@@ -65,24 +65,7 @@
         .btn-primary { background: #1e3c72; color: white; }
         .btn-primary:disabled { background: #ccc; cursor: not-allowed; }
         .btn-secondary { background: #6c757d; color: white; }
-        .btn-small { 
-            padding: 8px 16px; 
-            border: none; 
-            border-radius: 8px; 
-            cursor: pointer; 
-            font-size: 0.9em; 
-            transition: all 0.3s ease; 
-            background: #28a745;
-            color: white;
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
-        .btn-small:hover {
-            background: #218838;
-            transform: translateY(-1px);
-        }
-
+        
         .btn-add-person {
             background: linear-gradient(45deg, #4CAF50, #66BB6A);
             color: white;
@@ -104,17 +87,11 @@
             background: linear-gradient(45deg, #388E3C, #4CAF50);
         }
 
-
         .search-results-list { max-height: 200px; overflow-y: auto; border: 1px solid #ccc; border-radius: 8px; margin-top: 5px; }
         .search-result-item { padding: 10px; cursor: pointer; border-bottom: 1px solid #eee; }
         .search-result-item:hover { background-color: #f0f4f8; }
         .search-result-display { background: #e9f5ff; border: 1px solid #bde0fe; padding: 15px; border-radius: 8px; margin-top: 10px; display: flex; gap: 15px; align-items: center;}
-        .search-result-display img { max-width: 60px; max-height: 60px; border-radius: 4px; border: 1px solid #ddd; }
-        .file-upload-area { border: 2px dashed #e1e8ed; border-radius: 10px; padding: 30px; text-align: center; cursor: pointer; transition: background .2s; }
-        .file-upload-area:hover { background: #f0f4f8; }
-        .file-list { margin-top: 15px; display: flex; flex-direction: column; gap: 8px; }
-        .file-item { display: flex; align-items: center; justify-content: space-between; background: #f8f9fa; padding: 8px 12px; border-radius: 6px; font-size: 0.9em; }
-        .remove-file { background: #ff6b6b; color: white; border: none; border-radius: 50%; width: 22px; height: 22px; cursor: pointer; }
+        
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.6); z-index: 1003; align-items: center; justify-content: center; }
         .modal.show { display: flex; }
         .modal-content { background: white; padding: 30px; border-radius: 20px; max-width: 500px; width: 90%; }
@@ -122,33 +99,11 @@
         .modal-title { font-size: 1.3em; color: #1e3c72; }
         .close-btn { background: none; border: none; font-size: 1.5em; cursor: pointer; color: #666; }
 
-        .detail-section-title {
-            font-size: 1.1em;
-            color: #1e3c72;
-            margin-top: 20px;
-            margin-bottom: 15px;
-            padding-bottom: 5px;
-            border-bottom: 1px dashed #e1e8ed;
-            grid-column: 1 / -1;
-        }
-        .person-form-grid {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 15px;
-        }
-        .person-form-actions {
-            display: flex;
-            gap: 10px;
-            justify-content: flex-end;
-            margin-top: 20px;
-            padding-top: 15px;
-            border-top: 1px solid #e1e8ed;
-        }
-        .person-form-actions .btn {
-            padding: 8px 16px;
-            font-size: 0.9em;
-        }
-         .total-amount-display {
+        .person-form-grid { display: grid; grid-template-columns: 1fr; gap: 15px; }
+        .person-form-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; padding-top: 15px; border-top: 1px solid #e1e8ed; }
+        .person-form-actions .btn { padding: 8px 16px; font-size: 0.9em; }
+        
+        .total-amount-display {
             font-size: 1.2em;
             font-weight: bold;
             color: #1e3c72;
@@ -157,6 +112,26 @@
             padding: 12px 15px;
             background-color: #f0f4f8;
             border-radius: 10px;
+        }
+        .input-with-currency { display: flex; gap: 10px; }
+        .input-with-currency .form-input { flex-grow: 1; }
+        .currency-select {
+            padding: 12px 8px;
+            border: 2px solid #e1e8ed;
+            border-radius: 10px;
+            background-color: #f8f9fa;
+            font-weight: bold;
+        }
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+        .checkbox-label input {
+            width: 18px;
+            height: 18px;
         }
     </style>
 </head>
@@ -277,13 +252,8 @@
                 this.selectedServiceInvoiceParty = null;
                 this.taskTypeMappings = {
                     'trademark': [
-                        'Başvuru', 'İtiraza Karşı Görüş (YIDD)', 'Yenileme', 'Eksiklik Giderme', 'Yayına İtiraz',
-                        'Karara İtiraz', 'Yayıma İtirazın Yeniden İncelenmesi', 'İtiraza Karşı Görüş (Markalar)',
-                        'Devir', 'Lisans', 'Birleşme', 'Veraset ile İntikal', 'Tescil Belgesi Sureti',
-                        'Sicil Sureti', 'Menşe Memleket Belgesi', 'Rehin/Teminat', 'Bölünme', 'Vazgeçme',
-                        'Tanınmışlık Tespiti', '3.Kişi Görüşü', 'Yayına İtirazı Geri Çekme',
-                        'Madrid Başvurusu Ücret Ödeme', 'Muvaffakat Sunumu', 'Kullanım İspatı Sunma',
-                        'İtiraza Ek Belge', 'Eşya Sınırlandırma'
+                        'Başvuru', 'Yenileme', 'Devir', 'Lisans', 'Birleşme', 'Veraset ile İntikal', 'Rehin/Teminat',
+                        'Eksiklik Giderme', 'Karara İtiraz', 'Yayına İtiraz', 'İtiraza Karşı Görüş (Markalar)', 'İtiraza Karşı Görüş (YIDD)',
                     ],
                     'patent': ['Başvuru', 'Yenileme', 'Yıllık Ücret Ödemesi', 'Lisans', 'Devir', 'Rehin'],
                     'design': ['Başvuru', 'Yenileme', 'Devir', 'Lisans', 'Rehin']
@@ -395,19 +365,41 @@
                         <div class="form-grid">
                             <div class="form-group">
                                 <label for="officialFee" class="form-label">Resmi Ücret</label>
-                                <input type="number" id="officialFee" class="form-input" placeholder="0.00" step="0.01">
+                                <div class="input-with-currency">
+                                    <input type="number" id="officialFee" class="form-input" placeholder="0.00" step="0.01">
+                                    <select id="officialFeeCurrency" class="currency-select">
+                                        <option value="TL" selected>TL</option>
+                                        <option value="EUR">EUR</option>
+                                        <option value="USD">USD</option>
+                                        <option value="CHF">CHF</option>
+                                    </select>
+                                </div>
                             </div>
                             <div class="form-group">
                                 <label for="serviceFee" class="form-label">Hizmet Bedeli</label>
-                                <input type="number" id="serviceFee" class="form-input" placeholder="0.00" step="0.01">
+                                <div class="input-with-currency">
+                                    <input type="number" id="serviceFee" class="form-input" placeholder="0.00" step="0.01">
+                                    <select id="serviceFeeCurrency" class="currency-select">
+                                        <option value="TL" selected>TL</option>
+                                        <option value="EUR">EUR</option>
+                                        <option value="USD">USD</option>
+                                        <option value="CHF">CHF</option>
+                                    </select>
+                                </div>
                             </div>
                             <div class="form-group">
                                 <label for="vatRate" class="form-label">KDV Oranı (%)</label>
                                 <input type="number" id="vatRate" class="form-input" value="20">
                             </div>
                              <div class="form-group">
-                                <label for="totalAmountDisplay" class="form-label">Toplam Tutar (KDV Dahil)</label>
+                                <label for="totalAmountDisplay" class="form-label">Toplam Tutar</label>
                                 <div id="totalAmountDisplay" class="total-amount-display">0.00 TL</div>
+                            </div>
+                             <div class="form-group full-width">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="applyVatToOfficialFee" checked>
+                                    Resmi Ücrete KDV Uygula
+                                </label>
                             </div>
                             <div class="form-group full-width">
                                 <label for="tpInvoicePartySearch" class="form-label">Türk Patent Faturası Tarafı</label>
@@ -464,19 +456,26 @@
                 const addNewPersonBtn = document.getElementById('addNewPersonBtn');
                 if (addNewPersonBtn) addNewPersonBtn.addEventListener('click', () => this.showAddPersonModal());
                 
-                ['officialFee', 'serviceFee', 'vatRate'].forEach(id => {
+                ['officialFee', 'serviceFee', 'vatRate', 'applyVatToOfficialFee'].forEach(id => {
                     const el = document.getElementById(id);
                     if (el) el.addEventListener('input', () => this.calculateTotalAmount());
                 });
-
-                this.setupFileUpload();
             }
 
             calculateTotalAmount() {
                 const officialFee = parseFloat(document.getElementById('officialFee').value) || 0;
                 const serviceFee = parseFloat(document.getElementById('serviceFee').value) || 0;
                 const vatRate = parseFloat(document.getElementById('vatRate').value) || 0;
-                const total = (officialFee + serviceFee) * (1 + vatRate / 100);
+                const applyVatToOfficial = document.getElementById('applyVatToOfficialFee').checked;
+
+                let total;
+                if(applyVatToOfficial) {
+                    total = (officialFee + serviceFee) * (1 + vatRate / 100);
+                } else {
+                    total = officialFee + (serviceFee * (1 + vatRate / 100));
+                }
+
+                // For simplicity, total is always in TL. Cross-currency calculation is complex.
                 document.getElementById('totalAmountDisplay').textContent = total.toFixed(2) + ' TL';
             }
 
@@ -486,51 +485,6 @@
                 this.selectedTpInvoiceParty = null;
                 this.selectedServiceInvoiceParty = null;
                 this.uploadedFiles = [];
-            }
-            
-            setupFileUpload() {
-                const area = document.getElementById('fileUploadArea');
-                if (!area) return;
-                const input = document.createElement('input');
-                input.type = 'file';
-                input.multiple = true;
-                input.hidden = true;
-                area.insertAdjacentElement('afterend', input);
-                
-                area.onclick = () => input.click();
-                input.onchange = (e) => { this.handleFiles(e.target.files); e.target.value = ''; };
-                area.ondragover = (e) => { e.preventDefault(); area.style.background = '#f0f4f8'; };
-                area.ondragleave = (e) => { e.preventDefault(); area.style.background = 'transparent'; };
-                area.ondrop = (e) => { e.preventDefault(); area.style.background = 'transparent'; this.handleFiles(e.dataTransfer.files); };
-            }
-
-            handleFiles(files) {
-                for (const file of files) {
-                    if (this.uploadedFiles.find(f => f.name === file.name && f.size === file.size)) continue;
-                    this.readFileAsDataURL(file).then(dataUrl => {
-                        this.uploadedFiles.push({ id: generateUUID(), name: file.name, size: file.size, type: file.type, content: dataUrl });
-                        this.updateFileList();
-                    });
-                }
-            }
-
-            updateFileList() {
-                const list = document.getElementById('fileList');
-                if (!list) return;
-                list.innerHTML = this.uploadedFiles.map(file => `<div class="file-item" data-id="${file.id}"><span>${file.name} (${this.formatFileSize(file.size)})</span><button type="button" class="remove-file" data-id="${file.id}">&times;</button></div>`).join('');
-                list.querySelectorAll('.remove-file').forEach(btn => btn.addEventListener('click', (e) => this.removeFile(e.target.dataset.id)));
-            }
-            
-            removeFile(fileId) { this.uploadedFiles = this.uploadedFiles.filter(f => f.id !== fileId); this.updateFileList(); }
-            
-            formatFileSize(bytes) {
-                if (bytes === 0) return '0 Bytes';
-                const k = 1024, i = Math.floor(Math.log(bytes) / Math.log(k));
-                return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${['Bytes', 'KB', 'MB', 'GB'][i]}`;
-            }
-
-            readFileAsDataURL(file) {
-                return new Promise((resolve, reject) => { const r = new FileReader(); r.onload = () => resolve(r.result); r.onerror = reject; r.readAsDataURL(file); });
             }
 
             searchPortfolio(query) {
@@ -589,6 +543,7 @@
                 }[target];
 
                 const container = document.getElementById(resultsContainerId);
+                if (!container) return;
                 container.innerHTML = '';
                 if (query.length < 2) { container.innerHTML = '<p class="no-results-message">Aramak için en az 2 karakter girin.</p>'; return; }
                 
@@ -724,15 +679,29 @@
 
                 if (officialFee > 0 || serviceFee > 0) {
                     const vatRate = parseFloat(document.getElementById('vatRate').value) || 0;
-                    const totalAmount = (officialFee + serviceFee) * (1 + vatRate / 100);
+                    const applyVatToOfficial = document.getElementById('applyVatToOfficialFee').checked;
+                    let totalAmount;
+                    if(applyVatToOfficial) {
+                        totalAmount = (officialFee + serviceFee) * (1 + vatRate / 100);
+                    } else {
+                        totalAmount = officialFee + (serviceFee * (1 + vatRate / 100));
+                    }
 
                     const accrualData = {
                         taskId: taskResult.id,
                         taskTitle: taskData.title,
-                        officialFee,
-                        serviceFee,
+                        officialFee: {
+                            amount: officialFee,
+                            currency: document.getElementById('officialFeeCurrency').value
+                        },
+                        serviceFee: {
+                            amount: serviceFee,
+                            currency: document.getElementById('serviceFeeCurrency').value
+                        },
                         vatRate,
+                        applyVatToOfficialFee: applyVatToOfficial,
                         totalAmount,
+                        totalAmountCurrency: 'TL',
                         tpInvoiceParty: this.selectedTpInvoiceParty ? {id: this.selectedTpInvoiceParty.id, name: this.selectedTpInvoiceParty.name} : null,
                         serviceInvoiceParty: this.selectedServiceInvoiceParty ? {id: this.selectedServiceInvoiceParty.id, name: this.selectedServiceInvoiceParty.name} : null,
                     };
