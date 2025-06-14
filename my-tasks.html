@@ -430,21 +430,25 @@
                     });
                 });
                 
-                document.getElementById('tasksTableBody').addEventListener('click', (event) => {
+                tableBody.addEventListener('click', (event) => {
                     const target = event.target.closest('button.action-btn, a.ip-record-link');
                     if (!target) return;
-                    
+
                     const row = target.closest('tr');
                     const taskId = row.querySelector('.task-checkbox')?.dataset.taskId;
-                    const recordId = row.querySelector('a.ip-record-link')?.dataset.ipRecordId;
-                    const completeBtn = row.querySelector('.complete-btn');
-                    const relatedIpRecordId = completeBtn ? completeBtn.dataset.ipRecordId : null;
-
-                    if (target.classList.contains('complete-btn')) { event.preventDefault(); if (taskId) this.showCompleteTaskModal(taskId, relatedIpRecordId); }
-                    else if (target.classList.contains('view-btn')) { if (taskId) this.viewTaskDetailsModal(taskId); }
-                    else if (target.classList.contains('edit-btn')) { if (taskId) this.showEditTaskModal(taskId); }
-                    else if (target.classList.contains('delete-btn')) { if (taskId) this.deleteTask(taskId); }
-                    else if (target.classList.contains('ip-record-link')) { event.preventDefault(); if (recordId) this.showIpRecordDetailModal(recordId); }
+                    if (!taskId) return;
+                    
+                    if (target.classList.contains('complete-btn')) { 
+                        const relatedIpRecordId = target.dataset.ipRecordId;
+                        this.showCompleteTaskModal(taskId, relatedIpRecordId); 
+                    }
+                    else if (target.classList.contains('view-btn')) { this.viewTaskDetailsModal(taskId); }
+                    else if (target.classList.contains('edit-btn')) { this.showEditTaskModal(taskId); }
+                    else if (target.classList.contains('delete-btn')) { this.deleteTask(taskId); }
+                    else if (target.classList.contains('ip-record-link')) { 
+                        const recordId = target.dataset.ipRecordId;
+                        if (recordId) this.showIpRecordDetailModal(recordId); 
+                    }
                 });
             }
 
@@ -474,9 +478,11 @@
                         <td>${task.dueDate ? new Date(task.dueDate).toLocaleDateString() : '-'}</td>
                         <td><span class="status-badge status-${task.status}">${statusMap[task.status] || task.status}</span></td>
                         <td>
-                            <button class="action-btn view-btn">Görüntüle</button>
-                            <button class="action-btn edit-btn">Güncelle</button>
-                            <button class="action-btn complete-btn" data-ip-record-id="${relatedIpRecordId}" ${isCompleted ? 'disabled' : ''}>${isCompleted ? 'Tamamlandı' : 'İşi Bitir'}</button>
+                            <div style="display: flex; gap: 5px;">
+                                <button class="action-btn view-btn">Görüntüle</button>
+                                <button class="action-btn edit-btn">Güncelle</button>
+                                <button class="action-btn complete-btn" data-ip-record-id="${relatedIpRecordId}" ${isCompleted ? 'disabled' : ''}>${isCompleted ? 'Tamamlandı' : 'İşi Bitir'}</button>
+                            </div>
                         </td>
                     `;
                     
@@ -630,10 +636,11 @@
             renderEditFileList(isInitial = false) {
                 const existingList = document.getElementById('modalEditTaskDocumentList');
                 const newList = document.getElementById('modalTaskDetailUploadedFileList');
+                const noDocsMessage = document.getElementById('modalNoTaskDocumentsMessage');
+
                 if (isInitial) {
                     existingList.innerHTML = '';
                     const existingFiles = this.currentEditTask.files || [];
-                    const noDocsMessage = document.getElementById('modalNoTaskDocumentsMessage');
                     if(noDocsMessage) noDocsMessage.style.display = existingFiles.length === 0 ? 'block' : 'none';
                     if (existingFiles.length > 0) {
                         existingFiles.forEach(file => {
