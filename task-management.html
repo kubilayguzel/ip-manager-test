@@ -79,6 +79,8 @@
         .action-btn.edit-btn:hover { background-color: #e0a800; }
         .action-btn.delete-btn { background-color: #dc3545; }
         .action-btn.delete-btn:hover { background-color: #c82333; }
+        .action-btn.add-accrual-btn { background-color: #28a745; }
+        .action-btn.add-accrual-btn:hover { background-color: #218838; }
         .btn-reassign { background-color: #5a6268; }
         .btn-reassign:hover { background-color: #4a5258; }
 
@@ -124,6 +126,43 @@
         .status-badge { padding: 4px 10px; border-radius: 12px; font-size: 0.8em; font-weight: 500; color: white; }
         .status-open { background-color: #007bff; }
         .status-completed { background-color: #28a745; }
+        #addAccrualModal .modal-content {
+            max-width: 700px;
+        }
+        .input-with-currency { display: flex; gap: 10px; }
+        .input-with-currency .form-input { flex-grow: 1; }
+        .currency-select {
+            padding: 12px 8px;
+            border: 2px solid #e1e8ed;
+            border-radius: 10px;
+            background-color: #f8f9fa;
+            font-weight: bold;
+        }
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+        .checkbox-label input {
+            width: 18px;
+            height: 18px;
+        }
+        .total-amount-display {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #1e3c72;
+            text-align: right;
+            margin-top: 10px;
+            padding: 12px 15px;
+            background-color: #f0f4f8;
+            border-radius: 10px;
+        }
+        .search-results-list { max-height: 150px; overflow-y: auto; border: 1px solid #ccc; border-radius: 8px; margin-top: 5px; }
+        .search-result-item { padding: 10px; cursor: pointer; border-bottom: 1px solid #eee; }
+        .search-result-item:hover { background-color: #f0f4f8; }
+        .search-result-display { background: #e9f5ff; border: 1px solid #bde0fe; padding: 10px; border-radius: 8px; margin-top: 10px; }
 </style>
 </head>
 <body>
@@ -286,6 +325,72 @@
     </div>
 </div>
 
+<div class="modal" id="addAccrualModal">
+    <div class="modal-content">
+        <span class="close-modal-btn" id="closeAddAccrualModal">&times;</span>
+        <h3 class="modal-title">İşe Yeni Tahakkuk Ekle</h3>
+        <form id="addAccrualForm" onsubmit="return false;">
+            <input type="hidden" id="accrualTaskId">
+            <div class="modal-body-content">
+                <div class="form-group">
+                    <label for="accrualTaskTitleDisplay" class="form-label">İlgili İş</label>
+                    <input type="text" id="accrualTaskTitleDisplay" class="form-input" readonly>
+                </div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="officialFee" class="form-label">Resmi Ücret</label>
+                        <div class="input-with-currency">
+                            <input type="number" id="officialFee" class="form-input" placeholder="0.00" step="0.01">
+                            <select id="officialFeeCurrency" class="currency-select">
+                                <option value="TL" selected>TL</option><option value="EUR">EUR</option><option value="USD">USD</option><option value="CHF">CHF</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="serviceFee" class="form-label">Hizmet Bedeli</label>
+                        <div class="input-with-currency">
+                            <input type="number" id="serviceFee" class="form-input" placeholder="0.00" step="0.01">
+                            <select id="serviceFeeCurrency" class="currency-select">
+                                <option value="TL" selected>TL</option><option value="EUR">EUR</option><option value="USD">USD</option><option value="CHF">CHF</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="vatRate" class="form-label">KDV Oranı (%)</label>
+                    <input type="number" id="vatRate" class="form-input" value="20">
+                </div>
+                <div class="form-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="applyVatToOfficialFee" checked>
+                        Resmi Ücrete KDV Uygula
+                    </label>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Toplam Tutar</label>
+                    <div id="totalAmountDisplay" class="total-amount-display">0.00 TL</div>
+                </div>
+                <div class="form-group">
+                    <label for="tpInvoicePartySearch" class="form-label">Türk Patent Faturası Tarafı</label>
+                    <input type="text" id="tpInvoicePartySearch" class="form-input" placeholder="Fatura tarafı arayın...">
+                    <div id="tpInvoicePartyResults" class="search-results-list"></div>
+                    <div id="selectedTpInvoicePartyDisplay" class="search-result-display" style="display:none;"></div>
+                </div>
+                <div class="form-group">
+                    <label for="serviceInvoicePartySearch" class="form-label">Hizmet Faturası Tarafı</label>
+                    <input type="text" id="serviceInvoicePartySearch" class="form-input" placeholder="Fatura tarafı arayın...">
+                    <div id="serviceInvoicePartyResults" class="search-results-list"></div>
+                    <div id="selectedServiceInvoicePartyDisplay" class="search-result-display" style="display:none;"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" id="cancelAddAccrualBtn">İptal</button>
+                <button type="button" class="btn btn-primary" id="saveAccrualBtn">Tahakkuku Kaydet</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <script type="module">
         import { authService, taskService, ipRecordsService, personsService, accrualService, auth, generateUUID } from './firebase-config.js';
 
@@ -300,6 +405,8 @@
                 this.currentEditTask = null;
                 this.uploadedEditFiles = [];
                 this.selectedTasks = new Set();
+                this.selectedTpInvoiceParty = null;
+                this.selectedServiceInvoiceParty = null;
             }
 
             async init() {
@@ -366,6 +473,18 @@
                 document.getElementById('cancelReassignBtn').addEventListener('click', () => this.closeModal('reassignTaskModal'));
                 document.getElementById('confirmReassignBtn').addEventListener('click', () => this.handleReassignment());
 
+                // Yeni Modal için Event Listener'lar
+                document.getElementById('closeAddAccrualModal').addEventListener('click', () => this.closeModal('addAccrualModal'));
+                document.getElementById('cancelAddAccrualBtn').addEventListener('click', () => this.closeModal('addAccrualModal'));
+                document.getElementById('saveAccrualBtn').addEventListener('click', () => this.handleSaveAccrual());
+
+                ['officialFee', 'serviceFee', 'vatRate', 'applyVatToOfficialFee'].forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) el.addEventListener('input', () => this.calculateTotalAmount());
+                });
+                document.getElementById('tpInvoicePartySearch').addEventListener('input', e => this.searchPersons(e.target.value, 'tpInvoiceParty'));
+                document.getElementById('serviceInvoicePartySearch').addEventListener('input', e => this.searchPersons(e.target.value, 'serviceInvoiceParty'));
+
                 const tableBody = document.getElementById('tasksTableBody');
                 tableBody.addEventListener('change', (event) => {
                     if (event.target.matches('.task-checkbox')) {
@@ -392,6 +511,7 @@
                     if (target.classList.contains('view-btn')) { this.viewTaskDetailsModal(taskId); }
                     else if (target.classList.contains('edit-btn')) { this.showEditTaskModal(taskId); }
                     else if (target.classList.contains('delete-btn')) { this.deleteTask(taskId); }
+                    else if (target.classList.contains('add-accrual-btn')) { this.showAddAccrualModal(taskId); }
                 });
             }
             
@@ -422,6 +542,7 @@
                                 <button class="action-btn view-btn">Görüntüle</button>
                                 <button class="action-btn edit-btn">Düzenle</button>
                                 <button class="action-btn delete-btn">Sil</button>
+                                <button class="action-btn add-accrual-btn" title="Bu İşe Tahakkuk Ekle">💰</button>
                             </div>
                         </td>
                     `;
@@ -748,6 +869,143 @@
                  if (modalId === 'reassignTaskModal') {
                     document.getElementById('reassignUserSelect').value = '';
                 }
+                if (modalId === 'addAccrualModal') {
+                    document.getElementById('addAccrualForm').reset();
+                }
+            }
+
+            showAddAccrualModal(taskId) {
+                const task = this.allTasks.find(t => t.id === taskId);
+                if (!task) {
+                    alert('Tahakkuk eklenecek iş bulunamadı.');
+                    return;
+                }
+                
+                document.getElementById('addAccrualForm').reset();
+                this.selectedTpInvoiceParty = null;
+                this.selectedServiceInvoiceParty = null;
+                document.getElementById('selectedTpInvoicePartyDisplay').style.display = 'none';
+                document.getElementById('selectedServiceInvoicePartyDisplay').style.display = 'none';
+                
+                document.getElementById('accrualTaskId').value = taskId;
+                document.getElementById('accrualTaskTitleDisplay').value = task.title;
+                
+                this.calculateTotalAmount();
+                
+                document.getElementById('addAccrualModal').classList.add('show');
+            }
+
+            async handleSaveAccrual() {
+                const taskId = document.getElementById('accrualTaskId').value;
+                const task = this.allTasks.find(t => t.id === taskId);
+
+                const officialFee = parseFloat(document.getElementById('officialFee').value) || 0;
+                const serviceFee = parseFloat(document.getElementById('serviceFee').value) || 0;
+                
+                if (officialFee <= 0 && serviceFee <= 0) {
+                    alert("Lütfen en az bir ücret girin.");
+                    return;
+                }
+
+                const vatRate = parseFloat(document.getElementById('vatRate').value) || 0;
+                const applyVatToOfficial = document.getElementById('applyVatToOfficialFee').checked;
+                let totalAmount;
+                if (applyVatToOfficial) {
+                    totalAmount = (officialFee + serviceFee) * (1 + vatRate / 100);
+                } else {
+                    totalAmount = officialFee + (serviceFee * (1 + vatRate / 100));
+                }
+
+                const accrualData = {
+                    taskId: taskId,
+                    taskTitle: task.title,
+                    officialFee: {
+                        amount: officialFee,
+                        currency: document.getElementById('officialFeeCurrency').value
+                    },
+                    serviceFee: {
+                        amount: serviceFee,
+                        currency: document.getElementById('serviceFeeCurrency').value
+                    },
+                    vatRate,
+                    applyVatToOfficialFee: applyVatToOfficial,
+                    totalAmount,
+                    totalAmountCurrency: 'TL',
+                    tpInvoiceParty: this.selectedTpInvoiceParty ? {id: this.selectedTpInvoiceParty.id, name: this.selectedTpInvoiceParty.name} : null,
+                    serviceInvoiceParty: this.selectedServiceInvoiceParty ? {id: this.selectedServiceInvoiceParty.id, name: this.selectedServiceInvoiceParty.name} : null,
+                };
+                
+                const result = await accrualService.addAccrual(accrualData);
+                if (result.success) {
+                    alert('Yeni tahakkuk başarıyla eklendi!');
+                    this.allAccruals.push(result.data);
+                    this.closeModal('addAccrualModal');
+                } else {
+                    alert('Tahakkuk eklenirken hata oluştu: ' + result.error);
+                }
+            }
+
+            calculateTotalAmount() {
+                const officialFee = parseFloat(document.getElementById('officialFee').value) || 0;
+                const serviceFee = parseFloat(document.getElementById('serviceFee').value) || 0;
+                const vatRate = parseFloat(document.getElementById('vatRate').value) || 0;
+                const applyVatToOfficial = document.getElementById('applyVatToOfficialFee').checked;
+
+                let total;
+                if(applyVatToOfficial) {
+                    total = (officialFee + serviceFee) * (1 + vatRate / 100);
+                } else {
+                    total = officialFee + (serviceFee * (1 + vatRate / 100));
+                }
+                document.getElementById('totalAmountDisplay').textContent = total.toFixed(2) + ' TL';
+            }
+
+            searchPersons(query, target) {
+                const resultsContainerId = {
+                    'tpInvoiceParty': 'tpInvoicePartyResults',
+                    'serviceInvoiceParty': 'serviceInvoicePartyResults'
+                }[target];
+                const container = document.getElementById(resultsContainerId);
+                if (!container) return;
+                container.innerHTML = '';
+                if (query.length < 2) { container.innerHTML = ''; return; }
+                
+                const filtered = this.allPersons.filter(p => p.name.toLowerCase().includes(query.toLowerCase()));
+                if (filtered.length === 0) { container.innerHTML = '<p class="no-results-message">Kişi bulunamadı.</p>'; return; }
+
+                filtered.forEach(p => {
+                    const item = document.createElement('div');
+                    item.className = 'search-result-item';
+                    item.dataset.id = p.id;
+                    item.innerHTML = `<div><b>${p.name}</b><br><small>${p.email || '-'}</small></div>`;
+                    item.addEventListener('click', () => this.selectPerson(p, target));
+                    container.appendChild(item);
+                });
+            }
+
+            selectPerson(person, target) {
+                const displayId = {
+                    'tpInvoiceParty': 'selectedTpInvoicePartyDisplay',
+                    'serviceInvoiceParty': 'selectedServiceInvoicePartyDisplay'
+                }[target];
+                const inputId = {
+                    'tpInvoiceParty': 'tpInvoicePartySearch',
+                    'serviceInvoiceParty': 'serviceInvoicePartySearch'
+                }[target];
+                const resultsId = {
+                    'tpInvoiceParty': 'tpInvoicePartyResults',
+                    'serviceInvoiceParty': 'serviceInvoicePartyResults'
+                }[target];
+                
+                if(target === 'tpInvoiceParty') this.selectedTpInvoiceParty = person;
+                else if(target === 'serviceInvoiceParty') this.selectedServiceInvoiceParty = person;
+
+                const display = document.getElementById(displayId);
+                display.innerHTML = `<p><b>Seçilen:</b> ${person.name}</p>`;
+                display.style.display = 'block';
+
+                document.getElementById(resultsId).innerHTML = '';
+                document.getElementById(inputId).value = person.name;
             }
         }
 
