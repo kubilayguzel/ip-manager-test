@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-
 <html lang="tr">
 <head>
 <meta charset="utf-8"/>
@@ -359,6 +358,20 @@
                         this.handleTaskSelection(checkbox);
                     });
                 });
+
+                // Düzeltilmiş Event Delegation
+                tableBody.addEventListener('click', (event) => {
+                    const target = event.target.closest('button.table-action-btn');
+                    if (!target) return;
+
+                    const row = target.closest('tr');
+                    const taskId = row.querySelector('.task-checkbox')?.dataset.taskId;
+                    if (!taskId) return;
+                    
+                    if (target.classList.contains('view-btn')) { this.viewTaskDetailsModal(taskId); }
+                    else if (target.classList.contains('edit-btn')) { this.showEditTaskModal(taskId); }
+                    else if (target.classList.contains('delete-btn')) { this.deleteTask(taskId); }
+                });
             }
             
             renderTasks() {
@@ -384,15 +397,13 @@
                         <td><a href="portfolio.html?recordId=${task.relatedIpRecordId}" target="_blank">${task.relatedIpRecordTitle || '-'}</a></td>
                         <td>${task.status}</td>
                         <td>
-                            <button class="table-action-btn view-btn" data-id="${task.id}">Görüntüle</button>
-                            <button class="table-action-btn edit-btn" data-id="${task.id}">Düzenle</button>
-                            <button class="table-action-btn delete-btn" data-id="${task.id}">Sil</button>
+                            <div style="display: flex; gap: 5px;">
+                                <button class="table-action-btn view-btn">Görüntüle</button>
+                                <button class="table-action-btn edit-btn">Düzenle</button>
+                                <button class="table-action-btn delete-btn">Sil</button>
+                            </div>
                         </td>
                     `;
-                    row.querySelector('.view-btn').addEventListener('click', () => this.viewTaskDetailsModal(task.id));
-                    row.querySelector('.edit-btn').addEventListener('click', () => this.showEditTaskModal(task.id));
-                    row.querySelector('.delete-btn').addEventListener('click', () => this.deleteTask(task.id));
-
                     tableBody.appendChild(row);
                 });
                 this.updateReassignButtonState();
@@ -489,6 +500,7 @@
                         const result = await taskService.deleteTask(taskId);
                         if (result.success) {
                             alert('Görev başarıyla silindi.');
+                            this.selectedTasks.delete(taskId);
                             await this.loadInitialData();
                         } else {
                             throw new Error(result.error);
@@ -589,11 +601,12 @@
             renderEditFileList(isInitial = false) {
                 const existingList = document.getElementById('modalEditTaskDocumentList');
                 const newList = document.getElementById('modalTaskDetailUploadedFileList');
+                const noDocsMessage = document.getElementById('modalNoTaskDocumentsMessage');
                 
                 if (isInitial) {
                     existingList.innerHTML = '';
                     const existingFiles = this.currentEditTask.files || [];
-                    document.getElementById('modalNoTaskDocumentsMessage').style.display = existingFiles.length === 0 ? 'block' : 'none';
+                    if (noDocsMessage) noDocsMessage.style.display = existingFiles.length === 0 ? 'block' : 'none';
                     existingFiles.forEach(file => {
                         const li = document.createElement('li');
                         li.innerHTML = `<a href="${file.content}" download="${file.name}" target="_blank">📄 ${file.name}</a><button class="remove-doc-btn" data-id="${file.id}">×</button>`;
