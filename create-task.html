@@ -37,7 +37,7 @@
         .user-info { display: flex; flex-direction: column; text-align: right;}
         .user-name { font-weight: 600; }
         .user-role { font-size: 0.8em; color: #666; }
-        .logout-btn { background: #ff6b6b; color: white; border: none; padding: 8px 16px; border-radius: 8px; cursor: font-size: 0.9em; }
+        .logout-btn { background: #ff6b6b; color: white; border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 0.9em; }
         
         .page-header { background: rgba(255, 255, 255, 0.95); padding: 30px; border-radius: 20px; margin-bottom: 30px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1); }
         .page-title { font-size: 2em; color: #1e3c72; margin-bottom: 10px; }
@@ -65,7 +65,6 @@
         .btn-primary { background: #1e3c72; color: white; }
         .btn-primary:disabled { background: #ccc; cursor: not-allowed; }
         .btn-secondary { background: #6c757d; color: white; }
-        
         .btn-small { 
             padding: 8px 16px; 
             border: none; 
@@ -104,6 +103,7 @@
             box-shadow: 0 6px 12px rgba(0, 123, 255, 0.3);
             background: linear-gradient(45deg, #388E3C, #4CAF50);
         }
+
 
         .search-results-list { max-height: 200px; overflow-y: auto; border: 1px solid #ccc; border-radius: 8px; margin-top: 5px; }
         .search-result-item { padding: 10px; cursor: pointer; border-bottom: 1px solid #eee; }
@@ -148,7 +148,7 @@
             padding: 8px 16px;
             font-size: 0.9em;
         }
-        .total-amount-display {
+         .total-amount-display {
             font-size: 1.2em;
             font-weight: bold;
             color: #1e3c72;
@@ -489,15 +489,36 @@
             }
             
             setupFileUpload() {
-                // Bu fonksiyon olduğu gibi kalabilir.
+                const area = document.getElementById('fileUploadArea');
+                if (!area) return;
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.multiple = true;
+                input.hidden = true;
+                area.insertAdjacentElement('afterend', input);
+                
+                area.onclick = () => input.click();
+                input.onchange = (e) => { this.handleFiles(e.target.files); e.target.value = ''; };
+                area.ondragover = (e) => { e.preventDefault(); area.style.background = '#f0f4f8'; };
+                area.ondragleave = (e) => { e.preventDefault(); area.style.background = 'transparent'; };
+                area.ondrop = (e) => { e.preventDefault(); area.style.background = 'transparent'; this.handleFiles(e.dataTransfer.files); };
             }
 
             handleFiles(files) {
-                // Bu fonksiyon olduğu gibi kalabilir.
+                for (const file of files) {
+                    if (this.uploadedFiles.find(f => f.name === file.name && f.size === file.size)) continue;
+                    this.readFileAsDataURL(file).then(dataUrl => {
+                        this.uploadedFiles.push({ id: generateUUID(), name: file.name, size: file.size, type: file.type, content: dataUrl });
+                        this.updateFileList();
+                    });
+                }
             }
 
             updateFileList() {
-                // Bu fonksiyon olduğu gibi kalabilir.
+                const list = document.getElementById('fileList');
+                if (!list) return;
+                list.innerHTML = this.uploadedFiles.map(file => `<div class="file-item" data-id="${file.id}"><span>${file.name} (${this.formatFileSize(file.size)})</span><button type="button" class="remove-file" data-id="${file.id}">&times;</button></div>`).join('');
+                list.querySelectorAll('.remove-file').forEach(btn => btn.addEventListener('click', (e) => this.removeFile(e.target.dataset.id)));
             }
             
             removeFile(fileId) { this.uploadedFiles = this.uploadedFiles.filter(f => f.id !== fileId); this.updateFileList(); }
@@ -513,7 +534,40 @@
             }
 
             searchPortfolio(query) {
-                // Bu fonksiyon olduğu gibi kalabilir.
+                const container = document.getElementById('portfolioSearchResults');
+                container.innerHTML = '';
+                if (query.length < 3) { 
+                    container.innerHTML = '<p class="no-results-message">Aramak için en az 3 karakter girin.</p>'; 
+                    return; 
+                }
+                
+                const mainIpType = document.getElementById('mainIpType').value;
+                const searchLower = query.toLowerCase(); 
+                
+                const filtered = this.allIpRecords.filter(r => {
+                    const rTypeLower = r.type ? r.type.toLowerCase() : '';
+                    const mainIpTypeLower = mainIpType ? mainIpType.toLowerCase() : '';
+                    if (rTypeLower !== mainIpTypeLower) return false;
+
+                    const rTitleLower = r.title ? r.title.toLowerCase() : '';
+                    const rAppNumberLower = r.applicationNumber ? r.applicationNumber.toLowerCase() : '';
+                    
+                    return rTitleLower.includes(searchLower) || rAppNumberLower.includes(searchLower);
+                });
+
+                if (filtered.length === 0) {
+                    container.innerHTML = '<p class="no-results-message">Kayıt bulunamadı.</p>';
+                    return;
+                }
+
+                filtered.forEach(r => {
+                    const item = document.createElement('div');
+                    item.className = 'search-result-item';
+                    item.dataset.id = r.id;
+                    item.innerHTML = `<div><b>${r.title}</b> (${r.applicationNumber || 'Numara Yok'})<br><small>Durum: ${r.status}</small></div>`;
+                    item.addEventListener('click', () => this.selectIpRecord(r.id));
+                    container.appendChild(item);
+                });
             }
 
             selectIpRecord(recordId) {
@@ -536,7 +590,7 @@
 
                 const container = document.getElementById(resultsContainerId);
                 container.innerHTML = '';
-                if (query.length < 2) { container.innerHTML = '<p class="no-results-message">Aramak için en az 2 karakter...</p>'; return; }
+                if (query.length < 2) { container.innerHTML = '<p class="no-results-message">Aramak için en az 2 karakter girin.</p>'; return; }
                 
                 const filtered = this.allPersons.filter(p => p.name.toLowerCase().includes(query.toLowerCase()));
                 
@@ -641,7 +695,6 @@
                 const specificTaskType = document.getElementById('specificTaskType').value;
                 const assignedToUser = this.allUsers.find(u => u.id === document.getElementById('assignedTo').value);
                 
-                // 1. Create the Task
                 let taskData = {
                     taskType: `${document.getElementById('mainIpType').value}_${specificTaskType.toLowerCase().replace(/ /g, '_')}`,
                     title: specificTaskType,
@@ -651,14 +704,13 @@
                     assignedTo_email: assignedToUser.email,
                     dueDate: document.getElementById('taskDueDate').value || null,
                     status: 'open',
-                    files: this.uploadedFiles,
                     relatedIpRecordId: this.selectedIpRecord.id,
                     relatedIpRecordTitle: this.selectedIpRecord.title,
                     details: {}
                 };
 
                 if (this.selectedRelatedParty) {
-                    taskData.details.relatedParty = this.selectedRelatedParty;
+                    taskData.details.relatedParty = { id: this.selectedRelatedParty.id, name: this.selectedRelatedParty.name };
                 }
 
                 const taskResult = await taskService.createTask(taskData);
@@ -667,7 +719,6 @@
                     return;
                 }
 
-                // 2. Create the Accrual
                 const officialFee = parseFloat(document.getElementById('officialFee').value) || 0;
                 const serviceFee = parseFloat(document.getElementById('serviceFee').value) || 0;
 
@@ -693,7 +744,6 @@
                     }
                 }
 
-                // 3. Add transaction to the IP Record
                 const transactionData = {
                     type: specificTaskType,
                     description: specificTaskType,
