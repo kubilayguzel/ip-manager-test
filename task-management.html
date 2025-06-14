@@ -72,13 +72,13 @@
         .form-input, .form-select, .form-textarea { width: 100%; padding: 12px 15px; border: 2px solid #e1e8ed; border-radius: 10px; font-size: 1em; transition: all 0.3s ease; background: white; }
         .form-input:focus, .form-select:focus, .form-textarea:focus { outline: none; border-color: #1e3c72; box-shadow: 0 0 0 3px rgba(30, 60, 114, 0.1); }
         
-        .table-action-btn { background: #6c757d; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; transition: all 0.3s ease; }
-        .table-action-btn.view-btn { background-color: #17a2b8; }
-        .table-action-btn.view-btn:hover { background-color: #138496; }
-        .table-action-btn.edit-btn { background-color: #ffc107; color: #212529; }
-        .table-action-btn.edit-btn:hover { background-color: #e0a800; }
-        .table-action-btn.delete-btn { background-color: #dc3545; }
-        .table-action-btn.delete-btn:hover { background-color: #c82333; }
+        .action-btn { background: #6c757d; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; transition: all 0.3s ease; margin-right: 5px; }
+        .action-btn.view-btn { background-color: #17a2b8; }
+        .action-btn.view-btn:hover { background-color: #138496; }
+        .action-btn.edit-btn { background-color: #ffc107; color: #212529; }
+        .action-btn.edit-btn:hover { background-color: #e0a800; }
+        .action-btn.delete-btn { background-color: #dc3545; }
+        .action-btn.delete-btn:hover { background-color: #c82333; }
         .btn-reassign { background-color: #5a6268; }
         .btn-reassign:hover { background-color: #4a5258; }
 
@@ -359,9 +359,8 @@
                     });
                 });
 
-                // Düzeltilmiş Event Delegation
                 tableBody.addEventListener('click', (event) => {
-                    const target = event.target.closest('button.table-action-btn');
+                    const target = event.target.closest('button.action-btn');
                     if (!target) return;
 
                     const row = target.closest('tr');
@@ -398,9 +397,9 @@
                         <td>${task.status}</td>
                         <td>
                             <div style="display: flex; gap: 5px;">
-                                <button class="table-action-btn view-btn">Görüntüle</button>
-                                <button class="table-action-btn edit-btn">Düzenle</button>
-                                <button class="table-action-btn delete-btn">Sil</button>
+                                <button class="action-btn view-btn">Görüntüle</button>
+                                <button class="action-btn edit-btn">Düzenle</button>
+                                <button class="action-btn delete-btn">Sil</button>
                             </div>
                         </td>
                     `;
@@ -607,17 +606,19 @@
                     existingList.innerHTML = '';
                     const existingFiles = this.currentEditTask.files || [];
                     if (noDocsMessage) noDocsMessage.style.display = existingFiles.length === 0 ? 'block' : 'none';
-                    existingFiles.forEach(file => {
-                        const li = document.createElement('li');
-                        li.innerHTML = `<a href="${file.content}" download="${file.name}" target="_blank">📄 ${file.name}</a><button class="remove-doc-btn" data-id="${file.id}">×</button>`;
-                        li.querySelector('.remove-doc-btn').addEventListener('click', (e) => {
-                            if(confirm('Bu dokümanı kalıcı olarak silmek istediğinizden emin misiniz?')) {
-                                this.currentEditTask.files = this.currentEditTask.files.filter(f => f.id !== e.target.dataset.id);
-                                this.renderEditFileList(true);
-                            }
+                    if (existingFiles.length > 0) {
+                        existingFiles.forEach(file => {
+                            const li = document.createElement('li');
+                            li.innerHTML = `<a href="${file.content}" download="${file.name}" target="_blank">📄 ${file.name}</a><button class="remove-doc-btn" data-id="${file.id}">×</button>`;
+                            li.querySelector('.remove-doc-btn').addEventListener('click', (e) => {
+                                if(confirm('Bu dokümanı kalıcı olarak silmek istediğinizden emin misiniz?')) {
+                                    this.currentEditTask.files = this.currentEditTask.files.filter(f => f.id !== e.target.dataset.id);
+                                    this.renderEditFileList(true);
+                                }
+                            });
+                            existingList.appendChild(li);
                         });
-                        existingList.appendChild(li);
-                    });
+                    }
                 }
                 
                 newList.innerHTML = '';
