@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IP Manager - Kişiler Yönetimi</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        /* BODY VE YENİ LAYOUT */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #333;
+            display: flex;
+        }
+        
+        .page-wrapper {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow-y: auto;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        }
+
+.main-container {
+    width: 100%; /* Genişliği tamamen doldurmasını sağlar */
+    padding: 30px; /* İçeriğin kenarlara yapışmaması için boşluk bırakır */
+    margin: 0; /* Otomatik ortalamayı kaldırır */
+}
+        
+        /* ESKİ HEADER'I GİZLE */
+        body > .header { display: none; }
+
+        /* === YENİ SOL MENÜ VE ÜST BAR STİLLERİ === */
+        .sidebar { width: 260px; background: #1e3c72; color: white; display: flex; flex-direction: column; transition: width 0.3s ease; height: 100vh; position: sticky; top: 0; z-index: 1001; }
+        .sidebar-header { padding: 20px; text-align: center; border-bottom: 1px solid rgba(255, 255, 255, 0.1); }
+        .sidebar-logo { font-size: 1.8em; font-weight: bold; color: white; text-decoration: none; }
+        .sidebar-nav { flex-grow: 1; overflow-y: auto; padding: 20px 0; }
+        .nav-category-title { padding: 10px 20px; font-size: 0.8em; font-weight: bold; color: rgba(255, 255, 255, 0.5); text-transform: uppercase; }
+        .sidebar-nav-item, .accordion-header { display: flex; align-items: center; gap: 15px; padding: 15px 20px; color: rgba(255, 255, 255, 0.8); text-decoration: none; transition: background 0.3s ease; cursor: pointer; }
+        .sidebar-nav-item:hover, .accordion-header:hover { background: rgba(255, 255, 255, 0.1); }
+        .sidebar-nav-item.active { background: #2a5298; color: white; font-weight: bold; border-left: 4px solid #4ecdc4; padding-left: 16px; }
+        .nav-icon { font-size: 1.2em; width: 20px; text-align: center; }
+        .accordion-header::after { content: '▶'; margin-left: auto; font-size: 0.8em; transition: transform 0.3s ease; }
+        .accordion-header.active::after { transform: rotate(90deg); }
+        .accordion-content { background: rgba(0, 0, 0, 0.2); max-height: 0; overflow: hidden; transition: max-height 0.3s ease-out; }
+        .accordion-content a { display: block; padding: 12px 20px 12px 55px; color: rgba(255, 255, 255, 0.7); text-decoration: none; transition: background 0.2s ease; }
+        .accordion-content a:hover { background: rgba(255, 255, 255, 0.1); color: white; }
+        .accordion-content a.active { color: white; font-weight: 500; }
+        .top-header { background: rgba(255, 255, 255, 0.95); padding: 15px 30px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05); display: flex; justify-content: flex-end; align-items: center; position: sticky; top: 0; z-index: 99; backdrop-filter: blur(10px); }
+        .user-section { display: flex; align-items: center; gap: 15px; }
+        .user-avatar { width: 40px; height: 40px; background: linear-gradient(45deg, #1e3c72, #2a5298); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; }
+        .user-info { display: flex; flex-direction: column; }
+        .user-name { font-weight: 600; color: #333; }
+        .user-role { font-size: 0.8em; color: #666; }
+        .logout-btn { background: #ff6b6b; color: white; border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 0.9em; transition: all 0.3s ease; }
+        .logout-btn:hover { background: #ff5252; }
+        
+        /* === PERSONS SAYFASINA AİT ORİJİNAL STİLLER === */
+        .page-header { background: rgba(255, 255, 255, 0.95); padding: 30px; border-radius: 20px; margin-bottom: 30px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1); }
+        .page-title { font-size: 2em; color: #1e3c72; margin-bottom: 10px; }
+        .page-subtitle { color: #666; font-size: 1.1em; }
+        .persons-container { background: rgba(255, 255, 255, 0.95); border-radius: 20px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1); overflow: hidden; }
+        .persons-header { padding: 30px; border-bottom: 1px solid #e1e8ed; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px; }
+        .persons-stats { display: flex; gap: 20px; flex-wrap: wrap; }
+        .stat-item { text-align: center; padding: 10px 15px; background: #f8f9fa; border-radius: 10px; min-width: 80px; }
+        .stat-number { font-size: 1.5em; font-weight: bold; color: #1e3c72; }
+        .stat-label { font-size: 0.9em; color: #666; margin-top: 5px; }
+        .persons-actions { display: flex; gap: 15px; align-items: center; }
+        .action-btn { background: #1e3c72; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-size: 0.9em; transition: all 0.3s ease; text-decoration: none; display: flex; align-items: center; gap: 8px; }
+        .action-btn:hover { background: #2a5298; transform: translateY(-1px); }
+        .action-btn.secondary { background: #6c757d; }
+        .action-btn.secondary:hover { background: #5a6268; }
+        .filters-section { padding: 20px 30px; background: #f8f9fa; border-bottom: 1px solid #e1e8ed; }
+        .filters-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; align-items: end; }
+        .filter-group { display: flex; flex-direction: column; }
+        .filter-label { font-size: 0.9em; color: #666; margin-bottom: 5px; font-weight: 500; }
+        .filter-input, .filter-select { padding: 8px 12px; border: 2px solid #e1e8ed; border-radius: 8px; font-size: 0.9em; transition: all 0.3s ease; }
+        .filter-input:focus, .filter-select:focus { outline: none; border-color: #1e3c72; }
+        .search-input { position: relative; }
+        .search-input input { padding-left: 35px; }
+        .search-input::before { content: '🔍'; position: absolute; left: 10px; top: 50%; transform: translateY(-50%); font-size: 1em; color: #666; }
+        .table-container { overflow-x: auto; }
+        .persons-table { width: 100%; border-collapse: collapse; font-size: 0.9em; }
+        .persons-table th { background: #f8f9fa; padding: 15px 12px; text-align: left; font-weight: 600; color: #333; border-bottom: 2px solid #e1e8ed; cursor: pointer; transition: all 0.3s ease; position: relative; }
+        .persons-table th:hover { background: #e9ecef; }
+        .persons-table th.sortable::after { content: '↕️'; position: absolute; right: 8px; font-size: 0.8em; opacity: 0.5; }
+        .persons-table th.sort-asc::after { content: '↑'; opacity: 1; }
+        .persons-table th.sort-desc::after { content: '↓'; opacity: 1; }
+        .persons-table td { padding: 15px 12px; border-bottom: 1px solid #f0f0f0; vertical-align: middle; }
+        .persons-table tr:hover { background: #f8f9fa; }
+        .person-type { display: inline-flex; align-items: center; gap: 5px; padding: 4px 8px; border-radius: 6px; font-size: 0.8em; font-weight: 500; }
+        .person-type.individual { background: #e3f2fd; color: #1565c0; }
+        .person-type.company { background: #e0f2f1; color: #00695c; }
+        .person-type.institution { background: #f3e5f5; color: #7b1fa2; }
+        .action-buttons { display: flex; gap: 5px; }
+        .table-action-btn { padding: 5px 8px; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8em; transition: all 0.3s ease; }
+        .btn-view { background: #17a2b8; color: white; }
+        .btn-view:hover { background: #138496; }
+        .btn-edit { background: #ffc107; color: #212529; }
+        .btn-edit:hover { background: #e0a800; }
+        .btn-delete { background: #dc3545; color: white; }
+        .btn-delete:hover { background: #c82333; }
+        .btn-create-user { background: #007bff; color: white; }
+        .btn-create-user:hover { background: #0056b3; }
+        .no-persons { text-align: center; padding: 60px 20px; color: #666; }
+        .no-persons-icon { font-size: 3em; margin-bottom: 20px; }
+        .pagination { padding: 20px 30px; display: flex; justify-content: center; align-items: center; gap: 10px; border-top: 1px solid #e1e8ed; }
+        .page-btn { padding: 8px 12px; border: 1px solid #e1e8ed; background: white; border-radius: 6px; cursor: pointer; transition: all 0.3s ease; }
+        .page-btn:hover { background: #f8f9fa; }
+        .page-btn.active { background: #1e3c72; color: white; border-color: #1e3c72; }
+        .page-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .page-info { color: #666; font-size: 0.9em; margin: 0 15px; }
+        .loading { text-align: center; padding: 40px; color: #666; }
+        .loading-spinner { display: inline-block; width: 30px; height: 30px; border: 3px solid #f3f3f3; border-top: 3px solid #1e3c72; border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); z-index: 1000; align-items: center; justify-content: center; }
+        .modal.show { display: flex; }
+        .modal-content { background: white; padding: 30px; border-radius: 20px; max-width: 600px; width: 90%; max-height: 90vh; overflow-y: auto; }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid #e1e8ed; }
+        .modal-title { font-size: 1.3em; color: #1e3c72; }
+        .close-btn { background: none; border: none; font-size: 1.5em; cursor: pointer; color: #666; padding: 5px; border-radius: 50%; transition: all 0.3s ease; }
+        .close-btn:hover { background: #f0f0f0; }
+        .detail-section-title { grid-column: 1 / -1; font-size: 1.1em; color: #1e3c72; margin-top: 20px; margin-bottom: 15px; padding-bottom: 5px; border-bottom: 1px dashed #e1e8ed; }
+        .person-form-grid { display: grid; grid-template-columns: 1fr; gap: 15px; }
+        .person-form-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; padding-top: 15px; border-top: 1px solid #e1e8ed; }
+        .person-form-actions .btn { padding: 8px 16px; font-size: 0.9em; }
+    </style>
+</head>
+<body>
+
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <a href="dashboard.html" class="sidebar-logo">🔥 IP Manager</a>
+        </div>
+        <nav class="sidebar-nav">
+            <div class="nav-category-title">Ana Menü</div>
+            <a href="dashboard.html" class="sidebar-nav-item"><span class="nav-icon">📊</span><span>Dashboard</span></a>
+            <a href="portfolio.html" class="sidebar-nav-item"><span class="nav-icon">📋</span><span>Portföy</span></a>
+            <div class="nav-category-title">Veri Girişi</div>
+            <a href="data-entry.html" class="sidebar-nav-item"><span class="nav-icon">➕</span><span>Yeni Kayıt</span></a>
+            <a href="excel-upload.html" class="sidebar-nav-item"><span class="nav-icon">📄</span><span>Excel ile Yükle</span></a>
+            <div class="nav-category-title">Yönetim</div>
+          <div class="accordion">
+    <div class="accordion-header"><span class="nav-icon">⚙️</span><span>Yönetim</span></div>
+    <div class="accordion-content">
+        <a href="create-task.html" class="new-task-link">Yeni İş Oluştur</a>
+        
+        <a href="task-management.html">İş Yönetimi</a>
+        <a href="my-tasks.html">İşlerim</a>
+        <a href="persons.html">Kişiler Yönetimi</a>
+        <a href="user-management.html">Kullanıcı Yönetimi</a>
+    </div>
+</div>
+            <div class="nav-category-title">Araçlar</div>
+            <a href="indexing.html" class="sidebar-nav-item"><span class="nav-icon">📁</span><span>Belge İndeksleme</span></a>
+            <a href="#" class="sidebar-nav-item" style="opacity: 0.5; cursor: not-allowed;"><span class="nav-icon">📈</span><span>Raporlar</span></a>
+            <a href="#" class="sidebar-nav-item" style="opacity: 0.5; cursor: not-allowed;"><span class="nav-icon">🔧</span><span>Ayarlar</span></a>
+        </nav>
+    </aside>
+
+    <div class="page-wrapper">
+        <header class="top-header">
+            <div class="user-section">
+                <div class="user-avatar" id="userAvatar">D</div>
+                <div class="user-info">
+                    <div class="user-name" id="userName">Yükleniyor...</div>
+                    <div class="user-role" id="userRole">Kullanıcı</div>
+                </div>
+                <button class="logout-btn" id="logoutBtn">Çıkış</button>
+            </div>
+        </header>
+
+        <main class="main-container">
+            <section class="page-header">
+                <h1 class="page-title">Kişiler Yönetimi</h1>
+                <p class="page-subtitle">Uygulamanızdaki tüm kişileri (hak sahipleri, başvuranlar vb.) yönetin.</p>
+            </section>
+    
+            <div class="persons-container">
+                <div class="persons-header">
+                    <div class="persons-stats">
+                        <div class="stat-item"><div class="stat-number" id="totalPersonsCount">0</div><div class="stat-label">Toplam Kişi</div></div>
+                        <div class="stat-item"><div class="stat-number" id="individualCount">0</div><div class="stat-label">Bireysel</div></div>
+                        <div class="stat-item"><div class="stat-number" id="companyCount">0</div><div class="stat-label">Şirket</div></div>
+                        <div class="stat-item"><div class="stat-number" id="institutionCount">0</div><div class="stat-label">Kurum</div></div>
+                    </div>
+                    <div class="persons-actions">
+                        <button class="action-btn" id="addPersonBtn">➕ Yeni Kişi Ekle</button>
+                        <button class="action-btn secondary" id="refreshPersonsBtn">🔄 Yenile</button>
+                    </div>
+                </div>
+    
+                <div class="filters-section">
+                    <div class="filters-grid">
+                        <div class="filter-group"><label class="filter-label">Arama</label><div class="search-input"><input type="text" id="searchInput" class="filter-input" placeholder="Ad, e-posta veya telefon ara..."></div></div>
+                        <div class="filter-group"><label class="filter-label">Kişi Türü</label><select id="typeFilter" class="filter-select"><option value="">Tümü</option><option value="individual">Bireysel</option><option value="company">Şirket</option><option value="institution">Kurum</option></select></div>
+                        <div class="filter-group"><button class="action-btn secondary" style="width:100%; margin-top: auto;" id="resetFiltersBtn">Filtreleri Sıfırla</button></div>
+                    </div>
+                </div>
+    
+                <div class="table-container">
+                    <div class="loading" id="loadingIndicator"><div class="loading-spinner"></div><div>Kişiler yükleniyor...</div></div>
+                    <table class="persons-table" id="personsTable" style="display: none;">
+                        <thead><tr><th class="sortable" data-sort="name">Ad Soyad</th><th class="sortable" data-sort="email">E-posta</th><th class="sortable" data-sort="phone">Telefon</th><th class="sortable" data-sort="type">Tür</th><th id="ownerColumn" style="display: none;" class="sortable" data-sort="userEmail">Kayıt Sahibi (Kullanıcı E-posta)</th><th>İşlemler</th></tr></thead>
+                        <tbody id="personsTableBody"></tbody>
+                    </table>
+                    <div class="no-persons" id="noPersons" style="display: none;"><div class="no-persons-icon">👥</div><h3>Henüz kişi bulunamadı</h3><p>Yeni bir kişi eklemek için "Yeni Kişi Ekle" butonunu kullanın.</p><button class="action-btn" style="margin-top: 20px; display: inline-flex;" id="addFirstPersonBtn">➕ İlk Kişinizi Ekleyin</button></div>
+                </div>
+    
+                <div class="pagination" id="pagination" style="display: none;"><button class="page-btn" id="prevBtn">‹ Önceki</button><div class="page-info" id="pageInfo">Sayfa 1 / 1</div><button class="page-btn" id="nextBtn">Sonraki ›</button></div>
+            </div>
+        </main>
+    </div>
+
+    <div class="modal" id="personModal">
+        <div class="modal-content">
+            <div class="modal-header"><h3 class="modal-title" id="personModalTitle">Kişi Detayları</h3><button class="close-btn" id="closePersonModalBtn">&times;</button></div>
+            <form id="personForm" onsubmit="return false;">
+                <div class="person-form-grid">
+                    <div class="form-group"><label class="form-label" for="personName">Ad Soyad *</label><input type="text" id="personName" class="filter-input" required></div>
+                    <div class="form-group"><label class="form-label" for="personEmail">E-posta</label><input type="email" id="personEmail" class="filter-input"></div>
+                    <div class="form-group"><label class="form-label" for="personPhone">Telefon</label><input type="tel" id="personPhone" class="filter-input"></div>
+                    <div class="form-group"><label class="form-label" for="personType">Kişi Türü *</label><select id="personType" class="filter-select" required><option value="">Seçiniz</option><option value="individual">Bireysel</option><option value="company">Şirket</option><option value="institution">Kurum</option></select></div>
+                    <div class="form-group"><label class="form-label" for="personAddress">Adres</label><textarea id="personAddress" class="filter-input" rows="3"></textarea></div>
+                    <h4 class="detail-section-title">Oluşturma Bilgileri</h4>
+                    <div class="form-group"><label class="form-label">Oluşturulma Tarihi</label><input type="text" id="personCreatedAt" class="filter-input" readonly></div>
+                    <div class="form-group"><label class="form-label">Son Güncelleme Tarihi</label><input type="text" id="personUpdatedAt" class="filter-input" readonly></div>
+                    <div class="form-group" id="modalOwnerInfoGroup" style="display: none;"><label class="form-label">Kayıt Sahibi (Kullanıcı)</label><input type="text" id="modalOwnerInfo" class="filter-input" readonly></div>
+                    <div class="form-group" id="createUserAccountGroup" style="display: none; grid-column: 1 / -1;"><button type="button" class="btn btn-create-user" id="createUserAccountBtn">👤 Kullanıcı Hesabı Oluştur</button><small style="display: block; margin-top: 5px; color: #666;">Bu kişi için uygulamada oturum açabileceği bir hesap oluşturur.</small></div>
+                </div>
+                <div class="person-form-actions"><button type="button" class="action-btn secondary" id="cancelPersonFormBtn">İptal</button><button type="submit" class="action-btn" id="savePersonBtn">Kaydet</button></div>
+            </form>
+        </div>
+    </div>
+
+
+    <script type="module">
+        import { authService, personsService, auth } from './firebase-config.js';
+
+        let personsModule; 
+
+        class PersonsModule {
+            constructor() {
+                this.currentUser = null;
+                this.allPersons = [];
+                this.filteredPersons = [];
+                this.currentPage = 1;
+                this.personsPerPage = 10;
+                this.sortColumn = 'name';
+                this.sortDirection = 'asc';
+                this.currentPersonId = null; 
+                this.init();
+            }
+
+            init() {
+                 auth.onAuthStateChanged(async (user) => {
+                    if (user || authService.getCurrentUser()) {
+                        this.currentUser = authService.getCurrentUser();
+                        this.updateUserInfo();
+                        this.setupEventListeners();
+                        await this.loadPersons();
+                    } else {
+                        window.location.href = 'index.html';
+                    }
+                });
+            }
+
+            updateUserInfo() {
+                 if (this.currentUser) {
+                    const userName = this.currentUser.displayName || this.currentUser.email.split('@')[0] || 'Kullanıcı';
+                    document.getElementById('userAvatar').textContent = userName.charAt(0).toUpperCase();
+                    document.getElementById('userName').textContent = userName;
+                    document.getElementById('userRole').textContent = this.currentUser.role === 'admin' ? 'Yönetici' : this.currentUser.role === 'superadmin' ? 'Süper Yönetici' : 'Kullanıcı';
+                }
+            }
+
+            setupEventListeners() {
+                document.getElementById('logoutBtn').addEventListener('click', () => authService.signOut());
+                document.getElementById('searchInput').addEventListener('input', (e) => { this.filters.search = e.target.value; this.applyFilters(); });
+                document.getElementById('typeFilter').addEventListener('change', (e) => { this.filters.type = e.target.value; this.applyFilters(); });
+                document.getElementById('resetFiltersBtn').addEventListener('click', () => this.resetFilters());
+                document.getElementById('refreshPersonsBtn').addEventListener('click', () => this.loadPersons());
+                document.getElementById('addPersonBtn').addEventListener('click', () => this.showPersonModal());
+                document.getElementById('addFirstPersonBtn').addEventListener('click', () => this.showPersonModal());
+                document.getElementById('closePersonModalBtn').addEventListener('click', () => this.hidePersonModal());
+                document.getElementById('cancelPersonFormBtn').addEventListener('click', () => this.hidePersonModal());
+                document.getElementById('personForm').addEventListener('submit', (e) => this.handlePersonFormSubmit(e));
+                document.getElementById('prevBtn').addEventListener('click', () => { if (this.currentPage > 1) { this.currentPage--; this.renderTable(); } });
+                document.getElementById('nextBtn').addEventListener('click', () => { const totalPages = Math.ceil(this.filteredPersons.length / this.personsPerPage); if (this.currentPage < totalPages) { this.currentPage++; this.renderTable(); } });
+                document.querySelectorAll('.persons-table th.sortable').forEach(th => {
+                    th.addEventListener('click', () => this.handleSort(th.dataset.sort));
+                });
+                const createUserAccountBtn = document.getElementById('createUserAccountBtn');
+                if (createUserAccountBtn) {
+                    createUserAccountBtn.addEventListener('click', () => this.createPersonUserAccount());
+                }
+
+                document.getElementById('personModal').addEventListener('click', (e) => {
+                    if (e.target.id === 'personModal') {
+                        this.hidePersonModal();
+                    }
+                });
+
+                if (this.currentUser && this.currentUser.role === 'superadmin') {
+                    document.getElementById('ownerColumn').style.display = 'table-cell';
+                } else {
+                    document.getElementById('ownerColumn').style.display = 'none';
+                }
+            }
+            
+            async loadPersons() {
+                const loadingIndicator = document.getElementById('loadingIndicator');
+                const personsTable = document.getElementById('personsTable');
+                const noPersons = document.getElementById('noPersons');
+                loadingIndicator.style.display = 'block';
+                personsTable.style.display = 'none';
+                noPersons.style.display = 'none';
+                try {
+                    const result = await personsService.getPersons();
+                    if (result.success) {
+                        this.allPersons = result.data;
+                        this.applyFilters();
+                    } else {
+                        throw new Error(result.error);
+                    }
+                } catch (error) {
+                    console.error('Error loading persons data:', error);
+                    this.allPersons = [];
+                    this.filteredPersons = [];
+                    this.showEmptyState();
+                    alert('Kişiler yüklenirken bir hata oluştu: ' + error.message);
+                } finally {
+                    loadingIndicator.style.display = 'none';
+                }
+            }
+
+            updateStats() {
+                document.getElementById('totalPersonsCount').textContent = this.filteredPersons.length;
+                document.getElementById('individualCount').textContent = this.filteredPersons.filter(p => p.type === 'individual').length;
+                document.getElementById('companyCount').textContent = this.filteredPersons.filter(p => p.type === 'company').length;
+                document.getElementById('institutionCount').textContent = this.filteredPersons.filter(p => p.type === 'institution').length;
+            }
+
+            applyFilters() {
+                this.currentPage = 1;
+                const search = document.getElementById('searchInput').value.toLowerCase();
+                const typeFilter = document.getElementById('typeFilter').value;
+
+                this.filteredPersons = this.allPersons.filter(person => {
+                    const searchMatch = search === '' || person.name.toLowerCase().includes(search) || (person.email && person.email.toLowerCase().includes(search)) || (person.phone && person.phone.includes(search));
+                    const typeMatch = typeFilter === '' || person.type === typeFilter;
+                    return searchMatch && typeMatch;
+                });
+                this.sortRecords();
+                this.renderTable();
+                this.updateStats();
+            }
+
+            resetFilters() {
+                document.getElementById('searchInput').value = '';
+                document.getElementById('typeFilter').value = '';
+                this.applyFilters();
+            }
+            
+            handleSort(column) {
+                if (this.sortColumn === column) {
+                    this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
+                } else {
+                    this.sortColumn = column;
+                    this.sortDirection = 'asc';
+                }
+                this.sortRecords();
+                this.renderTable();
+            }
+
+            sortRecords() {
+                this.filteredPersons.sort((a, b) => {
+                    let aVal = a[this.sortColumn] || '';
+                    let bVal = b[this.sortColumn] || '';
+
+                    if (this.sortColumn === 'name' || this.sortColumn === 'email' || this.sortColumn === 'type' || this.sortColumn === 'phone' || this.sortColumn === 'userEmail') {
+                        aVal = String(aVal).toLowerCase();
+                        bVal = String(bVal).toLowerCase();
+                    }
+
+                    if (aVal < bVal) return this.sortDirection === 'asc' ? -1 : 1;
+                    if (aVal > bVal) return this.sortDirection === 'asc' ? 1 : -1;
+                    return 0;
+                });
+                this.updateSortIndicators();
+            }
+
+            updateSortIndicators() {
+                document.querySelectorAll('.persons-table th.sortable').forEach(th => {
+                    th.classList.remove('sort-asc', 'sort-desc');
+                    if (th.dataset.sort === this.sortColumn) {
+                        th.classList.add(`sort-${this.sortDirection}`);
+                    }
+                });
+            }
+
+            renderTable() {
+                const tbody = document.getElementById('personsTableBody');
+                const pagination = document.getElementById('pagination');
+                const personsTable = document.getElementById('personsTable');
+                const noPersons = document.getElementById('noPersons');
+                tbody.innerHTML = '';
+
+                if (this.filteredPersons.length === 0) {
+                    this.showEmptyState();
+                    return;
+                }
+
+                personsTable.style.display = 'table';
+                noPersons.style.display = 'none';
+
+                const totalPages = Math.ceil(this.filteredPersons.length / this.personsPerPage);
+                const pagePersons = this.filteredPersons.slice((this.currentPage - 1) * this.personsPerPage, this.currentPage * this.personsPerPage);
+
+                pagePersons.forEach(person => {
+                    tbody.appendChild(this.createTableRow(person));
+                });
+
+                if (totalPages > 1) {
+                    pagination.style.display = 'flex';
+                    document.getElementById('prevBtn').disabled = this.currentPage === 1;
+                    document.getElementById('nextBtn').disabled = this.currentPage === totalPages;
+                    document.getElementById('pageInfo').textContent = `Sayfa ${this.currentPage} / ${totalPages}`;
+                } else {
+                    pagination.style.display = 'none';
+                }
+                this.updateSortIndicators();
+            }
+
+            createTableRow(person) {
+                const row = document.createElement('tr');
+                const typeNames = { individual: 'Bireysel', company: 'Şirket', institution: 'Kurum' };
+                row.innerHTML = `
+                    <td>${person.name}</td>
+                    <td>${person.email || '-'}</td>
+                    <td>${person.phone || '-'}</td>
+                    <td><span class="person-type ${person.type}">${typeNames[person.type] || 'Bilinmiyor'}</span></td>
+                    <td style="${this.currentUser && this.currentUser.role === 'superadmin' ? 'display: table-cell;' : 'display: none;'}">${person.userEmail || '-'}</td>
+                    <td>
+                        <div class="action-buttons">
+                            <button class="table-action-btn btn-view" data-id="${person.id}" title="Görüntüle">👁️</button>
+                            <button class="table-action-btn btn-edit" data-id="${person.id}" title="Düzenle">✏️</button>
+                            <button class="table-action-btn btn-delete" data-id="${person.id}" title="Sil">🗑️</button>
+                        </div>
+                    </td>
+                `;
+                row.querySelector('.btn-view').addEventListener('click', () => this.viewPerson(person.id));
+                row.querySelector('.btn-edit').addEventListener('click', () => this.editPerson(person.id));
+                row.querySelector('.btn-delete').addEventListener('click', () => this.deletePerson(person.id));
+                return row;
+            }
+
+            showEmptyState() {
+                document.getElementById('personsTable').style.display = 'none';
+                document.getElementById('pagination').style.display = 'none';
+                document.getElementById('noPersons').style.display = 'block';
+            }
+
+            showPersonModal(personId = null) {
+                this.currentPersonId = personId;
+                const modal = document.getElementById('personModal');
+                const form = document.getElementById('personForm');
+                form.reset();
+
+                form.querySelectorAll('.error-message').forEach(el => el.style.display = 'none');
+                form.querySelectorAll('.filter-input').forEach(el => el.classList.remove('error-field'));
+
+                document.getElementById('personModalTitle').textContent = personId ? 'Kişi Detayları' : 'Yeni Kişi Ekle';
+                document.getElementById('personCreatedAt').value = '';
+                document.getElementById('personUpdatedAt').value = '';
+                document.getElementById('modalOwnerInfo').value = '';
+                document.getElementById('modalOwnerInfoGroup').style.display = 'none';
+                document.getElementById('createUserAccountGroup').style.display = 'none';
+
+                if (personId) {
+                    const person = this.allPersons.find(p => p.id === personId);
+                    if (person) {
+                        document.getElementById('personName').value = person.name || '';
+                        document.getElementById('personEmail').value = person.email || '';
+                        document.getElementById('personPhone').value = person.phone || '';
+                        document.getElementById('personType').value = person.type || '';
+                        document.getElementById('personAddress').value = person.address || '';
+                        document.getElementById('personCreatedAt').value = person.createdAt ? new Date(person.createdAt).toLocaleString('tr-TR') : '-';
+                        document.getElementById('personUpdatedAt').value = person.updatedAt ? new Date(person.updatedAt).toLocaleString('tr-TR') : '-';
+
+                        if (this.currentUser.role === 'superadmin' || person.userId === this.currentUser.uid) {
+                            if (person.userEmail) {
+                                document.getElementById('modalOwnerInfo').value = person.userEmail;
+                                document.getElementById('modalOwnerInfoGroup').style.display = 'flex';
+                            }
+                            if (this.currentUser.role === 'superadmin' && person.email && !person.hasUserAccount) {
+                                document.getElementById('createUserAccountGroup').style.display = 'flex';
+                            }
+                        }
+                    }
+                }
+                modal.classList.add('show');
+            }
+
+            hidePersonModal() {
+                document.getElementById('personModal').classList.remove('show');
+            }
+
+            viewPerson(personId) {
+                this.showPersonModal(personId);
+                const formElements = document.querySelectorAll('#personForm input, #personForm select, #personForm textarea, #personForm button:not(#cancelPersonFormBtn)');
+                formElements.forEach(el => el.disabled = true);
+                document.getElementById('savePersonBtn').style.display = 'none';
+            }
+
+            editPerson(personId) {
+                this.showPersonModal(personId);
+                const formElements = document.querySelectorAll('#personForm input, #personForm select, #personForm textarea, #personForm button:not(#cancelPersonFormBtn)');
+                formElements.forEach(el => el.disabled = false);
+                document.getElementById('savePersonBtn').style.display = 'inline-block';
+            }
+
+            async handlePersonFormSubmit(event) {
+                event.preventDefault();
+                const personName = document.getElementById('personName').value.trim();
+                const personEmail = document.getElementById('personEmail').value.trim();
+                const personPhone = document.getElementById('personPhone').value.trim();
+                const personType = document.getElementById('personType').value;
+                const personAddress = document.getElementById('personAddress').value.trim();
+
+                let isValid = true;
+                if (!personName) {
+                    alert('Ad Soyad zorunludur.');
+                    isValid = false;
+                }
+                if (!personType) {
+                    alert('Kişi Türü zorunludur.');
+                    isValid = false;
+                }
+                if (personEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(personEmail)) {
+                    alert('Geçerli bir e-posta adresi girin.');
+                    isValid = false;
+                }
+                
+                if (!isValid) return;
+
+                const personData = { name: personName, email: personEmail, phone: personPhone, type: personType, address: personAddress };
+                let result;
+                if (this.currentPersonId) {
+                    result = await personsService.updatePerson(this.currentPersonId, personData);
+                    if (result.success) {
+                        alert('Kişi başarıyla güncellendi!');
+                    } else {
+                        alert('Kişi güncellenirken hata: ' + result.error);
+                    }
+                } else {
+                    result = await personsService.addPerson(personData);
+                    if (result.success) {
+                        alert('Yeni kişi başarıyla eklendi!');
+                    } else {
+                        alert('Kişi eklenirken hata: ' + result.error);
+                    }
+                }
+                if (result.success) {
+                    this.hidePersonModal();
+                    await this.loadPersons();
+                }
+            }
+
+            async deletePerson(personId) {
+                const person = this.allPersons.find(p => p.id === personId);
+                if (!person) return;
+
+                if (confirm(`'${person.name}' adlı kişiyi silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.`)) {
+                    try {
+                        const result = await personsService.deletePerson(personId);
+                        if (result.success) {
+                            alert('Kişi başarıyla silindi.');
+                            this.loadPersons();
+                        } else {
+                            throw new Error(result.error);
+                        }
+                    } catch (error) {
+                        alert('Kişi silinirken bir hata oluştu: ' + error.message);
+                    }
+                }
+            }
+
+            async createPersonUserAccount() {
+                if (!this.currentPersonId) {
+                    alert('Lütfen önce bir kişi seçin.');
+                    return;
+                }
+                const person = this.allPersons.find(p => p.id === this.currentPersonId);
+                if (!person || !person.email) {
+                    alert('Bu kişi için bir e-posta adresi bulunmuyor veya kişi seçilmedi.');
+                    return;
+                }
+
+                if (!confirm(`'${person.name}' (${person.email}) için yeni bir kullanıcı hesabı oluşturulacak. Devam etmek istiyor musunuz?`)) {
+                    return;
+                }
+
+                try {
+                    const dummyPassword = 'password123';
+                    const result = await authService.signUp(person.email, dummyPassword, person.name, 'user');
+
+                    if (result.success) {
+                        await personsService.updatePerson(person.id, { hasUserAccount: true });
+                        alert(`'${person.name}' için kullanıcı hesabı başarıyla oluşturuldu! Varsayılan şifre: ${dummyPassword}. Kullanıcıya bildirip şifresini değiştirmesini söyleyin.`);
+                        this.hidePersonModal();
+                        this.loadPersons();
+                    } else {
+                        alert('Kullanıcı hesabı oluşturulurken hata: ' + result.error);
+                    }
+                } catch (error) {
+                    console.error('Kullanıcı hesabı oluşturma hatası:', error);
+                    alert('Kullanıcı hesabı oluşturulurken beklenmeyen bir hata oluştu: ' + error.message);
+                }
+            }
+        }
+
+        auth.onAuthStateChanged((user) => {
+            if (user || authService.getCurrentUser()) {
+                if (!personsModule) {
+                    personsModule = new PersonsModule();
+                    window.personsModule = personsModule;
+                }
+            } else {
+                window.location.href = 'index.html'; 
+            }
+        });
+
+        document.addEventListener('DOMContentLoaded', function() {
+    const accordions = document.querySelectorAll('.accordion-header');
+    accordions.forEach(accordion => {
+        accordion.addEventListener('click', function(event) {
+            this.classList.toggle('active');
+            const content = this.nextElementSibling;
+            if (content.style.maxHeight) {
+                content.style.maxHeight = null;
+            } else {
+                content.style.maxHeight = content.scrollHeight + "px";
+            }
+        });
+    });
+
+    function setActiveMenu() {
+        const currentPage = window.location.pathname.split("/").pop() || 'dashboard.html';
+        
+        document.querySelectorAll('.sidebar-nav-item.active, .accordion-content a.active').forEach(el => el.classList.remove('active'));
+        
+        const activeLink = document.querySelector(`.sidebar-nav a[href="${currentPage}"]`);
+        if (!activeLink) return;
+
+        activeLink.classList.add('active');
+        
+        const parentAccordionContent = activeLink.closest('.accordion-content');
+        if (parentAccordionContent) {
+            const parentAccordionHeader = parentAccordionContent.previousElementSibling;
+            if (parentAccordionHeader && parentAccordionHeader.classList.contains('accordion-header')) {
+                parentAccordionHeader.classList.add('active');
+                parentAccordionContent.style.maxHeight = parentAccordionContent.scrollHeight + "px";
+            }
+        }
+    }
+
+    setActiveMenu();
+});
+    </script>
+</body>
+</html>
