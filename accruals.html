@@ -121,8 +121,8 @@
                             <tr>
                                 <th>Durum</th>
                                 <th>İlgili İş</th>
-                                <th>Hizmet Faturası</th>
-                                <th>TP Faturası</th>
+                                <th>Resmi Ücret</th>
+                                <th>Hizmet Bedeli</th>
                                 <th>Toplam Tutar (KDV Dahil)</th>
                                 <th>İşlemler</th>
                             </tr>
@@ -199,19 +199,24 @@
                 }
                 noRecordsMessage.style.display = 'none';
 
-                const currencyFormatter = new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' });
+                const currencyFormatter = (amount, currency) => {
+                    return new Intl.NumberFormat('tr-TR', { style: 'currency', currency: currency }).format(amount);
+                };
 
                 filteredAccruals.forEach(accrual => {
                     const row = document.createElement('tr');
                     const statusText = accrual.status === 'paid' ? 'Ödendi' : 'Ödenmedi';
                     const statusClass = accrual.status === 'paid' ? 'status-paid' : 'status-unpaid';
-
+                    
+                    const officialFee = accrual.officialFee || { amount: 0, currency: 'TL' };
+                    const serviceFee = accrual.serviceFee || { amount: 0, currency: 'TL' };
+                    
                     row.innerHTML = `
                         <td><span class="status-badge ${statusClass}">${statusText}</span></td>
                         <td><a href="task-detail.html?taskId=${accrual.taskId}" target="_blank">${accrual.taskTitle || 'İş Detayı'}</a></td>
-                        <td>${accrual.serviceInvoiceParty?.name || '-'}</td>
-                        <td>${accrual.tpInvoiceParty?.name || '-'}</td>
-                        <td>${currencyFormatter.format(accrual.totalAmount || 0)}</td>
+                        <td>${currencyFormatter(officialFee.amount, officialFee.currency)}</td>
+                        <td>${currencyFormatter(serviceFee.amount, serviceFee.currency)}</td>
+                        <td>${currencyFormatter(accrual.totalAmount || 0, accrual.totalAmountCurrency || 'TL')}</td>
                         <td>
                             ${accrual.status !== 'paid' ? `<button class="action-btn" data-id="${accrual.id}">Ödendi İşaretle</button>` : 'İşlem Yok'}
                         </td>
