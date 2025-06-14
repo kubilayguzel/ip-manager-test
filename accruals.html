@@ -3,104 +3,113 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>IP Manager - Tahakkuk Yönetimi</title>
+    <title>Tahakkuk Yönetimi - IP Manager</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333; display: flex; }
-        
-        .page-wrapper { flex-grow: 1; display: flex; flex-direction: column; height: 100vh; overflow-y: auto; background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); }
-        .main-container { width: 100%; padding: 30px; margin: 0; }
-        .sidebar { width: 260px; background: #1e3c72; color: white; display: flex; flex-direction: column; height: 100vh; position: sticky; top: 0; z-index: 1001; }
-        .sidebar-header { padding: 20px; text-align: center; border-bottom: 1px solid rgba(255, 255, 255, 0.1); }
-        .sidebar-logo { font-size: 1.8em; font-weight: bold; color: white; text-decoration: none; }
-        .sidebar-nav { flex-grow: 1; overflow-y: auto; padding: 20px 0; }
-        .nav-category-title { padding: 10px 20px; font-size: 0.8em; font-weight: bold; color: rgba(255, 255, 255, 0.5); text-transform: uppercase; }
-        .sidebar-nav-item, .accordion-header { display: flex; align-items: center; gap: 15px; padding: 15px 20px; color: rgba(255, 255, 255, 0.8); text-decoration: none; transition: background 0.3s ease; cursor: pointer; }
-        .sidebar-nav-item:hover, .accordion-header:hover { background: rgba(255, 255, 255, 0.1); }
-        .sidebar-nav-item.active { background: #2a5298; color: white; font-weight: bold; border-left: 4px solid #4ecdc4; padding-left: 16px; }
-        .nav-icon { font-size: 1.2em; width: 20px; text-align: center; }
-        .accordion-header::after { content: '▶'; margin-left: auto; font-size: 0.8em; transition: transform 0.3s ease; }
-        .accordion-header.active::after { transform: rotate(90deg); }
-        .accordion-content { background: rgba(0, 0, 0, 0.2); max-height: 0; overflow: hidden; transition: max-height 0.3s ease-out; }
-        .accordion-content a { display: block; padding: 12px 20px 12px 55px; color: rgba(255, 255, 255, 0.7); text-decoration: none; }
-        .accordion-content a.active { color: white; font-weight: 500; }
-        
-        .top-header { background: rgba(255, 255, 255, 0.95); padding: 15px 30px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05); display: flex; justify-content: flex-end; align-items: center; position: sticky; top: 0; z-index: 99; }
+        body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; }
+        .sidebar { width: 250px; background: #1e3c72; color: white; position: fixed; left: 0; top: 0; height: 100%; overflow-y: auto; z-index: 1000; }
+        .sidebar-header { padding: 20px; border-bottom: 1px solid #2a4f8b; }
+        .sidebar-logo { color: white; text-decoration: none; font-size: 1.3em; font-weight: bold; }
+        .sidebar-nav { padding: 15px 0; }
+        .sidebar-nav-item { display: flex; align-items: center; padding: 12px 20px; color: #b3c6ff; text-decoration: none; transition: all 0.3s; }
+        .sidebar-nav-item:hover, .sidebar-nav-item.active { background: #2a4f8b; color: white; }
+        .nav-icon { margin-right: 10px; font-size: 1.1em; }
+        .nav-category-title { padding: 15px 20px 8px; font-size: 0.9em; color: #7a92d1; font-weight: 600; text-transform: uppercase; }
+        .dropdown-nav { position: relative; }
+        .dropdown-toggle { cursor: pointer; justify-content: space-between; }
+        .dropdown-content { display: none; background: #2a4f8b; }
+        .dropdown-content a { padding-left: 50px; font-size: 0.9em; }
+        .dropdown-nav.open .dropdown-content { display: block; }
+        .page-wrapper { margin-left: 250px; min-height: 100vh; }
+        .top-header { background: white; padding: 15px 30px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); display: flex; justify-content: flex-end; align-items: center; }
         .user-section { display: flex; align-items: center; gap: 15px; }
-        .user-avatar { width: 40px; height: 40px; background: linear-gradient(45deg, #1e3c72, #2a5298); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; }
-        .user-info { display: flex; flex-direction: column; }
-        .user-name { font-weight: 600; }
-        .user-role { font-size: 0.8em; color: #666; }
-        .logout-btn { background: #ff6b6b; color: white; border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer; }
-        
-        .page-header { background: rgba(255, 255, 255, 0.95); padding: 30px; border-radius: 20px; margin-bottom: 30px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1); }
-        .page-title { font-size: 2em; color: #1e3c72; margin-bottom: 10px; }
-        .page-subtitle { color: #666; font-size: 1.1em; }
-        
-        .accruals-container { background: rgba(255, 255, 255, 0.95); border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); overflow: hidden; }
-        .accruals-header { padding: 20px 30px; border-bottom: 1px solid #e1e8ed; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;}
-        .filter-group { display: flex; gap: 10px; align-items: center; }
-        .filter-label { font-weight: 500; }
-        .filter-select { padding: 8px 12px; border-radius: 8px; border: 1px solid #ccc; }
-        
+        .user-avatar { width: 40px; height: 40px; background: #667eea; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; }
+        .user-info { }
+        .user-name { font-weight: 600; color: #333; }
+        .user-role { font-size: 0.85em; color: #666; }
+        .logout-btn { background: #ff6b6b; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; }
+        .main-container { padding: 30px; }
+        .page-header { text-align: center; margin-bottom: 30px; }
+        .page-title { color: white; font-size: 2.5em; margin-bottom: 10px; font-weight: 700; }
+        .page-subtitle { color: rgba(255,255,255,0.8); font-size: 1.1em; }
+        .accruals-container { background: white; border-radius: 20px; padding: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
+        .accruals-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; border-bottom: 2px solid #f1f3f4; padding-bottom: 15px; }
+        .filter-group { display: flex; align-items: center; gap: 15px; }
+        .filter-label { font-weight: 600; color: #1e3c72; }
+        .filter-select { padding: 10px 15px; border: 2px solid #e1e8ed; border-radius: 10px; background: white; font-weight: 500; }
+        .filter-select:focus { outline: none; border-color: #667eea; }
+        .action-btn { padding: 8px 16px; border: none; border-radius: 8px; cursor: pointer; font-size: 0.85em; font-weight: 600; transition: all 0.3s; }
+        .action-btn { background: #28a745; color: white; }
+        .action-btn:hover { transform: translateY(-1px); opacity: 0.9; }
+        .action-btn.unpaid { background: #dc3545; }
+        .action-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+        .table-container { background: white; border-radius: 15px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
         .accruals-table { width: 100%; border-collapse: collapse; }
-        .accruals-table th, .accruals-table td { padding: 15px; text-align: left; border-bottom: 1px solid #f0f0f0; }
-        .accruals-table th { background: #f8f9fa; font-weight: 600; }
-        
-        .status-badge { padding: 4px 10px; border-radius: 12px; font-size: 0.8em; font-weight: 500; color: white; text-align: center; }
-        .status-paid { background-color: #28a745; }
-        .status-unpaid { background-color: #dc3545; }
-        
-        .action-btn { background: #007bff; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; margin-left: 5px; }
-        .action-btn.unpaid { background-color: #dc3545; }
-        .action-btn:disabled { background-color: #6c757d; cursor: not-allowed; opacity: 0.7; }
-
-        .loading { text-align: center; padding: 50px; }
-        .no-records { text-align: center; padding: 50px; color: #666; }
-        
-        .modal { display: none; position: fixed; z-index: 1002; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.6); align-items: center; justify-content: center; }
+        .accruals-table th { background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 18px 15px; text-align: left; font-weight: 600; font-size: 0.95em; }
+        .accruals-table td { padding: 15px; border-bottom: 1px solid #f1f3f4; }
+        .accruals-table tr:hover { background: #f8f9fa; }
+        .status-badge { padding: 6px 12px; border-radius: 20px; font-size: 0.8em; font-weight: 600; text-transform: uppercase; }
+        .status-paid { background: #28a745; color: white; }
+        .status-unpaid { background: #dc3545; color: white; }
+        .task-detail-link { color: #667eea; text-decoration: none; font-weight: 600; }
+        .task-detail-link:hover { text-decoration: underline; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1003; align-items: center; justify-content: center; }
         .modal.show { display: flex; }
-        .modal-content { background-color: #fefefe; margin: auto; padding: 30px; border: 1px solid #888; width: 90%; max-width: 900px; border-radius: 20px; animation-name: animatetop; animation-duration: 0.4s; max-height: 90vh; overflow-y: auto; }
-        @keyframes animatetop { from {top: -300px; opacity: 0} to {top: 0; opacity: 1} }
-        .close-modal-btn { color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer; }
-        .modal-title { font-size: 1.5em; color: #1e3c72; margin-bottom: 20px;}
-        .modal-detail-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px 25px; }
-        .modal-detail-item { margin-bottom: 10px; }
-        .modal-detail-label { font-weight: 600; color: #333; margin-bottom: 5px; font-size: 0.9em; }
-        .modal-detail-value { color: #555; word-break: break-word; font-size: 0.95em; }
-        .modal-detail-value.long-text { white-space: pre-wrap; background-color: #f8f9fa; padding: 8px; border-radius: 6px; }
-        .modal-detail-section-title { grid-column: 1 / -1; font-size: 1.1em; color: #1e3c72; margin-top: 20px; margin-bottom: 15px; padding-bottom: 5px; border-bottom: 1px dashed #e1e8ed; }
-        .task-history { margin-top: 20px; padding-top: 20px; border-top: 1px solid #e1e8ed; max-height: 250px; overflow-y: auto; }
-        .task-history-item { padding: 8px 0; border-bottom: 1px dashed #eee; }
-        .task-history-item:last-child { border-bottom: none; }
-        .task-history-description { font-size: 0.9em; color: #333; font-weight: 600; }
-        .task-history-meta { font-size: 0.8em; color: #666; margin-top: 4px; }
-        .related-accrual-item { background: #f8f9fa; padding: 10px; border-radius: 8px; margin-bottom: 8px; font-size: 0.9em; }
+        .modal-content, .modal-content-lg { background: white; border-radius: 20px; max-width: 500px; width: 90%; max-height: 90vh; overflow-y: auto; }
+        .modal-content-lg { max-width: 800px; }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; padding: 25px 30px 15px; border-bottom: 2px solid #f1f3f4; }
+        .modal-title { font-size: 1.4em; color: #1e3c72; font-weight: 700; }
+        .close-modal-btn { background: none; border: none; font-size: 1.8em; cursor: pointer; color: #666; }
+        .modal-body-content { padding: 25px 30px; }
+        .modal-detail-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; }
+        .modal-detail-item { }
+        .modal-detail-item.full-width { grid-column: 1 / -1; }
+        .modal-detail-label { font-weight: 600; color: #1e3c72; margin-bottom: 5px; }
+        .modal-detail-value { color: #333; }
+        .modal-detail-value.long-text { background: #f8f9fa; padding: 15px; border-radius: 8px; white-space: pre-wrap; }
+        .task-history { }
+        .task-history-item { margin-bottom: 15px; padding: 15px; background: #f8f9fa; border-radius: 10px; border-left: 4px solid #667eea; }
+        .task-history-description { font-weight: 600; color: #333; margin-bottom: 5px; }
+        .task-history-meta { font-size: 0.9em; color: #666; }
+        .related-accrual-item { background: #f8f9fa; padding: 10px; border-radius: 8px; margin-bottom: 8px; font-size: 0.9em; border-left: 3px solid #1e3c72; }
+        #loadingIndicator { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 30px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); z-index: 9999; text-align: center; }
+        .no-records-message { text-align: center; padding: 50px; color: #666; font-size: 1.1em; }
     </style>
 </head>
 <body>
+    <div id="loadingIndicator">
+        <div style="font-size: 1.2em; color: #1e3c72; margin-bottom: 15px;">💰 Tahakkuklar Yükleniyor...</div>
+        <div style="width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid #667eea; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto;"></div>
+        <style>@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }</style>
+    </div>
+
     <aside class="sidebar">
-        <div class="sidebar-header"><a href="dashboard.html" class="sidebar-logo">🔥 IP Manager</a></div>
+        <div class="sidebar-header">
+            <a href="dashboard.html" class="sidebar-logo">🔥 IP Manager</a>
+        </div>
         <nav class="sidebar-nav">
-            <div class="nav-category-title">Ana Menü</div>
-            <a href="dashboard.html" class="sidebar-nav-item"><span class="nav-icon">📊</span><span>Dashboard</span></a>
-            <a href="portfolio.html" class="sidebar-nav-item"><span class="nav-icon">📋</span><span>Portföy</span></a>
-            <div class="nav-category-title">Veri Girişi</div>
-            <a href="data-entry.html" class="sidebar-nav-item"><span class="nav-icon">➕</span><span>Yeni Kayıt</span></a>
-            <a href="excel-upload.html" class="sidebar-nav-item"><span class="nav-icon">📄</span><span>Excel ile Yükle</span></a>
-            <div class="nav-category-title">Yönetim</div>
-            <div class="accordion">
-                <div class="accordion-header"><span class="nav-icon">⚙️</span><span>Yönetim</span></div>
-                <div class="accordion-content">
-                    <a href="create-task.html" class="new-task-link">Yeni İş Oluştur</a>
-                    <a href="task-management.html">İş Yönetimi</a>
-                    <a href="my-tasks.html">İşlerim</a>
+            <div class="nav-category-title">Ana Sayfa</div>
+            <a href="dashboard.html" class="sidebar-nav-item"><span class="nav-icon">🏠</span><span>Dashboard</span></a>
+            <div class="nav-category-title">Portföy Yönetimi</div>
+            <a href="portfolio.html" class="sidebar-nav-item"><span class="nav-icon">💼</span><span>Portföy</span></a>
+            <a href="data-entry.html" class="sidebar-nav-item"><span class="nav-icon">📝</span><span>Yeni Kayıt</span></a>
+            <div class="nav-category-title">İş Yönetimi</div>
+            <a href="task-management.html" class="sidebar-nav-item"><span class="nav-icon">📋</span><span>İş Yönetimi</span></a>
+            <a href="my-tasks.html" class="sidebar-nav-item"><span class="nav-icon">✅</span><span>Bana Atanan İşler</span></a>
+            <a href="create-task.html" class="sidebar-nav-item"><span class="nav-icon">➕</span><span>Yeni İş Oluştur</span></a>
+            <div class="nav-category-title">Kişiler</div>
+            <div class="dropdown-nav" id="personsDropdown">
+                <a href="#" class="sidebar-nav-item dropdown-toggle">
+                    <div><span class="nav-icon">👥</span><span>Kişiler</span></div>
+                    <span>▼</span>
+                </a>
+                <div class="dropdown-content">
                     <a href="persons.html">Kişiler Yönetimi</a>
                     <a href="user-management.html">Kullanıcı Yönetimi</a>
                 </div>
             </div>
             <div class="nav-category-title">Finans</div>
-            <a href="accruals.html" class="sidebar-nav-item"><span class="nav-icon">💰</span><span>Tahakkuklarım</span></a>
+            <a href="accruals.html" class="sidebar-nav-item active"><span class="nav-icon">💰</span><span>Tahakkuklarım</span></a>
             <div class="nav-category-title">Araçlar</div>
             <a href="indexing.html" class="sidebar-nav-item"><span class="nav-icon">📁</span><span>Belge İndeksleme</span></a>
             <a href="#" class="sidebar-nav-item" style="opacity: 0.5; cursor: not-allowed;"><span class="nav-icon">📈</span><span>Raporlar</span></a>
@@ -141,6 +150,7 @@
                         <button id="bulkMarkUnpaidBtn" class="action-btn unpaid">Seçilenleri Ödenmedi İşaretle</button>
                     </div>
                 </div>
+                
                 <div class="table-container">
                     <table class="accruals-table">
                         <thead>
@@ -151,344 +161,396 @@
                                 <th>İlgili İş</th>
                                 <th>Resmi Ücret</th>
                                 <th>Hizmet Bedeli</th>
-                                <th>Toplam Tutar (KDV Dahil)</th>
+                                <th>Toplam Tutar</th>
                                 <th>İşlemler</th>
                             </tr>
                         </thead>
-                        <tbody id="accrualsTableBody"></tbody>
+                        <tbody id="accrualsTableBody">
+                        </tbody>
                     </table>
-                     <div id="loadingIndicator" class="loading">Yükleniyor...</div>
-                     <div id="noRecordsMessage" class="no-records">Henüz tahakkuk kaydı bulunmamaktadır.</div>
+                </div>
+
+                <div id="noRecordsMessage" class="no-records-message" style="display: none;">
+                    💰 Henüz tahakkuk bulunmuyor.
                 </div>
             </div>
         </main>
     </div>
 
-    <div id="taskDetailModal" class="modal">
-        <div class="modal-content">
-            <span class="close-modal-btn" id="closeTaskDetailModal">&times;</span>
-            <h3 class="modal-title" id="modalTaskTitle">İş Detayı</h3>
-            <div id="modalBody" class="modal-body-content">
+    <!-- İş Detayları Modal -->
+    <div class="modal" id="taskDetailModal">
+        <div class="modal-content-lg">
+            <div class="modal-header">
+                <h3 class="modal-title" id="taskDetailModalTitle">İş Detayı</h3>
+                <button class="close-modal-btn" id="closeTaskDetailModal">&times;</button>
+            </div>
+            <div class="modal-body-content" id="taskDetailModalBody">
+                <!-- İçerik buraya dinamik olarak eklenecek -->
             </div>
         </div>
     </div>
 
-    <script type="module">
-        import { authService, accrualService, taskService, ipRecordsService, personsService, auth } from './firebase-config.js';
+    <script src="js/auth.js"></script>
+    <script src="js/services/accrualService.js"></script>
+    <script src="js/services/taskService.js"></script>
+    <script src="js/services/ipRecordsService.js"></script>
+    <script src="js/services/personsService.js"></script>
+    <script>
+        class AccrualsModule {
+            constructor() {
+                this.allAccruals = [];
+                this.allTasks = [];
+                this.allIpRecords = [];
+                this.allPersons = [];
+                this.selectedAccruals = new Set();
+            }
 
-        document.addEventListener('DOMContentLoaded', () => {
-            class AccrualsModule {
-                constructor() {
-                    this.currentUser = null;
-                    this.allAccruals = [];
-                    this.allTasks = [];
-                    this.allIpRecords = [];
-                    this.allPersons = [];
-                    this.selectedAccruals = new Set();
+            // Para birimi kodunu standart hale getiren fonksiyon
+            normalizeCurrencyCode(currency) {
+                const currencyMap = {
+                    'TL': 'TRY',
+                    'tl': 'TRY',
+                    'try': 'TRY'
+                };
+                return currencyMap[currency] || currency;
+            }
+
+            // Güvenli para birimi formatı fonksiyonu
+            formatCurrencyAmount(amount, currency) {
+                try {
+                    const normalizedCurrency = this.normalizeCurrencyCode(currency || 'TL');
+                    return new Intl.NumberFormat('tr-TR', { 
+                        style: 'currency', 
+                        currency: normalizedCurrency 
+                    }).format(amount || 0);
+                } catch (error) {
+                    console.warn('Currency formatting error:', error);
+                    // Fallback: Sadece sayı + para birimi simgesi
+                    return `${(amount || 0).toFixed(2)} ${currency || 'TL'}`;
                 }
+            }
 
-                init() {
-                    authService.auth.onAuthStateChanged(async user => {
-                        if (user || authService.getCurrentUser()) {
-                            this.currentUser = authService.getCurrentUser();
-                            this.updateUserInfo();
-                            await this.loadAllData();
-                            this.setupEventListeners();
-                        } else {
-                            window.location.href = 'index.html';
-                        }
+            async init() {
+                await this.loadInitialData();
+                this.setupEventListeners();
+                this.setupDropdowns();
+            }
+
+            setupDropdowns() {
+                const dropdown = document.getElementById('personsDropdown');
+                if (dropdown) {
+                    dropdown.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        dropdown.classList.toggle('open');
                     });
                 }
+            }
 
-                updateUserInfo() {
-                    if (this.currentUser) {
-                        const userName = this.currentUser.displayName || this.currentUser.email.split('@')[0] || 'Kullanıcı';
-                        const userRole = this.currentUser.role === 'admin' ? 'Yönetici' : this.currentUser.role === 'superadmin' ? 'Süper Yönetici' : 'Kullanıcı';
-                        document.getElementById('userAvatar').textContent = userName.charAt(0).toUpperCase();
-                        document.getElementById('userName').textContent = userName;
-                        document.getElementById('userRole').textContent = userRole;
+            setupEventListeners() {
+                // Filtre
+                document.getElementById('statusFilter').addEventListener('change', (e) => {
+                    this.renderTable(e.target.value);
+                });
+
+                // Seçim
+                document.getElementById('selectAllCheckbox').addEventListener('change', (e) => {
+                    this.toggleSelectAll(e.target.checked);
+                });
+
+                // Toplu işlemler
+                document.getElementById('bulkMarkPaidBtn').addEventListener('click', () => {
+                    this.bulkUpdateStatus('paid');
+                });
+                document.getElementById('bulkMarkUnpaidBtn').addEventListener('click', () => {
+                    this.bulkUpdateStatus('unpaid');
+                });
+
+                // Modal kapatma
+                document.getElementById('closeTaskDetailModal').addEventListener('click', () => {
+                    this.closeModal('taskDetailModal');
+                });
+
+                // Logout
+                document.getElementById('logoutBtn')?.addEventListener('click', () => {
+                    authService.signOut();
+                    window.location.href = 'index.html';
+                });
+
+                // Event delegation for dynamic content
+                document.addEventListener('click', (e) => {
+                    if (e.target.classList.contains('action-btn')) {
+                        const accrualId = e.target.dataset.id;
+                        const status = e.target.dataset.status;
+                        this.markAs(accrualId, status);
                     }
-                }
-
-                setupEventListeners() {
-                    document.getElementById('logoutBtn').addEventListener('click', () => authService.signOut());
-                    document.getElementById('statusFilter').addEventListener('change', (e) => this.renderTable(e.target.value));
-                    document.getElementById('selectAllCheckbox').addEventListener('change', (e) => this.toggleSelectAll(e.target.checked));
                     
-                    document.getElementById('accrualsTableBody').addEventListener('change', (e) => {
-                        if (e.target.classList.contains('row-checkbox')) {
-                            this.updateSelection(e.target.dataset.id, e.target.checked);
-                        }
-                    });
+                    if (e.target.classList.contains('task-detail-link')) {
+                        e.preventDefault();
+                        const taskId = e.target.dataset.taskId;
+                        this.showTaskDetail(taskId);
+                    }
+                    
+                    if (e.target.classList.contains('row-checkbox')) {
+                        const accrualId = e.target.dataset.id;
+                        this.toggleAccrualSelection(accrualId, e.target.checked);
+                    }
+                });
+            }
 
-                    document.getElementById('accrualsTableBody').addEventListener('click', (e) => {
-                        if (e.target.classList.contains('task-detail-link')) {
-                            e.preventDefault();
-                            const taskId = e.target.dataset.taskId;
-                            this.showTaskDetailModal(taskId);
-                        }
-                        if (e.target.classList.contains('action-btn')) {
-                            e.preventDefault();
-                            const accrualId = e.target.dataset.id;
-                            const newStatus = e.target.dataset.status;
-                            this.markAs(accrualId, newStatus);
-                        }
-                    });
-
-                    document.getElementById('closeTaskDetailModal').addEventListener('click', () => this.closeModal('taskDetailModal'));
-                    document.getElementById('bulkMarkPaidBtn').addEventListener('click', () => this.handleBulkUpdate('paid'));
-                    document.getElementById('bulkMarkUnpaidBtn').addEventListener('click', () => this.handleBulkUpdate('unpaid'));
-                }
-                
-                async loadAllData() {
+            async loadInitialData() {
+                try {
                     document.getElementById('loadingIndicator').style.display = 'block';
-                    try {
-                        const [accrualsResult, tasksResult, ipRecordsResult, personsResult] = await Promise.all([
-                            accrualService.getAccruals(),
-                            taskService.getAllTasks(),
-                            ipRecordsService.getRecords(),
-                            personsService.getPersons()
-                        ]);
-
-                        this.allAccruals = accrualsResult.success ? accrualsResult.data : [];
-                        this.allTasks = tasksResult.success ? tasksResult.data : [];
-                        this.allIpRecords = ipRecordsResult.success ? ipRecordsResult.data : [];
-                        this.allPersons = personsResult.success ? personsResult.data : [];
-                        
-                        this.renderTable();
-
-                    } catch (error) {
-                        alert('Veriler yüklenirken bir hata oluştu: ' + error.message);
-                    } finally {
-                        document.getElementById('loadingIndicator').style.display = 'none';
-                    }
-                }
-
-                renderTable(filter = 'all') {
-                    const tableBody = document.getElementById('accrualsTableBody');
-                    const noRecordsMessage = document.getElementById('noRecordsMessage');
-                    tableBody.innerHTML = '';
-
-                    const filteredAccruals = this.allAccruals.filter(acc => filter === 'all' || acc.status === filter);
-
-                    if (filteredAccruals.length === 0) {
-                        noRecordsMessage.style.display = 'block';
-                        return;
-                    }
-                    noRecordsMessage.style.display = 'none';
-
-                    const currencyFormatter = (amount, currency) => {
-                        try {
-                            return new Intl.NumberFormat('tr-TR', { style: 'currency', currency: currency || 'TRY' }).format(amount);
-                        } catch (e) {
-                            return new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' }).format(amount);
-                        }
-                    };
                     
-                    const formatFee = (feeData) => {
-                        if (typeof feeData === 'object' && feeData !== null && feeData.currency) {
-                            return { amount: feeData.amount || 0, currency: feeData.currency };
-                        }
-                        if (typeof feeData === 'number') {
-                            return { amount: feeData, currency: 'TRY' };
-                        }
-                        return { amount: 0, currency: 'TRY' };
-                    };
+                    const currentUser = authService.getCurrentUser();
+                    if (currentUser) {
+                        document.getElementById('userName').textContent = currentUser.displayName || currentUser.email;
+                        document.getElementById('userAvatar').textContent = (currentUser.displayName || currentUser.email).charAt(0).toUpperCase();
+                    }
 
-                    filteredAccruals.forEach(accrual => {
-                        const row = document.createElement('tr');
-                        const statusText = accrual.status === 'paid' ? 'Ödendi' : 'Ödenmedi';
-                        const statusClass = accrual.status === 'paid' ? 'status-paid' : 'status-unpaid';
-                        
-                        const officialFee = formatFee(accrual.officialFee);
-                        const serviceFee = formatFee(accrual.serviceFee);
-                        const isSelected = this.selectedAccruals.has(accrual.id);
+                    const [accrualsResult, tasksResult, ipRecordsResult, personsResult] = await Promise.all([
+                        accrualService.getAllAccruals(),
+                        taskService.getAllTasks(),
+                        ipRecordsService.getAllRecords(),
+                        personsService.getAllPersons()
+                    ]);
 
-                        row.innerHTML = `
-                            <td><input type="checkbox" class="row-checkbox" data-id="${accrual.id}" ${isSelected ? 'checked' : ''}></td>
-                            <td><small>${accrual.id.substring(0, 8)}...</small></td>
-                            <td><span class="status-badge ${statusClass}">${statusText}</span></td>
-                            <td><a href="#" class="task-detail-link" data-task-id="${accrual.taskId}">${accrual.taskTitle || 'İş Detayı'}</a></td>
-                            <td>${currencyFormatter(officialFee.amount, officialFee.currency)}</td>
-                            <td>${currencyFormatter(serviceFee.amount, serviceFee.currency)}</td>
-                            <td>${currencyFormatter(accrual.totalAmount || 0, accrual.totalAmountCurrency || 'TRY')}</td>
-                            <td>
-                                <button class="action-btn" data-id="${accrual.id}" data-status="paid" ${accrual.status === 'paid' ? 'disabled' : ''}>Ödendi</button>
-                                <button class="action-btn unpaid" data-id="${accrual.id}" data-status="unpaid" ${accrual.status === 'unpaid' ? 'disabled' : ''}>Ödenmedi</button>
-                            </td>
-                        `;
-                        tableBody.appendChild(row);
-                    });
+                    this.allAccruals = accrualsResult.success ? accrualsResult.data : [];
+                    this.allTasks = tasksResult.success ? tasksResult.data : [];
+                    this.allIpRecords = ipRecordsResult.success ? ipRecordsResult.data : [];
+                    this.allPersons = personsResult.success ? personsResult.data : [];
+                    
+                    this.renderTable();
+
+                } catch (error) {
+                    alert('Veriler yüklenirken bir hata oluştu: ' + error.message);
+                } finally {
+                    document.getElementById('loadingIndicator').style.display = 'none';
                 }
+            }
 
-                async markAs(accrualId, newStatus) {
-                    const statusText = newStatus === 'paid' ? 'Ödendi' : 'Ödenmedi';
-                    if (confirm(`Bu tahakkuku "${statusText}" olarak işaretlemek istediğinizden emin misiniz?`)) {
+            renderTable(filter = 'all') {
+                const tableBody = document.getElementById('accrualsTableBody');
+                const noRecordsMessage = document.getElementById('noRecordsMessage');
+                tableBody.innerHTML = '';
+
+                const filteredAccruals = this.allAccruals.filter(acc => filter === 'all' || acc.status === filter);
+
+                if (filteredAccruals.length === 0) {
+                    noRecordsMessage.style.display = 'block';
+                    return;
+                }
+                noRecordsMessage.style.display = 'none';
+
+                const formatFee = (feeData) => {
+                    if (typeof feeData === 'object' && feeData !== null && feeData.currency) {
+                        return { amount: feeData.amount || 0, currency: feeData.currency };
+                    }
+                    if (typeof feeData === 'number') {
+                        return { amount: feeData, currency: 'TRY' };
+                    }
+                    return { amount: 0, currency: 'TRY' };
+                };
+
+                filteredAccruals.forEach(accrual => {
+                    const row = document.createElement('tr');
+                    const statusText = accrual.status === 'paid' ? 'Ödendi' : 'Ödenmedi';
+                    const statusClass = accrual.status === 'paid' ? 'status-paid' : 'status-unpaid';
+                    
+                    const officialFee = formatFee(accrual.officialFee);
+                    const serviceFee = formatFee(accrual.serviceFee);
+                    const isSelected = this.selectedAccruals.has(accrual.id);
+
+                    row.innerHTML = `
+                        <td><input type="checkbox" class="row-checkbox" data-id="${accrual.id}" ${isSelected ? 'checked' : ''}></td>
+                        <td><small>${accrual.id.substring(0, 8)}...</small></td>
+                        <td><span class="status-badge ${statusClass}">${statusText}</span></td>
+                        <td><a href="#" class="task-detail-link" data-task-id="${accrual.taskId}">${accrual.taskTitle || 'İş Detayı'}</a></td>
+                        <td>${this.formatCurrencyAmount(officialFee.amount, officialFee.currency)}</td>
+                        <td>${this.formatCurrencyAmount(serviceFee.amount, serviceFee.currency)}</td>
+                        <td>${this.formatCurrencyAmount(accrual.totalAmount || 0, accrual.totalAmountCurrency)}</td>
+                        <td>
+                            <button class="action-btn" data-id="${accrual.id}" data-status="paid" ${accrual.status === 'paid' ? 'disabled' : ''}>Ödendi</button>
+                            <button class="action-btn unpaid" data-id="${accrual.id}" data-status="unpaid" ${accrual.status === 'unpaid' ? 'disabled' : ''}>Ödenmedi</button>
+                        </td>
+                    `;
+                    tableBody.appendChild(row);
+                });
+            }
+
+            toggleAccrualSelection(accrualId, checked) {
+                if (checked) {
+                    this.selectedAccruals.add(accrualId);
+                } else {
+                    this.selectedAccruals.delete(accrualId);
+                }
+                this.updateBulkActions();
+            }
+
+            toggleSelectAll(checked) {
+                const checkboxes = document.querySelectorAll('.row-checkbox');
+                checkboxes.forEach(cb => {
+                    cb.checked = checked;
+                    this.toggleAccrualSelection(cb.dataset.id, checked);
+                });
+            }
+
+            updateBulkActions() {
+                const bulkActions = document.getElementById('bulkActions');
+                if (this.selectedAccruals.size > 0) {
+                    bulkActions.style.display = 'flex';
+                } else {
+                    bulkActions.style.display = 'none';
+                }
+            }
+
+            async markAs(accrualId, newStatus) {
+                const statusText = newStatus === 'paid' ? 'Ödendi' : 'Ödenmedi';
+                if (confirm(`Bu tahakkuku "${statusText}" olarak işaretlemek istediğinizden emin misiniz?`)) {
+                    try {
                         const result = await accrualService.updateAccrual(accrualId, { status: newStatus });
                         if (result.success) {
                             alert('Tahakkuk durumu başarıyla güncellendi.');
-                            const index = this.allAccruals.findIndex(a => a.id === accrualId);
-                            if (index > -1) {
-                                this.allAccruals[index].status = newStatus;
-                            }
-                            this.renderTable(document.getElementById('statusFilter').value);
+                            await this.loadInitialData();
                         } else {
-                            alert('Durum güncellenirken hata oluştu: ' + result.error);
+                            throw new Error(result.error);
                         }
+                    } catch (error) {
+                        console.error('Tahakkuk güncelleme hatası:', error);
+                        alert('Tahakkuk güncellenirken bir hata oluştu: ' + error.message);
                     }
                 }
+            }
 
-                toggleSelectAll(checked) {
-                    const checkboxes = document.querySelectorAll('.row-checkbox');
-                    checkboxes.forEach(checkbox => {
-                        checkbox.checked = checked;
-                        this.updateSelection(checkbox.dataset.id, checked);
-                    });
+            async bulkUpdateStatus(newStatus) {
+                if (this.selectedAccruals.size === 0) {
+                    alert('Lütfen önce tahakkuk seçin.');
+                    return;
                 }
 
-                updateSelection(accrualId, isSelected) {
-                    if (isSelected) {
-                        this.selectedAccruals.add(accrualId);
-                    } else {
-                        this.selectedAccruals.delete(accrualId);
-                    }
-                    this.updateBulkActionsVisibility();
-                }
-
-                updateBulkActionsVisibility() {
-                    const bulkActions = document.getElementById('bulkActions');
-                    bulkActions.style.display = this.selectedAccruals.size > 0 ? 'flex' : 'none';
-                }
-
-                async handleBulkUpdate(newStatus) {
-                    if (this.selectedAccruals.size === 0) {
-                        alert('Lütfen en az bir tahakkuk seçin.');
-                        return;
-                    }
-                    const statusText = newStatus === 'paid' ? 'Ödendi' : 'Ödenmedi';
-                    if (confirm(`${this.selectedAccruals.size} adet tahakkuku "${statusText}" olarak işaretlemek istediğinizden emin misiniz?`)) {
-                        const promises = Array.from(this.selectedAccruals).map(id => 
-                            accrualService.updateAccrual(id, { status: newStatus })
+                const statusText = newStatus === 'paid' ? 'Ödendi' : 'Ödenmedi';
+                if (confirm(`${this.selectedAccruals.size} tahakkuku "${statusText}" olarak işaretlemek istediğinizden emin misiniz?`)) {
+                    try {
+                        const promises = Array.from(this.selectedAccruals).map(accrualId => 
+                            accrualService.updateAccrual(accrualId, { status: newStatus })
                         );
-                        const results = await Promise.all(promises);
-                        const failed = results.filter(r => !r.success);
-                        if (failed.length > 0) {
-                            alert(`${failed.length} adet tahakkuk güncellenirken hata oluştu.`);
-                        } else {
-                            alert('Seçili tüm tahakkuklar başarıyla güncellendi.');
-                        }
+
+                        await Promise.all(promises);
+                        alert(`${this.selectedAccruals.size} tahakkuk başarıyla güncellendi.`);
+                        
                         this.selectedAccruals.clear();
-                        document.getElementById('selectAllCheckbox').checked = false;
-                        this.updateBulkActionsVisibility();
-                        await this.loadAllData();
+                        await this.loadInitialData();
+                    } catch (error) {
+                        console.error('Toplu güncelleme hatası:', error);
+                        alert('Tahakkuklar güncellenirken bir hata oluştu: ' + error.message);
                     }
                 }
+            }
+
+            showTaskDetail(taskId) {
+                const task = this.allTasks.find(t => t.id === taskId);
+                if (!task) {
+                    alert('İş detayı bulunamadı.');
+                    return;
+                }
+
+                const modal = document.getElementById('taskDetailModal');
+                const modalTitle = document.getElementById('taskDetailModalTitle');
+                const modalBody = document.getElementById('taskDetailModalBody');
+
+                modalTitle.textContent = `İş Detayı: ${task.title}`;
+
+                // İlgili IP kaydını bul
+                const ipRecord = this.allIpRecords.find(r => r.id === task.relatedIpRecordId);
                 
-                showTaskDetailModal(taskId) {
-                    const task = this.allTasks.find(t => t.id === taskId);
-                    if (!task) {
-                        alert('İlgili iş bulunamadı.');
-                        return;
-                    }
+                // İlgili kişiyi bul
+                const relatedParty = this.allPersons.find(p => p.id === task.relatedPartyId);
+                
+                // İş türü formatla
+                const taskTypeParts = task.taskType ? task.taskType.split('_') : [];
+                const mainType = taskTypeParts[0] || '';
+                const specificType = taskTypeParts.slice(1).join(' ').replace(/\b\w/g, l => l.toUpperCase());
 
-                    const modal = document.getElementById('taskDetailModal');
-                    const modalBody = document.getElementById('modalBody');
-                    
-                    const ipRecord = this.allIpRecords.find(r => r.id === task.relatedIpRecordId);
-                    const relatedParty = task.details?.relatedParty?.id ? this.allPersons.find(p => p.id === task.details.relatedParty.id) : null;
-                    const relatedAccruals = this.allAccruals.filter(acc => acc.taskId === taskId);
+                // İlgili tahakkukları bul
+                const relatedAccruals = this.allAccruals.filter(acc => acc.taskId === taskId);
 
-                    document.getElementById('modalTaskTitle').textContent = `İş Detayı: ${task.title}`;
+                const renderField = (label, value) => 
+                    value ? `<div class="modal-detail-item"><div class="modal-detail-label">${label}</div><div class="modal-detail-value">${value}</div></div>` : '';
 
-                    const taskTypeParts = task.taskType ? task.taskType.split('_') : [];
-                    const mainType = taskTypeParts[0] || '';
-                    const specificType = taskTypeParts.slice(1).join(' ').replace(/\b\w/g, l => l.toUpperCase());
+                let accrualsHtml = '';
+                if(relatedAccruals.length > 0) {
+                    accrualsHtml = relatedAccruals.map(acc => {
+                        const statusText = acc.status === 'paid' ? 'Ödendi' : 'Ödenmedi';
+                        // DÜZELTİLMİŞ: formatCurrencyAmount kullanılıyor
+                        const totalAmountText = this.formatCurrencyAmount(acc.totalAmount, acc.totalAmountCurrency);
+                        
+                        return `<div class="related-accrual-item">
+                            <b>ID:</b> ${acc.id.substring(0,8)}... | <b>Durum:</b> ${statusText} | <b>Tutar:</b> ${totalAmountText}
+                        </div>`
+                    }).join('');
+                } else {
+                    accrualsHtml = '<p>Bu işe ait tahakkuk bulunmuyor.</p>';
+                }
 
-                    const renderField = (label, value) => value ? `<div class="modal-detail-item"><div class="modal-detail-label">${label}</div><div class="modal-detail-value">${value}</div></div>` : '';
+                let historyHtml = '<p>İşlem geçmişi bulunmuyor.</p>';
+                if(task.history && task.history.length > 0) {
+                    historyHtml = [...task.history].sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp)).map(entry => 
+                        `<div class="task-history-item">
+                            <div class="task-history-description">${entry.action}</div>
+                            <div class="task-history-meta">${new Date(entry.timestamp).toLocaleString('tr-TR')} by ${entry.userEmail}</div>
+                        </div>`
+                    ).join('');
+                }
 
-                    let accrualsHtml = '';
-                    if(relatedAccruals.length > 0) {
-                        accrualsHtml = relatedAccruals.map(acc => {
-                            const statusText = acc.status === 'paid' ? 'Ödendi' : 'Ödenmedi';
-                            return `<div class="related-accrual-item">
-                                <b>ID:</b> ${acc.id.substring(0,8)}... | <b>Durum:</b> ${statusText} | <b>Tutar:</b> ${new Intl.NumberFormat('tr-TR', { style: 'currency', currency: acc.totalAmountCurrency || 'TRY' }).format(acc.totalAmount || 0)}
-                            </div>`
-                        }).join('');
-                    } else {
-                        accrualsHtml = '<p>Bu işe ait tahakkuk bulunmuyor.</p>';
-                    }
-
-                    let historyHtml = '<p>İşlem geçmişi bulunmuyor.</p>';
-                    if(task.history && task.history.length > 0) {
-                        historyHtml = [...task.history].sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp)).map(entry => 
-                            `<div class="task-history-item">
-                                <div class="task-history-description">${entry.action}</div>
-                                <div class="task-history-meta">${new Date(entry.timestamp).toLocaleString('tr-TR')} by ${entry.userEmail}</div>
-                            </div>`
-                        ).join('');
-                    }
-
-                    modalBody.innerHTML = `
-                        <div class="modal-detail-grid">
-                            ${renderField('İş Başlığı', task.title)}
-                            ${renderField('Atanan Kişi', task.assignedTo_email)}
-                            ${renderField('İş Türü', `${mainType.charAt(0).toUpperCase() + mainType.slice(1)} - ${specificType}`)}
-                            ${renderField('Bitiş Tarihi', task.dueDate ? new Date(task.dueDate).toLocaleDateString('tr-TR') : '-')}
-                            ${renderField('Öncelik', task.priority)}
-                            ${renderField('İlgili Portföy Kaydı', ipRecord ? ipRecord.title : 'Bulunamadı')}
-                            ${renderField('İlgili Taraf', relatedParty ? relatedParty.name : '')}
-                            <div class="modal-detail-item full-width">
-                                <div class="modal-detail-label">Açıklama</div>
-                                <div class="modal-detail-value long-text">${task.description || '-'}</div>
-                            </div>
-                            
-                            <h4 class="modal-detail-section-title">İlişkili Tahakkuklar</h4>
-                            <div class="modal-detail-item full-width">${accrualsHtml}</div>
-                            
-                            <h4 class="modal-detail-section-title">İşlem Geçmişi</h4>
-                            <div class="modal-detail-item full-width task-history">${historyHtml}</div>
+                modalBody.innerHTML = `
+                    <div class="modal-detail-grid">
+                        ${renderField('İş Başlığı', task.title)}
+                        ${renderField('Atanan Kişi', task.assignedTo_email)}
+                        ${renderField('İş Türü', `${mainType.charAt(0).toUpperCase() + mainType.slice(1)} - ${specificType}`)}
+                        ${renderField('Bitiş Tarihi', task.dueDate ? new Date(task.dueDate).toLocaleDateString('tr-TR') : '-')}
+                        ${renderField('Öncelik', task.priority)}
+                        ${renderField('İlgili Portföy Kaydı', ipRecord ? ipRecord.title : 'Bulunamadı')}
+                        ${renderField('İlgili Taraf', relatedParty ? relatedParty.name : '')}
+                        ${renderField('Açıklama', task.description)}
+                        
+                        <div class="modal-detail-item full-width">
+                            <div class="modal-detail-label">İlişkili Tahakkuklar</div>
+                            <div class="modal-detail-value">${accrualsHtml}</div>
                         </div>
-                    `;
-                    modal.classList.add('show');
-                }
+                        
+                        <div class="modal-detail-item full-width">
+                            <div class="modal-detail-label">İşlem Geçmişi</div>
+                            <div class="modal-detail-value">${historyHtml}</div>
+                        </div>
+                    </div>
+                `;
 
-                closeModal(modalId) {
-                    document.getElementById(modalId).classList.remove('show');
-                }
+                modal.classList.add('show');
             }
 
-            const module = new AccrualsModule();
-            module.init();
-            
-            const accordions = document.querySelectorAll('.accordion-header');
-            accordions.forEach(accordion => {
-                accordion.addEventListener('click', function(event) {
-                    this.classList.toggle('active');
-                    const content = this.nextElementSibling;
-                    if (content.style.maxHeight) {
-                        content.style.maxHeight = null;
-                    } else {
-                        content.style.maxHeight = content.scrollHeight + "px";
-                    }
-                });
-            });
-
-            function setActiveMenu() {
-                const currentPage = window.location.pathname.split("/").pop() || 'dashboard.html';
-                document.querySelectorAll('.sidebar-nav-item.active, .accordion-content a.active').forEach(el => el.classList.remove('active'));
-                const activeLink = document.querySelector(`.sidebar-nav a[href="${currentPage}"]`);
-                if (!activeLink) return;
-                activeLink.classList.add('active');
-                const parentAccordionContent = activeLink.closest('.accordion-content');
-                if (parentAccordionContent) {
-                    const parentAccordionHeader = parentAccordionContent.previousElementSibling;
-                    if (parentAccordionHeader && parentAccordionHeader.classList.contains('accordion-header')) {
-                        parentAccordionHeader.classList.add('active');
-                        parentAccordionContent.style.maxHeight = parentAccordionContent.scrollHeight + "px";
-                    }
-                }
+            closeModal(modalId) {
+                document.getElementById(modalId).classList.remove('show');
             }
-            setActiveMenu();
+        }
+
+        // Global instance
+        const accrualsModule = new AccrualsModule();
+
+        // Auth state listener
+        auth.onAuthStateChanged(user => {
+            if (user || authService.getCurrentUser()) {
+                accrualsModule.init();
+                window.accrualsModule = accrualsModule;
+            } else {
+                window.location.href = 'index.html';
+            }
+        });
+
+        // Modal click outside to close
+        window.addEventListener('click', (event) => {
+            const modal = document.getElementById('taskDetailModal');
+            if (event.target === modal) {
+                accrualsModule.closeModal('taskDetailModal');
+            }
         });
     </script>
 </body>
