@@ -1,0 +1,949 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IP Manager - Yeni İş Oluştur</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333; display: flex; }
+        
+        /* === ANA SAYFA YAPISI === */
+        .page-wrapper { flex-grow: 1; display: flex; flex-direction: column; height: 100vh; overflow-y: auto; background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); }
+        .main-container { 
+            width: 100%; /* Genişliği tamamen doldurmasını sağlar */
+            padding: 30px; /* İçeriğin kenarlara yapışmaması için boşluk bırakır */
+            margin: 0; /* Otomatik ortalamayı kaldırır */
+        }
+        
+        /* === SOL MENÜ (SIDEBAR) === */
+        .sidebar { width: 260px; background: #1e3c72; color: white; display: flex; flex-direction: column; height: 100vh; position: sticky; top: 0; z-index: 1002; flex-shrink: 0; }
+        .sidebar-header { padding: 20px; text-align: center; border-bottom: 1px solid rgba(255, 255, 255, 0.1); }
+        .sidebar-logo { font-size: 1.8em; font-weight: bold; color: white; text-decoration: none; }
+        .sidebar-nav { flex-grow: 1; overflow-y: auto; padding: 20px 0; }
+        .nav-category-title { padding: 10px 20px; font-size: 0.8em; font-weight: bold; color: rgba(255, 255, 255, 0.5); text-transform: uppercase; }
+        .sidebar-nav-item, .accordion-header { display: flex; align-items: center; gap: 15px; padding: 15px 20px; color: rgba(255, 255, 255, 0.8); text-decoration: none; transition: background 0.3s ease; cursor: pointer; }
+        .sidebar-nav-item:hover, .accordion-header:hover { background: rgba(255, 255, 255, 0.1); }
+        .sidebar-nav-item.active { background: #2a5298; color: white; font-weight: bold; border-left: 4px solid #4ecdc4; padding-left: 16px; }
+        .nav-icon { font-size: 1.2em; width: 20px; text-align: center; }
+        .accordion-header::after { content: '▶'; margin-left: auto; font-size: 0.8em; transition: transform 0.3s ease; }
+        .accordion-header.active::after { transform: rotate(90deg); }
+        .accordion-content { background: rgba(0, 0, 0, 0.2); max-height: 0; overflow: hidden; transition: max-height 0.3s ease-out; }
+        .accordion-content a { display: block; padding: 12px 20px 12px 55px; color: rgba(255, 255, 255, 0.7); text-decoration: none; }
+        .accordion-content a.active { color: white; font-weight: 500; }
+        .accordion-content a.new-task-link { color: #fff; background-color: rgba(78, 205, 196, 0.25); font-weight: 500; }
+        
+        /* === ÜST BAR (TOP HEADER) === */
+        .top-header { background: rgba(255, 255, 255, 0.95); padding: 15px 30px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05); display: flex; justify-content: flex-end; align-items: center; position: sticky; top: 0; z-index: 99; }
+        .user-section { display: flex; align-items: center; gap: 15px; }
+        .user-avatar { width: 40px; height: 40px; background: linear-gradient(45deg, #1e3c72, #2a5298); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; }
+        .user-info { display: flex; flex-direction: column; text-align: right;}
+        .user-name { font-weight: 600; }
+        .user-role { font-size: 0.8em; color: #666; }
+        .logout-btn { background: #ff6b6b; color: white; border: none; padding: 8px 16px; border-radius: 8px; cursor: font-size: 0.9em; }
+        
+        /* === SAYFA GENELİ ELEMENTLER === */
+        .page-header { background: rgba(255, 255, 255, 0.95); padding: 30px; border-radius: 20px; margin-bottom: 30px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1); }
+        .page-title { font-size: 2em; color: #1e3c72; margin-bottom: 10px; }
+        .page-subtitle { color: #666; font-size: 1.1em; }
+        .form-container { background: rgba(255, 255, 255, 0.95); padding: 40px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1); }
+        .form-section { border-bottom: 1px solid #e1e8ed; padding-bottom: 25px; margin-bottom: 25px; }
+        .form-section:last-child { border-bottom: none; }
+        .section-title { font-size: 1.3em; color: #1e3c72; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 25px; }
+        .form-group { display: flex; flex-direction: column; }
+        .form-group.full-width { grid-column: 1 / -1; }
+        .form-label { display: block; margin-bottom: 8px; color: #333; font-weight: 500; }
+        /* Font düzenlemesi için form-select'e ekleme */
+        .form-input, .form-select, .form-textarea { 
+            width: 100%; 
+            padding: 12px 15px; 
+            border: 2px solid #e1e8ed; 
+            border-radius: 10px; 
+            font-size: 1em; 
+            transition: all 0.3s ease; 
+            background: white;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; /* Eklenen stil */
+        }
+        .form-actions { display: flex; justify-content: flex-end; gap: 15px; margin-top: 30px; }
+        .btn { padding: 12px 25px; border: none; border-radius: 8px; font-size: 1em; font-weight: 600; cursor: pointer; }
+        .btn-primary { background: #1e3c72; color: white; }
+        .btn-primary:disabled { background: #ccc; cursor: not-allowed; }
+        .btn-secondary { background: #6c757d; color: white; }
+        /* Yeni kişi ekle butonu için stil */
+        .btn-small { 
+            padding: 8px 16px; 
+            border: none; 
+            border-radius: 8px; 
+            cursor: pointer; 
+            font-size: 0.9em; 
+            transition: all 0.3s ease; 
+            background: #28a745; /* Yeşil ton */
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .btn-small:hover {
+            background: #218838;
+            transform: translateY(-1px);
+        }
+
+        /* Yeni Kişi Ekle butonu için estetik dokunuş */
+        .btn-add-person {
+            background: linear-gradient(45deg, #4CAF50, #66BB6A); /* Yeşil tonlar */
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.9em;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            box-shadow: 0 4px 8px rgba(0, 123, 255, 0.2); /* Hafif gölge */
+        }
+        .btn-add-person:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0, 123, 255, 0.3);
+            background: linear-gradient(45deg, #388E3C, #4CAF50); /* Koyu yeşil hover */
+        }
+
+
+        .search-results-list { max-height: 200px; overflow-y: auto; border: 1px solid #ccc; border-radius: 8px; margin-top: 5px; }
+        .search-result-item { padding: 10px; cursor: pointer; border-bottom: 1px solid #eee; }
+        .search-result-item:hover { background-color: #f0f4f8; }
+        .search-result-display { background: #e9f5ff; border: 1px solid #bde0fe; padding: 15px; border-radius: 8px; margin-top: 10px; display: flex; gap: 15px; align-items: center;}
+        .search-result-display img { max-width: 60px; max-height: 60px; border-radius: 4px; border: 1px solid #ddd; }
+        .file-upload-area { border: 2px dashed #e1e8ed; border-radius: 10px; padding: 30px; text-align: center; cursor: pointer; transition: background .2s; }
+        .file-upload-area:hover { background: #f0f4f8; }
+        .file-list { margin-top: 15px; display: flex; flex-direction: column; gap: 8px; }
+        .file-item { display: flex; align-items: center; justify-content: space-between; background: #f8f9fa; padding: 8px 12px; border-radius: 6px; font-size: 0.9em; }
+        .remove-file { background: #ff6b6b; color: white; border: none; border-radius: 50%; width: 22px; height: 22px; cursor: }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.6); z-index: 1003; align-items: center; justify-content: center; }
+        .modal.show { display: flex; }
+        .modal-content { background: white; padding: 30px; border-radius: 20px; max-width: 500px; width: 90%; }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .modal-title { font-size: 1.3em; color: #1e3c72; }
+        .close-btn { background: none; border: none; font-size: 1.5em; cursor: pointer; color: #666; }
+
+        /* Kişi ekleme formundaki detay başlığı ve ızgara */
+        .detail-section-title {
+            font-size: 1.1em;
+            color: #1e3c72;
+            margin-top: 20px;
+            margin-bottom: 15px;
+            padding-bottom: 5px;
+            border-bottom: 1px dashed #e1e8ed;
+            grid-column: 1 / -1; /* Tüm ızgara genişliğini kaplaması için */
+        }
+        .person-form-grid {
+            display: grid;
+            grid-template-columns: 1fr; /* Tek sütunlu düzen */
+            gap: 15px;
+        }
+        .person-form-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 20px;
+            padding-top: 15px;
+            border-top: 1px solid #e1e8ed;
+        }
+        .person-form-actions .btn {
+            padding: 8px 16px;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <a href="dashboard.html" class="sidebar-logo">🔥 IP Manager</a>
+        </div>
+        <nav class="sidebar-nav">
+            <div class="nav-category-title">Ana Menü</div>
+            <a href="dashboard.html" class="sidebar-nav-item"><span class="nav-icon">📊</span><span>Dashboard</span></a>
+            <a href="portfolio.html" class="sidebar-nav-item"><span class="nav-icon">📋</span><span>Portföy</span></a>
+            <div class="nav-category-title">Veri Girişi</div>
+            <a href="data-entry.html" class="sidebar-nav-item"><span class="nav-icon">➕</span><span>Yeni Kayıt</span></a>
+            <a href="excel-upload.html" class="sidebar-nav-item"><span class="nav-icon">📄</span><span>Excel ile Yükle</span></a>
+            <div class="nav-category-title">Yönetim</div>
+            <div class="accordion">
+                <div class="accordion-header"><span class="nav-icon">⚙️</span><span>Yönetim</span></div>
+                <div class="accordion-content">
+                    <a href="create-task.html" class="new-task-link">Yeni İş Oluştur</a>
+                    <a href="task-management.html">İş Yönetimi</a>
+                    <a href="my-tasks.html">İşlerim</a>
+                    <a href="persons.html">Kişiler Yönetimi</a>
+                    <a href="user-management.html">Kullanıcı Yönetimi</a>
+                </div>
+            </div>
+            <div class="nav-category-title">Araçlar</div>
+            <a href="indexing.html" class="sidebar-nav-item"><span class="nav-icon">📁</span><span>Belge İndeksleme</span></a>
+            <a href="#" class="sidebar-nav-item" style="opacity: 0.5; cursor: not-allowed;"><span class="nav-icon">📈</span><span>Raporlar</span></a>
+            <a href="#" class="sidebar-nav-item" style="opacity: 0.5; cursor: not-allowed;"><span class="nav-icon">🔧</span><span>Ayarlar</span></a>
+        </nav>
+    </aside>
+
+    <div class="page-wrapper">
+        <header class="top-header">
+            <div class="user-section">
+                <div class="user-avatar" id="userAvatar">?</div>
+                <div class="user-info">
+                    <div class="user-name" id="userName"></div>
+                    <div class="user-role" id="userRole"></div>
+                </div>
+                <button class="logout-btn" id="logoutBtn">Çıkış</button>
+            </div>
+        </header>
+
+        <main class="main-container">
+            <section class="page-header">
+                <h1 class="page-title">Yeni İş Oluştur</h1>
+                <p class="page-subtitle">Oluşturmak istediğiniz işin türünü ve tipini seçerek devam edin.</p>
+            </section>
+            
+            <div class="form-container">
+                <form id="createTaskForm" onsubmit="return false;">
+                    <div class="form-section">
+                        <h3 class="section-title">1. İş Tipi Seçimi</h3>
+                        <div class="form-grid">
+                            <div class="form-group"><label for="mainIpType" class="form-label">İşin Ana Türü</label><select id="mainIpType" class="form-select"><option value="">Seçiniz...</option><option value="patent">Patent</option><option value="trademark">Marka</option><option value="design">Tasarım</option></select></div>
+                            <div class="form-group"><label for="specificTaskType" class="form-label">Spesifik İş Tipi</label><select id="specificTaskType" class="form-select" disabled><option value="">Önce İşin Ana Türünü Seçin</option></select></div>
+                        </div>
+                    </div>
+                    <div id="conditionalFieldsContainer"></div>
+                    <div class="form-actions"><button type="button" id="cancelBtn" class="btn-secondary">İptal</button><button type="submit" id="saveTaskBtn" class="btn-primary" disabled>İşi Oluştur</button></div>
+                </form>
+            </div>
+        </main>
+    </div>
+    
+    <div class="modal" id="addPersonModal">
+        <div class="modal-content">
+            <div class="modal-header"><h3 class="modal-title">Yeni Kişi Ekle</h3><button class="close-btn" id="closeAddPersonModal">&times;</button></div>
+            <form id="personForm" onsubmit="return false;">
+                <div class="person-form-grid">
+                    <div class="form-group"><label class="form-label" for="personName">Ad Soyad *</label><input type="text" id="personName" class="form-input" required></div>
+                    <div class="form-group"><label class="form-label" for="personEmail">E-posta</label><input type="email" id="personEmail" class="form-input"></div>
+                    <div class="form-group"><label class="form-label" for="personPhone">Telefon</label><input type="tel" id="personPhone" class="form-input"></div>
+                    <div class="form-group"><label class="form-label" for="personType">Kişi Türü *</label><select id="personType" class="form-select" required><option value="">Seçiniz</option><option value="individual">Bireysel</option><option value="company">Şirket</option><option value="institution">Kurum</option></select></div>
+                    <div class="form-group"><label class="form-label" for="personAddress">Adres</label><textarea id="personAddress" class="form-input" rows="3"></textarea></div>
+                    <h4 class="detail-section-title" style="display:none;">Oluşturma Bilgileri</h4>
+                    <div class="form-group" style="display:none;"><label class="form-label">Oluşturulma Tarihi</label><input type="text" id="personCreatedAt" class="form-input" readonly></div>
+                    <div class="form-group" style="display:none;"><label class="form-label">Son Güncelleme Tarihi</label><input type="text" id="personUpdatedAt" class="form-input" readonly></div>
+                    <div class="form-group" style="display:none;"><label class="form-label">Kayıt Sahibi (Kullanıcı)</label><input type="text" id="modalOwnerInfo" class="form-input" readonly></div>
+                    <div class="form-group" style="display:none;"><button type="button" class="btn btn-create-user" id="createUserAccountBtn">👤 Kullanıcı Hesabı Oluştur</button></div>
+                </div>
+                <div class="person-form-actions"><button type="button" class="btn-secondary" id="cancelPersonBtn">İptal</button><button type="button" class="btn-primary" id="savePersonBtn">Kaydet</button></div>
+            </form>
+        </div>
+    </div>
+
+    <script type="module">
+        import { authService, taskService, ipRecordsService, personsService, auth, generateUUID } from './firebase-config.js';
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const accordions = document.querySelectorAll('.accordion-header');
+            accordions.forEach(header => {
+                header.addEventListener('click', function() { this.classList.toggle('active'); const content = this.nextElementSibling; if (content.style.maxHeight) { content.style.maxHeight = null; } else { content.style.maxHeight = content.scrollHeight + "px"; } });
+            });
+            function setActiveMenu() {
+                const currentPage = window.location.pathname.split("/").pop() || 'dashboard.html';
+                const activeLink = document.querySelector(`.sidebar-nav a[href*="${currentPage}"]`);
+                if (!activeLink) return;
+                activeLink.classList.add('active');
+                const parentAccordionContent = activeLink.closest('.accordion-content');
+                if (parentAccordionContent) {
+                    const parentAccordionHeader = parentAccordionContent.previousElementSibling;
+                    if (parentAccordionHeader) { parentAccordionHeader.classList.add('active'); parentAccordionContent.style.maxHeight = parentAccordionContent.scrollHeight + "px"; }
+                }
+            }
+            setActiveMenu();
+        });
+
+        class CreateTaskModule {
+            constructor() {
+                this.currentUser = null;
+                this.allIpRecords = [];
+                this.allPersons = [];
+                this.allUsers = [];
+                this.uploadedFiles = [];
+                this.selectedIpRecord = null;
+                this.selectedRelatedParty = null;
+                this.taskTypeMappings = {
+                    'trademark': [
+                        'Başvuru',
+                        'İtiraza Karşı Görüş (YIDD)',
+                        'Yenileme',
+                        'Eksiklik Giderme',
+                        'Yayına İtiraz',
+                        'Karara İtiraz',
+                        'Yayıma İtirazın Yeniden İncelenmesi',
+                        'İtiraza Karşı Görüş (Markalar)',
+                        'Devir',
+                        'Lisans',
+                        'Birleşme',
+                        'Veraset ile İntikal',
+                        'Tescil Belgesi Sureti',
+                        'Sicil Sureti',
+                        'Menşe Memleket Belgesi',
+                        'Rehin/Teminat',
+                        'Bölünme',
+                        'Vazgeçme',
+                        'Tanınmışlık Tespiti',
+                        '3.Kişi Görüşü',
+                        'Yayına İtirazı Geri Çekme',
+                        'Madrid Başvurusu Ücret Ödeme',
+                        'Muvaffakat Sunumu',
+                        'Kullanım İspatı Sunma',
+                        'İtiraza Ek Belge',
+                        'Eşya Sınırlandırma'
+                    ],
+                    'patent': ['Başvuru', 'Yenileme', 'Yıllık Ücret Ödemesi', 'Lisans', 'Devir', 'Rehin'],
+                    'design': ['Başvuru', 'Yenileme', 'Devir', 'Lisans', 'Rehin']
+                };
+            }
+
+            async init() {
+                this.currentUser = authService.getCurrentUser();
+                if (!this.currentUser) { window.location.href = 'index.html'; return; }
+                
+                const user = this.currentUser;
+                document.getElementById('userAvatar').textContent = (user.displayName || 'U').charAt(0);
+                document.getElementById('userName').textContent = user.displayName || user.email.split('@')[0];
+                document.getElementById('userRole').textContent = user.role;
+                
+                try {
+                    const [ipRecordsResult, personsResult, usersResult] = await Promise.all([
+                        ipRecordsService.getRecords(), personsService.getPersons(), taskService.getAllUsers()
+                    ]);
+                    this.allIpRecords = ipRecordsResult.data || [];
+                    this.allPersons = personsResult.data || [];
+                    this.allUsers = usersResult.data || [];
+                } catch (error) {
+                    console.error("Veri yüklenirken hata oluştu:", error);
+                    alert("Gerekli veriler yüklenemedi, lütfen sayfayı yenileyin.");
+                    return;
+                }
+                this.setupEventListeners();
+            }
+
+            setupEventListeners() {
+                document.getElementById('mainIpType').addEventListener('change', (e) => this.handleMainTypeChange(e));
+                document.getElementById('specificTaskType').addEventListener('change', (e) => this.handleSpecificTypeChange(e));
+                document.getElementById('createTaskForm').addEventListener('submit', (e) => this.handleFormSubmit(e));
+                document.getElementById('cancelBtn').addEventListener('click', () => { window.location.href = 'task-management.html'; });
+                document.getElementById('logoutBtn').addEventListener('click', () => authService.signOut());
+                document.getElementById('closeAddPersonModal').addEventListener('click', () => this.hideAddPersonModal());
+                document.getElementById('cancelPersonBtn').addEventListener('click', () => this.hideAddPersonModal());
+                document.getElementById('savePersonBtn').addEventListener('click', () => this.saveNewPerson());
+            }
+
+            handleMainTypeChange(e) {
+                const mainType = e.target.value;
+                const specificTypeSelect = document.getElementById('specificTaskType');
+                document.getElementById('conditionalFieldsContainer').innerHTML = '';
+                document.getElementById('saveTaskBtn').disabled = true;
+
+                specificTypeSelect.innerHTML = '<option value="">Önce İşin Ana Türünü Seçin</option>';
+                if (mainType) {
+                    specificTypeSelect.innerHTML = '<option value="">Seçiniz...</option>';
+                    this.taskTypeMappings[mainType].forEach(type => {
+                        specificTypeSelect.innerHTML += `<option value="${type}">${type}</option>`;
+                    });
+                    specificTypeSelect.disabled = false;
+                } else {
+                    specificTypeSelect.disabled = true;
+                }
+            }
+
+            handleSpecificTypeChange(e) {
+                const taskType = e.target.value;
+                const container = document.getElementById('conditionalFieldsContainer');
+                container.innerHTML = '';
+                this.resetSelections();
+                document.getElementById('saveTaskBtn').disabled = true;
+
+                const transactionLikeTasks = ['Devir', 'Lisans', 'Birleşme', 'Rehin', 'Veraset ile İntikal', 'Rehin/Teminat'];
+                const simpleTasks = [
+                    'Yenileme',
+                    'Eksiklik Giderme',
+                    'Yayıma İtirazın Yeniden İncelenmesi', 
+                    'Tescil Belgesi Sureti',
+                    'Sicil Sureti',
+                    'Menşe Memleket Belgesi',
+                    'Bölünme',
+                    'Vazgeçme',
+                    'Tanınmışlık Tespiti', 
+                    '3.Kişi Görüşü',
+                    'Madrid Başvurusu Ücret Ödeme', 
+                    'Muvaffakat Sunumu',
+                    'Eşya Sınırlandırma' 
+                ];
+                // Transaction odaklı özel tipler (ilgilil transaction'ları listeleyecek olanlar)
+                const transactionSpecificTasks = [
+                    'İtiraza Karşı Görüş (YIDD)',
+                    'İtiraza Karşı Görüş (Markalar)',
+                    'İtirazı Geri Çekme',
+                    'Kullanım İspatı Sunma', 
+                    'İtiraza Ek Belge',
+                    'Yayına İtiraz', 
+                    'Karara İtiraz' 
+                ];
+
+
+                if (transactionLikeTasks.includes(taskType)) {
+                    this.renderGenericTransactionForm(container, taskType);
+                } else if (simpleTasks.includes(taskType)) {
+                    this.renderSimpleTransactionForm(container, taskType);
+                } else if (transactionSpecificTasks.includes(taskType)) {
+                    this.renderTransactionRelatedForm(container, taskType); 
+                }
+            }
+
+            renderGenericTransactionForm(container, taskType) {
+                const partyLabels = { 
+                    'Devir': 'Devralan Taraf', 
+                    'Lisans': 'Lisans Alan Taraf', 
+                    'Rehin': 'Rehin Alan Taraf', 
+                    'Birleşme': 'Birleşilen Taraf', 
+                    'Veraset ile İntikal': 'Mirasçı', 
+                    'Rehin/Teminat': 'Rehin Alan Taraf' 
+                }; 
+                const partyLabel = partyLabels[taskType] || 'İlgili Taraf';
+
+                container.innerHTML = `
+                    <div class="form-section"><h3 class="section-title">2. İşleme Konu Varlık</h3><div class="form-group full-width"><label for="portfolioSearchInput" class="form-label">Portföyden Ara</label><input type="text" id="portfolioSearchInput" class="form-input" placeholder="Aramak için en az 3 karakter..."><div id="portfolioSearchResults" class="search-results-list"></div><div id="selectedIpRecordDisplay" class="search-result-display" style="display:none; align-items: center;"></div></div></div>
+                    <div class="form-section"><h3 class="section-title">3. ${partyLabel}</h3><div class="form-group full-width"><label for="personSearchInput" class="form-label">Sistemdeki Kişilerden Ara</label><div style="display: flex; gap: 10px;"><input type="text" id="personSearchInput" class="form-input" placeholder="Aramak için en az 2 karakter..."><button type="button" id="addNewPersonBtn" class="btn-small btn-add-person"><span>&#x2795;</span> Yeni Kişi</button></div><div id="personSearchResults" class="search-results-list"></div><div id="selectedRelatedPartyDisplay" class="search-result-display" style="display:none;"></div></div></div>
+                    <div class="form-section"><h3 class="section-title">4. Gerekli Dokümanlar</h3><div class="form-group full-width"><div class="file-upload-area" id="fileUploadArea"><p>Dosyaları buraya sürükleyin veya tıklayın</p><input type="file" id="fileInput" multiple hidden></div><div class="file-list" id="fileList"></div></div></div>
+                    <div class="form-section"><h3 class="section-title">5. İş Detayları</h3><div class="form-grid"><div class="form-group"><label for="taskPriority" class="form-label">Öncelik</label><select id="taskPriority" class="form-select"><option value="medium">Orta</option><option value="high">Yüksek</option><option value="low">Düşük</option></select></div><div class="form-group"><label for="assignedTo" class="form-label">Atanacak Kullanıcı</label><select id="assignedTo" class="form-select">${this.allUsers.map(u => `<option value="${u.id}">${u.displayName || u.email}</option>`).join('')}</select></div><div class="form-group full-width"><label for="taskDueDate" class="form-label">Operasyonel Son Tarih</label><input type="date" id="taskDueDate" class="form-input"></div></div></div>`;
+                
+                this.setupDynamicFormListeners();
+            }
+
+            renderSimpleTransactionForm(container, taskType) {
+                container.innerHTML = `
+                    <div class="form-section"><h3 class="section-title">2. İşleme Konu Varlık</h3><div class="form-group full-width"><label for="portfolioSearchInput" class="form-label">Portföyden Ara</label><input type="text" id="portfolioSearchInput" class="form-input" placeholder="Aramak için en az 3 karakter..."><div id="portfolioSearchResults" class="search-results-list"></div><div id="selectedIpRecordDisplay" class="search-result-display" style="display:none; align-items: center;"></div></div></div>
+                    <div class="form-section"><h3 class="section-title">3. Gerekli Dokümanlar</h3><div class="form-group full-width"><div class="file-upload-area" id="fileUploadArea"><p>Dosyaları buraya sürükleyin veya tıklayın</p><input type="file" id="fileInput" multiple hidden></div><div class="file-list" id="fileList"></div></div></div>
+                    <div class="form-section"><h3 class="section-title">4. İş Detayları</h3><div class="form-grid"><div class="form-group"><label for="taskPriority" class="form-label">Öncelik</label><select id="taskPriority" class="form-select"><option value="medium">Orta</option><option value="high">Yüksek</option><option value="low">Düşük</option></select></div><div class="form-group"><label for="assignedTo" class="form-label">Atanacak Kullanıcı</label><select id="assignedTo" class="form-select">${this.allUsers.map(u => `<option value="${u.id}">${u.displayName || u.email}</option>`).join('')}</select></div><div class="form-group full-width"><label for="taskDueDate" class="form-label">Operasyonel Son Tarih</label><input type="date" id="taskDueDate" class="form-input"></div></div></div>`;
+
+                document.getElementById('portfolioSearchInput').addEventListener('input', (e) => this.searchPortfolio(e.target.value));
+                this.setupFileUpload(); // Doküman yükleme alanı için listener'ı kur
+            }
+
+            // YENİ METOD: Transaction odaklı formları render etmek için
+            renderTransactionRelatedForm(container, taskType) {
+                const transactionTypeMap = {
+                    'İtiraza Karşı Görüş (YIDD)': 'Karara İtiraz',
+                    'İtiraza Karşı Görüş (Markalar)': 'Yayına İtiraz',
+                    'İtirazı Geri Çekme': 'Yayına İtiraz veya Karara İtiraz',
+                    'Kullanım İspatı Sunma': 'Yayına İtiraz',
+                    'İtiraza Ek Belge': 'Yayına İtiraz veya Karara İtiraz',
+                    'Yayına İtiraz': 'Yok', // Bu işlem tipi için ilgili bir transaction seçimi beklenmiyor
+                    'Karara İtiraz': 'Yok' // Bu işlem tipi için ilgili bir transaction seçimi beklenmiyor
+                };
+                const relatedTransactionLabel = `İlgili İşlem Seçin (${transactionTypeMap[taskType] || 'Özel İşlem'})`;
+
+                container.innerHTML = `
+                    <div class="form-section"><h3 class="section-title">2. İşleme Konu Varlık</h3><div class="form-group full-width"><label for="portfolioSearchInput" class="form-label">Portföyden Ara</label><input type="text" id="portfolioSearchInput" class="form-input" placeholder="Aramak için en az 3 karakter..."><div id="portfolioSearchResults" class="search-results-list"></div><div id="selectedIpRecordDisplay" class="search-result-display" style="display:none; align-items: center;"></div></div></div>
+                    <div class="form-section" id="relatedTransactionSection" style="display:none;"><h3 class="section-title">3. ${relatedTransactionLabel}</h3><div class="form-group full-width"><label for="relatedTransactionSelect" class="form-label">Mevcut İşlemler</label><select id="relatedTransactionSelect" class="form-select" disabled><option value="">Önce Varlık Seçin</option></select><p class="help-text">İlgili işlemin türü: ${transactionTypeMap[taskType] || ''}</p></div></div>
+                    <div class="form-section"><h3 class="section-title">4. Gerekli Dokümanlar</h3><div class="form-group full-width"><div class="file-upload-area" id="fileUploadArea"><p>Dosyaları buraya sürükleyin veya tıklayın</p><input type="file" id="fileInput" multiple hidden></div><div class="file-list" id="fileList"></div></div></div>
+                    <div class="form-section"><h3 class="section-title">5. İş Detayları</h3><div class="form-grid"><div class="form-group"><label for="taskPriority" class="form-label">Öncelik</label><select id="taskPriority" class="form-select"><option value="medium">Orta</option><option value="high">Yüksek</option><option value="low">Düşük</option></select></div><div class="form-group"><label for="assignedTo" class="form-label">Atanacak Kullanıcı</label><select id="assignedTo" class="form-select">${this.allUsers.map(u => `<option value="${u.id}">${u.displayName || u.email}</option>`).join('')}</select></div><div class="form-group full-width"><label for="taskDueDate" class="form-label">Operasyonel Son Tarih</label><input type="date" id="taskDueDate" class="form-input"></div></div></div>`;
+
+                // Dinamik event listener'ları kur
+                document.getElementById('portfolioSearchInput').addEventListener('input', (e) => this.searchPortfolio(e.target.value));
+                this.setupFileUpload(); // Doküman yükleme alanı için listener'ı kur
+                
+                // Varlık seçildiğinde ilgili transaction'ları yükle
+                // selectIpRecord metodunu güncelleyerek burayı tetikleyeceğiz
+            }
+
+            setupDynamicFormListeners() {
+                document.getElementById('portfolioSearchInput').addEventListener('input', (e) => this.searchPortfolio(e.target.value));
+                const personSearch = document.getElementById('personSearchInput');
+                if (personSearch) personSearch.addEventListener('input', (e) => this.searchPersons(e.target.value));
+                const addNewPersonBtn = document.getElementById('addNewPersonBtn');
+                if (addNewPersonBtn) addNewPersonBtn.addEventListener('click', () => this.showAddPersonModal());
+                this.setupFileUpload();
+            }
+
+            resetSelections() {
+                this.selectedIpRecord = null;
+                this.selectedRelatedParty = null;
+                this.uploadedFiles = [];
+            }
+            
+            setupFileUpload() {
+                const area = document.getElementById('fileUploadArea'), input = document.getElementById('fileInput');
+                if(!area || !input) return;
+                area.onclick = () => input.click();
+                input.onchange = (e) => { this.handleFiles(e.target.files); e.target.value = ''; };
+                area.ondragover = (e) => { e.preventDefault(); area.style.background = '#f0f4f8'; };
+                area.ondragleave = (e) => { e.preventDefault(); area.style.background = 'transparent'; };
+                area.ondrop = (e) => { e.preventDefault(); area.style.background = 'transparent'; this.handleFiles(e.dataTransfer.files); };
+            }
+
+            handleFiles(files) {
+                for (const file of files) {
+                    if (this.uploadedFiles.find(f => f.name === file.name && f.size === file.size)) continue;
+                    this.readFileAsDataURL(file).then(dataUrl => {
+                        this.uploadedFiles.push({ id: generateUUID(), name: file.name, size: file.size, type: file.type, content: dataUrl });
+                        this.updateFileList();
+                    });
+                }
+            }
+
+            updateFileList() {
+                const list = document.getElementById('fileList');
+                if (!list) return;
+                list.innerHTML = this.uploadedFiles.map(file => `<div class="file-item" data-id="${file.id}"><span>${file.name} (${this.formatFileSize(file.size)})</span><button type="button" class="remove-file" data-id="${file.id}">&times;</button></div>`).join('');
+                list.querySelectorAll('.remove-file').forEach(btn => btn.addEventListener('click', (e) => this.removeFile(e.target.dataset.id)));
+            }
+            
+            removeFile(fileId) { this.uploadedFiles = this.uploadedFiles.filter(f => f.id !== fileId); this.updateFileList(); }
+            
+            formatFileSize(bytes) {
+                if (bytes === 0) return '0 Bytes';
+                const k = 1024, i = Math.floor(Math.log(bytes) / Math.log(k));
+                return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${['Bytes', 'KB', 'MB', 'GB'][i]}`;
+            }
+
+            readFileAsDataURL(file) {
+                return new Promise((resolve, reject) => { const r = new FileReader(); r.onload = () => resolve(r.result); r.onerror = reject; r.readAsDataURL(file); });
+            }
+
+            searchPortfolio(query) {
+                const container = document.getElementById('portfolioSearchResults');
+                container.innerHTML = '';
+                if (query.length < 3) { 
+                    container.innerHTML = '<p class="no-results-message">Aramak için en az 3 karakter...</p>'; 
+                    return; 
+                }
+                
+                const mainIpType = document.getElementById('mainIpType').value;
+                const searchLower = query.toLowerCase(); 
+                
+                const filtered = this.allIpRecords.filter(r => {
+                    const rTypeLower = r.type ? r.type.toLowerCase() : '';
+                    const mainIpTypeLower = mainIpType ? mainIpType.toLowerCase() : '';
+                    const matchesType = rTypeLower === mainIpTypeLower;
+
+                    const rTitleLower = r.title ? r.title.toLowerCase() : '';
+                    const matchesTitle = rTitleLower.includes(searchLower);
+
+                    const rAppNumberLower = r.applicationNumber ? r.applicationNumber.toLowerCase() : '';
+                    const matchesApplicationNumber = rAppNumberLower.includes(searchLower);
+                    
+                    const isMatch = matchesType && (matchesTitle || matchesApplicationNumber);
+
+                    return isMatch;
+                });
+
+                if (filtered.length === 0) {
+                    container.innerHTML = '<p class="no-results-message">Kayıt bulunamadı.</p>';
+                    return;
+                }
+
+                filtered.forEach(r => {
+                    const item = document.createElement('div');
+                    item.className = 'search-result-item';
+                    item.dataset.id = r.id;
+                    item.innerHTML = `
+                        <div>
+                            <b>${r.title}</b> (${r.applicationNumber || 'Numara Yok'})<br>
+                            <small>Durum: ${r.status}, Hak Sahipleri: ${r.owners.map(o => o.name).join(', ') || '-'}</small>
+                        </div>
+                    `;
+                    item.addEventListener('click', () => this.selectIpRecord(r.id));
+                    container.appendChild(item);
+                });
+            }
+
+            selectIpRecord(recordId) {
+                this.selectedIpRecord = this.allIpRecords.find(r => r.id === recordId);
+                const display = document.getElementById('selectedIpRecordDisplay');
+                let imageHtml = '';
+                // Marka tipi ise ve görseli varsa göster
+                if (this.selectedIpRecord.type === 'trademark' && this.selectedIpRecord.trademarkImage && this.selectedIpRecord.trademarkImage.content) {
+                    imageHtml = `<img src="${this.selectedIpRecord.trademarkImage.content}" alt="Marka Görseli" style="width: 40px; height: 40px; object-fit: contain; margin-right: 10px; border-radius: 4px; border: 1px solid #ddd;">`;
+                }
+                if (display) { // Null kontrolü
+                    display.innerHTML = `${imageHtml}<div><p><b>Seçilen Varlık:</b> ${this.selectedIpRecord.title}</p><p><small>Mevcut Sahip: ${this.selectedIpRecord.owners.map(o=>o.name).join(', ')}</small></p></div><button type="button" id="removeSelectedIpRecordBtn" style="background: none; border: none; font-size: 1.5em; cursor: pointer; color: #ff6b6b; margin-left: auto;">&times;</button>`;
+                    display.style.display = 'flex';
+                    // Butona event listener ata
+                    const removeBtn = document.getElementById('removeSelectedIpRecordBtn');
+                    if (removeBtn) {
+                        removeBtn.addEventListener('click', () => this.removeSelectedIpRecord());
+                    }
+                }
+
+                document.getElementById('portfolioSearchResults').innerHTML = ''; // Sonuçları temizle
+                document.getElementById('portfolioSearchInput').value = ''; // Arama kutusunu temizle
+                this.checkFormCompleteness();
+
+                // İlgili transaction'ları yükle (eğer ilgili form tipi seçiliyse)
+                const specificTaskType = document.getElementById('specificTaskType').value;
+                const transactionSpecificTasks = [
+                    'İtiraza Karşı Görüş (YIDD)',
+                    'İtiraza Karşı Görüş (Markalar)',
+                    'İtirazı Geri Çekme',
+                    'Kullanım İspatı Sunma', 
+                    'İtiraza Ek Belge',
+                    'Yayına İtiraz', 
+                    'Karara İtiraz' 
+                ];
+                if (transactionSpecificTasks.includes(specificTaskType) && this.selectedIpRecord.transactions) {
+                    this.populateRelatedTransactions(specificTaskType);
+                } else {
+                    const relatedTransactionSelect = document.getElementById('relatedTransactionSelect');
+                    const relatedTransactionSection = document.getElementById('relatedTransactionSection');
+                    if (relatedTransactionSelect && relatedTransactionSection) { 
+                        relatedTransactionSelect.innerHTML = '<option value="">Uygun İşlem Yok</option>';
+                        relatedTransactionSelect.disabled = true;
+                        relatedTransactionSection.style.display = 'none';
+                    }
+                }
+            }
+
+            // İşleme konu varlık kaldırma metodu
+            removeSelectedIpRecord() {
+                this.selectedIpRecord = null;
+                const display = document.getElementById('selectedIpRecordDisplay');
+                if (display) {
+                    display.innerHTML = '';
+                    display.style.display = 'none';
+                }
+                document.getElementById('portfolioSearchInput').value = '';
+                // İlgili transaction seçimi alanını da sıfırla
+                const relatedTransactionSelect = document.getElementById('relatedTransactionSelect');
+                const relatedTransactionSection = document.getElementById('relatedTransactionSection');
+                if (relatedTransactionSelect && relatedTransactionSection) {
+                    relatedTransactionSelect.innerHTML = '<option value="">Önce Varlık Seçin</option>';
+                    relatedTransactionSelect.disabled = true;
+                    relatedTransactionSection.style.display = 'none';
+                }
+                this.checkFormCompleteness();
+            }
+
+
+            populateRelatedTransactions(specificTaskType) {
+                const selectElement = document.getElementById('relatedTransactionSelect');
+                const section = document.getElementById('relatedTransactionSection');
+                
+                if (!selectElement || !section) { 
+                    console.warn('relatedTransactionSelect veya relatedTransactionSection elementi bulunamadı. Form tipinin doğru yüklendiğinden emin olun.');
+                    return;
+                }
+
+                selectElement.innerHTML = '<option value="">İlgili İşlem Seçin</option>';
+                selectElement.disabled = true;
+                section.style.display = 'block';
+
+                if (!this.selectedIpRecord || !this.selectedIpRecord.transactions) {
+                    selectElement.innerHTML = '<option value="">İşlem geçmişi bulunamadı.</option>';
+                    return;
+                }
+
+                let filteredTransactions = [];
+                const allTransactions = this.selectedIpRecord.transactions.sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp)); 
+
+                // Transaction filtreleme mantığı güncellendi: Sadece parent olanları al
+                if (specificTaskType === 'İtirazı Geri Çekme' || specificTaskType === 'İtiraza Ek Belge') {
+                    filteredTransactions = allTransactions.filter(tx => 
+                        tx.description && (
+                            tx.description.includes('Yayına İtiraz') || 
+                            tx.description.includes('Karara İtiraz')
+                        ) && tx.parentId === null // Sadece parent olanları al
+                    );
+                } else if (specificTaskType === 'İtiraza Karşı Görüş (YIDD)') {
+                    filteredTransactions = allTransactions.filter(tx => 
+                        tx.description && tx.description.includes('Karara İtiraz') && tx.parentId === null // Sadece parent olanları al
+                    );
+                } else if (specificTaskType === 'İtiraza Karşı Görüş (Markalar)' || specificTaskType === 'Kullanım İspatı Sunma') {
+                    filteredTransactions = allTransactions.filter(tx => 
+                        tx.description && tx.description.includes('Yayına İtiraz') && tx.parentId === null // Sadece parent olanları al
+                    );
+                } else if (specificTaskType === 'Yayına İtiraz' || specificTaskType === 'Karara İtiraz') {
+                    // Bu işlem tipleri için ilgili bir transaction seçimi beklenmiyor.
+                    // Dolayısıyla selectElement boş kalacak ve disabled olacak.
+                    selectElement.innerHTML = '<option value="">Uygun İşlem Yok</option>';
+                    selectElement.disabled = true;
+                    return; 
+                }
+
+                if (filteredTransactions.length > 0) {
+                    filteredTransactions.forEach(tx => {
+                        const option = document.createElement('option');
+                        option.value = tx.transactionId;
+                        option.textContent = `${new Date(tx.timestamp).toLocaleDateString('tr-TR')} - ${tx.description}`;
+                        selectElement.appendChild(option);
+                    });
+                    selectElement.disabled = false;
+                } else {
+                    selectElement.innerHTML = '<option value="">Uygun İşlem Bulunamadı</option>';
+                }
+            }
+
+            searchPersons(query) {
+                const container = document.getElementById('personSearchResults');
+                container.innerHTML = '';
+                if (query.length < 2) { container.innerHTML = '<p class="no-results-message">Aramak için en az 2 karakter...</p>'; return; }
+                
+                const filtered = this.allPersons.filter(p => p.name.toLowerCase().includes(query.toLowerCase()));
+                
+                if (filtered.length === 0) {
+                    container.innerHTML = '<p class="no-results-message">Kişi bulunamadı.</p>';
+                    return;
+                }
+
+                filtered.forEach(p => {
+                    const item = document.createElement('div');
+                    item.className = 'search-result-item';
+                    item.dataset.id = p.id;
+                    item.innerHTML = `
+                        <div>
+                            <b>${p.name}</b><br>
+                            <small>${p.email || '-'}</small>
+                        </div>
+                    `;
+                    item.addEventListener('click', () => this.selectRelatedParty(p));
+                    container.appendChild(item);
+                });
+            }
+            
+            selectRelatedParty(person) {
+                this.selectedRelatedParty = person;
+                const display = document.getElementById('selectedRelatedPartyDisplay');
+                const taskType = document.getElementById('specificTaskType').value;
+                const label = { 'Devir': 'Devralan Taraf', 'Lisans': 'Lisans Alan Taraf', 'Rehin': 'Rehin Alan Taraf', 'Birleşme': 'Birleşilen Taraf', 'Veraset ile İntikal': 'Mirasçı', 'Rehin/Teminat': 'Rehin Alan Taraf' }[taskType] || 'İlgili Taraf';
+                display.innerHTML = `<p><b>Seçilen ${label}:</b> ${this.selectedRelatedParty.name}</p>`;
+                display.style.display = 'block';
+                document.getElementById('personSearchResults').innerHTML = '';
+                document.getElementById('personSearchInput').value = '';
+                this.checkFormCompleteness();
+            }
+
+            showAddPersonModal() {
+                document.getElementById('addPersonModal').style.display = 'flex';
+                // Formu temizle ve Kişiler Yönetimi sayfasındaki gibi tüm alanları sıfırla
+                const form = document.getElementById('personForm');
+                form.reset();
+                // Hata mesajlarını ve alanları sıfırla (varsa)
+                // form.querySelectorAll('.error-message').forEach(el => el.style.display = 'none'); // Eğer hata mesajı varsa
+                // form.querySelectorAll('.form-input').forEach(el => el.classList.remove('error-field')); // Eğer hata sınıfı varsa
+
+                document.getElementById('personType').value = ''; // 'Seçiniz' opsiyonunu sıfırla
+                
+                // Eklenen gizli alanları tekrar gizle
+                document.querySelector('#addPersonModal .detail-section-title').style.display = 'none';
+                document.getElementById('personCreatedAt').parentElement.style.display = 'none';
+                document.getElementById('personUpdatedAt').parentElement.style.display = 'none';
+                document.getElementById('modalOwnerInfo').parentElement.style.display = 'none';
+                document.getElementById('createUserAccountBtn').parentElement.style.display = 'none';
+            }
+
+            hideAddPersonModal() { document.getElementById('addPersonModal').style.display = 'none'; }
+            
+            async saveNewPerson() {
+                const name = document.getElementById('personName').value.trim();
+                const email = document.getElementById('personEmail').value.trim();
+                const phone = document.getElementById('personPhone').value.trim();
+                const type = document.getElementById('personType').value;
+                const address = document.getElementById('personAddress').value.trim();
+
+                // Basit validasyon (daha kapsamlı validasyon eklenebilir)
+                if (!name || !type) {
+                    alert('Ad Soyad ve Kişi Türü zorunludur.');
+                    return;
+                }
+                if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+                    alert('Geçerli bir e-posta adresi girin.');
+                    return;
+                }
+
+                try {
+                    const result = await personsService.addPerson({ name, email, phone, type, address });
+                    if (result.success) {
+                        alert('Yeni kişi başarıyla eklendi.');
+                        const addedPerson = { ...result.data }; // Firebase'den dönen tüm datayı al
+                        this.allPersons.push(addedPerson); // allPersons listesini güncelle
+                        this.selectRelatedParty(addedPerson); // Yeni kişiyi seç
+                        this.hideAddPersonModal();
+                    } else {
+                        alert('Hata: ' + result.error);
+                    }
+                } catch (error) {
+                    console.error("Kişi kaydetme hatası:", error);
+                    alert("Kişi kaydedilirken beklenmeyen bir hata oluştu.");
+                }
+            }
+            
+            checkFormCompleteness() {
+                const taskType = document.getElementById('specificTaskType').value;
+                const transactionLikeTasks = ['Devir', 'Lisans', 'Birleşme', 'Rehin', 'Veraset ile İntikal', 'Rehin/Teminat'];
+                const simpleTasks = [
+                    'Yenileme',
+                    'Eksiklik Giderme',
+                    'Yayıma İtirazın Yeniden İncelenmesi',
+                    'Tescil Belgesi Sureti',
+                    'Sicil Sureti',
+                    'Menşe Memleket Belgesi',
+                    'Bölünme',
+                    'Vazgeçme',
+                    'Tanınmışlık Tespiti',
+                    '3.Kişi Görüşü',
+                    'Madrid Başvurusu Ücret Ödeme',
+                    'Muvaffakat Sunumu',
+                    'Eşya Sınırlandırma'
+                ];
+                const transactionSpecificTasks = [
+                    'İtiraza Karşı Görüş (YIDD)',
+                    'İtiraza Karşı Görüş (Markalar)',
+                    'İtirazı Geri Çekme',
+                    'Kullanım İspatı Sunma',
+                    'İtiraza Ek Belge',
+                    'Yayına İtiraz', 
+                    'Karara İtiraz'
+                ];
+
+                let isComplete = false;
+                if (transactionLikeTasks.includes(taskType)) {
+                    if (this.selectedIpRecord && this.selectedRelatedParty) {
+                        isComplete = true;
+                    }
+                } else if (simpleTasks.includes(taskType)) {
+                    if (this.selectedIpRecord) {
+                        isComplete = true;
+                    }
+                } else if (transactionSpecificTasks.includes(taskType)) {
+                     if (this.selectedIpRecord) { // Varlık seçimi her durumda zorunlu
+                         // Eğer ilgili bir transaction seçimi gerekiyorsa ve seçildiyse
+                         // 'Yayına İtiraz' ve 'Karara İtiraz' için transaction seçimi zorunlu DEĞİL
+                         if (['İtiraza Karşı Görüş (YIDD)', 'İtiraza Karşı Görüş (Markalar)', 'İtirazı Geri Çekme', 'Kullanım İspatı Sunma', 'İtiraza Ek Belge'].includes(taskType)) {
+                            if (document.getElementById('relatedTransactionSelect') && document.getElementById('relatedTransactionSelect').value !== '') {
+                                isComplete = true;
+                            } else {
+                                isComplete = false; // Transaction seçimi zorunlu ama yapılmamış
+                            }
+                         } else {
+                            // 'Yayına İtiraz' veya 'Karara İtiraz' gibi transaction seçimi gerektirmeyen durumlarda
+                            isComplete = true;
+                         }
+                    }
+                }
+                document.getElementById('saveTaskBtn').disabled = !isComplete;
+            }
+
+            async handleFormSubmit(e) {
+                e.preventDefault();
+                const mainIpType = document.getElementById('mainIpType').value;
+                const specificTaskType = document.getElementById('specificTaskType').value;
+                const assignedToUser = this.allUsers.find(u => u.id === document.getElementById('assignedTo').value);
+                
+                let taskData = {
+                    taskType: `${mainIpType}_${specificTaskType.toLowerCase().replace(/ /g, '_')}`,
+                    priority: document.getElementById('taskPriority').value,
+                    assignedTo_uid: assignedToUser.id,
+                    assignedTo_email: assignedToUser.email,
+                    dueDate: document.getElementById('taskDueDate').value || null,
+                    status: 'open',
+                    createdBy_uid: this.currentUser.uid,
+                    createdBy_email: this.currentUser.email,
+                    files: this.uploadedFiles,
+                    relatedIpRecordId: this.selectedIpRecord.id,
+                    relatedIpRecordTitle: this.selectedIpRecord.title,
+                    title: specificTaskType // İş başlığı spesifik iş tipi olacak şekilde güncellendi
+                };
+
+                const transactionLikeTasks = ['Devir', 'Lisans', 'Birleşme', 'Rehin', 'Veraset ile İntikal', 'Rehin/Teminat'];
+                const transactionSpecificTasks = [
+                    'İtiraza Karşı Görüş (YIDD)',
+                    'İtiraza Karşı Görüş (Markalar)',
+                    'İtirazı Geri Çekme',
+                    'Kullanım İspatı Sunma',
+                    'İtiraza Ek Belge',
+                    'Yayına İtiraz', 
+                    'Karara İtiraz'
+                ];
+
+                if (transactionLikeTasks.includes(specificTaskType)) {
+                    taskData.description = `'${this.selectedIpRecord.title}' adlı varlık için ${specificTaskType} işlemi. İlgili taraf: '${this.selectedRelatedParty.name}'.`;
+                    taskData.details = { relatedParty: this.selectedRelatedParty };
+                } else if (transactionSpecificTasks.includes(specificTaskType)) {
+                    const relatedTransactionSelect = document.getElementById('relatedTransactionSelect');
+                    let relatedTransactionId = null;
+                    let relatedTransactionDescription = null;
+
+                    // Eğer select elementi varsa ve bir değer seçilmişse (Yayına İtiraz ve Karara İtiraz hariç)
+                    if (relatedTransactionSelect && relatedTransactionSelect.value !== '' && 
+                        !['Yayına İtiraz', 'Karara İtiraz'].includes(specificTaskType)) {
+                        
+                        relatedTransactionId = relatedTransactionSelect.value;
+                        const relatedTransaction = this.selectedIpRecord.transactions.find(tx => tx.transactionId === relatedTransactionId);
+                        relatedTransactionDescription = relatedTransaction ? relatedTransaction.description : null;
+                    }
+
+                    taskData.description = `'${this.selectedIpRecord.title}' adlı varlık için ${specificTaskType} işlemi.`;
+                    if (relatedTransactionDescription) {
+                        taskData.description += ` İlgili İşlem: '${relatedTransactionDescription}'.`;
+                    }
+                    taskData.details = { 
+                        relatedTransactionId: relatedTransactionId, 
+                        relatedTransactionDescription: relatedTransactionDescription 
+                    };
+                }
+                else {
+                    taskData.description = `'${this.selectedIpRecord.title}' adlı varlık için ${specificTaskType} talebi.`;
+                }
+
+                // İş oluşturulmadan önce transaction'ı portföy kaydına ekle ve ID'sini al
+                const transactionTypeToRecord = specificTaskType; 
+                const transactionDescriptionToRecord = specificTaskType;
+                let parentTransactionIdForChildLink = null;
+                if (taskData.details && taskData.details.relatedTransactionId) {
+                    parentTransactionIdForChildLink = taskData.details.relatedTransactionId;
+                }
+
+                const transactionData = {
+                    type: transactionTypeToRecord, 
+                    description: transactionDescriptionToRecord, 
+                    parentId: parentTransactionIdForChildLink || null 
+                };
+                const addTxResult = await ipRecordsService.addTransactionToRecord(this.selectedIpRecord.id, transactionData);
+
+                if (!addTxResult.success) {
+                    console.error('Portföy kaydına işlem eklenirken hata:', addTxResult.error);
+                    alert('İş oluşturulurken bir hata oluştu: Portföy kaydına işlem eklenemedi. ' + addTxResult.error);
+                    return; // İşlem eklenemediyse görevi de oluşturma
+                }
+
+                // Transaction ID'sini iş objesine ekle
+                taskData.transactionIdForDeletion = addTxResult.transaction.transactionId; // Yeni alan
+
+                const result = await taskService.createTask(taskData);
+                if(result.success) {
+                    alert('İş başarıyla oluşturuldu ve Portföy kaydına işlem eklendi!');
+                    window.location.href = 'task-management.html';
+                } else {
+                    console.error('İş oluşturulurken hata:', result.error);
+                    // Eğer görev oluşturma başarısız olursa, eklenen transaction'ı geri al (isteğe bağlı)
+                    // await ipRecordsService.deleteTransaction(this.selectedIpRecord.id, addTxResult.transaction.transactionId);
+                    alert('İş oluşturulurken bir hata oluştu: ' + result.error);
+                }
+            }
+        }
+
+        const module = new CreateTaskModule();
+        auth.onAuthStateChanged(user => {
+            if(user || authService.getCurrentUser()) {
+                module.init();
+                window.createTaskModule = module;
+            } else { window.location.href = 'index.html'; }
+        });
+    </script>
+</body>
+</html>
