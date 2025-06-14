@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IP Manager - Tahakkuk Yönetimi</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333; display: flex; }
+        
+        .page-wrapper { flex-grow: 1; display: flex; flex-direction: column; height: 100vh; overflow-y: auto; background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); }
+        .main-container { width: 100%; padding: 30px; margin: 0; }
+        .sidebar { width: 260px; background: #1e3c72; color: white; display: flex; flex-direction: column; height: 100vh; position: sticky; top: 0; z-index: 1001; }
+        .sidebar-header { padding: 20px; text-align: center; border-bottom: 1px solid rgba(255, 255, 255, 0.1); }
+        .sidebar-logo { font-size: 1.8em; font-weight: bold; color: white; text-decoration: none; }
+        .sidebar-nav { flex-grow: 1; overflow-y: auto; padding: 20px 0; }
+        .nav-category-title { padding: 10px 20px; font-size: 0.8em; font-weight: bold; color: rgba(255, 255, 255, 0.5); text-transform: uppercase; }
+        .sidebar-nav-item, .accordion-header { display: flex; align-items: center; gap: 15px; padding: 15px 20px; color: rgba(255, 255, 255, 0.8); text-decoration: none; transition: background 0.3s ease; cursor: pointer; }
+        .sidebar-nav-item:hover, .accordion-header:hover { background: rgba(255, 255, 255, 0.1); }
+        .sidebar-nav-item.active { background: #2a5298; color: white; font-weight: bold; border-left: 4px solid #4ecdc4; padding-left: 16px; }
+        .nav-icon { font-size: 1.2em; width: 20px; text-align: center; }
+        .accordion-header::after { content: '▶'; margin-left: auto; font-size: 0.8em; transition: transform 0.3s ease; }
+        .accordion-header.active::after { transform: rotate(90deg); }
+        .accordion-content { background: rgba(0, 0, 0, 0.2); max-height: 0; overflow: hidden; transition: max-height 0.3s ease-out; }
+        .accordion-content a { display: block; padding: 12px 20px 12px 55px; color: rgba(255, 255, 255, 0.7); text-decoration: none; }
+        .accordion-content a.active { color: white; font-weight: 500; }
+        
+        .top-header { background: rgba(255, 255, 255, 0.95); padding: 15px 30px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05); display: flex; justify-content: flex-end; align-items: center; position: sticky; top: 0; z-index: 99; }
+        .user-section { display: flex; align-items: center; gap: 15px; }
+        .user-avatar { width: 40px; height: 40px; background: linear-gradient(45deg, #1e3c72, #2a5298); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; }
+        .user-info { display: flex; flex-direction: column; }
+        .user-name { font-weight: 600; }
+        .user-role { font-size: 0.8em; color: #666; }
+        .logout-btn { background: #ff6b6b; color: white; border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer; }
+        
+        .page-header { background: rgba(255, 255, 255, 0.95); padding: 30px; border-radius: 20px; margin-bottom: 30px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1); }
+        .page-title { font-size: 2em; color: #1e3c72; margin-bottom: 10px; }
+        .page-subtitle { color: #666; font-size: 1.1em; }
+        
+        .accruals-container { background: rgba(255, 255, 255, 0.95); border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); overflow: hidden; }
+        .accruals-header { padding: 20px 30px; border-bottom: 1px solid #e1e8ed; display: flex; justify-content: space-between; align-items: center; }
+        .filter-group { display: flex; gap: 10px; align-items: center; }
+        .filter-label { font-weight: 500; }
+        .filter-select { padding: 8px 12px; border-radius: 8px; border: 1px solid #ccc; }
+        
+        .accruals-table { width: 100%; border-collapse: collapse; }
+        .accruals-table th, .accruals-table td { padding: 15px; text-align: left; border-bottom: 1px solid #f0f0f0; }
+        .accruals-table th { background: #f8f9fa; font-weight: 600; }
+        
+        .status-badge { padding: 4px 10px; border-radius: 12px; font-size: 0.8em; font-weight: 500; color: white; text-align: center; }
+        .status-paid { background-color: #28a745; }
+        .status-unpaid { background-color: #dc3545; }
+        
+        .action-btn { background: #007bff; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; }
+        .loading { text-align: center; padding: 50px; }
+        .no-records { text-align: center; padding: 50px; color: #666; }
+    </style>
+</head>
+<body>
+    <aside class="sidebar">
+        <div class="sidebar-header"><a href="dashboard.html" class="sidebar-logo">🔥 IP Manager</a></div>
+        <nav class="sidebar-nav">
+            <div class="nav-category-title">Ana Menü</div>
+            <a href="dashboard.html" class="sidebar-nav-item"><span class="nav-icon">📊</span><span>Dashboard</span></a>
+            <a href="portfolio.html" class="sidebar-nav-item"><span class="nav-icon">📋</span><span>Portföy</span></a>
+            <div class="nav-category-title">Veri Girişi</div>
+            <a href="data-entry.html" class="sidebar-nav-item"><span class="nav-icon">➕</span><span>Yeni Kayıt</span></a>
+            <a href="excel-upload.html" class="sidebar-nav-item"><span class="nav-icon">📄</span><span>Excel ile Yükle</span></a>
+            <div class="nav-category-title">Yönetim</div>
+            <div class="accordion">
+                <div class="accordion-header"><span class="nav-icon">⚙️</span><span>Yönetim</span></div>
+                <div class="accordion-content">
+                    <a href="create-task.html" class="new-task-link">Yeni İş Oluştur</a>
+                    <a href="task-management.html">İş Yönetimi</a>
+                    <a href="my-tasks.html">İşlerim</a>
+                    <a href="persons.html">Kişiler Yönetimi</a>
+                    <a href="user-management.html">Kullanıcı Yönetimi</a>
+                </div>
+            </div>
+            <div class="nav-category-title">Finans</div>
+            <a href="accruals.html" class="sidebar-nav-item"><span class="nav-icon">💰</span><span>Tahakkuklarım</span></a>
+            <div class="nav-category-title">Araçlar</div>
+            <div class="nav-category-title">Finans</div>
+            <a href="accruals.html" class="sidebar-nav-item"><span class="nav-icon">💰</span><span>Tahakkuklarım</span></a>
+            <div class="nav-category-title">Araçlar</div>
+            <a href="indexing.html" class="sidebar-nav-item"><span class="nav-icon">📁</span><span>Belge İndeksleme</span></a>
+            <a href="#" class="sidebar-nav-item" style="opacity: 0.5; cursor: not-allowed;"><span class="nav-icon">📈</span><span>Raporlar</span></a>
+            <a href="#" class="sidebar-nav-item" style="opacity: 0.5; cursor: not-allowed;"><span class="nav-icon">🔧</span><span>Ayarlar</span></a>
+        </nav>
+    </aside>
+
+    <div class="page-wrapper">
+        <header class="top-header">
+            <div class="user-section">
+                <div class="user-avatar" id="userAvatar">?</div>
+                <div class="user-info">
+                    <div class="user-name" id="userName">Yükleniyor...</div>
+                    <div class="user-role" id="userRole">Kullanıcı</div>
+                </div>
+                <button class="logout-btn" id="logoutBtn">Çıkış</button>
+            </div>
+        </header>
+
+        <main class="main-container">
+            <section class="page-header">
+                <h1 class="page-title">Tahakkuk Yönetimi</h1>
+                <p class="page-subtitle">Tüm finansal tahakkukları ve ödeme durumlarını buradan takip edin.</p>
+            </section>
+    
+            <div class="accruals-container">
+                <div class="accruals-header">
+                    <div class="filter-group">
+                        <label class="filter-label" for="statusFilter">Duruma Göre Filtrele:</label>
+                        <select id="statusFilter" class="filter-select">
+                            <option value="all">Tümü</option>
+                            <option value="unpaid">Ödenmedi</option>
+                            <option value="paid">Ödendi</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="table-container">
+                    <table class="accruals-table">
+                        <thead>
+                            <tr>
+                                <th>Durum</th>
+                                <th>İlgili İş</th>
+                                <th>Hizmet Faturası</th>
+                                <th>TP Faturası</th>
+                                <th>Toplam Tutar (KDV Dahil)</th>
+                                <th>İşlemler</th>
+                            </tr>
+                        </thead>
+                        <tbody id="accrualsTableBody"></tbody>
+                    </table>
+                     <div id="loadingIndicator" class="loading">Yükleniyor...</div>
+                     <div id="noRecordsMessage" class="no-records">Henüz tahakkuk kaydı bulunmamaktadır.</div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script type="module">
+        import { authService, accrualService, auth } from './firebase-config.js';
+
+        class AccrualsModule {
+            constructor() {
+                this.currentUser = null;
+                this.allAccruals = [];
+                this.init();
+            }
+
+            init() {
+                authService.auth.onAuthStateChanged(async user => {
+                    if (user) {
+                        this.currentUser = authService.getCurrentUser();
+                        this.updateUserInfo();
+                        await this.loadAccruals();
+                        this.setupEventListeners();
+                    } else {
+                        window.location.href = 'index.html';
+                    }
+                });
+            }
+
+            updateUserInfo() {
+                if (this.currentUser) {
+                    const userName = this.currentUser.displayName || this.currentUser.email.split('@')[0] || 'Kullanıcı';
+                    const userRole = this.currentUser.role === 'admin' ? 'Yönetici' : this.currentUser.role === 'superadmin' ? 'Süper Yönetici' : 'Kullanıcı';
+                    document.getElementById('userAvatar').textContent = userName.charAt(0).toUpperCase();
+                    document.getElementById('userName').textContent = userName;
+                    document.getElementById('userRole').textContent = userRole;
+                }
+            }
+
+            setupEventListeners() {
+                document.getElementById('logoutBtn').addEventListener('click', () => authService.signOut());
+                document.getElementById('statusFilter').addEventListener('change', (e) => this.renderTable(e.target.value));
+            }
+
+            async loadAccruals() {
+                document.getElementById('loadingIndicator').style.display = 'block';
+                const result = await accrualService.getAccruals();
+                if (result.success) {
+                    this.allAccruals = result.data;
+                    this.renderTable();
+                } else {
+                    alert('Tahakkuklar yüklenirken bir hata oluştu: ' + result.error);
+                }
+                document.getElementById('loadingIndicator').style.display = 'none';
+            }
+
+            renderTable(filter = 'all') {
+                const tableBody = document.getElementById('accrualsTableBody');
+                const noRecordsMessage = document.getElementById('noRecordsMessage');
+                tableBody.innerHTML = '';
+
+                const filteredAccruals = this.allAccruals.filter(acc => filter === 'all' || acc.status === filter);
+
+                if (filteredAccruals.length === 0) {
+                    noRecordsMessage.style.display = 'block';
+                    return;
+                }
+                noRecordsMessage.style.display = 'none';
+
+                const currencyFormatter = new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' });
+
+                filteredAccruals.forEach(accrual => {
+                    const row = document.createElement('tr');
+                    const statusText = accrual.status === 'paid' ? 'Ödendi' : 'Ödenmedi';
+                    const statusClass = accrual.status === 'paid' ? 'status-paid' : 'status-unpaid';
+
+                    row.innerHTML = `
+                        <td><span class="status-badge ${statusClass}">${statusText}</span></td>
+                        <td><a href="task-detail.html?taskId=${accrual.taskId}" target="_blank">${accrual.taskTitle || 'İş Detayı'}</a></td>
+                        <td>${accrual.serviceInvoiceParty?.name || '-'}</td>
+                        <td>${accrual.tpInvoiceParty?.name || '-'}</td>
+                        <td>${currencyFormatter.format(accrual.totalAmount || 0)}</td>
+                        <td>
+                            ${accrual.status !== 'paid' ? `<button class="action-btn" data-id="${accrual.id}">Ödendi İşaretle</button>` : 'İşlem Yok'}
+                        </td>
+                    `;
+                    
+                    const button = row.querySelector('button');
+                    if (button) {
+                        button.addEventListener('click', () => this.markAsPaid(accrual.id));
+                    }
+
+                    tableBody.appendChild(row);
+                });
+            }
+
+            async markAsPaid(accrualId) {
+                if (confirm('Bu tahakkuku "Ödendi" olarak işaretlemek istediğinizden emin misiniz?')) {
+                    const result = await accrualService.updateAccrual(accrualId, { status: 'paid' });
+                    if (result.success) {
+                        alert('Tahakkuk durumu başarıyla güncellendi.');
+                        await this.loadAccruals();
+                    } else {
+                        alert('Durum güncellenirken hata oluştu: ' + result.error);
+                    }
+                }
+            }
+        }
+
+        // Initialize Module
+        new AccrualsModule();
+    </script>
+</body>
+</html>
