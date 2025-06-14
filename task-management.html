@@ -113,6 +113,17 @@
         .file-list-task-detail { margin-top: 10px; }
         .file-item-task-detail { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; background: #f8f9fa; border-radius: 6px; margin-bottom: 5px; }
         .remove-file-task-detail { background: #ff6b6b; color: white; border: none; border-radius: 50%; width: 20px; height: 20px; cursor: pointer; }
+        .related-accrual-item {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            font-size: 0.9em;
+            border-left: 3px solid #1e3c72;
+        }
+        .status-badge { padding: 4px 10px; border-radius: 12px; font-size: 0.8em; font-weight: 500; color: white; }
+        .status-open { background-color: #007bff; }
+        .status-completed { background-color: #28a745; }
 </style>
 </head>
 <body>
@@ -208,6 +219,12 @@
                 <div class="modal-detail-item full-width"><div class="modal-detail-label">İlgili Fikri Mülkiyet Kaydı</div><div class="modal-detail-value" id="modalViewRelatedIpRecordValue"></div></div>
                 <div class="modal-detail-item full-width" id="modalViewRelatedPartyGroup" style="display:none;"><div class="modal-detail-label" id="modalViewRelatedPartyLabel"></div><div class="modal-detail-value" id="modalViewRelatedPartyValue"></div></div>
                 <div class="modal-detail-item full-width" id="modalViewRelatedTransactionGroup" style="display:none;"><div class="modal-detail-label" id="modalViewRelatedTransactionLabel"></div><div class="modal-detail-value" id="modalViewRelatedTransactionValue"></div></div>
+                
+                <h4 class="modal-detail-section-title">İlişkili Tahakkuklar</h4>
+                <div class="modal-detail-item full-width" id="modalViewRelatedAccruals">
+                    <p style="text-align: center; color: #666;">Tahakkuk bilgisi bulunmuyor.</p>
+                </div>
+
                 <h4 class="modal-detail-section-title">İşlem Geçmişi</h4>
                 <div class="modal-detail-item full-width task-history" id="modalViewTaskHistory"><p style="text-align: center; color: #666;">İşlem geçmişi bulunmuyor.</p></div>
             </div>
@@ -270,7 +287,7 @@
 </div>
 
 <script type="module">
-        import { authService, taskService, ipRecordsService, personsService, auth, generateUUID } from './firebase-config.js';
+        import { authService, taskService, ipRecordsService, personsService, accrualService, auth, generateUUID } from './firebase-config.js';
 
         class TaskManagementModule {
             constructor() {
@@ -279,6 +296,7 @@
                 this.allUsers = [];
                 this.allIpRecords = [];
                 this.allPersons = [];
+                this.allAccruals = [];
                 this.currentEditTask = null;
                 this.uploadedEditFiles = [];
                 this.selectedTasks = new Set();
@@ -311,17 +329,19 @@
             }
 
             async loadInitialData() {
-                const [usersResult, tasksResult, ipRecordsResult, personsResult] = await Promise.all([
+                const [usersResult, tasksResult, ipRecordsResult, personsResult, accrualsResult] = await Promise.all([
                     taskService.getAllUsers(), 
                     taskService.getAllTasks(),
                     ipRecordsService.getRecords(),
-                    personsService.getPersons()
+                    personsService.getPersons(),
+                    accrualService.getAccruals()
                 ]);
 
                 if (usersResult.success) this.allUsers = usersResult.data;
                 if (tasksResult.success) this.allTasks = tasksResult.data;
                 if (ipRecordsResult.success) this.allIpRecords = ipRecordsResult.data;
                 if (personsResult.success) this.allPersons = personsResult.data;
+                if (accrualsResult.success) this.allAccruals = accrualsResult.data;
                 
                 this.populateFilters();
                 this.renderTasks();
@@ -683,6 +703,26 @@
                 } else {
                     modalViewRelatedPartyGroup.style.display = 'none';
                 }
+
+                const modalViewRelatedAccruals = document.getElementById('modalViewRelatedAccruals');
+                const relatedAccruals = this.allAccruals.filter(acc => acc.taskId === task.id);
+                
+                if (relatedAccruals.length > 0) {
+                    modalViewRelatedAccruals.innerHTML = relatedAccruals.map(acc => {
+                        const statusText = acc.status === 'paid' ? 'Ödendi' : 'Ödenmedi';
+                        const statusBadgeClass = acc.status === 'paid' ? 'status-completed' : 'status-open';
+                        const totalAmountText = new Intl.NumberFormat('tr-TR', { style: 'currency', currency: acc.totalAmountCurrency || 'TRY' }).format(acc.totalAmount || 0);
+                        
+                        return `<div class="related-accrual-item">
+                            <b>ID:</b> ${acc.id.substring(0,8)}... | 
+                            <b>Durum:</b> <span class="status-badge ${statusBadgeClass}">${statusText}</span> | 
+                            <b>Tutar:</b> ${totalAmountText}
+                        </div>`;
+                    }).join('');
+                } else {
+                    modalViewRelatedAccruals.innerHTML = '<p>Bu işe ait tahakkuk bulunmuyor.</p>';
+                }
+
 
                 const modalViewTaskHistory = document.getElementById('modalViewTaskHistory');
                 modalViewTaskHistory.innerHTML = '';
