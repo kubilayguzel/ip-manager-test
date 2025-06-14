@@ -430,14 +430,17 @@
                     });
                 });
                 
-                document.addEventListener('click', (event) => {
+                document.getElementById('tasksTableBody').addEventListener('click', (event) => {
                     const target = event.target.closest('button.action-btn, a.ip-record-link');
                     if (!target) return;
                     
-                    const taskId = target.getAttribute('data-id');
-                    const recordId = target.getAttribute('data-ip-record-id');
+                    const row = target.closest('tr');
+                    const taskId = row.querySelector('.task-checkbox')?.dataset.taskId;
+                    const recordId = row.querySelector('a.ip-record-link')?.dataset.ipRecordId;
+                    const completeBtn = row.querySelector('.complete-btn');
+                    const relatedIpRecordId = completeBtn ? completeBtn.dataset.ipRecordId : null;
 
-                    if (target.classList.contains('complete-btn')) { event.preventDefault(); if (taskId) this.showCompleteTaskModal(taskId, recordId); }
+                    if (target.classList.contains('complete-btn')) { event.preventDefault(); if (taskId) this.showCompleteTaskModal(taskId, relatedIpRecordId); }
                     else if (target.classList.contains('view-btn')) { if (taskId) this.viewTaskDetailsModal(taskId); }
                     else if (target.classList.contains('edit-btn')) { if (taskId) this.showEditTaskModal(taskId); }
                     else if (target.classList.contains('delete-btn')) { if (taskId) this.deleteTask(taskId); }
@@ -471,11 +474,9 @@
                         <td>${task.dueDate ? new Date(task.dueDate).toLocaleDateString() : '-'}</td>
                         <td><span class="status-badge status-${task.status}">${statusMap[task.status] || task.status}</span></td>
                         <td>
-                            <div style="display: flex; gap: 5px;">
-                                <button class="action-btn view-btn" data-id="${task.id}" title="Görüntüle">👁️</button>
-                                <button class="action-btn edit-btn" data-id="${task.id}" title="Güncelle">✏️</button>
-                                <button class="action-btn complete-btn" data-id="${task.id}" data-ip-record-id="${task.relatedIpRecordId}" ${isCompleted ? 'disabled' : ''} title="İşi Bitir">✔️</button>
-                            </div>
+                            <button class="action-btn view-btn">Görüntüle</button>
+                            <button class="action-btn edit-btn">Güncelle</button>
+                            <button class="action-btn complete-btn" data-ip-record-id="${relatedIpRecordId}" ${isCompleted ? 'disabled' : ''}>${isCompleted ? 'Tamamlandı' : 'İşi Bitir'}</button>
                         </td>
                     `;
                     
@@ -632,7 +633,8 @@
                 if (isInitial) {
                     existingList.innerHTML = '';
                     const existingFiles = this.currentEditTask.files || [];
-                    document.getElementById('modalNoTaskDocumentsMessage').style.display = existingFiles.length === 0 ? 'block' : 'none';
+                    const noDocsMessage = document.getElementById('modalNoTaskDocumentsMessage');
+                    if(noDocsMessage) noDocsMessage.style.display = existingFiles.length === 0 ? 'block' : 'none';
                     if (existingFiles.length > 0) {
                         existingFiles.forEach(file => {
                             const li = document.createElement('li');
