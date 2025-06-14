@@ -562,7 +562,57 @@ export const taskService = {
     }
 };
 
-// --- YENİ EKLENEN FONKSİYON ---
+// --- Accrual Service (NEW) ---
+export const accrualService = {
+    async addAccrual(accrualData) {
+        if (!isFirebaseAvailable) return { success: false, error: "Firebase not connected." };
+        const user = authService.getCurrentUser();
+        if (!user) return { success: false, error: "Not logged in" };
+        
+        try {
+            const newAccrual = {
+                ...accrualData,
+                id: generateUUID(),
+                status: 'unpaid', // Default status
+                createdAt: new Date().toISOString(),
+                createdBy_uid: user.uid,
+                createdBy_email: user.email,
+            };
+            await setDoc(doc(db, 'accruals', newAccrual.id), newAccrual);
+            return { success: true, data: newAccrual };
+        } catch (error) {
+            console.error("Error creating accrual:", error);
+            return { success: false, error: error.message };
+        }
+    },
+
+    async getAccruals() {
+        if (!isFirebaseAvailable) return { success: true, data: [] };
+        try {
+            const q = query(collection(db, 'accruals'), orderBy('createdAt', 'desc'));
+            const querySnapshot = await getDocs(q);
+            return { success: true, data: querySnapshot.docs.map(d => d.data()) };
+        } catch (error) {
+            console.error("Error fetching accruals:", error);
+            return { success: false, error: error.message, data: [] };
+        }
+    },
+
+    async updateAccrual(accrualId, updates) {
+        if (!isFirebaseAvailable) return { success: false, error: "Firebase not connected." };
+        try {
+            const accrualRef = doc(db, 'accruals', accrualId);
+            await updateDoc(accrualRef, updates);
+            return { success: true };
+        } catch (error) {
+            console.error("Error updating accrual:", error);
+            return { success: false, error: error.message };
+        }
+    }
+};
+
+
+// --- Demo Data Function ---
 export async function createDemoData() {
     console.log('🧪 Creating demo data...');
     const user = authService.getCurrentUser();
