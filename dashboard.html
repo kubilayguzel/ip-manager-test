@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IP Manager - Dashboard</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333; display: flex; }
+        
+        /* === ANA SAYFA YAPISI === */
+        .page-wrapper { flex-grow: 1; display: flex; flex-direction: column; height: 100vh; overflow-y: auto; background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); }
+        .main-container { width: 100%; max-width: 1400px; margin: 30px auto; padding: 0 30px; }
+        
+        /* === SOL MENÜ (SIDEBAR) === */
+        .sidebar { width: 260px; background: #1e3c72; color: white; display: flex; flex-direction: column; height: 100vh; position: sticky; top: 0; z-index: 1002; flex-shrink: 0; }
+        .sidebar-header { padding: 20px; text-align: center; border-bottom: 1px solid rgba(255, 255, 255, 0.1); }
+        .sidebar-logo { font-size: 1.8em; font-weight: bold; color: white; text-decoration: none; }
+        .sidebar-nav { flex-grow: 1; overflow-y: auto; padding: 20px 0; }
+        .nav-category-title { padding: 10px 20px; font-size: 0.8em; font-weight: bold; color: rgba(255, 255, 255, 0.5); text-transform: uppercase; }
+        .sidebar-nav-item, .accordion-header { display: flex; align-items: center; gap: 15px; padding: 15px 20px; color: rgba(255, 255, 255, 0.8); text-decoration: none; transition: background 0.3s ease; cursor: pointer; }
+        .sidebar-nav-item:hover, .accordion-header:hover { background: rgba(255, 255, 255, 0.1); }
+        .sidebar-nav-item.active { background: #2a5298; color: white; font-weight: bold; border-left: 4px solid #4ecdc4; padding-left: 16px; }
+        .nav-icon { font-size: 1.2em; width: 20px; text-align: center; }
+        .accordion-header::after { content: '▶'; margin-left: auto; font-size: 0.8em; transition: transform 0.3s ease; }
+        .accordion-header.active::after { transform: rotate(90deg); }
+        .accordion-content { background: rgba(0, 0, 0, 0.2); max-height: 0; overflow: hidden; transition: max-height 0.3s ease-out; }
+        .accordion-content a { display: block; padding: 12px 20px 12px 55px; color: rgba(255, 255, 255, 0.7); text-decoration: none; }
+        .accordion-content a.active { color: white; font-weight: 500; }
+        .accordion-content a.new-task-link { color: #fff; background-color: rgba(78, 205, 196, 0.25); font-weight: 500; }
+        
+        /* === ÜST BAR (TOP HEADER) === */
+        .top-header { background: rgba(255, 255, 255, 0.95); padding: 15px 30px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05); display: flex; justify-content: flex-end; align-items: center; position: sticky; top: 0; z-index: 99; }
+        .user-section { display: flex; align-items: center; gap: 15px; }
+        .user-avatar { width: 40px; height: 40px; background: linear-gradient(45deg, #1e3c72, #2a5298); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; }
+        .user-info { display: flex; flex-direction: column; }
+        .user-name { font-weight: 600; }
+        .user-role { font-size: 0.8em; color: #666; }
+        .logout-btn { background: #ff6b6b; color: white; border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 0.9em; }
+        
+        /* === DASHBOARD SAYFASINA ÖZEL STİLLER === */
+        .welcome-section { background: rgba(255, 255, 255, 0.95); padding: 30px; border-radius: 20px; margin-bottom: 30px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1); }
+        .welcome-title { font-size: 2em; color: #1e3c72; margin-bottom: 10px; }
+        .welcome-subtitle { color: #666; font-size: 1.1em; }
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 25px; margin-bottom: 40px; }
+        .stat-card { background: rgba(255, 255, 255, 0.95); padding: 25px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1); transition: transform 0.3s ease; border-left: 5px solid; }
+        .stat-card:hover { transform: translateY(-5px); }
+        .stat-card.patents { border-left-color: #ff6b6b; }
+        .stat-card.trademarks { border-left-color: #4ecdc4; }
+        .stat-card.copyrights { border-left-color: #45b7d1; }
+        .stat-card.designs { border-left-color: #96ceb4; }
+        .stat-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .stat-icon { width: 50px; height: 50px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.5em; color: white; }
+        .stat-icon.patents { background: #ff6b6b; }
+        .stat-icon.trademarks { background: #4ecdc4; }
+        .stat-icon.copyrights { background: #45b7d1; }
+        .stat-icon.designs { background: #96ceb4; }
+        .stat-value { font-size: 2.5em; font-weight: bold; color: #1e3c72; }
+        .stat-label { color: #666; font-size: 1.1em; margin-bottom: 10px; }
+        .stat-change { font-size: 0.9em; padding: 4px 8px; border-radius: 6px; font-weight: 500; }
+        .stat-change.positive { background: #d4edda; color: #155724; }
+        .dashboard-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 30px; margin-bottom: 40px; }
+        .chart-section { background: rgba(255, 255, 255, 0.95); padding: 30px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1); }
+        .chart-title { font-size: 1.3em; color: #1e3c72; margin-bottom: 20px; }
+        .chart-container { height: 300px; position: relative; }
+        .recent-activities { background: rgba(255, 255, 255, 0.95); padding: 30px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1); }
+        .activity-item { display: flex; align-items: center; padding: 15px 0; border-bottom: 1px solid #eee; }
+        .activity-item:last-child { border-bottom: none; }
+        .activity-icon { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 15px; font-size: 1.2em; color: white; flex-shrink: 0; }
+        .activity-content { flex: 1; }
+        .activity-title { font-weight: 600; color: #333; }
+        .activity-time { font-size: 0.9em; color: #666; }
+        .quick-actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; }
+        .action-btn { background: linear-gradient(45deg, #1e3c72, #2a5298); color: white; padding: 20px; border: none; border-radius: 15px; cursor: pointer; font-size: 1em; font-weight: 600; transition: all 0.3s ease; text-align: center; text-decoration: none; }
+        .action-btn:hover { transform: translateY(-3px); box-shadow: 0 10px 25px rgba(30, 60, 114, 0.3); }
+        .loading-animation { display: inline-block; width: 20px; height: 20px; border: 3px solid #f3f3f3; border-top: 3px solid #1e3c72; border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        @media (max-width: 992px) { .dashboard-grid { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <a href="dashboard.html" class="sidebar-logo">🔥 IP Manager</a>
+        </div>
+        <nav class="sidebar-nav">
+            <div class="nav-category-title">Ana Menü</div>
+            <a href="dashboard.html" class="sidebar-nav-item"><span class="nav-icon">📊</span><span>Dashboard</span></a>
+            <a href="portfolio.html" class="sidebar-nav-item"><span class="nav-icon">📋</span><span>Portföy</span></a>
+            <div class="nav-category-title">Veri Girişi</div>
+            <a href="data-entry.html" class="sidebar-nav-item"><span class="nav-icon">➕</span><span>Yeni Kayıt</span></a>
+            <a href="excel-upload.html" class="sidebar-nav-item"><span class="nav-icon">📄</span><span>Excel ile Yükle</span></a>
+            <div class="nav-category-title">Yönetim</div>
+            <div class="accordion">
+                <div class="accordion-header"><span class="nav-icon">⚙️</span><span>Yönetim</span></div>
+                <div class="accordion-content">
+                    <a href="create-task.html" class="new-task-link">Yeni İş Oluştur</a>
+                    <a href="task-management.html">İş Yönetimi</a>
+                    <a href="my-tasks.html">İşlerim</a>
+                    <a href="persons.html">Kişiler Yönetimi</a>
+                    <a href="user-management.html">Kullanıcı Yönetimi</a>
+                </div>
+            </div>
+            <div class="nav-category-title">Araçlar</div>
+            <a href="indexing.html" class="sidebar-nav-item"><span class="nav-icon">📁</span><span>Belge İndeksleme</span></a>
+            <a href="#" class="sidebar-nav-item" style="opacity: 0.5; cursor: not-allowed;"><span class="nav-icon">📈</span><span>Raporlar</span></a>
+            <a href="#" class="sidebar-nav-item" style="opacity: 0.5; cursor: not-allowed;"><span class="nav-icon">🔧</span><span>Ayarlar</span></a>
+        </nav>
+    </aside>
+
+    <div class="page-wrapper">
+        <header class="top-header">
+            <div class="user-section">
+                <div class="user-avatar" id="userAvatar">?</div>
+                <div class="user-info">
+                    <div class="user-name" id="userName">Yükleniyor...</div>
+                    <div class="user-role" id="userRole">Kullanıcı</div>
+                </div>
+                <button class="logout-btn" id="logoutBtn">Çıkış</button>
+            </div>
+        </header>
+
+        <main class="main-container">
+            <section class="welcome-section">
+                <h1 class="welcome-title">Hoş Geldiniz! 👋</h1>
+                <p class="welcome-subtitle">Fikri mülkiyet haklarınızın güncel durumunu görüntüleyin ve yönetin.</p>
+            </section>
+            <section class="stats-grid">
+                 <div class="stat-card patents"><div class="stat-header"><div class="stat-icon patents">📋</div><div class="stat-change positive" id="patentChange">+0</div></div><div class="stat-value" id="patentCount">0</div><div class="stat-label">Patent</div></div>
+                 <div class="stat-card trademarks"><div class="stat-header"><div class="stat-icon trademarks">🏷️</div><div class="stat-change positive" id="trademarkChange">+0</div></div><div class="stat-value" id="trademarkCount">0</div><div class="stat-label">Marka</div></div>
+                 <div class="stat-card copyrights"><div class="stat-header"><div class="stat-icon copyrights">©</div><div class="stat-change positive" id="copyrightChange">+0</div></div><div class="stat-value" id="copyrightCount">0</div><div class="stat-label">Telif Hakkı</div></div>
+                 <div class="stat-card designs"><div class="stat-header"><div class="stat-icon designs">🎨</div><div class="stat-change positive" id="designChange">+0</div></div><div class="stat-value" id="designCount">0</div><div class="stat-label">Tasarım</div></div>
+            </section>
+            <section class="dashboard-grid">
+                <div class="chart-section"><h2 class="chart-title">Aylık Başvuru Trendi</h2><div class="chart-container"><canvas id="trendChart"></canvas></div></div>
+                <div class="recent-activities"><h2 class="chart-title">Son Aktiviteler</h2><div id="activitiesList"></div></div>
+            </section>
+            <section class="quick-actions">
+                <a href="data-entry.html?type=patent" class="action-btn">📋 Yeni Patent Başvurusu</a>
+                <a href="data-entry.html?type=trademark" class="action-btn">🏷️ Yeni Marka Başvurusu</a>
+                <a href="portfolio.html" class="action-btn">📊 Portföyü Görüntüle</a>
+                <a href="persons.html" class="action-btn">👥 Kişileri Yönet</a>
+            </section>
+        </main>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script type="module">
+        import { authService, ipRecordsService, auth } from './firebase-config.js';
+
+        // Sidebar menü scripti
+        document.addEventListener('DOMContentLoaded', function() {
+            const accordions = document.querySelectorAll('.accordion-header');
+            accordions.forEach(header => {
+                header.addEventListener('click', function() { this.classList.toggle('active'); const content = this.nextElementSibling; if (content.style.maxHeight) { content.style.maxHeight = null; } else { content.style.maxHeight = content.scrollHeight + "px"; } });
+            });
+
+            function setActiveMenu() {
+                const currentPage = window.location.pathname.split("/").pop() || 'dashboard.html';
+                const activeLink = document.querySelector(`.sidebar-nav a[href*="${currentPage}"]`);
+                if (!activeLink) return;
+                activeLink.classList.add('active');
+                const parentAccordionContent = activeLink.closest('.accordion-content');
+                if (parentAccordionContent) {
+                    const parentAccordionHeader = parentAccordionContent.previousElementSibling;
+                    if (parentAccordionHeader) { parentAccordionHeader.classList.add('active'); parentAccordionContent.style.maxHeight = parentAccordionContent.scrollHeight + "px"; }
+                }
+            }
+            setActiveMenu();
+        });
+
+        class DashboardController {
+            constructor() {
+                this.currentUser = null;
+                this.chart = null;
+            }
+
+            async init() {
+                this.currentUser = authService.getCurrentUser();
+                if (!this.currentUser) { window.location.href = 'index.html'; return; }
+                this.updateUserInfo();
+                this.setupEventListeners();
+                await this.loadDashboardData();
+            }
+
+            updateUserInfo() {
+                const user = this.currentUser;
+                const userName = user.displayName || user.email.split('@')[0] || 'Kullanıcı';
+                document.getElementById('userName').textContent = userName;
+                document.getElementById('userAvatar').textContent = userName.charAt(0).toUpperCase();
+                document.getElementById('userRole').textContent = user.role === 'admin' ? 'Yönetici' : user.role === 'superadmin' ? 'Süper Yönetici' : 'Kullanıcı';
+            }
+
+            setupEventListeners() {
+                document.getElementById('logoutBtn').addEventListener('click', () => authService.signOut());
+            }
+
+            async loadDashboardData() {
+                const result = await ipRecordsService.getRecords();
+                if (result.success) {
+                    this.updateStats(result.data);
+                    this.updateActivities(result.data);
+                    this.renderChart(result.data);
+                } else {
+                    document.getElementById('activitiesList').innerHTML = '<p>Veriler yüklenemedi.</p>';
+                }
+            }
+            
+            updateStats(records = []) {
+                const counts = { patent: 0, trademark: 0, copyright: 0, design: 0 };
+                records.forEach(r => { if(counts[r.type] !== undefined) counts[r.type]++; });
+                document.getElementById('patentCount').textContent = counts.patent;
+                document.getElementById('trademarkCount').textContent = counts.trademark;
+                document.getElementById('copyrightCount').textContent = counts.copyright;
+                document.getElementById('designCount').textContent = counts.design;
+            }
+
+            updateActivities(records = []) {
+                const list = document.getElementById('activitiesList');
+                list.innerHTML = '';
+                const recent = records.sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 5);
+                if(recent.length === 0) {
+                    list.innerHTML = '<p>Henüz aktivite yok.</p>';
+                    return;
+                }
+                recent.forEach(record => {
+                    const item = document.createElement('div');
+                    item.className = 'activity-item';
+                    item.innerHTML = `<div class="activity-icon ${record.type}">${{patent:'📋',trademark:'🏷️',copyright:'©',design:'🎨'}[record.type]}</div>
+                                      <div class="activity-content">
+                                        <div class="activity-title">${record.title}</div>
+                                        <div class="activity-time">${new Date(record.createdAt).toLocaleDateString('tr-TR')}</div>
+                                      </div>`;
+                    list.appendChild(item);
+                });
+            }
+            
+            renderChart(records = []) {
+                const ctx = document.getElementById('trendChart').getContext('2d');
+                const monthlyData = {};
+                records.forEach(record => {
+                    const month = new Date(record.applicationDate).toISOString().slice(0, 7);
+                    if(!monthlyData[month]) monthlyData[month] = 0;
+                    monthlyData[month]++;
+                });
+
+                const sortedMonths = Object.keys(monthlyData).sort();
+                if(this.chart) this.chart.destroy();
+                this.chart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: sortedMonths,
+                        datasets: [{
+                            label: 'Aylık Başvuru Sayısı',
+                            data: sortedMonths.map(month => monthlyData[month]),
+                            borderColor: '#1e3c72',
+                            backgroundColor: 'rgba(30, 60, 114, 0.1)',
+                            fill: true,
+                            tension: 0.4
+                        }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false }
+                });
+            }
+        }
+
+        let dashboard;
+        auth.onAuthStateChanged((user) => {
+            if (user || authService.getCurrentUser()) {
+                if (!dashboard) {
+                    dashboard = new DashboardController();
+                    dashboard.init();
+                }
+            } else {
+                window.location.href = 'index.html'; 
+            }
+        });
+    </script>
+</body>
+</html>
+```
