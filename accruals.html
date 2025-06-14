@@ -148,7 +148,7 @@
 
             init() {
                 authService.auth.onAuthStateChanged(async user => {
-                    if (user) {
+                    if (user || authService.getCurrentUser()) {
                         this.currentUser = authService.getCurrentUser();
                         this.updateUserInfo();
                         await this.loadAccruals();
@@ -200,7 +200,23 @@
                 noRecordsMessage.style.display = 'none';
 
                 const currencyFormatter = (amount, currency) => {
-                    return new Intl.NumberFormat('tr-TR', { style: 'currency', currency: currency }).format(amount);
+                    // Güvenli fallback: Eğer currency geçerli değilse, hata vermemesi için TRY kullan
+                    try {
+                        return new Intl.NumberFormat('tr-TR', { style: 'currency', currency: currency || 'TRY' }).format(amount);
+                    } catch (e) {
+                        return new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' }).format(amount);
+                    }
+                };
+                
+                // Gelen veriyi güvenli bir şekilde işleyen yardımcı fonksiyon
+                const formatFee = (feeData) => {
+                    if (typeof feeData === 'object' && feeData !== null && feeData.currency) {
+                        return { amount: feeData.amount || 0, currency: feeData.currency };
+                    }
+                    if (typeof feeData === 'number') {
+                        return { amount: feeData, currency: 'TRY' }; // Eski veri formatı için varsayılan
+                    }
+                    return { amount: 0, currency: 'TRY' }; // Hiç veri yoksa varsayılan
                 };
 
                 filteredAccruals.forEach(accrual => {
@@ -208,15 +224,15 @@
                     const statusText = accrual.status === 'paid' ? 'Ödendi' : 'Ödenmedi';
                     const statusClass = accrual.status === 'paid' ? 'status-paid' : 'status-unpaid';
                     
-                    const officialFee = accrual.officialFee || { amount: 0, currency: 'TL' };
-                    const serviceFee = accrual.serviceFee || { amount: 0, currency: 'TL' };
+                    const officialFee = formatFee(accrual.officialFee);
+                    const serviceFee = formatFee(accrual.serviceFee);
                     
                     row.innerHTML = `
                         <td><span class="status-badge ${statusClass}">${statusText}</span></td>
-                        <td><a href="task-detail.html?taskId=${accrual.taskId}" target="_blank">${accrual.taskTitle || 'İş Detayı'}</a></td>
+                        <td><a href="task-management.html" target="_blank">${accrual.taskTitle || 'İş Detayı'}</a></td>
                         <td>${currencyFormatter(officialFee.amount, officialFee.currency)}</td>
                         <td>${currencyFormatter(serviceFee.amount, serviceFee.currency)}</td>
-                        <td>${currencyFormatter(accrual.totalAmount || 0, accrual.totalAmountCurrency || 'TL')}</td>
+                        <td>${currencyFormatter(accrual.totalAmount || 0, accrual.totalAmountCurrency || 'TRY')}</td>
                         <td>
                             ${accrual.status !== 'paid' ? `<button class="action-btn" data-id="${accrual.id}">Ödendi İşaretle</button>` : 'İşlem Yok'}
                         </td>
@@ -246,6 +262,39 @@
 
         // Initialize Module
         new AccrualsModule();
+        
+        // Akordiyon Menü için JS kodu
+        document.addEventListener('DOMContentLoaded', function() {
+            const accordions = document.querySelectorAll('.accordion-header');
+            accordions.forEach(accordion => {
+                accordion.addEventListener('click', function(event) {
+                    this.classList.toggle('active');
+                    const content = this.nextElementSibling;
+                    if (content.style.maxHeight) {
+                        content.style.maxHeight = null;
+                    } else {
+                        content.style.maxHeight = content.scrollHeight + "px";
+                    }
+                });
+            });
+
+            function setActiveMenu() {
+                const currentPage = window.location.pathname.split("/").pop() || 'dashboard.html';
+                document.querySelectorAll('.sidebar-nav-item.active, .accordion-content a.active').forEach(el => el.classList.remove('active'));
+                const activeLink = document.querySelector(`.sidebar-nav a[href="${currentPage}"]`);
+                if (!activeLink) return;
+                activeLink.classList.add('active');
+                const parentAccordionContent = activeLink.closest('.accordion-content');
+                if (parentAccordionContent) {
+                    const parentAccordionHeader = parentAccordionContent.previousElementSibling;
+                    if (parentAccordionHeader && parentAccordionHeader.classList.contains('accordion-header')) {
+                        parentAccordionHeader.classList.add('active');
+                        parentAccordionContent.style.maxHeight = parentAccordionContent.scrollHeight + "px";
+                    }
+                }
+            }
+            setActiveMenu();
+        });
     </script>
 </body>
 </html>
