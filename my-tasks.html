@@ -50,9 +50,8 @@
         .status-badge { padding: 4px 10px; border-radius: 12px; font-size: 0.8em; font-weight: 500; color: white; }
         .status-open { background-color: #007bff; }
         .status-in_progress { background-color: #ffc107; color: #333; }
-        .status-completed, .status-badge.status-paid { background-color: #28a745; }
+        .status-completed { background-color: #28a745; }
         .status-pending_review { background-color: #17a2b8; }
-        .status-badge.status-unpaid { background-color: #dc3545; }
         .action-btn { background: #6c757d; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; transition: all 0.3s ease; margin-right: 5px; }
         .action-btn.view-btn { background-color: #17a2b8; }
         .action-btn.view-btn:hover { background-color: #138496; }
@@ -62,8 +61,6 @@
         .action-btn.delete-btn:hover { background-color: #c82333; }
         .action-btn.complete-btn { background-color: #28a745; }
         .action-btn.complete-btn:hover { background-color: #218838; }
-        .action-btn.add-accrual-btn { background-color: #28a745; }
-        .action-btn.add-accrual-btn:hover { background-color: #218838; }
         .action-btn:disabled { background-color: #6c757d; opacity: 0.5; cursor: not-allowed; }
         .btn-reassign { background-color: #5a6268; }
         .btn-reassign:hover { background-color: #4a5258; }
@@ -73,7 +70,6 @@
         .modal.show { display: flex !important; }
         .modal-content-lg, .modal-content { background-color: #fefefe; margin: auto; padding: 30px; border: 1px solid #888; width: 90%; max-width: 900px; border-radius: 20px; box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2),0 6px 20px 0 rgba(0,0,0,0.19); animation-name: animatetop; animation-duration: 0.4s; max-height: 90vh; overflow-y: auto; position: relative; z-index: 10000; }
         #completeTaskModal .modal-content, #reassignTaskModal .modal-content { max-width: 600px; }
-        #addAccrualModal .modal-content { max-width: 700px; }
         @keyframes animatetop { from {top: -300px; opacity: 0} to {top: 0; opacity: 1} }
         .close-modal-btn { color: #aaa; float: right; font-size: 28px; font-weight: bold; }
         .close-modal-btn:hover, .close-modal-btn:focus { color: black; text-decoration: none; cursor: pointer; }
@@ -127,62 +123,15 @@
         .remove-file-task-detail { background: #ff6b6b; color: white; border: none; border-radius: 50%; width: 20px; height: 20px; cursor: pointer; }
         .form-group { margin-bottom: 15px; }
         .form-label { display: block; margin-bottom: 5px; font-weight: 600; color: #333; }
-        .related-accrual-item { background: #f8f9fa; padding: 10px; border-radius: 8px; margin-bottom: 8px; font-size: 0.9em; border-left: 3px solid #1e3c72; }
-        .input-with-currency { display: flex; gap: 10px; }
-        .input-with-currency .form-input { flex-grow: 1; }
-        .currency-select { padding: 12px 8px; border: 2px solid #e1e8ed; border-radius: 10px; background-color: #f8f9fa; font-weight: bold; }
-        .checkbox-label { display: flex; align-items: center; gap: 10px; cursor: pointer; font-weight: 500; }
-        .checkbox-label input { width: 18px; height: 18px; }
-        .total-amount-display { font-size: 1.2em; font-weight: bold; color: #1e3c72; text-align: right; margin-top: 10px; padding: 12px 15px; background-color: #f0f4f8; border-radius: 10px; }
-        .search-results-list { max-height: 150px; overflow-y: auto; border: 1px solid #ccc; border-radius: 8px; margin-top: 5px; }
-        .search-result-item { padding: 10px; cursor: pointer; border-bottom: 1px solid #eee; }
-        .search-result-item:hover { background-color: #f0f4f8; }
-        .search-result-display { background: #e9f5ff; border: 1px solid #bde0fe; padding: 10px; border-radius: 8px; margin-top: 10px; }
     </style>
 </head>
 <body>
     <aside class="sidebar">
-        <div class="sidebar-header">
-            <a href="dashboard.html" class="sidebar-logo">🔥 IP Manager</a>
-        </div>
-        <nav class="sidebar-nav">
-            <div class="nav-category-title">Ana Menü</div>
-            <a href="dashboard.html" class="sidebar-nav-item"><span class="nav-icon">📊</span><span>Dashboard</span></a>
-            <a href="portfolio.html" class="sidebar-nav-item"><span class="nav-icon">📋</span><span>Portföy</span></a>
-            <div class="nav-category-title">Veri Girişi</div>
-            <a href="data-entry.html" class="sidebar-nav-item"><span class="nav-icon">➕</span><span>Yeni Kayıt</span></a>
-            <a href="excel-upload.html" class="sidebar-nav-item"><span class="nav-icon">📄</span><span>Excel ile Yükle</span></a>
-            <div class="nav-category-title">Yönetim</div>
-         <div class="accordion">
-    <div class="accordion-header"><span class="nav-icon">⚙️</span><span>Yönetim</span></div>
-    <div class="accordion-content">
-        <a href="create-task.html" class="new-task-link">Yeni İş Oluştur</a>
-        <a href="task-management.html">İş Yönetimi</a>
-        <a href="my-tasks.html">İşlerim</a>
-        <a href="persons.html">Kişiler Yönetimi</a>
-        <a href="user-management.html">Kullanıcı Yönetimi</a>
-    </div>
-</div>
-           <div class="nav-category-title">Finans</div>
-            <a href="accruals.html" class="sidebar-nav-item"><span class="nav-icon">💰</span><span>Tahakkuklarım</span></a>
-            <div class="nav-category-title">Araçlar</div>
-            <a href="indexing.html" class="sidebar-nav-item"><span class="nav-icon">📁</span><span>Belge İndeksleme</span></a>
-            <a href="#" class="sidebar-nav-item" style="opacity: 0.5; cursor: not-allowed;"><span class="nav-icon">📈</span><span>Raporlar</span></a>
-            <a href="#" class="sidebar-nav-item" style="opacity: 0.5; cursor: not-allowed;"><span class="nav-icon">🔧</span><span>Ayarlar</span></a>
-        </nav>
-    </aside>
+        </aside>
 
     <div class="page-wrapper">
         <header class="top-header">
-            <div class="user-section">
-                <div class="user-avatar" id="userAvatar">?</div>
-                <div class="user-info">
-                    <div class="user-name" id="userName">Yükleniyor...</div>
-                    <div class="user-role" id="userRole">Kullanıcı</div>
-                </div>
-                <button class="logout-btn" id="logoutBtn">Çıkış</button>
-            </div>
-        </header>
+            </header>
 
         <main class="main-container">
             <section class="page-header">
@@ -228,174 +177,22 @@
     </div>
 
     <div id="viewTaskDetailModal" class="modal">
-        <div class="modal-content-lg">
-            <span class="close-modal-btn" id="closeViewTaskDetailModal">&times;</span>
-            <h3 class="modal-title" id="modalViewTaskTitle">İş Detayı</h3>
-            <div class="modal-body-content">
-                <div class="modal-detail-grid">
-                    <div class="modal-detail-item full-width"><div class="modal-detail-label">İş Başlığı</div><div class="modal-detail-value" id="modalViewTaskTitleValue"></div></div>
-                    <div class="modal-detail-item full-width"><div class="modal-detail-label">Açıklama</div><div class="modal-detail-value long-text" id="modalViewTaskDescriptionValue"></div></div>
-                    <div class="modal-detail-item"><div class="modal-detail-label">İş Türü</div><div class="modal-detail-value" id="modalViewTaskTypeValue"></div></div>
-                    <div class="modal-detail-item"><div class="modal-detail-label">Öncelik</div><div class="modal-detail-value" id="modalViewTaskPriorityValue"></div></div>
-                    <div class="modal-detail-item"><div class="modal-detail-label">Atanan Kişi</div><div class="modal-detail-value" id="modalViewAssignedToValue"></div></div>
-                    <div class="modal-detail-item"><div class="modal-detail-label">Bitiş Tarihi</div><div class="modal-detail-value" id="modalViewTaskDueDateValue"></div></div>
-                    <div class="modal-detail-item full-width"><div class="modal-detail-label">İlgili Fikri Mülkiyet Kaydı</div><div class="modal-detail-value" id="modalViewRelatedIpRecordValue"></div></div>
-                    <div class="modal-detail-item full-width" id="modalViewRelatedPartyGroup" style="display:none;"><div class="modal-detail-label" id="modalViewRelatedPartyLabel"></div><div class="modal-detail-value" id="modalViewRelatedPartyValue"></div></div>
-                    <div class="modal-detail-item full-width" id="modalViewRelatedTransactionGroup" style="display:none;"><div class="modal-detail-label" id="modalViewRelatedTransactionLabel"></div><div class="modal-detail-value" id="modalViewRelatedTransactionValue"></div></div>
-                    
-                    <h4 class="modal-detail-section-title">İlişkili Tahakkuklar</h4>
-                    <div class="modal-detail-item full-width" id="modalViewRelatedAccruals">
-                        <p style="text-align: center; color: #666;">Tahakkuk bilgisi bulunmuyor.</p>
-                    </div>
-
-                    <h4 class="modal-detail-section-title">İşlem Geçmişi</h4>
-                    <div class="modal-detail-item full-width task-history" id="modalViewTaskHistory"><p style="text-align: center; color: #666;">İşlem geçmişi bulunmuyor.</p></div>
-                </div>
-            </div>
         </div>
-    </div>
 
     <div id="editTaskModal" class="modal">
-        <div class="modal-content-lg">
-            <span class="close-modal-btn" id="closeEditTaskModal">&times;</span>
-            <h3 class="modal-title">İşi Düzenle</h3>
-            <div class="modal-body-content">
-                <form id="editTaskForm" onsubmit="return false;">
-                    <input type="hidden" id="editTaskId">
-                    <div class="modal-detail-grid">
-                        <div class="form-group" style="grid-column: 1 / -1;"><label class="form-label" for="modalEditTaskTitle">İş Başlığı</label><input type="text" id="modalEditTaskTitle" class="form-input"></div>
-                        <div class="form-group" style="grid-column: 1 / -1;"><label class="form-label" for="modalEditTaskDescription">Açıklama</label><textarea id="modalEditTaskDescription" class="form-textarea" rows="4"></textarea></div>
-                        <div class="form-group"><label class="form-label" for="modalEditTaskPriority">Öncelik</label><select id="modalEditTaskPriority" class="form-select"></select></div>
-                        <div class="form-group"><label class="form-label" for="modalEditAssignedTo">Atanan Kişi</label><select id="modalEditAssignedTo" class="form-select"></select></div>
-                        <div class="form-group" style="grid-column: 1 / -1;"><label class="form-label" for="modalEditTaskDueDate">Bitiş Tarihi</label><input type="date" id="modalEditTaskDueDate" class="form-input"></div>
-                        <h4 class="modal-detail-section-title">Dokümanlar</h4>
-                        <div class="modal-detail-item" style="grid-column: 1 / -1;"><label class="modal-detail-label">Mevcut Dokümanlar</label><ul class="document-list" id="modalEditTaskDocumentList"><li id="modalNoTaskDocumentsMessage">Henüz doküman yok.</li></ul><div class="file-upload-area-task-detail" id="modalTaskDetailFileUploadArea"><div>Yeni Dosyaları buraya sürükleyin veya tıklayın</div><input type="file" id="modalTaskDetailFileInput" multiple hidden></div><div class="file-list-task-detail" id="modalTaskDetailUploadedFileList"></div></div>
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer"><button type="button" class="btn btn-secondary" id="cancelEditTaskBtn">İptal</button><button type="button" class="btn btn-primary" id="saveTaskChangesBtn">Değişiklikleri Kaydet</button></div>
         </div>
-    </div>
 
     <div id="completeTaskModal" class="modal">
-        <div class="modal-content">
-            <span class="close-modal-btn" id="closeCompleteTaskModal">&times;</span>
-            <h3 class="modal-title">İşi Tamamla</h3>
-            <div class="modal-body-content">
-                <p>Bu işi tamamlamak için bir yöntem seçin. Doküman yüklemek isterseniz, aşağıdaki alanı kullanabilirsiniz.</p>
-                <input type="hidden" id="completeTaskId"><input type="hidden" id="completeTaskRelatedIpRecordId">
-                <div class="form-group"><label class="form-label" for="completeTaskDocumentInput">Tamamlama Dokümanı (Opsiyonel)</label><div class="file-upload-area-modal" id="completeTaskFileUploadArea"><div>Dosyayı buraya sürükleyin veya tıklayın</div><input type="file" id="completeTaskDocumentInput" multiple hidden></div><div class="file-list-modal" id="completeTaskFileList"></div></div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" id="cancelCompleteTaskBtn">İptal</button>
-                <button type="button" class="btn btn-warning" id="clientApprovalBtn">Müvekkil Onayı</button>
-                <button type="button" class="btn btn-info" id="manualCloseBtn">Manuel Kapat</button>
-                <button type="button" class="btn btn-primary" id="submitCompleteTaskBtn">İşi Tamamla</button>
-            </div>
         </div>
-    </div>
 
     <div class="modal" id="ipRecordDetailModal">
-        <div class="modal-content portfolio-detail">
-            <div class="modal-header"><h3 class="modal-title" id="ipRecordModalTitle">Kayıt Detayları</h3><button class="close-modal-btn" id="closeIpRecordModalBtn">&times;</button></div>
-            <div id="ipRecordModalBody"></div>
-            <h4 class="modal-detail-section-title" style="margin-top: 30px;">Belge İşlem Geçmişi</h4>
-            <div class="task-history" id="ipRecordTransactionHistory"><p style="text-align: center; color: #666;">Yükleniyor...</p></div>
         </div>
-    </div>
 
     <div class="modal" id="reassignTaskModal">
-        <div class="modal-content">
-            <span class="close-modal-btn" id="closeReassignModal">&times;</span>
-            <h3 class="modal-title">Seçili İşleri Ata</h3>
-            <div class="modal-body-content">
-                <div class="form-group">
-                    <label for="reassignUserSelect" class="form-label">Yeni Kullanıcı Seçin</label>
-                    <select id="reassignUserSelect" class="form-select"></select>
-                </div>
-                <p><strong id="reassignTaskCount"></strong> adet iş seçildi.</p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" id="cancelReassignBtn">İptal</button>
-                <button type="button" class="btn btn-primary" id="confirmReassignBtn">Atamayı Onayla</button>
-            </div>
-        </div>
-    </div>
+       </div>
     
-    <div class="modal" id="addAccrualModal">
-        <div class="modal-content">
-            <span class="close-modal-btn" id="closeAddAccrualModal">&times;</span>
-            <h3 class="modal-title">İşe Yeni Tahakkuk Ekle</h3>
-            <form id="addAccrualForm" onsubmit="return false;">
-                <input type="hidden" id="accrualTaskId">
-                <div class="modal-body-content">
-                    <div class="form-group">
-                        <label for="accrualTaskTitleDisplay" class="form-label">İlgili İş</label>
-                        <input type="text" id="accrualTaskTitleDisplay" class="form-input" readonly>
-                    </div>
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label for="officialFee" class="form-label">Resmi Ücret</label>
-                            <div class="input-with-currency">
-                                <input type="number" id="officialFee" class="form-input" placeholder="0.00" step="0.01">
-                                <select id="officialFeeCurrency" class="currency-select">
-                                    <option value="TRY" selected>TL</option>
-                                    <option value="EUR">EUR</option>
-                                    <option value="USD">USD</option>
-                                    <option value="CHF">CHF</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <label for="serviceFee" class="form-label">Hizmet Bedeli</label>
-                            <div class="input-with-currency">
-                                <input type="number" id="serviceFee" class="form-input" placeholder="0.00" step="0.01">
-                                <select id="serviceFeeCurrency" class="currency-select">
-                                    <option value="TRY" selected>TL</option>
-                                    <option value="EUR">EUR</option>
-                                    <option value="USD">USD</option>
-                                    <option value="CHF">CHF</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label for="vatRate" class="form-label">KDV Oranı (%)</label>
-                        <input type="number" id="vatRate" class="form-input" value="20">
-                    </div>
-                    <div class="form-group">
-                        <label class="checkbox-label">
-                            <input type="checkbox" id="applyVatToOfficialFee" checked>
-                            Resmi Ücrete KDV Uygula
-                        </label>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Toplam Tutar</label>
-                        <div id="totalAmountDisplay" class="total-amount-display">0.00 TRY</div>
-                    </div>
-                    <div class="form-group">
-                        <label for="tpInvoicePartySearch" class="form-label">Türk Patent Faturası Tarafı</label>
-                        <input type="text" id="tpInvoicePartySearch" class="form-input" placeholder="Fatura tarafı arayın...">
-                        <div id="tpInvoicePartyResults" class="search-results-list"></div>
-                        <div id="selectedTpInvoicePartyDisplay" class="search-result-display" style="display:none;"></div>
-                    </div>
-                    <div class="form-group">
-                        <label for="serviceInvoicePartySearch" class="form-label">Hizmet Faturası Tarafı</label>
-                        <input type="text" id="serviceInvoicePartySearch" class="form-input" placeholder="Fatura tarafı arayın...">
-                        <div id="serviceInvoicePartyResults" class="search-results-list"></div>
-                        <div id="selectedServiceInvoicePartyDisplay" class="search-result-display" style="display:none;"></div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" id="cancelAddAccrualBtn">İptal</button>
-                    <button type="button" class="btn btn-primary" id="saveAccrualBtn">Tahakkuku Kaydet</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
     <script type="module">
-        import { authService, taskService, ipRecordsService, personsService, accrualService, auth, generateUUID } from './firebase-config.js';
+        import { authService, taskService, ipRecordsService, personsService, auth, generateUUID } from './firebase-config.js';
 
         class MyTasksModule {
             constructor() {
@@ -403,26 +200,25 @@
                 this.tasks = [];
                 this.allIpRecords = [];
                 this.allPersons = [];
-                this.allAccruals = [];
                 this.allUsers = [];
                 this.uploadedCompletionFiles = [];
                 this.uploadedEditFiles = [];
                 this.currentEditTask = null;
                 this.selectedTasks = new Set();
-                this.selectedTpInvoiceParty = null;
-                this.selectedServiceInvoiceParty = null;
                 this.init();
             }
 
-            async init() {
-                this.currentUser = authService.getCurrentUser();
-                if (!this.currentUser) {
-                    window.location.href = 'index.html';
-                    return;
-                }
-                this.updateUserInfo();
-                await this.loadInitialData();
-                this.setupEventListeners();
+            init() {
+                authService.auth.onAuthStateChanged(async user => {
+                    if (user) {
+                        this.currentUser = authService.getCurrentUser();
+                        this.updateUserInfo();
+                        await this.loadInitialData();
+                        this.setupEventListeners();
+                    } else {
+                        window.location.href = 'index.html';
+                    }
+                });
             }
 
             updateUserInfo() {
@@ -441,19 +237,17 @@
                 document.getElementById('tasksTableBody').innerHTML = '';
                 
                 try {
-                    const [tasksResult, ipRecordsResult, personsResult, usersResult, accrualsResult] = await Promise.all([
+                    const [tasksResult, ipRecordsResult, personsResult, usersResult] = await Promise.all([
                         taskService.getTasksForUser(this.currentUser.uid),
                         ipRecordsService.getRecords(),
                         personsService.getPersons(),
-                        taskService.getAllUsers(),
-                        accrualService.getAccruals()
+                        taskService.getAllUsers()
                     ]);
 
                     if (tasksResult.success) this.tasks = tasksResult.data; else throw new Error(tasksResult.error || 'Görevler yüklenemedi');
                     if (ipRecordsResult.success) this.allIpRecords = ipRecordsResult.data; else throw new Error(ipRecordsResult.error || 'IP Kayıtları yüklenemedi');
                     if (personsResult.success) this.allPersons = personsResult.data; else throw new Error(personsResult.error || 'Kişiler yüklenemedi');
                     if (usersResult.success) this.allUsers = usersResult.data; else throw new Error(usersResult.error || 'Kullanıcılar yüklenemedi');
-                    if (accrualsResult.success) this.allAccruals = accrualsResult.data; else throw new Error(accrualsResult.error || 'Tahakkuklar yüklenemedi');
                     
                     this.renderTasks();
                     
@@ -491,17 +285,6 @@
                 document.getElementById('cancelReassignBtn').addEventListener('click', () => this.closeModal('reassignTaskModal'));
                 document.getElementById('confirmReassignBtn').addEventListener('click', () => this.handleReassignment());
 
-                document.getElementById('closeAddAccrualModal').addEventListener('click', () => this.closeModal('addAccrualModal'));
-                document.getElementById('cancelAddAccrualBtn').addEventListener('click', () => this.closeModal('addAccrualModal'));
-                document.getElementById('saveAccrualBtn').addEventListener('click', () => this.handleSaveAccrual());
-
-                ['officialFee', 'serviceFee', 'vatRate', 'applyVatToOfficialFee'].forEach(id => {
-                    const el = document.getElementById(id);
-                    if (el) el.addEventListener('input', () => this.calculateTotalAmount());
-                });
-                document.getElementById('tpInvoicePartySearch').addEventListener('input', e => this.searchPersons(e.target.value, 'tpInvoiceParty'));
-                document.getElementById('serviceInvoicePartySearch').addEventListener('input', e => this.searchPersons(e.target.value, 'serviceInvoiceParty'));
-
                 const tableBody = document.getElementById('tasksTableBody');
                 tableBody.addEventListener('change', (event) => {
                     if (event.target.matches('.task-checkbox')) {
@@ -532,7 +315,6 @@
                     else if (target.classList.contains('view-btn')) { this.viewTaskDetailsModal(taskId); }
                     else if (target.classList.contains('edit-btn')) { this.showEditTaskModal(taskId); }
                     else if (target.classList.contains('delete-btn')) { this.deleteTask(taskId); }
-                    else if (target.classList.contains('add-accrual-btn')) { this.showAddAccrualModal(taskId); }
                     else if (target.classList.contains('ip-record-link')) { 
                         const recordId = target.dataset.ipRecordId;
                         if (recordId) this.showIpRecordDetailModal(recordId); 
@@ -559,18 +341,17 @@
                     const isSelected = this.selectedTasks.has(task.id);
                     
                     row.innerHTML = `
-                        <td><input type="checkbox" class="task-checkbox" data-task-id="${task.id}" ${isSelected ? 'checked' : ''}></td>
-                        <td><span class="priority-${task.priority}">${priorityMap[task.priority] || 'Normal'}</span></td>
-                        <td>${task.title}</td>
-                        <td><a href="#" class="ip-record-link" data-ip-record-id="${relatedIpRecordId}">${relatedIpRecordTitle}</a></td> 
-                        <td>${task.dueDate ? new Date(task.dueDate).toLocaleDateString() : '-'}</td>
-                        <td><span class="status-badge status-${task.status}">${statusMap[task.status] || task.status}</span></td>
-                        <td>
-                            <div style="display: flex; gap: 5px;">
-                                <button class="action-btn view-btn">Görüntüle</button>
-                                <button class="action-btn edit-btn">Güncelle</button>
-                                <button class="action-btn complete-btn" data-ip-record-id="${relatedIpRecordId}" ${isCompleted ? 'disabled' : ''}>${isCompleted ? 'Tamamlandı' : 'İşi Bitir'}</button>
-                                <button class="action-btn add-accrual-btn" title="Bu İşe Tahakkuk Ekle">💰</button>
+                        <td><input type="checkbox" class="task-checkbox" data-task-id="${task.id}" <span class="math-inline">\{isSelected ? 'checked' \: ''\}\></td\>
+<td\><span class\="priority\-</span>{task.priority}"><span class="math-inline">\{priorityMap\[task\.priority\] \|\| 'Normal'\}</span\></td\>
+<td\></span>{task.title}</td>
+                        <td><a href="#" class="ip-record-link" data-ip-record-id="<span class="math-inline">\{relatedIpRecordId\}"\></span>{relatedIpRecordTitle}</a></td> 
+                        <td><span class="math-inline">\{task\.dueDate ? new Date\(task\.dueDate\)\.toLocaleDateString\(\) \: '\-'\}</td\>
+<td\><span class\="status\-badge status\-</span>{task.status}"><span class="math-inline">\{statusMap\[task\.status\] \|\| task\.status\}</span\></td\>
+<td\>
+<div style\="display\: flex; gap\: 5px;"\>
+<button class\="action\-btn view\-btn"\>Görüntüle</button\>
+<button class\="action\-btn edit\-btn"\>Güncelle</button\>
+<button class\="action\-btn complete\-btn" data\-ip\-record\-id\="</span>{relatedIpRecordId}" <span class="math-inline">\{isCompleted ? 'disabled' \: ''\}\></span>{isCompleted ? 'Tamamlandı' : 'İşi Bitir'}</button>
                             </div>
                         </td>
                     `;
@@ -631,7 +412,7 @@
                 const newUser = this.allUsers.find(u => u.id === newUserId);
                 const taskIds = Array.from(this.selectedTasks);
                 
-                if (!confirm(`${taskIds.length} adet işi "${newUser.displayName || newUser.email}" kullanıcısına atamak istediğinizden emin misiniz?`)) {
+                if (!confirm(`<span class="math-inline">\{taskIds\.length\} adet işi "</span>{newUser.displayName || newUser.email}" kullanıcısına atamak istediğinizden emin misiniz?`)) {
                     return;
                 }
 
@@ -734,7 +515,7 @@
                     if (existingFiles.length > 0) {
                         existingFiles.forEach(file => {
                             const li = document.createElement('li');
-                            li.innerHTML = `<a href="${file.content}" download="${file.name}" target="_blank">📄 ${file.name}</a><button class="remove-doc-btn" data-id="${file.id}">×</button>`;
+                            li.innerHTML = `<a href="<span class="math-inline">\{file\.content\}" download\="</span>{file.name}" target="_blank">📄 <span class="math-inline">\{file\.name\}</a\><button class\="remove\-doc\-btn" data\-id\="</span>{file.id}">×</button>`;
                             li.querySelector('.remove-doc-btn').addEventListener('click', (e) => {
                                 if(confirm('Bu dokümanı kalıcı olarak silmek istediğinizden emin misiniz?')) {
                                     this.currentEditTask.files = this.currentEditTask.files.filter(f => f.id !== e.target.dataset.id);
@@ -749,7 +530,7 @@
                 this.uploadedEditFiles.forEach(file => {
                     const item = document.createElement('div');
                     item.className = 'file-item-task-detail';
-                    item.innerHTML = `<span>${file.name}</span><button class="remove-file-task-detail" data-id="${file.id}">×</button>`;
+                    item.innerHTML = `<span><span class="math-inline">\{file\.name\}</span\><button class\="remove\-file\-task\-detail" data\-id\="</span>{file.id}">×</button>`;
                     item.querySelector('.remove-file-task-detail').addEventListener('click', (e) => {
                         this.uploadedEditFiles = this.uploadedEditFiles.filter(f => f.id !== e.target.dataset.id);
                         this.renderEditFileList();
@@ -808,26 +589,6 @@
                         modalViewRelatedPartyGroup.style.display = 'block';
                     } else { modalViewRelatedPartyGroup.style.display = 'none'; }
                 } else { modalViewRelatedPartyGroup.style.display = 'none'; }
-                
-                const modalViewRelatedAccruals = document.getElementById('modalViewRelatedAccruals');
-                const relatedAccruals = this.allAccruals.filter(acc => acc.taskId === task.id);
-                
-                if (relatedAccruals.length > 0) {
-                    modalViewRelatedAccruals.innerHTML = relatedAccruals.map(acc => {
-                        const statusText = acc.status === 'paid' ? 'Ödendi' : 'Ödenmedi';
-                        const statusBadgeClass = `status-badge status-${acc.status}`;
-                        const totalAmountText = new Intl.NumberFormat('tr-TR', { style: 'currency', currency: acc.totalAmountCurrency || 'TRY' }).format(acc.totalAmount || 0);
-                        
-                        return `<div class="related-accrual-item">
-                            <b>ID:</b> ${acc.id.substring(0,8)}... | 
-                            <b>Durum:</b> <span class="${statusBadgeClass}">${statusText}</span> | 
-                            <b>Tutar:</b> ${totalAmountText}
-                        </div>`;
-                    }).join('');
-                } else {
-                    modalViewRelatedAccruals.innerHTML = '<p>Bu işe ait tahakkuk bulunmuyor.</p>';
-                }
-
                 const modalViewTaskHistory = document.getElementById('modalViewTaskHistory');
                 modalViewTaskHistory.innerHTML = '';
                 if (!task.history || task.history.length === 0) {
@@ -837,7 +598,7 @@
                     sortedHistory.forEach(entry => {
                         const item = document.createElement('div');
                         item.className = 'task-history-item';
-                        item.innerHTML = `<div class="task-history-item-content"><div class="task-history-info"><div class="task-history-description">${entry.action}</div><div class="task-history-meta">${new Date(entry.timestamp).toLocaleString('tr-TR')} by ${entry.userEmail}</div></div></div>`;
+                        item.innerHTML = `<div class="task-history-item-content"><div class="task-history-info"><div class="task-history-description"><span class="math-inline">\{entry\.action\}</div\><div class\="task\-history\-meta"\></span>{new Date(entry.timestamp).toLocaleString('tr-TR')} by ${entry.userEmail}</div></div></div>`;
                         modalViewTaskHistory.appendChild(item);
                     });
                 }
@@ -910,7 +671,7 @@
                 this.uploadedCompletionFiles.forEach(file => {
                     const fileItem = document.createElement('div');
                     fileItem.className = 'file-item-modal';
-                    fileItem.innerHTML = `<span>${file.name} (${this.formatFileSize(file.size)})</span><button type="button" class="remove-file-modal" data-id="${file.id}">&times;</button>`;
+                    fileItem.innerHTML = `<span><span class="math-inline">\{file\.name\} \(</span>{this.formatFileSize(file.size)})</span><button type="button" class="remove-file-modal" data-id="${file.id}">&times;</button>`;
                     fileItem.querySelector('.remove-file-modal').addEventListener('click', () => {
                         this.uploadedCompletionFiles = this.uploadedCompletionFiles.filter(f => f.id !== file.id);
                         this.renderDocumentListForTaskCompletion();
@@ -920,11 +681,11 @@
             }
 
             async showIpRecordDetailModal(recordId) {
-                const record = this.allIpRecords.find(r => r.id === recordId); if (!record) { alert('Portföy kaydı bulunamadı.'); return; } const modal = document.getElementById('ipRecordDetailModal'); if (!modal) return; const typeNames = { patent: 'Patent', trademark: 'Marka', copyright: 'Telif Hakkı', design: 'Tasarım' }; const statusNames = { application: 'Başvuru', pending: 'Beklemede', approved: 'Onaylandı', rejected: 'Reddedildi', expired: 'Süresi Doldu', published: 'Yayınlandı', partial_refusal: 'Kısmi Ret', refused: 'Ret', opposition_received: 'İtiraz Geldi', opposition_filed: 'İtiraz Edildi', registered: 'Tescilli', not_renewed: 'Yenilenmedi', invalid_void: 'Geçersiz' }; const formatDate = (dateString) => dateString ? new Date(dateString).toLocaleDateString('tr-TR') : '-'; const renderField = (label, value, isLongText = false) => { if (value === null || value === undefined || value === '') return ''; return `<div class="modal-detail-item ${isLongText ? 'full-width' : ''}"><div class="modal-detail-label">${label}</div><div class="modal-detail-value ${isLongText ? 'long-text' : ''}">${value}</div></div>`; }; document.getElementById('ipRecordModalTitle').textContent = `Detay: ${record.title}`; let modalContentHtml = `<div class="modal-detail-grid portfolio-detail">`; modalContentHtml += `<h4 class="modal-detail-section-title">Genel Bilgiler</h4>`; modalContentHtml += renderField('Tür', `<span class="ip-type ${record.type}">${typeNames[record.type] || 'Bilinmiyor'}</span>`); modalContentHtml += renderField('Başlık', record.title); modalContentHtml += renderField('Durum', `<span class="status-badge ${record.status}">${statusNames[record.status] || record.status}</span>`); modalContentHtml += renderField('Başvuru Numarası', record.applicationNumber); modalContentHtml += renderField('Tescil Numarası', record.registrationNumber); modalContentHtml += renderField('Başvuru Tarihi', formatDate(record.applicationDate)); modalContentHtml += renderField('Tescil Tarihi', formatDate(record.registrationDate)); modalContentHtml += renderField('Hak Sahipleri', (record.owners || []).map(o => o.name).join(', ')); if (record.files && record.files.length > 0) { modalContentHtml += `<h4 class="modal-detail-section-title">Yüklenen Dokümanlar</h4>`; modalContentHtml += `<div class="modal-detail-item full-width"><ul>`; record.files.forEach(file => { modalContentHtml += `<li><a href="${file.content}" download="${file.name}">📄 ${file.name} (${this.formatFileSize(file.size)}) - ${file.documentDesignation || 'Belge'}</a></li>`; }); modalContentHtml += `</ul></div>`; } modalContentHtml += `</div>`; document.getElementById('ipRecordModalBody').innerHTML = modalContentHtml; this.renderIpRecordTransactionHistory(record.id, record.transactions, record.files); modal.classList.add('show');
+                const record = this.allIpRecords.find(r => r.id === recordId); if (!record) { alert('Portföy kaydı bulunamadı.'); return; } const modal = document.getElementById('ipRecordDetailModal'); if (!modal) return; const typeNames = { patent: 'Patent', trademark: 'Marka', copyright: 'Telif Hakkı', design: 'Tasarım' }; const statusNames = { application: 'Başvuru', pending: 'Beklemede', approved: 'Onaylandı', rejected: 'Reddedildi', expired: 'Süresi Doldu', published: 'Yayınlandı', partial_refusal: 'Kısmi Ret', refused: 'Ret', opposition_received: 'İtiraz Geldi', opposition_filed: 'İtiraz Edildi', registered: 'Tescilli', not_renewed: 'Yenilenmedi', invalid_void: 'Geçersiz' }; const formatDate = (dateString) => dateString ? new Date(dateString).toLocaleDateString('tr-TR') : '-'; const renderField = (label, value, isLongText = false) => { if (value === null || value === undefined || value === '') return ''; return `<div class="modal-detail-item <span class="math-inline">\{isLongText ? 'full\-width' \: ''\}"\><div class\="modal\-detail\-label"\></span>{label}</div><div class="modal-detail-value <span class="math-inline">\{isLongText ? 'long\-text' \: ''\}"\></span>{value}</div></div>`; }; document.getElementById('ipRecordModalTitle').textContent = `Detay: ${record.title}`; let modalContentHtml = `<div class="modal-detail-grid portfolio-detail">`; modalContentHtml += `<h4 class="modal-detail-section-title">Genel Bilgiler</h4>`; modalContentHtml += renderField('Tür', `<span class="ip-type <span class="math-inline">\{record\.type\}"\></span>{typeNames[record.type] || 'Bilinmiyor'}</span>`); modalContentHtml += renderField('Başlık', record.title); modalContentHtml += renderField('Durum', `<span class="status-badge <span class="math-inline">\{record\.status\}"\></span>{statusNames[record.status] || record.status}</span>`); modalContentHtml += renderField('Başvuru Numarası', record.applicationNumber); modalContentHtml += renderField('Tescil Numarası', record.registrationNumber); modalContentHtml += renderField('Başvuru Tarihi', formatDate(record.applicationDate)); modalContentHtml += renderField('Tescil Tarihi', formatDate(record.registrationDate)); modalContentHtml += renderField('Hak Sahipleri', (record.owners || []).map(o => o.name).join(', ')); if (record.files && record.files.length > 0) { modalContentHtml += `<h4 class="modal-detail-section-title">Yüklenen Dokümanlar</h4>`; modalContentHtml += `<div class="modal-detail-item full-width"><ul>`; record.files.forEach(file => { modalContentHtml += `<li><a href="<span class="math-inline">\{file\.content\}" download\="</span>{file.name}">📄 <span class="math-inline">\{file\.name\} \(</span>{this.formatFileSize(file.size)}) - ${file.documentDesignation || 'Belge'}</a></li>`; }); modalContentHtml += `</ul></div>`; } modalContentHtml += `</div>`; document.getElementById('ipRecordModalBody').innerHTML = modalContentHtml; this.renderIpRecordTransactionHistory(record.id, record.transactions, record.files); modal.classList.add('show');
             }
             
             renderIpRecordTransactionHistory(recordId, transactions, recordFiles) {
-                const historyContainer = document.getElementById('ipRecordTransactionHistory'); historyContainer.innerHTML = ''; if (!transactions || transactions.length === 0) { historyContainer.innerHTML = '<p style="text-align: center; color: #666; padding: 20px;">İşlem geçmişi yok.</p>'; return; } const sortedTransactions = transactions.sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp)); let html = ''; sortedTransactions.forEach(tx => { let docLink = ''; if (tx.documentId) { const file = recordFiles.find(f => f.id === tx.documentId); if (file) docLink = ` | <a href="${file.content}" download="${file.name}">Belge</a>`; } html += `<div class="task-history-item"><div class="task-history-item-content"><div class="task-history-info"><div class="task-history-description">${tx.description || tx.type}</div><div class="task-history-meta">${new Date(tx.timestamp).toLocaleString('tr-TR')} by ${tx.userEmail}${docLink}</div></div></div></div>`; }); historyContainer.innerHTML = html;
+                const historyContainer = document.getElementById('ipRecordTransactionHistory'); historyContainer.innerHTML = ''; if (!transactions || transactions.length === 0) { historyContainer.innerHTML = '<p style="text-align: center; color: #666; padding: 20px;">İşlem geçmişi yok.</p>'; return; } const sortedTransactions = transactions.sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp)); let html = ''; sortedTransactions.forEach(tx => { let docLink = ''; if (tx.documentId) { const file = recordFiles.find(f => f.id === tx.documentId); if (file) docLink = ` | <a href="<span class="math-inline">\{file\.content\}" download\="</span>{file.name}">Belge</a>`; } html += `<div class="task-history-item"><div class="task-history-item-content"><div class="task-history-info"><div class="task-history-description"><span class="math-inline">\{tx\.description \|\| tx\.type\}</div\><div class\="task\-history\-meta"\></span>{new Date(tx.timestamp).toLocaleString('tr-TR')} by <span class="math-inline">\{tx\.userEmail\}</span>{docLink}</div></div></div></div>`; }); historyContainer.innerHTML = html;
             }
             
             readFileAsDataURL(file) { return new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(reader.result); reader.onerror = reject; reader.readAsDataURL(file); }); }
@@ -935,120 +696,8 @@
                 if (modalId === 'completeTaskModal') { this.uploadedCompletionFiles = []; document.getElementById('completeTaskFileList').innerHTML = ''; }
                 if (modalId === 'editTaskModal') { this.uploadedEditFiles = []; this.currentEditTask = null; }
                 if (modalId === 'reassignTaskModal') { document.getElementById('reassignUserSelect').value = ''; }
-                if (modalId === 'addAccrualModal') { document.getElementById('addAccrualForm').reset(); }
-            }
-
-            async handleSaveAccrual() {
-                const taskId = document.getElementById('accrualTaskId').value;
-                const task = this.tasks.find(t => t.id === taskId);
-                const officialFee = parseFloat(document.getElementById('officialFee').value) || 0;
-                const serviceFee = parseFloat(document.getElementById('serviceFee').value) || 0;
-                if (officialFee <= 0 && serviceFee <= 0) {
-                    alert("Lütfen en az bir ücret girin.");
-                    return;
-                }
-                const vatRate = parseFloat(document.getElementById('vatRate').value) || 0;
-                const applyVatToOfficial = document.getElementById('applyVatToOfficialFee').checked;
-                let totalAmount;
-                if (applyVatToOfficial) {
-                    totalAmount = (officialFee + serviceFee) * (1 + vatRate / 100);
-                } else {
-                    totalAmount = officialFee + (serviceFee * (1 + vatRate / 100));
-                }
-                const accrualData = {
-                    taskId: taskId,
-                    taskTitle: task.title,
-                    officialFee: {
-                        amount: officialFee,
-                        currency: document.getElementById('officialFeeCurrency').value
-                    },
-                    serviceFee: {
-                        amount: serviceFee,
-                        currency: document.getElementById('serviceFeeCurrency').value
-                    },
-                    vatRate,
-                    applyVatToOfficialFee: applyVatToOfficial,
-                    totalAmount,
-                    totalAmountCurrency: 'TRY', // HATA DÜZELTİLDİ
-                    tpInvoiceParty: this.selectedTpInvoiceParty ? {id: this.selectedTpInvoiceParty.id, name: this.selectedTpInvoiceParty.name} : null,
-                    serviceInvoiceParty: this.selectedServiceInvoiceParty ? {id: this.selectedServiceInvoiceParty.id, name: this.selectedServiceInvoiceParty.name} : null,
-                };
-                
-                const result = await accrualService.addAccrual(accrualData);
-                if (result.success) {
-                    alert('Yeni tahakkuk başarıyla eklendi!');
-                    this.allAccruals.push(result.data);
-                    this.closeModal('addAccrualModal');
-                } else {
-                    alert('Tahakkuk eklenirken hata oluştu: ' + result.error);
-                }
-            }
-
-            calculateTotalAmount() {
-                const officialFee = parseFloat(document.getElementById('officialFee').value) || 0;
-                const serviceFee = parseFloat(document.getElementById('serviceFee').value) || 0;
-                const vatRate = parseFloat(document.getElementById('vatRate').value) || 0;
-                const applyVatToOfficial = document.getElementById('applyVatToOfficialFee').checked;
-                let total;
-                if(applyVatToOfficial) {
-                    total = (officialFee + serviceFee) * (1 + vatRate / 100);
-                } else {
-                    total = officialFee + (serviceFee * (1 + vatRate / 100));
-                }
-                document.getElementById('totalAmountDisplay').textContent = new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' }).format(total);
-            }
-
-            searchPersons(query, target) {
-                const resultsContainerId = {
-                    'tpInvoiceParty': 'tpInvoicePartyResults',
-                    'serviceInvoiceParty': 'serviceInvoicePartyResults'
-                }[target];
-                const container = document.getElementById(resultsContainerId);
-                if (!container) return;
-                container.innerHTML = '';
-                if (query.length < 2) { container.innerHTML = ''; return; }
-                
-                const filtered = this.allPersons.filter(p => p.name.toLowerCase().includes(query.toLowerCase()));
-                if (filtered.length === 0) { container.innerHTML = '<p class="no-results-message">Kişi bulunamadı.</p>'; return; }
-
-                filtered.forEach(p => {
-                    const item = document.createElement('div');
-                    item.className = 'search-result-item';
-                    item.dataset.id = p.id;
-                    item.innerHTML = `<div><b>${p.name}</b><br><small>${p.email || '-'}</small></div>`;
-                    item.addEventListener('click', () => this.selectPerson(p, target));
-                    container.appendChild(item);
-                });
-            }
-
-            selectPerson(person, target) {
-                const displayId = { 'tpInvoiceParty': 'selectedTpInvoicePartyDisplay', 'serviceInvoiceParty': 'selectedServiceInvoicePartyDisplay' }[target];
-                const inputId = { 'tpInvoiceParty': 'tpInvoicePartySearch', 'serviceInvoiceParty': 'serviceInvoicePartySearch' }[target];
-                const resultsId = { 'tpInvoiceParty': 'tpInvoicePartyResults', 'serviceInvoiceParty': 'serviceInvoicePartyResults' }[target];
-                
-                if(target === 'tpInvoiceParty') this.selectedTpInvoiceParty = person;
-                else if(target === 'serviceInvoiceParty') this.selectedServiceInvoiceParty = person;
-
-                const display = document.getElementById(displayId);
-                display.innerHTML = `<p><b>Seçilen:</b> ${person.name}</p>`;
-                display.style.display = 'block';
-
-                document.getElementById(resultsId).innerHTML = '';
-                document.getElementById(inputId).value = person.name;
             }
         }
-
-        let myTasksModuleInstance;
-        auth.onAuthStateChanged((user) => {
-            if (user || authService.getCurrentUser()) {
-                if (!myTasksModuleInstance) {
-                    myTasksModuleInstance = new MyTasksModule();
-                    myTasksModuleInstance.init();
-                }
-            } else {
-                window.location.href = 'index.html';
-            }
-        });
 
         document.addEventListener('DOMContentLoaded', function() {
             const accordions = document.querySelectorAll('.accordion-header');
@@ -1077,111 +726,18 @@
             }
             setActiveMenu();
         });
-    </script>
 
-<script type="module">
-import { authService, taskService } from './firebase-config.js';
-
-class MyTasksModule {
-    constructor() {
-        this.currentUser = null;
-        this.allTasks = [];
-    }
-
-    async init() {
-        this.currentUser = authService.getCurrentUser();
-        this.updateUserInfo();
-        this.allTasks = await taskService.getMyTasks(this.currentUser.uid);
-        this.renderTasks();
-        this.setupEventListeners();
-    }
-
-    updateUserInfo() {
-        if (this.currentUser) {
-            const userName = this.currentUser.displayName || this.currentUser.email.split('@')[0];
-            document.getElementById('userName').textContent = userName;
-        }
-    }
-
-    renderTasks() {
-        const tbody = document.getElementById('tasksTableBody');
-        tbody.innerHTML = '';
-        this.allTasks.forEach(task => {
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td><input type="checkbox" data-task-id="${task.id}"></td>
-                <td>${task.priority}</td>
-                <td>${task.title}</td>
-                <td>${task.relatedRecord}</td>
-                <td>${task.dueDate}</td>
-                <td><span class="status-badge ${task.statusClass}">${task.statusLabel}</span></td>
-                <td>
-                    <button class="action-btn add-accrual-btn" data-task-id="${task.id}">💰</button>
-                </td>
-            `;
-            tbody.appendChild(tr);
-        });
-    }
-
-    setupEventListeners() {
-        const tasksTableBody = document.getElementById('tasksTableBody');
-
-        tasksTableBody.addEventListener('click', (e) => {
-            if (e.target.classList.contains('add-accrual-btn')) {
-                const taskId = e.target.dataset.taskId;
-                const task = this.allTasks.find(t => t.id === taskId);
-                if (task) this.showAddAccrualModal(task);
+        let myTasksModuleInstance;
+        auth.onAuthStateChanged((user) => {
+            if (user || authService.getCurrentUser()) {
+                if (!myTasksModuleInstance) {
+                    myTasksModuleInstance = new MyTasksModule();
+                }
+            } else {
+                window.location.href = 'index.html';
             }
         });
-
-        document.getElementById('closeAddAccrualModal')?.addEventListener('click', () => {
-            document.getElementById('addAccrualModal').classList.remove('show');
-        });
-
-        document.getElementById('saveAccrualBtn')?.addEventListener('click', () => {
-            this.handleSaveAccrual();
-        });
-
-        ['officialFee', 'serviceFee', 'vatRate', 'applyVatToOfficialFee'].forEach(id => {
-            const el = document.getElementById(id);
-            if (el) el.addEventListener('input', () => this.calculateTotalAmount());
-        });
-    }
-
-    showAddAccrualModal(task) {
-        const modal = document.getElementById('addAccrualModal');
-        if (!modal) return;
-
-        document.getElementById('accrualTaskId').value = task.id || '';
-        document.getElementById('accrualTaskTitleDisplay').value = task.title || '';
-        document.getElementById('officialFee').value = '';
-        document.getElementById('serviceFee').value = '';
-        document.getElementById('totalAmountDisplay').textContent = '0.00 TL';
-        modal.classList.add('show');
-    }
-
-    calculateTotalAmount() {
-        const officialFee = parseFloat(document.getElementById('officialFee').value) || 0;
-        const serviceFee = parseFloat(document.getElementById('serviceFee').value) || 0;
-        const vatRate = parseFloat(document.getElementById('vatRate').value) || 0;
-        const applyVat = document.getElementById('applyVatToOfficialFee').checked;
-
-        let total = serviceFee + (applyVat ? officialFee : 0);
-        const vat = total * (vatRate / 100);
-        total += vat;
-
-        document.getElementById('totalAmountDisplay').textContent = `${total.toFixed(2)} TL`;
-    }
-
-    handleSaveAccrual() {
-        alert("Tahakkuk kaydedildi (örnek)");
-        document.getElementById('addAccrualModal').classList.remove('show');
-    }
-}
-
-const myTasksModule = new MyTasksModule();
-myTasksModule.init();
-</script>
-
+    </script>
 </body>
 </html>
+}
