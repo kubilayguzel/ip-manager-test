@@ -152,7 +152,7 @@
                     <a href="create-task.html" class="new-task-link">Yeni İş Oluştur</a>
                     <a href="task-management.html">İş Yönetimi</a>
                     <a href="my-tasks.html">İşlerim</a>
-                    <a href="#" style="opacity: 0.5; cursor: not-allowed;">Hatırlatmalar</a>
+                    <a href="reminders.html">Hatırlatmalar</a>
                     <a href="#" style="opacity: 0.5; cursor: not-allowed;">Zamanlanmış Görevler</a>
                 </div>
             </div>
@@ -242,7 +242,7 @@
                     <div class="form-group" id="modalOwnerInfoGroup" style="display: none;"><label class="form-label">Kayıt Sahibi (Kullanıcı)</label><input type="text" id="modalOwnerInfo" class="filter-input" readonly></div>
                     <div class="form-group" id="createUserAccountGroup" style="display: none; grid-column: 1 / -1;"><button type="button" class="btn btn-create-user" id="createUserAccountBtn">👤 Kullanıcı Hesabı Oluştur</button><small style="display: block; margin-top: 5px; color: #666;">Bu kişi için uygulamada oturum açabileceği bir hesap oluşturur.</small></div>
                 </div>
-                <div class="person-form-actions"><button type="button" class="action-btn secondary" id="cancelPersonFormBtn">İptal</button><button type="submit" class="action-btn" id="savePersonBtn">Kaydet</button></div>
+                <div class="person-form-actions"><button type="button" class="btn btn-secondary" id="cancelPersonFormBtn">İptal</button><button type="submit" class="action-btn" id="savePersonBtn">Kaydet</button></div>
             </form>
         </div>
     </div>
@@ -250,6 +250,7 @@
 
     <script type="module">
         import { authService, personsService, auth } from './firebase-config.js';
+        import { showNotification, showFieldError, clearAllFieldErrors } from './utils.js'; // utils.js eklendi
 
         let personsModule; 
 
@@ -342,7 +343,7 @@
                     this.allPersons = [];
                     this.filteredPersons = [];
                     this.showEmptyState();
-                    alert('Kişiler yüklenirken bir hata oluştu: ' + error.message);
+                    showNotification('Kişiler yüklenirken bir hata oluştu: ' + error.message, 'error'); // alert() yerine
                 } finally {
                     loadingIndicator.style.display = 'none';
                 }
@@ -454,7 +455,7 @@
                     <td>${person.email || '-'}</td>
                     <td>${person.phone || '-'}</td>
                     <td><span class="person-type ${person.type}">${typeNames[person.type] || 'Bilinmiyor'}</span></td>
-                    <td style="${this.currentUser && this.currentUser.role === 'superadmin' ? 'display: table-cell;' : 'display: none;'}">${person.userEmail || '-'}</td>
+                    <td style="${this.currentUser && this.currentUser.role === 'superadmin' ? 'display: table-cell;' : 'display: none;'}" class="person-owner">${person.userEmail || '-'}</td>
                     <td>
                         <div class="action-buttons">
                             <button class="table-action-btn btn-view" data-id="${person.id}" title="Görüntüle">👁️</button>
@@ -481,8 +482,7 @@
                 const form = document.getElementById('personForm');
                 form.reset();
 
-                form.querySelectorAll('.error-message').forEach(el => el.style.display = 'none');
-                form.querySelectorAll('.filter-input').forEach(el => el.classList.remove('error-field'));
+                clearAllFieldErrors(); // Tüm hata mesajlarını temizle
 
                 document.getElementById('personModalTitle').textContent = personId ? 'Kişi Detayları' : 'Yeni Kişi Ekle';
                 document.getElementById('personCreatedAt').value = '';
@@ -543,16 +543,18 @@
                 const personAddress = document.getElementById('personAddress').value.trim();
 
                 let isValid = true;
+                clearAllFieldErrors(); // Yeni: Her gönderimde hataları temizle
+
                 if (!personName) {
-                    alert('Ad Soyad zorunludur.');
+                    showFieldError('personName', 'Ad Soyad zorunludur.'); // showFieldError kullanıldı
                     isValid = false;
                 }
                 if (!personType) {
-                    alert('Kişi Türü zorunludur.');
+                    showFieldError('personType', 'Kişi Türü zorunludur.'); // showFieldError kullanıldı
                     isValid = false;
                 }
                 if (personEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(personEmail)) {
-                    alert('Geçerli bir e-posta adresi girin.');
+                    showFieldError('personEmail', 'Geçerli bir e-posta adresi girin.'); // showFieldError kullanıldı
                     isValid = false;
                 }
                 
@@ -563,16 +565,16 @@
                 if (this.currentPersonId) {
                     result = await personsService.updatePerson(this.currentPersonId, personData);
                     if (result.success) {
-                        alert('Kişi başarıyla güncellendi!');
+                        showNotification('Kişi başarıyla güncellendi!', 'success'); // alert() yerine
                     } else {
-                        alert('Kişi güncellenirken hata: ' + result.error);
+                        showNotification('Kişi güncellenirken hata: ' + result.error, 'error'); // alert() yerine
                     }
                 } else {
                     result = await personsService.addPerson(personData);
                     if (result.success) {
-                        alert('Yeni kişi başarıyla eklendi!');
+                        showNotification('Yeni kişi başarıyla eklendi!', 'success'); // alert() yerine
                     } else {
-                        alert('Kişi eklenirken hata: ' + result.error);
+                        showNotification('Kişi eklenirken hata: ' + result.error, 'error'); // alert() yerine
                     }
                 }
                 if (result.success) {
@@ -589,25 +591,25 @@
                     try {
                         const result = await personsService.deletePerson(personId);
                         if (result.success) {
-                            alert('Kişi başarıyla silindi.');
+                            showNotification('Kişi başarıyla silindi.', 'success'); // alert() yerine
                             this.loadPersons();
                         } else {
                             throw new Error(result.error);
                         }
                     } catch (error) {
-                        alert('Kişi silinirken bir hata oluştu: ' + error.message);
+                        showNotification('Kişi silinirken bir hata oluştu: ' + error.message, 'error'); // alert() yerine
                     }
                 }
             }
 
             async createPersonUserAccount() {
                 if (!this.currentPersonId) {
-                    alert('Lütfen önce bir kişi seçin.');
+                    showNotification('Lütfen önce bir kişi seçin.', 'error'); // alert() yerine
                     return;
                 }
                 const person = this.allPersons.find(p => p.id === this.currentPersonId);
                 if (!person || !person.email) {
-                    alert('Bu kişi için bir e-posta adresi bulunmuyor veya kişi seçilmedi.');
+                    showNotification('Bu kişi için bir e-posta adresi bulunmuyor veya kişi seçilmedi.', 'error'); // alert() yerine
                     return;
                 }
 
@@ -621,15 +623,15 @@
 
                     if (result.success) {
                         await personsService.updatePerson(person.id, { hasUserAccount: true });
-                        alert(`'${person.name}' için kullanıcı hesabı başarıyla oluşturuldu! Varsayılan şifre: ${dummyPassword}. Kullanıcıya bildirip şifresini değiştirmesini söyleyin.`);
+                        showNotification(`'${person.name}' için kullanıcı hesabı başarıyla oluşturuldu! Varsayılan şifre: ${dummyPassword}. Kullanıcıya bildirip şifresini değiştirmesini söyleyin.`, 'success', 10000); // alert() yerine, uzun mesaj
                         this.hidePersonModal();
                         this.loadPersons();
                     } else {
-                        alert('Kullanıcı hesabı oluşturulurken hata: ' + result.error);
+                        showNotification('Kullanıcı hesabı oluşturulurken hata: ' + result.error, 'error'); // alert() yerine
                     }
                 } catch (error) {
                     console.error('Kullanıcı hesabı oluşturma hatası:', error);
-                    alert('Kullanıcı hesabı oluşturulurken beklenmeyen bir hata oluştu: ' + error.message);
+                    showNotification('Kullanıcı hesabı oluşturulurken beklenmeyen bir hata oluştu: ' + error.message, 'error'); // alert() yerine
                 }
             }
         }
