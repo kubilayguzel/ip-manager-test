@@ -72,13 +72,13 @@
         .modal.show { display: flex !important; }
         .modal-content-lg, .modal-content { background-color: #fefefe; margin: auto; padding: 30px; border: 1px solid #888; width: 90%; max-width: 900px; border-radius: 20px; box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2),0 6px 20px 0 rgba(0,0,0,0.19); animation-name: animatetop; animation-duration: 0.4s; max-height: 90vh; overflow-y: auto; position: relative; z-index: 10000; }
         #completeTaskModal .modal-content, #reassignTaskModal .modal-content { max-width: 600px; }
-        #addAccrualModal .modal-content { max-width: 700px; } /* Yeni eklendi */
+        #addAccrualModal .modal-content { max-width: 700px; }
         @keyframes animatetop { from {top: -300px; opacity: 0} to {top: 0; opacity: 1} }
         .close-modal-btn { color: #aaa; float: right; font-size: 28px; font-weight: bold; }
         .close-modal-btn:hover, .close-modal-btn:focus { color: black; text-decoration: none; cursor: pointer; }
         .modal-body-content { padding: 10px 0; }
         .modal-detail-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px 25px; }
-        .form-group { margin-bottom: 15px; } /* Yeni eklendi */
+        .form-group { margin-bottom: 15px; }
         .modal-detail-item { margin-bottom: 10px; }
         .modal-detail-label, .form-label { font-weight: 600; color: #333; margin-bottom: 5px; font-size: 0.9em; }
         .modal-detail-value { color: #555; word-break: break-word; font-size: 0.95em; }
@@ -245,6 +245,11 @@
                     <div class="modal-detail-item full-width"><div class="modal-detail-label">İlgili Fikri Mülkiyet Kaydı</div><div class="modal-detail-value" id="modalViewRelatedIpRecordValue"></div></div>
                     <div class="modal-detail-item full-width" id="modalViewRelatedPartyGroup" style="display:none;"><div class="modal-detail-label" id="modalViewRelatedPartyLabel"></div><div class="modal-detail-value" id="modalViewRelatedPartyValue"></div></div>
                     <div class="modal-detail-item full-width" id="modalViewRelatedTransactionGroup" style="display:none;"><div class="modal-detail-label" id="modalViewRelatedTransactionLabel"></div><div class="modal-detail-value" id="modalViewRelatedTransactionValue"></div></div>
+                    
+                    <h4 class="modal-detail-section-title">İlişkili Tahakkuklar</h4>
+                    <div class="modal-detail-item full-width" id="modalViewRelatedAccruals">
+                        <p style="text-align: center; color: #666;">Tahakkuk bilgisi bulunmuyor.</p>
+                    </div>
                     <h4 class="modal-detail-section-title">İşlem Geçmişi</h4>
                     <div class="modal-detail-item full-width task-history" id="modalViewTaskHistory"><p style="text-align: center; color: #666;">İşlem geçmişi bulunmuyor.</p></div>
                 </div>
@@ -402,13 +407,13 @@
                 this.allIpRecords = [];
                 this.allPersons = [];
                 this.allUsers = [];
-                this.allAccruals = []; // Yeni eklenen
+                this.allAccruals = []; // Zaten mevcut, ancak tahakkuk hizmetinden yüklendiğinden emin olun
                 this.uploadedCompletionFiles = [];
                 this.uploadedEditFiles = [];
                 this.currentEditTask = null;
                 this.selectedTasks = new Set();
-                this.selectedTpInvoiceParty = null; // Yeni eklenen
-                this.selectedServiceInvoiceParty = null; // Yeni eklenen
+                this.selectedTpInvoiceParty = null;
+                this.selectedServiceInvoiceParty = null;
             }
 
             async init() {
@@ -438,7 +443,7 @@
                 document.getElementById('tasksTableBody').innerHTML = '';
                 
                 try {
-                    const [tasksResult, ipRecordsResult, personsResult, usersResult, accrualsResult] = await Promise.all([ // accrualsResult eklendi
+                    const [tasksResult, ipRecordsResult, personsResult, usersResult, accrualsResult] = await Promise.all([
                         taskService.getTasksForUser(this.currentUser.uid),
                         ipRecordsService.getRecords(),
                         personsService.getPersons(),
@@ -488,7 +493,7 @@
                 document.getElementById('cancelReassignBtn').addEventListener('click', () => this.closeModal('reassignTaskModal'));
                 document.getElementById('confirmReassignBtn').addEventListener('click', () => this.handleReassignment());
 
-                // Tahakkuk Modalı Event Listeners - Yeni Eklendi
+                // Tahakkuk Modalı Event Listeners
                 document.getElementById('closeAddAccrualModal').addEventListener('click', () => this.closeModal('addAccrualModal'));
                 document.getElementById('cancelAddAccrualBtn').addEventListener('click', () => this.closeModal('addAccrualModal'));
                 document.getElementById('saveAccrualBtn').addEventListener('click', () => this.handleSaveAccrual());
@@ -531,7 +536,7 @@
                     else if (target.classList.contains('view-btn')) { this.viewTaskDetailsModal(taskId); }
                     else if (target.classList.contains('edit-btn')) { this.showEditTaskModal(taskId); }
                     else if (target.classList.contains('delete-btn')) { this.deleteTask(taskId); }
-                    else if (target.classList.contains('add-accrual-btn')) { // Yeni Eklendi
+                    else if (target.classList.contains('add-accrual-btn')) {
                          this.showAddAccrualModal(taskId);
                     }
                     else if (target.classList.contains('ip-record-link')) { 
@@ -571,7 +576,8 @@
                                 <button class="action-btn view-btn">Görüntüle</button>
                                 <button class="action-btn edit-btn">Güncelle</button>
                                 <button class="action-btn complete-btn" data-ip-record-id="${relatedIpRecordId}" ${isCompleted ? 'disabled' : ''}>${isCompleted ? 'Tamamlandı' : 'İşi Bitir'}</button>
-                                <button class="action-btn add-accrual-btn" data-task-id="${task.id}" title="Bu İşe Tahakkuk Ekle">💰</button> </div>
+                                <button class="action-btn add-accrual-btn" data-task-id="${task.id}" title="Bu İşe Tahakkuk Ekle">💰</button>
+                            </div>
                         </td>
                     `;
                     
@@ -808,6 +814,28 @@
                         modalViewRelatedPartyGroup.style.display = 'block';
                     } else { modalViewRelatedPartyGroup.style.display = 'none'; }
                 } else { modalViewRelatedPartyGroup.style.display = 'none'; }
+
+                // İlişkili Tahakkuklar Bilgisi - Başlangıç
+                const modalViewRelatedAccruals = document.getElementById('modalViewRelatedAccruals');
+                const relatedAccruals = this.allAccruals.filter(acc => acc.taskId === task.id);
+                
+                if (relatedAccruals.length > 0) {
+                    modalViewRelatedAccruals.innerHTML = relatedAccruals.map(acc => {
+                        const statusText = acc.status === 'paid' ? 'Ödendi' : 'Ödenmedi';
+                        const statusBadgeClass = `status-badge status-${acc.status}`;
+                        const totalAmountText = new Intl.NumberFormat('tr-TR', { style: 'currency', currency: acc.totalAmountCurrency || 'TRY' }).format(acc.totalAmount || 0);
+                        
+                        return `<div class="related-accrual-item">
+                            <b>ID:</b> ${acc.id.substring(0,8)}... | 
+                            <b>Durum:</b> <span class="${statusBadgeClass}">${statusText}</span> | 
+                            <b>Tutar:</b> ${totalAmountText}
+                        </div>`;
+                    }).join('');
+                } else {
+                    modalViewRelatedAccruals.innerHTML = '<p>Bu işe ait tahakkuk bulunmuyor.</p>';
+                }
+                // İlişkili Tahakkuklar Bilgisi - Bitiş
+
                 const modalViewTaskHistory = document.getElementById('modalViewTaskHistory');
                 modalViewTaskHistory.innerHTML = '';
                 if (!task.history || task.history.length === 0) {
@@ -915,7 +943,7 @@
                 if (modalId === 'completeTaskModal') { this.uploadedCompletionFiles = []; document.getElementById('completeTaskFileList').innerHTML = ''; }
                 if (modalId === 'editTaskModal') { this.uploadedEditFiles = []; this.currentEditTask = null; }
                 if (modalId === 'reassignTaskModal') { document.getElementById('reassignUserSelect').value = ''; }
-                if (modalId === 'addAccrualModal') { // Yeni eklenen
+                if (modalId === 'addAccrualModal') {
                     document.getElementById('addAccrualForm').reset();
                     this.selectedTpInvoiceParty = null;
                     this.selectedServiceInvoiceParty = null;
@@ -924,7 +952,7 @@
                 }
             }
 
-            // Tahakkuk Ekle Modal Fonksiyonları - Yeni Eklendi
+            // Tahakkuk Ekle Modal Fonksiyonları
             showAddAccrualModal(taskId) {
                 const task = this.tasks.find(t => t.id === taskId);
                 if (!task) {
@@ -961,7 +989,7 @@
                 const vatRate = parseFloat(document.getElementById('vatRate').value) || 0;
                 const applyVatToOfficial = document.getElementById('applyVatToOfficialFee').checked;
                 let totalAmount;
-                if (applyVatToOfficial) {
+                if(applyVatToOfficial) {
                     totalAmount = (officialFee + serviceFee) * (1 + vatRate / 100);
                 } else {
                     totalAmount = officialFee + (serviceFee * (1 + vatRate / 100));
