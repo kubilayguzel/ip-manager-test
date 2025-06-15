@@ -173,11 +173,9 @@
         </div>
     </div>
 
-
     <script type="module">
         import { authService, accrualService, taskService, ipRecordsService, personsService, auth } from './firebase-config.js';
 
-        // DÜZELTME: Sınıf ve başlatma kodunu DOMContentLoaded içine alıyoruz.
         document.addEventListener('DOMContentLoaded', () => {
             class AccrualsModule {
                 constructor() {
@@ -329,7 +327,6 @@
                         const result = await accrualService.updateAccrual(accrualId, { status: newStatus });
                         if (result.success) {
                             alert('Tahakkuk durumu başarıyla güncellendi.');
-                            // Find and update the local data to re-render instantly
                             const index = this.allAccruals.findIndex(a => a.id === accrualId);
                             if (index > -1) {
                                 this.allAccruals[index].status = newStatus;
