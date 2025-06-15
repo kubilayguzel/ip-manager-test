@@ -865,5 +865,5 @@ export async function createDemoData() {
 }
 
 // --- Exports ---
-export { subDesignationTranslations, documentDesignationTranslations, taskTypeDefinitions };
+export { subDesignationTranslations, documentDesignationTranslations,};
 export { auth, db, generateUUID };
