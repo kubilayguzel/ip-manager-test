@@ -25,7 +25,6 @@
         .accordion-content a:hover { background: rgba(255, 255, 255, 0.1); color: white; }
         .accordion-content a.active { color: white; font-weight: 500; }
         .accordion-content a.new-task-link { color: #fff; background-color: rgba(78, 205, 196, 0.25); font-weight: 500; }
-        .accordion-content a.new-task-link:hover { background-color: rgba(78, 205, 196, 0.4); }
         .top-header { background: rgba(255, 255, 255, 0.95); padding: 15px 30px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05); display: flex; justify-content: flex-end; align-items: center; position: sticky; top: 0; z-index: 99; backdrop-filter: blur(10px); }
         .user-section { display: flex; align-items: center; gap: 15px; }
         .user-avatar { width: 40px; height: 40px; background: linear-gradient(45deg, #1e3c72, #2a5298); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; }
@@ -92,12 +91,13 @@
         .remove-file-task-detail { background: #ff6b6b; color: white; border: none; border-radius: 50%; width: 20px; height: 20px; cursor: pointer; }
         .related-accrual-item { background: #f8f9fa; padding: 10px; border-radius: 8px; margin-bottom: 8px; font-size: 0.9em; border-left: 3px solid #1e3c72; }
         .status-badge { padding: 4px 10px; border-radius: 12px; font-size: 0.8em; font-weight: 500; color: white; }
-        .status-badge.status-open { background-color: #007bff; }
-        .status-badge.status-in_progress { background-color: #ffc107; color: #212529; }
-        .status-badge.status-pending_review { background-color: #fd7e14; }
-        .status-badge.status-completed { background-color: #28a745; }
-        .status-badge.status-paid { background-color: #28a745; }
-        .status-badge.status-unpaid { background-color: #dc3545; }
+        .status-open { background-color: #007bff; }
+        .status-in_progress { background-color: #ffc107; color: #212529; }
+        .status-pending_review { background-color: #fd7e14; }
+        .status-completed { background-color: #28a745; }
+        .status-paid { background-color: #28a745; }
+        .status-unpaid { background-color: #dc3545; }
+        .status-pending_client_approval { background-color: #ffc107; color: #212529; } /* Yeni */
         .input-with-currency { display: flex; gap: 10px; }
         .input-with-currency .form-input { flex-grow: 1; }
         .currency-select { padding: 12px 8px; border: 2px solid #e1e8ed; border-radius: 10px; background-color: #f8f9fa; font-weight: bold; }
@@ -169,23 +169,23 @@
 <a class="sidebar-nav-item" href="data-entry.html"><span class="nav-icon">➕</span><span>Yeni Kayıt</span></a>
 <a class="sidebar-nav-item" href="excel-upload.html"><span class="nav-icon">📄</span><span>Excel ile Yükle</span></a>
 <div class="nav-category-title">Yönetim</div>
-            <div class="accordion">
-                <div class="accordion-header"><span class="nav-icon">✅</span><span>Görevler</span></div>
-                <div class="accordion-content">
-                    <a href="create-task.html" class="new-task-link">Yeni İş Oluştur</a>
-                    <a href="task-management.html">İş Yönetimi</a>
-                    <a href="my-tasks.html">İşlerim</a>
-                    <a href="#" style="opacity: 0.5; cursor: not-allowed;">Hatırlatmalar</a>
-                    <a href="#" style="opacity: 0.5; cursor: not-allowed;">Zamanlanmış Görevler</a>
-                </div>
-            </div>
-            <div class="accordion">
-                <div class="accordion-header"><span class="nav-icon">👥</span><span>Kişi Yönetimi</span></div>
-                <div class="accordion-content">
-                    <a href="persons.html">Kişiler Yönetimi</a>
-                    <a href="user-management.html">Kullanıcı Yönetimi</a>
-                </div>
-            </div>
+<div class="accordion">
+    <div class="accordion-header"><span class="nav-icon">✅</span><span>Görevler</span></div>
+    <div class="accordion-content">
+        <a href="create-task.html" class="new-task-link">Yeni İş Oluştur</a>
+        <a href="task-management.html">İş Yönetimi</a>
+        <a href="my-tasks.html">İşlerim</a>
+        <a href="reminders.html">Hatırlatmalar</a>
+        <a href="#" style="opacity: 0.5; cursor: not-allowed;">Zamanlanmış Görevler</a>
+    </div>
+</div>
+<div class="accordion">
+    <div class="accordion-header"><span class="nav-icon">👥</span><span>Kişi Yönetimi</span></div>
+    <div class="accordion-content">
+        <a href="persons.html">Kişiler Yönetimi</a>
+        <a href="user-management.html">Kullanıcı Yönetimi</a>
+    </div>
+</div>
 <div class="nav-category-title">Finans</div>
 <a href="accruals.html" class="sidebar-nav-item"><span class="nav-icon">💰</span><span>Tahakkuklarım</span></a>
 <div class="nav-category-title">Araçlar</div>
@@ -246,7 +246,6 @@
 </main>
 </div>
 
-<!-- İş Detay Modal -->
 <div class="modal" id="viewTaskDetailModal">
     <div class="modal-content-lg">
         <span class="close-modal-btn" id="closeViewTaskDetailModal">×</span>
@@ -275,7 +274,6 @@
     </div>
 </div>
 
-<!-- Portfolio Detay Modal -->
 <div class="modal" id="portfolioDetailModal">
     <div class="modal-content-lg">
         <span class="close-modal-btn" id="closePortfolioDetailModal">×</span>
@@ -409,10 +407,10 @@
             </div>
         </form>
     </div>
-</div>
 
 <script type="module">
         import { authService, taskService, ipRecordsService, personsService, accrualService, auth, generateUUID } from './firebase-config.js';
+        import { showNotification, formatFileSize } from './utils.js'; // utils.js eklendi
 
         class TaskManagementModule {
             constructor() {
@@ -433,7 +431,7 @@
                 this.currentUser = authService.getCurrentUser();
                 
                 if (this.currentUser.role !== 'superadmin' && this.currentUser.role !== 'admin') {
-                    alert('Bu sayfaya erişim yetkiniz yoktur.');
+                    showNotification('Bu sayfaya erişim yetkiniz yoktur.', 'error'); // alert() yerine
                     window.location.href = 'dashboard.html';
                     return;
                 }
@@ -584,7 +582,8 @@
                     'open': 'Açık',
                     'in_progress': 'Devam Ediyor',
                     'pending_review': 'Gözden Geçiriliyor',
-                    'completed': 'Tamamlandı'
+                    'completed': 'Tamamlandı',
+                    'pending_client_approval': 'Müvekkil Onayı Bekliyor' // Yeni
                 };
                 return statusMappings[status] || status;
             }
@@ -646,7 +645,7 @@
             showPortfolioDetailModal(recordId) {
                 const record = this.allIpRecords.find(r => r.id === recordId);
                 if (!record) {
-                    alert('Kayıt bulunamadı.');
+                    showNotification('Kayıt bulunamadı.', 'error'); // alert() yerine
                     return;
                 }
 
@@ -659,7 +658,8 @@
                     rejected: 'Reddedildi', expired: 'Süresi Doldu', published: 'Yayınlandı', 
                     partial_refusal: 'Kısmi Ret', refused: 'Ret', opposition_received: 'İtiraz Geldi', 
                     opposition_filed: 'İtiraz Edildi', registered: 'Tescilli', not_renewed: 'Yenilenmedi', 
-                    invalid_void: 'Geçersiz' 
+                    invalid_void: 'Geçersiz',
+                    invalid_not_renewed: 'Yenilememe Nedeniyle Geçersiz' // Yeni
                 };
 
                 const formatDate = (dateString) => dateString ? new Date(dateString).toLocaleDateString('tr-TR') : '-';
@@ -702,7 +702,7 @@
                     modalContentHtml += renderField('Nice Sınıfı', record.niceClass);
                     modalContentHtml += renderField('Yenileme Tarihi', formatDate(record.renewalDate));
                     modalContentHtml += renderField('Bülten Tarihi', formatDate(record.bulletinDate));
-                    modalContentHtml += renderField('Bülten Numarası', record.bulletinNumber);
+                    modalContentHtml += renderField('Bülten Numarası', record.bulletenNumber);
                     modalContentHtml += renderField('Mal ve Hizmetler', record.goodsServices, true);
                 }
                 if (record.type === 'copyright') {
@@ -727,7 +727,7 @@
                     modalContentHtml += `<h4 class="modal-detail-section-title">Yüklenen Dokümanlar</h4>`;
                     modalContentHtml += `<div class="modal-detail-item" style="grid-column: 1 / -1;"><ul>`;
                     record.files.forEach(file => {
-                        modalContentHtml += `<li><a href="${file.content}" download="${file.name}">📄 ${file.name} (${this.formatFileSize(file.size)}) - ${file.documentDesignation || 'Belge'}</a></li>`;
+                        modalContentHtml += `<li><a href="${file.content}" download="${file.name}">📄 ${file.name} (${formatFileSize(file.size)}) - ${file.documentDesignation || 'Belge'}</a></li>`; // formatFileSize eklendi
                     });
                     modalContentHtml += `</ul></div>`;
                 }
@@ -760,7 +760,7 @@
 
             showReassignModal() {
                 if (this.selectedTasks.size === 0) {
-                    alert('Lütfen en az bir iş seçin.');
+                    showNotification('Lütfen en az bir iş seçin.', 'info'); // alert() yerine
                     return;
                 }
                 const userSelect = document.getElementById('reassignUserSelect');
@@ -780,7 +780,7 @@
             async handleReassignment() {
                 const newUserId = document.getElementById('reassignUserSelect').value;
                 if (!newUserId) {
-                    alert('Lütfen bir kullanıcı seçin.');
+                    showNotification('Lütfen bir kullanıcı seçin.', 'error'); // alert() yerine
                     return;
                 }
 
@@ -794,7 +794,7 @@
                 try {
                     const result = await taskService.reassignTasks(taskIds, newUserId, newUser.email);
                     if (result.success) {
-                        alert('İşler başarıyla yeniden atandı!');
+                        showNotification('İşler başarıyla yeniden atandı!', 'success'); // alert() yerine
                         this.selectedTasks.clear();
                         document.getElementById('selectAllCheckbox').checked = false;
                         this.updateReassignButtonState();
@@ -804,7 +804,7 @@
                         throw new Error(result.error);
                     }
                 } catch (error) {
-                    alert('İşler atanırken bir hata oluştu: ' + error.message);
+                    showNotification('İşler atanırken bir hata oluştu: ' + error.message, 'error'); // alert() yerine
                 }
             }
 
@@ -820,7 +820,8 @@
                     <option value="open">Açık</option>
                     <option value="in_progress">Devam Ediyor</option>
                     <option value="pending_review">Gözden Geçiriliyor</option>
-                    <option value="completed">Tamamlandı</option>`;
+                    <option value="completed">Tamamlandı</option>
+                    <option value="pending_client_approval">Müvekkil Onayı Bekliyor</option>`; // Yeni
             }
 
             async deleteTask(taskId) {
@@ -828,28 +829,28 @@
                     try {
                         const result = await taskService.deleteTask(taskId);
                         if (result.success) {
-                            alert('Görev başarıyla silindi.');
+                            showNotification('Görev başarıyla silindi.', 'success'); // alert() yerine
                             this.selectedTasks.delete(taskId);
                             await this.loadInitialData();
                         } else {
                             throw new Error(result.error);
                         }
                     } catch (error) {
-                        alert('Görev silinirken bir hata oluştu: ' + error.message);
+                        showNotification('Görev silinirken bir hata oluştu: ' + error.message, 'error'); // alert() yerine
                     }
                 }
             }
             
             viewTaskDetailsModal(taskId) {
                 const task = this.allTasks.find(t => t.id === taskId);
-                if (!task) return alert('Görev bulunamadı.');
+                if (!task) return showNotification('Görev bulunamadı.', 'error'); // alert() yerine
                 this.populateModalTaskDetails(task, this.allIpRecords, this.allPersons);
                 document.getElementById('viewTaskDetailModal').classList.add('show');
             }
             
             showEditTaskModal(taskId) {
                 const task = this.allTasks.find(t => t.id === taskId);
-                if (!task) return alert('Düzenlenecek görev bulunamadı.');
+                if (!task) return showNotification('Düzenlenecek görev bulunamadı.', 'error'); // alert() yerine
 
                 this.currentEditTask = { ...task }; 
                 this.uploadedEditFiles = []; 
@@ -902,21 +903,21 @@
                 try {
                     const result = await taskService.updateTask(taskId, updates);
                     if (result.success) {
-                        alert('İş başarıyla güncellendi!');
+                        showNotification('İş başarıyla güncellendi!', 'success'); // alert() yerine
                         this.closeModal('editTaskModal');
                         await this.loadInitialData();
                     } else { throw new Error(result.error); }
                 } catch(error) {
-                    alert('İş güncellenirken bir hata oluştu: ' + error.message);
+                    showNotification('İş güncellenirken bir hata oluştu: ' + error.message, 'error'); // alert() yerine
                 }
             }
             
             handleEditDocumentUpload(files) {
                 for (const file of files) {
                     const isDuplicate = (this.currentEditTask.files || []).some(f => f.name === file.name && f.size === file.size) || this.uploadedEditFiles.some(f => f.name === file.name && f.size === file.size);
-                    if(isDuplicate) { alert(`"${file.name}" adlı dosya zaten listede.`); continue; }
+                    if(isDuplicate) { showNotification(`"${file.name}" adlı dosya zaten listede.`, 'info'); continue; } // alert() yerine
 
-                    this.readFileAsDataURL(file).then(dataUrl => {
+                    readFileAsDataURL(file).then(dataUrl => { // readFileAsDataURL eklendi
                         this.uploadedEditFiles.push({
                             id: generateUUID(), name: file.name, size: file.size, type: file.type,
                             content: dataUrl, uploadedAt: new Date().toISOString(),
@@ -964,7 +965,8 @@
                 });
             }
             
-            readFileAsDataURL(file) { return new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(reader.result); reader.onerror = reject; reader.readAsDataURL(file); }); }
+            // readFileAsDataURL utils.js'ten import edildiği için buradan kaldırıldı.
+            // formatFileSize utils.js'ten import edildiği için buradan kaldırıldı.
             
             populateModalTaskDetails(task, ipRecords, persons) {
                  const modal = document.getElementById('viewTaskDetailModal');
@@ -1064,7 +1066,7 @@
             showAddAccrualModal(taskId) {
                 const task = this.allTasks.find(t => t.id === taskId);
                 if (!task) {
-                    alert('Tahakkuk eklenecek iş bulunamadı.');
+                    showNotification('Tahakkuk eklenecek iş bulunamadı.', 'error'); // alert() yerine
                     return;
                 }
                 
@@ -1090,7 +1092,7 @@
                 const serviceFee = parseFloat(document.getElementById('serviceFee').value) || 0;
                 
                 if (officialFee <= 0 && serviceFee <= 0) {
-                    alert("Lütfen en az bir ücret girin.");
+                    showNotification("Lütfen en az bir ücret girin.", 'error'); // alert() yerine
                     return;
                 }
 
@@ -1124,11 +1126,11 @@
                 
                 const result = await accrualService.addAccrual(accrualData);
                 if (result.success) {
-                    alert('Yeni tahakkuk başarıyla eklendi!');
+                    showNotification('Yeni tahakkuk başarıyla eklendi!', 'success'); // alert() yerine
                     this.allAccruals.push(result.data);
                     this.closeModal('addAccrualModal');
                 } else {
-                    alert('Tahakkuk eklenirken hata oluştu: ' + result.error);
+                    showNotification('Tahakkuk eklenirken hata oluştu: ' + result.error, 'error'); // alert() yerine
                 }
             }
 
@@ -1195,59 +1197,56 @@
                 document.getElementById(inputId).value = person.name;
             }
             
-            formatFileSize(bytes) {
-                if (bytes === 0) return '0 Bytes';
-                const k = 1024;
-                const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-                const i = Math.floor(Math.log(bytes) / Math.log(k));
-                return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-            }
+            // formatFileSize utils.js'ten import edildiği için buradan kaldırıldı.
         }
 
-        let taskManagementModule;
-        document.addEventListener('DOMContentLoaded', async () => {
-             auth.onAuthStateChanged(async (user) => {
-                if (user || authService.getCurrentUser()) {
-                    if (!taskManagementModule) {
-                        taskManagementModule = new TaskManagementModule();
-                        await taskManagementModule.init();
-                        window.taskManagementModule = taskManagementModule;
-                    }
-                } else {
-                    window.location.href = 'index.html';
+        auth.onAuthStateChanged((user) => {
+            if (user || authService.getCurrentUser()) {
+                 if (!taskManagementModule) {
+                    taskManagementModule = new TaskManagementModule();
+                    window.taskManagementModule = taskManagementModule;
                 }
-            });
-            
-            const accordions = document.querySelectorAll('.accordion-header');
-            accordions.forEach(accordion => {
-                accordion.addEventListener('click', function(event) {
-                    this.classList.toggle('active');
-                    const content = this.nextElementSibling;
-                    if (content.style.maxHeight) {
-                        content.style.maxHeight = null;
-                    } else {
-                        content.style.maxHeight = content.scrollHeight + "px";
-                    }
-                });
-            });
-
-            function setActiveMenu() {
-                const currentPage = window.location.pathname.split("/").pop() || 'dashboard.html';
-                document.querySelectorAll('.sidebar-nav-item.active, .accordion-content a.active').forEach(el => el.classList.remove('active'));
-                const activeLink = document.querySelector(`.sidebar-nav a[href="${currentPage}"]`);
-                if (!activeLink) return;
-                activeLink.classList.add('active');
-                const parentAccordionContent = activeLink.closest('.accordion-content');
-                if (parentAccordionContent) {
-                    const parentAccordionHeader = parentAccordionContent.previousElementSibling;
-                    if (parentAccordionHeader && parentAccordionHeader.classList.contains('accordion-header')) {
-                        parentAccordionHeader.classList.add('active');
-                        parentAccordionContent.style.maxHeight = parentAccordionContent.scrollHeight + "px";
-                    }
-                }
+            } else {
+                window.location.href = 'index.html';
             }
-            setActiveMenu();
         });
-</script>
+
+        document.addEventListener('DOMContentLoaded', function() {
+    const accordions = document.querySelectorAll('.accordion-header');
+    accordions.forEach(accordion => {
+        accordion.addEventListener('click', function(event) {
+            this.classList.toggle('active');
+            const content = this.nextElementSibling;
+            if (content.style.maxHeight) {
+                content.style.maxHeight = null;
+            } else {
+                content.style.maxHeight = content.scrollHeight + "px";
+            }
+        });
+    });
+
+    function setActiveMenu() {
+        const currentPage = window.location.pathname.split("/").pop() || 'dashboard.html';
+        
+        document.querySelectorAll('.sidebar-nav-item.active, .accordion-content a.active').forEach(el => el.classList.remove('active'));
+        
+        const activeLink = document.querySelector(`.sidebar-nav a[href="${currentPage}"]`);
+        if (!activeLink) return;
+
+        activeLink.classList.add('active');
+        
+        const parentAccordionContent = activeLink.closest('.accordion-content');
+        if (parentAccordionContent) {
+            const parentAccordionHeader = parentAccordionContent.previousElementSibling;
+            if (parentAccordionHeader && parentAccordionHeader.classList.contains('accordion-header')) {
+                parentAccordionHeader.classList.add('active');
+                parentAccordionContent.style.maxHeight = parentAccordionContent.scrollHeight + "px";
+            }
+        }
+    }
+
+    setActiveMenu();
+});
+    </script>
 </body>
 </html>
