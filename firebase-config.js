@@ -79,7 +79,8 @@ const documentDesignationTranslations = {
     'Araştırma Raporu': 'Araştırma Raporu',
     'İnceleme Raporu': 'İnceleme Raporu',
     'Diğer Belge': 'Diğer Belge',
-    'Genel Not': 'Genel Not'
+    'Genel Not': 'Genel Not',
+    'Ödeme Dekontu': 'Ödeme Dekontu' // Yeni eklendi
 };
 
 // --- Authentication Service ---
@@ -577,6 +578,8 @@ export const accrualService = {
                 createdAt: new Date().toISOString(),
                 createdBy_uid: user.uid,
                 createdBy_email: user.email,
+                files: accrualData.files || [], // Dosya alanı eklendi
+                paymentDate: null // Ödeme tarihi eklendi
             };
             await setDoc(doc(db, 'accruals', newAccrual.id), newAccrual);
             return { success: true, data: newAccrual };
@@ -591,7 +594,8 @@ export const accrualService = {
         try {
             const q = query(collection(db, 'accruals'), orderBy('createdAt', 'desc'));
             const querySnapshot = await getDocs(q);
-            return { success: true, data: querySnapshot.docs.map(d => d.data()) };
+            // Firestore'dan gelen verileri dönüştürürken, documents'ın id'sini de data olarak ekleyelim
+            return { success: true, data: querySnapshot.docs.map(d => ({id: d.id, ...d.data()})) };
         } catch (error) {
             console.error("Error fetching accruals:", error);
             return { success: false, error: error.message, data: [] };
@@ -602,7 +606,20 @@ export const accrualService = {
         if (!isFirebaseAvailable) return { success: false, error: "Firebase not connected." };
         try {
             const accrualRef = doc(db, 'accruals', accrualId);
-            await updateDoc(accrualRef, updates);
+            const currentAccrualDoc = await getDoc(accrualRef);
+            if (!currentAccrualDoc.exists()) {
+                return { success: false, error: "Accrual not found" };
+            }
+            const currentAccrualData = currentAccrualDoc.data();
+
+            // Dosyalar güncelleniyorsa, mevcut dosyalarla birleştir
+            // 'files' alanı doğrudan güncellemeler içinde gönderiliyorsa kullan, yoksa mevcutları koru.
+            let updatedFiles = updates.files !== undefined ? updates.files : currentAccrualData.files;
+            
+            await updateDoc(accrualRef, {
+                ...updates,
+                files: updatedFiles // Güncellenmiş dosyaları ata
+            });
             return { success: true };
         } catch (error) {
             console.error("Error updating accrual:", error);
