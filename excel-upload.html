@@ -78,7 +78,7 @@
         .form-input, .form-select { width: 100%; padding: 12px 15px; border: 2px solid #e1e8ed; border-radius: 10px; font-size: 1em; transition: all 0.3s ease; background: white; }
         .form-input:focus, .form-select:focus { outline: none; border-color: #1e3c72; box-shadow: 0 0 0 3px rgba(30, 60, 114, 0.1); }
         .file-upload-area { border: 2px dashed #e1e8ed; border-radius: 10px; padding: 30px; text-align: center; cursor: pointer; transition: all 0.3s ease; }
-        .file-upload-area:hover { border-color: #1e3c72; background: #f8f9fa; }
+        .file-upload-area:hover { border-color: #1e3c72; background: #f0f4f8; }
         .upload-icon { font-size: 3em; color: #1e3c72; margin-bottom: 15px; }
         .preview-table-container { max-height: 400px; overflow-y: auto; border: 1px solid #e1e8ed; border-radius: 10px; margin-top: 20px; display: none; }
         .preview-table { width: 100%; border-collapse: collapse; font-size: 0.9em; }
@@ -123,7 +123,7 @@
                     <a href="create-task.html" class="new-task-link">Yeni İş Oluştur</a>
                     <a href="task-management.html">İş Yönetimi</a>
                     <a href="my-tasks.html">İşlerim</a>
-                    <a href="#" style="opacity: 0.5; cursor: not-allowed;">Hatırlatmalar</a>
+                    <a href="reminders.html">Hatırlatmalar</a>
                     <a href="#" style="opacity: 0.5; cursor: not-allowed;">Zamanlanmış Görevler</a>
                 </div>
             </div>
@@ -132,8 +132,7 @@
                 <div class="accordion-content">
                     <a href="persons.html">Kişiler Yönetimi</a>
                     <a href="user-management.html">Kullanıcı Yönetimi</a>
-                </div>
-            </div>
+                 </div>
             <div class="nav-category-title">Finans</div>
             <a href="accruals.html" class="sidebar-nav-item"><span class="nav-icon">💰</span><span>Tahakkuklarım</span></a>
             </div>
@@ -242,12 +241,12 @@
     <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
     <script type="module">
         import { authService, ipRecordsService, personsService, auth } from './firebase-config.js';
+        import { showNotification } from './utils.js'; // utils.js eklendi
 
         let excelUploadModule; // Global scope
 
         class ExcelUploadModule {
             constructor() {
-                // Sınıfın tüm orijinal constructor içeriği
                 this.selectedFile = null;
                 this.workbook = null;
                 this.dataRows = [];
@@ -258,7 +257,6 @@
             }
 
             init() {
-                // Sınıfın tüm orijinal init içeriği
                 auth.onAuthStateChanged(async (user) => {
                     if (user || authService.getCurrentUser()) {
                         this.currentUser = authService.getCurrentUser();
@@ -284,15 +282,21 @@
             }
             
             async loadAllPersons() {
-                // ... (Orijinal metod içeriği)
+                const result = await personsService.getPersons();
+                if (result.success) {
+                    this.allPersons = result.data;
+                } else {
+                    console.error('Kişiler yüklenirken hata:', result.error);
+                    showNotification('Kişiler yüklenirken bir hata oluştu.', 'error'); // alert() yerine
+                }
             }
             
             initializeEventListeners() {
-                document.getElementById('backBtn').addEventListener('click', () => {
-                    if (confirm('Değişiklikler kaybolacak. Devam etmek istiyor musunuz?')) {
-                        window.location.href = 'portfolio.html';
-                    }
-                });
+                // document.getElementById('backBtn').addEventListener('click', () => { // backBtn yok bu sayfada
+                //     if (confirm('Değişiklikler kaybolacak. Devam etmek istiyor musunuz?')) {
+                //         window.location.href = 'portfolio.html';
+                //     }
+                // });
                 const fileUploadArea = document.getElementById('fileUploadArea');
                 const excelFileInput = document.getElementById('excelFile');
                 fileUploadArea.addEventListener('click', () => excelFileInput.click());
@@ -306,8 +310,269 @@
                 document.getElementById('cancelUploadBtn').addEventListener('click', () => this.resetForm());
             }
 
-            // Sınıfın diğer tüm metodları (showNotification, setLoading, handleFile, vb.) buraya gelecek...
-            // Bu metodlar önceki yanıtlarda tam olarak bulunmaktadır.
+            showNotification(message, type = 'info') {
+                // utils.js'ten import edildiği için yerel tanım kaldırıldı.
+                // utils.js'teki showNotification'ı çağır
+                import('./utils.js').then(({ showNotification: importedShowNotification }) => {
+                    importedShowNotification(message, type);
+                });
+            }
+
+            setLoading(isLoading) {
+                const uploadBtn = document.getElementById('uploadBtn');
+                const uploadText = document.getElementById('uploadText');
+                const uploadLoading = document.getElementById('uploadLoading');
+
+                uploadBtn.disabled = isLoading;
+                uploadText.style.display = isLoading ? 'none' : 'inline';
+                uploadLoading.style.display = isLoading ? 'inline-block' : 'none';
+            }
+
+            handleFile(file) {
+                this.resetForm(); // Yeni dosya seçildiğinde formu sıfırla
+                this.selectedFile = file;
+
+                if (!this.selectedFile) {
+                    showNotification('Lütfen bir Excel dosyası seçin.', 'error');
+                    return;
+                }
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const data = new Uint8Array(e.target.result);
+                    this.workbook = XLSX.read(data, { type: 'array' });
+                    this.populateSheetSelection();
+                };
+                reader.onerror = (error) => {
+                    showNotification('Dosya okuma hatası: ' + error.message, 'error');
+                };
+                reader.readAsArrayBuffer(this.selectedFile);
+            }
+
+            populateSheetSelection() {
+                const sheetNameSelect = document.getElementById('sheetName');
+                sheetNameSelect.innerHTML = '';
+                this.workbook.SheetNames.forEach(sheetName => {
+                    const option = document.createElement('option');
+                    option.value = sheetName;
+                    option.textContent = sheetName;
+                    sheetNameSelect.appendChild(option);
+                });
+                document.getElementById('sheetSelectionGroup').style.display = 'block';
+                document.getElementById('headerRowGroup').style.display = 'block';
+                this.readSelectedSheet(); // İlk sayfayı otomatik oku
+            }
+
+            readSelectedSheet() {
+                const sheetName = document.getElementById('sheetName').value;
+                const hasHeader = document.getElementById('hasHeader').checked;
+                const sheet = this.workbook.Sheets[sheetName];
+                
+                // XLSX kütüphanesini kullanarak veriyi JSON formatına çevir
+                const jsonData = XLSX.utils.sheet_to_json(sheet, { header: hasHeader ? 1 : undefined });
+
+                this.columnHeaders = hasHeader && jsonData.length > 0 ? jsonData[0] : [];
+                this.dataRows = hasHeader ? jsonData.slice(1) : jsonData;
+
+                this.renderPreviewTable();
+                this.populateColumnMappings();
+            }
+
+            renderPreviewTable() {
+                const previewTableContainer = document.getElementById('previewTableContainer');
+                const previewTableHead = previewTableContainer.querySelector('thead');
+                const previewTableBody = previewTableContainer.querySelector('tbody');
+
+                previewTableHead.innerHTML = '';
+                previewTableBody.innerHTML = '';
+
+                if (this.dataRows.length === 0) {
+                    previewTableContainer.style.display = 'none';
+                    return;
+                }
+
+                previewTableContainer.style.display = 'block';
+
+                // Başlık satırı
+                let headerHtml = '<tr>';
+                if (this.columnHeaders.length > 0) {
+                    this.columnHeaders.forEach(header => {
+                        headerHtml += `<th>${header}</th>`;
+                    });
+                } else {
+                    // Başlık yoksa, sütun numaralarıyla otomatik başlıklar oluştur
+                    if (this.dataRows[0]) {
+                        for (let i = 0; i < Object.keys(this.dataRows[0]).length; i++) {
+                            headerHtml += `<th>Sütun ${i + 1}</th>`;
+                        }
+                    }
+                }
+                headerHtml += '</tr>';
+                previewTableHead.innerHTML = headerHtml;
+
+                // Veri satırları (ilk 10 satırla sınırlayalım)
+                let bodyHtml = '';
+                this.dataRows.slice(0, 10).forEach(row => {
+                    bodyHtml += '<tr>';
+                    Object.values(row).forEach(cell => {
+                        bodyHtml += `<td>${cell !== undefined ? cell : ''}</td>`;
+                    });
+                    bodyHtml += '</tr>';
+                });
+                previewTableBody.innerHTML = bodyHtml;
+            }
+
+            populateColumnMappings() {
+                const columnMappingSection = document.getElementById('columnMappingSection');
+                const mappingSelects = columnMappingSection.querySelectorAll('.mapping-select');
+
+                // Tüm select'leri temizle
+                mappingSelects.forEach(select => {
+                    select.innerHTML = '<option value="">Eşleştirme Yok</option>';
+                    this.columnHeaders.forEach((header, index) => {
+                        const option = document.createElement('option');
+                        option.value = header; // Sütun başlığını değer olarak kullan
+                        option.textContent = header;
+                        select.appendChild(option);
+                    });
+                });
+                columnMappingSection.style.display = 'block';
+                this.checkRequiredMappings();
+            }
+
+            checkRequiredMappings() {
+                const requiredMappings = document.querySelectorAll('.required-mapping');
+                let allRequiredMapped = true;
+
+                requiredMappings.forEach(select => {
+                    if (!select.value) {
+                        allRequiredMapped = false;
+                        return;
+                    }
+                });
+                document.getElementById('uploadBtn').disabled = !allRequiredMapped;
+            }
+            
+            async uploadDataToDatabase() {
+                this.setLoading(true);
+                const mappings = {};
+                document.querySelectorAll('.mapping-select').forEach(select => {
+                    if (select.value) {
+                        mappings[select.dataset.dbField] = select.value;
+                    }
+                });
+
+                const recordsToUpload = [];
+                for (const row of this.dataRows) {
+                    const record = {};
+                    let isValidRow = true;
+                    for (const dbField in mappings) {
+                        const excelColumnHeader = mappings[dbField];
+                        // Sütun başlığı ile veriyi eşleştir
+                        const columnIndex = this.columnHeaders.indexOf(excelColumnHeader);
+                        let cellValue = (columnIndex !== -1 && row[excelColumnHeader] !== undefined) ? row[excelColumnHeader] : '';
+
+                        // Özel durumlar ve formatlamalar
+                        if (dbField.includes('Date') && cellValue) {
+                            // Excel'deki tarihlerin sayısal formatını JS tarihine çevir
+                            if (typeof cellValue === 'number') {
+                                const date = new Date(Math.round((cellValue - 25569) * 86400 * 1000));
+                                cellValue = date.toISOString().split('T')[0]; // YYYY-MM-DD
+                            } else {
+                                // Direkt tarih stringi ise formatını kontrol et
+                                const date = new Date(cellValue);
+                                if (!isNaN(date.getTime())) {
+                                    cellValue = date.toISOString().split('T')[0];
+                                } else {
+                                    showNotification(`Hata: Geçersiz tarih formatı "${cellValue}". Lütfen YYYY-MM-DD formatını kullanın veya Excel tarih formatını kontrol edin.`, 'error', 10000);
+                                    isValidRow = false;
+                                    break;
+                                }
+                            }
+                        } else if (dbField === 'owners' && cellValue) {
+                            // Hak sahipleri için metni diziye çevir
+                            const ownerNames = cellValue.split(',').map(name => name.trim());
+                            const ownersArray = [];
+                            for (const name of ownerNames) {
+                                // Kişi zaten varsa al, yoksa yeni oluştur (veya hata ver)
+                                let person = this.allPersons.find(p => p.name.toLowerCase() === name.toLowerCase());
+                                if (!person) {
+                                    // Yeni kişi oluştur (varsayılan tip: individual)
+                                    const newPersonData = { name: name, type: 'individual', email: null, phone: null, address: null };
+                                    const addPersonResult = await personsService.addPerson(newPersonData);
+                                    if (addPersonResult.success) {
+                                        person = addPersonResult.data;
+                                        this.allPersons.push(person); // Yeni kişiyi listeye ekle
+                                    } else {
+                                        showNotification(`Hata: Hak sahibi "${name}" oluşturulamadı.`, 'error');
+                                        isValidRow = false;
+                                        break;
+                                    }
+                                }
+                                ownersArray.push({ id: person.id, name: person.name, type: person.type, email: person.email });
+                            }
+                            cellValue = ownersArray;
+                        }
+
+                        record[dbField] = cellValue;
+                    }
+                    if (isValidRow) {
+                        recordsToUpload.push(record);
+                    }
+                }
+
+                if (recordsToUpload.length === 0) {
+                    showNotification('Yüklenecek geçerli kayıt bulunamadı.', 'error');
+                    this.setLoading(false);
+                    return;
+                }
+
+                let successCount = 0;
+                let errorCount = 0;
+
+                for (const recordData of recordsToUpload) {
+                    try {
+                        const result = await ipRecordsService.addRecord(recordData);
+                        if (result.success) {
+                            successCount++;
+                        } else {
+                            throw new Error(result.error || 'Bilinmeyen hata');
+                        }
+                    } catch (error) {
+                        errorCount++;
+                        console.error('Kayıt yüklenirken hata:', recordData, error);
+                    }
+                }
+
+                if (successCount > 0) {
+                    showNotification(`${successCount} kayıt başarıyla yüklendi.`, 'success');
+                }
+                if (errorCount > 0) {
+                    showNotification(`${errorCount} kayıt yüklenirken hata oluştu. Lütfen konsolu kontrol edin.`, 'error');
+                }
+                this.setLoading(false);
+                this.resetForm();
+            }
+
+            resetForm() {
+                this.selectedFile = null;
+                this.workbook = null;
+                this.dataRows = [];
+                this.columnHeaders = [];
+                
+                document.getElementById('excelFile').value = ''; // Dosya inputunu temizle
+                document.getElementById('sheetSelectionGroup').style.display = 'none';
+                document.getElementById('sheetName').innerHTML = '';
+                document.getElementById('headerRowGroup').style.display = 'none';
+                document.getElementById('hasHeader').checked = true;
+                document.getElementById('previewTableContainer').style.display = 'none';
+                document.getElementById('previewTableContainer').querySelector('thead').innerHTML = '';
+                document.getElementById('previewTableContainer').querySelector('tbody').innerHTML = '';
+                document.getElementById('columnMappingSection').style.display = 'none';
+                document.getElementById('uploadBtn').disabled = true;
+
+                showNotification('Form temizlendi.', 'info');
+            }
         }
 
         // Modül başlatma
@@ -349,7 +614,6 @@
 
         activeLink.classList.add('active');
         
-        // Eğer link bir akordiyon içindeyse, akordiyonu aç ve başlığını aktif et
         const parentAccordionContent = activeLink.closest('.accordion-content');
         if (parentAccordionContent) {
             const parentAccordionHeader = parentAccordionContent.previousElementSibling;
