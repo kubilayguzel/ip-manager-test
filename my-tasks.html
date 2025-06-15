@@ -52,6 +52,7 @@
         .status-in_progress { background-color: #ffc107; color: #333; }
         .status-completed { background-color: #28a745; }
         .status-pending_review { background-color: #17a2b8; }
+        .status-pending_client_approval { background-color: #ffc107; color: #212529; } /* Yeni */
         .action-btn { background: #6c757d; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; transition: all 0.3s ease; margin-right: 5px; }
         .action-btn.view-btn { background-color: #17a2b8; }
         .action-btn.view-btn:hover { background-color: #138496; }
@@ -91,7 +92,7 @@
         .task-history-info { flex-grow: 1; }
         .task-history-description { font-size: 0.9em; color: #333; font-weight: 600; }
         .task-history-meta { font-size: 0.8em; color: #666; white-space: nowrap; margin-top: 4px; }
-        .file-upload-area-modal { border: 2px dashed #e1e8ed; border-radius: 10px; padding: 20px; text-align: center; cursor: pointer; margin-top: 15px; }
+        .file-upload-area-modal { border: 2px dashed #e1e8ed; border-radius: 10px; padding: 20px; text-align: center; cursor: pointer; transition: all 0.3s ease; margin-top: 15px; }
         .file-upload-area-modal:hover { border-color: #1e3c72; background: #f0f4f8; }
         .file-list-modal { margin-top: 10px; }
         .file-item-modal { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; background: #f8f9fa; border-radius: 6px; margin-bottom: 5px; font-size: 0.9em; }
@@ -128,19 +129,6 @@
         .form-group { margin-bottom: 15px; }
         .form-label { display: block; margin-bottom: 5px; font-weight: 600; color: #333; }
         .related-accrual-item { background: #f8f9fa; padding: 10px; border-radius: 8px; margin-bottom: 8px; font-size: 0.9em; border-left: 3px solid #1e3c72; }
-        /* Tahakkuk Modalı için yeni stiller */
-        .input-with-currency { display: flex; gap: 10px; }
-        .input-with-currency .form-input { flex-grow: 1; }
-        .currency-select { padding: 12px 8px; border: 2px solid #e1e8ed; border-radius: 10px; background-color: #f8f9fa; font-weight: bold; }
-        .checkbox-label { display: flex; align-items: center; gap: 10px; cursor: pointer; font-weight: 500; }
-        .checkbox-label input { width: 18px; height: 18px; }
-        .total-amount-display { font-size: 1.2em; font-weight: bold; color: #1e3c72; text-align: right; margin-top: 10px; padding: 12px 15px; background-color: #f0f4f8; border-radius: 10px; }
-        .search-results-list { max-height: 150px; overflow-y: auto; border: 1px solid #ccc; border-radius: 8px; margin-top: 5px; }
-        .search-result-item { padding: 10px; cursor: pointer; border-bottom: 1px solid #eee; }
-        .search-result-item:hover { background-color: #f0f4f8; }
-        .no-results-message { text-align: center; color: #999; padding: 15px; }
-        .search-result-display { background: #e9f5ff; border: 1px solid #bde0fe; padding: 10px; border-radius: 8px; margin-top: 10px; }
-
     </style>
 </head>
 <body>
@@ -155,14 +143,14 @@
             <div class="nav-category-title">Veri Girişi</div>
             <a href="data-entry.html" class="sidebar-nav-item"><span class="nav-icon">➕</span><span>Yeni Kayıt</span></a>
             <a href="excel-upload.html" class="sidebar-nav-item"><span class="nav-icon">📄</span><span>Excel ile Yükle</span></a>
-           <div class="nav-category-title">Yönetim</div>
+            <div class="nav-category-title">Yönetim</div>
             <div class="accordion">
                 <div class="accordion-header"><span class="nav-icon">✅</span><span>Görevler</span></div>
                 <div class="accordion-content">
                     <a href="create-task.html" class="new-task-link">Yeni İş Oluştur</a>
                     <a href="task-management.html">İş Yönetimi</a>
                     <a href="my-tasks.html">İşlerim</a>
-                    <a href="#" style="opacity: 0.5; cursor: not-allowed;">Hatırlatmalar</a>
+                    <a href="reminders.html">Hatırlatmalar</a>
                     <a href="#" style="opacity: 0.5; cursor: not-allowed;">Zamanlanmış Görevler</a>
                 </div>
             </div>
@@ -196,7 +184,7 @@
 
         <main class="main-container">
             <section class="page-header">
-                <h1 class="page-title">Bana Atanan İşler</h1>
+                <h1 class="page-title">İşlerim</h1>
                 <p class="page-subtitle">Size atanmış olan tüm görevleri buradan takip edebilirsiniz.</p>
             </section>
     
@@ -210,6 +198,7 @@
                             <option value="in_progress">Devam Ediyor</option>
                             <option value="pending_review">Gözden Geçiriliyor</option>
                             <option value="completed">Tamamlandı</option>
+                            <option value="pending_client_approval">Müvekkil Onayı Bekliyor</option>
                         </select>
                         <button class="btn-primary btn-reassign" id="reassignBtn" style="display: none;">Seçilenleri Ata</button>
                     </div>
@@ -252,7 +241,6 @@
                     <div class="modal-detail-item full-width"><div class="modal-detail-label">İlgili Fikri Mülkiyet Kaydı</div><div class="modal-detail-value" id="modalViewRelatedIpRecordValue"></div></div>
                     <div class="modal-detail-item full-width" id="modalViewRelatedPartyGroup" style="display:none;"><div class="modal-detail-label" id="modalViewRelatedPartyLabel"></div><div class="modal-detail-value" id="modalViewRelatedPartyValue"></div></div>
                     <div class="modal-detail-item full-width" id="modalViewRelatedTransactionGroup" style="display:none;"><div class="modal-detail-label" id="modalViewRelatedTransactionLabel"></div><div class="modal-detail-value" id="modalViewRelatedTransactionValue"></div></div>
-                    
                     <h4 class="modal-detail-section-title">İlişkili Tahakkuklar</h4>
                     <div class="modal-detail-item full-width" id="modalViewRelatedAccruals">
                         <p style="text-align: center; color: #666;">Tahakkuk bilgisi bulunmuyor.</p>
@@ -304,7 +292,7 @@
         </div>
     </div>
 
-    <div class="modal" id="ipRecordDetailModal">
+    <div id="ipRecordDetailModal" class="modal">
         <div class="modal-content portfolio-detail">
             <div class="modal-header"><h3 class="modal-title" id="ipRecordModalTitle">Kayıt Detayları</h3><button class="close-modal-btn" id="closeIpRecordModalBtn">&times;</button></div>
             <div id="ipRecordModalBody"></div>
@@ -347,7 +335,7 @@
                             <label for="officialFee" class="form-label">Resmi Ücret</label>
                             <div class="input-with-currency">
                                 <input type="number" id="officialFee" class="form-input" placeholder="0.00" step="0.01">
-                                <select id="officialFeeCurrency" class="currency-select">
+                                <select class="currency-select">
                                     <option value="TRY" selected>TL</option>
                                     <option value="EUR">EUR</option>
                                     <option value="USD">USD</option>
@@ -359,7 +347,7 @@
                             <label for="serviceFee" class="form-label">Hizmet Bedeli</label>
                             <div class="input-with-currency">
                                 <input type="number" id="serviceFee" class="form-input" placeholder="0.00" step="0.01">
-                                <select id="serviceFeeCurrency" class="currency-select">
+                                <select class="currency-select">
                                     <option value="TRY" selected>TL</option>
                                     <option value="EUR">EUR</option>
                                     <option value="USD">USD</option>
@@ -368,56 +356,54 @@
                             </div>
                         </div>
                     </div>
-                    <div class="form-group">
-                        <label for="vatRate" class="form-label">KDV Oranı (%)</label>
-                        <input type="number" id="vatRate" class="form-input" value="20">
-                    </div>
-                    <div class="form-group">
-                        <label class="checkbox-label">
-                            <input type="checkbox" id="applyVatToOfficialFee" checked>
-                            Resmi Ücrete KDV Uygula
-                        </label>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Toplam Tutar</label>
-                        <div id="totalAmountDisplay" class="total-amount-display">0.00 TRY</div>
-                    </div>
-                    <div class="form-group">
-                        <label for="tpInvoicePartySearch" class="form-label">Türk Patent Faturası Tarafı</label>
-                        <input type="text" id="tpInvoicePartySearch" class="form-input" placeholder="Fatura tarafı arayın...">
-                        <div id="tpInvoicePartyResults" class="search-results-list"></div>
-                        <div id="selectedTpInvoicePartyDisplay" class="search-result-display" style="display:none;"></div>
-                    </div>
-                    <div class="form-group">
-                        <label for="serviceInvoicePartySearch" class="form-label">Hizmet Faturası Tarafı</label>
-                        <input type="text" id="serviceInvoicePartySearch" class="form-input" placeholder="Fatura tarafı arayın...">
-                        <div id="serviceInvoicePartyResults" class="search-results-list"></div>
-                        <div id="selectedServiceInvoicePartyDisplay" class="search-result-display" style="display:none;"></div>
-                    </div>
+                <div class="form-group">
+                    <label for="vatRate" class="form-label">KDV Oranı (%)</label>
+                    <input type="number" id="vatRate" class="form-input" value="20">
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" id="cancelAddAccrualBtn">İptal</button>
-                    <button type="button" class="btn btn-primary" id="saveAccrualBtn">Tahakkuku Kaydet</button>
+                <div class="form-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="applyVatToOfficialFee" checked>
+                        Resmi Ücrete KDV Uygula
+                    </label>
                 </div>
-            </form>
-        </div>
+                <div class="form-group">
+                    <label class="form-label">Toplam Tutar</label>
+                    <div id="totalAmountDisplay" class="total-amount-display">0.00 TRY</div>
+                </div>
+                <div class="form-group">
+                    <label for="tpInvoicePartySearch" class="form-label">Türk Patent Faturası Tarafı</label>
+                    <input type="text" id="tpInvoicePartySearch" class="form-input" placeholder="Fatura tarafı arayın...">
+                    <div id="tpInvoicePartyResults" class="search-results-list"></div>
+                    <div id="selectedTpInvoicePartyDisplay" class="search-result-display" style="display:none;"></div>
+                </div>
+                <div class="form-group">
+                    <label for="serviceInvoicePartySearch" class="form-label">Hizmet Faturası Tarafı</label>
+                    <input type="text" id="serviceInvoicePartySearch" class="form-input" placeholder="Fatura tarafı arayın...">
+                    <div id="serviceInvoicePartyResults" class="search-results-list"></div>
+                    <div id="selectedServiceInvoicePartyDisplay" class="search-result-display" style="display:none;"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" id="cancelAddAccrualBtn">İptal</button>
+                <button type="button" class="btn btn-primary" id="saveAccrualBtn">Tahakkuku Kaydet</button>
+            </div>
+        </form>
     </div>
 
-
-    <script type="module">
+<script type="module">
         import { authService, taskService, ipRecordsService, personsService, accrualService, auth, generateUUID } from './firebase-config.js';
+        import { showNotification, formatFileSize, readFileAsDataURL } from './utils.js'; // utils.js eklendi
 
-        class MyTasksModule {
+        class TaskManagementModule {
             constructor() {
                 this.currentUser = null;
-                this.tasks = [];
+                this.allTasks = [];
+                this.allUsers = [];
                 this.allIpRecords = [];
                 this.allPersons = [];
-                this.allUsers = [];
-                this.allAccruals = []; // Zaten mevcut, ancak tahakkuk hizmetinden yüklendiğinden emin olun
-                this.uploadedCompletionFiles = [];
-                this.uploadedEditFiles = [];
+                this.allAccruals = [];
                 this.currentEditTask = null;
+                this.uploadedEditFiles = [];
                 this.selectedTasks = new Set();
                 this.selectedTpInvoiceParty = null;
                 this.selectedServiceInvoiceParty = null;
@@ -425,10 +411,13 @@
 
             async init() {
                 this.currentUser = authService.getCurrentUser();
-                if (!this.currentUser) {
-                    window.location.href = 'index.html';
+                
+                if (this.currentUser.role !== 'superadmin' && this.currentUser.role !== 'admin') {
+                    showNotification('Bu sayfaya erişim yetkiniz yoktur.', 'error');
+                    window.location.href = 'dashboard.html';
                     return;
                 }
+
                 this.updateUserInfo();
                 await this.loadInitialData();
                 this.setupEventListeners();
@@ -438,69 +427,52 @@
                 if (this.currentUser) {
                     const userName = this.currentUser.displayName || this.currentUser.email.split('@')[0] || 'Kullanıcı';
                     const userRole = this.currentUser.role === 'admin' ? 'Yönetici' : this.currentUser.role === 'superadmin' ? 'Süper Yönetici' : 'Kullanıcı';
+                    
                     document.getElementById('userAvatar').textContent = userName.charAt(0).toUpperCase();
                     document.getElementById('userName').textContent = userName;
                     document.getElementById('userRole').textContent = userRole;
                 }
             }
-            
+
             async loadInitialData() {
-                document.getElementById('loadingIndicator').style.display = 'block';
-                document.getElementById('noTasksMessage').style.display = 'none';
-                document.getElementById('tasksTableBody').innerHTML = '';
-                
-                try {
-                    const [tasksResult, ipRecordsResult, personsResult, usersResult, accrualsResult] = await Promise.all([
-                        taskService.getTasksForUser(this.currentUser.uid),
-                        ipRecordsService.getRecords(),
-                        personsService.getPersons(),
-                        taskService.getAllUsers(),
-                        accrualService.getAccruals() // Tahakkukları da yükle
-                    ]);
+                const [usersResult, tasksResult, ipRecordsResult, personsResult, accrualsResult] = await Promise.all([
+                    taskService.getAllUsers(), 
+                    taskService.getAllTasks(),
+                    ipRecordsService.getRecords(),
+                    personsService.getPersons(),
+                    accrualService.getAccruals()
+                ]);
 
-                    if (tasksResult.success) this.tasks = tasksResult.data; else throw new Error(tasksResult.error || 'Görevler yüklenemedi');
-                    if (ipRecordsResult.success) this.allIpRecords = ipRecordsResult.data; else throw new Error(ipRecordsResult.error || 'IP Kayıtları yüklenemedi');
-                    if (personsResult.success) this.allPersons = personsResult.data; else throw new Error(personsResult.error || 'Kişiler yüklenemedi');
-                    if (usersResult.success) this.allUsers = usersResult.data; else throw new Error(usersResult.error || 'Kullanıcılar yüklenemedi');
-                    if (accrualsResult.success) this.allAccruals = accrualsResult.data; else throw new Error(accrualsResult.error || 'Tahakkuklar yüklenemedi'); // Tahakkukları ata
-                    
-                    this.renderTasks();
-                    
-                } catch (error) {
-                    console.error('Başlangıç verileri yüklenirken hata:', error);
-                    alert('Veriler yüklenirken bir hata oluştu: ' + error.message);
-                } finally {
-                    document.getElementById('loadingIndicator').style.display = 'none';
-                }
+                if (usersResult.success) this.allUsers = usersResult.data;
+                if (tasksResult.success) this.allTasks = tasksResult.data;
+                if (ipRecordsResult.success) this.allIpRecords = ipRecordsResult.data;
+                if (personsResult.success) this.allPersons = personsResult.data;
+                if (accrualsResult.success) this.allAccruals = accrualsResult.data;
+                
+                this.populateFilters();
+                this.renderTasks();
             }
-
+            
             setupEventListeners() {
-                document.getElementById('logoutBtn').addEventListener('click', () => authService.signOut().then(() => window.location.href = 'index.html'));
-                document.getElementById('statusFilter').addEventListener('change', (e) => this.renderTasks(e.target.value));
-                
+                document.getElementById('createTaskBtn').addEventListener('click', () => {window.location.href = 'create-task.html';});
+                document.getElementById('userFilter').addEventListener('change', () => this.renderTasks());
+                document.getElementById('statusFilter').addEventListener('change', () => this.renderTasks());
+                document.getElementById('logoutBtn').addEventListener('click', () => authService.signOut());
+
                 document.getElementById('closeViewTaskDetailModal').addEventListener('click', () => this.closeModal('viewTaskDetailModal'));
+                document.getElementById('closePortfolioDetailModal').addEventListener('click', () => this.closeModal('portfolioDetailModal'));
                 document.getElementById('closeEditTaskModal').addEventListener('click', () => this.closeModal('editTaskModal'));
                 document.getElementById('cancelEditTaskBtn').addEventListener('click', () => this.closeModal('editTaskModal'));
                 document.getElementById('saveTaskChangesBtn').addEventListener('click', () => this.saveTaskChanges());
+
                 document.getElementById('modalTaskDetailFileUploadArea').addEventListener('click', () => document.getElementById('modalTaskDetailFileInput').click());
                 document.getElementById('modalTaskDetailFileInput').addEventListener('change', (e) => this.handleEditDocumentUpload(e.target.files));
-                
-                document.getElementById('closeCompleteTaskModal').addEventListener('click', () => this.closeModal('completeTaskModal'));
-                document.getElementById('cancelCompleteTaskBtn').addEventListener('click', () => this.closeModal('completeTaskModal'));
-                document.getElementById('submitCompleteTaskBtn').addEventListener('click', () => this.completeTask('completed_with_doc'));
-                document.getElementById('clientApprovalBtn').addEventListener('click', () => this.completeTask('client_approved'));
-                document.getElementById('manualCloseBtn').addEventListener('click', () => this.completeTask('manually_closed'));
-                document.getElementById('completeTaskDocumentInput').addEventListener('change', (e) => this.handleDocumentUploadForTaskCompletion(e.target.files));
-                document.getElementById('completeTaskFileUploadArea').addEventListener('click', () => document.getElementById('completeTaskDocumentInput').click());
-                
-                document.getElementById('closeIpRecordModalBtn').addEventListener('click', () => this.closeModal('ipRecordDetailModal'));
-                
+
                 document.getElementById('reassignBtn').addEventListener('click', () => this.showReassignModal());
                 document.getElementById('closeReassignModal').addEventListener('click', () => this.closeModal('reassignTaskModal'));
                 document.getElementById('cancelReassignBtn').addEventListener('click', () => this.closeModal('reassignTaskModal'));
                 document.getElementById('confirmReassignBtn').addEventListener('click', () => this.handleReassignment());
 
-                // Tahakkuk Modalı Event Listeners
                 document.getElementById('closeAddAccrualModal').addEventListener('click', () => this.closeModal('addAccrualModal'));
                 document.getElementById('cancelAddAccrualBtn').addEventListener('click', () => this.closeModal('addAccrualModal'));
                 document.getElementById('saveAccrualBtn').addEventListener('click', () => this.handleSaveAccrual());
@@ -511,7 +483,6 @@
                 });
                 document.getElementById('tpInvoicePartySearch').addEventListener('input', e => this.searchPersons(e.target.value, 'tpInvoiceParty'));
                 document.getElementById('serviceInvoicePartySearch').addEventListener('input', e => this.searchPersons(e.target.value, 'serviceInvoiceParty'));
-
 
                 const tableBody = document.getElementById('tasksTableBody');
                 tableBody.addEventListener('change', (event) => {
@@ -527,72 +498,228 @@
                         this.handleTaskSelection(checkbox);
                     });
                 });
-                
+
                 tableBody.addEventListener('click', (event) => {
-                    const target = event.target.closest('button.action-btn, a.ip-record-link');
+                    const target = event.target.closest('button.action-btn');
                     if (!target) return;
 
                     const row = target.closest('tr');
                     const taskId = row.querySelector('.task-checkbox')?.dataset.taskId;
                     if (!taskId) return;
                     
-                    if (target.classList.contains('complete-btn')) { 
-                        const relatedIpRecordId = target.dataset.ipRecordId;
-                        this.showCompleteTaskModal(taskId, relatedIpRecordId); 
-                    }
-                    else if (target.classList.contains('view-btn')) { this.viewTaskDetailsModal(taskId); }
+                    if (target.classList.contains('view-btn')) { this.viewTaskDetailsModal(taskId); }
                     else if (target.classList.contains('edit-btn')) { this.showEditTaskModal(taskId); }
                     else if (target.classList.contains('delete-btn')) { this.deleteTask(taskId); }
-                    else if (target.classList.contains('add-accrual-btn')) {
-                         this.showAddAccrualModal(taskId);
-                    }
-                    else if (target.classList.contains('ip-record-link')) { 
-                        const recordId = target.dataset.ipRecordId;
-                        if (recordId) this.showIpRecordDetailModal(recordId); 
+                    else if (target.classList.contains('add-accrual-btn')) { this.showAddAccrualModal(taskId); }
+                });
+                
+                // Başvuru numarası linklerine event listener ekle
+                tableBody.addEventListener('click', (event) => {
+                    if (event.target.classList.contains('application-number-link')) {
+                        event.preventDefault();
+                        const recordId = event.target.dataset.recordId;
+                        this.showPortfolioDetailModal(recordId);
                     }
                 });
             }
-
-            renderTasks(filter = 'all') {
+            
+            // İş referansı oluşturma fonksiyonu
+            generateTaskReference(task) {
+                const taskDate = new Date(task.createdAt || Date.now());
+                const year = taskDate.getFullYear().toString().substr(-2);
+                const month = String(taskDate.getMonth() + 1).padStart(2, '0');
+                const taskIdShort = task.id.substr(-4).toUpperCase();
+                return `IS${year}${month}-${taskIdShort}`;
+            }
+            
+            // İş türü Türkçeleştirme
+            getTaskTypeDisplay(taskType) {
+                if (!taskType) return '-';
+                
+                const taskTypeMappings = {
+                    'patent_application': 'Patent Başvuru',
+                    'patent_renewal': 'Patent Yenileme',
+                    'trademark_application': 'Marka Başvuru', 
+                    'trademark_renewal': 'Marka Yenileme',
+                    'trademark_opposition': 'Marka İtiraz',
+                    'copyright_application': 'Telif Başvuru',
+                    'design_application': 'Tasarım Başvuru',
+                    'design_renewal': 'Tasarım Yenileme',
+                    'legal_devir': 'Hukuki - Devir',
+                    'legal_lisans': 'Hukuki - Lisans',
+                    'legal_rehin': 'Hukuki - Rehin',
+                    'legal_birleşme': 'Hukuki - Birleşme',
+                    'legal_veraset': 'Hukuki - Veraset',
+                    'legal_teminat': 'Hukuki - Teminat',
+                    'administrative_general': 'İdari - Genel',
+                    'administrative_documentation': 'İdari - Belgelendirme'
+                };
+                
+                return taskTypeMappings[taskType] || taskType.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+            }
+            
+            // Durum Türkçeleştirme
+            getStatusDisplay(status) {
+                const statusMappings = {
+                    'open': 'Açık',
+                    'in_progress': 'Devam Ediyor',
+                    'pending_review': 'Gözden Geçiriliyor',
+                    'completed': 'Tamamlandı',
+                    'pending_client_approval': 'Müvekkil Onayı Bekliyor' // Yeni
+                };
+                return statusMappings[status] || status;
+            }
+            
+            renderTasks() {
                 const tableBody = document.getElementById('tasksTableBody');
-                const noTasksMessage = document.getElementById('noTasksMessage');
                 tableBody.innerHTML = '';
-                const filteredTasks = this.tasks.filter(task => filter === 'all' || task.status === filter);
                 
-                noTasksMessage.style.display = filteredTasks.length === 0 ? 'block' : 'none';
-                
-                const priorityMap = { high: 'Yüksek', medium: 'Orta', low: 'Düşük' };
-                const statusMap = { open: 'Açık', in_progress: 'Devam Ediyor', completed: 'Tamamlandı', pending_review: 'Gözden Geçiriliyor' };
-                
-                filteredTasks.forEach((task) => {
+                const selectedUser = document.getElementById('userFilter').value;
+                const selectedStatus = document.getElementById('statusFilter').value;
+
+                const filteredTasks = this.allTasks.filter(task => {
+                    const userMatch = selectedUser === 'all' || task.assignedTo_uid === selectedUser;
+                    const statusMatch = selectedStatus === 'all' || task.status === selectedStatus;
+                    return userMatch && statusMatch;
+                });
+
+                filteredTasks.forEach(task => {
                     const row = document.createElement('tr');
-                    const relatedIpRecordTitle = task.relatedIpRecordTitle || '-'; 
-                    const relatedIpRecordId = task.relatedIpRecordId || '';
-                    const isCompleted = task.status === 'completed';
                     const isSelected = this.selectedTasks.has(task.id);
+                    
+                    // Atanan kullanıcının ad-soyad bilgisini al
+                    const assignedUser = this.allUsers.find(u => u.id === task.assignedTo_uid);
+                    const assignedUserName = assignedUser ? (assignedUser.displayName || assignedUser.email.split('@')[0]) : task.assignedTo_email;
+                    
+                    // İlgili IP kaydını bul
+                    const relatedIpRecord = this.allIpRecords.find(r => r.id === task.relatedIpRecordId);
+                    
+                    // Başvuru numarası HTML'i oluştur
+                    let applicationNumberHtml = '-';
+                    if (relatedIpRecord && relatedIpRecord.applicationNumber) {
+                        applicationNumberHtml = `<a href="#" class="application-number-link" data-record-id="${relatedIpRecord.id}">${relatedIpRecord.applicationNumber}</a>`;
+                    }
                     
                     row.innerHTML = `
                         <td><input type="checkbox" class="task-checkbox" data-task-id="${task.id}" ${isSelected ? 'checked' : ''}></td>
-                        <td><span class="priority-${task.priority}">${priorityMap[task.priority] || 'Normal'}</span></td>
+                        <td><span class="task-reference">${this.generateTaskReference(task)}</span></td>
                         <td>${task.title}</td>
-                        <td><a href="#" class="ip-record-link" data-ip-record-id="${relatedIpRecordId}">${relatedIpRecordTitle}</a></td> 
-                        <td>${task.dueDate ? new Date(task.dueDate).toLocaleDateString() : '-'}</td>
-                        <td><span class="status-badge status-${task.status}">${statusMap[task.status] || task.status}</span></td>
+                        <td><span class="task-type-badge">${this.getTaskTypeDisplay(task.taskType)}</span></td>
+                        <td>${assignedUserName}</td>
+                        <td>${applicationNumberHtml}</td>
+                        <td><span class="status-badge status-${task.status}">${this.getStatusDisplay(task.status)}</span></td>
                         <td>
                             <div style="display: flex; gap: 5px;">
                                 <button class="action-btn view-btn">Görüntüle</button>
-                                <button class="action-btn edit-btn">Güncelle</button>
-                                <button class="action-btn complete-btn" data-ip-record-id="${relatedIpRecordId}" ${isCompleted ? 'disabled' : ''}>${isCompleted ? 'Tamamlandı' : 'İşi Bitir'}</button>
-                                <button class="action-btn add-accrual-btn" data-task-id="${task.id}" title="Bu İşe Tahakkuk Ekle">💰</button>
+                                <button class="action-btn edit-btn">Düzenle</button>
+                                <button class="action-btn delete-btn">Sil</button>
+                                <button class="action-btn add-accrual-btn" title="Bu İşe Tahakkuk Ekle">💰</button>
                             </div>
                         </td>
                     `;
-                    
                     tableBody.appendChild(row);
                 });
+                
                 this.updateReassignButtonState();
             }
+            
+            // Portfolio detay modalını göster
+            showPortfolioDetailModal(recordId) {
+                const record = this.allIpRecords.find(r => r.id === recordId);
+                if (!record) {
+                    showNotification('Kayıt bulunamadı.', 'error');
+                    return;
+                }
 
+                const modal = document.getElementById('portfolioDetailModal');
+                document.getElementById('portfolioModalTitle').textContent = `Detay: ${record.title}`;
+                
+                const typeNames = { patent: 'Patent', trademark: 'Marka', copyright: 'Telif Hakkı', design: 'Tasarım' };
+                const statusNames = { 
+                    application: 'Başvuru', pending: 'Beklemede', approved: 'Onaylandı', 
+                    rejected: 'Reddedildi', expired: 'Süresi Doldu', published: 'Yayınlandı', 
+                    partial_refusal: 'Kısmi Ret', refused: 'Ret', opposition_received: 'İtiraz Geldi', 
+                    opposition_filed: 'İtiraz Edildi', registered: 'Tescilli', not_renewed: 'Yenilenmedi', 
+                    invalid_void: 'Geçersiz',
+                    invalid_not_renewed: 'Yenilememe Nedeniyle Geçersiz' // Yeni
+                };
+
+                const formatDate = (dateString) => dateString ? new Date(dateString).toLocaleDateString('tr-TR') : '-';
+                
+                const renderField = (label, value, isLongText = false) => {
+                    if (value === null || value === undefined || value === '') return '';
+                    const valueClass = isLongText ? 'modal-detail-value long-text' : 'modal-detail-value';
+                    return `<div class="modal-detail-item ${isLongText ? 'full-width' : ''}"><div class="modal-detail-label">${label}</div><div class="${valueClass}">${value}</div></div>`;
+                };
+
+                let modalContentHtml = `<div class="modal-detail-grid">`;
+                
+                modalContentHtml += `<h4 class="modal-detail-section-title">Genel Bilgiler</h4>`;
+                modalContentHtml += renderField('Tür', `<span class="ip-type ${record.type}">${typeNames[record.type] || 'Bilinmiyor'}</span>`);
+                modalContentHtml += renderField('Başlık', record.title);
+                modalContentHtml += renderField('Durum', `<span class="status-badge ${record.status}">${statusNames[record.status] || record.status}</span>`);
+                modalContentHtml += renderField('Başvuru Numarası', record.applicationNumber);
+                modalContentHtml += renderField('Tescil Numarası', record.registrationNumber);
+                modalContentHtml += renderField('Başvuru Tarihi', formatDate(record.applicationDate));
+                modalContentHtml += renderField('Tescil Tarihi', formatDate(record.registrationDate));
+                modalContentHtml += renderField('Hak Sahipleri', (record.owners || []).map(o => o.name).join(', '));
+
+                if (record.type === 'patent') {
+                    modalContentHtml += `<h4 class="modal-detail-section-title">Patent Detayları</h4>`;
+                    modalContentHtml += renderField('Patent Sınıfı', record.patentClass);
+                    modalContentHtml += renderField('Öncelik Tarihi', formatDate(record.priority));
+                    modalContentHtml += renderField('Son Geçerlilik Tarihi', formatDate(record.expiryDate));
+                    modalContentHtml += renderField('Patent İstekleri (Claims)', record.claims, true);
+                }
+                if (record.type === 'trademark') {
+                    modalContentHtml += `<h4 class="modal-detail-section-title">Marka Detayları</h4>`;
+                    if (record.trademarkImage && record.trademarkImage.content) {
+                        modalContentHtml += `
+                            <div class="modal-detail-item detail-trademark-image-container">
+                                <div class="modal-detail-label">Marka Örneği</div>
+                                <img src="${record.trademarkImage.content}" class="detail-trademark-image" alt="Marka Örneği">
+                            </div>`;
+                    }
+                    modalContentHtml += renderField('Marka Türü', record.trademarkType);
+                    modalContentHtml += renderField('Nice Sınıfı', record.niceClass);
+                    modalContentHtml += renderField('Yenileme Tarihi', formatDate(record.renewalDate));
+                    modalContentHtml += renderField('Bülten Tarihi', formatDate(record.bulletinDate));
+                    modalContentHtml += renderField('Bülten Numarası', record.bulletinNumber);
+                    modalContentHtml += renderField('Mal ve Hizmetler', record.goodsServices, true);
+                }
+                if (record.type === 'copyright') {
+                    modalContentHtml += `<h4 class="modal-detail-section-title">Telif Hakkı Detayları</h4>`;
+                    modalContentHtml += renderField('Eser Türü', record.workType);
+                    modalContentHtml += renderField('Oluşturulma Tarihi', formatDate(record.creationDate));
+                    modalContentHtml += renderField('Yayın Tarihi', formatDate(record.publicationDate));
+                    modalContentHtml += renderField('Yayımcı/Yapımcı', record.publisher);
+                }
+                if (record.type === 'design') {
+                    modalContentHtml += `<h4 class="modal-detail-section-title">Tasarım Detayları</h4>`;
+                    modalContentHtml += renderField('Tasarım Türü', record.designType);
+                    modalContentHtml += renderField('Locarno Sınıfı', record.locarnoClass);
+                    modalContentHtml += renderField('Tasarım Tarihi', formatDate(record.designDate));
+                    modalContentHtml += renderField('Tasarım Özellikleri', record.designFeatures, true);
+                }
+                
+                modalContentHtml += `<h4 class="modal-detail-section-title">Açıklama</h4>`;
+                modalContentHtml += renderField('Açıklama', record.description, true);
+                
+                if (record.files && record.files.length > 0) {
+                    modalContentHtml += `<h4 class="modal-detail-section-title">Yüklenen Dokümanlar</h4>`;
+                    modalContentHtml += `<div class="modal-detail-item" style="grid-column: 1 / -1;"><ul>`;
+                    record.files.forEach(file => {
+                        modalContentHtml += `<li><a href="${file.content}" download="${file.name}">📄 ${file.name} (${formatFileSize(file.size)}) - ${file.documentDesignation || 'Belge'}</a></li>`;
+                    });
+                    modalContentHtml += `</ul></div>`;
+                }
+                
+                modalContentHtml += `</div>`;
+                document.getElementById('portfolioModalBody').innerHTML = modalContentHtml;
+                
+                modal.classList.add('show');
+            }
+            
             handleTaskSelection(checkbox) {
                 const taskId = checkbox.dataset.taskId;
                 if (checkbox.checked) {
@@ -615,19 +742,17 @@
 
             showReassignModal() {
                 if (this.selectedTasks.size === 0) {
-                    alert('Lütfen en az bir iş seçin.');
+                    showNotification('Lütfen en az bir iş seçin.', 'info');
                     return;
                 }
                 const userSelect = document.getElementById('reassignUserSelect');
                 userSelect.innerHTML = '<option value="">Kullanıcı Seçin...</option>';
                 
                 this.allUsers.forEach(user => {
-                    if (user.id !== this.currentUser.uid) { 
-                        const option = document.createElement('option');
-                        option.value = user.id;
-                        option.textContent = user.displayName || user.email;
-                        userSelect.appendChild(option);
-                    }
+                    const option = document.createElement('option');
+                    option.value = user.id;
+                    option.textContent = user.displayName || user.email;
+                    userSelect.appendChild(option);
                 });
 
                 document.getElementById('reassignTaskCount').textContent = this.selectedTasks.size;
@@ -637,7 +762,7 @@
             async handleReassignment() {
                 const newUserId = document.getElementById('reassignUserSelect').value;
                 if (!newUserId) {
-                    alert('Lütfen bir kullanıcı seçin.');
+                    showNotification('Lütfen bir kullanıcı seçin.', 'error');
                     return;
                 }
 
@@ -651,7 +776,7 @@
                 try {
                     const result = await taskService.reassignTasks(taskIds, newUserId, newUser.email);
                     if (result.success) {
-                        alert('İşler başarıyla yeniden atandı!');
+                        showNotification('İşler başarıyla yeniden atandı!', 'success');
                         this.selectedTasks.clear();
                         document.getElementById('selectAllCheckbox').checked = false;
                         this.updateReassignButtonState();
@@ -661,19 +786,62 @@
                         throw new Error(result.error);
                     }
                 } catch (error) {
-                    alert('İşler atanırken bir hata oluştu: ' + error.message);
+                    showNotification('İşler atanırken bir hata oluştu: ' + error.message, 'error');
                 }
             }
 
+            populateFilters() {
+                const userFilter = document.getElementById('userFilter');
+                userFilter.innerHTML = '<option value="all">Tüm Kullanıcılar</option>';
+                this.allUsers.forEach(user => {
+                    userFilter.innerHTML += `<option value="${user.id}">${user.displayName || user.email}</option>`;
+                });
+                
+                const statusFilter = document.getElementById('statusFilter');
+                statusFilter.innerHTML = `<option value="all">Tüm Durumlar</option>
+                    <option value="open">Açık</option>
+                    <option value="in_progress">Devam Ediyor</option>
+                    <option value="pending_review">Gözden Geçiriliyor</option>
+                    <option value="completed">Tamamlandı</option>
+                    <option value="pending_client_approval">Müvekkil Onayı Bekliyor</option>`; // Yeni
+            }
+
+            async deleteTask(taskId) {
+                if (confirm('Bu görevi silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.')) {
+                    try {
+                        const result = await taskService.deleteTask(taskId);
+                        if (result.success) {
+                            showNotification('Görev başarıyla silindi.', 'success');
+                            this.selectedTasks.delete(taskId);
+                            await this.loadInitialData();
+                        } else {
+                            throw new Error(result.error);
+                        }
+                    } catch (error) {
+                        showNotification('Görev silinirken bir hata oluştu: ' + error.message, 'error');
+                    }
+                }
+            }
+            
+            viewTaskDetailsModal(taskId) {
+                const task = this.allTasks.find(t => t.id === taskId);
+                if (!task) return showNotification('Görev bulunamadı.', 'error');
+                this.populateModalTaskDetails(task, this.allIpRecords, this.allPersons);
+                document.getElementById('viewTaskDetailModal').classList.add('show');
+            }
+            
             showEditTaskModal(taskId) {
-                const task = this.tasks.find(t => t.id === taskId);
-                if (!task) { alert('Düzenlenecek görev bulunamadı.'); return; }
-                this.currentEditTask = { ...task };
-                this.uploadedEditFiles = [];
+                const task = this.allTasks.find(t => t.id === taskId);
+                if (!task) return showNotification('Düzenlenecek görev bulunamadı.', 'error');
+
+                this.currentEditTask = { ...task }; 
+                this.uploadedEditFiles = []; 
+
                 document.getElementById('editTaskId').value = task.id;
                 document.getElementById('modalEditTaskTitle').value = task.title || '';
                 document.getElementById('modalEditTaskDescription').value = task.description || '';
                 document.getElementById('modalEditTaskDueDate').value = task.dueDate || '';
+
                 const prioritySelect = document.getElementById('modalEditTaskPriority');
                 prioritySelect.innerHTML = '';
                 const priorities = { low: 'Düşük', medium: 'Orta', high: 'Yüksek' };
@@ -684,6 +852,7 @@
                     if (key === task.priority) option.selected = true;
                     prioritySelect.appendChild(option);
                 }
+
                 const assignedToSelect = document.getElementById('modalEditAssignedTo');
                 assignedToSelect.innerHTML = '';
                 this.allUsers.forEach(user => {
@@ -693,6 +862,7 @@
                     if (user.id === task.assignedTo_uid) option.selected = true;
                     assignedToSelect.appendChild(option);
                 });
+
                 this.renderEditFileList(true);
                 document.getElementById('editTaskModal').classList.add('show');
             }
@@ -701,6 +871,7 @@
                 const taskId = document.getElementById('editTaskId').value;
                 const newAssignedToUid = document.getElementById('modalEditAssignedTo').value;
                 const newAssignedToUser = this.allUsers.find(u => u.id === newAssignedToUid);
+
                 const updates = {
                     title: document.getElementById('modalEditTaskTitle').value.trim(),
                     description: document.getElementById('modalEditTaskDescription').value.trim(),
@@ -710,21 +881,25 @@
                     dueDate: document.getElementById('modalEditTaskDueDate').value,
                     files: (this.currentEditTask.files || []).concat(this.uploadedEditFiles)
                 };
+
                 try {
                     const result = await taskService.updateTask(taskId, updates);
                     if (result.success) {
-                        alert('İş başarıyla güncellendi!');
+                        showNotification('İş başarıyla güncellendi!', 'success');
                         this.closeModal('editTaskModal');
                         await this.loadInitialData();
                     } else { throw new Error(result.error); }
-                } catch(error) { alert('İş güncellenirken bir hata oluştu: ' + error.message); }
+                } catch(error) {
+                    showNotification('İş güncellenirken bir hata oluştu: ' + error.message, 'error');
+                }
             }
-
+            
             handleEditDocumentUpload(files) {
                 for (const file of files) {
-                    const isDuplicate = (this.currentEditTask.files || []).some(f => f.name === file.name) || this.uploadedEditFiles.some(f => f.name === file.name);
-                    if(isDuplicate) { alert(`"${file.name}" adlı dosya zaten listede.`); continue; }
-                    this.readFileAsDataURL(file).then(dataUrl => {
+                    const isDuplicate = (this.currentEditTask.files || []).some(f => f.name === file.name && f.size === file.size) || this.uploadedEditFiles.some(f => f.name === file.name && f.size === file.size);
+                    if(isDuplicate) { showNotification(`"${file.name}" adlı dosya zaten listede.`, 'info'); continue; }
+
+                    readFileAsDataURL(file).then(dataUrl => {
                         this.uploadedEditFiles.push({
                             id: generateUUID(), name: file.name, size: file.size, type: file.type,
                             content: dataUrl, uploadedAt: new Date().toISOString(),
@@ -739,11 +914,11 @@
                 const existingList = document.getElementById('modalEditTaskDocumentList');
                 const newList = document.getElementById('modalTaskDetailUploadedFileList');
                 const noDocsMessage = document.getElementById('modalNoTaskDocumentsMessage');
-
+                
                 if (isInitial) {
                     existingList.innerHTML = '';
                     const existingFiles = this.currentEditTask.files || [];
-                    if(noDocsMessage) noDocsMessage.style.display = existingFiles.length === 0 ? 'block' : 'none';
+                    if (noDocsMessage) noDocsMessage.style.display = existingFiles.length === 0 ? 'block' : 'none';
                     if (existingFiles.length > 0) {
                         existingFiles.forEach(file => {
                             const li = document.createElement('li');
@@ -758,11 +933,12 @@
                         });
                     }
                 }
+                
                 newList.innerHTML = '';
                 this.uploadedEditFiles.forEach(file => {
                     const item = document.createElement('div');
                     item.className = 'file-item-task-detail';
-                    item.innerHTML = `<span>${file.name}</span><button class="remove-file-task-detail" data-id="${file.id}">×</button>`;
+                    item.innerHTML = `<span>${file.name} (${formatFileSize(file.size)})</span><button type="button" class="remove-file-task-detail" data-id="${file.id}">×</button>`;
                     item.querySelector('.remove-file-task-detail').addEventListener('click', (e) => {
                         this.uploadedEditFiles = this.uploadedEditFiles.filter(f => f.id !== e.target.dataset.id);
                         this.renderEditFileList();
@@ -770,59 +946,54 @@
                     newList.appendChild(item);
                 });
             }
-
-            async deleteTask(taskId) {
-                if (confirm('Bu görevi silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.')) {
-                    try {
-                        const result = await taskService.deleteTask(taskId);
-                        if (result.success) { alert('Görev başarıyla silindi.'); await this.loadInitialData(); } 
-                        else { throw new Error(result.error); }
-                    } catch (error) { console.error('Görev silinirken hata:', error); alert('Görev silinirken bir hata oluştu: ' + error.message); }
-                }
-            }
-
-            async viewTaskDetailsModal(taskId) {
-                const task = this.tasks.find(t => t.id === taskId);
-                if (!task) { alert('Görev bulunamadı.'); return; }
-                this.populateModalTaskDetails(task, this.allIpRecords, this.allPersons);
-                document.getElementById('viewTaskDetailModal').classList.add('show');
-            }
-
+            
             populateModalTaskDetails(task, ipRecords, persons) {
-                const modal = document.getElementById('viewTaskDetailModal');
+                 const modal = document.getElementById('viewTaskDetailModal');
                 if (!modal) return;
+
                 document.getElementById('modalViewTaskTitle').textContent = `İş Detayı: ${task.title || '-'}`;
                 document.getElementById('modalViewTaskTitleValue').textContent = task.title || '-';
                 document.getElementById('modalViewTaskDescriptionValue').textContent = task.description || '-';
-                const taskTypeParts = task.taskType ? task.taskType.split('_') : [];
-                const mainType = taskTypeParts[0] || '';
-                const specificType = taskTypeParts.slice(1).join(' ').replace(/\b\w/g, l => l.toUpperCase());
-                document.getElementById('modalViewTaskTypeValue').textContent = `${mainType.charAt(0).toUpperCase() + mainType.slice(1)} - ${specificType}` || '-';
+                
+                document.getElementById('modalViewTaskTypeValue').textContent = this.getTaskTypeDisplay(task.taskType);
+
                 const priorityMap = { high: 'Yüksek', medium: 'Orta', low: 'Düşük' };
                 document.getElementById('modalViewTaskPriorityValue').textContent = priorityMap[task.priority] || task.priority || '-';
-                document.getElementById('modalViewAssignedToValue').textContent = task.assignedTo_email || '-';
+                
+                // Atanan kişinin ad-soyad bilgisini göster
+                const assignedUser = this.allUsers.find(u => u.id === task.assignedTo_uid);
+                const assignedUserName = assignedUser ? (assignedUser.displayName || assignedUser.email.split('@')[0]) : task.assignedTo_email;
+                document.getElementById('modalViewAssignedToValue').textContent = assignedUserName || '-';
+                
                 document.getElementById('modalViewTaskDueDateValue').textContent = task.dueDate ? new Date(task.dueDate).toLocaleDateString('tr-TR') : '-';
+
                 let relatedIpRecordText = '-';
                 if (task.relatedIpRecordId) {
                     const ipRecord = ipRecords.find(r => r.id === task.relatedIpRecordId);
-                    relatedIpRecordText = ipRecord ? `${ipRecord.title || ipRecord.applicationNumber || 'Kayıt'}` : (task.relatedIpRecordTitle || 'Kayıt Bulunamadı');
+                    if (ipRecord) {
+                        relatedIpRecordText = `${ipRecord.title || ipRecord.applicationNumber || 'Kayıt'}`;
+                    } else {
+                        relatedIpRecordText = task.relatedIpRecordTitle || 'Kayıt Bulunamadı';
+                    }
                 }
                 document.getElementById('modalViewRelatedIpRecordValue').textContent = relatedIpRecordText;
+
                 const modalViewRelatedPartyGroup = document.getElementById('modalViewRelatedPartyGroup');
-                const modalViewRelatedPartyLabel = document.getElementById('modalViewRelatedPartyLabel');
-                const modalViewRelatedPartyValue = document.getElementById('modalViewRelatedPartyValue');
-                if (task.details?.relatedParty?.id) {
+                if(task.details?.relatedParty?.id) {
                     const person = persons.find(p => p.id === task.details.relatedParty.id);
                     if (person) {
                         const taskType = task.taskType.split('_')[1];
                         const labelMap = { 'devir': 'Devralan Taraf', 'lisans': 'Lisans Alan Taraf', 'rehin': 'Rehin Alan Taraf', 'birleşme': 'Birleşilen Taraf', 'veraset': 'Mirasçı', 'teminat': 'Rehin Alan Taraf' };
-                        modalViewRelatedPartyLabel.textContent = labelMap[taskType] || 'İlgili Taraf';
-                        modalViewRelatedPartyValue.textContent = person.name;
+                        document.getElementById('modalViewRelatedPartyLabel').textContent = labelMap[taskType] || 'İlgili Taraf';
+                        document.getElementById('modalViewRelatedPartyValue').textContent = person.name;
                         modalViewRelatedPartyGroup.style.display = 'block';
-                    } else { modalViewRelatedPartyGroup.style.display = 'none'; }
-                } else { modalViewRelatedPartyGroup.style.display = 'none'; }
+                    } else {
+                        modalViewRelatedPartyGroup.style.display = 'none';
+                    }
+                } else {
+                    modalViewRelatedPartyGroup.style.display = 'none';
+                }
 
-                // İlişkili Tahakkuklar Bilgisi - Başlangıç
                 const modalViewRelatedAccruals = document.getElementById('modalViewRelatedAccruals');
                 const relatedAccruals = this.allAccruals.filter(acc => acc.taskId === task.id);
                 
@@ -841,7 +1012,6 @@
                 } else {
                     modalViewRelatedAccruals.innerHTML = '<p>Bu işe ait tahakkuk bulunmuyor.</p>';
                 }
-                // İlişkili Tahakkuklar Bilgisi - Bitiş
 
                 const modalViewTaskHistory = document.getElementById('modalViewTaskHistory');
                 modalViewTaskHistory.innerHTML = '';
@@ -858,112 +1028,24 @@
                 }
             }
 
-            showCompleteTaskModal(taskId, relatedIpRecordId) {
-                const modal = document.getElementById('completeTaskModal');
-                if (!modal) return;
-                document.getElementById('completeTaskId').value = taskId;
-                document.getElementById('completeTaskRelatedIpRecordId').value = relatedIpRecordId;
-                this.uploadedCompletionFiles = [];
-                document.getElementById('completeTaskFileList').innerHTML = '';
-                modal.classList.add('show');
-            }
-
-            async completeTask(actionType) {
-                const taskId = document.getElementById('completeTaskId').value;
-                const relatedIpRecordId = document.getElementById('completeTaskRelatedIpRecordId').value;
-                if (!taskId) { alert('İş ID\'si bulunamadı.'); return; }
-                
-                const actionMessages = {
-                    completed_with_doc: { confirm: 'Bu işi "Tamamlandı" olarak işaretlemek istediğinizden emin misiniz?', success: 'İş başarıyla tamamlandı!' },
-                    client_approved: { confirm: 'Bu işi "Müvekkil Onayı" ile tamamlamak istediğinizden emin misiniz?', success: 'İş, müvekkil onayı ile tamamlandı!' },
-                    manually_closed: { confirm: 'Bu işi "Manuel Kapat" olarak işaretlemek istediğinizden emin misiniz?', success: 'İş, manuel olarak kapatıldı!' }
-                };
-                const messages = actionMessages[actionType];
-
-                if (confirm(messages.confirm)) {
-                    try {
-                        const result = await taskService.updateTask(taskId, { status: 'completed' });
-                        if (!result.success) throw new Error(result.error || 'İş durumu güncellenemedi.');
-
-                        if (this.uploadedCompletionFiles.length > 0 && relatedIpRecordId) {
-                            const currentIpRecord = this.allIpRecords.find(r => r.id === relatedIpRecordId);
-                            const updatedFiles = (currentIpRecord?.files || []).concat(this.uploadedCompletionFiles);
-                            const ipRecordUpdateResult = await ipRecordsService.updateRecord(relatedIpRecordId, { files: updatedFiles });
-                            if (!ipRecordUpdateResult.success) {
-                                alert(`${messages.success} Ancak dokümanlar yüklenirken bir hata oluştu: ${ipRecordUpdateResult.error}`);
-                            } else {
-                                alert(`${messages.success} Dokümanlar da başarıyla yüklendi!`);
-                            }
-                        } else {
-                            alert(messages.success);
-                        }
-
-                        this.closeModal('completeTaskModal');
-                        await this.loadInitialData();
-                    } catch (error) {
-                        alert('İş tamamlanırken bir hata oluştu: ' + error.message);
-                    }
-                }
-            }
-
-            handleDocumentUploadForTaskCompletion(files) {
-                for (const file of files) {
-                    if (this.uploadedCompletionFiles.some(f => f.name === file.name)) continue;
-                    this.readFileAsDataURL(file).then(dataUrl => {
-                        this.uploadedCompletionFiles.push({
-                            id: generateUUID(), name: file.name, size: file.size, type: file.type, content: dataUrl,
-                            uploadedAt: new Date().toISOString(), documentDesignation: 'İş Tamamlama Dokümanı',
-                        });
-                        this.renderDocumentListForTaskCompletion();
-                    });
-                }
-            }
-            
-            renderDocumentListForTaskCompletion() {
-                const fileList = document.getElementById('completeTaskFileList');
-                fileList.innerHTML = '';
-                this.uploadedCompletionFiles.forEach(file => {
-                    const fileItem = document.createElement('div');
-                    fileItem.className = 'file-item-modal';
-                    fileItem.innerHTML = `<span>${file.name} (${this.formatFileSize(file.size)})</span><button type="button" class="remove-file-modal" data-id="${file.id}">&times;</button>`;
-                    fileItem.querySelector('.remove-file-modal').addEventListener('click', () => {
-                        this.uploadedCompletionFiles = this.uploadedCompletionFiles.filter(f => f.id !== file.id);
-                        this.renderDocumentListForTaskCompletion();
-                    });
-                    fileList.appendChild(fileItem);
-                });
-            }
-
-            async showIpRecordDetailModal(recordId) {
-                const record = this.allIpRecords.find(r => r.id === recordId); if (!record) { alert('Portföy kaydı bulunamadı.'); return; } const modal = document.getElementById('ipRecordDetailModal'); if (!modal) return; const typeNames = { patent: 'Patent', trademark: 'Marka', copyright: 'Telif Hakkı', design: 'Tasarım' }; const statusNames = { application: 'Başvuru', pending: 'Beklemede', approved: 'Onaylandı', rejected: 'Reddedildi', expired: 'Süresi Doldu', published: 'Yayınlandı', partial_refusal: 'Kısmi Ret', refused: 'Ret', opposition_received: 'İtiraz Geldi', opposition_filed: 'İtiraz Edildi', registered: 'Tescilli', not_renewed: 'Yenilenmedi', invalid_void: 'Geçersiz' }; const formatDate = (dateString) => dateString ? new Date(dateString).toLocaleDateString('tr-TR') : '-'; const renderField = (label, value, isLongText = false) => { if (value === null || value === undefined || value === '') return ''; return `<div class="modal-detail-item ${isLongText ? 'full-width' : ''}"><div class="modal-detail-label">${label}</div><div class="modal-detail-value ${isLongText ? 'long-text' : ''}">${value}</div></div>`; }; document.getElementById('ipRecordModalTitle').textContent = `Detay: ${record.title}`; let modalContentHtml = `<div class="modal-detail-grid portfolio-detail">`; modalContentHtml += `<h4 class="modal-detail-section-title">Genel Bilgiler</h4>`; modalContentHtml += renderField('Tür', `<span class="ip-type ${record.type}">${typeNames[record.type] || 'Bilinmiyor'}</span>`); modalContentHtml += renderField('Başlık', record.title); modalContentHtml += renderField('Durum', `<span class="status-badge ${record.status}">${statusNames[record.status] || record.status}</span>`); modalContentHtml += renderField('Başvuru Numarası', record.applicationNumber); modalContentHtml += renderField('Tescil Numarası', record.registrationNumber); modalContentHtml += renderField('Başvuru Tarihi', formatDate(record.applicationDate)); modalContentHtml += renderField('Tescil Tarihi', formatDate(record.registrationDate)); modalContentHtml += renderField('Hak Sahipleri', (record.owners || []).map(o => o.name).join(', ')); if (this.currentUser && this.currentUser.role === 'superadmin') {modalContentHtml += renderField('Oluşturan Kullanıcı', record.userEmail);} /* Kullanıcı bilgisi eklendi */ if (record.files && record.files.length > 0) { modalContentHtml += `<h4 class="modal-detail-section-title">Yüklenen Dokümanlar</h4>`; modalContentHtml += `<div class="modal-detail-item full-width"><ul>`; record.files.forEach(file => { modalContentHtml += `<li><a href="${file.content}" download="${file.name}">📄 ${file.name} (${this.formatFileSize(file.size)}) - ${file.documentDesignation || 'Belge'}</a></li>`; }); modalContentHtml += `</ul></div>`; } modalContentHtml += `</div>`; document.getElementById('ipRecordModalBody').innerHTML = modalContentHtml; this.renderIpRecordTransactionHistory(record.id, record.transactions, record.files); modal.classList.add('show');
-            }
-            
-            renderIpRecordTransactionHistory(recordId, transactions, recordFiles) {
-                const historyContainer = document.getElementById('ipRecordTransactionHistory'); historyContainer.innerHTML = ''; if (!transactions || transactions.length === 0) { historyContainer.innerHTML = '<p style="text-align: center; color: #666; padding: 20px;">İşlem geçmişi yok.</p>'; return; } const sortedTransactions = transactions.sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp)); let html = ''; sortedTransactions.forEach(tx => { let docLink = ''; if (tx.documentId) { const file = recordFiles.find(f => f.id === tx.documentId); if (file) docLink = ` | <a href="${file.content}" download="${file.name}">Belge</a>`; } html += `<div class="task-history-item"><div class="task-history-item-content"><div class="task-history-info"><div class="task-history-description">${tx.description || tx.type}</div><div class="task-history-meta">${new Date(tx.timestamp).toLocaleString('tr-TR')} by ${tx.userEmail}${docLink}</div></div></div></div>`; }); historyContainer.innerHTML = html;
-            }
-            
-            readFileAsDataURL(file) { return new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(reader.result); reader.onerror = reject; reader.readAsDataURL(file); }); }
-            formatFileSize(bytes) { if (bytes === 0) return '0 Bytes'; const k = 1024; const i = Math.floor(Math.log(bytes) / Math.log(k)); return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${['Bytes', 'KB', 'MB', 'GB'][i]}`; }
-            
             closeModal(modalId) {
                 document.getElementById(modalId).classList.remove('show');
-                if (modalId === 'completeTaskModal') { this.uploadedCompletionFiles = []; document.getElementById('completeTaskFileList').innerHTML = ''; }
-                if (modalId === 'editTaskModal') { this.uploadedEditFiles = []; this.currentEditTask = null; }
-                if (modalId === 'reassignTaskModal') { document.getElementById('reassignUserSelect').value = ''; }
+                if (modalId === 'editTaskModal') {
+                    this.currentEditTask = null;
+                    this.uploadedEditFiles = [];
+                }
+                 if (modalId === 'reassignTaskModal') {
+                    document.getElementById('reassignUserSelect').value = '';
+                }
                 if (modalId === 'addAccrualModal') {
                     document.getElementById('addAccrualForm').reset();
-                    this.selectedTpInvoiceParty = null;
-                    this.selectedServiceInvoiceParty = null;
-                    document.getElementById('selectedTpInvoicePartyDisplay').style.display = 'none';
-                    document.getElementById('selectedServiceInvoicePartyDisplay').style.display = 'none';
                 }
             }
 
-            // Tahakkuk Ekle Modal Fonksiyonları
             showAddAccrualModal(taskId) {
-                const task = this.tasks.find(t => t.id === taskId);
+                const task = this.allTasks.find(t => t.id === taskId);
                 if (!task) {
-                    alert('Tahakkuk eklenecek iş bulunamadı.');
+                    showNotification('Tahakkuk eklenecek iş bulunamadı.', 'error');
                     return;
                 }
                 
@@ -983,20 +1065,20 @@
             
             async handleSaveAccrual() {
                 const taskId = document.getElementById('accrualTaskId').value;
-                const task = this.tasks.find(t => t.id === taskId);
+                const task = this.allTasks.find(t => t.id === taskId);
 
                 const officialFee = parseFloat(document.getElementById('officialFee').value) || 0;
                 const serviceFee = parseFloat(document.getElementById('serviceFee').value) || 0;
                 
                 if (officialFee <= 0 && serviceFee <= 0) {
-                    alert("Lütfen en az bir ücret girin.");
+                    showNotification("Lütfen en az bir ücret girin.", 'error');
                     return;
                 }
 
                 const vatRate = parseFloat(document.getElementById('vatRate').value) || 0;
                 const applyVatToOfficial = document.getElementById('applyVatToOfficialFee').checked;
                 let totalAmount;
-                if(applyVatToOfficial) {
+                if (applyVatToOfficial) {
                     totalAmount = (officialFee + serviceFee) * (1 + vatRate / 100);
                 } else {
                     totalAmount = officialFee + (serviceFee * (1 + vatRate / 100));
@@ -1023,11 +1105,11 @@
                 
                 const result = await accrualService.addAccrual(accrualData);
                 if (result.success) {
-                    alert('Yeni tahakkuk başarıyla eklendi!');
+                    showNotification('Yeni tahakkuk başarıyla eklendi!', 'success');
                     this.allAccruals.push(result.data);
                     this.closeModal('addAccrualModal');
                 } else {
-                    alert('Tahakkuk eklenirken hata oluştu: ' + result.error);
+                    showNotification('Tahakkuk eklenirken hata oluştu: ' + result.error, 'error');
                 }
             }
 
@@ -1093,49 +1175,55 @@
                 document.getElementById(resultsId).innerHTML = '';
                 document.getElementById(inputId).value = person.name;
             }
-
         }
 
-        let myTasksModuleInstance;
-        document.addEventListener('DOMContentLoaded', function() {
-            const accordions = document.querySelectorAll('.accordion-header');
-            accordions.forEach(accordion => { 
-                accordion.addEventListener('click', function() { 
-                    this.classList.toggle('active'); 
-                    const content = this.nextElementSibling; 
-                    if (content.style.maxHeight) { content.style.maxHeight = null; } else { content.style.maxHeight = content.scrollHeight + "px"; } 
-                }); 
-            });
-            
-            function setActiveMenu() { 
-                const currentPage = window.location.pathname.split("/").pop() || 'dashboard.html'; 
-                document.querySelectorAll('.sidebar-nav-item.active, .accordion-content a.active').forEach(el => el.classList.remove('active')); 
-                const activeLink = document.querySelector(`.sidebar-nav a[href="${currentPage}"]`); 
-                if (!activeLink) return; 
-                activeLink.classList.add('active'); 
-                const parentAccordionContent = activeLink.closest('.accordion-content'); 
-                if (parentAccordionContent) { 
-                    const parentAccordionHeader = parentAccordionContent.previousElementSibling; 
-                    if (parentAccordionHeader && parentAccordionHeader.classList.contains('accordion-header')) { 
-                        parentAccordionHeader.classList.add('active'); 
-                        parentAccordionContent.style.maxHeight = parentAccordionContent.scrollHeight + "px"; 
-                    } 
-                } 
-            }
-            setActiveMenu();
-        });
-
-        auth.onAuthStateChanged(async (user) => {
+        auth.onAuthStateChanged((user) => {
             if (user || authService.getCurrentUser()) {
-                if (!myTasksModuleInstance) {
-                    myTasksModuleInstance = new MyTasksModule();
-                    await myTasksModuleInstance.init();
-                    window.myTasksModule = myTasksModuleInstance; // Global erişim sağlandı
+                 if (!taskManagementModule) {
+                    taskManagementModule = new TaskManagementModule();
+                    window.taskManagementModule = taskManagementModule;
                 }
             } else {
                 window.location.href = 'index.html';
             }
         });
+
+        document.addEventListener('DOMContentLoaded', function() {
+    const accordions = document.querySelectorAll('.accordion-header');
+    accordions.forEach(accordion => {
+        accordion.addEventListener('click', function(event) {
+            this.classList.toggle('active');
+            const content = this.nextElementSibling;
+            if (content.style.maxHeight) {
+                content.style.maxHeight = null;
+            } else {
+                content.style.maxHeight = content.scrollHeight + "px";
+            }
+        });
+    });
+
+    function setActiveMenu() {
+        const currentPage = window.location.pathname.split("/").pop() || 'dashboard.html';
+        
+        document.querySelectorAll('.sidebar-nav-item.active, .accordion-content a.active').forEach(el => el.classList.remove('active'));
+        
+        const activeLink = document.querySelector(`.sidebar-nav a[href="${currentPage}"]`);
+        if (!activeLink) return;
+
+        activeLink.classList.add('active');
+        
+        const parentAccordionContent = activeLink.closest('.accordion-content');
+        if (parentAccordionContent) {
+            const parentAccordionHeader = parentAccordionContent.previousElementSibling;
+            if (parentAccordionHeader && parentAccordionHeader.classList.contains('accordion-header')) {
+                parentAccordionHeader.classList.add('active');
+                parentAccordionContent.style.maxHeight = parentAccordionContent.scrollHeight + "px";
+            }
+        }
+    }
+
+    setActiveMenu();
+});
     </script>
 </body>
 </html>
