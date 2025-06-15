@@ -82,133 +82,6 @@ const documentDesignationTranslations = {
     'Genel Not': 'Genel Not'
 };
 
-// --- Task Type Definitions ---
-export const taskTypeDefinitions = {
-    // Ana kategoriler
-    categories: {
-        'patent': 'Patent İşleri',
-        'trademark': 'Marka İşleri', 
-        'copyright': 'Telif İşleri',
-        'design': 'Tasarım İşleri',
-        'legal': 'Hukuki İşler',
-        'administrative': 'İdari İşler'
-    },
-    
-    // Türkçe iş türleri
-    types: {
-        // Patent İşleri
-        'Patent Başvuru': { category: 'patent', label: 'Patent Başvuru' },
-        'Patent Yenileme': { category: 'patent', label: 'Patent Yenileme' },
-        'Patent Araştırma': { category: 'patent', label: 'Patent Araştırma' },
-        'Patent İtiraz': { category: 'patent', label: 'Patent İtiraz' },
-        
-        // Marka İşleri
-        'Marka Başvuru': { category: 'trademark', label: 'Marka Başvuru' },
-        'Marka Yenileme': { category: 'trademark', label: 'Marka Yenileme' },
-        'Marka İtiraz': { category: 'trademark', label: 'Marka İtiraz' },
-        'Marka Araştırma': { category: 'trademark', label: 'Marka Araştırma' },
-        
-        // Telif İşleri
-        'Telif Başvuru': { category: 'copyright', label: 'Telif Başvuru' },
-        'Telif Yenileme': { category: 'copyright', label: 'Telif Yenileme' },
-        
-        // Tasarım İşleri
-        'Tasarım Başvuru': { category: 'design', label: 'Tasarım Başvuru' },
-        'Tasarım Yenileme': { category: 'design', label: 'Tasarım Yenileme' },
-        
-        // Hukuki İşler
-        'Hukuki - Devir': { category: 'legal', label: 'Hukuki - Devir' },
-        'Hukuki - Lisans': { category: 'legal', label: 'Hukuki - Lisans' },
-        'Hukuki - Rehin': { category: 'legal', label: 'Hukuki - Rehin' },
-        'Hukuki - Birleşme': { category: 'legal', label: 'Hukuki - Birleşme' },
-        'Hukuki - Veraset': { category: 'legal', label: 'Hukuki - Veraset' },
-        'Hukuki - Teminat': { category: 'legal', label: 'Hukuki - Teminat' },
-        
-        // İdari İşler
-        'İdari - Genel': { category: 'administrative', label: 'İdari - Genel' },
-        'İdari - Belgelendirme': { category: 'administrative', label: 'İdari - Belgelendirme' },
-        'İdari - Yazışma': { category: 'administrative', label: 'İdari - Yazışma' }
-    },
-    
-    // Geriye uyumluluk için eski kodlar
-    legacyMapping: {
-        'patent_application': 'Patent Başvuru',
-        'patent_renewal': 'Patent Yenileme',
-        'trademark_application': 'Marka Başvuru',
-        'trademark_renewal': 'Marka Yenileme',
-        'trademark_opposition': 'Marka İtiraz',
-        'copyright_application': 'Telif Başvuru',
-        'design_application': 'Tasarım Başvuru',
-        'design_renewal': 'Tasarım Yenileme',
-        'legal_devir': 'Hukuki - Devir',
-        'legal_lisans': 'Hukuki - Lisans',
-        'legal_rehin': 'Hukuki - Rehin',
-        'legal_birleşme': 'Hukuki - Birleşme',
-        'legal_veraset': 'Hukuki - Veraset',
-        'legal_teminat': 'Hukuki - Teminat',
-        'administrative_general': 'İdari - Genel',
-        'administrative_documentation': 'İdari - Belgelendirme'
-    },
-
-    // İş türü validasyonu
-    isValidTaskType(taskType) {
-        return this.types.hasOwnProperty(taskType) || this.legacyMapping.hasOwnProperty(taskType);
-    },
-
-    // İş türünü normalize et
-    normalizeTaskType(taskType) {
-        if (this.types.hasOwnProperty(taskType)) {
-            return taskType; // Zaten Türkçe
-        }
-        if (this.legacyMapping.hasOwnProperty(taskType)) {
-            return this.legacyMapping[taskType]; // Eski kodu Türkçe'ye çevir
-        }
-        return taskType; // Bilinmeyen türü olduğu gibi döndür
-    },
-
-    // Kategoriye göre türleri getir
-    getTypesByCategory(category) {
-        return Object.entries(this.types)
-            .filter(([_, typeInfo]) => typeInfo.category === category)
-            .map(([typeName, typeInfo]) => ({ value: typeName, label: typeInfo.label }));
-    },
-
-    // Tüm türleri getir
-    getAllTypes() {
-        return Object.entries(this.types).map(([typeName, typeInfo]) => ({
-            value: typeName,
-            label: typeInfo.label,
-            category: typeInfo.category
-        }));
-    }
-};
-
-// --- Task Status Definitions ---
-export const taskStatusDefinitions = {
-    statuses: {
-        'open': { label: 'Açık', color: '#007bff' },
-        'in_progress': { label: 'Devam Ediyor', color: '#ffc107' },
-        'pending_review': { label: 'Gözden Geçiriliyor', color: '#fd7e14' },
-        'completed': { label: 'Tamamlandı', color: '#28a745' }
-    },
-
-    getStatusLabel(status) {
-        return this.statuses[status]?.label || status;
-    },
-
-    getStatusColor(status) {
-        return this.statuses[status]?.color || '#6c757d';
-    },
-
-    getAllStatuses() {
-        return Object.entries(this.statuses).map(([value, info]) => ({
-            value,
-            label: info.label,
-            color: info.color
-        }));
-    }
-};
-
 // --- Authentication Service ---
 export const authService = {
     auth: auth,
@@ -503,18 +376,8 @@ export const taskService = {
         if (!isFirebaseAvailable) return { success: false, error: "Firebase not connected." };
         try {
             const user = authService.getCurrentUser();
-            
-            // İş türünü normalize et (eski kodları Türkçe'ye çevir)
-            const normalizedTaskType = taskTypeDefinitions.normalizeTaskType(taskData.taskType);
-            
-            // İş türü validasyonu
-            if (!taskTypeDefinitions.isValidTaskType(taskData.taskType)) {
-                console.warn(`Geçersiz iş türü: ${taskData.taskType}, normalize ediliyor...`);
-            }
-            
             const docRef = await addDoc(collection(db, 'tasks'), {
                 ...taskData,
-                taskType: normalizedTaskType, // Normalize edilmiş tür
                 createdBy_uid: user.uid,
                 createdBy_email: user.email,
                 createdAt: new Date().toISOString(),
@@ -539,15 +402,9 @@ export const taskService = {
             const taskRef = doc(db, "tasks", taskId);
             const user = authService.getCurrentUser();
             
-            // İş türü güncellenmişse normalize et
-            if (updates.taskType) {
-                updates.taskType = taskTypeDefinitions.normalizeTaskType(updates.taskType);
-            }
-            
             let actionMessage = `İş güncellendi.`;
             if (updates.status) {
-                const statusLabel = taskStatusDefinitions.getStatusLabel(updates.status);
-                actionMessage = `İş durumu "${statusLabel}" olarak güncellendi.`;
+                actionMessage = `İş durumu "${updates.status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}" olarak güncellendi.`;
             } else {
                 const changedFields = Object.keys(updates).filter(key => key !== 'updatedAt' && key !== 'history' && key !== 'files');
                 if (changedFields.length > 0) {
@@ -702,27 +559,10 @@ export const taskService = {
             console.error("Error fetching all users:", error);
             return { success: false, error: error.message, data: [] };
         }
-    },
-
-    // İş türü yardımcı metodları
-    getTaskTypesByCategory(category) {
-        return taskTypeDefinitions.getTypesByCategory(category);
-    },
-
-    getAllTaskTypes() {
-        return taskTypeDefinitions.getAllTypes();
-    },
-
-    validateTaskType(taskType) {
-        return taskTypeDefinitions.isValidTaskType(taskType);
-    },
-
-    normalizeTaskType(taskType) {
-        return taskTypeDefinitions.normalizeTaskType(taskType);
     }
 };
 
-// --- Accrual Service ---
+// --- Accrual Service (NEW) ---
 export const accrualService = {
     async addAccrual(accrualData) {
         if (!isFirebaseAvailable) return { success: false, error: "Firebase not connected." };
@@ -770,6 +610,7 @@ export const accrualService = {
         }
     }
 };
+
 
 // --- Demo Data Function ---
 export async function createDemoData() {
@@ -827,43 +668,14 @@ export async function createDemoData() {
             await ipRecordsService.addRecord(record);
         }
 
-        // Demo task oluştur
-        const demoTasks = [
-            {
-                title: 'Patent Başvuru İncelemesi',
-                description: 'Yeni patent başvurusunun teknik incelemesi yapılacak',
-                taskType: 'Patent Başvuru', // Türkçe iş türü
-                priority: 'high',
-                status: 'open',
-                assignedTo_uid: user.uid,
-                assignedTo_email: user.email,
-                dueDate: '2024-12-31',
-                relatedIpRecordId: null
-            },
-            {
-                title: 'Marka Yenileme İşlemi', 
-                description: 'Tescilli markanın yenileme işlemleri başlatılacak',
-                taskType: 'Marka Yenileme', // Türkçe iş türü
-                priority: 'medium',
-                status: 'in_progress',
-                assignedTo_uid: user.uid,
-                assignedTo_email: user.email,
-                dueDate: '2025-01-15',
-                relatedIpRecordId: null
-            }
-        ];
-
-        for (const taskData of demoTasks) {
-            await taskService.createTask(taskData);
-        }
-
-        console.log('✅ Demo data created successfully with Turkish task types!');
+        console.log('✅ Demo data created successfully!');
 
     } catch (error) {
         console.error('Error creating demo data:', error);
     }
 }
 
+
 // --- Exports ---
-export { subDesignationTranslations, documentDesignationTranslations,};
+export { subDesignationTranslations, documentDesignationTranslations };
 export { auth, db, generateUUID };
