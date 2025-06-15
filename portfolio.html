@@ -10,8 +10,7 @@
             padding: 0;
             box-sizing: border-box;
         }
-
-        /* BODY VE YENİ LAYOUT */
+        /* ... Tüm stiller aynı ... */
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             color: #333;
@@ -27,183 +26,35 @@
             background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
         }
 
- .main-container {
-    width: 100%; /* Genişliği tamamen doldurmasını sağlar */
-    padding: 30px; /* İçeriğin kenarlara yapışmaması için boşluk bırakır */
-    margin: 0; /* Otomatik ortalamayı kaldırır */
-}
-        
-
-        /* ESKİ HEADER'I GİZLE */
-        body > .header {
-            display: none;
-        }
-
-        /* === YENİ SOL MENÜ VE ÜST BAR STİLLERİ === */
-        .sidebar {
-            width: 260px;
-            background: #1e3c72;
-            color: white;
-            display: flex;
-            flex-direction: column;
-            transition: width 0.3s ease;
-            height: 100vh;
-            position: sticky;
-            top: 0;
-            z-index: 1001; /* Modalların üstünde kalmaması için */
-        }
-
-        .sidebar-header {
-            padding: 20px;
-            text-align: center;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .sidebar-logo {
-            font-size: 1.8em;
-            font-weight: bold;
-            color: white;
-            text-decoration: none;
-        }
-
-        .sidebar-nav {
-            flex-grow: 1;
-            overflow-y: auto;
-            padding: 20px 0;
-        }
-
-        .nav-category-title {
-            padding: 10px 20px;
-            font-size: 0.8em;
-            font-weight: bold;
-            color: rgba(255, 255, 255, 0.5);
-            text-transform: uppercase;
-        }
-
-        .sidebar-nav-item, .accordion-header {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            padding: 15px 20px;
-            color: rgba(255, 255, 255, 0.8);
-            text-decoration: none;
-            transition: background 0.3s ease;
-            cursor: pointer;
-        }
-
-        .sidebar-nav-item:hover, .accordion-header:hover {
-            background: rgba(255, 255, 255, 0.1);
-        }
-
-        .sidebar-nav-item.active {
-            background: #2a5298;
-            color: white;
-            font-weight: bold;
-            border-left: 4px solid #4ecdc4;
-            padding-left: 16px;
+        .main-container {
+            width: 100%; /* Genişliği tamamen doldurmasını sağlar */
+            padding: 30px; /* İçeriğin kenarlara yapışmaması için boşluk bırakır */
+            margin: 0; /* Otomatik ortalamayı kaldırır */
         }
         
-        .nav-icon {
-            font-size: 1.2em;
-            width: 20px;
-            text-align: center;
-        }
-
-        .accordion-header::after {
-            content: '▶';
-            margin-left: auto;
-            font-size: 0.8em;
-            transition: transform 0.3s ease;
-        }
-
-        .accordion-header.active::after {
-            transform: rotate(90deg);
-        }
-
-        .accordion-content {
-            background: rgba(0, 0, 0, 0.2);
-            max-height: 0;
-            overflow: hidden;
-            transition: max-height 0.3s ease-out;
-        }
-
-        .accordion-content a {
-            display: block;
-            padding: 12px 20px 12px 55px; /* İkon boşluğu için girinti */
-            color: rgba(255, 255, 255, 0.7);
-            text-decoration: none;
-            transition: background 0.2s ease;
-        }
-
-        .accordion-content a:hover {
-            background: rgba(255, 255, 255, 0.1);
-            color: white;
-        }
-
-        .accordion-content a.active {
-            color: white;
-            font-weight: 500;
-        }
-
-        .top-header {
-            background: rgba(255, 255, 255, 0.95);
-            padding: 15px 30px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-            display: flex;
-            justify-content: flex-end;
-            align-items: center;
-            position: sticky;
-            top: 0;
-            z-index: 99;
-            backdrop-filter: blur(10px);
-        }
-
-        .user-section {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-
-        .user-avatar {
-            width: 40px;
-            height: 40px;
-            background: linear-gradient(45deg, #1e3c72, #2a5298);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-weight: bold;
-        }
-        
-        .user-info {
-            display: flex;
-            flex-direction: column;
-        }
-
-        .user-name {
-            font-weight: 600;
-            color: #333;
-        }
-
-        .user-role {
-            font-size: 0.8em;
-            color: #666;
-        }
-
-        .logout-btn {
-            background: #ff6b6b;
-            color: white;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 0.9em;
-            transition: all 0.3s ease;
-        }
+        .sidebar { width: 260px; background: #1e3c72; color: white; display: flex; flex-direction: column; transition: width 0.3s ease; height: 100vh; position: sticky; top: 0; z-index: 1001; }
+        .sidebar-header { padding: 20px; text-align: center; border-bottom: 1px solid rgba(255, 255, 255, 0.1); }
+        .sidebar-logo { font-size: 1.8em; font-weight: bold; color: white; text-decoration: none; }
+        .sidebar-nav { flex-grow: 1; overflow-y: auto; padding: 20px 0; }
+        .nav-category-title { padding: 10px 20px; font-size: 0.8em; font-weight: bold; color: rgba(255, 255, 255, 0.5); text-transform: uppercase; }
+        .sidebar-nav-item, .accordion-header { display: flex; align-items: center; gap: 15px; padding: 15px 20px; color: rgba(255, 255, 255, 0.8); text-decoration: none; transition: background 0.3s ease; cursor: pointer; }
+        .sidebar-nav-item:hover, .accordion-header:hover { background: rgba(255, 255, 255, 0.1); }
+        .sidebar-nav-item.active { background: #2a5298; color: white; font-weight: bold; border-left: 4px solid #4ecdc4; padding-left: 16px; }
+        .nav-icon { font-size: 1.2em; width: 20px; text-align: center; }
+        .accordion-header::after { content: '▶'; margin-left: auto; font-size: 0.8em; transition: transform 0.3s ease; }
+        .accordion-header.active::after { transform: rotate(90deg); }
+        .accordion-content { background: rgba(0, 0, 0, 0.2); max-height: 0; overflow: hidden; transition: max-height 0.3s ease-out; }
+        .accordion-content a { display: block; padding: 12px 20px 12px 55px; color: rgba(255, 255, 255, 0.7); text-decoration: none; transition: background 0.2s ease; }
+        .accordion-content a:hover { background: rgba(255, 255, 255, 0.1); color: white; }
+        .accordion-content a.active { color: white; font-weight: 500; }
+        .top-header { background: rgba(255, 255, 255, 0.95); padding: 15px 30px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05); display: flex; justify-content: flex-end; align-items: center; position: sticky; top: 0; z-index: 99; backdrop-filter: blur(10px); }
+        .user-section { display: flex; align-items: center; gap: 15px; }
+        .user-avatar { width: 40px; height: 40px; background: linear-gradient(45deg, #1e3c72, #2a5298); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; }
+        .user-info { display: flex; flex-direction: column; }
+        .user-name { font-weight: 600; color: #333; }
+        .user-role { font-size: 0.8em; color: #666; }
+        .logout-btn { background: #ff6b6b; color: white; border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 0.9em; transition: all 0.3s ease; }
         .logout-btn:hover { background: #ff5252; }
-
-        /* === PORTFÖY SAYFASINA AİT ORİJİNAL STİLLER === */
         .page-header { background: rgba(255, 255, 255, 0.95); padding: 30px; border-radius: 20px; margin-bottom: 30px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1); }
         .page-title { font-size: 2em; color: #1e3c72; margin-bottom: 10px; }
         .page-subtitle { color: #666; font-size: 1.1em; }
@@ -574,136 +425,8 @@
                     status: '',
                     period: 'all'
                 };
-                
-                // Metotları arrow function olarak tanımlayın
-                // Bu şekilde 'this' bağlamı otomatik olarak constructor'a bağlanır
-                // ve bind() kullanımına gerek kalmaz.
-                this.viewRecord = (recordId) => {
-                    const record = this.records.find(r => r.id === recordId);
-                    if (!record) return;
-
-                    const modal = document.getElementById('detailModal');
-                    document.getElementById('modalTitle').textContent = `Detay: ${record.title}`;
-                    
-                    const typeNames = { patent: 'Patent', trademark: 'Marka', copyright: 'Telif Hakkı', design: 'Tasarım' };
-                    const statusNames = { application: 'Başvuru', pending: 'Beklemede', approved: 'Onaylandı', rejected: 'Reddedildi', expired: 'Süresi Doldu', published: 'Yayınlandı', partial_refusal: 'Kısmi Ret', refused: 'Ret', opposition_received: 'İtiraz Geldi', opposition_filed: 'İtiraz Edildi', registered: 'Tescilli', not_renewed: 'Yenilenmedi', invalid_void: 'Geçersiz' };
-
-                    const formatDate = (dateString) => dateString ? new Date(dateString).toLocaleDateString('tr-TR') : '-';
-                    const renderField = (label, value, isLongText = false) => { // isLongText parametresi eklendi
-                        if (value === null || value === undefined || value === '') return '';
-                        if (isLongText) {
-                            return `<div class="detail-item full-width"><div class="detail-label">${label}</div><div class="detail-value long-text">${value}</div></div>`;
-                        }
-                        return `<div class="detail-item"><div class="detail-label">${label}</div><div class="detail-value">${value}</div></div>`;
-                    };
-
-                    let modalContentHtml = `<div class="detail-grid">`;
-                    
-                    modalContentHtml += `<h4 class="detail-section-title">Genel Bilgiler</h4>`;
-                    modalContentHtml += renderField('Tür', `<span class="ip-type ${record.type}">${typeNames[record.type] || 'Bilinmiyor'}</span>`);
-                    modalContentHtml += renderField('Başlık', record.title);
-                    modalContentHtml += renderField('Durum', `<span class="status-badge ${record.status}">${statusNames[record.status] || record.status}</span>`);
-                    modalContentHtml += renderField('Başvuru Numarası', record.applicationNumber);
-                    modalContentHtml += renderField('Tescil Numarası', record.registrationNumber);
-                    modalContentHtml += renderField('Başvuru Tarihi', formatDate(record.applicationDate));
-                    modalContentHtml += renderField('Tescil Tarihi', formatDate(record.registrationDate));
-                    modalContentHtml += renderField('Hak Sahipleri', (record.owners || []).map(o => o.name).join(', '));
-                    if(this.currentUser && this.currentUser.role === 'superadmin') {
-                        modalContentHtml += renderField('Oluşturan Kullanıcı', record.userEmail);
-                    }
-
-                    if (record.type === 'patent') {
-                        modalContentHtml += `<h4 class="detail-section-title">Patent Detayları</h4>`;
-                        modalContentHtml += renderField('Patent Sınıfı', record.patentClass);
-                        modalContentHtml += renderField('Öncelik Tarihi', formatDate(record.priority));
-                        modalContentHtml += renderField('Son Geçerlilik Tarihi', formatDate(record.expiryDate));
-                        modalContentHtml += renderField('Patent İstekleri (Claims)', record.claims, true); // true ile long-text olmasını sağla
-                    }
-                    if (record.type === 'trademark') {
-                        modalContentHtml += `<h4 class="detail-section-title">Marka Detayları</h4>`;
-                        if (record.trademarkImage && record.trademarkImage.content) {
-                            modalContentHtml += `
-                                <div class="detail-item detail-trademark-image-container">
-                                    <div class="detail-label">Marka Örneği</div>
-                                    <img src="${record.trademarkImage.content}" class="detail-trademark-image" alt="Marka Örneği">
-                                </div>`;
-                        }
-                        modalContentHtml += renderField('Marka Türü', record.trademarkType);
-                        modalContentHtml += renderField('Nice Sınıfı', record.niceClass);
-                        modalContentHtml += renderField('Yenileme Tarihi', formatDate(record.renewalDate));
-                        modalContentHtml += renderField('Bülten Tarihi', formatDate(record.bulletinDate));
-                        modalContentHtml += renderField('Bülten Numarası', record.bulletinNumber);
-                        modalContentHtml += renderLongTextField('Mal ve Hizmetler', record.goodsServices);
-                    }
-                    if (record.type === 'copyright') {
-                        modalContentHtml += `<h4 class="detail-section-title">Telif Hakkı Detayları</h4>`;
-                        modalContentHtml += renderField('Eser Türü', record.workType);
-                        modalContentHtml += renderField('Oluşturulma Tarihi', formatDate(record.creationDate));
-                        modalContentHtml += renderField('Yayın Tarihi', formatDate(record.publicationDate));
-                        modalContentHtml += renderField('Yayımcı/Yapımcı', record.publisher);
-                    }
-                    if (record.type === 'design') {
-                        modalContentHtml += `<h4 class="detail-section-title">Tasarım Detayları</h4>`;
-                        modalContentHtml += renderField('Tasarım Türü', record.designType);
-                        modalContentHtml += renderField('Locarno Sınıfı', record.locarnoClass);
-                        modalContentHtml += renderField('Tasarım Tarihi', formatDate(record.designDate));
-                        modalContentHtml += renderLongTextField('Tasarım Özellikleri', record.designFeatures);
-                    }
-                    
-                    modalContentHtml += `<h4 class="detail-section-title">Açıklama</h4>`;
-                    modalContentHtml += renderLongTextField('Açıklama', record.description);
-
-                    // Portföy detay modalında dokümanları görüntüleme (Yeni eklendi)
-                    if (record.files && record.files.length > 0) {
-                        modalContentHtml += `<h4 class="detail-section-title">Yüklenen Dokümanlar</h4>`;
-                        modalContentHtml += `<div class="detail-item full-width"><ul>`;
-                        record.files.forEach(file => {
-                            modalContentHtml += `<li><a href="${file.content}" download="${file.name}">📄 ${file.name} (${this.formatFileSize(file.size)}) - ${file.documentDesignation || 'Belge'}</a></li>`;
-                        });
-                        modalContentHtml += `</ul></div>`;
-                    }
-                    
-                    modalContentHtml += `</div>`; // .detail-grid kapanışı
-                    document.getElementById('modalBody').innerHTML = modalContentHtml;
-
-                    this.renderTransactionHistory(record.id, record.transactions, record.files);
-                    
-                    modal.classList.add('show');
-                };
-
-                this.editRecord = (recordId) => {
-                    window.location.href = `data-entry.html?recordId=${recordId}`;
-                };
-
-                this.deleteRecord = async (recordId) => {
-                    if (confirm('Kaydı silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.')) {
-                        try {
-                            const result = await ipRecordsService.deleteRecord(recordId);
-                            if (result.success) {
-                                alert('Kayıt başarıyla silindi.');
-                                await this.loadRecords(); // Tabloyu yenile
-                            } else {
-                                throw new Error(result.error);
-                            }
-                        } catch (error) {
-                            console.error('Kayıt silinirken hata:', error);
-                            alert('Kayıt silinirken bir hata oluştu: ' + error.message);
-                        }
-                    }
-                };
-
-                this.handleSort = (event) => { 
-                    const column = event.currentTarget.dataset.sort; 
-                    if (this.sortColumn === column) { this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc'; } else { this.sortColumn = column; this.sortDirection = 'asc'; }
-                    this.sortRecords();
-                    this.renderTable();
-                };
-
-                this.init(); 
             }
 
-            // Metotlar artık doğrudan sınıf içinde arrow function olarak tanımlanmıştır.
-            // Bu nedenle, init() içinde bind() çağrılarına gerek kalmaz.
             init() {
                 auth.onAuthStateChanged(async (user) => {
                     if (user) {
@@ -761,7 +484,6 @@
                         this.applyFilters();
                     });
                 });
-                // handleSort artık doğrudan arrow function olarak tanımlandığı için bind() gereksizdir.
                 document.querySelectorAll('.portfolio-table th.sortable').forEach(th => {
                     th.addEventListener('click', this.handleSort); 
                 });
@@ -794,6 +516,13 @@
                 });
             }
 
+            handleSort = (event) => { 
+                const column = event.currentTarget.dataset.sort; 
+                if (this.sortColumn === column) { this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc'; } else { this.sortColumn = column; this.sortDirection = 'asc'; }
+                this.sortRecords();
+                this.renderTable();
+            };
+
             async loadRecords() {
                 const loadingIndicator = document.getElementById('loadingIndicator');
                 const portfolioTable = document.getElementById('portfolioTable');
@@ -803,10 +532,8 @@
                 noRecords.style.display = 'none';
                 try {
                     const result = await ipRecordsService.getRecords();
-                    console.log('API call result:', result); // Hata ayıklama için ekledik
                     if (result.success) {
                         this.records = result.data;
-                        console.log('Records loaded:', this.records); // Hata ayıklama için ekledik
                         this.applyFilters();
                     } else {
                         throw new Error(result.error);
@@ -822,6 +549,98 @@
                 }
             }
 
+            viewRecord = (recordId) => {
+                const record = this.records.find(r => r.id === recordId);
+                if (!record) return;
+
+                const modal = document.getElementById('detailModal');
+                document.getElementById('modalTitle').textContent = `Detay: ${record.title}`;
+                
+                const typeNames = { patent: 'Patent', trademark: 'Marka', copyright: 'Telif Hakkı', design: 'Tasarım' };
+                const statusNames = { application: 'Başvuru', pending: 'Beklemede', approved: 'Onaylandı', rejected: 'Reddedildi', expired: 'Süresi Doldu', published: 'Yayınlandı', partial_refusal: 'Kısmi Ret', refused: 'Ret', opposition_received: 'İtiraz Geldi', opposition_filed: 'İtiraz Edildi', registered: 'Tescilli', not_renewed: 'Yenilenmedi', invalid_void: 'Geçersiz' };
+
+                const formatDate = (dateString) => dateString ? new Date(dateString).toLocaleDateString('tr-TR') : '-';
+                const renderField = (label, value, isLongText = false) => {
+                    if (value === null || value === undefined || value === '') return '';
+                    if (isLongText) {
+                        return `<div class="detail-item full-width"><div class="detail-label"><span class="math-inline">\{label\}</div\><div class\="detail\-value long\-text"\></span>{value}</div></div>`;
+                    }
+                    return `<div class="detail-item"><div class="detail-label"><span class="math-inline">\{label\}</div\><div class\="detail\-value"\></span>{value}</div></div>`;
+                };
+
+                let modalContentHtml = `<div class="detail-grid">`;
+                
+                modalContentHtml += `<h4 class="detail-section-title">Genel Bilgiler</h4>`;
+                modalContentHtml += renderField('Tür', `<span class="ip-type <span class="math-inline">\{record\.type\}"\></span>{typeNames[record.type] || 'Bilinmiyor'}</span>`);
+                modalContentHtml += renderField('Başlık', record.title);
+                modalContentHtml += renderField('Durum', `<span class="status-badge <span class="math-inline">\{record\.status\}"\></span>{statusNames[record.status] || record.status}</span>`);
+                modalContentHtml += renderField('Başvuru Numarası', record.applicationNumber);
+                modalContentHtml += renderField('Tescil Numarası', record.registrationNumber);
+                modalContentHtml += renderField('Başvuru Tarihi', formatDate(record.applicationDate));
+                modalContentHtml += renderField('Tescil Tarihi', formatDate(record.registrationDate));
+                modalContentHtml += renderField('Hak Sahipleri', (record.owners || []).map(o => o.name).join(', '));
+                if(this.currentUser && this.currentUser.role === 'superadmin') {
+                    modalContentHtml += renderField('Oluşturan Kullanıcı', record.userEmail);
+                }
+
+                if (record.type === 'patent') {
+                    modalContentHtml += `<h4 class="detail-section-title">Patent Detayları</h4>`;
+                    modalContentHtml += renderField('Patent Sınıfı', record.patentClass);
+                    modalContentHtml += renderField('Öncelik Tarihi', formatDate(record.priority));
+                    modalContentHtml += renderField('Son Geçerlilik Tarihi', formatDate(record.expiryDate));
+                    modalContentHtml += renderField('Patent İstekleri (Claims)', record.claims, true);
+                }
+                if (record.type === 'trademark') {
+                    modalContentHtml += `<h4 class="detail-section-title">Marka Detayları</h4>`;
+                    if (record.trademarkImage && record.trademarkImage.content) {
+                        modalContentHtml += `
+                            <div class="detail-item detail-trademark-image-container">
+                                <div class="detail-label">Marka Örneği</div>
+                                <img src="${record.trademarkImage.content}" class="detail-trademark-image" alt="Marka Örneği">
+                            </div>`;
+                    }
+                    modalContentHtml += renderField('Marka Türü', record.trademarkType);
+                    modalContentHtml += renderField('Nice Sınıfı', record.niceClass);
+                    modalContentHtml += renderField('Yenileme Tarihi', formatDate(record.renewalDate));
+                    modalContentHtml += renderField('Bülten Tarihi', formatDate(record.bulletinDate));
+                    modalContentHtml += renderField('Bülten Numarası', record.bulletinNumber);
+                    modalContentHtml += renderField('Mal ve Hizmetler', record.goodsServices, true);
+                }
+                if (record.type === 'copyright') {
+                    modalContentHtml += `<h4 class="detail-section-title">Telif Hakkı Detayları</h4>`;
+                    modalContentHtml += renderField('Eser Türü', record.workType);
+                    modalContentHtml += renderField('Oluşturulma Tarihi', formatDate(record.creationDate));
+                    modalContentHtml += renderField('Yayın Tarihi', formatDate(record.publicationDate));
+                    modalContentHtml += renderField('Yayımcı/Yapımcı', record.publisher);
+                }
+                if (record.type === 'design') {
+                    modalContentHtml += `<h4 class="detail-section-title">Tasarım Detayları</h4>`;
+                    modalContentHtml += renderField('Tasarım Türü', record.designType);
+                    modalContentHtml += renderField('Locarno Sınıfı', record.locarnoClass);
+                    modalContentHtml += renderField('Tasarım Tarihi', formatDate(record.designDate));
+                    modalContentHtml += renderField('Tasarım Özellikleri', record.designFeatures, true);
+                }
+                
+                modalContentHtml += `<h4 class="detail-section-title">Açıklama</h4>`;
+                modalContentHtml += renderField('Açıklama', record.description, true);
+                
+                if (record.files && record.files.length > 0) {
+                    modalContentHtml += `<h4 class="detail-section-title">Yüklenen Dokümanlar</h4>`;
+                    modalContentHtml += `<div class="detail-item full-width"><ul>`;
+                    record.files.forEach(file => {
+                        modalContentHtml += `<li><a href="<span class="math-inline">\{file\.content\}" download\="</span>{file.name}">📄 <span class="math-inline">\{file\.name\} \(</span>{this.formatFileSize(file.size)}) - ${file.documentDesignation || 'Belge'}</a></li>`;
+                    });
+                    modalContentHtml += `</ul></div>`;
+                }
+                
+                modalContentHtml += `</div>`; // .detail-grid kapanışı
+                document.getElementById('modalBody').innerHTML = modalContentHtml;
+
+                this.renderTransactionHistory(record.id, record.transactions, record.files);
+                
+                modal.classList.add('show');
+            };
+            
             updateStats() {
                 document.getElementById('totalRecords').textContent = this.filteredRecords.length;
                 document.getElementById('patentCount').textContent = this.filteredRecords.filter(r => r.type === 'patent').length;
@@ -908,18 +727,17 @@
                 const statusNames = { application: 'Başvuru', pending: 'Beklemede', approved: 'Onaylandı', rejected: 'Reddedildi', expired: 'Süresi Doldu', published: 'Yayınlandı', partial_refusal: 'Kısmi Ret', refused: 'Ret', opposition_received: 'İtiraz Geldi', opposition_filed: 'İtiraz Edildi', registered: 'Tescilli', not_renewed: 'Yenilenmedi', invalid_void: 'Geçersiz' };
                 let titleHtml = record.title;
                 if (record.type === 'trademark' && record.trademarkImage?.content) {
-                    titleHtml += `<div class="trademark-image-thumb-container"><img src="${record.trademarkImage.content}" class="trademark-image-thumb" alt="Marka Örneği"><img src="${record.trademarkImage.content}" class="trademark-image-preview-large"></div>`;
+                    titleHtml += `<div class="trademark-image-thumb-container"><img src="<span class="math-inline">\{record\.trademarkImage\.content\}" class\="trademark\-image\-thumb" alt\="Marka Örneği"\><img src\="</span>{record.trademarkImage.content}" class="trademark-image-preview-large"></div>`;
                 }
                 row.innerHTML = `
-                    <td><span class="ip-type ${record.type}">${typeNames[record.type] || 'Bilinmiyor'}</span></td>
-                    <td>${titleHtml}</td>
-                    <td>${record.applicationNumber || '-'}</td>
-                    <td><span class="status-badge ${record.status}">${statusNames[record.status] || record.status}</span></td>
-                    <td>${record.applicationDate ? new Date(record.applicationDate).toLocaleDateString('tr-TR') : '-'}</td>
-                    <td>${(record.owners || []).map(o => o.name).join(', ') || '-'}</td>
-                    <td><div class="action-buttons"><button class="table-action-btn btn-view" data-id="${record.id}" title="Görüntüle">👁️</button><button class="table-action-btn btn-edit" data-id="${record.id}" title="Düzenle">✏️</button><button class="table-action-btn btn-delete" data-id="${record.id}" title="Sil">🗑️</button></div></td>`;
+                    <td><span class="ip-type <span class="math-inline">\{record\.type\}"\></span>{typeNames[record.type] || 'Bilinmiyor'}</span></td>
+                    <td><span class="math-inline">\{titleHtml\}</td\>
+<td\></span>{record.applicationNumber || '-'}</td>
+                    <td><span class="status-badge <span class="math-inline">\{record\.status\}"\></span>{statusNames[record.status] || record.status}</span></td>
+                    <td><span class="math-inline">\{record\.applicationDate ? new Date\(record\.applicationDate\)\.toLocaleDateString\('tr\-TR'\) \: '\-'\}</td\>
+<td\></span>{(record.owners || []).map(o => o.name).join(', ') || '-'}</td>
+                    <td><div class="action-buttons"><button class="table-action-btn btn-view" data-id="<span class="math-inline">\{record\.id\}" title\="Görüntüle"\>👁️</button\><button class\="table\-action\-btn btn\-edit" data\-id\="</span>{record.id}" title="Düzenle">✏️</button><button class="table-action-btn btn-delete" data-id="${record.id}" title="Sil">🗑️</button></div></td>`;
                 
-                // Buradaki olay dinleyicilerini güncelliyoruz:
                 row.querySelector('.btn-view').addEventListener('click', () => this.viewRecord(record.id));
                 row.querySelector('.btn-edit').addEventListener('click', () => this.editRecord(record.id));
                 row.querySelector('.btn-delete').addEventListener('click', () => this.deleteRecord(record.id));
@@ -979,19 +797,19 @@
                         let documentLinkHtml = '';
                         if (tx.documentId && recordFiles) {
                             const relatedFile = recordFiles.find(file => file.id === tx.documentId);
-                            if (relatedFile) documentLinkHtml = ` | <a href="${relatedFile.content}" download="${relatedFile.name}" class="transaction-document-link">📄 Belge</a>`;
+                            if (relatedFile) documentLinkHtml = ` | <a href="<span class="math-inline">\{relatedFile\.content\}" download\="</span>{relatedFile.name}" class="transaction-document-link">📄 Belge</a>`;
                         }
                         html += `
                             <div class="transaction-node" data-id="${tx.transactionId}">
                                 ${hasChildren ? `<button class="transaction-toggle-btn" data-target-id="${tx.transactionId}">${children.length > 0 ? '+' : ''}</button>` : ''}
                                 <div class="transaction-node-content">
                                     <div class="transaction-info">
-                                        <div class="transaction-description">${tx.description || tx.type}</div> 
-                                        <div class="transaction-meta">${new Date(tx.timestamp).toLocaleDateString('tr-TR')} by ${tx.userEmail}${documentLinkHtml}</div>
+                                        <div class="transaction-description"><span class="math-inline">\{tx\.description \|\| tx\.type\}</div\> 
+<div class\="transaction\-meta"\></span>{new Date(tx.timestamp).toLocaleDateString('tr-TR')} by <span class="math-inline">\{tx\.userEmail\}</span>{documentLinkHtml}</div>
                                     </div>
                                     <div class="transaction-actions">
-                                        <button class="transaction-action-btn btn-edit-transaction" onclick="portfolio.openEditTransactionModal('${recordId}', '${tx.transactionId}')" title="Düzenle">✏️</button>
-                                        <button class="transaction-action-btn btn-delete-transaction" onclick="portfolio.deleteTransaction('${recordId}', '${tx.transactionId}')" title="Sil">🗑️</button>
+                                        <button class="transaction-action-btn btn-edit-transaction" onclick="portfolio.openEditTransactionModal('<span class="math-inline">\{recordId\}', '</span>{tx.transactionId}')" title="Düzenle">✏️</button>
+                                        <button class="transaction-action-btn btn-delete-transaction" onclick="portfolio.deleteTransaction('<span class="math-inline">\{recordId\}', '</span>{tx.transactionId}')" title="Sil">🗑️</button>
                                     </div>
                                 </div>
                             </div>
@@ -1003,7 +821,6 @@
                 const rootTransactions = relevantTransactions.filter(tx => !tx.parentId || !transactionsMap.has(tx.parentId));
                 historyContainer.innerHTML = buildTreeHtml(rootTransactions);
 
-                // Akordiyon düğmelerine olay dinleyici ekle
                 historyContainer.querySelectorAll('.transaction-toggle-btn').forEach(btn => {
                     btn.addEventListener('click', () => {
                         const targetId = btn.dataset.targetId;
@@ -1038,27 +855,27 @@
                     const registrationDate = record.registrationDate ? new Date(record.registrationDate).toLocaleDateString('tr-TR') : '';
                     return [
                         record.type || '',
-                        `"${record.title}"` || '', // Başlık içinde virgül olabileceği için tırnak içine al
+                        `"${record.title}"` || '', 
                         record.applicationNumber || '',
                         record.status || '',
                         applicationDate,
                         registrationDate,
                         `"${owners}"` || '',
-                        `"${record.description || ''}"` // Açıklama içinde virgül olabileceği için tırnak içine al
+                        `"${record.description || ''}"`
                     ];
                 });
 
-                let csvContent = "data:text/csv;charset=utf-8,\uFEFF" // UTF-8 BOM ekleme
-                csvContent += headers.join(';') + '\r\n'; // Başlıkları noktalı virgülle ayır
+                let csvContent = "data:text/csv;charset=utf-8,\uFEFF" 
+                csvContent += headers.join(';') + '\r\n';
                 data.forEach(row => {
-                    csvContent += row.join(';') + '\r\n'; // Satırları noktalı virgülle ayır
+                    csvContent += row.join(';') + '\r\n';
                 });
 
                 const encodedUri = encodeURI(csvContent);
                 const link = document.createElement("a");
                 link.setAttribute("href", encodedUri);
                 link.setAttribute("download", "fikri_mulkiyet_portfoyu.csv");
-                document.body.appendChild(link); // Required for Firefox
+                document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
             }
@@ -1069,7 +886,6 @@
                 document.getElementById('noRecords').style.display = 'block';
             }
             
-            // Helper function for formatting file size (copied from my-tasks.html)
             formatFileSize(bytes) {
                 if (bytes === 0) return '0 Bytes';
                 const k = 1024;
@@ -1079,16 +895,12 @@
             }
         }
 
-        // Modülün global scope'ta tanımlanması
         window.portfolio = new PortfolioModule();
 
-        // YENİ AKORDİYON MENÜ İÇİN JAVASCRIPT
         document.addEventListener('DOMContentLoaded', function() {
-    // --- Akordiyon Menü Tıklama Fonksiyonu ---
     const accordions = document.querySelectorAll('.accordion-header');
     accordions.forEach(accordion => {
         accordion.addEventListener('click', function(event) {
-            // Akordiyonu aç/kapat
             this.classList.toggle('active');
             const content = this.nextElementSibling;
             if (content.style.maxHeight) {
@@ -1099,20 +911,16 @@
         });
     });
 
-    // --- Sayfa Yüklendiğinde Aktif Menüyü Ayarlama Fonksiyonu ---
     function setActiveMenu() {
         const currentPage = window.location.pathname.split("/").pop() || 'dashboard.html';
         
-        // Önce tüm aktif işaretlerini temizle
         document.querySelectorAll('.sidebar-nav-item.active, .accordion-content a.active').forEach(el => el.classList.remove('active'));
         
-        // Mevcut sayfanın linkini bul ve aktif yap
         const activeLink = document.querySelector(`.sidebar-nav a[href="${currentPage}"]`);
         if (!activeLink) return;
 
         activeLink.classList.add('active');
         
-        // Eğer link bir akordiyon içindeyse, akordiyonu aç ve başlığını aktif et
         const parentAccordionContent = activeLink.closest('.accordion-content');
         if (parentAccordionContent) {
             const parentAccordionHeader = parentAccordionContent.previousElementSibling;
@@ -1123,7 +931,6 @@
         }
     }
 
-    // Sayfa ilk yüklendiğinde aktif menüyü ayarla
     setActiveMenu();
 });
     </script>
