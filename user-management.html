@@ -112,7 +112,7 @@
                     <a href="create-task.html" class="new-task-link">Yeni İş Oluştur</a>
                     <a href="task-management.html">İş Yönetimi</a>
                     <a href="my-tasks.html">İşlerim</a>
-                    <a href="#" style="opacity: 0.5; cursor: not-allowed;">Hatırlatmalar</a>
+                    <a href="reminders.html">Hatırlatmalar</a>
                     <a href="#" style="opacity: 0.5; cursor: not-allowed;">Zamanlanmış Görevler</a>
                 </div>
             </div>
@@ -175,7 +175,8 @@
 
     <script type="module">
         import { authService, auth, db } from './firebase-config.js';
-        import { collection, getDocs, updateDoc, doc, deleteDoc, query, orderBy, setDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js'; // setDoc eklendi
+        import { collection, getDocs, updateDoc, doc, deleteDoc, query, orderBy, setDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+        import { showNotification } from './utils.js'; // utils.js eklendi
 
         let userManagementModule;
 
@@ -192,7 +193,7 @@
                         this.currentUser = authService.getCurrentUser();
                         // Süper yönetici kontrolü
                         if (this.currentUser.role !== 'superadmin') {
-                            alert('Bu sayfaya erişim yetkiniz yoktur. Sadece süper yöneticiler erişebilir.');
+                            showNotification('Bu sayfaya erişim yetkiniz yoktur. Sadece süper yöneticiler erişebilir.', 'error'); // alert() yerine
                             window.location.href = 'dashboard.html';
                             return;
                         }
@@ -255,7 +256,7 @@
                     this.renderUserTable();
                 } catch (error) {
                     console.error('Kullanıcılar yüklenirken hata:', error);
-                    this.showNotification('Kullanıcılar yüklenirken bir hata oluştu: ' + error.message, 'error');
+                    showNotification('Kullanıcılar yüklenirken bir hata oluştu: ' + error.message, 'error'); // alert() yerine
                     this.showEmptyState();
                 } finally {
                     loadingIndicator.style.display = 'none';
@@ -306,7 +307,7 @@
 
             async updateUserRole(userId, newRole) {
                 if (userId === this.currentUser.uid) {
-                    this.showNotification('Kendi rolünüzü değiştiremezsiniz.', 'error');
+                    showNotification('Kendi rolünüzü değiştiremezsiniz.', 'error');
                     this.loadUsers(); // UI'ı geri al
                     return;
                 }
@@ -322,22 +323,22 @@
                 try {
                     const userRef = doc(db, 'users', userId);
                     await updateDoc(userRef, { role: newRole, updatedAt: new Date().toISOString() });
-                    this.showNotification('Kullanıcı rolü başarıyla güncellendi.', 'success');
+                    showNotification('Kullanıcı rolü başarıyla güncellendi.', 'success');
                     await this.loadUsers(); // Tabloyu yenile
                 } catch (error) {
                     console.error('Rol güncellenirken hata:', error);
-                    this.showNotification('Kullanıcı rolü güncellenirken hata oluştu: ' + error.message, 'error');
+                    showNotification('Kullanıcı rolü güncellenirken hata oluştu: ' + error.message, 'error');
                 }
             }
 
             async deleteUser(userId, userEmail) {
                 if (userId === this.currentUser.uid) {
-                    this.showNotification('Kendi hesabınızı silemezsiniz.', 'error');
+                    showNotification('Kendi hesabınızı silemezsiniz.', 'error');
                     return;
                 }
                  const targetUser = this.allUsers.find(u => u.id === userId);
                 if (targetUser && (targetUser.role === 'admin' || targetUser.role === 'superadmin')) {
-                    this.showNotification('Yönetici veya Süper Yönetici rollerine sahip kullanıcılar silinemez. Rolünü düşürdükten sonra deneyin.', 'error');
+                    showNotification('Yönetici veya Süper Yönetici rollerine sahip kullanıcılar silinemez. Rolünü düşürdükten sonra deneyin.', 'error');
                     return;
                 }
 
@@ -351,11 +352,11 @@
                         // Firestore'dan kullanıcı belgesini sil
                         await deleteDoc(doc(db, 'users', userId));
 
-                        this.showNotification('Kullanıcı başarıyla silindi.', 'success');
+                        showNotification('Kullanıcı başarıyla silindi.', 'success');
                         await this.loadUsers(); // Tabloyu yenile
                     } catch (error) {
                         console.error('Kullanıcı silinirken hata:', error);
-                        this.showNotification('Kullanıcı silinirken hata oluştu: ' + error.message, 'error');
+                        showNotification('Kullanıcı silinirken hata oluştu: ' + error.message, 'error');
                     }
                 }
             }
@@ -367,44 +368,7 @@
                 document.getElementById('noUsersMessage').querySelector('p').textContent = message === 'Henüz kullanıcı bulunamadı' ? 'Uygulamada kayıtlı hiçbir kullanıcı yok.' : '';
             }
 
-            showNotification(message, type = 'info') {
-                const successMessage = document.getElementById('successMessage');
-                const errorMessage = document.getElementById('errorMessage');
-                const infoMessage = document.getElementById('infoMessage');
-
-                successMessage.style.display = 'none';
-                errorMessage.style.display = 'none';
-                infoMessage.style.display = 'none';
-
-                let targetMessage;
-                let targetText;
-
-                switch (type) {
-                    case 'success':
-                        targetMessage = successMessage;
-                        targetText = document.getElementById('successText');
-                        break;
-                    case 'error':
-                        targetMessage = errorMessage;
-                        targetText = document.getElementById('errorText');
-                        break;
-                    case 'info':
-                        targetMessage = infoMessage;
-                        targetText = document.getElementById('infoText');
-                        break;
-                    default:
-                        targetMessage = infoMessage;
-                        targetText = document.getElementById('infoText');
-                }
-
-                if (targetMessage && targetText) {
-                    targetText.textContent = message;
-                    targetMessage.style.display = 'flex';
-                    setTimeout(() => {
-                        targetMessage.style.display = 'none';
-                    }, 5000); // 5 saniye sonra bildirimi kapat
-                }
-            }
+            // showNotification fonksiyonu utils.js'ten import edildiği için buradan kaldırıldı.
         }
 
         auth.onAuthStateChanged((user) => {
