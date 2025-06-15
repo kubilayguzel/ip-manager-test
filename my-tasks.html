@@ -605,24 +605,25 @@
                             <div class="task-actions">
                                 <button class="btn-view" onclick="myTasksModule.viewTaskDetailsModal('${task.id}')" title="Görüntüle">👁️</button>
                                 ${task.status !== 'completed' ? `<button class="btn-complete" onclick="myTasksModule.showCompleteTaskModal('${task.id}', '${task.relatedIpRecordId || ''}')" title="Tamamla">✅</button>` : ''}
-                                <button class="btn-accrual" data-task-id="${task.id}" title="Ek Tahakkuk">💰</button>
+                                <button class="btn-accrual" onclick="myTasksModule.showAddAccrualModal('${task.id}')" title="Ek Tahakkuk">💰</button>
                             </div>
                         </td>
                     `;
                     tableBody.appendChild(row);
                 });
 
-                // Event delegation for dynamic buttons
-                tableBody.removeEventListener('click', this.handleTableClick);
-                tableBody.addEventListener('click', this.handleTableClick.bind(this));
+                // Event delegation for dynamic buttons - remove this since we're using onclick
+                // tableBody.removeEventListener('click', this.handleTableClick);
+                // tableBody.addEventListener('click', this.handleTableClick.bind(this));
             }
 
-            handleTableClick(event) {
-                if (event.target.classList.contains('btn-accrual')) {
-                    const taskId = event.target.dataset.taskId;
-                    this.showAddAccrualModal(taskId);
-                }
-            }
+            // Remove this method since we don't need it with onclick approach
+            // handleTableClick(event) {
+            //     if (event.target.classList.contains('btn-accrual')) {
+            //         const taskId = event.target.dataset.taskId;
+            //         this.showAddAccrualModal(taskId);
+            //     }
+            // }
             }
 
             async viewTaskDetailsModal(taskId) {
@@ -1028,12 +1029,12 @@
 
         // Global instance
         const myTasksModule = new MyTasksModule();
+        window.myTasksModule = myTasksModule; // Global erişim için
 
         // Auth state listener
         auth.onAuthStateChanged(user => {
             if (user || authService.getCurrentUser()) {
                 myTasksModule.init();
-                window.myTasksModule = myTasksModule;
             } else {
                 window.location.href = 'index.html';
             }
