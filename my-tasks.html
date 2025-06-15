@@ -1080,7 +1080,7 @@
     </script>
 
 <script type="module">
-import { authService, taskService, accrualService } from './firebase-config.js';
+import { authService, taskService } from './firebase-config.js';
 
 class MyTasksModule {
     constructor() {
@@ -1108,23 +1108,24 @@ class MyTasksModule {
         tbody.innerHTML = '';
         this.allTasks.forEach(task => {
             const tr = document.createElement('tr');
-            tr.innerHTML = \`
-                <td><input type="checkbox" data-task-id="\${task.id}"></td>
-                <td>\${task.priority}</td>
-                <td>\${task.title}</td>
-                <td>\${task.relatedRecord}</td>
-                <td>\${task.dueDate}</td>
-                <td><span class="status-badge \${task.statusClass}">\${task.statusLabel}</span></td>
+            tr.innerHTML = `
+                <td><input type="checkbox" data-task-id="${task.id}"></td>
+                <td>${task.priority}</td>
+                <td>${task.title}</td>
+                <td>${task.relatedRecord}</td>
+                <td>${task.dueDate}</td>
+                <td><span class="status-badge ${task.statusClass}">${task.statusLabel}</span></td>
                 <td>
-                    <button class="action-btn add-accrual-btn" data-task-id="\${task.id}">💰</button>
+                    <button class="action-btn add-accrual-btn" data-task-id="${task.id}">💰</button>
                 </td>
-            \`;
+            `;
             tbody.appendChild(tr);
         });
     }
 
     setupEventListeners() {
         const tasksTableBody = document.getElementById('tasksTableBody');
+
         tasksTableBody.addEventListener('click', (e) => {
             if (e.target.classList.contains('add-accrual-btn')) {
                 const taskId = e.target.dataset.taskId;
@@ -1169,11 +1170,10 @@ class MyTasksModule {
         const vat = total * (vatRate / 100);
         total += vat;
 
-        document.getElementById('totalAmountDisplay').textContent = \`\${total.toFixed(2)} TL\`;
+        document.getElementById('totalAmountDisplay').textContent = `${total.toFixed(2)} TL`;
     }
 
     handleSaveAccrual() {
-        // Buraya tahakkuku Firebase'e kaydetme kodu yazılabilir
         alert("Tahakkuk kaydedildi (örnek)");
         document.getElementById('addAccrualModal').classList.remove('show');
     }
