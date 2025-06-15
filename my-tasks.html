@@ -1078,5 +1078,110 @@
             setActiveMenu();
         });
     </script>
+
+<script type="module">
+import { authService, taskService, accrualService } from './firebase-config.js';
+
+class MyTasksModule {
+    constructor() {
+        this.currentUser = null;
+        this.allTasks = [];
+    }
+
+    async init() {
+        this.currentUser = authService.getCurrentUser();
+        this.updateUserInfo();
+        this.allTasks = await taskService.getMyTasks(this.currentUser.uid);
+        this.renderTasks();
+        this.setupEventListeners();
+    }
+
+    updateUserInfo() {
+        if (this.currentUser) {
+            const userName = this.currentUser.displayName || this.currentUser.email.split('@')[0];
+            document.getElementById('userName').textContent = userName;
+        }
+    }
+
+    renderTasks() {
+        const tbody = document.getElementById('tasksTableBody');
+        tbody.innerHTML = '';
+        this.allTasks.forEach(task => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = \`
+                <td><input type="checkbox" data-task-id="\${task.id}"></td>
+                <td>\${task.priority}</td>
+                <td>\${task.title}</td>
+                <td>\${task.relatedRecord}</td>
+                <td>\${task.dueDate}</td>
+                <td><span class="status-badge \${task.statusClass}">\${task.statusLabel}</span></td>
+                <td>
+                    <button class="action-btn add-accrual-btn" data-task-id="\${task.id}">💰</button>
+                </td>
+            \`;
+            tbody.appendChild(tr);
+        });
+    }
+
+    setupEventListeners() {
+        const tasksTableBody = document.getElementById('tasksTableBody');
+        tasksTableBody.addEventListener('click', (e) => {
+            if (e.target.classList.contains('add-accrual-btn')) {
+                const taskId = e.target.dataset.taskId;
+                const task = this.allTasks.find(t => t.id === taskId);
+                if (task) this.showAddAccrualModal(task);
+            }
+        });
+
+        document.getElementById('closeAddAccrualModal')?.addEventListener('click', () => {
+            document.getElementById('addAccrualModal').classList.remove('show');
+        });
+
+        document.getElementById('saveAccrualBtn')?.addEventListener('click', () => {
+            this.handleSaveAccrual();
+        });
+
+        ['officialFee', 'serviceFee', 'vatRate', 'applyVatToOfficialFee'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.addEventListener('input', () => this.calculateTotalAmount());
+        });
+    }
+
+    showAddAccrualModal(task) {
+        const modal = document.getElementById('addAccrualModal');
+        if (!modal) return;
+
+        document.getElementById('accrualTaskId').value = task.id || '';
+        document.getElementById('accrualTaskTitleDisplay').value = task.title || '';
+        document.getElementById('officialFee').value = '';
+        document.getElementById('serviceFee').value = '';
+        document.getElementById('totalAmountDisplay').textContent = '0.00 TL';
+        modal.classList.add('show');
+    }
+
+    calculateTotalAmount() {
+        const officialFee = parseFloat(document.getElementById('officialFee').value) || 0;
+        const serviceFee = parseFloat(document.getElementById('serviceFee').value) || 0;
+        const vatRate = parseFloat(document.getElementById('vatRate').value) || 0;
+        const applyVat = document.getElementById('applyVatToOfficialFee').checked;
+
+        let total = serviceFee + (applyVat ? officialFee : 0);
+        const vat = total * (vatRate / 100);
+        total += vat;
+
+        document.getElementById('totalAmountDisplay').textContent = \`\${total.toFixed(2)} TL\`;
+    }
+
+    handleSaveAccrual() {
+        // Buraya tahakkuku Firebase'e kaydetme kodu yazılabilir
+        alert("Tahakkuk kaydedildi (örnek)");
+        document.getElementById('addAccrualModal').classList.remove('show');
+    }
+}
+
+const myTasksModule = new MyTasksModule();
+myTasksModule.init();
+</script>
+
 </body>
 </html>
