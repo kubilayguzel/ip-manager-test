@@ -1,4 +1,856 @@
-document.getElementById('modalEditTaskDueDate').value = task.dueDate || '';
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>IP Manager - İş Yönetimi</title>
+<style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333; display: flex; }
+        .page-wrapper { flex-grow: 1; display: flex; flex-direction: column; height: 100vh; overflow-y: auto; background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); }
+        .main-container { width: 100%; padding: 30px; margin: 0; }
+        .sidebar { width: 260px; background: #1e3c72; color: white; display: flex; flex-direction: column; transition: width 0.3s ease; height: 100vh; position: sticky; top: 0; z-index: 1001; }
+        .sidebar-header { padding: 20px; text-align: center; border-bottom: 1px solid rgba(255, 255, 255, 0.1); }
+        .sidebar-logo { font-size: 1.8em; font-weight: bold; color: white; text-decoration: none; }
+        .sidebar-nav { flex-grow: 1; overflow-y: auto; padding: 20px 0; }
+        .nav-category-title { padding: 10px 20px; font-size: 0.8em; font-weight: bold; color: rgba(255, 255, 255, 0.5); text-transform: uppercase; }
+        .sidebar-nav-item, .accordion-header { display: flex; align-items: center; gap: 15px; padding: 15px 20px; color: rgba(255, 255, 255, 0.8); text-decoration: none; transition: background 0.3s ease; cursor: pointer; }
+        .sidebar-nav-item:hover, .accordion-header:hover { background: rgba(255, 255, 255, 0.1); }
+        .sidebar-nav-item.active { background: #2a5298; color: white; font-weight: bold; border-left: 4px solid #4ecdc4; padding-left: 16px; }
+        .nav-icon { font-size: 1.2em; width: 20px; text-align: center; }
+        .accordion-header::after { content: '▶'; margin-left: auto; font-size: 0.8em; transition: transform 0.3s ease; }
+        .accordion-header.active::after { transform: rotate(90deg); }
+        .accordion-content { background: rgba(0, 0, 0, 0.2); max-height: 0; overflow: hidden; transition: max-height 0.3s ease-out; }
+        .accordion-content a { display: block; padding: 12px 20px 12px 55px; color: rgba(255, 255, 255, 0.7); text-decoration: none; transition: background 0.2s ease; }
+        .accordion-content a:hover { background: rgba(255, 255, 255, 0.1); color: white; }
+        .accordion-content a.active { color: white; font-weight: 500; }
+        .accordion-content a.new-task-link { color: #fff; background-color: rgba(78, 205, 196, 0.25); font-weight: 500; }
+        .accordion-content a.new-task-link:hover { background-color: rgba(78, 205, 196, 0.4); }
+        .top-header { background: rgba(255, 255, 255, 0.95); padding: 15px 30px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05); display: flex; justify-content: flex-end; align-items: center; position: sticky; top: 0; z-index: 99; backdrop-filter: blur(10px); }
+        .user-section { display: flex; align-items: center; gap: 15px; }
+        .user-avatar { width: 40px; height: 40px; background: linear-gradient(45deg, #1e3c72, #2a5298); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; }
+        .user-info { display: flex; flex-direction: column; }
+        .user-name { font-weight: 600; color: #333; }
+        .user-role { font-size: 0.8em; color: #666; }
+        .logout-btn { background: #ff6b6b; color: white; border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 0.9em; transition: all 0.3s ease; }
+        .logout-btn:hover { background: #ff5252; }
+        .btn { padding: 12px 25px; border: none; border-radius: 8px; font-size: 1em; font-weight: 600; cursor: pointer; }
+        .btn-primary { background: #1e3c72; color: white; }
+        .btn-secondary { background: #6c757d; color: white; }
+        .page-header { background: rgba(255, 255, 255, 0.95); padding: 30px; border-radius: 20px; margin-bottom: 30px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1); }
+        .page-title { font-size: 2em; color: #1e3c72; margin-bottom: 10px; }
+        .page-subtitle { color: #666; font-size: 1.1em; }
+        .tasks-container { background: rgba(255, 255, 255, 0.95); border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); overflow: hidden; }
+        .tasks-header { padding: 20px 30px; border-bottom: 1px solid #e1e8ed; display: flex; justify-content: space-between; align-items: center; flex-wrap:wrap; gap:15px; }
+        .filter-group { display: flex; gap: 10px; align-items: center; flex-wrap:wrap; }
+        .filter-label { font-weight: 500; }
+        .filter-select { padding: 8px 12px; border-radius: 8px; border: 1px solid #ccc; }
+        .task-table { width: 100%; border-collapse: collapse; }
+        .task-table th, .task-table td { padding: 15px; text-align: left; border-bottom: 1px solid #f0f0f0; }
+        .form-label { display: block; margin-bottom: 8px; color: #333; font-weight: 500; }
+        .form-input, .form-select, .form-textarea { width: 100%; padding: 12px 15px; border: 2px solid #e1e8ed; border-radius: 10px; font-size: 1em; transition: all 0.3s ease; background: white; }
+        .form-input:focus, .form-select:focus, .form-textarea:focus { outline: none; border-color: #1e3c72; box-shadow: 0 0 0 3px rgba(30, 60, 114, 0.1); }
+        .action-btn { background: #6c757d; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; transition: all 0.3s ease; margin-right: 5px; }
+        .action-btn.view-btn { background-color: #17a2b8; }
+        .action-btn.view-btn:hover { background-color: #138496; }
+        .action-btn.edit-btn { background-color: #ffc107; color: #212529; }
+        .action-btn.edit-btn:hover { background-color: #e0a800; }
+        .action-btn.delete-btn { background-color: #dc3545; }
+        .action-btn.delete-btn:hover { background-color: #c82333; }
+        .action-btn.add-accrual-btn { background-color: #28a745; }
+        .action-btn.add-accrual-btn:hover { background-color: #218838; }
+        .btn-reassign { background-color: #5a6268; }
+        .btn-reassign:hover { background-color: #4a5258; }
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.4); align-items: center; justify-content: center; }
+        .modal.show { display: flex; }
+        .modal-content-lg, .modal-content { background-color: #fefefe; margin: auto; padding: 30px; border: 1px solid #888; width: 90%; max-width: 900px; border-radius: 20px; box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2),0 6px 20px 0 rgba(0,0,0,0.19); animation-name: animatetop; animation-duration: 0.4s; max-height: 90vh; overflow-y: auto; }
+        .modal-content { max-width: 600px; }
+        #addAccrualModal .modal-content { max-width: 700px; }
+        @keyframes animatetop { from {top: -300px; opacity: 0} to {top: 0; opacity: 1} }
+        .close-modal-btn { color: #aaa; float: right; font-size: 28px; font-weight: bold; }
+        .close-modal-btn:hover, .close-modal-btn:focus { color: black; text-decoration: none; cursor: pointer; }
+        .modal-body-content { padding: 10px 0; }
+        .modal-footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; padding-top: 15px; border-top: 1px solid #e1e8ed; }
+        .modal-detail-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px 25px; }
+        .form-group { margin-bottom: 15px; }
+        .modal-detail-item { margin-bottom: 10px; }
+        .modal-detail-label, .form-label { font-weight: 600; color: #333; margin-bottom: 5px; font-size: 0.9em; }
+        .modal-detail-value { color: #555; word-break: break-word; font-size: 0.95em; }
+        .modal-detail-value.long-text { white-space: pre-wrap; background-color: #f8f9fa; padding: 8px; border-radius: 6px; }
+        .modal-detail-section-title { grid-column: 1 / -1; font-size: 1.1em; color: #1e3c72; margin-top: 20px; margin-bottom: 15px; padding-bottom: 5px; border-bottom: 1px dashed #e1e8ed; }
+        .task-history { margin-top: 20px; padding-top: 20px; border-top: 1px solid #e1e8ed; max-height: 400px; overflow-y: auto; }
+        .task-history-item { padding: 8px 0 8px 25px; border-bottom: 1px dashed #eee; }
+        .task-history-description { font-size: 0.9em; color: #333; font-weight: 600; }
+        .task-history-meta { font-size: 0.8em; color: #666; white-space: nowrap; margin-top: 4px; }
+        .document-list { list-style: none; padding: 0; }
+        .document-list li { background-color: #f0f4f8; margin-bottom: 8px; padding: 10px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; font-size: 0.9em; }
+        .document-list li a { color: #1e3c72; text-decoration: none; font-weight: 500; }
+        .remove-doc-btn { background: #ff6b6b; color: white; border: none; border-radius: 50%; width: 25px; height: 25px; font-size: 0.8em; cursor: pointer; }
+        .file-upload-area-task-detail { border: 2px dashed #e1e8ed; border-radius: 10px; padding: 20px; text-align: center; cursor: pointer; margin-top: 15px; }
+        .file-list-task-detail { margin-top: 10px; }
+        .file-item-task-detail { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; background: #f8f9fa; border-radius: 6px; margin-bottom: 5px; }
+        .remove-file-task-detail { background: #ff6b6b; color: white; border: none; border-radius: 50%; width: 20px; height: 20px; cursor: pointer; }
+        .related-accrual-item { background: #f8f9fa; padding: 10px; border-radius: 8px; margin-bottom: 8px; font-size: 0.9em; border-left: 3px solid #1e3c72; }
+        .status-badge { padding: 4px 10px; border-radius: 12px; font-size: 0.8em; font-weight: 500; color: white; }
+        .status-badge.status-open { background-color: #007bff; }
+        .status-badge.status-in_progress { background-color: #ffc107; color: #212529; }
+        .status-badge.status-pending_review { background-color: #fd7e14; }
+        .status-badge.status-completed { background-color: #28a745; }
+        .status-badge.status-paid { background-color: #28a745; }
+        .status-badge.status-unpaid { background-color: #dc3545; }
+        .input-with-currency { display: flex; gap: 10px; }
+        .input-with-currency .form-input { flex-grow: 1; }
+        .currency-select { padding: 12px 8px; border: 2px solid #e1e8ed; border-radius: 10px; background-color: #f8f9fa; font-weight: bold; }
+        .checkbox-label { display: flex; align-items: center; gap: 10px; cursor: pointer; font-weight: 500; }
+        .checkbox-label input { width: 18px; height: 18px; }
+        .total-amount-display { font-size: 1.2em; font-weight: bold; color: #1e3c72; text-align: right; margin-top: 10px; padding: 12px 15px; background-color: #f0f4f8; border-radius: 10px; }
+        .search-results-list { max-height: 150px; overflow-y: auto; border: 1px solid #ccc; border-radius: 8px; margin-top: 5px; }
+        .search-result-item { padding: 10px; cursor: pointer; border-bottom: 1px solid #eee; }
+        .search-result-item:hover { background-color: #f0f4f8; }
+        .no-results-message { text-align: center; color: #999; padding: 15px; }
+        .search-result-display { background: #e9f5ff; border: 1px solid #bde0fe; padding: 10px; border-radius: 8px; margin-top: 10px; }
+        
+        /* Yeni stiller - başvuru numarası linki için */
+        .application-number-link {
+            color: #1e3c72;
+            text-decoration: none;
+            font-weight: 500;
+            padding: 4px 8px;
+            border-radius: 4px;
+            transition: all 0.3s ease;
+        }
+        .application-number-link:hover {
+            background-color: #e3f2fd;
+            text-decoration: underline;
+        }
+        
+        /* İş referansı için stil */
+        .task-reference {
+            font-family: 'Courier New', monospace;
+            background: #f8f9fa;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.85em;
+            color: #495057;
+        }
+        
+        /* İş türü badge'i için stil */
+        .task-type-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 0.8em;
+            font-weight: 500;
+            background: #e9ecef;
+            color: #495057;
+        }
+        
+        /* Portfolio detay modalı için ek stiller */
+        .ip-type { display: inline-flex; align-items: center; gap: 5px; padding: 4px 8px; border-radius: 6px; font-size: 0.8em; font-weight: 500; }
+        .ip-type.patent { background: #ffebee; color: #c62828; }
+        .ip-type.trademark { background: #e0f2f1; color: #00695c; }
+        .ip-type.copyright { background: #e3f2fd; color: #1565c0; }
+        .ip-type.design { background: #f3e5f5; color: #7b1fa2; }
+        
+        .trademark-image-thumb { width: 40px; height: 40px; object-fit: contain; border: 1px solid #e1e8ed; border-radius: 4px; vertical-align: middle; margin-left: 5px; cursor: pointer; }
+        .detail-trademark-image-container { grid-column: 1 / -1; text-align: center; padding: 15px; background-color: #f8f9fa; border-radius: 8px; }
+        .detail-trademark-image { max-width: 250px; max-height: 250px; border: 1px solid #e1e8ed; border-radius: 8px; }
+        .full-width { grid-column: 1 / -1; }
+</style>
+</head>
+<body>
+<aside class="sidebar">
+<div class="sidebar-header"><a class="sidebar-logo" href="dashboard.html">🔥 IP Manager</a></div>
+<nav class="sidebar-nav">
+<div class="nav-category-title">Ana Menü</div>
+<a class="sidebar-nav-item" href="dashboard.html"><span class="nav-icon">📊</span><span>Dashboard</span></a>
+<a class="sidebar-nav-item" href="portfolio.html"><span class="nav-icon">📋</span><span>Portföy</span></a>
+<div class="nav-category-title">Veri Girişi</div>
+<a class="sidebar-nav-item" href="data-entry.html"><span class="nav-icon">➕</span><span>Yeni Kayıt</span></a>
+<a class="sidebar-nav-item" href="excel-upload.html"><span class="nav-icon">📄</span><span>Excel ile Yükle</span></a>
+<div class="nav-category-title">Yönetim</div>
+<div class="accordion">
+<div class="accordion-header"><span class="nav-icon">⚙️</span><span>Yönetim</span></div>
+<div class="accordion-content">
+<a class="new-task-link" href="create-task.html">Yeni İş Oluştur</a>
+<a href="task-management.html">İş Yönetimi</a>
+<a href="my-tasks.html">İşlerim</a>
+<a href="persons.html">Kişiler Yönetimi</a>
+<a href="user-management.html">Kullanıcı Yönetimi</a>
+    </div>
+</div>
+<div class="nav-category-title">Finans</div>
+<a href="accruals.html" class="sidebar-nav-item"><span class="nav-icon">💰</span><span>Tahakkuklarım</span></a>
+<div class="nav-category-title">Araçlar</div>
+<a class="sidebar-nav-item" href="indexing.html"><span class="nav-icon">📁</span><span>Belge İndeksleme</span></a>
+<a class="sidebar-nav-item" href="#" style="opacity: 0.5; cursor: not-allowed;"><span class="nav-icon">📈</span><span>Raporlar</span></a>
+<a class="sidebar-nav-item" href="#" style="opacity: 0.5; cursor: not-allowed;"><span class="nav-icon">🔧</span><span>Ayarlar</span></a>
+</nav>
+</aside>
+<div class="page-wrapper">
+<header class="top-header">
+<div class="user-section">
+<div class="user-avatar" id="userAvatar">?</div>
+<div class="user-info">
+<div class="user-name" id="userName">Yükleniyor...</div>
+<div class="user-role" id="userRole">Kullanıcı</div>
+</div>
+<button class="logout-btn" id="logoutBtn">Çıkış</button>
+</div>
+</header>
+<main class="main-container">
+<div id="viewContainer">
+<div id="taskListContainer">
+<section class="page-header">
+<h1 class="page-title">İş Akış Yönetimi</h1>
+<p class="page-subtitle">Tüm işleri görüntüleyin, yeni işler oluşturun ve atamaları yönetin.</p>
+</section>
+<div class="tasks-container">
+<div class="tasks-header">
+<div class="filter-group">
+<label class="filter-label" for="userFilter">Kullanıcı:</label>
+<select class="filter-select" id="userFilter"></select>
+<label class="filter-label" for="statusFilter">Durum:</label>
+<select class="filter-select" id="statusFilter"></select>
+<button class="btn-primary btn-reassign" id="reassignBtn" style="display: none;">Seçilenleri Ata</button>
+</div>
+<button class="btn-primary" id="createTaskBtn">➕ Yeni İş Oluştur</button>
+</div>
+<div class="table-container">
+<table class="task-table">
+<thead>
+<tr>
+<th><input type="checkbox" id="selectAllCheckbox"></th>
+<th>İş Ref.</th>
+<th>İş Başlığı</th>
+<th>İş Türü</th>
+<th>Atanan Kişi</th>
+<th>Başvuru No</th>
+<th>Durum</th>
+<th>İşlemler</th>
+</tr>
+</thead>
+<tbody id="tasksTableBody"></tbody>
+</table>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+
+<!-- İş Detay Modal -->
+<div class="modal" id="viewTaskDetailModal">
+    <div class="modal-content-lg">
+        <span class="close-modal-btn" id="closeViewTaskDetailModal">×</span>
+        <h3 class="modal-title" id="modalViewTaskTitle">İş Detayı</h3>
+        <div class="modal-body-content">
+            <div class="modal-detail-grid">
+                <div class="modal-detail-item full-width"><div class="modal-detail-label">İş Başlığı</div><div class="modal-detail-value" id="modalViewTaskTitleValue"></div></div>
+                <div class="modal-detail-item full-width"><div class="modal-detail-label">Açıklama</div><div class="modal-detail-value long-text" id="modalViewTaskDescriptionValue"></div></div>
+                <div class="modal-detail-item"><div class="modal-detail-label">İş Türü</div><div class="modal-detail-value" id="modalViewTaskTypeValue"></div></div>
+                <div class="modal-detail-item"><div class="modal-detail-label">Öncelik</div><div class="modal-detail-value" id="modalViewTaskPriorityValue"></div></div>
+                <div class="modal-detail-item"><div class="modal-detail-label">Atanan Kişi</div><div class="modal-detail-value" id="modalViewAssignedToValue"></div></div>
+                <div class="modal-detail-item"><div class="modal-detail-label">Bitiş Tarihi</div><div class="modal-detail-value" id="modalViewTaskDueDateValue"></div></div>
+                <div class="modal-detail-item full-width"><div class="modal-detail-label">İlgili Fikri Mülkiyet Kaydı</div><div class="modal-detail-value" id="modalViewRelatedIpRecordValue"></div></div>
+                <div class="modal-detail-item full-width" id="modalViewRelatedPartyGroup" style="display:none;"><div class="modal-detail-label" id="modalViewRelatedPartyLabel"></div><div class="modal-detail-value" id="modalViewRelatedPartyValue"></div></div>
+                <div class="modal-detail-item full-width" id="modalViewRelatedTransactionGroup" style="display:none;"><div class="modal-detail-label" id="modalViewRelatedTransactionLabel"></div><div class="modal-detail-value" id="modalViewRelatedTransactionValue"></div></div>
+                
+                <h4 class="modal-detail-section-title">İlişkili Tahakkuklar</h4>
+                <div class="modal-detail-item full-width" id="modalViewRelatedAccruals">
+                    <p style="text-align: center; color: #666;">Tahakkuk bilgisi bulunmuyor.</p>
+                </div>
+
+                <h4 class="modal-detail-section-title">İşlem Geçmişi</h4>
+                <div class="modal-detail-item full-width task-history" id="modalViewTaskHistory"><p style="text-align: center; color: #666;">İşlem geçmişi bulunmuyor.</p></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Portfolio Detay Modal -->
+<div class="modal" id="portfolioDetailModal">
+    <div class="modal-content-lg">
+        <span class="close-modal-btn" id="closePortfolioDetailModal">×</span>
+        <h3 class="modal-title" id="portfolioModalTitle">Kayıt Detayları</h3>
+        <div id="portfolioModalBody">
+        </div>
+    </div>
+</div>
+
+<div id="editTaskModal" class="modal">
+    <div class="modal-content-lg">
+        <span class="close-modal-btn" id="closeEditTaskModal">&times;</span>
+        <h3 class="modal-title">İşi Düzenle</h3>
+        <div class="modal-body-content">
+            <form id="editTaskForm" onsubmit="return false;">
+                <input type="hidden" id="editTaskId">
+                <div class="modal-detail-grid">
+                    <div class="form-group" style="grid-column: 1 / -1;"><label class="form-label" for="modalEditTaskTitle">İş Başlığı</label><input type="text" id="modalEditTaskTitle" class="form-input"></div>
+                    <div class="form-group" style="grid-column: 1 / -1;"><label class="form-label" for="modalEditTaskDescription">Açıklama</label><textarea id="modalEditTaskDescription" class="form-textarea" rows="4"></textarea></div>
+                    <div class="form-group"><label class="form-label" for="modalEditTaskPriority">Öncelik</label><select id="modalEditTaskPriority" class="form-select"></select></div>
+                    <div class="form-group"><label class="form-label" for="modalEditAssignedTo">Atanan Kişi</label><select id="modalEditAssignedTo" class="form-select"></select></div>
+                    <div class="form-group" style="grid-column: 1 / -1;"><label class="form-label" for="modalEditTaskDueDate">Bitiş Tarihi</label><input type="date" id="modalEditTaskDueDate" class="form-input"></div>
+                    
+                    <h4 class="modal-detail-section-title">Dokümanlar</h4>
+                    <div class="modal-detail-item" style="grid-column: 1 / -1;">
+                        <label class="modal-detail-label">Mevcut Dokümanlar</label>
+                        <ul class="document-list" id="modalEditTaskDocumentList">
+                            <li id="modalNoTaskDocumentsMessage">Henüz doküman yok.</li>
+                        </ul>
+                        <div class="file-upload-area-task-detail" id="modalTaskDetailFileUploadArea">
+                            <div>Yeni Dosyaları buraya sürükleyin veya tıklayın</div>
+                            <input type="file" id="modalTaskDetailFileInput" multiple hidden>
+                        </div>
+                        <div class="file-list-task-detail" id="modalTaskDetailUploadedFileList"></div>
+                    </div>
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" id="cancelEditTaskBtn">İptal</button>
+            <button type="button" class="btn btn-primary" id="saveTaskChangesBtn">Değişiklikleri Kaydet</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal" id="reassignTaskModal">
+    <div class="modal-content">
+        <span class="close-modal-btn" id="closeReassignModal">&times;</span>
+        <h3 class="modal-title">Seçili İşleri Ata</h3>
+        <div class="modal-body-content">
+            <div class="form-group">
+                <label for="reassignUserSelect" class="form-label">Yeni Kullanıcı Seçin</label>
+                <select id="reassignUserSelect" class="form-select"></select>
+            </div>
+            <p><strong id="reassignTaskCount"></strong> adet iş seçildi.</p>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" id="cancelReassignBtn">İptal</button>
+            <button type="button" class="btn btn-primary" id="confirmReassignBtn">Atamayı Onayla</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal" id="addAccrualModal">
+    <div class="modal-content">
+        <span class="close-modal-btn" id="closeAddAccrualModal">&times;</span>
+        <h3 class="modal-title">İşe Yeni Tahakkuk Ekle</h3>
+        <form id="addAccrualForm" onsubmit="return false;">
+            <input type="hidden" id="accrualTaskId">
+            <div class="modal-body-content">
+                <div class="form-group">
+                    <label for="accrualTaskTitleDisplay" class="form-label">İlgili İş</label>
+                    <input type="text" id="accrualTaskTitleDisplay" class="form-input" readonly>
+                </div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="officialFee" class="form-label">Resmi Ücret</label>
+                        <div class="input-with-currency">
+                            <input type="number" id="officialFee" class="form-input" placeholder="0.00" step="0.01">
+                            <select id="officialFeeCurrency" class="currency-select">
+                                <option value="TRY" selected>TL</option>
+                                <option value="EUR">EUR</option>
+                                <option value="USD">USD</option>
+                                <option value="CHF">CHF</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="serviceFee" class="form-label">Hizmet Bedeli</label>
+                        <div class="input-with-currency">
+                            <input type="number" id="serviceFee" class="form-input" placeholder="0.00" step="0.01">
+                            <select id="serviceFeeCurrency" class="currency-select">
+                                <option value="TRY" selected>TL</option>
+                                <option value="EUR">EUR</option>
+                                <option value="USD">USD</option>
+                                <option value="CHF">CHF</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="vatRate" class="form-label">KDV Oranı (%)</label>
+                    <input type="number" id="vatRate" class="form-input" value="20">
+                </div>
+                <div class="form-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="applyVatToOfficialFee" checked>
+                        Resmi Ücrete KDV Uygula
+                    </label>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Toplam Tutar</label>
+                    <div id="totalAmountDisplay" class="total-amount-display">0.00 TRY</div>
+                </div>
+                <div class="form-group">
+                    <label for="tpInvoicePartySearch" class="form-label">Türk Patent Faturası Tarafı</label>
+                    <input type="text" id="tpInvoicePartySearch" class="form-input" placeholder="Fatura tarafı arayın...">
+                    <div id="tpInvoicePartyResults" class="search-results-list"></div>
+                    <div id="selectedTpInvoicePartyDisplay" class="search-result-display" style="display:none;"></div>
+                </div>
+                <div class="form-group">
+                    <label for="serviceInvoicePartySearch" class="form-label">Hizmet Faturası Tarafı</label>
+                    <input type="text" id="serviceInvoicePartySearch" class="form-input" placeholder="Fatura tarafı arayın...">
+                    <div id="serviceInvoicePartyResults" class="search-results-list"></div>
+                    <div id="selectedServiceInvoicePartyDisplay" class="search-result-display" style="display:none;"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" id="cancelAddAccrualBtn">İptal</button>
+                <button type="button" class="btn btn-primary" id="saveAccrualBtn">Tahakkuku Kaydet</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script type="module">
+        import { authService, taskService, ipRecordsService, personsService, accrualService, auth, generateUUID } from './firebase-config.js';
+
+        class TaskManagementModule {
+            constructor() {
+                this.currentUser = null;
+                this.allTasks = [];
+                this.allUsers = [];
+                this.allIpRecords = [];
+                this.allPersons = [];
+                this.allAccruals = [];
+                this.currentEditTask = null;
+                this.uploadedEditFiles = [];
+                this.selectedTasks = new Set();
+                this.selectedTpInvoiceParty = null;
+                this.selectedServiceInvoiceParty = null;
+            }
+
+            async init() {
+                this.currentUser = authService.getCurrentUser();
+                
+                if (this.currentUser.role !== 'superadmin' && this.currentUser.role !== 'admin') {
+                    alert('Bu sayfaya erişim yetkiniz yoktur.');
+                    window.location.href = 'dashboard.html';
+                    return;
+                }
+
+                this.updateUserInfo();
+                await this.loadInitialData();
+                this.setupEventListeners();
+            }
+
+            updateUserInfo() {
+                if (this.currentUser) {
+                    const userName = this.currentUser.displayName || this.currentUser.email.split('@')[0] || 'Kullanıcı';
+                    const userRole = this.currentUser.role === 'admin' ? 'Yönetici' : this.currentUser.role === 'superadmin' ? 'Süper Yönetici' : 'Kullanıcı';
+                    
+                    document.getElementById('userAvatar').textContent = userName.charAt(0).toUpperCase();
+                    document.getElementById('userName').textContent = userName;
+                    document.getElementById('userRole').textContent = userRole;
+                }
+            }
+
+            async loadInitialData() {
+                const [usersResult, tasksResult, ipRecordsResult, personsResult, accrualsResult] = await Promise.all([
+                    taskService.getAllUsers(), 
+                    taskService.getAllTasks(),
+                    ipRecordsService.getRecords(),
+                    personsService.getPersons(),
+                    accrualService.getAccruals()
+                ]);
+
+                if (usersResult.success) this.allUsers = usersResult.data;
+                if (tasksResult.success) this.allTasks = tasksResult.data;
+                if (ipRecordsResult.success) this.allIpRecords = ipRecordsResult.data;
+                if (personsResult.success) this.allPersons = personsResult.data;
+                if (accrualsResult.success) this.allAccruals = accrualsResult.data;
+                
+                this.populateFilters();
+                this.renderTasks();
+            }
+            
+            setupEventListeners() {
+                document.getElementById('createTaskBtn').addEventListener('click', () => {window.location.href = 'create-task.html';});
+                document.getElementById('userFilter').addEventListener('change', () => this.renderTasks());
+                document.getElementById('statusFilter').addEventListener('change', () => this.renderTasks());
+                document.getElementById('logoutBtn').addEventListener('click', () => authService.signOut());
+
+                document.getElementById('closeViewTaskDetailModal').addEventListener('click', () => this.closeModal('viewTaskDetailModal'));
+                document.getElementById('closePortfolioDetailModal').addEventListener('click', () => this.closeModal('portfolioDetailModal'));
+                document.getElementById('closeEditTaskModal').addEventListener('click', () => this.closeModal('editTaskModal'));
+                document.getElementById('cancelEditTaskBtn').addEventListener('click', () => this.closeModal('editTaskModal'));
+                document.getElementById('saveTaskChangesBtn').addEventListener('click', () => this.saveTaskChanges());
+
+                document.getElementById('modalTaskDetailFileUploadArea').addEventListener('click', () => document.getElementById('modalTaskDetailFileInput').click());
+                document.getElementById('modalTaskDetailFileInput').addEventListener('change', (e) => this.handleEditDocumentUpload(e.target.files));
+
+                document.getElementById('reassignBtn').addEventListener('click', () => this.showReassignModal());
+                document.getElementById('closeReassignModal').addEventListener('click', () => this.closeModal('reassignTaskModal'));
+                document.getElementById('cancelReassignBtn').addEventListener('click', () => this.closeModal('reassignTaskModal'));
+                document.getElementById('confirmReassignBtn').addEventListener('click', () => this.handleReassignment());
+
+                document.getElementById('closeAddAccrualModal').addEventListener('click', () => this.closeModal('addAccrualModal'));
+                document.getElementById('cancelAddAccrualBtn').addEventListener('click', () => this.closeModal('addAccrualModal'));
+                document.getElementById('saveAccrualBtn').addEventListener('click', () => this.handleSaveAccrual());
+
+                ['officialFee', 'serviceFee', 'vatRate', 'applyVatToOfficialFee'].forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) el.addEventListener('input', () => this.calculateTotalAmount());
+                });
+                document.getElementById('tpInvoicePartySearch').addEventListener('input', e => this.searchPersons(e.target.value, 'tpInvoiceParty'));
+                document.getElementById('serviceInvoicePartySearch').addEventListener('input', e => this.searchPersons(e.target.value, 'serviceInvoiceParty'));
+
+                const tableBody = document.getElementById('tasksTableBody');
+                tableBody.addEventListener('change', (event) => {
+                    if (event.target.matches('.task-checkbox')) {
+                        this.handleTaskSelection(event.target);
+                    }
+                });
+                
+                document.getElementById('selectAllCheckbox').addEventListener('change', (event) => {
+                    const isChecked = event.target.checked;
+                    document.querySelectorAll('.task-checkbox').forEach(checkbox => {
+                        checkbox.checked = isChecked;
+                        this.handleTaskSelection(checkbox);
+                    });
+                });
+
+                tableBody.addEventListener('click', (event) => {
+                    const target = event.target.closest('button.action-btn');
+                    if (!target) return;
+
+                    const row = target.closest('tr');
+                    const taskId = row.querySelector('.task-checkbox')?.dataset.taskId;
+                    if (!taskId) return;
+                    
+                    if (target.classList.contains('view-btn')) { this.viewTaskDetailsModal(taskId); }
+                    else if (target.classList.contains('edit-btn')) { this.showEditTaskModal(taskId); }
+                    else if (target.classList.contains('delete-btn')) { this.deleteTask(taskId); }
+                    else if (target.classList.contains('add-accrual-btn')) { this.showAddAccrualModal(taskId); }
+                });
+                
+                // Başvuru numarası linklerine event listener ekle
+                tableBody.addEventListener('click', (event) => {
+                    if (event.target.classList.contains('application-number-link')) {
+                        event.preventDefault();
+                        const recordId = event.target.dataset.recordId;
+                        this.showPortfolioDetailModal(recordId);
+                    }
+                });
+            }
+            
+            // İş referansı oluşturma fonksiyonu
+            generateTaskReference(task) {
+                const taskDate = new Date(task.createdAt || Date.now());
+                const year = taskDate.getFullYear().toString().substr(-2);
+                const month = String(taskDate.getMonth() + 1).padStart(2, '0');
+                const taskIdShort = task.id.substr(-4).toUpperCase();
+                return `IS${year}${month}-${taskIdShort}`;
+            }
+            
+            // İş türü Türkçeleştirme
+            getTaskTypeDisplay(taskType) {
+                if (!taskType) return '-';
+                
+                const taskTypeMappings = {
+                    'patent_application': 'Patent Başvuru',
+                    'patent_renewal': 'Patent Yenileme',
+                    'trademark_application': 'Marka Başvuru', 
+                    'trademark_renewal': 'Marka Yenileme',
+                    'trademark_opposition': 'Marka İtiraz',
+                    'copyright_application': 'Telif Başvuru',
+                    'design_application': 'Tasarım Başvuru',
+                    'design_renewal': 'Tasarım Yenileme',
+                    'legal_devir': 'Hukuki - Devir',
+                    'legal_lisans': 'Hukuki - Lisans',
+                    'legal_rehin': 'Hukuki - Rehin',
+                    'legal_birleşme': 'Hukuki - Birleşme',
+                    'legal_veraset': 'Hukuki - Veraset',
+                    'legal_teminat': 'Hukuki - Teminat',
+                    'administrative_general': 'İdari - Genel',
+                    'administrative_documentation': 'İdari - Belgelendirme'
+                };
+                
+                return taskTypeMappings[taskType] || taskType.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+            }
+            
+            // Durum Türkçeleştirme
+            getStatusDisplay(status) {
+                const statusMappings = {
+                    'open': 'Açık',
+                    'in_progress': 'Devam Ediyor',
+                    'pending_review': 'Gözden Geçiriliyor',
+                    'completed': 'Tamamlandı'
+                };
+                return statusMappings[status] || status;
+            }
+            
+            renderTasks() {
+                const tableBody = document.getElementById('tasksTableBody');
+                tableBody.innerHTML = '';
+                
+                const selectedUser = document.getElementById('userFilter').value;
+                const selectedStatus = document.getElementById('statusFilter').value;
+
+                const filteredTasks = this.allTasks.filter(task => {
+                    const userMatch = selectedUser === 'all' || task.assignedTo_uid === selectedUser;
+                    const statusMatch = selectedStatus === 'all' || task.status === selectedStatus;
+                    return userMatch && statusMatch;
+                });
+
+                filteredTasks.forEach(task => {
+                    const row = document.createElement('tr');
+                    const isSelected = this.selectedTasks.has(task.id);
+                    
+                    // Atanan kullanıcının ad-soyad bilgisini al
+                    const assignedUser = this.allUsers.find(u => u.id === task.assignedTo_uid);
+                    const assignedUserName = assignedUser ? (assignedUser.displayName || assignedUser.email.split('@')[0]) : task.assignedTo_email;
+                    
+                    // İlgili IP kaydını bul
+                    const relatedIpRecord = this.allIpRecords.find(r => r.id === task.relatedIpRecordId);
+                    
+                    // Başvuru numarası HTML'i oluştur
+                    let applicationNumberHtml = '-';
+                    if (relatedIpRecord && relatedIpRecord.applicationNumber) {
+                        applicationNumberHtml = `<a href="#" class="application-number-link" data-record-id="${relatedIpRecord.id}">${relatedIpRecord.applicationNumber}</a>`;
+                    }
+                    
+                    row.innerHTML = `
+                        <td><input type="checkbox" class="task-checkbox" data-task-id="${task.id}" ${isSelected ? 'checked' : ''}></td>
+                        <td><span class="task-reference">${this.generateTaskReference(task)}</span></td>
+                        <td>${task.title}</td>
+                        <td><span class="task-type-badge">${this.getTaskTypeDisplay(task.taskType)}</span></td>
+                        <td>${assignedUserName}</td>
+                        <td>${applicationNumberHtml}</td>
+                        <td><span class="status-badge status-${task.status}">${this.getStatusDisplay(task.status)}</span></td>
+                        <td>
+                            <div style="display: flex; gap: 5px;">
+                                <button class="action-btn view-btn">Görüntüle</button>
+                                <button class="action-btn edit-btn">Düzenle</button>
+                                <button class="action-btn delete-btn">Sil</button>
+                                <button class="action-btn add-accrual-btn" title="Bu İşe Tahakkuk Ekle">💰</button>
+                            </div>
+                        </td>
+                    `;
+                    tableBody.appendChild(row);
+                });
+                
+                this.updateReassignButtonState();
+            }
+            
+            // Portfolio detay modalını göster
+            showPortfolioDetailModal(recordId) {
+                const record = this.allIpRecords.find(r => r.id === recordId);
+                if (!record) {
+                    alert('Kayıt bulunamadı.');
+                    return;
+                }
+
+                const modal = document.getElementById('portfolioDetailModal');
+                document.getElementById('portfolioModalTitle').textContent = `Detay: ${record.title}`;
+                
+                const typeNames = { patent: 'Patent', trademark: 'Marka', copyright: 'Telif Hakkı', design: 'Tasarım' };
+                const statusNames = { 
+                    application: 'Başvuru', pending: 'Beklemede', approved: 'Onaylandı', 
+                    rejected: 'Reddedildi', expired: 'Süresi Doldu', published: 'Yayınlandı', 
+                    partial_refusal: 'Kısmi Ret', refused: 'Ret', opposition_received: 'İtiraz Geldi', 
+                    opposition_filed: 'İtiraz Edildi', registered: 'Tescilli', not_renewed: 'Yenilenmedi', 
+                    invalid_void: 'Geçersiz' 
+                };
+
+                const formatDate = (dateString) => dateString ? new Date(dateString).toLocaleDateString('tr-TR') : '-';
+                
+                const renderField = (label, value, isLongText = false) => {
+                    if (value === null || value === undefined || value === '') return '';
+                    const valueClass = isLongText ? 'modal-detail-value long-text' : 'modal-detail-value';
+                    return `<div class="modal-detail-item ${isLongText ? 'full-width' : ''}"><div class="modal-detail-label">${label}</div><div class="${valueClass}">${value}</div></div>`;
+                };
+
+                let modalContentHtml = `<div class="modal-detail-grid">`;
+                
+                modalContentHtml += `<h4 class="modal-detail-section-title">Genel Bilgiler</h4>`;
+                modalContentHtml += renderField('Tür', `<span class="ip-type ${record.type}">${typeNames[record.type] || 'Bilinmiyor'}</span>`);
+                modalContentHtml += renderField('Başlık', record.title);
+                modalContentHtml += renderField('Durum', `<span class="status-badge ${record.status}">${statusNames[record.status] || record.status}</span>`);
+                modalContentHtml += renderField('Başvuru Numarası', record.applicationNumber);
+                modalContentHtml += renderField('Tescil Numarası', record.registrationNumber);
+                modalContentHtml += renderField('Başvuru Tarihi', formatDate(record.applicationDate));
+                modalContentHtml += renderField('Tescil Tarihi', formatDate(record.registrationDate));
+                modalContentHtml += renderField('Hak Sahipleri', (record.owners || []).map(o => o.name).join(', '));
+
+                if (record.type === 'patent') {
+                    modalContentHtml += `<h4 class="modal-detail-section-title">Patent Detayları</h4>`;
+                    modalContentHtml += renderField('Patent Sınıfı', record.patentClass);
+                    modalContentHtml += renderField('Öncelik Tarihi', formatDate(record.priority));
+                    modalContentHtml += renderField('Son Geçerlilik Tarihi', formatDate(record.expiryDate));
+                    modalContentHtml += renderField('Patent İstekleri (Claims)', record.claims, true);
+                }
+                if (record.type === 'trademark') {
+                    modalContentHtml += `<h4 class="modal-detail-section-title">Marka Detayları</h4>`;
+                    if (record.trademarkImage && record.trademarkImage.content) {
+                        modalContentHtml += `
+                            <div class="modal-detail-item detail-trademark-image-container">
+                                <div class="modal-detail-label">Marka Örneği</div>
+                                <img src="${record.trademarkImage.content}" class="detail-trademark-image" alt="Marka Örneği">
+                            </div>`;
+                    }
+                    modalContentHtml += renderField('Marka Türü', record.trademarkType);
+                    modalContentHtml += renderField('Nice Sınıfı', record.niceClass);
+                    modalContentHtml += renderField('Yenileme Tarihi', formatDate(record.renewalDate));
+                    modalContentHtml += renderField('Bülten Tarihi', formatDate(record.bulletinDate));
+                    modalContentHtml += renderField('Bülten Numarası', record.bulletinNumber);
+                    modalContentHtml += renderField('Mal ve Hizmetler', record.goodsServices, true);
+                }
+                if (record.type === 'copyright') {
+                    modalContentHtml += `<h4 class="modal-detail-section-title">Telif Hakkı Detayları</h4>`;
+                    modalContentHtml += renderField('Eser Türü', record.workType);
+                    modalContentHtml += renderField('Oluşturulma Tarihi', formatDate(record.creationDate));
+                    modalContentHtml += renderField('Yayın Tarihi', formatDate(record.publicationDate));
+                    modalContentHtml += renderField('Yayımcı/Yapımcı', record.publisher);
+                }
+                if (record.type === 'design') {
+                    modalContentHtml += `<h4 class="modal-detail-section-title">Tasarım Detayları</h4>`;
+                    modalContentHtml += renderField('Tasarım Türü', record.designType);
+                    modalContentHtml += renderField('Locarno Sınıfı', record.locarnoClass);
+                    modalContentHtml += renderField('Tasarım Tarihi', formatDate(record.designDate));
+                    modalContentHtml += renderField('Tasarım Özellikleri', record.designFeatures, true);
+                }
+                
+                modalContentHtml += `<h4 class="modal-detail-section-title">Açıklama</h4>`;
+                modalContentHtml += renderField('Açıklama', record.description, true);
+                
+                if (record.files && record.files.length > 0) {
+                    modalContentHtml += `<h4 class="modal-detail-section-title">Yüklenen Dokümanlar</h4>`;
+                    modalContentHtml += `<div class="modal-detail-item" style="grid-column: 1 / -1;"><ul>`;
+                    record.files.forEach(file => {
+                        modalContentHtml += `<li><a href="${file.content}" download="${file.name}">📄 ${file.name} (${this.formatFileSize(file.size)}) - ${file.documentDesignation || 'Belge'}</a></li>`;
+                    });
+                    modalContentHtml += `</ul></div>`;
+                }
+                
+                modalContentHtml += `</div>`;
+                document.getElementById('portfolioModalBody').innerHTML = modalContentHtml;
+                
+                modal.classList.add('show');
+            }
+            
+            handleTaskSelection(checkbox) {
+                const taskId = checkbox.dataset.taskId;
+                if (checkbox.checked) {
+                    this.selectedTasks.add(taskId);
+                } else {
+                    this.selectedTasks.delete(taskId);
+                }
+                this.updateReassignButtonState();
+            }
+
+            updateReassignButtonState() {
+                const reassignBtn = document.getElementById('reassignBtn');
+                if (this.selectedTasks.size > 0) {
+                    reassignBtn.style.display = 'inline-block';
+                    reassignBtn.textContent = `${this.selectedTasks.size} İş Ata`;
+                } else {
+                    reassignBtn.style.display = 'none';
+                }
+            }
+
+            showReassignModal() {
+                if (this.selectedTasks.size === 0) {
+                    alert('Lütfen en az bir iş seçin.');
+                    return;
+                }
+                const userSelect = document.getElementById('reassignUserSelect');
+                userSelect.innerHTML = '<option value="">Kullanıcı Seçin...</option>';
+                
+                this.allUsers.forEach(user => {
+                    const option = document.createElement('option');
+                    option.value = user.id;
+                    option.textContent = user.displayName || user.email;
+                    userSelect.appendChild(option);
+                });
+
+                document.getElementById('reassignTaskCount').textContent = this.selectedTasks.size;
+                document.getElementById('reassignTaskModal').classList.add('show');
+            }
+
+            async handleReassignment() {
+                const newUserId = document.getElementById('reassignUserSelect').value;
+                if (!newUserId) {
+                    alert('Lütfen bir kullanıcı seçin.');
+                    return;
+                }
+
+                const newUser = this.allUsers.find(u => u.id === newUserId);
+                const taskIds = Array.from(this.selectedTasks);
+                
+                if (!confirm(`${taskIds.length} adet işi "${newUser.displayName || newUser.email}" kullanıcısına atamak istediğinizden emin misiniz?`)) {
+                    return;
+                }
+
+                try {
+                    const result = await taskService.reassignTasks(taskIds, newUserId, newUser.email);
+                    if (result.success) {
+                        alert('İşler başarıyla yeniden atandı!');
+                        this.selectedTasks.clear();
+                        document.getElementById('selectAllCheckbox').checked = false;
+                        this.updateReassignButtonState();
+                        this.closeModal('reassignTaskModal');
+                        await this.loadInitialData();
+                    } else {
+                        throw new Error(result.error);
+                    }
+                } catch (error) {
+                    alert('İşler atanırken bir hata oluştu: ' + error.message);
+                }
+            }
+
+            populateFilters() {
+                const userFilter = document.getElementById('userFilter');
+                userFilter.innerHTML = '<option value="all">Tüm Kullanıcılar</option>';
+                this.allUsers.forEach(user => {
+                    userFilter.innerHTML += `<option value="${user.id}">${user.displayName || user.email}</option>`;
+                });
+                
+                const statusFilter = document.getElementById('statusFilter');
+                statusFilter.innerHTML = `<option value="all">Tüm Durumlar</option>
+                    <option value="open">Açık</option>
+                    <option value="in_progress">Devam Ediyor</option>
+                    <option value="pending_review">Gözden Geçiriliyor</option>
+                    <option value="completed">Tamamlandı</option>`;
+            }
+
+            async deleteTask(taskId) {
+                if (confirm('Bu görevi silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.')) {
+                    try {
+                        const result = await taskService.deleteTask(taskId);
+                        if (result.success) {
+                            alert('Görev başarıyla silindi.');
+                            this.selectedTasks.delete(taskId);
+                            await this.loadInitialData();
+                        } else {
+                            throw new Error(result.error);
+                        }
+                    } catch (error) {
+                        alert('Görev silinirken bir hata oluştu: ' + error.message);
+                    }
+                }
+            }
+            
+            viewTaskDetailsModal(taskId) {
+                const task = this.allTasks.find(t => t.id === taskId);
+                if (!task) return alert('Görev bulunamadı.');
+                this.populateModalTaskDetails(task, this.allIpRecords, this.allPersons);
+                document.getElementById('viewTaskDetailModal').classList.add('show');
+            }
+            
+            showEditTaskModal(taskId) {
+                const task = this.allTasks.find(t => t.id === taskId);
+                if (!task) return alert('Düzenlenecek görev bulunamadı.');
+
+                this.currentEditTask = { ...task }; 
+                this.uploadedEditFiles = []; 
+
+                document.getElementById('editTaskId').value = task.id;
+                document.getElementById('modalEditTaskTitle').value = task.title || '';
+                document.getElementById('modalEditTaskDescription').value = task.description || '';
+                document.getElementById('modalEditTaskDueDate').value = task.dueDate || '';
 
                 const prioritySelect = document.getElementById('modalEditTaskPriority');
                 prioritySelect.innerHTML = '';
@@ -391,317 +1243,4 @@ document.getElementById('modalEditTaskDueDate').value = task.dueDate || '';
         });
 </script>
 </body>
-</html><!DOCTYPE html>
-<html lang="tr">
-<head>
-<meta charset="utf-8"/>
-<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<title>IP Manager - İş Yönetimi</title>
-<style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333; display: flex; }
-        .page-wrapper { flex-grow: 1; display: flex; flex-direction: column; height: 100vh; overflow-y: auto; background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); }
-        .main-container { width: 100%; padding: 30px; margin: 0; }
-        .sidebar { width: 260px; background: #1e3c72; color: white; display: flex; flex-direction: column; transition: width 0.3s ease; height: 100vh; position: sticky; top: 0; z-index: 1001; }
-        .sidebar-header { padding: 20px; text-align: center; border-bottom: 1px solid rgba(255, 255, 255, 0.1); }
-        .sidebar-logo { font-size: 1.8em; font-weight: bold; color: white; text-decoration: none; }
-        .sidebar-nav { flex-grow: 1; overflow-y: auto; padding: 20px 0; }
-        .nav-category-title { padding: 10px 20px; font-size: 0.8em; font-weight: bold; color: rgba(255, 255, 255, 0.5); text-transform: uppercase; }
-        .sidebar-nav-item, .accordion-header { display: flex; align-items: center; gap: 15px; padding: 15px 20px; color: rgba(255, 255, 255, 0.8); text-decoration: none; transition: background 0.3s ease; cursor: pointer; }
-        .sidebar-nav-item:hover, .accordion-header:hover { background: rgba(255, 255, 255, 0.1); }
-        .sidebar-nav-item.active { background: #2a5298; color: white; font-weight: bold; border-left: 4px solid #4ecdc4; padding-left: 16px; }
-        .nav-icon { font-size: 1.2em; width: 20px; text-align: center; }
-        .accordion-header::after { content: '▶'; margin-left: auto; font-size: 0.8em; transition: transform 0.3s ease; }
-        .accordion-header.active::after { transform: rotate(90deg); }
-        .accordion-content { background: rgba(0, 0, 0, 0.2); max-height: 0; overflow: hidden; transition: max-height 0.3s ease-out; }
-        .accordion-content a { display: block; padding: 12px 20px 12px 55px; color: rgba(255, 255, 255, 0.7); text-decoration: none; transition: background 0.2s ease; }
-        .accordion-content a:hover { background: rgba(255, 255, 255, 0.1); color: white; }
-        .accordion-content a.active { color: white; font-weight: 500; }
-        .accordion-content a.new-task-link { color: #fff; background-color: rgba(78, 205, 196, 0.25); font-weight: 500; }
-        .accordion-content a.new-task-link:hover { background-color: rgba(78, 205, 196, 0.4); }
-        .top-header { background: rgba(255, 255, 255, 0.95); padding: 15px 30px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05); display: flex; justify-content: flex-end; align-items: center; position: sticky; top: 0; z-index: 99; backdrop-filter: blur(10px); }
-        .user-section { display: flex; align-items: center; gap: 15px; }
-        .user-avatar { width: 40px; height: 40px; background: linear-gradient(45deg, #1e3c72, #2a5298); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; }
-        .user-info { display: flex; flex-direction: column; }
-        .user-name { font-weight: 600; color: #333; }
-        .user-role { font-size: 0.8em; color: #666; }
-        .logout-btn { background: #ff6b6b; color: white; border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 0.9em; transition: all 0.3s ease; }
-        .logout-btn:hover { background: #ff5252; }
-        .btn { padding: 12px 25px; border: none; border-radius: 8px; font-size: 1em; font-weight: 600; cursor: pointer; }
-        .btn-primary { background: #1e3c72; color: white; }
-        .btn-secondary { background: #6c757d; color: white; }
-        .page-header { background: rgba(255, 255, 255, 0.95); padding: 30px; border-radius: 20px; margin-bottom: 30px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1); }
-        .page-title { font-size: 2em; color: #1e3c72; margin-bottom: 10px; }
-        .page-subtitle { color: #666; font-size: 1.1em; }
-        .tasks-container { background: rgba(255, 255, 255, 0.95); border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); overflow: hidden; }
-        .tasks-header { padding: 20px 30px; border-bottom: 1px solid #e1e8ed; display: flex; justify-content: space-between; align-items: center; flex-wrap:wrap; gap:15px; }
-        .filter-group { display: flex; gap: 10px; align-items: center; flex-wrap:wrap; }
-        .filter-label { font-weight: 500; }
-        .filter-select { padding: 8px 12px; border-radius: 8px; border: 1px solid #ccc; }
-        .task-table { width: 100%; border-collapse: collapse; }
-        .task-table th, .task-table td { padding: 15px; text-align: left; border-bottom: 1px solid #f0f0f0; }
-        .form-label { display: block; margin-bottom: 8px; color: #333; font-weight: 500; }
-        .form-input, .form-select, .form-textarea { width: 100%; padding: 12px 15px; border: 2px solid #e1e8ed; border-radius: 10px; font-size: 1em; transition: all 0.3s ease; background: white; }
-        .form-input:focus, .form-select:focus, .form-textarea:focus { outline: none; border-color: #1e3c72; box-shadow: 0 0 0 3px rgba(30, 60, 114, 0.1); }
-        .action-btn { background: #6c757d; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; transition: all 0.3s ease; margin-right: 5px; }
-        .action-btn.view-btn { background-color: #17a2b8; }
-        .action-btn.view-btn:hover { background-color: #138496; }
-        .action-btn.edit-btn { background-color: #ffc107; color: #212529; }
-        .action-btn.edit-btn:hover { background-color: #e0a800; }
-        .action-btn.delete-btn { background-color: #dc3545; }
-        .action-btn.delete-btn:hover { background-color: #c82333; }
-        .action-btn.add-accrual-btn { background-color: #28a745; }
-        .action-btn.add-accrual-btn:hover { background-color: #218838; }
-        .btn-reassign { background-color: #5a6268; }
-        .btn-reassign:hover { background-color: #4a5258; }
-        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.4); align-items: center; justify-content: center; }
-        .modal.show { display: flex; }
-        .modal-content-lg, .modal-content { background-color: #fefefe; margin: auto; padding: 30px; border: 1px solid #888; width: 90%; max-width: 900px; border-radius: 20px; box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2),0 6px 20px 0 rgba(0,0,0,0.19); animation-name: animatetop; animation-duration: 0.4s; max-height: 90vh; overflow-y: auto; }
-        .modal-content { max-width: 600px; }
-        #addAccrualModal .modal-content { max-width: 700px; }
-        @keyframes animatetop { from {top: -300px; opacity: 0} to {top: 0; opacity: 1} }
-        .close-modal-btn { color: #aaa; float: right; font-size: 28px; font-weight: bold; }
-        .close-modal-btn:hover, .close-modal-btn:focus { color: black; text-decoration: none; cursor: pointer; }
-        .modal-body-content { padding: 10px 0; }
-        .modal-footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; padding-top: 15px; border-top: 1px solid #e1e8ed; }
-        .modal-detail-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px 25px; }
-        .form-group { margin-bottom: 15px; }
-        .modal-detail-item { margin-bottom: 10px; }
-        .modal-detail-label, .form-label { font-weight: 600; color: #333; margin-bottom: 5px; font-size: 0.9em; }
-        .modal-detail-value { color: #555; word-break: break-word; font-size: 0.95em; }
-        .modal-detail-value.long-text { white-space: pre-wrap; background-color: #f8f9fa; padding: 8px; border-radius: 6px; }
-        .modal-detail-section-title { grid-column: 1 / -1; font-size: 1.1em; color: #1e3c72; margin-top: 20px; margin-bottom: 15px; padding-bottom: 5px; border-bottom: 1px dashed #e1e8ed; }
-        .task-history { margin-top: 20px; padding-top: 20px; border-top: 1px solid #e1e8ed; max-height: 400px; overflow-y: auto; }
-        .task-history-item { padding: 8px 0 8px 25px; border-bottom: 1px dashed #eee; }
-        .task-history-description { font-size: 0.9em; color: #333; font-weight: 600; }
-        .task-history-meta { font-size: 0.8em; color: #666; white-space: nowrap; margin-top: 4px; }
-        .document-list { list-style: none; padding: 0; }
-        .document-list li { background-color: #f0f4f8; margin-bottom: 8px; padding: 10px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; font-size: 0.9em; }
-        .document-list li a { color: #1e3c72; text-decoration: none; font-weight: 500; }
-        .remove-doc-btn { background: #ff6b6b; color: white; border: none; border-radius: 50%; width: 25px; height: 25px; font-size: 0.8em; cursor: pointer; }
-        .file-upload-area-task-detail { border: 2px dashed #e1e8ed; border-radius: 10px; padding: 20px; text-align: center; cursor: pointer; margin-top: 15px; }
-        .file-list-task-detail { margin-top: 10px; }
-        .file-item-task-detail { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; background: #f8f9fa; border-radius: 6px; margin-bottom: 5px; }
-        .remove-file-task-detail { background: #ff6b6b; color: white; border: none; border-radius: 50%; width: 20px; height: 20px; cursor: pointer; }
-        .related-accrual-item { background: #f8f9fa; padding: 10px; border-radius: 8px; margin-bottom: 8px; font-size: 0.9em; border-left: 3px solid #1e3c72; }
-        .status-badge { padding: 4px 10px; border-radius: 12px; font-size: 0.8em; font-weight: 500; color: white; }
-        .status-open { background-color: #007bff; }
-        .status-completed, .status-badge.status-paid { background-color: #28a745; }
-        .status-badge.status-unpaid { background-color: #dc3545; }
-        .input-with-currency { display: flex; gap: 10px; }
-        .input-with-currency .form-input { flex-grow: 1; }
-        .currency-select { padding: 12px 8px; border: 2px solid #e1e8ed; border-radius: 10px; background-color: #f8f9fa; font-weight: bold; }
-        .checkbox-label { display: flex; align-items: center; gap: 10px; cursor: pointer; font-weight: 500; }
-        .checkbox-label input { width: 18px; height: 18px; }
-        .total-amount-display { font-size: 1.2em; font-weight: bold; color: #1e3c72; text-align: right; margin-top: 10px; padding: 12px 15px; background-color: #f0f4f8; border-radius: 10px; }
-        .search-results-list { max-height: 150px; overflow-y: auto; border: 1px solid #ccc; border-radius: 8px; margin-top: 5px; }
-        .search-result-item { padding: 10px; cursor: pointer; border-bottom: 1px solid #eee; }
-        .search-result-item:hover { background-color: #f0f4f8; }
-        .no-results-message { text-align: center; color: #999; padding: 15px; }
-        .search-result-display { background: #e9f5ff; border: 1px solid #bde0fe; padding: 10px; border-radius: 8px; margin-top: 10px; }
-        
-        /* Yeni stiller - başvuru numarası linki için */
-        .application-number-link {
-            color: #1e3c72;
-            text-decoration: none;
-            font-weight: 500;
-            padding: 4px 8px;
-            border-radius: 4px;
-            transition: all 0.3s ease;
-        }
-        .application-number-link:hover {
-            background-color: #e3f2fd;
-            text-decoration: underline;
-        }
-        
-        /* İş referansı için stil */
-        .task-reference {
-            font-family: 'Courier New', monospace;
-            background: #f8f9fa;
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-size: 0.85em;
-            color: #495057;
-        }
-        
-        /* İş türü badge'i için stil */
-        .task-type-badge {
-            display: inline-block;
-            padding: 4px 8px;
-            border-radius: 6px;
-            font-size: 0.8em;
-            font-weight: 500;
-            background: #e9ecef;
-            color: #495057;
-        }
-        
-        /* Durum badge'leri için güncellenmiş stiller */
-        .status-badge.status-open { background-color: #007bff; }
-        .status-badge.status-in_progress { background-color: #ffc107; color: #212529; }
-        .status-badge.status-pending_review { background-color: #fd7e14; }
-        .status-badge.status-completed { background-color: #28a745; }
-        
-        /* Portfolio detay modalı için ek stiller */
-        .ip-type { display: inline-flex; align-items: center; gap: 5px; padding: 4px 8px; border-radius: 6px; font-size: 0.8em; font-weight: 500; }
-        .ip-type.patent { background: #ffebee; color: #c62828; }
-        .ip-type.trademark { background: #e0f2f1; color: #00695c; }
-        .ip-type.copyright { background: #e3f2fd; color: #1565c0; }
-        .ip-type.design { background: #f3e5f5; color: #7b1fa2; }
-        
-        .trademark-image-thumb { width: 40px; height: 40px; object-fit: contain; border: 1px solid #e1e8ed; border-radius: 4px; vertical-align: middle; margin-left: 5px; cursor: pointer; }
-        .detail-trademark-image-container { grid-column: 1 / -1; text-align: center; padding: 15px; background-color: #f8f9fa; border-radius: 8px; }
-        .detail-trademark-image { max-width: 250px; max-height: 250px; border: 1px solid #e1e8ed; border-radius: 8px; }
-</style>
-</head>
-<body>
-<aside class="sidebar">
-<div class="sidebar-header"><a class="sidebar-logo" href="dashboard.html">🔥 IP Manager</a></div>
-<nav class="sidebar-nav">
-<div class="nav-category-title">Ana Menü</div>
-<a class="sidebar-nav-item" href="dashboard.html"><span class="nav-icon">📊</span><span>Dashboard</span></a>
-<a class="sidebar-nav-item" href="portfolio.html"><span class="nav-icon">📋</span><span>Portföy</span></a>
-<div class="nav-category-title">Veri Girişi</div>
-<a class="sidebar-nav-item" href="data-entry.html"><span class="nav-icon">➕</span><span>Yeni Kayıt</span></a>
-<a class="sidebar-nav-item" href="excel-upload.html"><span class="nav-icon">📄</span><span>Excel ile Yükle</span></a>
-<div class="nav-category-title">Yönetim</div>
-<div class="accordion">
-<div class="accordion-header"><span class="nav-icon">⚙️</span><span>Yönetim</span></div>
-<div class="accordion-content">
-<a class="new-task-link" href="create-task.html">Yeni İş Oluştur</a>
-<a href="task-management.html">İş Yönetimi</a>
-<a href="my-tasks.html">İşlerim</a>
-<a href="persons.html">Kişiler Yönetimi</a>
-<a href="user-management.html">Kullanıcı Yönetimi</a>
-    </div>
-</div>
-<div class="nav-category-title">Finans</div>
-<a href="accruals.html" class="sidebar-nav-item"><span class="nav-icon">💰</span><span>Tahakkuklarım</span></a>
-<div class="nav-category-title">Araçlar</div>
-<a class="sidebar-nav-item" href="indexing.html"><span class="nav-icon">📁</span><span>Belge İndeksleme</span></a>
-<a class="sidebar-nav-item" href="#" style="opacity: 0.5; cursor: not-allowed;"><span class="nav-icon">📈</span><span>Raporlar</span></a>
-<a class="sidebar-nav-item" href="#" style="opacity: 0.5; cursor: not-allowed;"><span class="nav-icon">🔧</span><span>Ayarlar</span></a>
-</nav>
-</aside>
-<div class="page-wrapper">
-<header class="top-header">
-<div class="user-section">
-<div class="user-avatar" id="userAvatar">?</div>
-<div class="user-info">
-<div class="user-name" id="userName">Yükleniyor...</div>
-<div class="user-role" id="userRole">Kullanıcı</div>
-</div>
-<button class="logout-btn" id="logoutBtn">Çıkış</button>
-</div>
-</header>
-<main class="main-container">
-<div id="viewContainer">
-<div id="taskListContainer">
-<section class="page-header">
-<h1 class="page-title">İş Akış Yönetimi</h1>
-<p class="page-subtitle">Tüm işleri görüntüleyin, yeni işler oluşturun ve atamaları yönetin.</p>
-</section>
-<div class="tasks-container">
-<div class="tasks-header">
-<div class="filter-group">
-<label class="filter-label" for="userFilter">Kullanıcı:</label>
-<select class="filter-select" id="userFilter"></select>
-<label class="filter-label" for="statusFilter">Durum:</label>
-<select class="filter-select" id="statusFilter"></select>
-<button class="btn-primary btn-reassign" id="reassignBtn" style="display: none;">Seçilenleri Ata</button>
-</div>
-<button class="btn-primary" id="createTaskBtn">➕ Yeni İş Oluştur</button>
-</div>
-<div class="table-container">
-<table class="task-table">
-<thead>
-<tr>
-<th><input type="checkbox" id="selectAllCheckbox"></th>
-<th>İş Ref.</th>
-<th>İş Başlığı</th>
-<th>İş Türü</th>
-<th>Atanan Kişi</th>
-<th>Başvuru No</th>
-<th>Durum</th>
-<th>İşlemler</th>
-</tr>
-</thead>
-<tbody id="tasksTableBody"></tbody>
-</table>
-</div>
-</div>
-</div>
-</div>
-</main>
-</div>
-
-<!-- İş Detay Modal -->
-<div class="modal" id="viewTaskDetailModal">
-    <div class="modal-content-lg">
-        <span class="close-modal-btn" id="closeViewTaskDetailModal">×</span>
-        <h3 class="modal-title" id="modalViewTaskTitle">İş Detayı</h3>
-        <div class="modal-body-content">
-            <div class="modal-detail-grid">
-                <div class="modal-detail-item full-width"><div class="modal-detail-label">İş Başlığı</div><div class="modal-detail-value" id="modalViewTaskTitleValue"></div></div>
-                <div class="modal-detail-item full-width"><div class="modal-detail-label">Açıklama</div><div class="modal-detail-value long-text" id="modalViewTaskDescriptionValue"></div></div>
-                <div class="modal-detail-item"><div class="modal-detail-label">İş Türü</div><div class="modal-detail-value" id="modalViewTaskTypeValue"></div></div>
-                <div class="modal-detail-item"><div class="modal-detail-label">Öncelik</div><div class="modal-detail-value" id="modalViewTaskPriorityValue"></div></div>
-                <div class="modal-detail-item"><div class="modal-detail-label">Atanan Kişi</div><div class="modal-detail-value" id="modalViewAssignedToValue"></div></div>
-                <div class="modal-detail-item"><div class="modal-detail-label">Bitiş Tarihi</div><div class="modal-detail-value" id="modalViewTaskDueDateValue"></div></div>
-                <div class="modal-detail-item full-width"><div class="modal-detail-label">İlgili Fikri Mülkiyet Kaydı</div><div class="modal-detail-value" id="modalViewRelatedIpRecordValue"></div></div>
-                <div class="modal-detail-item full-width" id="modalViewRelatedPartyGroup" style="display:none;"><div class="modal-detail-label" id="modalViewRelatedPartyLabel"></div><div class="modal-detail-value" id="modalViewRelatedPartyValue"></div></div>
-                <div class="modal-detail-item full-width" id="modalViewRelatedTransactionGroup" style="display:none;"><div class="modal-detail-label" id="modalViewRelatedTransactionLabel"></div><div class="modal-detail-value" id="modalViewRelatedTransactionValue"></div></div>
-                
-                <h4 class="modal-detail-section-title">İlişkili Tahakkuklar</h4>
-                <div class="modal-detail-item full-width" id="modalViewRelatedAccruals">
-                    <p style="text-align: center; color: #666;">Tahakkuk bilgisi bulunmuyor.</p>
-                </div>
-
-                <h4 class="modal-detail-section-title">İşlem Geçmişi</h4>
-                <div class="modal-detail-item full-width task-history" id="modalViewTaskHistory"><p style="text-align: center; color: #666;">İşlem geçmişi bulunmuyor.</p></div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Portfolio Detay Modal -->
-<div class="modal" id="portfolioDetailModal">
-    <div class="modal-content-lg">
-        <span class="close-modal-btn" id="closePortfolioDetailModal">×</span>
-        <h3 class="modal-title" id="portfolioModalTitle">Kayıt Detayları</h3>
-        <div id="portfolioModalBody">
-        </div>
-    </div>
-</div>
-
-<div id="editTaskModal" class="modal">
-    <div class="modal-content-lg">
-        <span class="close-modal-btn" id="closeEditTaskModal">&times;</span>
-        <h3 class="modal-title">İşi Düzenle</h3>
-        <div class="modal-body-content">
-            <form id="editTaskForm" onsubmit="return false;">
-                <input type="hidden" id="editTaskId">
-                <div class="modal-detail-grid">
-                    <div class="form-group" style="grid-column: 1 / -1;"><label class="form-label" for="modalEditTaskTitle">İş Başlığı</label><input type="text" id="modalEditTaskTitle" class="form-input"></div>
-                    <div class="form-group" style="grid-column: 1 / -1;"><label class="form-label" for="modalEditTaskDescription">Açıklama</label><textarea id="modalEditTaskDescription" class="form-textarea" rows="4"></textarea></div>
-                    <div class="form-group"><label class="form-label" for="modalEditTaskPriority">Öncelik</label><select id="modalEditTaskPriority" class="form-select"></select></div>
-                    <div class="form-group"><label class="form-label" for="modalEditAssignedTo">Atanan Kişi</label><select id="modalEditAssignedTo" class="form-select"></select></div>
-                    <div class="form-group" style="grid-column: 1 / -1;"><label class="form-label" for="modalEditTaskDueDate">Bitiş Tarihi</label><input type="date" id="modalEditTaskDueDate" class="form-input"></div>
-                    
-                    <h4 class="modal-detail-section-title">Dokümanlar</h4>
-                    <div class="modal-detail-item" style="grid-column: 1 / -1;">
-                        <label class="modal-detail-label">Mevcut Dokümanlar</label>
-                        <ul class="document-list" id="modalEditTaskDocumentList">
-                            <li id="modalNoTaskDocumentsMessage">Henüz doküman yok.</li>
-                        </ul>
-                        <div class="file-upload-area-task-detail" id="modalTaskDetailFileUploadArea">
-                            <div>Yeni Dosyaları buraya sürükleyin veya tıklayın</div>
-                            <input type="file" id="modalTaskDetailFileInput" multiple hidden>
-                        </div>
-                        <div class="file-list-task-detail" id="modalTaskDetailUploadedFileList"></div>
-                    </div>
-                </div>
-            </form>
-        </div>
-        <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" id="cancelEditTaskBtn">İptal</button>
-            <button type="button" class="btn btn-primary" id="saveTaskChanges
+</html>
