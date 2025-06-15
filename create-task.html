@@ -368,7 +368,7 @@
                                 <div class="input-with-currency">
                                     <input type="number" id="officialFee" class="form-input" placeholder="0.00" step="0.01">
                                     <select id="officialFeeCurrency" class="currency-select">
-                                        <option value="TL" selected>TL</option>
+                                        <option value="TRY" selected>TL</option>
                                         <option value="EUR">EUR</option>
                                         <option value="USD">USD</option>
                                         <option value="CHF">CHF</option>
@@ -380,7 +380,7 @@
                                 <div class="input-with-currency">
                                     <input type="number" id="serviceFee" class="form-input" placeholder="0.00" step="0.01">
                                     <select id="serviceFeeCurrency" class="currency-select">
-                                        <option value="TL" selected>TL</option>
+                                        <option value="TRY" selected>TL</option>
                                         <option value="EUR">EUR</option>
                                         <option value="USD">USD</option>
                                         <option value="CHF">CHF</option>
@@ -393,7 +393,7 @@
                             </div>
                              <div class="form-group">
                                 <label for="totalAmountDisplay" class="form-label">Toplam Tutar</label>
-                                <div id="totalAmountDisplay" class="total-amount-display">0.00 TL</div>
+                                <div id="totalAmountDisplay" class="total-amount-display">0.00 TRY</div>
                             </div>
                              <div class="form-group full-width">
                                 <label class="checkbox-label">
@@ -475,8 +475,7 @@
                     total = officialFee + (serviceFee * (1 + vatRate / 100));
                 }
 
-                // For simplicity, total is always in TL. Cross-currency calculation is complex.
-                document.getElementById('totalAmountDisplay').textContent = total.toFixed(2) + ' TL';
+                document.getElementById('totalAmountDisplay').textContent = new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' }).format(total);
             }
 
             resetSelections() {
@@ -701,7 +700,7 @@
                         vatRate,
                         applyVatToOfficialFee: applyVatToOfficial,
                         totalAmount,
-                        totalAmountCurrency: 'TL',
+                        totalAmountCurrency: 'TRY',
                         tpInvoiceParty: this.selectedTpInvoiceParty ? {id: this.selectedTpInvoiceParty.id, name: this.selectedTpInvoiceParty.name} : null,
                         serviceInvoiceParty: this.selectedServiceInvoiceParty ? {id: this.selectedServiceInvoiceParty.id, name: this.selectedServiceInvoiceParty.name} : null,
                     };
