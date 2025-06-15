@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IP Manager - Hatırlatmalar</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333; display: flex; }
+        
+        .page-wrapper { flex-grow: 1; display: flex; flex-direction: column; height: 100vh; overflow-y: auto; background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); }
+        .main-container { width: 100%; padding: 30px; margin: 0; }
+        
+        .sidebar { width: 260px; background: #1e3c72; color: white; display: flex; flex-direction: column; height: 100vh; position: sticky; top: 0; z-index: 1001; }
+        .sidebar-header { padding: 20px; text-align: center; border-bottom: 1px solid rgba(255, 255, 255, 0.1); }
+        .sidebar-logo { font-size: 1.8em; font-weight: bold; color: white; text-decoration: none; }
+        .sidebar-nav { flex-grow: 1; overflow-y: auto; padding: 20px 0; }
+        .nav-category-title { padding: 10px 20px; font-size: 0.8em; font-weight: bold; color: rgba(255, 255, 255, 0.5); text-transform: uppercase; }
+        .sidebar-nav-item, .accordion-header { display: flex; align-items: center; gap: 15px; padding: 15px 20px; color: rgba(255, 255, 255, 0.8); text-decoration: none; transition: background 0.3s ease; cursor: pointer; }
+        .sidebar-nav-item:hover, .accordion-header:hover { background: rgba(255, 255, 255, 0.1); }
+        .sidebar-nav-item.active { background: #2a5298; color: white; font-weight: bold; border-left: 4px solid #4ecdc4; padding-left: 16px; }
+        .nav-icon { font-size: 1.2em; width: 20px; text-align: center; }
+        .accordion-header::after { content: '▶'; margin-left: auto; font-size: 0.8em; transition: transform 0.3s ease; }
+        .accordion-header.active::after { transform: rotate(90deg); }
+        .accordion-content { background: rgba(0, 0, 0, 0.2); max-height: 0; overflow: hidden; transition: max-height 0.3s ease-out; }
+        .accordion-content a { display: block; padding: 12px 20px 12px 55px; color: rgba(255, 255, 255, 0.7); text-decoration: none; }
+        .accordion-content a.active { color: white; font-weight: 500; }
+        .accordion-content a.new-task-link { color: #fff; background-color: rgba(78, 205, 196, 0.25); font-weight: 500; }
+        
+        .top-header { background: rgba(255, 255, 255, 0.95); padding: 15px 30px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05); display: flex; justify-content: flex-end; align-items: center; position: sticky; top: 0; z-index: 99; }
+        .user-section { display: flex; align-items: center; gap: 15px; }
+        .user-avatar { width: 40px; height: 40px; background: linear-gradient(45deg, #1e3c72, #2a5298); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; }
+        .user-info { display: flex; flex-direction: column; }
+        .user-name { font-weight: 600; }
+        .user-role { font-size: 0.8em; color: #666; }
+        .logout-btn { background: #ff6b6b; color: white; border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 0.9em; }
+
+        /* Sayfa başlığı */
+        .page-header { background: rgba(255, 255, 255, 0.95); padding: 30px; border-radius: 20px; margin-bottom: 30px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1); }
+        .page-title { font-size: 2em; color: #1e3c72; margin-bottom: 10px; }
+        .page-subtitle { color: #666; font-size: 1.1em; }
+
+        /* Bildirimler Container */
+        .notifications-container { background: rgba(255, 255, 255, 0.95); border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); overflow: hidden; padding: 30px; }
+        .notification-item {
+            background-color: #f8f9fa;
+            border: 1px solid #e1e8ed;
+            border-radius: 10px;
+            padding: 15px 20px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            transition: all 0.3s ease;
+        }
+        .notification-item:hover {
+            background-color: #f0f4f8;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+        }
+        .notification-item.unread {
+            background-color: #fff3cd; /* Okunmamış için sarımsı ton */
+            border-left: 4px solid #ffc107;
+            font-weight: 500;
+        }
+        .notification-icon {
+            font-size: 1.8em;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            background-color: #e9ecef;
+            color: #6c757d;
+        }
+        .notification-item.unread .notification-icon {
+            background-color: #ffc107;
+            color: white;
+        }
+        .notification-content {
+            flex-grow: 1;
+        }
+        .notification-message-text {
+            font-size: 1em;
+            color: #333;
+            margin-bottom: 5px;
+            word-break: break-word; /* Uzun mesajları kırmak için */
+        }
+        .notification-meta {
+            font-size: 0.85em;
+            color: #666;
+        }
+        .notification-actions {
+            display: flex;
+            gap: 8px;
+        }
+        .action-btn-small {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85em;
+            transition: all 0.2s ease;
+        }
+        .btn-mark-read { background-color: #28a745; color: white; }
+        .btn-mark-read:hover { background-color: #218838; }
+        .btn-delete { background-color: #dc3545; color: white; }
+        .btn-delete:hover { background-color: #c82333; }
+
+        .no-notifications { text-align: center; padding: 60px 20px; color: #666; font-size: 1.1em; display: none; }
+        .loading { text-align: center; padding: 40px; color: #666; }
+        .loading-spinner { display: inline-block; width: 30px; height: 30px; border: 3px solid #f3f3f3; border-top: 3px solid #1e3c72; border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <a href="dashboard.html" class="sidebar-logo">🔥 IP Manager</a>
+        </div>
+        <nav class="sidebar-nav">
+            <div class="nav-category-title">Ana Menü</div>
+            <a href="dashboard.html" class="sidebar-nav-item"><span class="nav-icon">📊</span><span>Dashboard</span></a>
+            <a href="portfolio.html" class="sidebar-nav-item"><span class="nav-icon">📋</span><span>Portföy</span></a>
+            <div class="nav-category-title">Veri Girişi</div>
+            <a href="data-entry.html" class="sidebar-nav-item"><span class="nav-icon">➕</span><span>Yeni Kayıt</span></a>
+            <a href="excel-upload.html" class="sidebar-nav-item"><span class="nav-icon">📄</span><span>Excel ile Yükle</span></a>
+            
+            <div class="nav-category-title">Yönetim</div>
+            <div class="accordion">
+                <div class="accordion-header"><span class="nav-icon">✅</span><span>Görevler</span></div>
+                <div class="accordion-content">
+                    <a href="create-task.html" class="new-task-link">Yeni İş Oluştur</a>
+                    <a href="task-management.html">İş Yönetimi</a>
+                    <a href="my-tasks.html">İşlerim</a>
+                    <a href="reminders.html">Hatırlatmalar</a> <a href="#" style="opacity: 0.5; cursor: not-allowed;">Zamanlanmış Görevler</a>
+                </div>
+            </div>
+            <div class="accordion">
+                <div class="accordion-header"><span class="nav-icon">👥</span><span>Kişi Yönetimi</span></div>
+                <div class="accordion-content">
+                    <a href="persons.html">Kişiler Yönetimi</a>
+                    <a href="user-management.html">Kullanıcı Yönetimi</a>
+                </div>
+            </div>
+            <div class="nav-category-title">Finans</div>
+            <a href="accruals.html" class="sidebar-nav-item"><span class="nav-icon">💰</span><span>Tahakkuklarım</span></a>
+            <div class="nav-category-title">Araçlar</div>
+            <a href="indexing.html" class="sidebar-nav-item"><span class="nav-icon">📁</span><span>Belge İndeksleme</span></a>
+            <a href="#" class="sidebar-nav-item" style="opacity: 0.5; cursor: not-allowed;"><span class="nav-icon">📈</span><span>Raporlar</span></a>
+            <a href="#" class="sidebar-nav-item" style="opacity: 0.5; cursor: not-allowed;"><span class="nav-icon">🔧</span><span>Ayarlar</span></a>
+        </nav>
+    </aside>
+
+    <div class="page-wrapper">
+        <header class="top-header">
+            <div class="user-section">
+                <div class="user-avatar" id="userAvatar">?</div>
+                <div class="user-info">
+                    <div class="user-name" id="userName">Yükleniyor...</div>
+                    <div class="user-role" id="userRole">Kullanıcı</div>
+                </div>
+                <button class="logout-btn" id="logoutBtn">Çıkış</button>
+            </div>
+        </header>
+
+        <main class="main-container">
+            <section class="page-header">
+                <h1 class="page-title">Hatırlatmalar</h1>
+                <p class="page-subtitle">Size gönderilen önemli hatırlatmaları ve sistem bildirimlerini buradan takip edin.</p>
+            </section>
+
+            <div class="notifications-container">
+                <div class="loading" id="loadingIndicator">
+                    <div class="loading-spinner"></div><div>Bildirimler yükleniyor...</div>
+                </div>
+                <div id="notificationsList">
+                    </div>
+                <div class="no-notifications" id="noNotificationsMessage">
+                    <div class="notification-icon">🔔</div>
+                    <h3>Şu anda hiçbir bildiriminiz bulunmuyor.</h3>
+                    <p>Yeni hatırlatmalar veya sistem mesajları buraya düşecektir.</p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script type="module">
+        import { authService, db, auth } from './firebase-config.js'; // db eklendi
+        import { collection, query, where, orderBy, getDocs, updateDoc, doc, deleteDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const accordions = document.querySelectorAll('.accordion-header');
+            accordions.forEach(header => {
+                header.addEventListener('click', function() { this.classList.toggle('active'); const content = this.nextElementSibling; if (content.style.maxHeight) { content.style.maxHeight = null; } else { content.style.maxHeight = content.scrollHeight + "px"; } });
+            });
+
+            function setActiveMenu() {
+                const currentPage = window.location.pathname.split("/").pop() || 'dashboard.html';
+                const activeLink = document.querySelector(`.sidebar-nav a[href*="${currentPage}"]`);
+                if (!activeLink) return;
+                activeLink.classList.add('active');
+                const parentAccordionContent = activeLink.closest('.accordion-content');
+                if (parentAccordionContent) {
+                    const parentAccordionHeader = parentAccordionContent.previousElementSibling;
+                    if (parentAccordionHeader) { parentAccordionHeader.classList.add('active'); parentAccordionContent.style.maxHeight = parentAccordionContent.scrollHeight + "px"; }
+                }
+            }
+            setActiveMenu();
+        });
+
+        class RemindersModule {
+            constructor() {
+                this.currentUser = null;
+                this.notifications = [];
+                this.init();
+            }
+
+            async init() {
+                this.currentUser = authService.getCurrentUser();
+                if (!this.currentUser) {
+                    window.location.href = 'index.html';
+                    return;
+                }
+                this.updateUserInfo();
+                this.setupEventListeners();
+                await this.loadNotifications();
+            }
+
+            updateUserInfo() {
+                const user = this.currentUser;
+                const userName = user.displayName || user.email.split('@')[0] || 'Kullanıcı';
+                document.getElementById('userAvatar').textContent = userName.charAt(0).toUpperCase();
+                document.getElementById('userName').textContent = userName;
+                document.getElementById('userRole').textContent = user.role === 'admin' ? 'Yönetici' : user.role === 'superadmin' ? 'Süper Yönetici' : 'Kullanıcı';
+            }
+
+            setupEventListeners() {
+                document.getElementById('logoutBtn').addEventListener('click', () => authService.signOut());
+                // Dinamik olarak oluşturulan butonlar için olay delegasyonu
+                document.getElementById('notificationsList').addEventListener('click', async (e) => {
+                    const target = e.target.closest('.action-btn-small');
+                    if (!target) return;
+
+                    const notificationId = target.dataset.id;
+                    if (target.classList.contains('btn-mark-read')) {
+                        await this.markAsRead(notificationId);
+                    } else if (target.classList.contains('btn-delete')) {
+                        await this.deleteNotification(notificationId);
+                    }
+                });
+            }
+
+            async loadNotifications() {
+                const loadingIndicator = document.getElementById('loadingIndicator');
+                const notificationsList = document.getElementById('notificationsList');
+                const noNotificationsMessage = document.getElementById('noNotificationsMessage');
+
+                loadingIndicator.style.display = 'block';
+                notificationsList.innerHTML = '';
+                noNotificationsMessage.style.display = 'none';
+
+                try {
+                    // Sadece 'all' kullanıcıya veya süper adminse tüm bildirimleri getir
+                    // Normal bir kullanıcı ise, user ID'sine göre filtreleyebiliriz.
+                    let q;
+                    if (this.currentUser.role === 'superadmin') {
+                        q = query(collection(db, 'notifications'), orderBy('createdAt', 'desc'));
+                    } else {
+                        // Eğer bildirimleri userId'ye göre atıyorsak (şimdiki Cloud Function'da 'all' atanıyor)
+                        // Bu kısım daha sonra geliştirilebilir. Şimdilik sadece 'all' olanları veya süper adminse hepsini gösterelim.
+                        q = query(collection(db, 'notifications'), where('userId', 'in', ['all', this.currentUser.uid]), orderBy('createdAt', 'desc'));
+                    }
+                    
+                    const querySnapshot = await getDocs(q);
+                    this.notifications = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    this.renderNotifications();
+
+                } catch (error) {
+                    console.error('Bildirimler yüklenirken hata:', error);
+                    notificationsList.innerHTML = '<p style="text-align: center; color: #dc3545;">Bildirimler yüklenirken bir hata oluştu.</p>';
+                } finally {
+                    loadingIndicator.style.display = 'none';
+                }
+            }
+
+            renderNotifications() {
+                const notificationsList = document.getElementById('notificationsList');
+                const noNotificationsMessage = document.getElementById('noNotificationsMessage');
+                notificationsList.innerHTML = '';
+
+                if (this.notifications.length === 0) {
+                    noNotificationsMessage.style.display = 'block';
+                    return;
+                }
+                noNotificationsMessage.style.display = 'none';
+
+                this.notifications.forEach(notification => {
+                    const item = document.createElement('div');
+                    item.className = `notification-item ${!notification.isRead ? 'unread' : ''}`;
+                    
+                    // Bildirim tipi ikonları
+                    let icon = '🔔'; // Varsayılan
+                    if (notification.type === 'warning') icon = '⚠️';
+                    if (notification.type === 'error') icon = '❌';
+                    if (notification.type === 'info') icon = 'ℹ️';
+                    if (notification.type === 'success') icon = '✅';
+
+                    item.innerHTML = `
+                        <div class="notification-icon">${icon}</div>
+                        <div class="notification-content">
+                            <div class="notification-message-text">${notification.message}</div>
+                            <div class="notification-meta">${new Date(notification.createdAt).toLocaleString('tr-TR')}</div>
+                        </div>
+                        <div class="notification-actions">
+                            ${!notification.isRead ? `<button class="action-btn-small btn-mark-read" data-id="${notification.id}">Okundu Olarak İşaretle</button>` : ''}
+                            <button class="action-btn-small btn-delete" data-id="${notification.id}">Sil</button>
+                        </div>
+                    `;
+                    notificationsList.appendChild(item);
+                });
+            }
+
+            async markAsRead(notificationId) {
+                try {
+                    await updateDoc(doc(db, 'notifications', notificationId), { isRead: true });
+                    alert('Bildirim okundu olarak işaretlendi.');
+                    await this.loadNotifications(); // Listeyi yenile
+                } catch (error) {
+                    console.error('Bildirim okundu olarak işaretlenirken hata:', error);
+                    alert('Bildirim güncellenemedi: ' + error.message);
+                }
+            }
+
+            async deleteNotification(notificationId) {
+                if (confirm('Bu bildirimi silmek istediğinizden emin misiniz?')) {
+                    try {
+                        await deleteDoc(doc(db, 'notifications', notificationId));
+                        alert('Bildirim silindi.');
+                        await this.loadNotifications(); // Listeyi yenile
+                    } catch (error) {
+                        console.error('Bildirim silinirken hata:', error);
+                        alert('Bildirim silinemedi: ' + error.message);
+                    }
+                }
+            }
+        }
+
+        let remindersModule;
+        auth.onAuthStateChanged((user) => {
+            if (user || authService.getCurrentUser()) {
+                if (!remindersModule) {
+                    remindersModule = new RemindersModule();
+                }
+            } else {
+                window.location.href = 'index.html';
+            }
+        });
+    </script>
+</body>
+</html>
