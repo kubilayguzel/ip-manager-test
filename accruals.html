@@ -54,9 +54,12 @@
         .action-btn { background: #007bff; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; margin-left: 5px; transition: all 0.3s ease; }
         .action-btn.unpaid { background-color: #dc3545; }
         .action-btn:disabled { background-color: #6c757d; cursor: not-allowed; opacity: 0.7; }
-        /* Yeni düzenleme butonu stili */
+        /* Düzenleme butonu stili */
         .action-btn.edit-btn { background-color: #ffc107; color: #212529; }
         .action-btn.edit-btn:hover { background-color: #e0a800; }
+        /* Görüntüle butonu stili */
+        .action-btn.view-btn { background-color: #17a2b8; }
+        .action-btn.view-btn:hover { background-color: #138496; }
 
         .loading { text-align: center; padding: 50px; }
         .no-records { text-align: center; padding: 50px; color: #666; }
@@ -64,8 +67,11 @@
         .modal { display: none; position: fixed; z-index: 1002; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.6); align-items: center; justify-content: center; }
         .modal.show { display: flex; }
         .modal-content { background-color: #fefefe; margin: auto; padding: 30px; border: 1px solid #888; width: 90%; max-width: 900px; border-radius: 20px; animation-name: animatetop; animation-duration: 0.4s; max-height: 90vh; overflow-y: auto; }
-        /* Düzenleme modalı için max-width'i küçült */
-        #editAccrualModal .modal-content, #markPaidModal .modal-content { max-width: 700px; }
+        /* Düzenleme ve Ödendi İşaretle modalları için max-width */
+        #editAccrualModal .modal-content, #markPaidModal .modal-content, #viewAccrualDetailModal .modal-content { max-width: 700px; }
+        /* Görüntüleme modalı daha genişse */
+        #viewAccrualDetailModal .modal-content.large-modal { max-width: 900px; }
+
         @keyframes animatetop { from {top: -300px; opacity: 0} to {top: 0; opacity: 1} }
         .close-modal-btn { color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer; }
         .modal-title { font-size: 1.5em; color: #1e3c72; margin-bottom: 20px;}
@@ -258,12 +264,11 @@
                         </thead>
                         <tbody id="accrualsTableBody"></tbody>
                     </table>
-                     <div id="loadingIndicator" class="loading">Yükleniyor...</div>
-                     <div id="noRecordsMessage" class="no-records">Henüz tahakkuk kaydı bulunmamaktadır.</div>
-                </div>
+                 <div id="loadingIndicator" class="loading">Yükleniyor...</div>
+                 <div id="noRecordsMessage" class="no-records">Henüz tahakkuk kaydı bulunmamaktadır.</div>
             </div>
-        </main>
-    </div>
+        </div>
+    </main>
 
     <div id="taskDetailModal" class="modal">
         <div class="modal-content">
@@ -372,6 +377,35 @@
         </div>
     </div>
 
+    <div class="modal" id="viewAccrualDetailModal">
+        <div class="modal-content">
+            <span class="close-modal-btn" id="closeViewAccrualDetailModal">&times;</span>
+            <h3 class="modal-title" id="viewAccrualTitle">Tahakkuk Detayı</h3>
+            <div class="modal-body-content">
+                <div class="modal-detail-grid">
+                    <div class="modal-detail-item"><div class="modal-detail-label">Tahakkuk ID</div><div class="modal-detail-value" id="viewAccrualId"></div></div>
+                    <div class="modal-detail-item"><div class="modal-detail-label">Durum</div><div class="modal-detail-value" id="viewAccrualStatus"></div></div>
+                    <div class="modal-detail-item full-width"><div class="modal-detail-label">İlgili İş</div><div class="modal-detail-value" id="viewAccrualRelatedTask"></div></div>
+                    <div class="modal-detail-item"><div class="modal-detail-label">Resmi Ücret</div><div class="modal-detail-value" id="viewAccrualOfficialFee"></div></div>
+                    <div class="modal-detail-item"><div class="modal-detail-label">Hizmet Bedeli</div><div class="modal-detail-value" id="viewAccrualServiceFee"></div></div>
+                    <div class="modal-detail-item"><div class="modal-detail-label">KDV Oranı</div><div class="modal-detail-value" id="viewAccrualVatRate"></div></div>
+                    <div class="modal-detail-item"><div class="modal-detail-label">Resmi Ücrete KDV Uygula</div><div class="modal-detail-value" id="viewAccrualApplyVatToOfficial"></div></div>
+                    <div class="modal-detail-item"><div class="modal-detail-label">Toplam Tutar</div><div class="modal-detail-value" id="viewAccrualTotalAmount"></div></div>
+                    <div class="modal-detail-item full-width"><div class="modal-detail-label">Türk Patent Faturası Tarafı</div><div class="modal-detail-value" id="viewAccrualTpInvoiceParty"></div></div>
+                    <div class="modal-detail-item full-width"><div class="modal-detail-label">Hizmet Faturası Tarafı</div><div class="modal-detail-value" id="viewAccrualServiceInvoiceParty"></div></div>
+                    <div class="modal-detail-item full-width"><div class="modal-detail-label">Oluşturulma Tarihi</div><div class="modal-detail-value" id="viewAccrualCreatedAt"></div></div>
+                    <div class="modal-detail-item full-width"><div class="modal-detail-label">Ödeme Tarihi</div><div class="modal-detail-value" id="viewAccrualPaymentDate"></div></div>
+                    <h4 class="modal-detail-section-title">Belgeler</h4>
+                    <div class="modal-detail-item full-width" id="viewAccrualFiles">
+                        <ul class="document-list" id="viewAccrualDocumentList">
+                            <li style="text-align: center; color: #666; padding: 10px;">Henüz belge yok.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script type="module">
         import { authService, accrualService, taskService, ipRecordsService, personsService, auth, generateUUID } from './firebase-config.js';
 
@@ -387,7 +421,7 @@
                     this.currentEditAccrual = null;
                     this.editSelectedTpInvoiceParty = null;
                     this.editSelectedServiceInvoiceParty = null;
-                    this.uploadedPaymentReceipts = []; // Yeni: Ödeme dekontları için
+                    this.uploadedPaymentReceipts = []; // Ödeme dekontları için
                 }
 
                 init() {
@@ -432,9 +466,10 @@
                         } else if (e.target.classList.contains('action-btn')) {
                             e.preventDefault();
                             const accrualId = e.target.dataset.id;
-                            // Durum değiştirme butonları kaldırıldı
                             if (e.target.classList.contains('edit-btn')) { // Düzenleme butonu
                                 this.showEditAccrualModal(accrualId);
+                            } else if (e.target.classList.contains('view-btn')) { // Görüntüle butonu
+                                this.showViewAccrualDetailModal(accrualId);
                             }
                         }
                     });
@@ -457,7 +492,7 @@
                     document.getElementById('editTpInvoicePartySearch').addEventListener('input', e => this.searchPersons(e.target.value, 'editTpInvoiceParty'));
                     document.getElementById('editServiceInvoicePartySearch').addEventListener('input', e => this.searchPersons(e.target.value, 'editServiceInvoiceParty'));
 
-                    // "Ödendi İşaretle" Modalı Event Listeners - Yeni Eklendi
+                    // "Ödendi İşaretle" Modalı Event Listeners
                     document.getElementById('closeMarkPaidModal').addEventListener('click', () => this.closeModal('markPaidModal'));
                     document.getElementById('cancelMarkPaidBtn').addEventListener('click', () => this.closeModal('markPaidModal'));
                     document.getElementById('confirmMarkPaidBtn').addEventListener('click', () => this.handleBulkUpdate('paid')); // Ödeme dekontu ile toplu ödeme
@@ -471,6 +506,9 @@
                         paymentReceiptFileUploadArea.addEventListener('dragleave', (e) => { e.preventDefault(); paymentReceiptFileUploadArea.style.borderColor = '#e1e8ed'; paymentReceiptFileUploadArea.style.background = 'transparent'; });
                         paymentReceiptFileUploadArea.addEventListener('drop', (e) => { e.preventDefault(); paymentReceiptFileUploadArea.style.borderColor = '#e1e8ed'; paymentReceiptFileUploadArea.style.background = 'transparent'; this.handlePaymentReceiptUpload(e.dataTransfer.files); });
                     }
+
+                    // Tahakkuk Detay Görüntüleme Modalı Event Listeners
+                    document.getElementById('closeViewAccrualDetailModal').addEventListener('click', () => this.closeModal('viewAccrualDetailModal'));
                 }
                 
                 async loadAllData() {
@@ -537,6 +575,10 @@
                         const serviceFee = formatFee(accrual.serviceFee);
                         const isSelected = this.selectedAccruals.has(accrual.id);
 
+                        // Düzenle butonu sadece ödenmedi durumundaysa aktif olacak
+                        const isPaid = accrual.status === 'paid';
+                        const editButtonDisabled = isPaid ? 'disabled' : '';
+
                         row.innerHTML = `
                             <td><input type="checkbox" class="row-checkbox" data-id="${accrual.id}" ${isSelected ? 'checked' : ''}></td>
                             <td><small>${accrual.id.substring(0, 8)}...</small></td>
@@ -546,7 +588,8 @@
                             <td>${currencyFormatter(serviceFee.amount, serviceFee.currency)}</td>
                             <td>${currencyFormatter(accrual.totalAmount || 0, accrual.totalAmountCurrency || 'TRY')}</td>
                             <td>
-                                <button class="action-btn edit-btn" data-id="${accrual.id}">✏️</button>
+                                <button class="action-btn view-btn" data-id="${accrual.id}">👁️</button>
+                                <button class="action-btn edit-btn" data-id="${accrual.id}" ${editButtonDisabled}>✏️</button>
                                 </td>
                         `;
                         tableBody.appendChild(row);
@@ -942,6 +985,7 @@
                         this.uploadedPaymentReceipts = [];
                         document.getElementById('paymentReceiptFileList').innerHTML = ''; // Clear file list
                     }
+                    if (modalId === 'viewAccrualDetailModal') { /* Görüntüleme modalı için özel bir resetleme gerekmez */ }
                 }
 
                 // Yeni: "Ödendi İşaretle" modalını göster
@@ -1007,6 +1051,52 @@
                         fileList.appendChild(fileItem);
                     });
                 }
+                
+                // Yeni: Tahakkuk Detay Görüntüleme Modalını Göster
+                showViewAccrualDetailModal(accrualId) {
+                    const accrual = this.allAccruals.find(a => a.id === accrualId);
+                    if (!accrual) {
+                        alert('Tahakkuk bulunamadı.');
+                        return;
+                    }
+
+                    const modal = document.getElementById('viewAccrualDetailModal');
+                    
+                    document.getElementById('viewAccrualTitle').textContent = `Tahakkuk Detayı: ${accrual.id.substring(0,8)}...`;
+                    document.getElementById('viewAccrualId').textContent = accrual.id;
+                    document.getElementById('viewAccrualStatus').innerHTML = `<span class="status-badge status-${accrual.status}">${accrual.status === 'paid' ? 'Ödendi' : 'Ödenmedi'}</span>`;
+                    document.getElementById('viewAccrualRelatedTask').textContent = accrual.taskTitle || 'N/A';
+                    
+                    const currencyFormatter = (amount, currency) => new Intl.NumberFormat('tr-TR', { style: 'currency', currency: currency || 'TRY' }).format(amount);
+
+                    document.getElementById('viewAccrualOfficialFee').textContent = currencyFormatter(accrual.officialFee?.amount || 0, accrual.officialFee?.currency);
+                    document.getElementById('viewAccrualServiceFee').textContent = currencyFormatter(accrual.serviceFee?.amount || 0, accrual.serviceFee?.currency);
+                    document.getElementById('viewAccrualVatRate').textContent = (accrual.vatRate || 0) + '%';
+                    document.getElementById('viewAccrualApplyVatToOfficial').textContent = (accrual.applyVatToOfficialFee !== undefined ? accrual.applyVatToOfficialFee : true) ? 'Evet' : 'Hayır';
+                    document.getElementById('viewAccrualTotalAmount').textContent = currencyFormatter(accrual.totalAmount || 0, accrual.totalAmountCurrency || 'TRY');
+
+                    document.getElementById('viewAccrualTpInvoiceParty').textContent = accrual.tpInvoiceParty?.name || '-';
+                    document.getElementById('viewAccrualServiceInvoiceParty').textContent = accrual.serviceInvoiceParty?.name || '-';
+                    document.getElementById('viewAccrualCreatedAt').textContent = accrual.createdAt ? new Date(accrual.createdAt).toLocaleString('tr-TR') : '-';
+                    document.getElementById('viewAccrualPaymentDate').textContent = accrual.paymentDate ? new Date(accrual.paymentDate).toLocaleDateString('tr-TR') : '-';
+
+                    // Belgeleri listele
+                    const documentListUl = document.getElementById('viewAccrualDocumentList');
+                    documentListUl.innerHTML = '';
+                    if (accrual.files && accrual.files.length > 0) {
+                        accrual.files.forEach(file => {
+                            const listItem = document.createElement('li');
+                            listItem.innerHTML = `<a href="${file.content}" download="${file.name}">📄 ${file.name} (${this.formatFileSize(file.size)}) - ${file.documentDesignation || 'Belge'}</a>`;
+                            documentListUl.appendChild(listItem);
+                        });
+                    } else {
+                        documentListUl.innerHTML = '<li style="text-align: center; color: #666; padding: 10px;">Henüz belge yok.</li>';
+                    }
+
+                    modal.classList.add('show');
+                }
+
+
                 // Yardımcı fonksiyon: Dosya boyutunu formatla
                 formatFileSize(bytes) {
                     if (bytes === 0) return '0 Bytes';
