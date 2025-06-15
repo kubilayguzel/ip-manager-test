@@ -91,6 +91,7 @@
         .search-result-item { padding: 10px; cursor: pointer; border-bottom: 1px solid #eee; }
         .search-result-item:hover { background-color: #f0f4f8; }
         .search-result-display { background: #e9f5ff; border: 1px solid #bde0fe; padding: 15px; border-radius: 8px; margin-top: 10px; display: flex; gap: 15px; align-items: center;}
+        .no-results-message { text-align: center; color: #999; padding: 15px; }
         
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.6); z-index: 1003; align-items: center; justify-content: center; }
         .modal.show { display: flex; }
@@ -188,14 +189,33 @@
             <div class="form-container">
                 <form id="createTaskForm" onsubmit="return false;">
                     <div class="form-section">
-                        <h3 class="section-title">1. İş Tipi Seçimi</h3>
+                        <h3 class="section-title">1. İş Türü Seçimi</h3>
                         <div class="form-grid">
-                            <div class="form-group"><label for="mainIpType" class="form-label">İşin Ana Türü</label><select id="mainIpType" class="form-select"><option value="">Seçiniz...</option><option value="patent">Patent</option><option value="trademark">Marka</option><option value="design">Tasarım</option></select></div>
-                            <div class="form-group"><label for="specificTaskType" class="form-label">Spesifik İş Tipi</label><select id="specificTaskType" class="form-select" disabled><option value="">Önce İşin Ana Türünü Seçin</option></select></div>
+                            <div class="form-group">
+                                <label for="taskCategory" class="form-label">İş Kategorisi</label>
+                                <select id="taskCategory" class="form-select">
+                                    <option value="">Kategori Seçiniz...</option>
+                                    <option value="patent">Patent İşleri</option>
+                                    <option value="trademark">Marka İşleri</option>
+                                    <option value="copyright">Telif İşleri</option>
+                                    <option value="design">Tasarım İşleri</option>
+                                    <option value="legal">Hukuki İşler</option>
+                                    <option value="administrative">İdari İşler</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="specificTaskType" class="form-label">Spesifik İş Türü</label>
+                                <select id="specificTaskType" class="form-select" disabled>
+                                    <option value="">Önce Kategori Seçin</option>
+                                </select>
+                            </div>
                         </div>
                     </div>
                     <div id="conditionalFieldsContainer"></div>
-                    <div class="form-actions"><button type="button" id="cancelBtn" class="btn btn-secondary">İptal</button><button type="submit" id="saveTaskBtn" class="btn btn-primary" disabled>İşi Oluştur ve Kaydet</button></div>
+                    <div class="form-actions">
+                        <button type="button" id="cancelBtn" class="btn btn-secondary">İptal</button>
+                        <button type="submit" id="saveTaskBtn" class="btn btn-primary" disabled>İşi Oluştur ve Kaydet</button>
+                    </div>
                 </form>
             </div>
         </main>
@@ -203,28 +223,63 @@
     
     <div class="modal" id="addPersonModal">
         <div class="modal-content">
-            <div class="modal-header"><h3 class="modal-title">Yeni Kişi Ekle</h3><button class="close-btn" id="closeAddPersonModal">&times;</button></div>
+            <div class="modal-header">
+                <h3 class="modal-title">Yeni Kişi Ekle</h3>
+                <button class="close-btn" id="closeAddPersonModal">&times;</button>
+            </div>
             <form id="personForm" onsubmit="return false;">
                 <div class="person-form-grid">
-                    <div class="form-group"><label class="form-label" for="personName">Ad Soyad *</label><input type="text" id="personName" class="form-input" required></div>
-                    <div class="form-group"><label class="form-label" for="personEmail">E-posta</label><input type="email" id="personEmail" class="form-input"></div>
-                    <div class="form-group"><label class="form-label" for="personPhone">Telefon</label><input type="tel" id="personPhone" class="form-input"></div>
-                    <div class="form-group"><label class="form-label" for="personType">Kişi Türü *</label><select id="personType" class="form-select" required><option value="">Seçiniz</option><option value="individual">Bireysel</option><option value="company">Şirket</option><option value="institution">Kurum</option></select></div>
-                    <div class="form-group"><label class="form-label" for="personAddress">Adres</label><textarea id="personAddress" class="form-input" rows="3"></textarea></div>
+                    <div class="form-group">
+                        <label class="form-label" for="personName">Ad Soyad *</label>
+                        <input type="text" id="personName" class="form-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="personEmail">E-posta</label>
+                        <input type="email" id="personEmail" class="form-input">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="personPhone">Telefon</label>
+                        <input type="tel" id="personPhone" class="form-input">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="personType">Kişi Türü *</label>
+                        <select id="personType" class="form-select" required>
+                            <option value="">Seçiniz</option>
+                            <option value="individual">Bireysel</option>
+                            <option value="company">Şirket</option>
+                            <option value="institution">Kurum</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="personAddress">Adres</label>
+                        <textarea id="personAddress" class="form-input" rows="3"></textarea>
+                    </div>
                 </div>
-                <div class="person-form-actions"><button type="button" class="btn btn-secondary" id="cancelPersonBtn">İptal</button><button type="button" class="btn btn-primary" id="savePersonBtn">Kaydet</button></div>
+                <div class="person-form-actions">
+                    <button type="button" class="btn btn-secondary" id="cancelPersonBtn">İptal</button>
+                    <button type="button" class="btn btn-primary" id="savePersonBtn">Kaydet</button>
+                </div>
             </form>
         </div>
     </div>
 
     <script type="module">
-        import { authService, taskService, ipRecordsService, personsService, accrualService, auth, generateUUID } from './firebase-config.js';
+        import { authService, taskService, ipRecordsService, personsService, accrualService, auth, generateUUID, taskTypeDefinitions } from './firebase-config.js';
 
         document.addEventListener('DOMContentLoaded', function() {
             const accordions = document.querySelectorAll('.accordion-header');
             accordions.forEach(header => {
-                header.addEventListener('click', function() { this.classList.toggle('active'); const content = this.nextElementSibling; if (content.style.maxHeight) { content.style.maxHeight = null; } else { content.style.maxHeight = content.scrollHeight + "px"; } });
+                header.addEventListener('click', function() { 
+                    this.classList.toggle('active'); 
+                    const content = this.nextElementSibling; 
+                    if (content.style.maxHeight) { 
+                        content.style.maxHeight = null; 
+                    } else { 
+                        content.style.maxHeight = content.scrollHeight + "px"; 
+                    } 
+                });
             });
+
             function setActiveMenu() {
                 const currentPage = window.location.pathname.split("/").pop() || 'dashboard.html';
                 const activeLink = document.querySelector(`.sidebar-nav a[href*="${currentPage}"]`);
@@ -233,7 +288,10 @@
                 const parentAccordionContent = activeLink.closest('.accordion-content');
                 if (parentAccordionContent) {
                     const parentAccordionHeader = parentAccordionContent.previousElementSibling;
-                    if (parentAccordionHeader) { parentAccordionHeader.classList.add('active'); parentAccordionContent.style.maxHeight = parentAccordionContent.scrollHeight + "px"; }
+                    if (parentAccordionHeader) { 
+                        parentAccordionHeader.classList.add('active'); 
+                        parentAccordionContent.style.maxHeight = parentAccordionContent.scrollHeight + "px"; 
+                    }
                 }
             }
             setActiveMenu();
@@ -250,19 +308,14 @@
                 this.selectedRelatedParty = null;
                 this.selectedTpInvoiceParty = null;
                 this.selectedServiceInvoiceParty = null;
-                this.taskTypeMappings = {
-                    'trademark': [
-                        'Başvuru', 'Yenileme', 'Devir', 'Lisans', 'Birleşme', 'Veraset ile İntikal', 'Rehin/Teminat',
-                        'Eksiklik Giderme', 'Karara İtiraz', 'Yayına İtiraz', 'İtiraza Karşı Görüş (Markalar)', 'İtiraza Karşı Görüş (YIDD)',
-                    ],
-                    'patent': ['Başvuru', 'Yenileme', 'Yıllık Ücret Ödemesi', 'Lisans', 'Devir', 'Rehin'],
-                    'design': ['Başvuru', 'Yenileme', 'Devir', 'Lisans', 'Rehin']
-                };
             }
 
             async init() {
                 this.currentUser = authService.getCurrentUser();
-                if (!this.currentUser) { window.location.href = 'index.html'; return; }
+                if (!this.currentUser) { 
+                    window.location.href = 'index.html'; 
+                    return; 
+                }
                 
                 const user = this.currentUser;
                 document.getElementById('userAvatar').textContent = (user.displayName || 'U').charAt(0);
@@ -271,7 +324,9 @@
                 
                 try {
                     const [ipRecordsResult, personsResult, usersResult] = await Promise.all([
-                        ipRecordsService.getRecords(), personsService.getPersons(), taskService.getAllUsers()
+                        ipRecordsService.getRecords(), 
+                        personsService.getPersons(), 
+                        taskService.getAllUsers()
                     ]);
                     this.allIpRecords = ipRecordsResult.data || [];
                     this.allPersons = personsResult.data || [];
@@ -285,7 +340,7 @@
             }
 
             setupEventListeners() {
-                document.getElementById('mainIpType').addEventListener('change', (e) => this.handleMainTypeChange(e));
+                document.getElementById('taskCategory').addEventListener('change', (e) => this.handleCategoryChange(e));
                 document.getElementById('specificTaskType').addEventListener('change', (e) => this.handleSpecificTypeChange(e));
                 document.getElementById('createTaskForm').addEventListener('submit', (e) => this.handleFormSubmit(e));
                 document.getElementById('cancelBtn').addEventListener('click', () => { window.location.href = 'task-management.html'; });
@@ -295,18 +350,27 @@
                 document.getElementById('savePersonBtn').addEventListener('click', () => this.saveNewPerson());
             }
 
-            handleMainTypeChange(e) {
-                const mainType = e.target.value;
+            handleCategoryChange(e) {
+                const category = e.target.value;
                 const specificTypeSelect = document.getElementById('specificTaskType');
                 document.getElementById('conditionalFieldsContainer').innerHTML = '';
                 document.getElementById('saveTaskBtn').disabled = true;
 
-                specificTypeSelect.innerHTML = '<option value="">Önce İşin Ana Türünü Seçin</option>';
-                if (mainType) {
-                    specificTypeSelect.innerHTML = '<option value="">Seçiniz...</option>';
-                    this.taskTypeMappings[mainType].forEach(type => {
-                        specificTypeSelect.innerHTML += `<option value="${type}">${type}</option>`;
+                specificTypeSelect.innerHTML = '<option value="">Önce Kategori Seçin</option>';
+                
+                if (category) {
+                    specificTypeSelect.innerHTML = '<option value="">İş Türü Seçiniz...</option>';
+                    
+                    // Firebase-config.js'den kategoriye göre türleri al
+                    const typesForCategory = taskTypeDefinitions.getTypesByCategory(category);
+                    
+                    typesForCategory.forEach(type => {
+                        const option = document.createElement('option');
+                        option.value = type.value;
+                        option.textContent = type.label;
+                        specificTypeSelect.appendChild(option);
                     });
+                    
                     specificTypeSelect.disabled = false;
                 } else {
                     specificTypeSelect.disabled = true;
@@ -326,13 +390,32 @@
             }
 
             renderBaseForm(container, taskType) {
-                 const transactionLikeTasks = ['Devir', 'Lisans', 'Birleşme', 'Rehin', 'Veraset ile İntikal', 'Rehin/Teminat'];
-                 const needsRelatedParty = transactionLikeTasks.includes(taskType);
-                 const partyLabels = { 
-                    'Devir': 'Devralan Taraf', 'Lisans': 'Lisans Alan Taraf', 'Rehin': 'Rehin Alan Taraf', 
-                    'Birleşme': 'Birleşilen Taraf', 'Veraset ile İntikal': 'Mirasçı', 'Rehin/Teminat': 'Rehin Alan Taraf' 
-                 };
-                 const partyLabel = partyLabels[taskType] || 'İlgili Taraf';
+                // Hukuki işler için ilgili taraf gerekli
+                const legalTaskTypes = [
+                    'Hukuki - Devir', 'Hukuki - Lisans', 'Hukuki - Rehin', 
+                    'Hukuki - Birleşme', 'Hukuki - Veraset', 'Hukuki - Teminat'
+                ];
+                const needsRelatedParty = legalTaskTypes.includes(taskType);
+                
+                const partyLabels = { 
+                    'Hukuki - Devir': 'Devralan Taraf', 
+                    'Hukuki - Lisans': 'Lisans Alan Taraf', 
+                    'Hukuki - Rehin': 'Rehin Alan Taraf', 
+                    'Hukuki - Birleşme': 'Birleşilen Taraf', 
+                    'Hukuki - Veraset': 'Mirasçı', 
+                    'Hukuki - Teminat': 'Rehin Alan Taraf' 
+                };
+                const partyLabel = partyLabels[taskType] || 'İlgili Taraf';
+
+                // IP türünü belirle (kategoriden)
+                const category = document.getElementById('taskCategory').value;
+                const ipTypeMapping = {
+                    'patent': 'patent',
+                    'trademark': 'trademark', 
+                    'copyright': 'copyright',
+                    'design': 'design'
+                };
+                const ipType = ipTypeMapping[category];
 
                 container.innerHTML = `
                     <div class="form-section">
@@ -361,7 +444,7 @@
                     ` : ''}
 
                     <div class="form-section">
-                        <h3 class="section-title">Tahakkuk Bilgileri</h3>
+                        <h3 class="section-title">4. Tahakkuk Bilgileri</h3>
                         <div class="form-grid">
                             <div class="form-group">
                                 <label for="officialFee" class="form-label">Resmi Ücret</label>
@@ -417,8 +500,12 @@
                     </div>
 
                     <div class="form-section">
-                        <h3 class="section-title">İş Detayları ve Atama</h3>
+                        <h3 class="section-title">5. İş Detayları ve Atama</h3>
                         <div class="form-grid">
+                            <div class="form-group">
+                                <label for="taskTitle" class="form-label">İş Başlığı</label>
+                                <input type="text" id="taskTitle" class="form-input" value="${taskType}" placeholder="İş başlığını girin...">
+                            </div>
                             <div class="form-group">
                                 <label for="taskPriority" class="form-label">Öncelik</label>
                                 <select id="taskPriority" class="form-select">
@@ -429,11 +516,17 @@
                             </div>
                             <div class="form-group">
                                 <label for="assignedTo" class="form-label">Atanacak Kullanıcı</label>
-                                <select id="assignedTo" class="form-select">${this.allUsers.map(u => `<option value="${u.id}">${u.displayName || u.email}</option>`).join('')}</select>
+                                <select id="assignedTo" class="form-select">
+                                    ${this.allUsers.map(u => `<option value="${u.id}">${u.displayName || u.email}</option>`).join('')}
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="taskDueDate" class="form-label">Son Tarih</label>
+                                <input type="date" id="taskDueDate" class="form-input">
                             </div>
                             <div class="form-group full-width">
-                                <label for="taskDueDate" class="form-label">Operasyonel Son Tarih</label>
-                                <input type="date" id="taskDueDate" class="form-input">
+                                <label for="taskDescription" class="form-label">İş Açıklaması</label>
+                                <textarea id="taskDescription" class="form-textarea" rows="3" placeholder="İş hakkında detaylı açıklama..."></textarea>
                             </div>
                         </div>
                     </div>
@@ -494,13 +587,20 @@
                     return; 
                 }
                 
-                const mainIpType = document.getElementById('mainIpType').value;
+                const category = document.getElementById('taskCategory').value;
+                const ipTypeMapping = {
+                    'patent': 'patent',
+                    'trademark': 'trademark', 
+                    'copyright': 'copyright',
+                    'design': 'design'
+                };
+                const targetIpType = ipTypeMapping[category];
+                
                 const searchLower = query.toLowerCase(); 
                 
-                const filtered = this.allIpRecords.filter(r => {
-                    const rTypeLower = r.type ? r.type.toLowerCase() : '';
-                    const mainIpTypeLower = mainIpType ? mainIpType.toLowerCase() : '';
-                    if (rTypeLower !== mainIpTypeLower) return false;
+                let filtered = this.allIpRecords.filter(r => {
+                    // IP türü kontrolü (sadece ilgili kategoriler için)
+                    if (targetIpType && r.type !== targetIpType) return false;
 
                     const rTitleLower = r.title ? r.title.toLowerCase() : '';
                     const rAppNumberLower = r.applicationNumber ? r.applicationNumber.toLowerCase() : '';
@@ -544,11 +644,17 @@
                 const container = document.getElementById(resultsContainerId);
                 if (!container) return;
                 container.innerHTML = '';
-                if (query.length < 2) { container.innerHTML = '<p class="no-results-message">Aramak için en az 2 karakter girin.</p>'; return; }
+                if (query.length < 2) { 
+                    container.innerHTML = '<p class="no-results-message">Aramak için en az 2 karakter girin.</p>'; 
+                    return; 
+                }
                 
                 const filtered = this.allPersons.filter(p => p.name.toLowerCase().includes(query.toLowerCase()));
                 
-                if (filtered.length === 0) { container.innerHTML = '<p class="no-results-message">Kişi bulunamadı.</p>'; return; }
+                if (filtered.length === 0) { 
+                    container.innerHTML = '<p class="no-results-message">Kişi bulunamadı.</p>'; 
+                    return; 
+                }
 
                 filtered.forEach(p => {
                     const item = document.createElement('div');
@@ -597,12 +703,17 @@
                 document.getElementById('personForm').reset();
             }
 
-            hideAddPersonModal() { document.getElementById('addPersonModal').classList.remove('show'); }
+            hideAddPersonModal() { 
+                document.getElementById('addPersonModal').classList.remove('show'); 
+            }
             
             async saveNewPerson() {
                 const name = document.getElementById('personName').value.trim();
                 const type = document.getElementById('personType').value;
-                if (!name || !type) { alert('Ad Soyad ve Kişi Türü zorunludur.'); return; }
+                if (!name || !type) { 
+                    alert('Ad Soyad ve Kişi Türü zorunludur.'); 
+                    return; 
+                }
                 
                 const personData = {
                     name, type,
@@ -627,10 +738,13 @@
             
             checkFormCompleteness() {
                 const taskType = document.getElementById('specificTaskType').value;
-                const transactionLikeTasks = ['Devir', 'Lisans', 'Birleşme', 'Rehin', 'Veraset ile İntikal', 'Rehin/Teminat'];
+                const legalTaskTypes = [
+                    'Hukuki - Devir', 'Hukuki - Lisans', 'Hukuki - Rehin', 
+                    'Hukuki - Birleşme', 'Hukuki - Veraset', 'Hukuki - Teminat'
+                ];
                 let isComplete = false;
                 
-                if (transactionLikeTasks.includes(taskType)) {
+                if (legalTaskTypes.includes(taskType)) {
                     isComplete = this.selectedIpRecord && this.selectedRelatedParty;
                 } else {
                     isComplete = !!this.selectedIpRecord;
@@ -646,13 +760,13 @@
                     return;
                 }
 
-                const specificTaskType = document.getElementById('specificTaskType').value;
+                const taskType = document.getElementById('specificTaskType').value;
                 const assignedToUser = this.allUsers.find(u => u.id === document.getElementById('assignedTo').value);
                 
                 let taskData = {
-                    taskType: `${document.getElementById('mainIpType').value}_${specificTaskType.toLowerCase().replace(/ /g, '_')}`,
-                    title: specificTaskType,
-                    description: `'${this.selectedIpRecord.title}' adlı varlık için ${specificTaskType} işlemi.`,
+                    taskType: taskType, // Artık direkt Türkçe iş türü
+                    title: document.getElementById('taskTitle').value.trim() || taskType,
+                    description: document.getElementById('taskDescription').value.trim() || `'${this.selectedIpRecord.title}' adlı varlık için ${taskType} işlemi.`,
                     priority: document.getElementById('taskPriority').value,
                     assignedTo_uid: assignedToUser.id,
                     assignedTo_email: assignedToUser.email,
@@ -664,8 +778,13 @@
                 };
 
                 if (this.selectedRelatedParty) {
-                    taskData.details.relatedParty = { id: this.selectedRelatedParty.id, name: this.selectedRelatedParty.name };
+                    taskData.details.relatedParty = { 
+                        id: this.selectedRelatedParty.id, 
+                        name: this.selectedRelatedParty.name 
+                    };
                 }
+
+                console.log('Task Data gönderiliyor:', taskData);
 
                 const taskResult = await taskService.createTask(taskData);
                 if (!taskResult.success) {
@@ -673,6 +792,7 @@
                     return;
                 }
 
+                // Tahakkuk oluştur
                 const officialFee = parseFloat(document.getElementById('officialFee').value) || 0;
                 const serviceFee = parseFloat(document.getElementById('serviceFee').value) || 0;
 
@@ -701,8 +821,14 @@
                         applyVatToOfficialFee: applyVatToOfficial,
                         totalAmount,
                         totalAmountCurrency: 'TRY',
-                        tpInvoiceParty: this.selectedTpInvoiceParty ? {id: this.selectedTpInvoiceParty.id, name: this.selectedTpInvoiceParty.name} : null,
-                        serviceInvoiceParty: this.selectedServiceInvoiceParty ? {id: this.selectedServiceInvoiceParty.id, name: this.selectedServiceInvoiceParty.name} : null,
+                        tpInvoiceParty: this.selectedTpInvoiceParty ? {
+                            id: this.selectedTpInvoiceParty.id, 
+                            name: this.selectedTpInvoiceParty.name
+                        } : null,
+                        serviceInvoiceParty: this.selectedServiceInvoiceParty ? {
+                            id: this.selectedServiceInvoiceParty.id, 
+                            name: this.selectedServiceInvoiceParty.name
+                        } : null,
                     };
 
                     const accrualResult = await accrualService.addAccrual(accrualData);
@@ -712,9 +838,10 @@
                     }
                 }
 
+                // IP kaydına transaction ekle
                 const transactionData = {
-                    type: specificTaskType,
-                    description: specificTaskType,
+                    type: taskType,
+                    description: taskType,
                     parentId: null 
                 };
                 await ipRecordsService.addTransactionToRecord(this.selectedIpRecord.id, transactionData);
@@ -729,7 +856,9 @@
             if(user || authService.getCurrentUser()) {
                 module.init();
                 window.createTaskModule = module;
-            } else { window.location.href = 'index.html'; }
+            } else { 
+                window.location.href = 'index.html'; 
+            }
         });
     </script>
 </body>
