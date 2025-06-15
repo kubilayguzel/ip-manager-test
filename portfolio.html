@@ -906,6 +906,7 @@
                 if (user || authService.getCurrentUser()) {
                     if (!portfolioModule) {
                         portfolioModule = new PortfolioModule();
+                        await portfolioModule.init(); 
                         window.portfolio = portfolioModule;
                     }
                 } else {
