@@ -400,7 +400,6 @@
         </div>
     </div>
 
-
     <script type="module">
         import { authService, ipRecordsService, auth, subDesignationTranslations, documentDesignationTranslations } from './firebase-config.js';
 
@@ -510,31 +509,74 @@
             }
 
             async loadRecords() {
-                const loadingIndicator = document.getElementById('loadingIndicator');
-                const portfolioTable = document.getElementById('portfolioTable');
-                const noRecords = document.getElementById('noRecords');
-                loadingIndicator.style.display = 'block';
-                portfolioTable.style.display = 'none';
-                noRecords.style.display = 'none';
-                try {
-                    const result = await ipRecordsService.getRecords();
-                    if (result.success) {
-                        this.records = result.data;
-                        this.applyFilters();
-                    } else {
-                        throw new Error(result.error);
-                    }
-                } catch (error) {
-                    console.error('Error loading records data:', error);
-                    this.records = [];
-                    this.filteredRecords = [];
-                    this.showEmptyState();
-                    alert('Kayıtlar yüklenirken bir hata oluştu: ' + error.message);
-                } finally {
-                    loadingIndicator.style.display = 'none';
-                }
-            }
-
+        console.log('🔄 loadRecords başlatıldı');
+    
+    const loadingIndicator = document.getElementById('loadingIndicator');
+    const portfolioTable = document.getElementById('portfolioTable');
+    const noRecords = document.getElementById('noRecords');
+    
+    loadingIndicator.style.display = 'block';
+    portfolioTable.style.display = 'none';
+    noRecords.style.display = 'none';
+    
+    try {
+        console.log('📡 ipRecordsService.getRecords() çağrılıyor...');
+        
+        // Service'in mevcut olup olmadığını kontrol et
+        if (!ipRecordsService) {
+            throw new Error('ipRecordsService tanımlı değil! firebase-config.js yüklenmemiş olabilir.');
+        }
+        
+        if (typeof ipRecordsService.getRecords !== 'function') {
+            throw new Error('ipRecordsService.getRecords bir fonksiyon değil!');
+        }
+        
+        console.log('✅ ipRecordsService kontrolleri başarılı');
+        
+        // Kullanıcı kontrolü
+        const currentUser = this.currentUser || authService.getCurrentUser();
+        if (!currentUser) {
+            throw new Error('Kullanıcı oturum açmamış!');
+        }
+        
+        console.log(`👤 Kullanıcı: ${currentUser.email}`);
+        
+        // API çağrısı
+        const result = await ipRecordsService.getRecords();
+        console.log('📊 API sonucu:', result);
+        
+        if (result.success) {
+            console.log(`✅ ${result.data.length} kayıt alındı`);
+            this.records = result.data;
+            
+            // Kayıtları logla
+            this.records.forEach((record, index) => {
+                console.log(`   ${index + 1}. ${record.type}: ${record.title}`);
+            });
+            
+            this.applyFilters();
+            console.log('🎯 Filtreler uygulandı');
+            
+        } else {
+            throw new Error(result.error || 'API başarısız sonuç döndürdü');
+        }
+        
+    } catch (error) {
+        console.error('❌ loadRecords hatası:', error);
+        console.error('📍 Hata detayı:', error.stack);
+        
+        this.records = [];
+        this.filteredRecords = [];
+        this.showEmptyState();
+        
+        // Kullanıcıya detaylı hata mesajı göster
+        alert(`Kayıtlar yüklenirken hata oluştu:\n\n${error.message}\n\nDetaylar için Console'u kontrol edin.`);
+        
+    } finally {
+        console.log('🏁 loadRecords tamamlandı');
+        loadingIndicator.style.display = 'none';
+    }
+}            
             viewRecord(recordId) {
                 const record = this.records.find(r => r.id === recordId);
                 if (!record) return;
@@ -546,7 +588,6 @@
                 const statusNames = { application: 'Başvuru', pending: 'Beklemede', approved: 'Onaylandı', rejected: 'Reddedildi', expired: 'Süresi Doldu', published: 'Yayınlandı', partial_refusal: 'Kısmi Ret', refused: 'Ret', opposition_received: 'İtiraz Geldi', opposition_filed: 'İtiraz Edildi', registered: 'Tescilli', not_renewed: 'Yenilenmedi', invalid_void: 'Geçersiz' };
 
                 const formatDate = (dateString) => dateString ? new Date(dateString).toLocaleDateString('tr-TR') : '-';
-                
                 const renderField = (label, value, isLongText = false) => {
                     if (value === null || value === undefined || value === '') return '';
                     const valueClass = isLongText ? 'detail-value long-text' : 'detail-value';
