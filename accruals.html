@@ -202,7 +202,7 @@
                     <a href="create-task.html" class="new-task-link">Yeni İş Oluştur</a>
                     <a href="task-management.html">İş Yönetimi</a>
                     <a href="my-tasks.html">İşlerim</a>
-                    <a href="#" style="opacity: 0.5; cursor: not-allowed;">Hatırlatmalar</a>
+                    <a href="reminders.html">Hatırlatmalar</a>
                     <a href="#" style="opacity: 0.5; cursor: not-allowed;">Zamanlanmış Görevler</a>
                 </div>
             </div>
@@ -213,7 +213,7 @@
                     <a href="user-management.html">Kullanıcı Yönetimi</a>
                 </div>
             </div>
-            <div class="nav-category-title">Finans</div>
+           <div class="nav-category-title">Finans</div>
             <a href="accruals.html" class="sidebar-nav-item"><span class="nav-icon">💰</span><span>Tahakkuklarım</span></a>
             <div class="nav-category-title">Araçlar</div>
             <a href="indexing.html" class="sidebar-nav-item"><span class="nav-icon">📁</span><span>Belge İndeksleme</span></a>
@@ -415,6 +415,7 @@
 
     <script type="module">
         import { authService, accrualService, taskService, ipRecordsService, personsService, auth, generateUUID } from './firebase-config.js';
+        import { showNotification, formatFileSize, readFileAsDataURL } from './utils.js'; // utils.js eklendi
 
         document.addEventListener('DOMContentLoaded', () => {
             class AccrualsModule {
@@ -536,7 +537,7 @@
                         this.renderTable();
 
                     } catch (error) {
-                        alert('Veriler yüklenirken bir hata oluştu: ' + error.message);
+                        showNotification('Veriler yüklenirken bir hata oluştu: ' + error.message, 'error');
                     } finally {
                         document.getElementById('loadingIndicator').style.display = 'none';
                     }
@@ -609,14 +610,14 @@
                     if (confirm(`Bu tahakkuku "${statusText}" olarak işaretlemek istediğinizden emin misiniz?`)) {
                         const result = await accrualService.updateAccrual(accrualId, { status: newStatus });
                         if (result.success) {
-                            alert('Tahakkuk durumu başarıyla güncellendi.');
+                            showNotification('Tahakkuk durumu başarıyla güncellendi.', 'success');
                             const index = this.allAccruals.findIndex(a => a.id === accrualId);
                             if (index > -1) {
                                 this.allAccruals[index].status = newStatus;
                             }
                             this.renderTable(document.getElementById('statusFilter').value);
                         } else {
-                            alert('Durum güncellenirken hata oluştu: ' + result.error);
+                            showNotification('Durum güncellenirken hata oluştu: ' + result.error, 'error');
                         }
                     }
                 }
@@ -646,7 +647,7 @@
                 // Toplu Güncelleme Mantığı - Revize Edildi
                 async handleBulkUpdate(newStatus) {
                     if (this.selectedAccruals.size === 0) {
-                        alert('Lütfen en az bir tahakkuk seçin.');
+                        showNotification('Lütfen en az bir tahakkuk seçin.', 'error');
                         return;
                     }
 
@@ -654,7 +655,7 @@
                         // "Ödendi İşaretle" modalından çağrıldığında
                         const paymentDate = document.getElementById('paymentDate').value;
                         if (!paymentDate) {
-                            alert('Lütfen ödeme tarihini girin.');
+                            showNotification('Lütfen ödeme tarihini girin.', 'error');
                             return;
                         }
 
@@ -685,9 +686,9 @@
                             const failed = results.filter(r => !r.success);
 
                             if (failed.length > 0) {
-                                alert(`${failed.length} adet tahakkuk güncellenirken hata oluştu.`);
+                                showNotification(`${failed.length} adet tahakkuk güncellenirken hata oluştu.`, 'error');
                             } else {
-                                alert('Seçili tüm tahakkuklar başarıyla güncellendi!');
+                                showNotification('Seçili tüm tahakkuklar başarıyla güncellendi!', 'success');
                             }
                             this.closeModal('markPaidModal'); // Modalı kapat
                         }
@@ -707,9 +708,9 @@
                             const failed = results.filter(r => !r.success);
 
                             if (failed.length > 0) {
-                                alert(`${failed.length} adet tahakkuk güncellenirken hata oluştu.`);
+                                showNotification(`${failed.length} adet tahakkuk güncellenirken hata oluştu.`, 'error');
                             } else {
-                                alert('Seçili tüm tahakkuklar başarıyla güncellendi!');
+                                showNotification('Seçili tüm tahakkuklar başarıyla güncellendi!', 'success');
                             }
                         }
                     }
@@ -723,7 +724,7 @@
                 showTaskDetailModal(taskId) {
                     const task = this.allTasks.find(t => t.id === taskId);
                     if (!task) {
-                        alert('İlgili iş bulunamadı.');
+                        showNotification('İlgili iş bulunamadı.', 'error');
                         return;
                     }
 
@@ -805,7 +806,7 @@
                 showEditAccrualModal(accrualId) {
                     const accrual = this.allAccruals.find(a => a.id === accrualId);
                     if (!accrual) {
-                        alert('Düzenlenecek tahakkuk bulunamadı.');
+                        showNotification('Düzenlenecek tahakkuk bulunamadı.', 'error');
                         return;
                     }
 
@@ -869,7 +870,7 @@
                     const serviceFee = parseFloat(document.getElementById('editServiceFee').value) || 0;
 
                     if (officialFee <= 0 && serviceFee <= 0) {
-                        alert("Lütfen en az bir ücret girin.");
+                        showNotification("Lütfen en az bir ücret girin.", 'error');
                         return;
                     }
 
@@ -902,14 +903,14 @@
                     try {
                         const result = await accrualService.updateAccrual(accrualId, updates);
                         if (result.success) {
-                            alert('Tahakkuk başarıyla güncellendi!');
+                            showNotification('Tahakkuk başarıyla güncellendi!', 'success');
                             this.closeModal('editAccrualModal');
                             await this.loadAllData(); // Verileri yeniden yükle
                         } else {
                             throw new Error(result.error);
                         }
                     } catch (error) {
-                        alert('Tahakkuk güncellenirken hata oluştu: ' + error.message);
+                        showNotification('Tahakkuk güncellenirken hata oluştu: ' + error.message, 'error');
                     }
                 }
 
@@ -998,7 +999,7 @@
                 // Yeni: "Ödendi İşaretle" modalını göster
                 showMarkPaidModal() {
                     if (this.selectedAccruals.size === 0) {
-                        alert('Lütfen ödendi olarak işaretlemek istediğiniz tahakkukları seçin.');
+                        showNotification('Lütfen ödendi olarak işaretlemek istediğiniz tahakkukları seçin.', 'error');
                         return;
                     }
                     document.getElementById('paidAccrualCount').textContent = this.selectedAccruals.size;
@@ -1010,22 +1011,22 @@
                     for (const file of files) {
                         // Basit dosya boyutu ve türü kontrolü
                         if (file.size > 5 * 1024 * 1024) { // 5MB limit
-                            alert(`"${file.name}" dosyası 5MB'tan büyük. Lütfen daha küçük bir dosya yükleyin.`);
+                            showNotification(`"${file.name}" dosyası 5MB'tan büyük. Lütfen daha küçük bir dosya yükleyin.`, 'error');
                             continue;
                         }
                         // Sadece PDF, DOC, JPG, PNG kabul et
                         const allowedTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'image/jpeg', 'image/png'];
                         if (!allowedTypes.includes(file.type)) {
-                            alert(`"${file.name}" dosyası desteklenmeyen bir formattadır. Sadece PDF, DOC, JPG, PNG yükleyebilirsiniz.`);
+                            showNotification(`"${file.name}" dosyası desteklenmeyen bir formattadır. Sadece PDF, DOC, JPG, PNG yükleyebilirsiniz.`, 'error');
                             continue;
                         }
                         
                         if (this.uploadedPaymentReceipts.some(f => f.name === file.name && f.size === file.size)) {
-                            alert(`"${file.name}" adlı dosya zaten eklenmiş.`);
+                            showNotification(`"${file.name}" adlı dosya zaten eklenmiş.`, 'info');
                             continue;
                         }
 
-                        this.readFileAsDataURL(file).then(dataUrl => {
+                        readFileAsDataURL(file).then(dataUrl => {
                             this.uploadedPaymentReceipts.push({
                                 id: generateUUID(),
                                 name: file.name,
@@ -1038,7 +1039,7 @@
                             this.renderPaymentReceiptFileList();
                         }).catch(error => {
                             console.error("Dosya okuma hatası:", error);
-                            alert(`"${file.name}" dosyası okunamadı.`);
+                            showNotification(`"${file.name}" dosyası okunamadı.`, 'error');
                         });
                     }
                 }
@@ -1050,7 +1051,7 @@
                     this.uploadedPaymentReceipts.forEach(file => {
                         const fileItem = document.createElement('div');
                         fileItem.className = 'file-item-modal'; // Mevcut stil sınıfını kullanabiliriz
-                        fileItem.innerHTML = `<span>${file.name} (${this.formatFileSize(file.size)})</span><button type="button" class="remove-file-modal" data-id="${file.id}">&times;</button>`;
+                        fileItem.innerHTML = `<span>${file.name} (${formatFileSize(file.size)})</span><button type="button" class="remove-file-modal" data-id="${file.id}">&times;</button>`;
                         fileItem.querySelector('.remove-file-modal').addEventListener('click', (e) => {
                             this.uploadedPaymentReceipts = this.uploadedPaymentReceipts.filter(f => f.id !== e.target.dataset.id);
                             this.renderPaymentReceiptFileList();
@@ -1063,7 +1064,7 @@
                 showViewAccrualDetailModal(accrualId) {
                     const accrual = this.allAccruals.find(a => a.id === accrualId);
                     if (!accrual) {
-                        alert('Tahakkuk bulunamadı.');
+                        showNotification('Tahakkuk bulunamadı.', 'error');
                         return;
                     }
 
@@ -1093,7 +1094,7 @@
                     if (accrual.files && accrual.files.length > 0) {
                         accrual.files.forEach(file => {
                             const listItem = document.createElement('li');
-                            listItem.innerHTML = `<a href="${file.content}" download="${file.name}">📄 ${file.name} (${this.formatFileSize(file.size)}) - ${file.documentDesignation || 'Belge'}</a>`;
+                            listItem.innerHTML = `<a href="${file.content}" download="${file.name}">📄 ${file.name} (${formatFileSize(file.size)}) - ${file.documentDesignation || 'Belge'}</a>`;
                             documentListUl.appendChild(listItem);
                         });
                     } else {
@@ -1104,24 +1105,7 @@
                 }
 
 
-                // Yardımcı fonksiyon: Dosya boyutunu formatla
-                formatFileSize(bytes) {
-                    if (bytes === 0) return '0 Bytes';
-                    const k = 1024;
-                    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-                    const i = Math.floor(Math.log(bytes) / Math.log(k));
-                    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-                }
-
-                // Yardımcı fonksiyon: Dosyayı Data URL olarak oku
-                readFileAsDataURL(file) {
-                    return new Promise((resolve, reject) => {
-                        const reader = new FileReader();
-                        reader.onload = () => resolve(reader.result);
-                        reader.onerror = reject;
-                        reader.readAsDataURL(file);
-                    });
-                }
+                // Yardımcı fonksiyonlar utils.js'ten import edildiği için buradan kaldırıldı.
             }
 
             const module = new AccrualsModule();
