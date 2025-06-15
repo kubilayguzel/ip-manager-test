@@ -393,11 +393,18 @@
             <a href="excel-upload.html" class="sidebar-nav-item"><span class="nav-icon">📄</span><span>Excel ile Yükle</span></a>
             <div class="nav-category-title">Yönetim</div>
             <div class="accordion">
-                <div class="accordion-header"><span class="nav-icon">⚙️</span><span>Yönetim</span></div>
+                <div class="accordion-header"><span class="nav-icon">✅</span><span>Görevler</span></div>
                 <div class="accordion-content">
                     <a href="create-task.html" class="new-task-link">Yeni İş Oluştur</a>
                     <a href="task-management.html">İş Yönetimi</a>
                     <a href="my-tasks.html">İşlerim</a>
+                    <a href="reminders.html">Hatırlatmalar</a>
+                    <a href="#" style="opacity: 0.5; cursor: not-allowed;">Zamanlanmış Görevler</a>
+                </div>
+            </div>
+            <div class="accordion">
+                <div class="accordion-header"><span class="nav-icon">👥</span><span>Kişi Yönetimi</span></div>
+                <div class="accordion-content">
                     <a href="persons.html">Kişiler Yönetimi</a>
                     <a href="user-management.html">Kullanıcı Yönetimi</a>
                 </div>
@@ -527,6 +534,7 @@
 
     <script type="module">
         import { authService, taskService, ipRecordsService, personsService, auth, generateUUID } from './firebase-config.js';
+        import { showNotification, formatFileSize, readFileAsDataURL } from './utils.js'; // utils.js eklendi
 
         document.addEventListener('DOMContentLoaded', function() {
             const accordions = document.querySelectorAll('.accordion-header');
@@ -571,7 +579,7 @@
                 this.mode = urlParams.get('mode') || 'view';
 
                 if (!this.taskId) {
-                    this.showNotification('Geçersiz iş ID\'si.', 'error');
+                    showNotification('Geçersiz iş ID\'si.', 'error'); // alert() yerine
                     document.getElementById('loadingIndicator').style.display = 'none';
                     setTimeout(() => window.location.href = 'my-tasks.html', 2000);
                     return;
@@ -609,15 +617,15 @@
                         this.allUsers = usersResult.data || [];
                         this.populateTaskDetails();
                         this.populateStatusDropdown();
-                        this.renderTaskHistory(); // <-- Hata veren çağrı artık doğru metodu çağırıyor
-                        this.renderTaskDocuments(); // Dokümanları render et
+                        this.renderTaskHistory();
+                        this.renderTaskDocuments();
                         document.getElementById('taskDetailContent').style.display = 'block';
                     } else {
                         throw new Error(taskResult.error || 'İş bulunamadı veya yüklenirken hata oluştu.');
                     }
                 } catch (error) {
                     console.error("İş detayları yüklenirken hata:", error);
-                    this.showNotification('İş detayları yüklenirken bir hata oluştu: ' + error.message, 'error');
+                    showNotification('İş detayları yüklenirken bir hata oluştu: ' + error.message, 'error'); // alert() yerine
                     setTimeout(() => window.location.href = 'my-tasks.html', 2000);
                 } finally {
                     document.getElementById('loadingIndicator').style.display = 'none';
@@ -788,13 +796,21 @@
             populateStatusDropdown() {
                 const statusSelect = document.getElementById('updateTaskStatus');
                 const currentStatus = this.currentTask.status;
-                const statuses = ['open', 'in_progress', 'pending_review', 'completed'];
+                const statuses = ['open', 'in_progress', 'pending_review', 'completed', 'pending_client_approval']; // Yeni statü eklendi
                 
                 statusSelect.innerHTML = '';
                 statuses.forEach(status => {
                     const option = document.createElement('option');
                     option.value = status;
-                    option.textContent = status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                    // Durumların Türkçe karşılıklarını doğru şekilde göster
+                    const statusMapping = {
+                        'open': 'Açık',
+                        'in_progress': 'Devam Ediyor',
+                        'pending_review': 'Gözden Geçiriliyor',
+                        'completed': 'Tamamlandı',
+                        'pending_client_approval': 'Müvekkil Onayı Bekliyor' // Yeni
+                    };
+                    option.textContent = statusMapping[status] || status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
                     if (status === currentStatus) {
                         option.selected = true;
                     }
@@ -805,7 +821,7 @@
             async updateTaskStatus() {
                 const newStatus = document.getElementById('updateTaskStatus').value;
                 if (!newStatus || newStatus === this.currentTask.status) {
-                    this.showNotification('Lütfen farklı bir durum seçin.', 'info');
+                    showNotification('Lütfen farklı bir durum seçin.', 'info');
                     return;
                 }
 
@@ -814,7 +830,7 @@
                         const updates = { status: newStatus };
                         const result = await taskService.updateTask(this.taskId, updates);
                         if (result.success) {
-                            this.showNotification('İş durumu başarıyla güncellendi!', 'success');
+                            showNotification('İş durumu başarıyla güncellendi!', 'success');
                             this.currentTask.status = newStatus;
                             await this.loadInitialData(); // Verileri yeniden yükleyerek geçmişi güncelle
                         } else {
@@ -822,7 +838,7 @@
                         }
                     } catch (error) {
                         console.error('Durum güncellenirken hata:', error);
-                        this.showNotification('Durum güncellenirken bir hata oluştu: ' + error.message, 'error');
+                        showNotification('Durum güncellenirken bir hata oluştu: ' + error.message, 'error');
                     }
                 }
             }
@@ -839,7 +855,7 @@
                 const newAssignedToEmail = newAssignedToUser ? newAssignedToUser.email : null;
 
                 if (!newTitle || !newDescription || !newPriority || !newAssignedToUid) {
-                    this.showNotification('Lütfen zorunlu alanları doldurun: Başlık, Açıklama, Öncelik, Atanan Kişi.', 'error');
+                    showNotification('Lütfen zorunlu alanları doldurun: Başlık, Açıklama, Öncelik, Atanan Kişi.', 'error');
                     return;
                 }
 
@@ -859,7 +875,7 @@
                 }
 
                 if (Object.keys(updates).length === 0) {
-                    this.showNotification('Hiçbir değişiklik yapılmadı.', 'info');
+                    showNotification('Hiçbir değişiklik yapılmadı.', 'info');
                     this.setFormMode('view');
                     return;
                 }
@@ -884,12 +900,12 @@
                             });
                              if(!ipRecordUpdateResult.success) {
                                 console.error("Portföy kaydına doküman eklenirken hata:", ipRecordUpdateResult.error);
-                                this.showNotification("İş güncellendi ancak dokümanlar portföye eklenirken hata oluştu: " + ipRecordUpdateResult.error, 'error');
+                                showNotification("İş güncellendi ancak dokümanlar portföye eklenirken hata oluştu: " + ipRecordUpdateResult.error, 'error');
                              } else {
-                                this.showNotification('İş ve dokümanlar başarıyla güncellendi!', 'success');
+                                showNotification('İş ve dokümanlar başarıyla güncellendi!', 'success');
                              }
                         } else {
-                            this.showNotification('İş başarıyla güncellendi!', 'success');
+                            showNotification('İş başarıyla güncellendi!', 'success');
                         }
                         
                         await this.loadInitialData(); // Verileri yeniden yükleyerek güncel hali göster
@@ -902,7 +918,7 @@
                     }
                 } catch (error) {
                     console.error('İş güncellenirken hata:', error);
-                    this.showNotification('İş güncellenirken bir hata oluştu: ' + error.message, 'error');
+                    showNotification('İş güncellenirken bir hata oluştu: ' + error.message, 'error');
                 }
             }
 
@@ -923,7 +939,7 @@
                 allDocuments.forEach(file => {
                     const listItem = document.createElement('li');
                     listItem.innerHTML = `
-                        <a href="${file.content}" download="${file.name}">📄 ${file.name} (${this.formatFileSize(file.size)})</a>
+                        <a href="${file.content}" download="${file.name}">📄 ${file.name} (${formatFileSize(file.size)})</a>
                         <button type="button" class="remove-doc-btn" data-file-id="${file.id}">×</button>
                     `;
                     // Kaldırma butonu olay dinleyicisi
@@ -955,7 +971,7 @@
                 if (confirm('Bu dokümanı görevden kaldırmak istediğinizden emin misiniz? Kaydedildikten sonra değişiklik kalıcı olacaktır.')) {
                     this.currentTask.files = (this.currentTask.files || []).filter(file => file.id !== fileId);
                     this.renderTaskDocuments(); // UI'ı güncelle
-                    this.showNotification('Doküman kaldırıldı. Değişiklikleri kaydetmeyi unutmayın!', 'info');
+                    showNotification('Doküman kaldırıldı. Değişiklikleri kaydetmeyi unutmayın!', 'info');
                 }
             }
 
@@ -965,18 +981,18 @@
                 
                 for (const file of files) {
                     if (file.size > 10 * 1024 * 1024) { // 10MB limit
-                        this.showNotification(`"${file.name}" dosyası 10MB'tan büyük ve yüklenemedi.`, 'error');
+                        showNotification(`"${file.name}" dosyası 10MB'tan büyük ve yüklenemedi.`, 'error'); // alert() yerine
                         continue;
                     }
                     // Daha önce yüklenmiş veya mevcut dokümanlarla çakışmayı kontrol et
                     const isDuplicate = (this.currentTask.files || []).some(f => f.name === file.name && f.size === file.size) ||
                                         this.uploadedFiles.some(f => f.name === file.name && f.size === file.size);
                     if (isDuplicate) {
-                        this.showNotification(`"${file.name}" dosyası zaten eklenmiş.`, 'info');
+                        showNotification(`"${file.name}" dosyası zaten eklenmiş.`, 'info');
                         continue;
                     }
 
-                    this.readFileAsDataURL(file).then(dataUrl => {
+                    readFileAsDataURL(file).then(dataUrl => { // readFileAsDataURL eklendi
                         const newFile = {
                             id: generateUUID(),
                             name: file.name,
@@ -990,10 +1006,10 @@
                         };
                         this.uploadedFiles.push(newFile);
                         this.renderUploadedFilesForTaskDetail();
-                        this.showNotification('Doküman eklendi. Değişiklikleri kaydetmeyi unutmayın!', 'info');
+                        showNotification('Doküman eklendi. Değişiklikleri kaydetmeyi unutmayın!', 'info');
                     }).catch(error => {
                         console.error("Dosya okuma hatası:", error);
-                        this.showNotification(`"${file.name}" dosyası okunamadı.`, 'error');
+                        showNotification(`"${file.name}" dosyası okunamadı.`, 'error'); // alert() yerine
                     });
                 }
             }
@@ -1005,74 +1021,19 @@
                 this.uploadedFiles.forEach(file => {
                     const fileItem = document.createElement('div');
                     fileItem.className = 'file-item-task-detail';
-                    fileItem.innerHTML = `
-                        <span>${file.name} (${this.formatFileSize(file.size)})</span>
-                        <button type="button" class="remove-file-task-detail" data-file-id="${file.id}">×</button>
-                    `;
+                    fileItem.innerHTML = `<span>${file.name} (${formatFileSize(file.size)})</span><button type="button" class="remove-file-task-detail" data-id="${file.id}">×</button>`; // formatFileSize eklendi
                     fileItem.querySelector('.remove-file-task-detail').addEventListener('click', (e) => {
-                        const fileIdToRemove = e.currentTarget.dataset.fileId;
-                        this.uploadedFiles = this.uploadedFiles.filter(f => f.id !== fileIdToRemove);
+                        this.uploadedFiles = this.uploadedFiles.filter(f => f.id !== e.target.dataset.id);
                         this.renderUploadedFilesForTaskDetail();
                     });
                     fileListElement.appendChild(fileItem);
                 });
             }
 
-            readFileAsDataURL(file) {
-                return new Promise((resolve, reject) => {
-                    const reader = new FileReader();
-                    reader.onload = () => resolve(reader.result);
-                    reader.onerror = reject;
-                    reader.readAsDataURL(file);
-                });
-            }
+            // readFileAsDataURL utils.js'ten import edildiği için buradan kaldırıldı.
+            // formatFileSize utils.js'ten import edildiği için buradan kaldırıldı.
 
-            formatFileSize(bytes) {
-                if (bytes === 0) return '0 Bytes';
-                const k = 1024;
-                const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-                const i = Math.floor(Math.log(bytes) / Math.log(k));
-                return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-            }
-
-            showNotification(message, type = 'info') {
-                const successMessage = document.getElementById('successMessage');
-                const errorMessage = document.getElementById('errorMessage');
-                const infoMessage = document.getElementById('infoMessage');
-
-                successMessage.style.display = 'none';
-                errorMessage.style.display = 'none';
-                infoMessage.style.display = 'none';
-
-                let targetMessage;
-                let targetText;
-
-                switch (type) {
-                    case 'success':
-                        targetMessage = successMessage;
-                        targetText = document.getElementById('successText');
-                        break;
-                    case 'error':
-                        targetMessage = errorMessage;
-                        targetText = document.getElementById('errorText');
-                        break;
-                    case 'info':
-                        targetMessage = infoMessage;
-                        targetText = document.getElementById('infoText');
-                        break;
-                    default:
-                        targetMessage = infoMessage;
-                        targetText = document.getElementById('infoText');
-                }
-
-                if (targetMessage && targetText) {
-                    targetText.textContent = message;
-                    targetMessage.style.display = 'flex';
-                    setTimeout(() => {
-                        targetMessage.style.display = 'none';
-                    }, 5000);
-                }
-            }
+            // showNotification fonksiyonu utils.js'ten import edildiği için buradan kaldırıldı.
             
             // YENİ EKLENEN METOT
             renderTaskHistory() {
