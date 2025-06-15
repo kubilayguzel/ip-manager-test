@@ -154,7 +154,7 @@
                     <a href="create-task.html" class="new-task-link">Yeni İş Oluştur</a>
                     <a href="task-management.html">İş Yönetimi</a>
                     <a href="my-tasks.html">İşlerim</a>
-                    <a href="#" style="opacity: 0.5; cursor: not-allowed;">Hatırlatmalar</a>
+                    <a href="reminders.html">Hatırlatmalar</a>
                     <a href="#" style="opacity: 0.5; cursor: not-allowed;">Zamanlanmış Görevler</a>
                 </div>
             </div>
@@ -219,13 +219,14 @@
                     <div class="form-group"><label class="form-label" for="personType">Kişi Türü *</label><select id="personType" class="form-select" required><option value="">Seçiniz</option><option value="individual">Bireysel</option><option value="company">Şirket</option><option value="institution">Kurum</option></select></div>
                     <div class="form-group"><label class="form-label" for="personAddress">Adres</label><textarea id="personAddress" class="form-input" rows="3"></textarea></div>
                 </div>
-                <div class="person-form-actions"><button type="button" class="btn btn-secondary" id="cancelPersonBtn">İptal</button><button type="button" class="btn btn-primary" id="savePersonBtn">Kaydet</button></div>
+                <div class="form-actions"><button type="button" class="btn btn-secondary" id="cancelPersonBtn">İptal</button><button type="button" class="btn btn-primary" id="savePersonBtn">Kaydet</button></div>
             </form>
         </div>
     </div>
 
     <script type="module">
         import { authService, taskService, ipRecordsService, personsService, accrualService, auth, generateUUID } from './firebase-config.js';
+        import { showNotification, showFieldError, clearAllFieldErrors } from './utils.js'; // utils.js eklendi
 
         document.addEventListener('DOMContentLoaded', function() {
             const accordions = document.querySelectorAll('.accordion-header');
@@ -285,7 +286,7 @@
                     this.allUsers = usersResult.data || [];
                 } catch (error) {
                     console.error("Veri yüklenirken hata oluştu:", error);
-                    alert("Gerekli veriler yüklenemedi, lütfen sayfayı yenileyin.");
+                    showNotification("Gerekli veriler yüklenemedi, lütfen sayfayı yenileyin.", 'error'); // alert() yerine
                     return;
                 }
                 this.setupEventListeners();
@@ -336,8 +337,8 @@
                  const transactionLikeTasks = ['Devir', 'Lisans', 'Birleşme', 'Rehin', 'Veraset ile İntikal', 'Rehin/Teminat'];
                  const needsRelatedParty = transactionLikeTasks.includes(taskType);
                  const partyLabels = { 
-                    'Devir': 'Devralan Taraf', 'Lisans': 'Lisans Alan Taraf', 'Rehin': 'Rehin Alan Taraf', 
-                    'Birleşme': 'Birleşilen Taraf', 'Veraset ile İntikal': 'Mirasçı', 'Rehin/Teminat': 'Rehin Alan Taraf' 
+                    'Devir': 'Devralan Taraf', 'lisans': 'Lisans Alan Taraf', 'rehin': 'Rehin Alan Taraf', 
+                    'Birleşme': 'Birleşilen Taraf', 'veraset': 'Mirasçı', 'teminat': 'Rehin Alan Taraf' 
                  };
                  const partyLabel = partyLabels[taskType] || 'İlgili Taraf';
 
@@ -602,6 +603,7 @@
             showAddPersonModal() {
                 document.getElementById('addPersonModal').classList.add('show');
                 document.getElementById('personForm').reset();
+                clearAllFieldErrors(); // Hataları temizle
             }
 
             hideAddPersonModal() { document.getElementById('addPersonModal').classList.remove('show'); }
@@ -609,11 +611,23 @@
             async saveNewPerson() {
                 const name = document.getElementById('personName').value.trim();
                 const type = document.getElementById('personType').value;
-                if (!name || !type) { alert('Ad Soyad ve Kişi Türü zorunludur.'); return; }
+                const email = document.getElementById('personEmail').value.trim();
+                
+                let isValid = true;
+                clearAllFieldErrors(); // Hataları temizle
+
+                if (!name) { showFieldError('personName', 'Ad Soyad zorunludur.'); isValid = false; }
+                if (!type) { showFieldError('personType', 'Kişi Türü zorunludur.'); isValid = false; }
+                if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+                    showFieldError('personEmail', 'Geçerli bir e-posta adresi girin.');
+                    isValid = false;
+                }
+
+                if (!isValid) { return; }
                 
                 const personData = {
                     name, type,
-                    email: document.getElementById('personEmail').value.trim(),
+                    email: email,
                     phone: document.getElementById('personPhone').value.trim(),
                     address: document.getElementById('personAddress').value.trim()
                 };
@@ -621,14 +635,14 @@
                 try {
                     const result = await personsService.addPerson(personData);
                     if (result.success) {
-                        alert('Yeni kişi başarıyla eklendi.');
+                        showNotification('Yeni kişi başarıyla eklendi.', 'success');
                         this.allPersons.push({ ...result.data });
                         this.hideAddPersonModal();
                     } else {
-                        alert('Hata: ' + result.error);
+                        showNotification('Hata: ' + result.error, 'error');
                     }
                 } catch (error) {
-                    alert("Kişi kaydedilirken beklenmeyen bir hata oluştu.");
+                    showNotification("Kişi kaydedilirken beklenmeyen bir hata oluştu.", 'error');
                 }
             }
             
@@ -649,7 +663,7 @@
             async handleFormSubmit(e) {
                 e.preventDefault();
                 if (!this.selectedIpRecord) {
-                    alert('Lütfen işleme konu bir varlık seçin.');
+                    showNotification('Lütfen işleme konu bir varlık seçin.', 'error');
                     return;
                 }
 
@@ -676,7 +690,7 @@
 
                 const taskResult = await taskService.createTask(taskData);
                 if (!taskResult.success) {
-                    alert('İş oluşturulurken hata oluştu: ' + taskResult.error);
+                    showNotification('İş oluşturulurken hata oluştu: ' + taskResult.error, 'error');
                     return;
                 }
 
@@ -714,7 +728,7 @@
 
                     const accrualResult = await accrualService.addAccrual(accrualData);
                     if (!accrualResult.success) {
-                        alert('İş oluşturuldu ancak tahakkuk kaydedilirken bir hata oluştu: ' + accrualResult.error);
+                        showNotification('İş oluşturuldu ancak tahakkuk kaydedilirken bir hata oluştu: ' + accrualResult.error, 'error');
                         return;
                     }
                 }
@@ -726,7 +740,7 @@
                 };
                 await ipRecordsService.addTransactionToRecord(this.selectedIpRecord.id, transactionData);
                 
-                alert('İş ve ilgili tahakkuk başarıyla oluşturuldu!');
+                showNotification('İş ve ilgili tahakkuk başarıyla oluşturuldu!', 'success');
                 window.location.href = 'task-management.html';
             }
         }
