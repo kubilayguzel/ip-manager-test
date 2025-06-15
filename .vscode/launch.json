@@ -8,7 +8,7 @@
             "name": "Launch Chrome",
             "request": "launch",
             "type": "chrome",
-            "url": "https://kubilayguzel.github.io/ip-manager-test/",
+            "url": "http://localhost:8000/index.html",
             "webRoot": "${workspaceFolder}"
         },
 
@@ -17,7 +17,7 @@
             "type": "chrome",
             "request": "launch",
             "name": "Launch Chrome against localhost",
-            "url": "https://kubilayguzel.github.io/ip-manager-test/",
+            "url": "http://localhost:8000/index.html",
             "webRoot": "${workspaceFolder}"
         }
     ]
