@@ -314,10 +314,11 @@
     <script type="module">
         import {
             authService,
-            ipRecordsService,
+            ipRecordsService, // Bu import burada kullanılmıyor, kaldırılabilir veya gelecekteki kullanım için bırakılabilir.
             createDemoData,
             auth
         } from './firebase-config.js';
+        import { showNotification, showFieldError, clearAllFieldErrors } from './utils.js'; // utils.js eklendi
 
         // UI Controller Class
         class AuthController {
@@ -371,12 +372,12 @@
                             email: user.email,
                             displayName: user.displayName,
                             role: role || 'user', // Rol yoksa varsayılan 'user'
-                            isSuperAdmin: role === 'superadmin' // isSuperAdmin bayrağını ayarla
+                            isSuperAdmin: role === 'superadmin'
                         };
                         localStorage.setItem('currentUser', JSON.stringify(userData));
                         console.log('💾 User data saved to localStorage:', userData);
                         
-                        this.showSuccess('Giriş başarılı! Dashboard\'a yönlendiriliyorsunuz...');
+                        showNotification('Giriş başarılı! Dashboard\'a yönlendiriliyorsunuz...', 'success'); // showNotification kullanıldı
                         
                         setTimeout(() => {
                             console.log('🚀 Redirecting to dashboard...');
@@ -420,7 +421,7 @@
                 document.getElementById(`${tabName}-section`).classList.add('active');
 
                 this.currentTab = tabName;
-                this.clearErrors();
+                clearAllFieldErrors(); // clearAllFieldErrors kullanıldı
                 this.clearMessages();
             }
 
@@ -438,14 +439,14 @@
                     
                     if (result.success) {
                         console.log('✅ Sign in process successful');
-                        this.showSuccess(result.message); // Başarılı mesajı göster
+                        showNotification(result.message, 'success'); // showNotification kullanıldı
                         // onAuthStateChanged listener'ı zaten dashboard'a yönlendirecek
                     } else {
-                        this.showError('signin', result.error);
+                        this.showError('signin', result.error); // showError kullanıldı
                     }
                 } catch (error) {
                     console.error('Final sign in error catch:', error);
-                    this.showError('signin', 'Giriş sırasında beklenmeyen bir hata oluştu.');
+                    this.showError('signin', 'Giriş sırasında beklenmeyen bir hata oluştu.'); // showError kullanıldı
                 } finally {
                     this.setLoading('signin', false);
                 }
@@ -466,7 +467,7 @@
                     const result = await authService.signUp(email, password, name, 'user');
                     
                     if (result.success) {
-                        this.showSuccess('Hesap oluşturuldu! Demo veriler yükleniyor...');
+                        showNotification('Hesap oluşturuldu! Demo veriler yükleniyor...', 'success'); // showNotification kullanıldı
                         
                         setTimeout(async () => {
                             await createDemoData();
@@ -477,11 +478,11 @@
                             // Firebase bağlıysa onAuthStateChanged zaten yönlendirecek
                         }, 2000);
                     } else {
-                        this.showError('signup', result.error);
+                        this.showError('signup', result.error); // showError kullanıldı
                     }
                 } catch (error) {
                     console.error('Final sign up error catch:', error);
-                    this.showError('signup', 'Kayıt sırasında beklenmeyen bir hata oluştu.');
+                    this.showError('signup', 'Kayıt sırasında beklenmeyen bir hata oluştu.'); // showError kullanıldı
                 } finally {
                     this.setLoading('signup', false);
                 }
@@ -500,7 +501,7 @@
                     const result = await authService.signUp(demoEmail, demoPassword, demoName, 'user');
                     
                     if (result.success) {
-                        this.showSuccess(`Demo hesap oluşturuldu: ${demoEmail}. Veriler yükleniyor...`);
+                        showNotification(`Demo hesap oluşturuldu: ${demoEmail}. Veriler yükleniyor...`, 'success'); // showNotification kullanıldı
                         
                         setTimeout(async () => {
                             await createDemoData(); 
@@ -509,27 +510,27 @@
                             }
                         }, 2000);
                     } else {
-                        this.showError(this.currentTab, result.error || 'Demo hesap oluşturulamadı.');
+                        this.showError(this.currentTab, result.error || 'Demo hesap oluşturulamadı.'); // showError kullanıldı
                     }
                 } catch (error) {
                     console.error('Demo account creation error (top level catch):', error);
-                    this.showError(this.currentTab, 'Demo hesap oluşturulurken beklenmeyen bir hata oluştu.');
+                    this.showError(this.currentTab, 'Demo hesap oluşturulurken beklenmeyen bir hata oluştu.'); // showError kullanıldı
                 } finally {
                     this.setLoading(this.currentTab, false);
                 }
             }
 
             validateSignIn(email, password) {
-                this.clearErrors();
+                clearAllFieldErrors(); // clearAllFieldErrors kullanıldı
                 let isValid = true;
 
                 if (!email) {
-                    this.showFieldError('signin-email', 'E-posta adresi gerekli');
+                    showFieldError('signin-email', 'E-posta adresi gerekli'); // showFieldError kullanıldı
                     isValid = false;
                 }
 
                 if (!password) {
-                    this.showFieldError('signin-password', 'Şifre gerekli');
+                    showFieldError('signin-password', 'Şifre gerekli'); // showFieldError kullanıldı
                     isValid = false;
                 }
 
@@ -537,27 +538,27 @@
             }
 
             validateSignUp(name, email, password) {
-                this.clearErrors();
+                clearAllFieldErrors(); // clearAllFieldErrors kullanıldı
                 let isValid = true;
 
                 if (!name || name.length < 2) {
-                    this.showFieldError('signup-name', 'Ad soyad en az 2 karakter olmalı');
+                    showFieldError('signup-name', 'Ad soyad en az 2 karakter olmalı'); // showFieldError kullanıldı
                     isValid = false;
                 }
 
                 if (!email) {
-                    this.showFieldError('signup-email', 'E-posta adresi gerekli');
+                    showFieldError('signup-email', 'E-posta adresi gerekli'); // showFieldError kullanıldı
                     isValid = false;
                 } else if (!this.isValidEmail(email)) {
-                    this.showFieldError('signup-email', 'Geçerli bir e-posta adresi girin');
+                    showFieldError('signup-email', 'Geçerli bir e-posta adresi girin'); // showFieldError kullanıldı
                     isValid = false;
                 }
 
                 if (!password) {
-                    this.showFieldError('signup-password', 'Şifre gerekli');
+                    showFieldError('signup-password', 'Şifre gerekli'); // showFieldError kullanıldı
                     isValid = false;
                 } else if (password.length < 6) {
-                    this.showFieldError('signup-password', 'Şifre en az 6 karakter olmalı');
+                    showFieldError('signup-password', 'Şifre en az 6 karakter olmalı'); // showFieldError kullanıldı
                     isValid = false;
                 }
 
@@ -569,15 +570,10 @@
                 return emailRegex.test(email);
             }
 
-            showFieldError(fieldId, message) {
-                const field = document.getElementById(fieldId);
-                const errorDiv = document.getElementById(`${fieldId}-error`);
-                
-                field.classList.add('error');
-                errorDiv.textContent = message;
-                errorDiv.style.display = 'block';
-            }
-
+            // showFieldError, showError, showSuccess, clearErrors, clearMessages, setLoading
+            // Bu fonksiyonlar utils.js'e taşındı ve/veya güncellendi.
+            // showFieldError ve clearAllFieldErrors import edildi.
+            // showError ve showSuccess'ın lokal tanımları auth akışına özel olduğu için burada kaldı.
             showError(form, message) {
                 console.error(`${form} error:`, message);
                 const successDiv = document.getElementById('successMessage'); 
@@ -600,16 +596,6 @@
                 setTimeout(() => {
                     successDiv.style.display = 'none';
                 }, 5000);
-            }
-
-            clearErrors() {
-                document.querySelectorAll('.form-input').forEach(input => {
-                    input.classList.remove('error');
-                });
-
-                document.querySelectorAll('.error-message').forEach(error => {
-                    error.style.display = 'none';
-                });
             }
 
             clearMessages() { 
@@ -635,22 +621,19 @@
             fillDemoSignIn: () => {
                 document.getElementById('signin-email').value = 'demo@ipmanager.com';
                 document.getElementById('signin-password').value = 'demo123';
-                document.getElementById('signin-email-error').style.display = 'none'; 
-                document.getElementById('signin-password-error').style.display = 'none';
+                clearAllFieldErrors(); 
                 document.getElementById('successMessage').style.display = 'none';
             },
             fillAdminSignIn: () => {
                 document.getElementById('signin-email').value = 'admin@ipmanager.com';
                 document.getElementById('signin-password').value = 'admin123';
-                document.getElementById('signin-email-error').style.display = 'none'; 
-                document.getElementById('signin-password-error').style.display = 'none';
+                clearAllFieldErrors(); 
                 document.getElementById('successMessage').style.display = 'none';
             },
-            fillSuperAdminSignIn: () => { // Süper Admin için yeni test fonksiyonu
+            fillSuperAdminSignIn: () => {
                 document.getElementById('signin-email').value = 'superadmin@ipmanager.com';
                 document.getElementById('signin-password').value = 'superadmin123';
-                document.getElementById('signin-email-error').style.display = 'none'; 
-                document.getElementById('signin-password-error').style.display = 'none';
+                clearAllFieldErrors(); 
                 document.getElementById('successMessage').style.display = 'none';
             },
             getCurrentUser: () => {
