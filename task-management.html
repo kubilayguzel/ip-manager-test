@@ -550,6 +550,40 @@
                 if (!taskType) return '-';
                 
                 const taskTypeMappings = {
+                    // Patent işleri
+                    'Patent Başvuru': 'Patent Başvuru',
+                    'Patent Yenileme': 'Patent Yenileme',
+                    'Patent Araştırma': 'Patent Araştırma',
+                    'Patent İtiraz': 'Patent İtiraz',
+                    
+                    // Marka işleri
+                    'Marka Başvuru': 'Marka Başvuru',
+                    'Marka Yenileme': 'Marka Yenileme',
+                    'Marka İtiraz': 'Marka İtiraz',
+                    'Marka Araştırma': 'Marka Araştırma',
+                    
+                    // Telif işleri
+                    'Telif Başvuru': 'Telif Başvuru',
+                    'Telif Yenileme': 'Telif Yenileme',
+                    
+                    // Tasarım işleri
+                    'Tasarım Başvuru': 'Tasarım Başvuru',
+                    'Tasarım Yenileme': 'Tasarım Yenileme',
+                    
+                    // Hukuki işler
+                    'Hukuki - Devir': 'Hukuki - Devir',
+                    'Hukuki - Lisans': 'Hukuki - Lisans',
+                    'Hukuki - Rehin': 'Hukuki - Rehin',
+                    'Hukuki - Birleşme': 'Hukuki - Birleşme',
+                    'Hukuki - Veraset': 'Hukuki - Veraset',
+                    'Hukuki - Teminat': 'Hukuki - Teminat',
+                    
+                    // İdari işler
+                    'İdari - Genel': 'İdari - Genel',
+                    'İdari - Belgelendirme': 'İdari - Belgelendirme',
+                    'İdari - Correspondence': 'İdari - Yazışma',
+                    
+                    // Eski İngilizce kodların desteklenmesi (geriye uyumluluk)
                     'patent_application': 'Patent Başvuru',
                     'patent_renewal': 'Patent Yenileme',
                     'trademark_application': 'Marka Başvuru', 
@@ -568,7 +602,7 @@
                     'administrative_documentation': 'İdari - Belgelendirme'
                 };
                 
-                return taskTypeMappings[taskType] || taskType.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                return taskTypeMappings[taskType] || taskType;
             }
             
             // Durum Türkçeleştirme
