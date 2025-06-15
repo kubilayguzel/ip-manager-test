@@ -38,11 +38,10 @@
         .page-subtitle { color: #666; font-size: 1.1em; }
         
         .accruals-container { background: rgba(255, 255, 255, 0.95); border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); overflow: hidden; }
-        .accruals-header { padding: 20px 30px; border-bottom: 1px solid #e1e8ed; display: flex; justify-content: space-between; align-items: center; }
+        .accruals-header { padding: 20px 30px; border-bottom: 1px solid #e1e8ed; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;}
         .filter-group { display: flex; gap: 10px; align-items: center; }
         .filter-label { font-weight: 500; }
         .filter-select { padding: 8px 12px; border-radius: 8px; border: 1px solid #ccc; }
-        .btn-action { padding: 8px 12px; border-radius: 8px; border: none; cursor: pointer; background-color: #007bff; color: white; }
         
         .accruals-table { width: 100%; border-collapse: collapse; }
         .accruals-table th, .accruals-table td { padding: 15px; text-align: left; border-bottom: 1px solid #f0f0f0; }
@@ -52,24 +51,31 @@
         .status-paid { background-color: #28a745; }
         .status-unpaid { background-color: #dc3545; }
         
+        .action-btn { background: #007bff; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; margin-left: 5px; }
+        .action-btn.unpaid { background-color: #dc3545; }
+        .action-btn:disabled { background-color: #6c757d; cursor: not-allowed; opacity: 0.7; }
+
         .loading { text-align: center; padding: 50px; }
         .no-records { text-align: center; padding: 50px; color: #666; }
-
-        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.4); align-items: center; justify-content: center; }
+        
+        .modal { display: none; position: fixed; z-index: 1002; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.6); align-items: center; justify-content: center; }
         .modal.show { display: flex; }
-        .modal-content-lg { background-color: #fefefe; margin: auto; padding: 30px; border: 1px solid #888; width: 90%; max-width: 900px; border-radius: 20px; box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2),0 6px 20px 0 rgba(0,0,0,0.19); animation-name: animatetop; animation-duration: 0.4s; max-height: 90vh; overflow-y: auto; }
+        .modal-content { background-color: #fefefe; margin: auto; padding: 30px; border: 1px solid #888; width: 90%; max-width: 900px; border-radius: 20px; animation-name: animatetop; animation-duration: 0.4s; max-height: 90vh; overflow-y: auto; }
         @keyframes animatetop { from {top: -300px; opacity: 0} to {top: 0; opacity: 1} }
-        .close-modal-btn { color: #aaa; float: right; font-size: 28px; font-weight: bold; }
-        .close-modal-btn:hover, .close-modal-btn:focus { color: black; text-decoration: none; cursor: pointer; }
-        .modal-body-content { padding: 10px 0; }
+        .close-modal-btn { color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer; }
+        .modal-title { font-size: 1.5em; color: #1e3c72; margin-bottom: 20px;}
         .modal-detail-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px 25px; }
         .modal-detail-item { margin-bottom: 10px; }
         .modal-detail-label { font-weight: 600; color: #333; margin-bottom: 5px; font-size: 0.9em; }
         .modal-detail-value { color: #555; word-break: break-word; font-size: 0.95em; }
+        .modal-detail-value.long-text { white-space: pre-wrap; background-color: #f8f9fa; padding: 8px; border-radius: 6px; }
         .modal-detail-section-title { grid-column: 1 / -1; font-size: 1.1em; color: #1e3c72; margin-top: 20px; margin-bottom: 15px; padding-bottom: 5px; border-bottom: 1px dashed #e1e8ed; }
-        .modal-detail-item ul { list-style: none; padding-left: 0; }
-        .modal-detail-item li { background-color: #f8f9fa; padding: 8px; border-radius: 6px; margin-bottom: 5px; font-size: 0.9em; }
-
+        .task-history { margin-top: 20px; padding-top: 20px; border-top: 1px solid #e1e8ed; max-height: 250px; overflow-y: auto; }
+        .task-history-item { padding: 8px 0; border-bottom: 1px dashed #eee; }
+        .task-history-item:last-child { border-bottom: none; }
+        .task-history-description { font-size: 0.9em; color: #333; font-weight: 600; }
+        .task-history-meta { font-size: 0.8em; color: #666; margin-top: 4px; }
+        .related-accrual-item { background: #f8f9fa; padding: 10px; border-radius: 8px; margin-bottom: 8px; font-size: 0.9em; }
     </style>
 </head>
 <body>
@@ -86,7 +92,7 @@
             <div class="accordion">
                 <div class="accordion-header"><span class="nav-icon">⚙️</span><span>Yönetim</span></div>
                 <div class="accordion-content">
-                    <a href="create-task.html">Yeni İş Oluştur</a>
+                    <a href="create-task.html" class="new-task-link">Yeni İş Oluştur</a>
                     <a href="task-management.html">İş Yönetimi</a>
                     <a href="my-tasks.html">İşlerim</a>
                     <a href="persons.html">Kişiler Yönetimi</a>
@@ -129,7 +135,10 @@
                             <option value="unpaid">Ödenmedi</option>
                             <option value="paid">Ödendi</option>
                         </select>
-                        <button id="bulkActionBtn" class="btn-action" style="display: none;">Seçilenlerin Durumunu Değiştir</button>
+                    </div>
+                    <div class="filter-group" id="bulkActions" style="display: none;">
+                        <button id="bulkMarkPaidBtn" class="action-btn">Seçilenleri Ödendi İşaretle</button>
+                        <button id="bulkMarkUnpaidBtn" class="action-btn unpaid">Seçilenleri Ödenmedi İşaretle</button>
                     </div>
                 </div>
                 <div class="table-container">
@@ -137,12 +146,13 @@
                         <thead>
                             <tr>
                                 <th><input type="checkbox" id="selectAllCheckbox"></th>
-                                <th>Durum</th>
                                 <th>Tahakkuk ID</th>
+                                <th>Durum</th>
                                 <th>İlgili İş</th>
                                 <th>Resmi Ücret</th>
                                 <th>Hizmet Bedeli</th>
                                 <th>Toplam Tutar (KDV Dahil)</th>
+                                <th>İşlemler</th>
                             </tr>
                         </thead>
                         <tbody id="accrualsTableBody"></tbody>
@@ -155,222 +165,304 @@
     </div>
 
     <div id="taskDetailModal" class="modal">
-        <div class="modal-content-lg">
+        <div class="modal-content">
             <span class="close-modal-btn" id="closeTaskDetailModal">&times;</span>
             <h3 class="modal-title" id="modalTaskTitle">İş Detayı</h3>
-            <div class="modal-body-content" id="modalTaskBody">
-                </div>
+            <div id="modalBody" class="modal-body-content">
+            </div>
         </div>
     </div>
 
+
     <script type="module">
-        import { authService, accrualService, taskService, auth } from './firebase-config.js';
+        import { authService, accrualService, taskService, ipRecordsService, personsService, auth } from './firebase-config.js';
 
-        class AccrualsModule {
-            constructor() {
-                this.currentUser = null;
-                this.allAccruals = [];
-                this.allTasks = [];
-                this.selectedAccruals = new Set();
-            }
-
-            async init() {
-                this.currentUser = authService.getCurrentUser();
-                if (!this.currentUser) { window.location.href = 'index.html'; return; }
-                
-                this.updateUserInfo();
-                await this.loadInitialData();
-                this.setupEventListeners();
-            }
-
-            updateUserInfo() {
-                if (this.currentUser) {
-                    const userName = this.currentUser.displayName || this.currentUser.email.split('@')[0] || 'Kullanıcı';
-                    const userRole = this.currentUser.role === 'admin' ? 'Yönetici' : this.currentUser.role === 'superadmin' ? 'Süper Yönetici' : 'Kullanıcı';
-                    document.getElementById('userAvatar').textContent = userName.charAt(0).toUpperCase();
-                    document.getElementById('userName').textContent = userName;
-                    document.getElementById('userRole').textContent = userRole;
+        // DÜZELTME: Sınıf ve başlatma kodunu DOMContentLoaded içine alıyoruz.
+        document.addEventListener('DOMContentLoaded', () => {
+            class AccrualsModule {
+                constructor() {
+                    this.currentUser = null;
+                    this.allAccruals = [];
+                    this.allTasks = [];
+                    this.allIpRecords = [];
+                    this.allPersons = [];
+                    this.selectedAccruals = new Set();
                 }
-            }
 
-            setupEventListeners() {
-                document.getElementById('logoutBtn').addEventListener('click', () => authService.signOut());
-                document.getElementById('statusFilter').addEventListener('change', (e) => this.renderTable(e.target.value));
-                document.getElementById('selectAllCheckbox').addEventListener('change', (e) => this.handleSelectAll(e));
-                
-                document.getElementById('accrualsTableBody').addEventListener('change', (e) => {
-                    if(e.target.classList.contains('accrual-checkbox')) {
-                        this.handleSelection(e.target);
+                init() {
+                    authService.auth.onAuthStateChanged(async user => {
+                        if (user || authService.getCurrentUser()) {
+                            this.currentUser = authService.getCurrentUser();
+                            this.updateUserInfo();
+                            await this.loadAllData();
+                            this.setupEventListeners();
+                        } else {
+                            window.location.href = 'index.html';
+                        }
+                    });
+                }
+
+                updateUserInfo() {
+                    if (this.currentUser) {
+                        const userName = this.currentUser.displayName || this.currentUser.email.split('@')[0] || 'Kullanıcı';
+                        const userRole = this.currentUser.role === 'admin' ? 'Yönetici' : this.currentUser.role === 'superadmin' ? 'Süper Yönetici' : 'Kullanıcı';
+                        document.getElementById('userAvatar').textContent = userName.charAt(0).toUpperCase();
+                        document.getElementById('userName').textContent = userName;
+                        document.getElementById('userRole').textContent = userRole;
                     }
-                });
-
-                document.getElementById('accrualsTableBody').addEventListener('click', (e) => {
-                    if (e.target.classList.contains('task-link')) {
-                        e.preventDefault();
-                        this.showTaskDetailModal(e.target.dataset.taskId);
-                    }
-                });
-                
-                document.getElementById('bulkActionBtn').addEventListener('click', () => this.handleBulkStatusChange());
-                document.getElementById('closeTaskDetailModal').addEventListener('click', () => this.closeModal('taskDetailModal'));
-            }
-
-            async loadInitialData() {
-                document.getElementById('loadingIndicator').style.display = 'block';
-                const [accrualsResult, tasksResult] = await Promise.all([
-                    accrualService.getAccruals(),
-                    taskService.getAllTasks()
-                ]);
-
-                this.allAccruals = accrualsResult.success ? accrualsResult.data : [];
-                this.allTasks = tasksResult.success ? tasksResult.data : [];
-                
-                if (!accrualsResult.success) {
-                    alert('Tahakkuklar yüklenirken bir hata oluştu: ' + accrualsResult.error);
-                }
-                if (!tasksResult.success) {
-                    console.error('Görevler yüklenemedi:', tasksResult.error);
                 }
 
-                this.renderTable();
-                document.getElementById('loadingIndicator').style.display = 'none';
-            }
+                setupEventListeners() {
+                    document.getElementById('logoutBtn').addEventListener('click', () => authService.signOut());
+                    document.getElementById('statusFilter').addEventListener('change', (e) => this.renderTable(e.target.value));
+                    document.getElementById('selectAllCheckbox').addEventListener('change', (e) => this.toggleSelectAll(e.target.checked));
+                    
+                    document.getElementById('accrualsTableBody').addEventListener('change', (e) => {
+                        if (e.target.classList.contains('row-checkbox')) {
+                            this.updateSelection(e.target.dataset.id, e.target.checked);
+                        }
+                    });
 
-            renderTable(filter = 'all') {
-                const tableBody = document.getElementById('accrualsTableBody');
-                tableBody.innerHTML = '';
+                    document.getElementById('accrualsTableBody').addEventListener('click', (e) => {
+                        if (e.target.classList.contains('task-detail-link')) {
+                            e.preventDefault();
+                            const taskId = e.target.dataset.taskId;
+                            this.showTaskDetailModal(taskId);
+                        }
+                        if (e.target.classList.contains('action-btn')) {
+                            e.preventDefault();
+                            const accrualId = e.target.dataset.id;
+                            const newStatus = e.target.dataset.status;
+                            this.markAs(accrualId, newStatus);
+                        }
+                    });
 
-                const filteredAccruals = this.allAccruals.filter(acc => filter === 'all' || acc.status === filter);
-                document.getElementById('noRecordsMessage').style.display = filteredAccruals.length === 0 ? 'block' : 'none';
-                
-                const currencyFormatter = (amount, currency) => {
-                    try { return new Intl.NumberFormat('tr-TR', { style: 'currency', currency: currency || 'TRY' }).format(amount); } 
-                    catch (e) { return new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' }).format(amount); }
-                };
-                
-                const formatFee = (feeData) => {
-                    if (typeof feeData === 'object' && feeData !== null && feeData.currency) { return { amount: feeData.amount || 0, currency: feeData.currency }; }
-                    if (typeof feeData === 'number') { return { amount: feeData, currency: 'TRY' }; }
-                    return { amount: 0, currency: 'TRY' };
-                };
-
-                filteredAccruals.forEach(accrual => {
-                    const row = document.createElement('tr');
-                    const statusText = accrual.status === 'paid' ? 'Ödendi' : 'Ödenmedi';
-                    const statusClass = accrual.status === 'paid' ? 'status-paid' : 'status-unpaid';
-                    const officialFee = formatFee(accrual.officialFee);
-                    const serviceFee = formatFee(accrual.serviceFee);
-
-                    row.innerHTML = `
-                        <td><input type="checkbox" class="accrual-checkbox" data-id="${accrual.id}"></td>
-                        <td><span class="status-badge ${statusClass}">${statusText}</span></td>
-                        <td>${accrual.id.substring(0, 8)}...</td>
-                        <td><a href="#" class="task-link" data-task-id="${accrual.taskId}">${accrual.taskTitle || 'İş Detayı'}</a></td>
-                        <td>${currencyFormatter(officialFee.amount, officialFee.currency)}</td>
-                        <td>${currencyFormatter(serviceFee.amount, serviceFee.currency)}</td>
-                        <td>${currencyFormatter(accrual.totalAmount || 0, accrual.totalAmountCurrency || 'TRY')}</td>
-                    `;
-                    tableBody.appendChild(row);
-                });
-            }
-
-            handleSelectAll(e) {
-                const isChecked = e.target.checked;
-                document.querySelectorAll('.accrual-checkbox').forEach(checkbox => {
-                    checkbox.checked = isChecked;
-                    this.handleSelection(checkbox);
-                });
-            }
-
-            handleSelection(checkbox) {
-                const id = checkbox.dataset.id;
-                if (checkbox.checked) {
-                    this.selectedAccruals.add(id);
-                } else {
-                    this.selectedAccruals.delete(id);
+                    document.getElementById('closeTaskDetailModal').addEventListener('click', () => this.closeModal('taskDetailModal'));
+                    document.getElementById('bulkMarkPaidBtn').addEventListener('click', () => this.handleBulkUpdate('paid'));
+                    document.getElementById('bulkMarkUnpaidBtn').addEventListener('click', () => this.handleBulkUpdate('unpaid'));
                 }
-                document.getElementById('bulkActionBtn').style.display = this.selectedAccruals.size > 0 ? 'inline-block' : 'none';
-            }
-
-            async handleBulkStatusChange() {
-                if (this.selectedAccruals.size === 0) return;
-
-                const newStatus = confirm('Seçili tahakkukların durumunu "Ödendi" olarak değiştirmek için TAMAM, "Ödenmedi" olarak değiştirmek için İPTAL\'e basın.') ? 'paid' : 'unpaid';
                 
-                const promises = [];
-                this.selectedAccruals.forEach(id => {
-                    promises.push(accrualService.updateAccrual(id, { status: newStatus }));
-                });
+                async loadAllData() {
+                    document.getElementById('loadingIndicator').style.display = 'block';
+                    try {
+                        const [accrualsResult, tasksResult, ipRecordsResult, personsResult] = await Promise.all([
+                            accrualService.getAccruals(),
+                            taskService.getAllTasks(),
+                            ipRecordsService.getRecords(),
+                            personsService.getPersons()
+                        ]);
 
-                try {
-                    await Promise.all(promises);
-                    alert('Seçili tahakkukların durumları başarıyla güncellendi.');
-                    this.selectedAccruals.clear();
-                    document.getElementById('selectAllCheckbox').checked = false;
-                    document.getElementById('bulkActionBtn').style.display = 'none';
-                    await this.loadInitialData();
-                } catch (error) {
-                    alert('Durumlar güncellenirken bir hata oluştu.');
-                }
-            }
-
-            showTaskDetailModal(taskId) {
-                const task = this.allTasks.find(t => t.id === taskId);
-                if (!task) { alert('İlgili iş detayı bulunamadı.'); return; }
-                
-                document.getElementById('modalTaskTitle').textContent = `İş Detayı: ${task.title || '-'}`;
-                const modalBody = document.getElementById('modalTaskBody');
-                
-                const priorityMap = { high: 'Yüksek', medium: 'Orta', low: 'Düşük' };
-                let accrualInfoHtml = '<p>Bu işe ait tahakkuk bulunmuyor.</p>';
-                const relatedAccruals = this.allAccruals.filter(acc => acc.taskId === taskId);
-                
-                const currencyFormatter = (amount, currency) => {
-                    try { return new Intl.NumberFormat('tr-TR', { style: 'currency', currency: currency || 'TRY' }).format(amount); } 
-                    catch (e) { return new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' }).format(amount); }
-                };
-
-                const formatFee = (feeData) => {
-                    if (typeof feeData === 'object' && feeData !== null && feeData.currency) { return { amount: feeData.amount || 0, currency: feeData.currency }; }
-                    if (typeof feeData === 'number') { return { amount: feeData, currency: 'TRY' }; }
-                    return { amount: 0, currency: 'TRY' };
-                };
-
-                if (relatedAccruals.length > 0) {
-                    accrualInfoHtml = relatedAccruals.map(acc => {
-                        const officialFee = formatFee(acc.officialFee);
-                        const serviceFee = formatFee(acc.serviceFee);
-                        return `<li><strong>Toplam:</strong> ${currencyFormatter(acc.totalAmount, acc.totalAmountCurrency)} | <strong>Resmi:</strong> ${currencyFormatter(officialFee.amount, officialFee.currency)} | <strong>Hizmet:</strong> ${currencyFormatter(serviceFee.amount, serviceFee.currency)} | <strong>Durum:</strong> ${acc.status === 'paid' ? 'Ödendi' : 'Ödenmedi'}</li>`
-                    }).join('');
-                    accrualInfoHtml = `<ul style="list-style: none; padding: 0;">${accrualInfoHtml}</ul>`;
-                }
-
-                modalBody.innerHTML = `
-                    <div class="modal-detail-grid">
-                        <div class="modal-detail-item"><div class="modal-detail-label">İş Başlığı</div><div class="modal-detail-value">${task.title}</div></div>
-                        <div class="modal-detail-item"><div class="modal-detail-label">Atanan Kişi</div><div class="modal-detail-value">${task.assignedTo_email}</div></div>
-                        <div class="modal-detail-item"><div class="modal-detail-label">Öncelik</div><div class="modal-detail-value">${priorityMap[task.priority]}</div></div>
-                        <div class="modal-detail-item"><div class="modal-detail-label">Bitiş Tarihi</div><div class="modal-detail-value">${task.dueDate ? new Date(task.dueDate).toLocaleDateString() : '-'}</div></div>
-                        <div class="modal-detail-item full-width"><div class="modal-detail-label">Açıklama</div><div class="modal-detail-value" style="white-space: pre-wrap;">${task.description}</div></div>
+                        this.allAccruals = accrualsResult.success ? accrualsResult.data : [];
+                        this.allTasks = tasksResult.success ? tasksResult.data : [];
+                        this.allIpRecords = ipRecordsResult.success ? ipRecordsResult.data : [];
+                        this.allPersons = personsResult.success ? personsResult.data : [];
                         
-                        <h4 class="modal-detail-section-title">İlişkili Tahakkuklar</h4>
-                        <div class="modal-detail-item full-width">${accrualInfoHtml}</div>
-                    </div>
-                `;
+                        this.renderTable();
 
-                document.getElementById('taskDetailModal').classList.add('show');
+                    } catch (error) {
+                        alert('Veriler yüklenirken bir hata oluştu: ' + error.message);
+                    } finally {
+                        document.getElementById('loadingIndicator').style.display = 'none';
+                    }
+                }
+
+                renderTable(filter = 'all') {
+                    const tableBody = document.getElementById('accrualsTableBody');
+                    const noRecordsMessage = document.getElementById('noRecordsMessage');
+                    tableBody.innerHTML = '';
+
+                    const filteredAccruals = this.allAccruals.filter(acc => filter === 'all' || acc.status === filter);
+
+                    if (filteredAccruals.length === 0) {
+                        noRecordsMessage.style.display = 'block';
+                        return;
+                    }
+                    noRecordsMessage.style.display = 'none';
+
+                    const currencyFormatter = (amount, currency) => {
+                        try {
+                            return new Intl.NumberFormat('tr-TR', { style: 'currency', currency: currency || 'TRY' }).format(amount);
+                        } catch (e) {
+                            return new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' }).format(amount);
+                        }
+                    };
+                    
+                    const formatFee = (feeData) => {
+                        if (typeof feeData === 'object' && feeData !== null && feeData.currency) {
+                            return { amount: feeData.amount || 0, currency: feeData.currency };
+                        }
+                        if (typeof feeData === 'number') {
+                            return { amount: feeData, currency: 'TRY' };
+                        }
+                        return { amount: 0, currency: 'TRY' };
+                    };
+
+                    filteredAccruals.forEach(accrual => {
+                        const row = document.createElement('tr');
+                        const statusText = accrual.status === 'paid' ? 'Ödendi' : 'Ödenmedi';
+                        const statusClass = accrual.status === 'paid' ? 'status-paid' : 'status-unpaid';
+                        
+                        const officialFee = formatFee(accrual.officialFee);
+                        const serviceFee = formatFee(accrual.serviceFee);
+                        const isSelected = this.selectedAccruals.has(accrual.id);
+
+                        row.innerHTML = `
+                            <td><input type="checkbox" class="row-checkbox" data-id="${accrual.id}" ${isSelected ? 'checked' : ''}></td>
+                            <td><small>${accrual.id.substring(0, 8)}...</small></td>
+                            <td><span class="status-badge ${statusClass}">${statusText}</span></td>
+                            <td><a href="#" class="task-detail-link" data-task-id="${accrual.taskId}">${accrual.taskTitle || 'İş Detayı'}</a></td>
+                            <td>${currencyFormatter(officialFee.amount, officialFee.currency)}</td>
+                            <td>${currencyFormatter(serviceFee.amount, serviceFee.currency)}</td>
+                            <td>${currencyFormatter(accrual.totalAmount || 0, accrual.totalAmountCurrency || 'TRY')}</td>
+                            <td>
+                                <button class="action-btn" data-id="${accrual.id}" data-status="paid" ${accrual.status === 'paid' ? 'disabled' : ''}>Ödendi</button>
+                                <button class="action-btn unpaid" data-id="${accrual.id}" data-status="unpaid" ${accrual.status === 'unpaid' ? 'disabled' : ''}>Ödenmedi</button>
+                            </td>
+                        `;
+                        tableBody.appendChild(row);
+                    });
+                }
+
+                async markAs(accrualId, newStatus) {
+                    const statusText = newStatus === 'paid' ? 'Ödendi' : 'Ödenmedi';
+                    if (confirm(`Bu tahakkuku "${statusText}" olarak işaretlemek istediğinizden emin misiniz?`)) {
+                        const result = await accrualService.updateAccrual(accrualId, { status: newStatus });
+                        if (result.success) {
+                            alert('Tahakkuk durumu başarıyla güncellendi.');
+                            // Find and update the local data to re-render instantly
+                            const index = this.allAccruals.findIndex(a => a.id === accrualId);
+                            if (index > -1) {
+                                this.allAccruals[index].status = newStatus;
+                            }
+                            this.renderTable(document.getElementById('statusFilter').value);
+                        } else {
+                            alert('Durum güncellenirken hata oluştu: ' + result.error);
+                        }
+                    }
+                }
+
+                toggleSelectAll(checked) {
+                    const checkboxes = document.querySelectorAll('.row-checkbox');
+                    checkboxes.forEach(checkbox => {
+                        checkbox.checked = checked;
+                        this.updateSelection(checkbox.dataset.id, checked);
+                    });
+                }
+
+                updateSelection(accrualId, isSelected) {
+                    if (isSelected) {
+                        this.selectedAccruals.add(accrualId);
+                    } else {
+                        this.selectedAccruals.delete(accrualId);
+                    }
+                    this.updateBulkActionsVisibility();
+                }
+
+                updateBulkActionsVisibility() {
+                    const bulkActions = document.getElementById('bulkActions');
+                    bulkActions.style.display = this.selectedAccruals.size > 0 ? 'flex' : 'none';
+                }
+
+                async handleBulkUpdate(newStatus) {
+                    if (this.selectedAccruals.size === 0) {
+                        alert('Lütfen en az bir tahakkuk seçin.');
+                        return;
+                    }
+                    const statusText = newStatus === 'paid' ? 'Ödendi' : 'Ödenmedi';
+                    if (confirm(`${this.selectedAccruals.size} adet tahakkuku "${statusText}" olarak işaretlemek istediğinizden emin misiniz?`)) {
+                        const promises = Array.from(this.selectedAccruals).map(id => 
+                            accrualService.updateAccrual(id, { status: newStatus })
+                        );
+                        const results = await Promise.all(promises);
+                        const failed = results.filter(r => !r.success);
+                        if (failed.length > 0) {
+                            alert(`${failed.length} adet tahakkuk güncellenirken hata oluştu.`);
+                        } else {
+                            alert('Seçili tüm tahakkuklar başarıyla güncellendi.');
+                        }
+                        this.selectedAccruals.clear();
+                        document.getElementById('selectAllCheckbox').checked = false;
+                        this.updateBulkActionsVisibility();
+                        await this.loadAllData();
+                    }
+                }
+                
+                showTaskDetailModal(taskId) {
+                    const task = this.allTasks.find(t => t.id === taskId);
+                    if (!task) {
+                        alert('İlgili iş bulunamadı.');
+                        return;
+                    }
+
+                    const modal = document.getElementById('taskDetailModal');
+                    const modalBody = document.getElementById('modalBody');
+                    
+                    const ipRecord = this.allIpRecords.find(r => r.id === task.relatedIpRecordId);
+                    const relatedParty = task.details?.relatedParty?.id ? this.allPersons.find(p => p.id === task.details.relatedParty.id) : null;
+                    const relatedAccruals = this.allAccruals.filter(acc => acc.taskId === taskId);
+
+                    document.getElementById('modalTaskTitle').textContent = `İş Detayı: ${task.title}`;
+
+                    const taskTypeParts = task.taskType ? task.taskType.split('_') : [];
+                    const mainType = taskTypeParts[0] || '';
+                    const specificType = taskTypeParts.slice(1).join(' ').replace(/\b\w/g, l => l.toUpperCase());
+
+                    const renderField = (label, value) => value ? `<div class="modal-detail-item"><div class="modal-detail-label">${label}</div><div class="modal-detail-value">${value}</div></div>` : '';
+
+                    let accrualsHtml = '';
+                    if(relatedAccruals.length > 0) {
+                        accrualsHtml = relatedAccruals.map(acc => {
+                            const statusText = acc.status === 'paid' ? 'Ödendi' : 'Ödenmedi';
+                            return `<div class="related-accrual-item">
+                                <b>ID:</b> ${acc.id.substring(0,8)}... | <b>Durum:</b> ${statusText} | <b>Tutar:</b> ${new Intl.NumberFormat('tr-TR', { style: 'currency', currency: acc.totalAmountCurrency || 'TRY' }).format(acc.totalAmount || 0)}
+                            </div>`
+                        }).join('');
+                    } else {
+                        accrualsHtml = '<p>Bu işe ait tahakkuk bulunmuyor.</p>';
+                    }
+
+                    let historyHtml = '<p>İşlem geçmişi bulunmuyor.</p>';
+                    if(task.history && task.history.length > 0) {
+                        historyHtml = [...task.history].sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp)).map(entry => 
+                            `<div class="task-history-item">
+                                <div class="task-history-description">${entry.action}</div>
+                                <div class="task-history-meta">${new Date(entry.timestamp).toLocaleString('tr-TR')} by ${entry.userEmail}</div>
+                            </div>`
+                        ).join('');
+                    }
+
+                    modalBody.innerHTML = `
+                        <div class="modal-detail-grid">
+                            ${renderField('İş Başlığı', task.title)}
+                            ${renderField('Atanan Kişi', task.assignedTo_email)}
+                            ${renderField('İş Türü', `${mainType.charAt(0).toUpperCase() + mainType.slice(1)} - ${specificType}`)}
+                            ${renderField('Bitiş Tarihi', task.dueDate ? new Date(task.dueDate).toLocaleDateString('tr-TR') : '-')}
+                            ${renderField('Öncelik', task.priority)}
+                            ${renderField('İlgili Portföy Kaydı', ipRecord ? ipRecord.title : 'Bulunamadı')}
+                            ${renderField('İlgili Taraf', relatedParty ? relatedParty.name : '')}
+                            <div class="modal-detail-item full-width">
+                                <div class="modal-detail-label">Açıklama</div>
+                                <div class="modal-detail-value long-text">${task.description || '-'}</div>
+                            </div>
+                            
+                            <h4 class="modal-detail-section-title">İlişkili Tahakkuklar</h4>
+                            <div class="modal-detail-item full-width">${accrualsHtml}</div>
+                            
+                            <h4 class="modal-detail-section-title">İşlem Geçmişi</h4>
+                            <div class="modal-detail-item full-width task-history">${historyHtml}</div>
+                        </div>
+                    `;
+                    modal.classList.add('show');
+                }
+
+                closeModal(modalId) {
+                    document.getElementById(modalId).classList.remove('show');
+                }
             }
 
-            closeModal(modalId) {
-                document.getElementById(modalId).classList.remove('show');
-            }
-        }
-
-        // Initialize Module
-        new AccrualsModule();
-        
-        // Akordiyon Menü için JS kodu
-        document.addEventListener('DOMContentLoaded', function() {
+            const module = new AccrualsModule();
+            module.init();
+            
             const accordions = document.querySelectorAll('.accordion-header');
             accordions.forEach(accordion => {
                 accordion.addEventListener('click', function(event) {
@@ -387,7 +479,7 @@
             function setActiveMenu() {
                 const currentPage = window.location.pathname.split("/").pop() || 'dashboard.html';
                 document.querySelectorAll('.sidebar-nav-item.active, .accordion-content a.active').forEach(el => el.classList.remove('active'));
-                const activeLink = document.querySelector(`.sidebar-nav a[href*="${currentPage}"]`);
+                const activeLink = document.querySelector(`.sidebar-nav a[href="${currentPage}"]`);
                 if (!activeLink) return;
                 activeLink.classList.add('active');
                 const parentAccordionContent = activeLink.closest('.accordion-content');
