@@ -129,7 +129,7 @@
         .modal-title { font-size: 1.3em; color: #1e3c72; }
         .close-btn { background: none; border: none; font-size: 1.5em; cursor: pointer; color: #666; }
         .file-upload { border: 2px dashed #e1e8ed; border-radius: 10px; padding: 30px; text-align: center; cursor: pointer; transition: all 0.3s ease; }
-        .file-upload:hover { border-color: #1e3c72; background: #f8f9fa; }
+        .file-upload:hover { border-color: #1e3c72; background: #f0f4f8; }
         .upload-icon { font-size: 3em; color: #1e3c72; margin-bottom: 15px; }
         .file-list { margin-top: 15px; }
         .file-item { display: flex; flex-direction: column; justify-content: space-between; align-items: flex-start; padding: 10px; background: #f8f9fa; border-radius: 8px; margin-bottom: 10px; }
@@ -199,7 +199,7 @@
                     <a href="create-task.html" class="new-task-link">Yeni İş Oluştur</a>
                     <a href="task-management.html">İş Yönetimi</a>
                     <a href="my-tasks.html">İşlerim</a>
-                    <a href="#" style="opacity: 0.5; cursor: not-allowed;">Hatırlatmalar</a>
+                    <a href="reminders.html">Hatırlatmalar</a>
                     <a href="#" style="opacity: 0.5; cursor: not-allowed;">Zamanlanmış Görevler</a>
                 </div>
             </div>
@@ -254,17 +254,17 @@
             </div>
 
             <div class="form-container">
-                <div class="notification-message success" id="formSuccessMessage" style="display: none;">
+                <div class="notification-message success" id="successMessage" style="display: none;">
                     <span>✅</span>
-                    <span id="formSuccessText">Kayıt başarıyla oluşturuldu!</span>
+                    <span id="successText">Kayıt başarıyla oluşturuldu!</span>
                 </div>
-                <div class="notification-message error" id="formErrorMessage" style="display: none;">
+                <div class="notification-message error" id="errorMessage" style="display: none;">
                     <span>❌</span>
-                    <span id="formErrorText">Bir hata oluştu. Lütfen tekrar deneyin.</span>
+                    <span id="errorText">Bir hata oluştu. Lütfen tekrar deneyin.</span>
                 </div>
-                <div class="notification-message info" id="formInfoMessage" style="display: none;">
+                <div class="notification-message info" id="infoMessage" style="display: none;">
                     <span>ℹ️</span>
-                    <span id="formInfoText"></span>
+                    <span id="infoText"></span>
                 </div>
 
                 <form id="ipForm" onsubmit="return false;">
@@ -374,11 +374,13 @@
         <div class="modal-content">
             <div class="modal-header"><h3 class="modal-title">Yeni Kişi Ekle</h3><button class="close-btn" id="closeAddPersonModal">&times;</button></div>
             <form id="personForm" onsubmit="return false;">
-                <div class="form-group"><label class="form-label" for="personName">Ad Soyad <span class="required">*</span></label><input type="text" id="personName" class="form-input" required><div class="error-message" id="personNameError">Ad Soyad alanı zorunludur.</div></div>
-                <div class="form-group"><label class="form-label" for="personEmail">E-posta</label><input type="email" id="personEmail" class="form-input"><div class="error-message" id="personEmailError">Geçerli bir e-posta adresi girin.</div></div>
-                <div class="form-group"><label class="form-label" for="personPhone">Telefon</label><input type="tel" id="personPhone" class="form-input"></div>
-                <div class="form-group"><label class="form-label" for="personType">Kişi Türü <span class="required">*</span></label><select id="personType" class="form-select" required><option value="">Seçiniz</option><option value="individual">Bireysel</option><option value="company">Şirket</option><option value="institution">Kurum</option></select><div class="error-message" id="personTypeError">Kişi Türü alanı zorunludur.</div></div>
-                <div class="form-group"><label class="form-label" for="personAddress">Adres</label><textarea id="personAddress" class="form-textarea" rows="3"></textarea></div>
+                <div class="person-form-grid">
+                    <div class="form-group"><label class="form-label" for="personName">Ad Soyad <span class="required">*</span></label><input type="text" id="personName" class="form-input" required></div>
+                    <div class="form-group"><label class="form-label" for="personEmail">E-posta</label><input type="email" id="personEmail" class="form-input"></div>
+                    <div class="form-group"><label class="form-label" for="personPhone">Telefon</label><input type="tel" id="personPhone" class="form-input"></div>
+                    <div class="form-group"><label class="form-label" for="personType">Kişi Türü <span class="required">*</span></label><select id="personType" class="form-select" required><option value="">Seçiniz</option><option value="individual">Bireysel</option><option value="company">Şirket</option><option value="institution">Kurum</option></select></div>
+                    <div class="form-group"><label class="form-label" for="personAddress">Adres</label><textarea id="personAddress" class="form-textarea" rows="3"></textarea></div>
+                </div>
                 <div class="form-actions"><button type="button" class="btn btn-secondary" id="cancelPersonBtn">İptal</button><button type="button" class="btn btn-primary" id="savePersonBtn">Kaydet</button></div>
             </form>
         </div>
@@ -395,6 +397,7 @@
 
     <script type="module">
         import { authService, ipRecordsService, personsService, auth, generateUUID } from './firebase-config.js';
+        import { showNotification, formatFileSize, readFileAsDataURL, showFieldError, clearAllFieldErrors } from './utils.js'; // utils.js eklendi
 
         let dataEntryModule; 
 
@@ -419,7 +422,7 @@
                         this.currentUser = authService.getCurrentUser();
                         this.updateUserInfo(); 
                         await this.loadPersonsFromService();
-                        this.initializeEventListeners(); // <-- Burası hata veren yerdi
+                        this.initializeEventListeners();
                         this.setupFileUpload();
                         this.setupTrademarkImageUpload();
                         this.renderOwnerList();
@@ -455,7 +458,6 @@
                 }
             }
 
-            // Aşağıdaki initializeEventListeners metodunu ekleyin:
             initializeEventListeners() {
                 document.getElementById('logoutBtn').addEventListener('click', () => authService.signOut());
                 
@@ -483,7 +485,7 @@
                         this.addOwnerToGrid(this.selectedPersonForSearch);
                         this.hideSearchPersonModal();
                     } else {
-                        this.showNotification('Lütfen bir kişi seçin.', 'info');
+                        showNotification('Lütfen bir kişi seçin.', 'info'); // alert() yerine
                     }
                 });
 
@@ -526,53 +528,17 @@
                 });
             }
 
-            // loadPersonsFromService, setupFileUpload vb. diğer metodlar buraya devam ediyor.
-            // Bu kısım, sizin tarafınızdan eksik olan kısımdı.
             async loadPersonsFromService() {
                 const result = await personsService.getPersons();
                 if (result.success) {
                     this.persons = result.data;
                 } else {
                     console.error('Kişiler yüklenirken hata:', result.error);
-                    this.showNotification('Kişiler yüklenemedi.', 'error');
+                    showNotification('Kişiler yüklenirken bir hata oluştu.', 'error'); // alert() yerine
                 }
             }
 
-            showNotification(message, type = 'info') {
-                const successMessage = document.getElementById('formSuccessMessage');
-                const errorMessage = document.getElementById('formErrorMessage');
-                const infoMessage = document.getElementById('formInfoMessage');
-
-                successMessage.style.display = 'none';
-                errorMessage.style.display = 'none';
-                infoMessage.style.display = 'none';
-
-                let targetMessage;
-                let targetText;
-
-                switch (type) {
-                    case 'success':
-                        targetMessage = successMessage;
-                        targetText = document.getElementById('formSuccessText');
-                        break;
-                    case 'error':
-                        targetMessage = errorMessage;
-                        targetText = document.getElementById('formErrorText');
-                        break;
-                    case 'info':
-                        targetMessage = infoMessage;
-                        targetText = document.getElementById('formInfoText');
-                        break;
-                    default:
-                        targetMessage = infoMessage;
-                        targetText = document.getElementById('formInfoText');
-                }
-
-                if (targetMessage && targetText) {
-                    targetText.textContent = message;
-                    targetMessage.style.display = 'flex';
-                }
-            }
+            // showNotification fonksiyonu utils.js'ten import edildiği için kaldırıldı.
 
             toggleLoading(isLoading) {
                 const submitBtn = document.getElementById('submitBtn');
@@ -617,7 +583,7 @@
                     this.selectedOwners.push(person);
                     this.renderOwnerList();
                 } else {
-                    this.showNotification('Bu kişi zaten hak sahipleri listesinde.', 'info');
+                    showNotification('Bu kişi zaten hak sahipleri listesinde.', 'info');
                 }
             }
 
@@ -631,9 +597,7 @@
                 document.getElementById('addPersonModal').classList.add('show');
                 // Formu temizle
                 document.getElementById('personForm').reset();
-                document.getElementById('personNameError').style.display = 'none';
-                document.getElementById('personEmailError').style.display = 'none';
-                document.getElementById('personTypeError').style.display = 'none';
+                clearAllFieldErrors(); // Tüm hata mesajlarını temizle
             }
 
             // Yeni kişi ekleme modalını kapatma
@@ -650,28 +614,19 @@
                 const personAddress = document.getElementById('personAddress').value.trim();
 
                 let isValid = true;
+                clearAllFieldErrors(); // Yeni: Her gönderimde hataları temizle
+
                 if (!personName) {
-                    document.getElementById('personNameError').textContent = 'Ad Soyad alanı zorunludur.';
-                    document.getElementById('personNameError').style.display = 'block';
+                    showFieldError('personName', 'Ad Soyad alanı zorunludur.');
                     isValid = false;
-                } else {
-                    document.getElementById('personNameError').style.display = 'none';
                 }
-
                 if (personEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(personEmail)) {
-                    document.getElementById('personEmailError').textContent = 'Geçerli bir e-posta adresi girin.';
-                    document.getElementById('personEmailError').style.display = 'block';
+                    showFieldError('personEmail', 'Geçerli bir e-posta adresi girin.');
                     isValid = false;
-                } else {
-                    document.getElementById('personEmailError').style.display = 'none';
                 }
-
                 if (!personType) {
-                    document.getElementById('personTypeError').textContent = 'Kişi Türü alanı zorunludur.';
-                    document.getElementById('personTypeError').style.display = 'block';
+                    showFieldError('personType', 'Kişi Türü alanı zorunludur.');
                     isValid = false;
-                } else {
-                    document.getElementById('personTypeError').style.display = 'none';
                 }
 
                 if (!isValid) {
@@ -689,17 +644,17 @@
                     };
                     const result = await personsService.addPerson(newPersonData);
                     if (result.success) {
-                        this.showNotification('Yeni kişi başarıyla eklendi.', 'success');
+                        showNotification('Yeni kişi başarıyla eklendi.', 'success');
                         const addedPerson = { ...newPersonData, id: result.data.id, userId: this.currentUser.uid, userEmail: this.currentUser.email };
                         this.persons.push(addedPerson); // Mevcut kişiler listesine ekle
                         this.addOwnerToGrid(addedPerson); // Otomatik olarak hak sahibi listesine ekle
                         this.hideAddPersonModal();
                     } else {
-                        this.showNotification('Kişi eklenirken hata: ' + result.error, 'error');
+                        showNotification('Kişi eklenirken hata: ' + result.error, 'error');
                     }
                 } catch (error) {
                     console.error('Kişi kaydetme hatası:', error);
-                    this.showNotification('Kişi kaydedilirken beklenmeyen bir hata oluştu.', 'error');
+                    showNotification('Kişi kaydedilirken beklenmeyen bir hata oluştu.', 'error');
                 } finally {
                     this.toggleLoading(false);
                 }
@@ -764,7 +719,7 @@
             selectType(type) {
                 if (this.recordIdToEdit) {
                     // Düzenleme modunda tür değiştirilemez
-                    this.showNotification('Kayıt düzenlerken tür değiştirilemez.', 'info');
+                    showNotification('Kayıt düzenlerken tür değiştirilemez.', 'info');
                     return;
                 }
 
@@ -796,7 +751,7 @@
                 const statusSelect = document.getElementById('status');
                 statusSelect.innerHTML = '<option value="">Seçiniz</option>';
                 const commonStatuses = ['application', 'pending', 'approved', 'rejected', 'expired'];
-                const trademarkStatuses = ['published', 'partial_refusal', 'refused', 'opposition_received', 'opposition_filed', 'registered', 'not_renewed', 'invalid_void'];
+                const trademarkStatuses = ['published', 'partial_refusal', 'refused', 'opposition_received', 'opposition_filed', 'registered', 'not_renewed', 'invalid_void', 'invalid_not_renewed']; // Yeni statü eklendi
 
                 commonStatuses.forEach(status => {
                     statusSelect.innerHTML += `<option value="${status}">${status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</option>`;
@@ -876,15 +831,15 @@
             handleFiles(files) {
                 for (const file of files) {
                     if (file.size > 10 * 1024 * 1024) { // 10MB limit
-                        this.showNotification(`"${file.name}" dosyası 10MB'tan büyük ve yüklenemedi.`, 'error');
+                        showNotification(`"${file.name}" dosyası 10MB'tan büyük ve yüklenemedi.`, 'error');
                         continue;
                     }
                     if (this.uploadedFiles.some(f => f.name === file.name && f.size === file.size)) {
-                        this.showNotification(`"${file.name}" dosyası zaten eklenmiş.`, 'info');
+                        showNotification(`"${file.name}" dosyası zaten eklenmiş.`, 'info');
                         continue;
                     }
 
-                    this.readFileAsDataURL(file).then(dataUrl => {
+                    readFileAsDataURL(file).then(dataUrl => {
                         this.uploadedFiles.push({
                             id: generateUUID(),
                             name: file.name,
@@ -898,7 +853,7 @@
                         this.updateFileList();
                     }).catch(error => {
                         console.error("Dosya okuma hatası:", error);
-                        this.showNotification(`"${file.name}" dosyası okunamadı.`, 'error');
+                        showNotification(`"${file.name}" dosyası okunamadı.`, 'error');
                     });
                 }
             }
@@ -917,7 +872,7 @@
                     fileItem.dataset.id = file.id;
 
                     const fileInfo = document.createElement('span');
-                    fileInfo.textContent = `${file.name} (${this.formatFileSize(file.size)})`;
+                    fileInfo.textContent = `${file.name} (${formatFileSize(file.size)})`;
                     fileItem.appendChild(fileInfo);
 
                     const controls = document.createElement('div');
@@ -1013,22 +968,8 @@
                 this.updateFileList();
             }
 
-            readFileAsDataURL(file) {
-                return new Promise((resolve, reject) => {
-                    const reader = new FileReader();
-                    reader.onload = () => resolve(reader.result);
-                    reader.onerror = reject;
-                    reader.readAsDataURL(file);
-                });
-            }
-
-            formatFileSize(bytes) {
-                if (bytes === 0) return '0 Bytes';
-                const k = 1024;
-                const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-                const i = Math.floor(Math.log(bytes) / Math.log(k));
-                return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-            }
+            // formatFileSize utils.js'ten import edildiği için kaldırıldı.
+            // readFileAsDataURL utils.js'ten import edildiği için kaldırıldı.
 
             setupTrademarkImageUpload() {
                 const trademarkImageUploadArea = document.getElementById('trademarkImageUpload');
@@ -1068,21 +1009,21 @@
                 }
 
                 if (file.type !== 'image/jpeg') {
-                    this.showNotification('Sadece JPEG formatında görsel yükleyebilirsiniz.', 'error');
+                    showNotification('Sadece JPEG formatında görsel yükleyebilirsiniz.', 'error'); // alert() yerine
                     this.uploadedTrademarkImage = null;
                     this.renderTrademarkImagePreview();
                     this.validateForm();
                     return;
                 }
                 if (file.size > 5 * 1024 * 1024) { // 5MB limit
-                    this.showNotification('Marka görseli 5MB\'tan büyük olamaz.', 'error');
+                    showNotification('Marka görseli 5MB\'tan büyük olamaz.', 'error'); // alert() yerine
                     this.uploadedTrademarkImage = null;
                     this.renderTrademarkImagePreview();
                     this.validateForm();
                     return;
                 }
 
-                this.readFileAsDataURL(file).then(dataUrl => {
+                readFileAsDataURL(file).then(dataUrl => {
                     this.uploadedTrademarkImage = {
                         name: file.name,
                         type: file.type,
@@ -1094,7 +1035,7 @@
                     this.validateForm();
                 }).catch(error => {
                     console.error("Marka görseli okuma hatası:", error);
-                    this.showNotification('Marka görseli okunamadı.', 'error');
+                    showNotification('Marka görseli okunamadı.', 'error'); // alert() yerine
                     this.uploadedTrademarkImage = null;
                     this.renderTrademarkImagePreview();
                     this.validateForm();
@@ -1274,16 +1215,16 @@
                             document.querySelector(`.type-card[data-type="${this.originalRecordData.type}"]`).classList.add('selected');
                             this.selectedType = this.originalRecordData.type;
                         } else {
-                            this.showNotification('Kayıt bulunamadı.', 'error');
+                            showNotification('Kayıt bulunamadı.', 'error'); // alert() yerine
                             setTimeout(() => window.location.href = 'portfolio.html', 2000);
                         }
                     } else {
-                        this.showNotification('Kayıt yüklenirken hata: ' + result.error, 'error');
+                        showNotification('Kayıt yüklenirken hata: ' + result.error, 'error'); // alert() yerine
                         setTimeout(() => window.location.href = 'portfolio.html', 2000);
                     }
                 } catch (error) {
                     console.error('Kayıt yükleme hatası:', error);
-                    this.showNotification('Kayıt yüklenirken beklenmeyen bir hata oluştu.', 'error');
+                    showNotification('Kayıt yüklenirken beklenmeyen bir hata oluştu.', 'error'); // alert() yerine
                     setTimeout(() => window.location.href = 'portfolio.html', 2000);
                 } finally {
                     this.toggleLoading(false);
@@ -1351,9 +1292,7 @@
                 this.recordIdToEdit = null; // Düzenleme modundan çık
                 this.originalRecordData = null; // Orijinal veriyi temizle
 
-                // Hata mesajlarını gizle
-                document.querySelectorAll('.error-message').forEach(el => el.style.display = 'none');
-                document.querySelectorAll('.form-input, .form-select, .form-textarea').forEach(el => el.classList.remove('error-field'));
+                clearAllFieldErrors(); // Tüm hata mesajlarını temizle
 
                 // Tip kartlarını sıfırla
                 document.querySelectorAll('.type-card').forEach(card => {
@@ -1380,13 +1319,13 @@
                 this.updateTitleLabel(); // Başlık etiketini varsayılana çevir
                 this.updateStatusOptions(); // Durum seçeneklerini varsayılana çevir
                 this.validateForm(); // Formu başlangıç durumuna getir
-                this.showNotification('Form temizlendi.', 'info');
+                showNotification('Form temizlendi.', 'info');
             }
 
 
             async handleSubmit() {
                 if (!this.validateForm()) {
-                    this.showNotification('Lütfen tüm zorunlu alanları doldurun ve hataları düzeltin.', 'error');
+                    showNotification('Lütfen tüm zorunlu alanları doldurun ve hataları düzeltin.', 'error');
                     return;
                 }
 
@@ -1398,14 +1337,14 @@
                     if (this.recordIdToEdit) {
                         result = await ipRecordsService.updateRecord(this.recordIdToEdit, formData);
                         if (result.success) {
-                            this.showNotification('Kayıt başarıyla güncellendi!', 'success');
+                            showNotification('Kayıt başarıyla güncellendi!', 'success');
                         } else {
                             throw new Error(result.error || 'Kayıt güncellenirken bir hata oluştu.');
                         }
                     } else {
                         result = await ipRecordsService.addRecord(formData);
                         if (result.success) {
-                            this.showNotification('Yeni kayıt başarıyla oluşturuldu!', 'success');
+                            showNotification('Yeni kayıt başarıyla oluşturuldu!', 'success');
                             this.resetForm(); // Yeni kayıt sonrası formu temizle
                         } else {
                             throw new Error(result.error || 'Yeni kayıt oluşturulurken bir hata oluştu.');
@@ -1413,7 +1352,7 @@
                     }
                 } catch (error) {
                     console.error("Kayıt işlemi hatası:", error);
-                    this.showNotification('İşlem sırasında bir hata oluştu: ' + error.message, 'error');
+                    showNotification('İşlem sırasında bir hata oluştu: ' + error.message, 'error');
                 } finally {
                     this.toggleLoading(false);
                 }
@@ -1453,13 +1392,11 @@
         // Önce tüm aktif işaretlerini temizle
         document.querySelectorAll('.sidebar-nav-item.active, .accordion-content a.active').forEach(el => el.classList.remove('active'));
         
-        // Mevcut sayfanın linkini bul ve aktif yap
         const activeLink = document.querySelector(`.sidebar-nav a[href="${currentPage}"]`);
         if (!activeLink) return;
 
         activeLink.classList.add('active');
         
-        // Eğer link bir akordiyon içindeyse, akordiyonu aç ve başlığını aktif et
         const parentAccordionContent = activeLink.closest('.accordion-content');
         if (parentAccordionContent) {
             const parentAccordionHeader = parentAccordionContent.previousElementSibling;
@@ -1470,7 +1407,6 @@
         }
     }
 
-    // Sayfa ilk yüklendiğinde aktif menüyü ayarla
     setActiveMenu();
 });
     </script>
