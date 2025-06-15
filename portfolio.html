@@ -10,14 +10,11 @@
             padding: 0;
             box-sizing: border-box;
         }
-
-        /* BODY VE YENİ LAYOUT */
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             color: #333;
             display: flex;
         }
-        
         .page-wrapper {
             flex-grow: 1;
             display: flex;
@@ -26,184 +23,34 @@
             overflow-y: auto;
             background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
         }
-
         .main-container {
-            width: 100%; /* Genişliği tamamen doldurmasını sağlar */
-            padding: 30px; /* İçeriğin kenarlara yapışmaması için boşluk bırakır */
-            margin: 0; /* Otomatik ortalamayı kaldırır */
+            width: 100%;
+            padding: 30px;
+            margin: 0;
         }
-        
-
-        /* ESKİ HEADER'I GİZLE */
-        body > .header {
-            display: none;
-        }
-
-        /* === YENİ SOL MENÜ VE ÜST BAR STİLLERİ === */
-        .sidebar {
-            width: 260px;
-            background: #1e3c72;
-            color: white;
-            display: flex;
-            flex-direction: column;
-            transition: width 0.3s ease;
-            height: 100vh;
-            position: sticky;
-            top: 0;
-            z-index: 1001; /* Modalların üstünde kalmaması için */
-        }
-
-        .sidebar-header {
-            padding: 20px;
-            text-align: center;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .sidebar-logo {
-            font-size: 1.8em;
-            font-weight: bold;
-            color: white;
-            text-decoration: none;
-        }
-
-        .sidebar-nav {
-            flex-grow: 1;
-            overflow-y: auto;
-            padding: 20px 0;
-        }
-
-        .nav-category-title {
-            padding: 10px 20px;
-            font-size: 0.8em;
-            font-weight: bold;
-            color: rgba(255, 255, 255, 0.5);
-            text-transform: uppercase;
-        }
-
-        .sidebar-nav-item, .accordion-header {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            padding: 15px 20px;
-            color: rgba(255, 255, 255, 0.8);
-            text-decoration: none;
-            transition: background 0.3s ease;
-            cursor: pointer;
-        }
-
-        .sidebar-nav-item:hover, .accordion-header:hover {
-            background: rgba(255, 255, 255, 0.1);
-        }
-
-        .sidebar-nav-item.active {
-            background: #2a5298;
-            color: white;
-            font-weight: bold;
-            border-left: 4px solid #4ecdc4;
-            padding-left: 16px;
-        }
-        
-        .nav-icon {
-            font-size: 1.2em;
-            width: 20px;
-            text-align: center;
-        }
-
-        .accordion-header::after {
-            content: '▶';
-            margin-left: auto;
-            font-size: 0.8em;
-            transition: transform 0.3s ease;
-        }
-
-        .accordion-header.active::after {
-            transform: rotate(90deg);
-        }
-
-        .accordion-content {
-            background: rgba(0, 0, 0, 0.2);
-            max-height: 0;
-            overflow: hidden;
-            transition: max-height 0.3s ease-out;
-        }
-
-        .accordion-content a {
-            display: block;
-            padding: 12px 20px 12px 55px; /* İkon boşluğu için girinti */
-            color: rgba(255, 255, 255, 0.7);
-            text-decoration: none;
-            transition: background 0.2s ease;
-        }
-
-        .accordion-content a:hover {
-            background: rgba(255, 255, 255, 0.1);
-            color: white;
-        }
-
-        .accordion-content a.active {
-            color: white;
-            font-weight: 500;
-        }
-
-        .top-header {
-            background: rgba(255, 255, 255, 0.95);
-            padding: 15px 30px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-            display: flex;
-            justify-content: flex-end;
-            align-items: center;
-            position: sticky;
-            top: 0;
-            z-index: 99;
-            backdrop-filter: blur(10px);
-        }
-
-        .user-section {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-
-        .user-avatar {
-            width: 40px;
-            height: 40px;
-            background: linear-gradient(45deg, #1e3c72, #2a5298);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-weight: bold;
-        }
-        
-        .user-info {
-            display: flex;
-            flex-direction: column;
-        }
-
-        .user-name {
-            font-weight: 600;
-            color: #333;
-        }
-
-        .user-role {
-            font-size: 0.8em;
-            color: #666;
-        }
-
-        .logout-btn {
-            background: #ff6b6b;
-            color: white;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 0.9em;
-            transition: all 0.3s ease;
-        }
+        .sidebar { width: 260px; background: #1e3c72; color: white; display: flex; flex-direction: column; transition: width 0.3s ease; height: 100vh; position: sticky; top: 0; z-index: 1001; }
+        .sidebar-header { padding: 20px; text-align: center; border-bottom: 1px solid rgba(255, 255, 255, 0.1); }
+        .sidebar-logo { font-size: 1.8em; font-weight: bold; color: white; text-decoration: none; }
+        .sidebar-nav { flex-grow: 1; overflow-y: auto; padding: 20px 0; }
+        .nav-category-title { padding: 10px 20px; font-size: 0.8em; font-weight: bold; color: rgba(255, 255, 255, 0.5); text-transform: uppercase; }
+        .sidebar-nav-item, .accordion-header { display: flex; align-items: center; gap: 15px; padding: 15px 20px; color: rgba(255, 255, 255, 0.8); text-decoration: none; transition: background 0.3s ease; cursor: pointer; }
+        .sidebar-nav-item:hover, .accordion-header:hover { background: rgba(255, 255, 255, 0.1); }
+        .sidebar-nav-item.active { background: #2a5298; color: white; font-weight: bold; border-left: 4px solid #4ecdc4; padding-left: 16px; }
+        .nav-icon { font-size: 1.2em; width: 20px; text-align: center; }
+        .accordion-header::after { content: '▶'; margin-left: auto; font-size: 0.8em; transition: transform 0.3s ease; }
+        .accordion-header.active::after { transform: rotate(90deg); }
+        .accordion-content { background: rgba(0, 0, 0, 0.2); max-height: 0; overflow: hidden; transition: max-height 0.3s ease-out; }
+        .accordion-content a { display: block; padding: 12px 20px 12px 55px; color: rgba(255, 255, 255, 0.7); text-decoration: none; transition: background 0.2s ease; }
+        .accordion-content a:hover { background: rgba(255, 255, 255, 0.1); color: white; }
+        .accordion-content a.active { color: white; font-weight: 500; }
+        .top-header { background: rgba(255, 255, 255, 0.95); padding: 15px 30px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05); display: flex; justify-content: flex-end; align-items: center; position: sticky; top: 0; z-index: 99; backdrop-filter: blur(10px); }
+        .user-section { display: flex; align-items: center; gap: 15px; }
+        .user-avatar { width: 40px; height: 40px; background: linear-gradient(45deg, #1e3c72, #2a5298); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; }
+        .user-info { display: flex; flex-direction: column; }
+        .user-name { font-weight: 600; color: #333; }
+        .user-role { font-size: 0.8em; color: #666; }
+        .logout-btn { background: #ff6b6b; color: white; border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 0.9em; transition: all 0.3s ease; }
         .logout-btn:hover { background: #ff5252; }
-
-        /* === PORTFÖY SAYFASINA AİT ORİJİNAL STİLLER === */
         .page-header { background: rgba(255, 255, 255, 0.95); padding: 30px; border-radius: 20px; margin-bottom: 30px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1); }
         .page-title { font-size: 2em; color: #1e3c72; margin-bottom: 10px; }
         .page-subtitle { color: #666; font-size: 1.1em; }
@@ -553,6 +400,7 @@
         </div>
     </div>
 
+
     <script type="module">
         import { authService, ipRecordsService, auth, subDesignationTranslations, documentDesignationTranslations } from './firebase-config.js';
 
@@ -654,7 +502,7 @@
                 });
             }
 
-            handleSort(event) { 
+            handleSort(event) {
                 const column = event.currentTarget.dataset.sort; 
                 if (this.sortColumn === column) { this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc'; } else { this.sortColumn = column; this.sortDirection = 'asc'; }
                 this.sortRecords();
@@ -686,7 +534,7 @@
                     loadingIndicator.style.display = 'none';
                 }
             }
-            
+
             viewRecord(recordId) {
                 const record = this.records.find(r => r.id === recordId);
                 if (!record) return;
@@ -698,21 +546,19 @@
                 const statusNames = { application: 'Başvuru', pending: 'Beklemede', approved: 'Onaylandı', rejected: 'Reddedildi', expired: 'Süresi Doldu', published: 'Yayınlandı', partial_refusal: 'Kısmi Ret', refused: 'Ret', opposition_received: 'İtiraz Geldi', opposition_filed: 'İtiraz Edildi', registered: 'Tescilli', not_renewed: 'Yenilenmedi', invalid_void: 'Geçersiz' };
 
                 const formatDate = (dateString) => dateString ? new Date(dateString).toLocaleDateString('tr-TR') : '-';
+                
                 const renderField = (label, value, isLongText = false) => {
                     if (value === null || value === undefined || value === '') return '';
-                    // DÜZELTME: renderLongTextField yerine bu fonksiyonun kendisi kullanılacak.
-                    if (isLongText) {
-                        return `<div class="detail-item full-width"><div class="detail-label">${label}</div><div class="detail-value long-text">${value}</div></div>`;
-                    }
-                    return `<div class="detail-item"><div class="detail-label">${label}</div><div class="detail-value">${value}</div></div>`;
+                    const valueClass = isLongText ? 'detail-value long-text' : 'detail-value';
+                    return `<div class="detail-item <span class="math-inline">\{isLongText ? 'full\-width' \: ''\}"\><div class\="detail\-label"\></span>{label}</div><div class="<span class="math-inline">\{valueClass\}"\></span>{value}</div></div>`;
                 };
 
                 let modalContentHtml = `<div class="detail-grid">`;
                 
                 modalContentHtml += `<h4 class="detail-section-title">Genel Bilgiler</h4>`;
-                modalContentHtml += renderField('Tür', `<span class="ip-type ${record.type}">${typeNames[record.type] || 'Bilinmiyor'}</span>`);
+                modalContentHtml += renderField('Tür', `<span class="ip-type <span class="math-inline">\{record\.type\}"\></span>{typeNames[record.type] || 'Bilinmiyor'}</span>`);
                 modalContentHtml += renderField('Başlık', record.title);
-                modalContentHtml += renderField('Durum', `<span class="status-badge ${record.status}">${statusNames[record.status] || record.status}</span>`);
+                modalContentHtml += renderField('Durum', `<span class="status-badge <span class="math-inline">\{record\.status\}"\></span>{statusNames[record.status] || record.status}</span>`);
                 modalContentHtml += renderField('Başvuru Numarası', record.applicationNumber);
                 modalContentHtml += renderField('Tescil Numarası', record.registrationNumber);
                 modalContentHtml += renderField('Başvuru Tarihi', formatDate(record.applicationDate));
@@ -767,7 +613,7 @@
                     modalContentHtml += `<h4 class="detail-section-title">Yüklenen Dokümanlar</h4>`;
                     modalContentHtml += `<div class="detail-item full-width"><ul>`;
                     record.files.forEach(file => {
-                        modalContentHtml += `<li><a href="${file.content}" download="${file.name}">📄 ${file.name} (${this.formatFileSize(file.size)}) - ${file.documentDesignation || 'Belge'}</a></li>`;
+                        modalContentHtml += `<li><a href="<span class="math-inline">\{file\.content\}" download\="</span>{file.name}">📄 <span class="math-inline">\{file\.name\} \(</span>{this.formatFileSize(file.size)}) - ${file.documentDesignation || 'Belge'}</a></li>`;
                     });
                     modalContentHtml += `</ul></div>`;
                 }
@@ -780,11 +626,11 @@
                 modal.classList.add('show');
             }
 
-            editRecord = (recordId) => {
+            editRecord(recordId) {
                 window.location.href = `data-entry.html?recordId=${recordId}`;
-            };
+            }
 
-            deleteRecord = async (recordId) => {
+            async deleteRecord(recordId) {
                 if (confirm('Kaydı silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.')) {
                     try {
                         const result = await ipRecordsService.deleteRecord(recordId);
@@ -799,12 +645,262 @@
                         alert('Kayıt silinirken bir hata oluştu: ' + error.message);
                     }
                 }
-            };
-            
-            // Diğer tüm metotlar aynı şekilde kalacak...
-        }
+            }
 
-        // --- Sayfa Başlatma ---
+            updateStats() {
+                document.getElementById('totalRecords').textContent = this.filteredRecords.length;
+                document.getElementById('patentCount').textContent = this.filteredRecords.filter(r => r.type === 'patent').length;
+                document.getElementById('trademarkCount').textContent = this.filteredRecords.filter(r => r.type === 'trademark').length;
+                document.getElementById('copyrightCount').textContent = this.filteredRecords.filter(r => r.type === 'copyright').length;
+                document.getElementById('designCount').textContent = this.filteredRecords.filter(r => r.type === 'design').length;
+            }
+
+            applyFilters() {
+                this.currentPage = 1;
+                const now = new Date();
+                const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+                const firstDayOfYear = new Date(now.getFullYear(), 0, 1);
+                this.filteredRecords = this.records.filter(record => {
+                    if (this.filters.type !== 'all' && record.type !== this.filters.type) return false;
+                    if (this.filters.status && record.status !== this.filters.status) return false;
+                    if (this.filters.search && !this.matchesSearch(record, this.filters.search.toLowerCase())) return false;
+                    if (this.filters.period !== 'all') {
+                        const appDate = new Date(record.applicationDate);
+                        if (this.filters.period === 'month' && appDate < firstDayOfMonth) return false;
+                        if (this.filters.period === 'year' && appDate < firstDayOfYear) return false;
+                    }
+                    return true;
+                });
+                this.sortRecords();
+                this.renderTable();
+                this.updateStats();
+            }
+
+            matchesSearch(record, search) {
+                const ownersString = (record.owners || []).map(o => o.name).join(' ').toLowerCase();
+                return (record.title.toLowerCase().includes(search) || (record.applicationNumber && record.applicationNumber.toLowerCase().includes(search)) || (record.description && record.description.toLowerCase().includes(search)) || ownersString.includes(search));
+            }
+            
+            sortRecords() {
+                this.filteredRecords.sort((a, b) => {
+                    let aVal = a[this.sortColumn] || '';
+                    let bVal = b[this.sortColumn] || '';
+                    if (this.sortColumn === 'owners') { aVal = (a.owners || []).map(o => o.name).join(', '); bVal = (b.owners || []).map(o => o.name).join(', '); }
+                    if (typeof aVal === 'string') { aVal = aVal.toLowerCase(); bVal = bVal.toLowerCase(); }
+                    if (aVal < bVal) return this.sortDirection === 'asc' ? -1 : 1;
+                    if (aVal > bVal) return this.sortDirection === 'asc' ? 1 : -1;
+                    return 0;
+                });
+                this.updateSortIndicators();
+            }
+
+            updateSortIndicators() {
+                document.querySelectorAll('.portfolio-table th.sortable').forEach(th => {
+                    th.classList.remove('sort-asc', 'sort-desc');
+                    if (th.dataset.sort === this.sortColumn) {
+                        th.classList.add(`sort-${this.sortDirection}`);
+                    }
+                });
+            }
+
+            renderTable() {
+                const tbody = document.getElementById('portfolioTableBody');
+                const pagination = document.getElementById('pagination');
+                const portfolioTable = document.getElementById('portfolioTable');
+                const noRecords = document.getElementById('noRecords');
+                tbody.innerHTML = '';
+                if (this.filteredRecords.length === 0) { this.showEmptyState(); return; }
+                portfolioTable.style.display = 'table';
+                noRecords.style.display = 'none';
+                const totalPages = Math.ceil(this.filteredRecords.length / this.recordsPerPage);
+                const pageRecords = this.filteredRecords.slice((this.currentPage - 1) * this.recordsPerPage, this.currentPage * this.recordsPerPage);
+                pageRecords.forEach(record => {
+                    tbody.appendChild(this.createTableRow(record));
+                });
+                if (totalPages > 1) {
+                    pagination.style.display = 'flex';
+                    document.getElementById('prevBtn').disabled = this.currentPage === 1;
+                    document.getElementById('nextBtn').disabled = this.currentPage === totalPages;
+                    document.getElementById('pageInfo').textContent = `Sayfa ${this.currentPage} / ${totalPages}`;
+                } else {
+                    pagination.style.display = 'none';
+                }
+            }
+
+            createTableRow(record) {
+                const row = document.createElement('tr');
+                const typeNames = { patent: 'Patent', trademark: 'Marka', copyright: 'Telif Hakkı', design: 'Tasarım' };
+                const statusNames = { application: 'Başvuru', pending: 'Beklemede', approved: 'Onaylandı', rejected: 'Reddedildi', expired: 'Süresi Doldu', published: 'Yayınlandı', partial_refusal: 'Kısmi Ret', refused: 'Ret', opposition_received: 'İtiraz Geldi', opposition_filed: 'İtiraz Edildi', registered: 'Tescilli', not_renewed: 'Yenilenmedi', invalid_void: 'Geçersiz' };
+                let titleHtml = record.title;
+                if (record.type === 'trademark' && record.trademarkImage?.content) {
+                    titleHtml += `<div class="trademark-image-thumb-container"><img src="<span class="math-inline">\{record\.trademarkImage\.content\}" class\="trademark\-image\-thumb" alt\="Marka Örneği"\><img src\="</span>{record.trademarkImage.content}" class="trademark-image-preview-large"></div>`;
+                }
+                row.innerHTML = `
+                    <td><span class="ip-type <span class="math-inline">\{record\.type\}"\></span>{typeNames[record.type] || 'Bilinmiyor'}</span></td>
+                    <td><span class="math-inline">\{titleHtml\}</td\>
+<td\></span>{record.applicationNumber || '-'}</td>
+                    <td><span class="status-badge <span class="math-inline">\{record\.status\}"\></span>{statusNames[record.status] || record.status}</span></td>
+                    <td><span class="math-inline">\{record\.applicationDate ? new Date\(record\.applicationDate\)\.toLocaleDateString\('tr\-TR'\) \: '\-'\}</td\>
+<td\></span>{(record.owners || []).map(o => o.name).join(', ') || '-'}</td>
+                    <td><div class="action-buttons"><button class="table-action-btn btn-view" data-id="<span class="math-inline">\{record\.id\}" title\="Görüntüle"\>👁️</button\><button class\="table\-action\-btn btn\-edit" data\-id\="</span>{record.id}" title="Düzenle">✏️</button><button class="table-action-btn btn-delete" data-id="${record.id}" title="Sil">🗑️</button></div></td>`;
+                
+                row.querySelector('.btn-view').addEventListener('click', () => this.viewRecord(record.id));
+                row.querySelector('.btn-edit').addEventListener('click', () => this.editRecord(record.id));
+                row.querySelector('.btn-delete').addEventListener('click', () => this.deleteRecord(record.id));
+                
+                return row;
+            }
+            
+            renderTransactionHistory(recordId, transactions, recordFiles) {
+                const historyContainer = document.getElementById('transactionHistory');
+                historyContainer.innerHTML = '';
+
+                if (!transactions || transactions.length === 0) {
+                    historyContainer.innerHTML = '<p style="text-align: center; color: #666; padding: 20px;">Belge işlem geçmişi bulunmuyor.</p>';
+                    return;
+                }
+
+                const allTransactions = transactions.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+                
+                const displayableTransactionTypes = [
+                    "Document Indexed", "Document Sub-Indexed",
+                    'Başvuru', 'İtiraza Karşı Görüş (YIDD)', 'Yenileme', 'Eksiklik Giderme', 'Yayına İtiraz',
+                    'Karara İtiraz', 'Yayıma İtirazın Yeniden İncelenmesi', 'İtiraza Karşı Görüş (Markalar)',
+                    'Devir', 'Lisans', 'Birleşme', 'Veraset ile İntikal', 'Tescil Belgesi Sureti',
+                    'Sicil Sureti', 'Menşe Memleket Belgesi', 'Rehin/Teminat', 'Bölünme', 'Vazgeçme',
+                    'Tanınmışlık Tespiti', '3.Kişi Görüşü', 'Yayına İtirazı Geri Çekme',
+                    'Madrid Başvurusu Ücret Ödeme', 'Muvaffakat Sunumu', 'Kullanım İspatı Sunma',
+                    'İtiraza Ek Belge', 'Eşya Sınırlandırma',
+                    'Kabul Kararı', 'Ret Kararı', 'İş Tamamlama',
+                    'Eksiklik Bildirimi'
+                ];
+
+                const relevantTransactions = allTransactions.filter(tx => 
+                    displayableTransactionTypes.includes(tx.type) || displayableTransactionTypes.includes(tx.description)
+                ).sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+
+                if (relevantTransactions.length === 0) {
+                    historyContainer.innerHTML = '<p style="text-align: center; color: #666; padding: 20px;">Gösterilebilir işlem bulunmuyor.</p>';
+                    return;
+                }
+
+                const transactionsMap = new Map(relevantTransactions.map(tx => [tx.transactionId, tx]));
+                const childrenMap = new Map();
+                
+                relevantTransactions.forEach(tx => {
+                    if (tx.parentId && transactionsMap.has(tx.parentId)) {
+                        if (!childrenMap.has(tx.parentId)) childrenMap.set(tx.parentId, []);
+                        childrenMap.get(tx.parentId).push(tx);
+                    }
+                });
+
+                const buildTreeHtml = (transactionsToBuild) => {
+                    let html = '';
+                    transactionsToBuild.forEach(tx => {
+                        const children = childrenMap.get(tx.transactionId) || [];
+                        const hasChildren = children.length > 0;
+                        let documentLinkHtml = '';
+                        if (tx.documentId && recordFiles) {
+                            const relatedFile = recordFiles.find(file => file.id === tx.documentId);
+                            if (relatedFile) documentLinkHtml = ` | <a href="<span class="math-inline">\{relatedFile\.content\}" download\="</span>{relatedFile.name}" class="transaction-document-link">📄 Belge</a>`;
+                        }
+                        html += `
+                            <div class="transaction-node" data-id="${tx.transactionId}">
+                                ${hasChildren ? `<button class="transaction-toggle-btn" data-target-id="${tx.transactionId}">${children.length > 0 ? '+' : ''}</button>` : ''}
+                                <div class="transaction-node-content">
+                                    <div class="transaction-info">
+                                        <div class="transaction-description"><span class="math-inline">\{tx\.description \|\| tx\.type\}</div\> 
+<div class\="transaction\-meta"\></span>{new Date(tx.timestamp).toLocaleDateString('tr-TR')} by <span class="math-inline">\{tx\.userEmail\}</span>{documentLinkHtml}</div>
+                                    </div>
+                                    <div class="transaction-actions">
+                                        <button class="transaction-action-btn btn-edit-transaction" onclick="portfolio.openEditTransactionModal('<span class="math-inline">\{recordId\}', '</span>{tx.transactionId}')" title="Düzenle">✏️</button>
+                                        <button class="transaction-action-btn btn-delete-transaction" onclick="portfolio.deleteTransaction('<span class="math-inline">\{recordId\}', '</span>{tx.transactionId}')" title="Sil">🗑️</button>
+                                    </div>
+                                </div>
+                            </div>
+                            ${hasChildren ? `<div class="child-transactions" id="children-of-${tx.transactionId}">${buildTreeHtml(children)}</div>` : ''}`;
+                    });
+                    return html;
+                };
+
+                const rootTransactions = relevantTransactions.filter(tx => !tx.parentId || !transactionsMap.has(tx.parentId));
+                historyContainer.innerHTML = buildTreeHtml(rootTransactions);
+
+                historyContainer.querySelectorAll('.transaction-toggle-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const targetId = btn.dataset.targetId;
+                        const childContainer = document.getElementById(`children-of-${targetId}`);
+                        if (childContainer) {
+                            childContainer.classList.toggle('show');
+                            btn.classList.toggle('expanded');
+                            btn.textContent = childContainer.classList.contains('show') ? '−' : '+';
+                        }
+                    });
+                });
+
+                if (rootTransactions.length === 0) {
+                    historyContainer.innerHTML = '<p style="text-align: center; color: #666; padding: 20px;">Gösterilebilir işlem bulunmuyor.</p>';
+                }
+            }
+
+            closeModal(modalId) {
+                document.getElementById(modalId).classList.remove('show');
+            }
+
+            exportData() {
+                if (this.filteredRecords.length === 0) {
+                    alert('Dışa aktarılacak kayıt bulunamadı.');
+                    return;
+                }
+
+                const headers = ["Tür", "Başlık", "Başvuru Numarası", "Durum", "Başvuru Tarihi", "Tescil Tarihi", "Hak Sahipleri", "Açıklama"];
+                const data = this.filteredRecords.map(record => {
+                    const owners = (record.owners || []).map(o => o.name).join(', ');
+                    const applicationDate = record.applicationDate ? new Date(record.applicationDate).toLocaleDateString('tr-TR') : '';
+                    const registrationDate = record.registrationDate ? new Date(record.registrationDate).toLocaleDateString('tr-TR') : '';
+                    return [
+                        record.type || '',
+                        `"${record.title}"` || '', 
+                        record.applicationNumber || '',
+                        record.status || '',
+                        applicationDate,
+                        registrationDate,
+                        `"${owners}"` || '',
+                        `"${record.description || ''}"`
+                    ];
+                });
+
+                let csvContent = "data:text/csv;charset=utf-8,\uFEFF" 
+                csvContent += headers.join(';') + '\r\n';
+                data.forEach(row => {
+                    csvContent += row.join(';') + '\r\n';
+                });
+
+                const encodedUri = encodeURI(csvContent);
+                const link = document.createElement("a");
+                link.setAttribute("href", encodedUri);
+                link.setAttribute("download", "fikri_mulkiyet_portfoyu.csv");
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }
+
+            showEmptyState() {
+                document.getElementById('portfolioTable').style.display = 'none';
+                document.getElementById('pagination').style.display = 'none';
+                document.getElementById('noRecords').style.display = 'block';
+            }
+            
+            formatFileSize(bytes) {
+                if (bytes === 0) return '0 Bytes';
+                const k = 1024;
+                const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+                const i = Math.floor(Math.log(bytes) / Math.log(k));
+                return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+            }
+        }
+        
         let portfolioModule;
         document.addEventListener('DOMContentLoaded', () => {
             auth.onAuthStateChanged((user) => {
@@ -818,7 +914,6 @@
                 }
             });
 
-            // Akordiyon menü scripti
             const accordions = document.querySelectorAll('.accordion-header');
             accordions.forEach(accordion => {
                 accordion.addEventListener('click', function(event) {
@@ -834,10 +929,14 @@
 
             function setActiveMenu() {
                 const currentPage = window.location.pathname.split("/").pop() || 'dashboard.html';
+                
                 document.querySelectorAll('.sidebar-nav-item.active, .accordion-content a.active').forEach(el => el.classList.remove('active'));
+                
                 const activeLink = document.querySelector(`.sidebar-nav a[href="${currentPage}"]`);
                 if (!activeLink) return;
+
                 activeLink.classList.add('active');
+                
                 const parentAccordionContent = activeLink.closest('.accordion-content');
                 if (parentAccordionContent) {
                     const parentAccordionHeader = parentAccordionContent.previousElementSibling;
