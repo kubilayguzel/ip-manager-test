@@ -33,7 +33,7 @@ body {
 
 /* Sol Menü (Sidebar) */
 .sidebar {
-    width: 260px;
+    width: 280px; /* GENİŞLİK BURADA ARTIRILDI */
     background: #1e3c72; /* Koyu mavi */
     color: white;
     display: flex;
