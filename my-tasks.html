@@ -414,6 +414,7 @@
                 const tableBody = document.getElementById('tasksTableBody');
                 
                 // TEK BİR TABLEBODY CLICK LISTENER'I OLUŞTURULDU
+                // Fix: Bind 'this' to the current instance of MyTasksModule
                 tableBody.addEventListener('click', (event) => {
                     const target = event.target.closest('button.action-btn, a.ip-record-link');
                     if (!target) return;
@@ -834,7 +835,7 @@
                 const serviceFee = parseFloat(document.getElementById('serviceFee').value) || 0;
                 
                 if (officialFee <= 0 && serviceFee <= 0) {
-                    showNotification("Lütfen en az bir ücret girin.", 'error');
+                    showNotification("Lütfen en least bir ücret girin.", 'error');
                     return;
                 }
 
@@ -1068,24 +1069,177 @@
                 }); 
                 historyContainer.innerHTML = html;
             }
-        }
 
-        let myTasksModule;
-        document.addEventListener('DOMContentLoaded', async () => {
-            await loadSharedLayout({ activeMenuLink: 'my-tasks.html' }); // layout-loader.js'i yükle
-            
-            auth.onAuthStateChanged(async (user) => {
-                if (user || authService.getCurrentUser()) {
-                    if (!myTasksModule) {
-                        myTasksModule = new MyTasksModule();
-                        await myTasksModule.init(); // init içinde updateUserInfo ve setupEventListeners çağrılmayacak
-                        window.myTasksModule = myTasksModule;
-                    }
-                } else {
-                    window.location.href = 'index.html';
+            // Method to display task details in a modal (already defined in task-management.html, re-added for my-tasks)
+            viewTaskDetailsModal(taskId) {
+                const task = this.tasks.find(t => t.id === taskId);
+                if (!task) {
+                    showNotification('Görev bulunamadı.', 'error');
+                    return;
                 }
+                this.populateModalTaskDetails(task, this.allIpRecords, this.allPersons);
+                document.getElementById('viewTaskDetailModal').classList.add('show');
+            }
+
+            // Method to display complete task modal (already defined in task-management.html, re-added for my-tasks)
+            showCompleteTaskModal(taskId, relatedIpRecordId) {
+                const task = this.tasks.find(t => t.id === taskId);
+                if (!task) {
+                    showNotification('Tamamlanacak görev bulunamadı.', 'error');
+                    return;
+                }
+                document.getElementById('completeTaskId').value = taskId;
+                document.getElementById('completeTaskRelatedIpRecordId').value = relatedIpRecordId || '';
+                this.uploadedCompletionFiles = [];
+                document.getElementById('completeTaskFileList').innerHTML = '';
+                document.getElementById('completeTaskModal').classList.add('show');
+            }
+
+            async completeTask(actionType) {
+                const taskId = document.getElementById('completeTaskId').value;
+                const relatedIpRecordId = document.getElementById('completeTaskRelatedIpRecordId').value;
+                if (!taskId) { showNotification('İş ID\'si bulunamadı.', 'error'); return; }
+                
+                const actionMessages = {
+                    completed_with_doc: { confirm: 'Bu işi "Tamamlandı" olarak işaretlemek istediğinizden emin misiniz?', success: 'İş başarıyla tamamlandı!' },
+                    client_approved: { confirm: 'Bu işi "Müvekkil Onayı" ile tamamlamak istediğinizden emin misiniz?', success: 'İş, müvekkil onayı ile tamamlandı!' },
+                    manually_closed: { confirm: 'Bu işi "Manuel Kapat" olarak işaretlemek istediğinizden emin misiniz?', success: 'İş, manuel olarak kapatıldı!' }
+                };
+                const messages = actionMessages[actionType];
+
+                if (confirm(messages.confirm)) {
+                    try {
+                        const updates = { status: 'completed' }; // Durumu tamamlandı olarak ayarla
+
+                        // Eğer dosya yüklendi ise, bu dosyaları da güncellemelere ekle
+                        if (this.uploadedCompletionFiles.length > 0) {
+                            // Mevcut görev verilerini al (eğer zaten dosya varsa)
+                            const currentTaskData = this.tasks.find(t => t.id === taskId);
+                            const existingFiles = currentTaskData ? (currentTaskData.files || []) : [];
+                            
+                            updates.files = [...existingFiles, ...this.uploadedCompletionFiles];
+                        }
+
+                        const result = await taskService.updateTask(taskId, updates);
+                        if (!result.success) throw new Error(result.error || 'İş durumu güncellenemedi.');
+
+                        // Eğer ilgili IP kaydı varsa ve tamamlanan dokümanlar yüklendiyse
+                        if (this.uploadedCompletionFiles.length > 0 && relatedIpRecordId) {
+                            const currentIpRecord = this.allIpRecords.find(r => r.id === relatedIpRecordId);
+                            const updatedIpRecordFiles = (currentIpRecord?.files || []).concat(this.uploadedCompletionFiles.map(f => ({
+                                ...f,
+                                documentDesignation: 'İş Tamamlama Dokümanı' // IP kaydına eklerken belge tipi
+                            })));
+                            const ipRecordUpdateResult = await ipRecordsService.updateRecord(relatedIpRecordId, { files: updatedIpRecordFiles });
+                            if (!ipRecordUpdateResult.success) {
+                                showNotification(`${messages.success} Ancak dokümanlar ilgili IP kaydına yüklenirken bir hata oluştu: ${ipRecordUpdateResult.error}`, 'error');
+                            } else {
+                                showNotification(`${messages.success} Dokümanlar da başarıyla ilgili IP kaydına yüklendi!`, 'success');
+                            }
+                        } else {
+                            showNotification(messages.success, 'success');
+                        }
+
+                        this.closeModal('completeTaskModal');
+                        await this.loadInitialData(); // Verileri yeniden yükleyerek güncel hali göster
+                    } catch (error) {
+                        showNotification('İş tamamlanırken bir hata oluştu: ' + error.message, 'error');
+                    }
+                }
+
+                handleDocumentUploadForTaskCompletion(files) {
+                    for (const file of files) {
+                        if (this.uploadedCompletionFiles.some(f => f.name === file.name && f.size === file.size)) {
+                            showNotification(`"${file.name}" dosyası zaten eklenmiş.`, 'info');
+                            continue;
+                        }
+                        readFileAsDataURL(file).then(dataUrl => {
+                            this.uploadedCompletionFiles.push({
+                                id: generateUUID(), name: file.name, size: file.size, type: file.type, content: dataUrl,
+                                uploadedAt: new Date().toISOString(), documentDesignation: 'Tamamlama Dokümanı',
+                            });
+                            this.renderDocumentListForTaskCompletion();
+                        }).catch(error => {
+                            console.error("Dosya okuma hatası:", error);
+                            showNotification(`"${file.name}" dosyası okunamadı.`, 'error');
+                        });
+                    }
+                }
+                
+                renderDocumentListForTaskCompletion() {
+                    const fileList = document.getElementById('completeTaskFileList');
+                    fileList.innerHTML = '';
+                    this.uploadedCompletionFiles.forEach(file => {
+                        const fileItem = document.createElement('div');
+                        fileItem.className = 'file-item-modal';
+                        fileItem.innerHTML = `<span>${file.name} (${formatFileSize(file.size)})</span><button type="button" class="remove-file-modal" data-id="${file.id}">&times;</button>`;
+                        fileItem.querySelector('.remove-file-modal').addEventListener('click', (e) => {
+                            this.uploadedCompletionFiles = this.uploadedCompletionFiles.filter(f => f.id !== e.target.dataset.id);
+                            this.renderDocumentListForTaskCompletion();
+                        });
+                        fileList.appendChild(fileItem);
+                    });
+                }
+
+                // Delete Task (already defined in task-management.html, re-added for my-tasks)
+                async deleteTask(taskId) {
+                    if (confirm('Bu işi silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.')) {
+                        try {
+                            const result = await taskService.deleteTask(taskId);
+                            if (result.success) {
+                                showNotification('İş başarıyla silindi.', 'success');
+                                await this.loadInitialData();
+                            } else {
+                                throw new Error(result.error);
+                            }
+                        } catch (error) {
+                            showNotification('İş silinirken hata oluştu: ' + error.message, 'error');
+                        }
+                    }
+                }
+                
+                // Helper to get task type display (already defined in task-management.html, re-added for my-tasks)
+                getTaskTypeDisplay(taskType) {
+                    if (!taskType) return '-';
+                    const taskTypeMappings = {
+                        'patent_application': 'Patent Başvuru',
+                        'patent_renewal': 'Patent Yenileme',
+                        'trademark_application': 'Marka Başvuru', 
+                        'trademark_renewal': 'Marka Yenileme',
+                        'trademark_opposition': 'Marka İtiraz',
+                        'copyright_application': 'Telif Başvuru',
+                        'design_application': 'Tasarım Başvuru',
+                        'design_renewal': 'Tasarım Yenileme',
+                        'legal_devir': 'Hukuki - Devir',
+                        'legal_lisans': 'Hukuki - Lisans',
+                        'legal_rehin': 'Hukuki - Rehin',
+                        'legal_birleşme': 'Hukuki - Birleşme',
+                        'legal_veraset': 'Hukuki - Veraset',
+                        'legal_teminat': 'Hukuki - Teminat',
+                        'administrative_general': 'İdari - Genel',
+                        'administrative_documentation': 'İdari - Belgelendirme'
+                    };
+                    return taskTypeMappings[taskType] || taskType.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                }
+
+            }
+
+            let myTasksModule;
+            document.addEventListener('DOMContentLoaded', async () => {
+                await loadSharedLayout({ activeMenuLink: 'my-tasks.html' });
+                
+                auth.onAuthStateChanged(async (user) => {
+                    if (user || authService.getCurrentUser()) {
+                        if (!myTasksModule) {
+                            myTasksModule = new MyTasksModule();
+                            await myTasksModule.init();
+                            window.myTasksModule = myTasksModule;
+                        }
+                    } else {
+                        window.location.href = 'index.html';
+                    }
+                });
             });
-        });
     </script>
 </body>
 </html>
