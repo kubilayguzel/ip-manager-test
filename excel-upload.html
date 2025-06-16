@@ -1,3 +1,4 @@
+// File: kubilayguzel/ip-manager-test/ip-manager-test-a757b22b8a080d015c6a8d80216da686e0284c4e/excel-upload.html
 <!DOCTYPE html>
 <html lang="tr">
 <head>
@@ -313,9 +314,7 @@
             showNotification(message, type = 'info') {
                 // utils.js'ten import edildiği için yerel tanım kaldırıldı.
                 // utils.js'teki showNotification'ı çağır
-                import('./utils.js').then(({ showNotification: importedShowNotification }) => {
-                    importedShowNotification(message, type);
-                });
+                showNotification(message, type); // Direct call after import.
             }
 
             setLoading(isLoading) {
@@ -333,7 +332,7 @@
                 this.selectedFile = file;
 
                 if (!this.selectedFile) {
-                    showNotification('Lütfen bir Excel dosyası seçin.', 'error');
+                    this.showNotification('Lütfen bir Excel dosyası seçin.', 'error');
                     return;
                 }
 
@@ -344,7 +343,7 @@
                     this.populateSheetSelection();
                 };
                 reader.onerror = (error) => {
-                    showNotification('Dosya okuma hatası: ' + error.message, 'error');
+                    this.showNotification('Dosya okuma hatası: ' + error.message, 'error');
                 };
                 reader.readAsArrayBuffer(this.selectedFile);
             }
@@ -477,14 +476,14 @@
                             // Excel'deki tarihlerin sayısal formatını JS tarihine çevir
                             if (typeof cellValue === 'number') {
                                 const date = new Date(Math.round((cellValue - 25569) * 86400 * 1000));
-                                cellValue = date.toISOString().split('T')[0]; // YYYY-MM-DD
+                                cellValue = date.toISOString().split('T')[0]; //YYYY-MM-DD
                             } else {
                                 // Direkt tarih stringi ise formatını kontrol et
                                 const date = new Date(cellValue);
                                 if (!isNaN(date.getTime())) {
                                     cellValue = date.toISOString().split('T')[0];
                                 } else {
-                                    showNotification(`Hata: Geçersiz tarih formatı "${cellValue}". Lütfen YYYY-MM-DD formatını kullanın veya Excel tarih formatını kontrol edin.`, 'error', 10000);
+                                    this.showNotification(`Hata: Geçersiz tarih formatı "${cellValue}". Lütfen YYYY-MM-DD formatını kullanın veya Excel tarih formatını kontrol edin.`, 'error', 10000);
                                     isValidRow = false;
                                     break;
                                 }
@@ -504,7 +503,7 @@
                                         person = addPersonResult.data;
                                         this.allPersons.push(person); // Yeni kişiyi listeye ekle
                                     } else {
-                                        showNotification(`Hata: Hak sahibi "${name}" oluşturulamadı.`, 'error');
+                                        this.showNotification(`Hata: Hak sahibi "${name}" oluşturulamadı.`, 'error');
                                         isValidRow = false;
                                         break;
                                     }
@@ -522,7 +521,7 @@
                 }
 
                 if (recordsToUpload.length === 0) {
-                    showNotification('Yüklenecek geçerli kayıt bulunamadı.', 'error');
+                    this.showNotification('Yüklenecek geçerli kayıt bulunamadı.', 'error');
                     this.setLoading(false);
                     return;
                 }
@@ -545,10 +544,10 @@
                 }
 
                 if (successCount > 0) {
-                    showNotification(`${successCount} kayıt başarıyla yüklendi.`, 'success');
+                    this.showNotification(`${successCount} kayıt başarıyla yüklendi.`, 'success');
                 }
                 if (errorCount > 0) {
-                    showNotification(`${errorCount} kayıt yüklenirken hata oluştu. Lütfen konsolu kontrol edin.`, 'error');
+                    this.showNotification(`${errorCount} kayıt yüklenirken hata oluştu. Lütfen konsolu kontrol edin.`, 'error');
                 }
                 this.setLoading(false);
                 this.resetForm();
@@ -571,7 +570,7 @@
                 document.getElementById('columnMappingSection').style.display = 'none';
                 document.getElementById('uploadBtn').disabled = true;
 
-                showNotification('Form temizlendi.', 'info');
+                this.showNotification('Form temizlendi.', 'info');
             }
         }
 
