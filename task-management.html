@@ -9,12 +9,39 @@
         /* Shared styles are now in shared-styles.css.
            Only add specific overrides or new styles for this page if necessary. */
 
-        /* Specific styles for this page (if any, typically overrides or additions) */
+        /* Ensure the main content area expands to fill available space */
+        body {
+            display: flex; /* Make body a flex container */
+            min-height: 100vh; /* Ensure body takes at least full viewport height */
+            flex-direction: row; /* Sidebar and page-wrapper side-by-side */
+        }
+
+        .page-wrapper {
+            flex-grow: 1; /* Allows page-wrapper to take all available horizontal space */
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh; /* Ensure page-wrapper fills its height */
+            overflow-y: auto;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        }
+
+        .main-container {
+            flex-grow: 1; /* Allows main-container to take all available vertical space within page-wrapper */
+            width: 100%; /* Ensures it uses full width within its parent */
+            padding: 30px; /* Internal padding */
+            margin: 0; /* Remove default margins */
+            display: flex; /* Make main-container a flex container for its children */
+            flex-direction: column; /* Stack children vertically */
+        }
+
         .tasks-container {
             background: rgba(255, 255, 255, 0.95);
             border-radius: 20px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.1);
             overflow: hidden;
+            flex-grow: 1; /* Allow tasks-container to grow and fill space */
+            display: flex;
+            flex-direction: column; /* Stack header and table vertically */
         }
 
         .tasks-header {
@@ -42,6 +69,11 @@
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
 
+        .table-container {
+            flex-grow: 1; /* Make table container fill available vertical space */
+            overflow-y: auto; /* Enable scrolling for the table if content overflows */
+        }
+
         .task-table {
             width: 100%;
             border-collapse: collapse;
@@ -56,6 +88,9 @@
         .task-table th {
             background: #f8f9fa;
             font-weight: 600;
+            position: sticky; /* Make header sticky */
+            top: 0; /* Stick to the top of its scrolling container */
+            z-index: 2; /* Ensure it stays above content */
         }
 
         .task-table tr:hover {
@@ -78,8 +113,7 @@
         .status-in_progress { background-color: #ffc107; color: #333; }
         .status-completed { background-color: #28a745; }
         .status-pending_review { background-color: #17a2b8; }
-        .status-pending_client_approval { background-color: #ffc107; color: #212529; } /* New */
-
+        .status-pending_client_approval { background-color: #ffc107; color: #212529; }
 
         .action-btn {
             background: #6c757d;
@@ -119,7 +153,7 @@
             text-align: center;
             padding: 50px;
             color: #666;
-            display: none; /* Hidden by default */
+            display: none;
         }
         .loading {
             text-align: center;
@@ -128,21 +162,21 @@
 
         /* Modal Styles */
         .modal {
-            display: none; /* Hidden by default */
-            position: fixed; /* Stay in place */
-            z-index: 9999; /* Sit on top */
+            display: none;
+            position: fixed;
+            z-index: 9999;
             left: 0;
             top: 0;
-            width: 100%; /* Full width */
-            height: 100%; /* Full height */
-            overflow: auto; /* Enable scroll if needed */
-            background-color: rgba(0,0,0,0.6); /* Black w/ opacity */
-            align-items: center; /* Center vertically */
-            justify-content: center; /* Center horizontally */
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.6);
+            align-items: center;
+            justify-content: center;
         }
 
         .modal.show {
-            display: flex !important; /* Use flex to center content */
+            display: flex !important;
         }
 
         .modal-content-lg, .modal-content {
@@ -151,18 +185,17 @@
             padding: 30px;
             border: 1px solid #888;
             width: 90%;
-            max-width: 900px; /* Large modal max-width */
+            max-width: 900px;
             border-radius: 20px;
             box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2), 0 6px 20px 0 rgba(0,0,0,0.19);
             animation-name: animatetop;
             animation-duration: 0.4s;
-            max-height: 90vh; /* Limit height and allow scrolling */
+            max-height: 90vh;
             overflow-y: auto;
-            position: relative; /* For z-index to work against other elements if needed */
-            z-index: 10000; /* Ensure it's above other elements */
+            position: relative;
+            z-index: 10000;
         }
 
-        /* Specific modal sizes */
         #completeTaskModal .modal-content,
         #reassignTaskModal .modal-content {
             max-width: 600px;
@@ -172,8 +205,6 @@
             max-width: 700px;
         }
 
-
-        /* Add Animation */
         @keyframes animatetop {
             from {top: -300px; opacity: 0}
             to {top: 0; opacity: 1}
@@ -204,7 +235,7 @@
         }
 
         .form-group {
-            margin-bottom: 15px; /* Adjust as needed for spacing in modals */
+            margin-bottom: 15px;
         }
 
         .modal-detail-item {
@@ -220,19 +251,19 @@
 
         .modal-detail-value {
             color: #555;
-            word-break: break-word; /* Prevents long words from overflowing */
+            word-break: break-word;
             font-size: 0.95em;
         }
 
         .modal-detail-value.long-text {
-            white-space: pre-wrap; /* Preserves whitespace and line breaks */
+            white-space: pre-wrap;
             background-color: #f8f9fa;
             padding: 8px;
             border-radius: 6px;
         }
 
         .modal-detail-section-title {
-            grid-column: 1 / -1; /* Span across all columns in grid */
+            grid-column: 1 / -1;
             font-size: 1.1em;
             color: #1e3c72;
             margin-top: 20px;
@@ -245,7 +276,7 @@
             margin-top: 20px;
             padding-top: 20px;
             border-top: 1px solid #e1e8ed;
-            max-height: 400px; /* Fixed height for scrollable history */
+            max-height: 400px;
             overflow-y: auto;
         }
 
@@ -262,12 +293,12 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            flex-wrap: wrap; /* Allow wrapping for smaller screens */
+            flex-wrap: wrap;
             gap: 10px;
         }
 
         .task-history-info {
-            flex-grow: 1; /* Allows info to take available space */
+            flex-grow: 1;
         }
 
         .task-history-description {
@@ -279,11 +310,10 @@
         .task-history-meta {
             font-size: 0.8em;
             color: #666;
-            white-space: nowrap; /* Keep date and user on one line */
+            white-space: nowrap;
             margin-top: 4px;
         }
 
-        /* File Upload Area in Modals */
         .file-upload-area-modal {
             border: 2px dashed #e1e8ed;
             border-radius: 10px;
@@ -341,7 +371,6 @@
             font-size: 1em;
         }
 
-        /* Re-add common button styles if not in shared-styles.css */
         .btn {
             padding: 12px 25px;
             border: none;
@@ -355,8 +384,6 @@
         .btn-warning { background-color: #ffc107; color: #212529; }
         .btn-info { background-color: #17a2b8; color: white; }
 
-
-        /* IP Record Detail Modal Specifics (for consistency with other pages) */
         .ip-type {
             display: inline-flex;
             align-items: center;
@@ -371,41 +398,38 @@
         .ip-type.copyright { background: #e3f2fd; color: #1565c0; }
         .ip-type.design { background: #f3e5f5; color: #7b1fa2; }
 
-        /* Specific badge styles for IP record statuses (matching portfolio.html) */
         .status-badge.application, .status-badge.pending, .status-badge.published, .status-badge.opposition_received, .status-badge.opposition_filed {
-            background: #fff3cd; /* Light yellow */
-            color: #856404; /* Dark yellow text */
+            background: #fff3cd;
+            color: #856404;
         }
         .status-badge.approved, .status-badge.registered {
-            background: #d4edda; /* Light green */
-            color: #155724; /* Dark green text */
+            background: #d4edda;
+            color: #155724;
         }
         .status-badge.rejected, .status-badge.refused, .status-badge.partial_refusal {
-            background: #f8d7da; /* Light red */
-            color: #721c24; /* Dark red text */
+            background: #f8d7da;
+            color: #721c24;
         }
         .status-badge.expired, .status-badge.not_renewed, .status-badge.invalid_void {
-            background: #e2e3e5; /* Light gray */
-            color: #383d41; /* Dark gray text */
+            background: #e2e3e5;
+            color: #383d41;
         }
-         .status-badge.modal-info { /* Example for an info badge within modal if needed */
+        .status-badge.modal-info {
             background-color: #cce5ff;
             color: #004085;
             border-left: 4px solid #007bff;
         }
 
-        /* Portfolio Detail Modal Overrides */
         .modal-content.portfolio-detail {
-            max-width: 1000px; /* Wider for portfolio details */
+            max-width: 1000px;
             width: 95%;
             padding: 30px;
             border-radius: 20px;
         }
         .modal-detail-grid.portfolio-detail {
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); /* More columns for wide modal */
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
         }
 
-        /* Form elements within modals - consistent styling */
         .form-input, .form-textarea {
             width: 100%;
             padding: 12px 15px;
@@ -417,7 +441,6 @@
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
 
-        /* Specific styles for displaying record details */
         .detail-item {
             display: flex;
             flex-direction: column;
@@ -463,7 +486,6 @@
             cursor: pointer;
         }
         
-        /* Styles for document upload in task detail modal */
         .file-upload-area-task-detail {
             border: 2px dashed #e1e8ed;
             border-radius: 10px;
@@ -498,7 +520,6 @@
             cursor: pointer;
         }
 
-        /* General form group and label adjustments for modals */
         .form-group {
             margin-bottom: 15px;
         }
@@ -509,14 +530,13 @@
             color: #333;
         }
 
-        /* Related Accrual Item within Task Detail Modal */
         .related-accrual-item {
             background: #f8f9fa;
             padding: 10px;
             border-radius: 8px;
             margin-bottom: 8px;
             font-size: 0.9em;
-            border-left: 3px solid #1e3c72; /* Accent color */
+            border-left: 3px solid #1e3c72;
         }
     </style>
 </head>
@@ -763,7 +783,7 @@
                     return;
                 }
                 
-                await this.loadInitialData(); // This is the line that was causing the error
+                await this.loadInitialData();
                 this.setupEventListeners();
             }
 
@@ -825,7 +845,7 @@
                     } else if (target.classList.contains('add-accrual-btn')) { 
                          this.showAddAccrualModal(taskId);
                     } else if (target.classList.contains('ip-record-link')) { 
-                        event.preventDefault(); // Varsayılan link davranışını engelle
+                        event.preventDefault();
                         const recordId = target.dataset.ipRecordId;
                         if (recordId) this.showIpRecordDetailModal(recordId); 
                     }
@@ -853,7 +873,7 @@
                 
                 try {
                     const [tasksResult, ipRecordsResult, personsResult, usersResult, accrualsResult] = await Promise.all([
-                        taskService.getAllTasks(), // task-management.html'de tüm görevleri çekiyoruz
+                        taskService.getAllTasks(),
                         ipRecordsService.getRecords(),
                         personsService.getPersons(),
                         taskService.getAllUsers(),
@@ -1290,7 +1310,6 @@
                     showNotification('Yeni tahakkuk başarıyla eklendi!', 'success');
                     this.allAccruals.push(result.data);
                     this.closeModal('addAccrualModal');
-                    // Optionally re-render tasks or update the view if needed
                 } else {
                     showNotification('Tahakkuk eklenirken hata oluştu: ' + result.error, 'error');
                 }
@@ -1643,8 +1662,8 @@
                 if (user || authService.getCurrentUser()) {
                     if (!taskManagementModule) {
                         taskManagementModule = new TaskManagementModule();
-                        await taskManagementModule.init(); // Explicitly call init here
-                        window.taskManagementModule = taskManagementModule; // Make it globally accessible for debugging
+                        await taskManagementModule.init();
+                        window.taskManagementModule = taskManagementModule;
                     }
                 } else {
                     window.location.href = 'index.html';
