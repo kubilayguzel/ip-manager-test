@@ -30,6 +30,7 @@
             min-height: 100vh; /* Dikeyde kendi alanını doldurmasını sağla */
             overflow-y: auto; 
             background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); 
+            width: 100%; /* page-wrapper'ın da tam genişlik aldığından emin ol */
         }
 
         .main-container { 
@@ -39,6 +40,7 @@
             margin: 0; /* Otomatik marginleri kaldır */
             display: flex; /* İçeriğini düzenlemek için flex kullan */
             flex-direction: column; /* İçeriği dikey sıralansın */
+            box-sizing: border-box; /* Padding'in genişliğe dahil edilmesini sağlar */
         }
         
         /* Aşağıdaki CSS sadece task-management.html'e özgü olmalı veya Shared-styles.css'ten gelmeli */
@@ -68,6 +70,8 @@
             flex-shrink: 1; /* Küçülmesine izin ver */
             display: flex; /* Header ve tabloyu dikeyde düzenle */
             flex-direction: column;
+            width: 100%; /* tasks-container'ın %100 genişlik almasını sağla */
+            box-sizing: border-box; /* Padding ve border'ın genişliğe dahil olmasını sağlar */
         }
         .tasks-header { 
             padding: 20px 30px; 
@@ -617,9 +621,14 @@
             }
             
             async loadInitialData() {
-                document.getElementById('loadingIndicator') ? document.getElementById('loadingIndicator').style.display = 'block' : '';
-                document.getElementById('noTasksMessage') ? document.getElementById('noTasksMessage').style.display = 'none' : '';
-                document.getElementById('tasksTableBody') ? document.getElementById('tasksTableBody').innerHTML = '' : '';
+                // Bu elemanların varlığını kontrol edelim
+                const loadingIndicator = document.getElementById('loadingIndicator');
+                const noTasksMessage = document.getElementById('noTasksMessage');
+                const tasksTableBody = document.getElementById('tasksTableBody');
+
+                if (loadingIndicator) loadingIndicator.style.display = 'block';
+                if (noTasksMessage) noTasksMessage.style.display = 'none';
+                if (tasksTableBody) tasksTableBody.innerHTML = '';
                 
                 try {
                     const [tasksResult, ipRecordsResult, personsResult, usersResult, accrualsResult] = await Promise.all([
@@ -647,29 +656,33 @@
                     console.error('Başlangıç verileri yüklenirken hata:', error);
                     showNotification('Veriler yüklenirken bir hata oluştu: ' + error.message, 'error');
                 } finally {
-                    document.getElementById('loadingIndicator') ? document.getElementById('loadingIndicator').style.display = 'none' : '';
+                    if (loadingIndicator) loadingIndicator.style.display = 'none';
                 }
             }
 
             populateFilters() {
                 const userFilter = document.getElementById('userFilter');
-                userFilter.innerHTML = '<option value="all">Tüm Kullanıcılar</option>';
-                this.allUsers.forEach(user => {
-                    const option = document.createElement('option');
-                    option.value = user.id;
-                    option.textContent = user.displayName || user.email;
-                    userFilter.appendChild(option);
-                });
+                if (userFilter) {
+                    userFilter.innerHTML = '<option value="all">Tüm Kullanıcılar</option>';
+                    this.allUsers.forEach(user => {
+                        const option = document.createElement('option');
+                        option.value = user.id;
+                        option.textContent = user.displayName || user.email;
+                        userFilter.appendChild(option);
+                    });
+                }
 
                 const statusFilter = document.getElementById('statusFilter');
-                statusFilter.innerHTML = `
-                    <option value="all">Tüm Durumlar</option>
-                    <option value="open">Açık</option>
-                    <option value="in_progress">Devam Ediyor</option>
-                    <option value="pending_review">Gözden Geçiriliyor</option>
-                    <option value="completed">Tamamlandı</option>
-                    <option value="pending_client_approval">Müvekkil Onayı Bekliyor</option>
-                `;
+                if (statusFilter) {
+                    statusFilter.innerHTML = `
+                        <option value="all">Tüm Durumlar</option>
+                        <option value="open">Açık</option>
+                        <option value="in_progress">Devam Ediyor</option>
+                        <option value="pending_review">Gözden Geçiriliyor</option>
+                        <option value="completed">Tamamlandı</option>
+                        <option value="pending_client_approval">Müvekkil Onayı Bekliyor</option>
+                    `;
+                }
             }
 
             // İş referansı oluşturma fonksiyonu
@@ -721,6 +734,10 @@
             
             renderTasks() {
                 const tableBody = document.getElementById('tasksTableBody');
+                const noTasksMessage = document.getElementById('noTasksMessage');
+
+                if (!tableBody || !noTasksMessage) return; // Elemanlar yoksa fonksiyonu durdur
+
                 tableBody.innerHTML = '';
                 
                 const selectedUser = document.getElementById('userFilter').value;
@@ -731,6 +748,9 @@
                     const statusMatch = selectedStatus === 'all' || task.status === selectedStatus;
                     return userMatch && statusMatch;
                 });
+
+                noTasksMessage.style.display = filteredTasks.length === 0 ? 'block' : 'none';
+
 
                 filteredTasks.forEach(task => {
                     const row = document.createElement('tr');
@@ -1238,6 +1258,8 @@
                 const newList = document.getElementById('modalTaskDetailUploadedFileList');
                 const noDocsMessage = document.getElementById('modalNoTaskDocumentsMessage');
                 
+                if (!existingList || !newList || !noDocsMessage) return; // Elemanlar yoksa fonksiyonu durdur
+
                 if (isInitial) {
                     existingList.innerHTML = '';
                     const existingFiles = this.currentEditTask.files || [];
@@ -1319,48 +1341,58 @@
                 const modalViewRelatedAccruals = document.getElementById('modalViewRelatedAccruals');
                 const relatedAccruals = this.allAccruals.filter(acc => acc.taskId === task.id);
                 
-                if (relatedAccruals.length > 0) {
-                    modalViewRelatedAccruals.innerHTML = relatedAccruals.map(acc => {
-                        const statusText = acc.status === 'paid' ? 'Ödendi' : 'Ödenmedi';
-                        const statusBadgeClass = `status-badge status-${acc.status}`;
-                        const totalAmountText = new Intl.NumberFormat('tr-TR', { style: 'currency', currency: acc.totalAmountCurrency || 'TRY' }).format(acc.totalAmount || 0);
-                        
-                        return `<div class="related-accrual-item">
-                            <b>ID:</b> ${acc.id.substring(0,8)}... | 
-                            <b>Durum:</b> <span class="${statusBadgeClass}">${statusText}</span> | 
-                            <b>Tutar:</b> ${totalAmountText}
-                        </div>`;
-                    }).join('');
-                } else {
-                    modalViewRelatedAccruals.innerHTML = '<p>Bu işe ait tahakkuk bulunmuyor.</p>';
+                if (modalViewRelatedAccruals) { // Added null check
+                    if (relatedAccruals.length > 0) {
+                        modalViewRelatedAccruals.innerHTML = relatedAccruals.map(acc => {
+                            const statusText = acc.status === 'paid' ? 'Ödendi' : 'Ödenmedi';
+                            const statusBadgeClass = `status-badge status-${acc.status}`;
+                            const totalAmountText = new Intl.NumberFormat('tr-TR', { style: 'currency', currency: acc.totalAmountCurrency || 'TRY' }).format(acc.totalAmount || 0);
+                            
+                            return `<div class="related-accrual-item">
+                                <b>ID:</b> ${acc.id.substring(0,8)}... | 
+                                <b>Durum:</b> <span class="${statusBadgeClass}">${statusText}</span> | 
+                                <b>Tutar:</b> ${totalAmountText}
+                            </div>`;
+                        }).join('');
+                    } else {
+                        modalViewRelatedAccruals.innerHTML = '<p>Bu işe ait tahakkuk bulunmuyor.</p>';
+                    }
                 }
 
                 const modalViewTaskHistory = document.getElementById('modalViewTaskHistory');
-                modalViewTaskHistory.innerHTML = '';
-                if (!task.history || task.history.length === 0) {
-                    modalViewTaskHistory.innerHTML = '<p style="text-align: center; color: #666; padding: 20px;">İşlem geçmişi bulunmuyor.</p>';
-                } else {
-                    const sortedHistory = [...task.history].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-                    sortedHistory.forEach(entry => {
-                        const item = document.createElement('div');
-                        item.className = 'task-history-item';
-                        item.innerHTML = `<div class="task-history-item-content"><div class="task-history-info"><div class="task-history-description">${entry.action}</div><div class="task-history-meta">${new Date(entry.timestamp).toLocaleString('tr-TR')} by ${entry.userEmail}</div></div></div>`;
-                        modalViewTaskHistory.appendChild(item);
-                    });
+                if (modalViewTaskHistory) { // Added null check
+                    modalViewTaskHistory.innerHTML = '';
+                    if (!task.history || task.history.length === 0) {
+                        modalViewTaskHistory.innerHTML = '<p style="text-align: center; color: #666; padding: 20px;">İşlem geçmişi bulunmuyor.</p>';
+                    } else {
+                        const sortedHistory = [...task.history].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+                        sortedHistory.forEach(entry => {
+                            const item = document.createElement('div');
+                            item.className = 'task-history-item';
+                            item.innerHTML = `<div class="task-history-item-content"><div class="task-history-info"><div class="task-history-description">${entry.action}</div><div class="task-history-meta">${new Date(entry.timestamp).toLocaleString('tr-TR')} by ${entry.userEmail}</div></div></div>`;
+                            modalViewTaskHistory.appendChild(item);
+                        });
+                    }
                 }
             }
 
             closeModal(modalId) {
-                document.getElementById(modalId).classList.remove('show');
+                const modalElement = document.getElementById(modalId);
+                if (modalElement) {
+                    modalElement.classList.remove('show');
+                }
+                
                 if (modalId === 'editTaskModal') {
                     this.currentEditTask = null;
                     this.uploadedEditFiles = [];
                 }
                  if (modalId === 'reassignTaskModal') {
-                    document.getElementById('reassignUserSelect').value = '';
+                    const reassignUserSelect = document.getElementById('reassignUserSelect');
+                    if (reassignUserSelect) reassignUserSelect.value = '';
                 }
                 if (modalId === 'addAccrualModal') {
-                    document.getElementById('addAccrualForm').reset();
+                    const addAccrualForm = document.getElementById('addAccrualForm');
+                    if (addAccrualForm) addAccrualForm.reset();
                 }
             }
 
@@ -1371,18 +1403,27 @@
                     return;
                 }
                 
-                document.getElementById('addAccrualForm').reset();
+                const addAccrualForm = document.getElementById('addAccrualForm');
+                if (addAccrualForm) addAccrualForm.reset();
+                
                 this.selectedTpInvoiceParty = null;
                 this.selectedServiceInvoiceParty = null;
-                document.getElementById('selectedTpInvoicePartyDisplay').style.display = 'none';
-                document.getElementById('selectedServiceInvoicePartyDisplay').style.display = 'none';
+                const selectedTpInvoicePartyDisplay = document.getElementById('selectedTpInvoicePartyDisplay');
+                const selectedServiceInvoicePartyDisplay = document.getElementById('selectedServiceInvoicePartyDisplay');
                 
-                document.getElementById('accrualTaskId').value = taskId;
-                document.getElementById('accrualTaskTitleDisplay').value = task.title;
+                if (selectedTpInvoicePartyDisplay) selectedTpInvoicePartyDisplay.style.display = 'none';
+                if (selectedServiceInvoicePartyDisplay) selectedServiceInvoicePartyDisplay.style.display = 'none';
+                
+                const accrualTaskId = document.getElementById('accrualTaskId');
+                const accrualTaskTitleDisplay = document.getElementById('accrualTaskTitleDisplay');
+
+                if (accrualTaskId) accrualTaskId.value = taskId;
+                if (accrualTaskTitleDisplay) accrualTaskTitleDisplay.value = task.title;
                 
                 this.calculateTotalAmount();
                 
-                document.getElementById('addAccrualModal').classList.add('show');
+                const addAccrualModal = document.getElementById('addAccrualModal');
+                if (addAccrualModal) addAccrualModal.classList.add('show');
             }
             
             async handleSaveAccrual() {
@@ -1400,7 +1441,7 @@
                 const vatRate = parseFloat(document.getElementById('vatRate').value) || 0;
                 const applyVatToOfficial = document.getElementById('applyVatToOfficialFee').checked;
                 let totalAmount;
-                if (applyVatToOfficial) {
+                if(applyVatToOfficial) {
                     totalAmount = (officialFee + serviceFee) * (1 + vatRate / 100);
                 } else {
                     totalAmount = officialFee + (serviceFee * (1 + vatRate / 100));
@@ -1440,6 +1481,7 @@
                 const serviceFee = parseFloat(document.getElementById('serviceFee').value) || 0;
                 const vatRate = parseFloat(document.getElementById('vatRate').value) || 0;
                 const applyVatToOfficial = document.getElementById('applyVatToOfficialFee').checked;
+                const totalAmountDisplay = document.getElementById('totalAmountDisplay');
 
                 let total;
                 if(applyVatToOfficial) {
@@ -1447,7 +1489,9 @@
                 } else {
                     total = officialFee + (serviceFee * (1 + vatRate / 100));
                 }
-                document.getElementById('totalAmountDisplay').textContent = new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' }).format(total);
+                if (totalAmountDisplay) { // Added null check
+                    totalAmountDisplay.textContent = new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' }).format(total);
+                }
             }
 
             searchPersons(query, target) {
@@ -1491,11 +1535,16 @@
                 else if(target === 'serviceInvoiceParty') this.selectedServiceInvoiceParty = person;
 
                 const display = document.getElementById(displayId);
-                display.innerHTML = `<p><b>Seçilen:</b> ${person.name}</p>`;
-                display.style.display = 'block';
+                if (display) { // Added null check
+                    display.innerHTML = `<p><b>Seçilen:</b> ${person.name}</p>`;
+                    display.style.display = 'block';
+                }
 
-                document.getElementById(resultsId).innerHTML = '';
-                document.getElementById(inputId).value = person.name;
+                const resultsElement = document.getElementById(resultsId);
+                const inputElement = document.getElementById(inputId);
+
+                if (resultsElement) resultsElement.innerHTML = '';
+                if (inputElement) inputElement.value = person.name;
             }
 
             viewTaskDetailsModal(taskId) {
@@ -1505,7 +1554,8 @@
                     return;
                 }
                 this.populateModalTaskDetails(task, this.allIpRecords, this.allPersons);
-                document.getElementById('viewTaskDetailModal').classList.add('show');
+                const viewTaskDetailModal = document.getElementById('viewTaskDetailModal');
+                if (viewTaskDetailModal) viewTaskDetailModal.classList.add('show');
             }
             
             async deleteTask(taskId) {
