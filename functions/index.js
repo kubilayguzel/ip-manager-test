@@ -42,7 +42,7 @@ function getMonthsAgo(date, months) {
 }
 
 // Her gün gece yarısı çalışacak zamanlanmış fonksiyon
-exports.checkTrademarkRenewalsAndInvalidations = functions.pubsub.schedule('2 * * * *')
+exports.checkTrademarkRenewalsAndInvalidations = functions.pubsub.schedule('*/2 * * * *')
     .timeZone('Europe/Istanbul') // Türkiye saati
     .onRun(async (context) => {
         console.log('Marka yenileme ve geçersiz kılma kontrol fonksiyonu çalıştı!');
