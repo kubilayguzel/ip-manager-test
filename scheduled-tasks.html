@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IP Manager - Zamanlanmış Görevler</title>
+    <style>
+        /* Ana sayfa yapısı, sidebar ve top-header stilleri shared_layout_parts.html'den gelecek */
+        /* Bu sayfaya özel stiller */
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333; display: flex; }
+        .page-wrapper { flex-grow: 1; display: flex; flex-direction: column; height: 100vh; overflow-y: auto; background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); }
+        .main-container { width: 100%; padding: 30px; margin: 0; }
+        
+        .page-header { background: rgba(255, 255, 255, 0.95); padding: 30px; border-radius: 20px; margin-bottom: 30px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1); }
+        .page-title { font-size: 2em; color: #1e3c72; margin-bottom: 10px; }
+        .page-subtitle { color: #666; font-size: 1.1em; }
+
+        .tasks-container { background: rgba(255, 255, 255, 0.95); border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); overflow: hidden; }
+        .tasks-header { padding: 20px 30px; border-bottom: 1px solid #e1e8ed; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; }
+        .filter-group { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+        .filter-label { font-weight: 500; }
+        .filter-select { padding: 8px 12px; border-radius: 8px; border: 1px solid #ccc; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        
+        .task-table { width: 100%; border-collapse: collapse; }
+        .task-table th, .task-table td { padding: 15px; text-align: left; border-bottom: 1px solid #f0f0f0; }
+        .task-table th { background: #f8f9fa; font-weight: 600; }
+        .task-table tr:hover { background: #f8f9fa; }
+        
+        .status-badge { padding: 4px 10px; border-radius: 12px; font-size: 0.8em; font-weight: 500; color: white; }
+        .status-open { background-color: #007bff; }
+        .status-in_progress { background-color: #ffc107; color: #333; }
+        .status-completed { background-color: #28a745; }
+        .status-pending_review { background-color: #17a2b8; }
+        .status-pending_client_approval { background-color: #ffc107; color: #212529; } /* Yeni */
+
+        .loading { text-align: center; padding: 50px; }
+        .loading-spinner { display: inline-block; width: 30px; height: 30px; border: 3px solid #f3f3f3; border-top: 3px solid #1e3c72; border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        .no-tasks { text-align: center; padding: 50px; color: #666; display: none; }
+        .no-tasks-icon { font-size: 3em; margin-bottom: 20px; }
+
+        /* Ortak layout stilleri için placeholder (layout-loader tarafından eklenecek) */
+        .top-header { background: rgba(255, 255, 255, 0.95); padding: 15px 30px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05); display: flex; justify-content: flex-end; align-items: center; position: sticky; top: 0; z-index: 99; backdrop-filter: blur(10px); }
+        .user-section { display: flex; align-items: center; gap: 15px; }
+        .user-avatar { width: 40px; height: 40px; background: linear-gradient(45deg, #1e3c72, #2a5298); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; }
+        .user-info { display: flex; flex-direction: column; }
+        .user-name { font-weight: 600; color: #333; }
+        .user-role { font-size: 0.8em; color: #666; }
+        .logout-btn { background: #ff6b6b; color: white; border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 0.9em; transition: all 0.3s ease; }
+        .logout-btn:hover { background: #ff5252; }
+    </style>
+</head>
+<body>
+    <div class="page-wrapper">
+        <main class="main-container">
+            <section class="page-header">
+                <h1 class="page-title">Zamanlanmış Görevler</h1>
+                <p class="page-subtitle">Otomatik sistem tarafından oluşturulan tüm görevleri buradan takip edebilirsiniz.</p>
+            </section>
+    
+            <div class="tasks-container">
+                <div class="tasks-header">
+                    <div class="filter-group">
+                        <label class="filter-label" for="statusFilter">Duruma Göre Filtrele:</label>
+                        <select id="statusFilter" class="filter-select">
+                            <option value="all">Tümü</option>
+                            <option value="open">Açık</option>
+                            <option value="pending_client_approval">Müvekkil Onayı Bekliyor</option>
+                            <option value="in_progress">Devam Ediyor</option>
+                            <option value="completed">Tamamlandı</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="table-container">
+                    <table class="task-table">
+                        <thead>
+                            <tr>
+                                <th>Oluşturulma Tarihi</th>
+                                <th>İş Başlığı</th>
+                                <th>İş Tipi</th>
+                                <th>İlgili Kayıt</th>
+                                <th>Bitiş Tarihi</th>
+                                <th>Durum</th>
+                            </tr>
+                        </thead>
+                        <tbody id="scheduledTasksTableBody">
+                            </tbody>
+                    </table>
+                     <div id="loadingIndicator" class="loading">
+                        <div class="loading-spinner"></div>
+                        <div>Zamanlanmış görevler yükleniyor...</div>
+                    </div>
+                     <div id="noScheduledTasksMessage" class="no-tasks">
+                        <div class="no-tasks-icon">⏳</div>
+                        <h3>Henüz zamanlanmış görev bulunmamaktadır.</h3>
+                        <p>Sistem otomatik olarak görevler oluşturduğunda burada listelenecektir.</p>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script type="module">
+        import { authService, taskService, ipRecordsService, auth } from './firebase-config.js'; // ipRecordsService eklendi
+        import { showNotification } from './utils.js';
+        import { loadSharedLayout } from './js/layout/layout-loader.js'; // Doğru yolu ayarlayın
+
+        class ScheduledTasksModule {
+            constructor() {
+                this.currentUser = null;
+                this.allTasks = [];
+                this.allIpRecords = []; // İlgili kayıtları çekmek için
+            }
+
+            async init() {
+                this.currentUser = authService.getCurrentUser();
+                if (!this.currentUser) {
+                    window.location.href = 'index.html';
+                    return;
+                }
+                
+                await this.loadInitialData();
+                this.setupEventListeners();
+            }
+
+            setupEventListeners() {
+                document.getElementById('statusFilter').addEventListener('change', () => this.renderTasks());
+            }
+
+            async loadInitialData() {
+                const loadingIndicator = document.getElementById('loadingIndicator');
+                const noTasksMessage = document.getElementById('noScheduledTasksMessage');
+                const tableBody = document.getElementById('scheduledTasksTableBody');
+                
+                loadingIndicator.style.display = 'block';
+                noTasksMessage.style.display = 'none';
+                tableBody.innerHTML = '';
+
+                try {
+                    const [tasksResult, ipRecordsResult] = await Promise.all([
+                        taskService.getAllTasks(),
+                        ipRecordsService.getRecords()
+                    ]);
+
+                    if (tasksResult.success) this.allTasks = tasksResult.data; else throw new Error(tasksResult.error || 'Görevler yüklenemedi');
+                    if (ipRecordsResult.success) this.allIpRecords = ipRecordsResult.data; else throw new Error(ipRecordsResult.error || 'IP Kayıtları yüklenemedi');
+                    
+                    this.renderTasks();
+
+                } catch (error) {
+                    console.error('Zamanlanmış görevler yüklenirken hata:', error);
+                    showNotification('Zamanlanmış görevler yüklenirken bir hata oluştu: ' + error.message, 'error');
+                } finally {
+                    loadingIndicator.style.display = 'none';
+                }
+            }
+
+            renderTasks() {
+                const tableBody = document.getElementById('scheduledTasksTableBody');
+                const noTasksMessage = document.getElementById('noScheduledTasksMessage');
+                tableBody.innerHTML = '';
+
+                const selectedStatus = document.getElementById('statusFilter').value;
+
+                // Sadece otomatik oluşturulan görevleri filtrele
+                let filteredTasks = this.allTasks.filter(task => task.isAutomated === true);
+
+                if (selectedStatus !== 'all') {
+                    filteredTasks = filteredTasks.filter(task => task.status === selectedStatus);
+                }
+                
+                if (filteredTasks.length === 0) {
+                    noTasksMessage.style.display = 'block';
+                    return;
+                }
+                noTasksMessage.style.display = 'none';
+
+                const statusMap = { 
+                    open: 'Açık', 
+                    in_progress: 'Devam Ediyor', 
+                    completed: 'Tamamlandı', 
+                    pending_review: 'Gözden Geçiriliyor',
+                    pending_client_approval: 'Müvekkil Onayı Bekliyor' 
+                };
+
+                const getTaskTypeDisplay = (taskType) => {
+                    const taskTypeMappings = {
+                        'trademark_renewal': 'Marka Yenileme',
+                        // Diğer otomatikleşmiş görev tiplerini buraya ekleyebilirsiniz
+                    };
+                    return taskTypeMappings[taskType] || taskType.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                };
+                
+                filteredTasks.forEach(task => {
+                    const relatedIpRecord = this.allIpRecords.find(r => r.id === task.relatedIpRecordId);
+                    const relatedRecordTitle = relatedIpRecord ? `${relatedIpRecord.title} (${relatedIpRecord.applicationNumber || 'N/A'})` : task.relatedIpRecordTitle || 'Yok';
+
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${task.createdAt ? new Date(task.createdAt).toLocaleDateString('tr-TR') : '-'}</td>
+                        <td>${task.title}</td>
+                        <td>${getTaskTypeDisplay(task.taskType)}</td>
+                        <td>${relatedRecordTitle}</td>
+                        <td>${task.dueDate ? new Date(task.dueDate).toLocaleDateString('tr-TR') : '-'}</td>
+                        <td><span class="status-badge status-${task.status}">${statusMap[task.status] || task.status}</span></td>
+                    `;
+                    tableBody.appendChild(row);
+                });
+            }
+        }
+
+        let scheduledTasksModule;
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Sidebar ve Top Header'ı yükle
+            await loadSharedLayout({ activeMenuLink: 'scheduled-tasks.html' }); // activeMenuLink'i güncelledik
+            
+            auth.onAuthStateChanged(async (user) => {
+                if (user || authService.getCurrentUser()) {
+                    if (!scheduledTasksModule) {
+                        scheduledTasksModule = new ScheduledTasksModule();
+                        await scheduledTasksModule.init();
+                        window.scheduledTasksModule = scheduledTasksModule;
+                    }
+                } else {
+                    window.location.href = 'index.html';
+                }
+            });
+        });
+    </script>
+</body>
+</html>
