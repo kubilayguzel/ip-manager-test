@@ -163,8 +163,7 @@
                             </div>
                             <div class="form-group">
                                 <label for="phone" class="form-label">Telefon:</label>
-                                <input type="tel" id="phone" name="phone" class="form-input">
-                                <div class="error-message" id="phoneError"></div>
+                                <input type="tel" id="phone" name="phone" class="form-input" autocomplete="tel"> <div class="error-message" id="phoneError"></div>
                             </div>
 
                             <div class="form-group full-width">
@@ -293,7 +292,7 @@
                     document.getElementById('createUserAccountSection').style.display = 'block';
                     // Sadece süperadmin'in başka süperadmin oluşturabilmesi için
                     const userRoleSelect = document.getElementById('userRole');
-                    if (this.currentUser.role !== 'superadmin') {
+                    if (this.currentUser.role !== 'superadmin') { // Bu kontrol zaten dışarıda yapılıyor, ama yine de bırakalım.
                         const superadminOption = userRoleSelect.querySelector('option[value="superadmin"]');
                         if (superadminOption) superadminOption.remove();
                     }
@@ -329,9 +328,26 @@
                     } else if (target.classList.contains('delete-btn')) {
                         await this.deletePerson(personId);
                     } else if (target.classList.contains('create-user-btn') && this.currentUser.role === 'superadmin') {
-                        await this.openUserRoleModal(personId);
+                        // Kullanıcı oluşturma butonu sadece süperadmin için ve user-id yoksa
+                        const personEmail = target.dataset.email;
+                        const personName = target.dataset.name;
+                        this.editingPersonId = personId; // Mevcut kişi ID'sini ayarla
+                        document.getElementById('email').value = personEmail; // Modala e-postayı yükle
+                        // Modalı açmadan önce createUserAccountSection'ı göster
+                        document.getElementById('createUserAccountSection').style.display = 'block';
+                        document.getElementById('personModalTitle').textContent = `Kişi Düzenle: ${personName}`;
+                        document.getElementById('savePersonBtn').textContent = 'Güncelle';
+                        document.getElementById('personModal').classList.add('show');
+                        // Kullanıcı parola ve rol alanlarını temizle
+                        document.getElementById('userPassword').value = '';
+                        document.getElementById('userRole').value = 'user';
+                    } else if (target.classList.contains('btn-secondary') && target.textContent === 'Rol Yönet' && this.currentUser.role === 'superadmin') {
+                        const userId = target.dataset.userId;
+                        const userName = target.dataset.name;
+                        this.openUserRoleModal(personId, userId, userName);
                     }
                 });
+
 
                 // Kullanıcı Rolü Modalı butonları
                 document.getElementById('closeUserRoleModal').addEventListener('click', () => this.closeUserRoleModal());
@@ -576,7 +592,10 @@
 
                 const searchTerm = document.getElementById('personSearchInput').value.toLowerCase();
                 let filteredPersons = this.allPersons.filter(person => {
-                    const nameToSearch = person.personType === 'real' ? `${person.firstName} ${person.lastName}` : person.companyName;
+                    const nameToSearch = person.personType === 'real' ? 
+                                        `${person.firstName || ''} ${person.lastName || ''}`.trim() : // null/undefined kontrolü
+                                        (person.companyName || ''); // null/undefined kontrolü
+                    
                     return nameToSearch.toLowerCase().includes(searchTerm) ||
                            (person.email && person.email.toLowerCase().includes(searchTerm)) ||
                            (person.phone && person.phone.includes(searchTerm));
