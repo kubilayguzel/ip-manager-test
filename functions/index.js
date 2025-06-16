@@ -5,25 +5,37 @@ admin.initializeApp();
 
 const db = admin.firestore();
 
-// Yardımcı fonksiyonlar (addMonths, getMonthsAgo) aynı kalacak
+// Yardımcı fonksiyonlar (addMonths, getMonthsAgo) artık fonksiyonun içinde tanımlanacak
 
-// Zamanlanmış fonksiyon tanımını güncelleyin
 exports.checkTrademarkRenewalsAndInvalidations = onSchedule({
-        schedule: '*/3 * * * *', // Cron ifadesi aynı kalabilir veya ihtiyaca göre değiştirin
+        schedule: '0 0 * * *', // Cron ifadesi aynı kalabilir veya ihtiyaca göre değiştirin
         timeZone: 'Europe/Istanbul'
     },
-    async (context) => {
+    async (context) => { // Bu bloğun içine taşıyoruz
+        // >>> addMonths ve getMonthsAgo fonksiyonlarını BURAYA YAPIŞTIRIN <<<
+        // (fonksiyonun içinde olması için)
+        function addMonths(date, months) {
+            const d = new Date(date);
+            d.setMonth(d.getMonth() + months);
+            return d;
+        }
+
+        function getMonthsAgo(date, months) {
+            const d = new Date(date);
+            d.setMonth(d.getMonth() - months);
+            return d;
+        }
+        // >>> Buraya yapıştırdığınızdan emin olun <<<
+
         console.log('Marka yenileme ve geçersiz kılma kontrol fonksiyonu çalıştı!');
 
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
-        const twelveMonthsFromNow = addMonths(today, 12);
-        const sixMonthsAgo = addMonths(today, -6);
+        const twelveMonthsFromNow = addMonths(today, 12); // Artık tanımlı olacak
+        const sixMonthsAgo = addMonths(today, -6); // Artık tanımlı olacak
 
         try {
-            // ... (fonksiyonun geri kalan tüm kodu buraya gelecek, değişiklik yok) ...
-
             const ipRecordsRef = db.collection('ipRecords');
             const trademarkSnapshot = await ipRecordsRef.where('type', '==', 'trademark').get();
 
@@ -42,7 +54,7 @@ exports.checkTrademarkRenewalsAndInvalidations = onSchedule({
                 const recordId = doc.id;
 
                 if (!record.renewalDate) {
-                    console.log(`Marka <span class="math-inline">\{record\.title\} \(</span>{record.applicationNumber}) için yenileme tarihi yok, atlandı.`);
+                    console.log(`Marka ${record.title} (${record.applicationNumber}) için yenileme tarihi yok, atlandı.`);
                     continue;
                 }
 
@@ -65,7 +77,7 @@ exports.checkTrademarkRenewalsAndInvalidations = onSchedule({
                         const taskData = {
                             id: newTaskId,
                             taskType: 'trademark_renewal',
-                            title: `Marka Yenileme Onayı: <span class="math-inline">\{record\.title\} \(</span>{record.applicationNumber})`,
+                            title: `Marka Yenileme Onayı: ${record.title} (${record.applicationNumber})`,
                             description: `${record.title} markasının yenileme tarihi ${record.renewalDate} yaklaşıyor. Müvekkil onayı bekleniyor.`,
                             priority: 'high',
                             assignedTo_uid: 'YOUR_ADMIN_UID', // Lütfen gerçek Admin UID ile değiştirin
@@ -99,13 +111,13 @@ exports.checkTrademarkRenewalsAndInvalidations = onSchedule({
                         updatedAt: new Date().toISOString()
                     });
                     recordsInvalidatedCount++;
-                    console.log(`Marka <span class="math-inline">\{record\.title\} \(</span>{record.applicationNumber}) yenilememe nedeniyle geçersiz kılındı.`);
+                    console.log(`Marka ${record.title} (${record.applicationNumber}) yenilememe nedeniyle geçersiz kılındı.`);
 
                     const notificationRef = db.collection('notifications').doc();
                     const notificationData = {
                         id: notificationRef.id,
                         userId: 'all',
-                        message: `Marka "<span class="math-inline">\{record\.title\}" \(</span>{record.applicationNumber}) yenilememe nedeniyle geçersiz kılınmıştır. Yenileme tarihi: ${record.renewalDate}. Lütfen kontrol edin.`,
+                        message: `Marka "${record.title}" (${record.applicationNumber}) yenilememe nedeniyle geçersiz kılınmıştır. Yenileme tarihi: ${record.renewalDate}. Lütfen kontrol edin.`,
                         type: 'warning',
                         createdAt: new Date().toISOString(),
                         isRead: false,
