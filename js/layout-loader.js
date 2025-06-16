@@ -84,7 +84,7 @@ function setupSidebarAccordion() {
             } else {
                 // Burada ek piksel ekleyerek yüksekliği artırıyoruz.
                 // 20px, genellikle iç padding ve marginleri telafi etmek için yeterli olacaktır.
-                content.style.maxHeight = (content.scrollHeight + 20) + "px"; 
+                content.style.maxHeight = (content.scrollHeight + 40) + "px"; 
             }
         });
     });
