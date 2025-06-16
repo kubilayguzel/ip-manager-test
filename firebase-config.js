@@ -865,5 +865,4 @@ export async function createDemoData() {
 
 
 // --- Exports ---
-export { subDesignationTranslations };
 export { auth, db };
