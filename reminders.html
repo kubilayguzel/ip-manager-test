@@ -4,38 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>IP Manager - Hatırlatmalar</title>
+    <link rel="stylesheet" href="css/shared-styles.css">
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333; display: flex; }
-        
-        .page-wrapper { flex-grow: 1; display: flex; flex-direction: column; height: 100vh; overflow-y: auto; background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); }
-        .main-container { width: 100%; padding: 30px; margin: 0; }
-        
-        .sidebar { width: 260px; background: #1e3c72; color: white; display: flex; flex-direction: column; height: 100vh; position: sticky; top: 0; z-index: 1001; }
-        .sidebar-header { padding: 20px; text-align: center; border-bottom: 1px solid rgba(255, 255, 255, 0.1); }
-        .sidebar-logo { font-size: 1.8em; font-weight: bold; color: white; text-decoration: none; }
-        .sidebar-nav { flex-grow: 1; overflow-y: auto; padding: 20px 0; }
-        .nav-category-title { padding: 10px 20px; font-size: 0.8em; font-weight: bold; color: rgba(255, 255, 255, 0.5); text-transform: uppercase; }
-        .sidebar-nav-item, .accordion-header { display: flex; align-items: center; gap: 15px; padding: 15px 20px; color: rgba(255, 255, 255, 0.8); text-decoration: none; transition: background 0.3s ease; cursor: pointer; }
-        .sidebar-nav-item:hover, .accordion-header:hover { background: rgba(255, 255, 255, 0.1); }
-        .sidebar-nav-item.active { background: #2a5298; color: white; font-weight: bold; border-left: 4px solid #4ecdc4; padding-left: 16px; }
-        .nav-icon { font-size: 1.2em; width: 20px; text-align: center; }
-        .accordion-header::after { content: '▶'; margin-left: auto; font-size: 0.8em; transition: transform 0.3s ease; }
-        .accordion-header.active::after { transform: rotate(90deg); }
-        .accordion-content { background: rgba(0, 0, 0, 0.2); max-height: 0; overflow: hidden; transition: max-height 0.3s ease-out; }
-        .accordion-content a { display: block; padding: 12px 20px 12px 55px; color: rgba(255, 255, 255, 0.7); text-decoration: none; }
-        .accordion-content a.active { color: white; font-weight: 500; }
-        .accordion-content a.new-task-link { color: #fff; background-color: rgba(78, 205, 196, 0.25); font-weight: 500; }
-        
-        .top-header { background: rgba(255, 255, 255, 0.95); padding: 15px 30px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05); display: flex; justify-content: flex-end; align-items: center; position: sticky; top: 0; z-index: 99; }
-        .user-section { display: flex; align-items: center; gap: 15px; }
-        .user-avatar { width: 40px; height: 40px; background: linear-gradient(45deg, #1e3c72, #2a5298); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; }
-        .user-info { display: flex; flex-direction: column; }
-        .user-name { font-weight: 600; }
-        .user-role { font-size: 0.8em; color: #666; }
-        .logout-btn { background: #ff6b6b; color: white; border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 0.9em; }
+        /* Bu sayfaya özel stiller */
+        /* Genel body, page-wrapper, main-container stilleri shared-styles.css'ten gelecektir. */
+        /* Eğer bu sayfaya özel body/page-wrapper/main-container stilleri gerekiyorsa,
+           shared-styles.css'teki tanımlardan sonra buraya eklenmelidir. */
 
-        /* Sayfa başlığı */
         .page-header { background: rgba(255, 255, 255, 0.95); padding: 30px; border-radius: 20px; margin-bottom: 30px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1); }
         .page-title { font-size: 2em; color: #1e3c72; margin-bottom: 10px; }
         .page-subtitle { color: #666; font-size: 1.1em; }
@@ -114,57 +89,7 @@
     </style>
 </head>
 <body>
-    <aside class="sidebar">
-        <div class="sidebar-header">
-            <a href="dashboard.html" class="sidebar-logo">🔥 IP Manager</a>
-        </div>
-        <nav class="sidebar-nav">
-            <div class="nav-category-title">Ana Menü</div>
-            <a href="dashboard.html" class="sidebar-nav-item"><span class="nav-icon">📊</span><span>Dashboard</span></a>
-            <a href="portfolio.html" class="sidebar-nav-item"><span class="nav-icon">📋</span><span>Portföy</span></a>
-            <div class="nav-category-title">Veri Girişi</div>
-            <a href="data-entry.html" class="sidebar-nav-item"><span class="nav-icon">➕</span><span>Yeni Kayıt</span></a>
-            <a href="excel-upload.html" class="sidebar-nav-item"><span class="nav-icon">📄</span><span>Excel ile Yükle</span></a>
-            
-            <div class="nav-category-title">Yönetim</div>
-            <div class="accordion">
-                <div class="accordion-header"><span class="nav-icon">✅</span><span>Görevler</span></div>
-                <div class="accordion-content">
-                    <a href="create-task.html" class="new-task-link">Yeni İş Oluştur</a>
-                    <a href="task-management.html">İş Yönetimi</a>
-                    <a href="my-tasks.html">İşlerim</a>
-                    <a href="reminders.html">Hatırlatmalar</a> 
-                    <a href="scheduled-tasks.html">Zamanlanmış Görevler</a>
-                </div>
-            </div>
-            <div class="accordion">
-                <div class="accordion-header"><span class="nav-icon">👥</span><span>Kişi Yönetimi</span></div>
-                <div class="accordion-content">
-                    <a href="persons.html">Kişiler Yönetimi</a>
-                    <a href="user-management.html">Kullanıcı Yönetimi</a>
-                </div>
-            </div>
-            <div class="nav-category-title">Finans</div>
-            <a href="accruals.html" class="sidebar-nav-item"><span class="nav-icon">💰</span><span>Tahakkuklarım</span></a>
-            <div class="nav-category-title">Araçlar</div>
-            <a href="indexing.html" class="sidebar-nav-item"><span class="nav-icon">📁</span><span>Belge İndeksleme</span></a>
-            <a href="#" class="sidebar-nav-item" style="opacity: 0.5; cursor: not-allowed;"><span class="nav-icon">📈</span><span>Raporlar</span></a>
-            <a href="#" class="sidebar-nav-item" style="opacity: 0.5; cursor: not-allowed;"><span class="nav-icon">🔧</span><span>Ayarlar</span></a>
-        </nav>
-    </aside>
-
     <div class="page-wrapper">
-        <header class="top-header">
-            <div class="user-section">
-                <div class="user-avatar" id="userAvatar">?</div>
-                <div class="user-info">
-                    <div class="user-name" id="userName">Yükleniyor...</div>
-                    <div class="user-role" id="userRole">Kullanıcı</div>
-                </div>
-                <button class="logout-btn" id="logoutBtn">Çıkış</button>
-            </div>
-        </header>
-
         <main class="main-container">
             <section class="page-header">
                 <h1 class="page-title">Hatırlatmalar</h1>
@@ -187,34 +112,33 @@
     </div>
 
     <script type="module">
-        import { authService, db, auth } from './firebase-config.js'; // db eklendi
+        import { authService, db, auth } from './firebase-config.js';
         import { collection, query, where, orderBy, getDocs, updateDoc, doc, deleteDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+        import { loadSharedLayout } from './js/layout-loader.js'; // layout-loader.js eklendi
+        import { showNotification } from './utils.js'; // showNotification utils.js'ten import edildi
 
-        document.addEventListener('DOMContentLoaded', function() {
-            const accordions = document.querySelectorAll('.accordion-header');
-            accordions.forEach(header => {
-                header.addEventListener('click', function() { this.classList.toggle('active'); const content = this.nextElementSibling; if (content.style.maxHeight) { content.style.maxHeight = null; } else { content.style.maxHeight = content.scrollHeight + "px"; } });
-            });
+        document.addEventListener('DOMContentLoaded', async function() { // async eklendi
+            // Sidebar ve Top Header'ı yükle
+            await loadSharedLayout({ activeMenuLink: 'reminders.html' }); // Sayfa aktifliğini ayarla
 
-            function setActiveMenu() {
-                const currentPage = window.location.pathname.split("/").pop() || 'dashboard.html';
-                const activeLink = document.querySelector(`.sidebar-nav a[href*="${currentPage}"]`);
-                if (!activeLink) return;
-                activeLink.classList.add('active');
-                const parentAccordionContent = activeLink.closest('.accordion-content');
-                if (parentAccordionContent) {
-                    const parentAccordionHeader = parentAccordionContent.previousElementSibling;
-                    if (parentAccordionHeader) { parentAccordionHeader.classList.add('active'); parentAccordionContent.style.maxHeight = parentAccordionContent.scrollHeight + "px"; }
+            // Hatırlatmalar Modülü'nü başlat
+            let remindersModule;
+            auth.onAuthStateChanged(async (user) => { // async eklendi
+                if (user || authService.getCurrentUser()) {
+                    if (!remindersModule) {
+                        remindersModule = new RemindersModule();
+                        await remindersModule.init(); // init metodunu bekle
+                    }
+                } else {
+                    window.location.href = 'index.html';
                 }
-            }
-            setActiveMenu();
+            });
         });
 
         class RemindersModule {
             constructor() {
                 this.currentUser = null;
                 this.notifications = [];
-                this.init();
             }
 
             async init() {
@@ -223,21 +147,18 @@
                     window.location.href = 'index.html';
                     return;
                 }
-                this.updateUserInfo();
+                // updateUserInfo çağrısı artık loadSharedLayout içinde yapıldığı için burada tekrara gerek yok.
+                // this.updateUserInfo(); 
                 this.setupEventListeners();
                 await this.loadNotifications();
             }
 
-            updateUserInfo() {
-                const user = this.currentUser;
-                const userName = user.displayName || user.email.split('@')[0] || 'Kullanıcı';
-                document.getElementById('userAvatar').textContent = userName.charAt(0).toUpperCase();
-                document.getElementById('userName').textContent = userName;
-                document.getElementById('userRole').textContent = user.role === 'admin' ? 'Yönetici' : user.role === 'superadmin' ? 'Süper Yönetici' : 'Kullanıcı';
-            }
+            // updateUserInfo() { /* Bu fonksiyon artık layout-loader.js içinde */ }
 
             setupEventListeners() {
-                document.getElementById('logoutBtn').addEventListener('click', () => authService.signOut());
+                // logoutBtn event listener'ı artık layout-loader.js içinde.
+                // document.getElementById('logoutBtn').addEventListener('click', () => authService.signOut());
+                
                 // Dinamik olarak oluşturulan butonlar için olay delegasyonu
                 document.getElementById('notificationsList').addEventListener('click', async (e) => {
                     const target = e.target.closest('.action-btn-small');
@@ -262,8 +183,6 @@
                 noNotificationsMessage.style.display = 'none';
 
                 try {
-                    // Sadece 'all' kullanıcıya veya süper adminse tüm bildirimleri getir
-                    // Normal bir kullanıcı ise, user ID'sine göre filtreleyebiliriz.
                     let q;
                     if (this.currentUser.role === 'superadmin') {
                         q = query(collection(db, 'notifications'), orderBy('createdAt', 'desc'));
@@ -325,11 +244,11 @@
             async markAsRead(notificationId) {
                 try {
                     await updateDoc(doc(db, 'notifications', notificationId), { isRead: true });
-                    alert('Bildirim okundu olarak işaretlendi.');
+                    showNotification('Bildirim okundu olarak işaretlendi.', 'success'); // alert() yerine
                     await this.loadNotifications(); // Listeyi yenile
                 } catch (error) {
                     console.error('Bildirim okundu olarak işaretlenirken hata:', error);
-                    alert('Bildirim güncellenemedi: ' + error.message);
+                    showNotification('Bildirim güncellenemedi: ' + error.message, 'error'); // alert() yerine
                 }
             }
 
@@ -337,26 +256,15 @@
                 if (confirm('Bu bildirimi silmek istediğinizden emin misiniz?')) {
                     try {
                         await deleteDoc(doc(db, 'notifications', notificationId));
-                        alert('Bildirim silindi.');
+                        showNotification('Bildirim silindi.', 'success'); // alert() yerine
                         await this.loadNotifications(); // Listeyi yenile
                     } catch (error) {
                         console.error('Bildirim silinirken hata:', error);
-                        alert('Bildirim silinemedi: ' + error.message);
+                        showNotification('Bildirim silinemedi: ' + error.message, 'error'); // alert() yerine
                     }
                 }
             }
         }
-
-        let remindersModule;
-        auth.onAuthStateChanged((user) => {
-            if (user || authService.getCurrentUser()) {
-                if (!remindersModule) {
-                    remindersModule = new RemindersModule();
-                }
-            } else {
-                window.location.href = 'index.html';
-            }
-        });
     </script>
 </body>
 </html>
