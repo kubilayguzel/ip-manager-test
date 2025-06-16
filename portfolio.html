@@ -397,12 +397,11 @@
                     return;
                 }
 
-                setupEventListeners
                 await this.loadRecords();
             }
             
             setupEventListeners() {
-                // Logout butonu event listener'ı artık layout-loader içinde.
+            
                 // document.getElementById('logoutBtn').addEventListener('click', async () => { ... });
 
                                 document.getElementById('searchInput').addEventListener('input', (e) => { this.filters.search = e.target.value; this.applyFilters(); });
