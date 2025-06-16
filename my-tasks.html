@@ -126,7 +126,7 @@
         .file-upload-area-task-detail { border: 2px dashed #e1e8ed; border-radius: 10px; padding: 20px; text-align: center; cursor: pointer; margin-top: 15px; }
         .file-list-task-detail { margin-top: 10px; }
         .file-item-task-detail { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; background: #f8f9fa; border-radius: 6px; margin-bottom: 5px; }
-        .remove-file-task-detail { background: #ff6b6b; color: white; border: none; border-radius: 50%; width: 20px; height: 20px; cursor: pointer; }
+        .remove-file-task-detail { background: #ff6b6b; color: white; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 0.8em; cursor: pointer; }
         .form-group { margin-bottom: 15px; }
         .form-label { display: block; margin-bottom: 5px; font-weight: 600; color: #333; }
         .related-accrual-item { background: #f8f9fa; padding: 10px; border-radius: 8px; margin-bottom: 8px; font-size: 0.9em; border-left: 3px solid #1e3c72; }
@@ -345,7 +345,7 @@
     <script type="module">
         import { authService, taskService, ipRecordsService, personsService, accrualService, auth, generateUUID } from './firebase-config.js';
         import { showNotification, formatFileSize, readFileAsDataURL } from './utils.js';
-        import { loadSharedLayout } from './js/layout-loader.js'; // layout-loader.js eklendi
+        import { loadSharedLayout } from './js/layout/layout-loader.js'; // layout-loader.js eklendi
 
         class MyTasksModule {
             constructor() {
@@ -370,21 +370,12 @@
                     return;
                 }
                 
-                // updateUserInfo ve setupEventListeners artık layout-loader içinde olduğu için buradan kaldırıldı.
-                // this.updateUserInfo(); // KALDIRILDI
-                // this.setupEventListeners(); // KALDIRILDI
-
                 await this.loadInitialData();
-                // MyTasksModule'e özel event listener'lar için yeni metod
-                this.setupMyTasksEventListeners(); // Yeni bir metod oluşturup burada çağırın
+                this.setupMyTasksEventListeners(); // MyTasksModule'e özel event listener'lar için metod çağrısı
             }
             
-            // updateUserInfo fonksiyonunu buradan kaldırın (artık layout-loader.js'e taşındı)
-            // setupEventListeners fonksiyonunun tamamını buradan kaldırın
-
             // MyTasksModule'e özel event listener'lar için yeni metod
             setupMyTasksEventListeners() {
-                // document.getElementById('logoutBtn').addEventListener('click', () => authService.signOut()); // Bu artık layout-loader'da ayarlanıyor
                 document.getElementById('statusFilter').addEventListener('change', (e) => this.renderTasks(e.target.value));
                 
                 document.getElementById('closeViewTaskDetailModal').addEventListener('click', () => this.closeModal('viewTaskDetailModal'));
