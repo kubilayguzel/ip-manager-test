@@ -810,7 +810,7 @@ export const taskService = {
 };
 
 // --- Accrual Service ---
-export const accrualService = {
+const accrualService = {
     async addAccrual(accrualData) {
         if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor. Tahakkuk eklenemez." };
         const user = authService.getCurrentUser();
