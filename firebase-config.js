@@ -970,4 +970,4 @@ export async function createDemoData() {
 
 
 // --- Exports ---
-export { auth, db, authService, personsService, accrualService };
+export { auth, db, authService, accrualService };
