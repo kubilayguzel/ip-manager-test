@@ -396,22 +396,16 @@
                     window.location.href = 'index.html';
                     return;
                 }
-                // Shared layout'ı yükle
-                await loadSharedLayout({ activeMenuLink: 'portfolio.html' });
-                // updateUserInfo ve setupEventListeners artık layout-loader içinde olduğu için buradan kaldırıldı.
 
-                this.initializeEventListeners();
+                setupEventListeners
                 await this.loadRecords();
             }
-
-            // updateUserInfo ve setupEventListeners fonksiyonları artık layout-loader.js'e taşındı.
-            // Bu sınıfta tekrar tanımlanmalarına gerek yok.
             
-            initializeEventListeners() {
+            setupEventListeners() {
                 // Logout butonu event listener'ı artık layout-loader içinde.
                 // document.getElementById('logoutBtn').addEventListener('click', async () => { ... });
 
-                document.getElementById('searchInput').addEventListener('input', (e) => { this.filters.search = e.target.value; this.applyFilters(); });
+                                document.getElementById('searchInput').addEventListener('input', (e) => { this.filters.search = e.target.value; this.applyFilters(); });
                 document.getElementById('statusFilter').addEventListener('change', (e) => { this.filters.status = e.target.value; this.applyFilters(); });
                 document.querySelectorAll('.filter-buttons .filter-btn').forEach(btn => {
                     btn.addEventListener('click', (e) => {
@@ -462,6 +456,7 @@
                     }
                 });
             }
+
 
             handleSort(event) {
                 const column = event.currentTarget.dataset.sort; 
