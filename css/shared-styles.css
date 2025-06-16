@@ -25,10 +25,9 @@ body {
 }
 
 .main-container {
-    width: 100%;
-    max-width: 1400px; /* Genellikle ana içeriği ortalamak için bir max-width iyi olur */
-    margin: 30px auto; /* Ortala ve üstten/alttan boşluk bırak */
-    padding: 0 30px; /* Yatayda boşluk bırak */
+    max-width: 100% !important; /* Tam genişlikte olmasını sağlar ve diğer stilleri ezer */
+    margin: 0 !important;      /* Yatayda otomatik marjini kaldırır ve diğer stilleri ezer */
+    padding: 30px;  /* İç padding'i korur veya ayarlar */
 }
 
 /* Sol Menü (Sidebar) */
