@@ -26,7 +26,7 @@ export async function loadSharedLayout(options = {}) {
         const topHeaderTemplate = doc.querySelector('header.top-header'); // Şablon olarak alın
 
         if (sidebar) {
-            document.body.prepend(sidebar); // Sidebar'ı body'nin başına ekle
+            document.body.prepend(sidebar); // Sidebar'ı body'nin başına ekla
         }
         if (topHeaderTemplate) {
             const topHeaderContainer = document.createElement('header');
@@ -82,7 +82,9 @@ function setupSidebarAccordion() {
             if (content.style.maxHeight) {
                 content.style.maxHeight = null;
             } else {
-                content.style.maxHeight = content.scrollHeight + "px";
+                // Burada ek piksel ekleyerek yüksekliği artırıyoruz.
+                // 20px, genellikle iç padding ve marginleri telafi etmek için yeterli olacaktır.
+                content.style.maxHeight = (content.scrollHeight + 20) + "px"; 
             }
         });
     });
