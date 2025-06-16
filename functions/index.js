@@ -100,8 +100,8 @@ exports.checkTrademarkRenewalsAndInvalidations = functions.pubsub.schedule('0 0 
                             title: `Marka Yenileme Onayı: ${record.title} (${record.applicationNumber})`,
                             description: `${record.title} markasının yenileme tarihi ${record.renewalDate} yaklaşıyor. Müvekkil onayı bekleniyor.`,
                             priority: 'high',
-                            assignedTo_uid: 'YOUR_ADMIN_UID', // Lütfen gerçek Admin UID ile değiştirin
-                            assignedTo_email: 'your_admin_email@example.com', // Lütfen gerçek Admin E-postası ile değiştirin
+                            assignedTo_uid: 'S8DVLPHlt3a6aMhHxGBCHqR0ANz2', // Lütfen gerçek Admin UID ile değiştirin
+                            assignedTo_email: 'sas@gmail.com', // Lütfen gerçek Admin E-postası ile değiştirin
                             dueDate: record.renewalDate,
                             status: 'pending_client_approval', // Yeni statü
                             relatedIpRecordId: recordId,
