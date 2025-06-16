@@ -4,68 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>IP Manager - Yeni İş Oluştur</title>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333; display: flex; }
-        
-        .page-wrapper { flex-grow: 1; display: flex; flex-direction: column; height: 100vh; overflow-y: auto; background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); }
-        .main-container { 
-            width: 100%;
-            padding: 30px;
-            margin: 0;
-        }
-        
-        .sidebar { width: 260px; background: #1e3c72; color: white; display: flex; flex-direction: column; height: 100vh; position: sticky; top: 0; z-index: 1002; flex-shrink: 0; }
-        .sidebar-header { padding: 20px; text-align: center; border-bottom: 1px solid rgba(255, 255, 255, 0.1); }
-        .sidebar-logo { font-size: 1.8em; font-weight: bold; color: white; text-decoration: none; }
-        .sidebar-nav { flex-grow: 1; overflow-y: auto; padding: 20px 0; }
-        .nav-category-title { padding: 10px 20px; font-size: 0.8em; font-weight: bold; color: rgba(255, 255, 255, 0.5); text-transform: uppercase; }
-        .sidebar-nav-item, .accordion-header { display: flex; align-items: center; gap: 15px; padding: 15px 20px; color: rgba(255, 255, 255, 0.8); text-decoration: none; transition: background 0.3s ease; cursor: pointer; }
-        .sidebar-nav-item:hover, .accordion-header:hover { background: rgba(255, 255, 255, 0.1); }
-        .sidebar-nav-item.active { background: #2a5298; color: white; font-weight: bold; border-left: 4px solid #4ecdc4; padding-left: 16px; }
-        .nav-icon { font-size: 1.2em; width: 20px; text-align: center; }
-        .accordion-header::after { content: '▶'; margin-left: auto; font-size: 0.8em; transition: transform 0.3s ease; }
-        .accordion-header.active::after { transform: rotate(90deg); }
-        .accordion-content { background: rgba(0, 0, 0, 0.2); max-height: 0; overflow: hidden; transition: max-height 0.3s ease-out; }
-        .accordion-content a { display: block; padding: 12px 20px 12px 55px; color: rgba(255, 255, 255, 0.7); text-decoration: none; }
-        .accordion-content a.active { color: white; font-weight: 500; }
-        .accordion-content a.new-task-link { color: #fff; background-color: rgba(78, 205, 196, 0.25); font-weight: 500; }
-        
-        .top-header { background: rgba(255, 255, 255, 0.95); padding: 15px 30px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05); display: flex; justify-content: flex-end; align-items: center; position: sticky; top: 0; z-index: 99; }
-        .user-section { display: flex; align-items: center; gap: 15px; }
-        .user-avatar { width: 40px; height: 40px; background: linear-gradient(45deg, #1e3c72, #2a5298); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; }
-        .user-info { display: flex; flex-direction: column; text-align: right;}
-        .user-name { font-weight: 600; }
-        .user-role { font-size: 0.8em; color: #666; }
-        .logout-btn { background: #ff6b6b; color: white; border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 0.9em; }
-        
-        .page-header { background: rgba(255, 255, 255, 0.95); padding: 30px; border-radius: 20px; margin-bottom: 30px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1); }
-        .page-title { font-size: 2em; color: #1e3c72; margin-bottom: 10px; }
-        .page-subtitle { color: #666; font-size: 1.1em; }
-        .form-container { background: rgba(255, 255, 255, 0.95); padding: 40px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1); }
-        .form-section { border-bottom: 1px solid #e1e8ed; padding-bottom: 25px; margin-bottom: 25px; }
-        .form-section:last-child { border-bottom: none; }
-        .section-title { font-size: 1.3em; color: #1e3c72; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
-        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 25px; }
-        .form-group { display: flex; flex-direction: column; }
-        .form-group.full-width { grid-column: 1 / -1; }
-        .form-label { display: block; margin-bottom: 8px; color: #333; font-weight: 500; }
-        .form-input, .form-select, .form-textarea { 
-            width: 100%; 
-            padding: 12px 15px; 
-            border: 2px solid #e1e8ed; 
-            border-radius: 10px; 
-            font-size: 1em; 
-            transition: all 0.3s ease; 
-            background: white;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-        .form-actions { display: flex; justify-content: flex-end; gap: 15px; margin-top: 30px; }
-        .btn { padding: 12px 25px; border: none; border-radius: 8px; font-size: 1em; font-weight: 600; cursor: pointer; }
-        .btn-primary { background: #1e3c72; color: white; }
-        .btn-primary:disabled { background: #ccc; cursor: not-allowed; }
-        .btn-secondary { background: #6c757d; color: white; }
-        
+    <link rel="stylesheet" href="css/shared-styles.css"> <style>
+        /* Specific styles for this page if any, otherwise this block can be removed */
+        .new-task-link { color: #fff; background-color: rgba(78, 205, 196, 0.25); font-weight: 500; }
+        .new-task-link:hover { background-color: rgba(78, 205, 196, 0.4); }
+
         .btn-add-person {
             background: linear-gradient(45deg, #4CAF50, #66BB6A);
             color: white;
@@ -87,22 +30,6 @@
             background: linear-gradient(45deg, #388E3C, #4CAF50);
         }
 
-        .search-results-list { max-height: 200px; overflow-y: auto; border: 1px solid #ccc; border-radius: 8px; margin-top: 5px; }
-        .search-result-item { padding: 10px; cursor: pointer; border-bottom: 1px solid #eee; }
-        .search-result-item:hover { background-color: #f0f4f8; }
-        .search-result-display { background: #e9f5ff; border: 1px solid #bde0fe; padding: 15px; border-radius: 8px; margin-top: 10px; display: flex; gap: 15px; align-items: center;}
-        
-        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.6); z-index: 1003; align-items: center; justify-content: center; }
-        .modal.show { display: flex; }
-        .modal-content { background: white; padding: 30px; border-radius: 20px; max-width: 500px; width: 90%; }
-        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-        .modal-title { font-size: 1.3em; color: #1e3c72; }
-        .close-btn { background: none; border: none; font-size: 1.5em; cursor: pointer; color: #666; }
-
-        .person-form-grid { display: grid; grid-template-columns: 1fr; gap: 15px; }
-        .person-form-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; padding-top: 15px; border-top: 1px solid #e1e8ed; }
-        .person-form-actions .btn { padding: 8px 16px; font-size: 0.9em; }
-        
         .total-amount-display {
             font-size: 1.2em;
             font-weight: bold;
@@ -136,56 +63,7 @@
     </style>
 </head>
 <body>
-    <aside class="sidebar">
-        <div class="sidebar-header">
-            <a href="dashboard.html" class="sidebar-logo">🔥 IP Manager</a>
-        </div>
-        <nav class="sidebar-nav">
-            <div class="nav-category-title">Ana Menü</div>
-            <a href="dashboard.html" class="sidebar-nav-item"><span class="nav-icon">📊</span><span>Dashboard</span></a>
-            <a href="portfolio.html" class="sidebar-nav-item"><span class="nav-icon">📋</span><span>Portföy</span></a>
-            <div class="nav-category-title">Veri Girişi</div>
-            <a href="data-entry.html" class="sidebar-nav-item"><span class="nav-icon">➕</span><span>Yeni Kayıt</span></a>
-            <a href="excel-upload.html" class="sidebar-nav-item"><span class="nav-icon">📄</span><span>Excel ile Yükle</span></a>
-            <div class="nav-category-title">Yönetim</div>
-            <div class="accordion">
-                <div class="accordion-header"><span class="nav-icon">✅</span><span>Görevler</span></div>
-                <div class="accordion-content">
-                    <a href="create-task.html" class="new-task-link">Yeni İş Oluştur</a>
-                    <a href="task-management.html">İş Yönetimi</a>
-                    <a href="my-tasks.html">İşlerim</a>
-                    <a href="reminders.html">Hatırlatmalar</a>
-                    <a href="#" style="opacity: 0.5; cursor: not-allowed;">Zamanlanmış Görevler</a>
-                </div>
-            </div>
-            <div class="accordion">
-                <div class="accordion-header"><span class="nav-icon">👥</span><span>Kişi Yönetimi</span></div>
-                <div class="accordion-content">
-                    <a href="persons.html">Kişiler Yönetimi</a>
-                    <a href="user-management.html">Kullanıcı Yönetimi</a>
-                </div>
-            </div>
-            <div class="nav-category-title">Finans</div>
-            <a href="accruals.html" class="sidebar-nav-item"><span class="nav-icon">💰</span><span>Tahakkuklarım</span></a>
-            <div class="nav-category-title">Araçlar</div>
-            <a href="indexing.html" class="sidebar-nav-item"><span class="nav-icon">📁</span><span>Belge İndeksleme</span></a>
-            <a href="#" class="sidebar-nav-item" style="opacity: 0.5; cursor: not-allowed;"><span class="nav-icon">📈</span><span>Raporlar</span></a>
-            <a href="#" class="sidebar-nav-item" style="opacity: 0.5; cursor: not-allowed;"><span class="nav-icon">🔧</span><span>Ayarlar</span></a>
-        </nav>
-    </aside>
-
     <div class="page-wrapper">
-        <header class="top-header">
-            <div class="user-section">
-                <div class="user-avatar" id="userAvatar">?</div>
-                <div class="user-info">
-                    <div class="user-name" id="userName"></div>
-                    <div class="user-role" id="userRole"></div>
-                </div>
-                <button class="logout-btn" id="logoutBtn">Çıkış</button>
-            </div>
-        </header>
-
         <main class="main-container">
             <section class="page-header">
                 <h1 class="page-title">Yeni İş Oluştur</h1>
@@ -226,25 +104,11 @@
 
     <script type="module">
         import { authService, taskService, ipRecordsService, personsService, accrualService, auth, generateUUID } from './firebase-config.js';
-        import { showNotification, showFieldError, clearAllFieldErrors } from './utils.js'; // utils.js eklendi
+        import { showNotification, showFieldError, clearAllFieldErrors } from './utils.js';
+        import { loadSharedLayout } from './js/layout-loader.js'; // Import the layout loader
 
-        document.addEventListener('DOMContentLoaded', function() {
-            const accordions = document.querySelectorAll('.accordion-header');
-            accordions.forEach(header => {
-                header.addEventListener('click', function() { this.classList.toggle('active'); const content = this.nextElementSibling; if (content.style.maxHeight) { content.style.maxHeight = null; } else { content.style.maxHeight = content.scrollHeight + "px"; } });
-            });
-            function setActiveMenu() {
-                const currentPage = window.location.pathname.split("/").pop() || 'dashboard.html';
-                const activeLink = document.querySelector(`.sidebar-nav a[href*="${currentPage}"]`);
-                if (!activeLink) return;
-                activeLink.classList.add('active');
-                const parentAccordionContent = activeLink.closest('.accordion-content');
-                if (parentAccordionContent) {
-                    const parentAccordionHeader = parentAccordionContent.previousElementSibling;
-                    if (parentAccordionHeader) { parentAccordionHeader.classList.add('active'); parentAccordionContent.style.maxHeight = parentAccordionContent.scrollHeight + "px"; }
-                }
-            }
-            setActiveMenu();
+        document.addEventListener('DOMContentLoaded', async function() {
+            await loadSharedLayout({ activeMenuLink: 'create-task.html' }); // Load shared layout with active menu link
         });
 
         class CreateTaskModule {
@@ -266,16 +130,18 @@
                     'patent': ['Başvuru', 'Yenileme', 'Yıllık Ücret Ödemesi', 'Lisans', 'Devir', 'Rehin'],
                     'design': ['Başvuru', 'Yenileme', 'Devir', 'Lisans', 'Rehin']
                 };
+                this.init();
             }
 
             async init() {
                 this.currentUser = authService.getCurrentUser();
                 if (!this.currentUser) { window.location.href = 'index.html'; return; }
                 
+                // User info update is now handled by layout-loader, but keeping this for robustness if needed elsewhere
                 const user = this.currentUser;
-                document.getElementById('userAvatar').textContent = (user.displayName || 'U').charAt(0);
-                document.getElementById('userName').textContent = user.displayName || user.email.split('@')[0];
-                document.getElementById('userRole').textContent = user.role;
+                // document.getElementById('userAvatar').textContent = (user.displayName || 'U').charAt(0);
+                // document.getElementById('userName').textContent = user.displayName || user.email.split('@')[0];
+                // document.getElementById('userRole').textContent = user.role;
                 
                 try {
                     const [ipRecordsResult, personsResult, usersResult] = await Promise.all([
@@ -286,18 +152,21 @@
                     this.allUsers = usersResult.data || [];
                 } catch (error) {
                     console.error("Veri yüklenirken hata oluştu:", error);
-                    showNotification("Gerekli veriler yüklenemedi, lütfen sayfayı yenileyin.", 'error'); // alert() yerine
+                    showNotification("Gerekli veriler yüklenemedi, lütfen sayfayı yenileyn.", 'error');
                     return;
                 }
                 this.setupEventListeners();
             }
 
             setupEventListeners() {
+                // Logout button listener is now handled by layout-loader.js
+                // document.getElementById('logoutBtn').addEventListener('click', () => authService.signOut());
+                
                 document.getElementById('mainIpType').addEventListener('change', (e) => this.handleMainTypeChange(e));
                 document.getElementById('specificTaskType').addEventListener('change', (e) => this.handleSpecificTypeChange(e));
                 document.getElementById('createTaskForm').addEventListener('submit', (e) => this.handleFormSubmit(e));
                 document.getElementById('cancelBtn').addEventListener('click', () => { window.location.href = 'task-management.html'; });
-                document.getElementById('logoutBtn').addEventListener('click', () => authService.signOut());
+                
                 document.getElementById('closeAddPersonModal').addEventListener('click', () => this.hideAddPersonModal());
                 document.getElementById('cancelPersonBtn').addEventListener('click', () => this.hideAddPersonModal());
                 document.getElementById('savePersonBtn').addEventListener('click', () => this.saveNewPerson());
@@ -603,7 +472,7 @@
             showAddPersonModal() {
                 document.getElementById('addPersonModal').classList.add('show');
                 document.getElementById('personForm').reset();
-                clearAllFieldErrors(); // Hataları temizle
+                clearAllFieldErrors();
             }
 
             hideAddPersonModal() { document.getElementById('addPersonModal').classList.remove('show'); }
@@ -614,7 +483,7 @@
                 const email = document.getElementById('personEmail').value.trim();
                 
                 let isValid = true;
-                clearAllFieldErrors(); // Hataları temizle
+                clearAllFieldErrors();
 
                 if (!name) { showFieldError('personName', 'Ad Soyad zorunludur.'); isValid = false; }
                 if (!type) { showFieldError('personType', 'Kişi Türü zorunludur.'); isValid = false; }
@@ -748,7 +617,9 @@
         const module = new CreateTaskModule();
         auth.onAuthStateChanged(user => {
             if(user || authService.getCurrentUser()) {
-                module.init();
+                // module.init(); // Init is already called in the constructor, and it has its own auth state listener.
+                // We should ensure init is called only once or manage its execution flow better.
+                // For now, removing this duplicate call as init is called in the constructor.
                 window.createTaskModule = module;
             } else { window.location.href = 'index.html'; }
         });
