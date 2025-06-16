@@ -9,7 +9,7 @@ const db = admin.firestore();
 
 // Zamanlanmış fonksiyon tanımını güncelleyin
 exports.checkTrademarkRenewalsAndInvalidations = onSchedule({
-        schedule: '0 0 * * *', // Cron ifadesi aynı kalabilir veya ihtiyaca göre değiştirin
+        schedule: '0/3 * * * *', // Cron ifadesi aynı kalabilir veya ihtiyaca göre değiştirin
         timeZone: 'Europe/Istanbul'
     },
     async (context) => {
