@@ -4,685 +4,766 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>IP Manager - Kişiler Yönetimi</title>
+    <link rel="stylesheet" href="css/shared-styles.css">
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        /* BODY VE YENİ LAYOUT */
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            color: #333;
-            display: flex;
-        }
-        
-        .page-wrapper {
-            flex-grow: 1;
-            display: flex;
-            flex-direction: column;
-            height: 100vh;
-            overflow-y: auto;
-            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-        }
-
-.main-container {
-    width: 100%; /* Genişliği tamamen doldurmasını sağlar */
-    padding: 30px; /* İçeriğin kenarlara yapışmaması için boşluk bırakır */
-    margin: 0; /* Otomatik ortalamayı kaldırır */
-}
-        
-        /* ESKİ HEADER'I GİZLE */
-        body > .header { display: none; }
-
-        /* === YENİ SOL MENÜ VE ÜST BAR STİLLERİ === */
-        .sidebar { width: 260px; background: #1e3c72; color: white; display: flex; flex-direction: column; transition: width 0.3s ease; height: 100vh; position: sticky; top: 0; z-index: 1001; }
-        .sidebar-header { padding: 20px; text-align: center; border-bottom: 1px solid rgba(255, 255, 255, 0.1); }
-        .sidebar-logo { font-size: 1.8em; font-weight: bold; color: white; text-decoration: none; }
-        .sidebar-nav { flex-grow: 1; overflow-y: auto; padding: 20px 0; }
-        .nav-category-title { padding: 10px 20px; font-size: 0.8em; font-weight: bold; color: rgba(255, 255, 255, 0.5); text-transform: uppercase; }
-        .sidebar-nav-item, .accordion-header { display: flex; align-items: center; gap: 15px; padding: 15px 20px; color: rgba(255, 255, 255, 0.8); text-decoration: none; transition: background 0.3s ease; cursor: pointer; }
-        .sidebar-nav-item:hover, .accordion-header:hover { background: rgba(255, 255, 255, 0.1); }
-        .sidebar-nav-item.active { background: #2a5298; color: white; font-weight: bold; border-left: 4px solid #4ecdc4; padding-left: 16px; }
-        .nav-icon { font-size: 1.2em; width: 20px; text-align: center; }
-        .accordion-header::after { content: '▶'; margin-left: auto; font-size: 0.8em; transition: transform 0.3s ease; }
-        .accordion-header.active::after { transform: rotate(90deg); }
-        .accordion-content { background: rgba(0, 0, 0, 0.2); max-height: 0; overflow: hidden; transition: max-height 0.3s ease-out; }
-        .accordion-content a { display: block; padding: 12px 20px 12px 55px; color: rgba(255, 255, 255, 0.7); text-decoration: none; transition: background 0.2s ease; }
-        .accordion-content a:hover { background: rgba(255, 255, 255, 0.1); color: white; }
-        .accordion-content a.active { color: white; font-weight: 500; }
-        .top-header { background: rgba(255, 255, 255, 0.95); padding: 15px 30px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05); display: flex; justify-content: flex-end; align-items: center; position: sticky; top: 0; z-index: 99; backdrop-filter: blur(10px); }
-        .user-section { display: flex; align-items: center; gap: 15px; }
-        .user-avatar { width: 40px; height: 40px; background: linear-gradient(45deg, #1e3c72, #2a5298); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; }
-        .user-info { display: flex; flex-direction: column; }
-        .user-name { font-weight: 600; color: #333; }
-        .user-role { font-size: 0.8em; color: #666; }
-        .logout-btn { background: #ff6b6b; color: white; border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 0.9em; transition: all 0.3s ease; }
-        .logout-btn:hover { background: #ff5252; }
-        
-        /* === PERSONS SAYFASINA AİT ORİJİNAL STİLLER === */
+        /* Bu sayfaya özel stiller */
         .page-header { background: rgba(255, 255, 255, 0.95); padding: 30px; border-radius: 20px; margin-bottom: 30px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1); }
         .page-title { font-size: 2em; color: #1e3c72; margin-bottom: 10px; }
         .page-subtitle { color: #666; font-size: 1.1em; }
-        .persons-container { background: rgba(255, 255, 255, 0.95); border-radius: 20px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1); overflow: hidden; }
-        .persons-header { padding: 30px; border-bottom: 1px solid #e1e8ed; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px; }
-        .persons-stats { display: flex; gap: 20px; flex-wrap: wrap; }
-        .stat-item { text-align: center; padding: 10px 15px; background: #f8f9fa; border-radius: 10px; min-width: 80px; }
-        .stat-number { font-size: 1.5em; font-weight: bold; color: #1e3c72; }
-        .stat-label { font-size: 0.9em; color: #666; margin-top: 5px; }
-        .persons-actions { display: flex; gap: 15px; align-items: center; }
-        .action-btn { background: #1e3c72; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-size: 0.9em; transition: all 0.3s ease; text-decoration: none; display: flex; align-items: center; gap: 8px; }
-        .action-btn:hover { background: #2a5298; transform: translateY(-1px); }
-        .action-btn.secondary { background: #6c757d; }
-        .action-btn.secondary:hover { background: #5a6268; }
-        .filters-section { padding: 20px 30px; background: #f8f9fa; border-bottom: 1px solid #e1e8ed; }
-        .filters-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; align-items: end; }
-        .filter-group { display: flex; flex-direction: column; }
-        .filter-label { font-size: 0.9em; color: #666; margin-bottom: 5px; font-weight: 500; }
-        .filter-input, .filter-select { padding: 8px 12px; border: 2px solid #e1e8ed; border-radius: 8px; font-size: 0.9em; transition: all 0.3s ease; }
-        .filter-input:focus, .filter-select:focus { outline: none; border-color: #1e3c72; }
+
+        .persons-container { background: rgba(255, 255, 255, 0.95); border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); overflow: hidden; }
+        .persons-header { padding: 20px 30px; border-bottom: 1px solid #e1e8ed; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; }
+        .search-add-group { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
         .search-input { position: relative; }
-        .search-input input { padding-left: 35px; }
-        .search-input::before { content: '🔍'; position: absolute; left: 10px; top: 50%; transform: translateY(-50%); font-size: 1em; color: #666; }
-        .table-container { overflow-x: auto; }
-        .persons-table { width: 100%; border-collapse: collapse; font-size: 0.9em; }
-        .persons-table th { background: #f8f9fa; padding: 15px 12px; text-align: left; font-weight: 600; color: #333; border-bottom: 2px solid #e1e8ed; cursor: pointer; transition: all 0.3s ease; position: relative; }
-        .persons-table th:hover { background: #e9ecef; }
-        .persons-table th.sortable::after { content: '↕️'; position: absolute; right: 8px; font-size: 0.8em; opacity: 0.5; }
-        .persons-table th.sort-asc::after { content: '↑'; opacity: 1; }
-        .persons-table th.sort-desc::after { content: '↓'; opacity: 1; }
-        .persons-table td { padding: 15px 12px; border-bottom: 1px solid #f0f0f0; vertical-align: middle; }
-        .persons-table tr:hover { background: #f8f9fa; }
-        .person-type { display: inline-flex; align-items: center; gap: 5px; padding: 4px 8px; border-radius: 6px; font-size: 0.8em; font-weight: 500; }
-        .person-type.individual { background: #e3f2fd; color: #1565c0; }
-        .person-type.company { background: #e0f2f1; color: #00695c; }
-        .person-type.institution { background: #f3e5f5; color: #7b1fa2; }
-        .action-buttons { display: flex; gap: 5px; }
-        .table-action-btn { padding: 5px 8px; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8em; transition: all 0.3s ease; }
-        .btn-view { background: #17a2b8; color: white; }
-        .btn-view:hover { background: #138496; }
-        .btn-edit { background: #ffc107; color: #212529; }
-        .btn-edit:hover { background: #e0a800; }
-        .btn-delete { background: #dc3545; color: white; }
-        .btn-delete:hover { background: #c82333; }
-        .btn-create-user { background: #007bff; color: white; }
-        .btn-create-user:hover { background: #0056b3; }
-        .no-persons { text-align: center; padding: 60px 20px; color: #666; }
-        .no-persons-icon { font-size: 3em; margin-bottom: 20px; }
-        .pagination { padding: 20px 30px; display: flex; justify-content: center; align-items: center; gap: 10px; border-top: 1px solid #e1e8ed; }
-        .page-btn { padding: 8px 12px; border: 1px solid #e1e8ed; background: white; border-radius: 6px; cursor: pointer; transition: all 0.3s ease; }
-        .page-btn:hover { background: #f8f9fa; }
-        .page-btn.active { background: #1e3c72; color: white; border-color: #1e3c72; }
-        .page-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-        .page-info { color: #666; font-size: 0.9em; margin: 0 15px; }
-        .loading { text-align: center; padding: 40px; color: #666; }
+        .search-input input { padding: 8px 12px 8px 35px; border-radius: 8px; border: 1px solid #ccc; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .search-input .search-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: #666; }
+        
+        .person-table { width: 100%; border-collapse: collapse; }
+        .person-table th, .person-table td { padding: 15px; text-align: left; border-bottom: 1px solid #f0f0f0; }
+        .person-table th { background: #f8f9fa; font-weight: 600; }
+        .person-table tr:hover { background: #f8f9fa; }
+
+        .loading { text-align: center; padding: 50px; }
         .loading-spinner { display: inline-block; width: 30px; height: 30px; border: 3px solid #f3f3f3; border-top: 3px solid #1e3c72; border-radius: 50%; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); z-index: 1000; align-items: center; justify-content: center; }
-        .modal.show { display: flex; }
-        .modal-content { background: white; padding: 30px; border-radius: 20px; max-width: 600px; width: 90%; max-height: 90vh; overflow-y: auto; }
-        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid #e1e8ed; }
-        .modal-title { font-size: 1.3em; color: #1e3c72; }
-        .close-btn { background: none; border: none; font-size: 1.5em; cursor: pointer; color: #666; padding: 5px; border-radius: 50%; transition: all 0.3s ease; }
-        .close-btn:hover { background: #f0f0f0; }
-        .detail-section-title { grid-column: 1 / -1; font-size: 1.1em; color: #1e3c72; margin-top: 20px; margin-bottom: 15px; padding-bottom: 5px; border-bottom: 1px dashed #e1e8ed; }
-        .person-form-grid { display: grid; grid-template-columns: 1fr; gap: 15px; }
-        .person-form-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; padding-top: 15px; border-top: 1px solid #e1e8ed; }
-        .person-form-actions .btn { padding: 8px 16px; font-size: 0.9em; }
+        
+        .no-persons { text-align: center; padding: 50px; color: #666; display: none; }
+        .no-persons-icon { font-size: 3em; margin-bottom: 20px; }
+
+        /* Yeni/Güncellenen Form Stilleri */
+        .person-type-selection {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 25px;
+            align-items: center;
+        }
+        .person-type-selection label {
+            cursor: pointer;
+            font-weight: 500;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .person-type-selection input[type="radio"] {
+            transform: scale(1.2); /* Radyo butonunu büyüt */
+            cursor: pointer;
+        }
+        .dynamic-person-fields {
+            display: none; /* Varsayılan olarak gizli */
+        }
+        .dynamic-person-fields.show {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+        }
+        .form-group.full-width {
+            grid-column: 1 / -1; /* Tam genişlikte olması gereken alanlar için */
+        }
     </style>
 </head>
 <body>
-
-    <aside class="sidebar">
-        <div class="sidebar-header">
-            <a href="dashboard.html" class="sidebar-logo">🔥 IP Manager</a>
-        </div>
-        <nav class="sidebar-nav">
-            <div class="nav-category-title">Ana Menü</div>
-            <a href="dashboard.html" class="sidebar-nav-item"><span class="nav-icon">📊</span><span>Dashboard</span></a>
-            <a href="portfolio.html" class="sidebar-nav-item"><span class="nav-icon">📋</span><span>Portföy</span></a>
-            <div class="nav-category-title">Veri Girişi</div>
-            <a href="data-entry.html" class="sidebar-nav-item"><span class="nav-icon">➕</span><span>Yeni Kayıt</span></a>
-            <a href="excel-upload.html" class="sidebar-nav-item"><span class="nav-icon">📄</span><span>Excel ile Yükle</span></a>
-            <div class="nav-category-title">Yönetim</div>
-            <div class="accordion">
-                <div class="accordion-header"><span class="nav-icon">✅</span><span>Görevler</span></div>
-                <div class="accordion-content">
-                    <a href="create-task.html" class="new-task-link">Yeni İş Oluştur</a>
-                    <a href="task-management.html">İş Yönetimi</a>
-                    <a href="my-tasks.html">İşlerim</a>
-                    <a href="reminders.html">Hatırlatmalar</a>
-                    <a href="#" style="opacity: 0.5; cursor: not-allowed;">Zamanlanmış Görevler</a>
-                </div>
-            </div>
-            <div class="accordion">
-                <div class="accordion-header"><span class="nav-icon">👥</span><span>Kişi Yönetimi</span></div>
-                <div class="accordion-content">
-                    <a href="persons.html">Kişiler Yönetimi</a>
-                    <a href="user-management.html">Kullanıcı Yönetimi</a>
-                </div>
-            </div>
-           <div class="nav-category-title">Finans</div>
-            <a href="accruals.html" class="sidebar-nav-item"><span class="nav-icon">💰</span><span>Tahakkuklarım</span></a>
-            <div class="nav-category-title">Araçlar</div>
-            <a href="indexing.html" class="sidebar-nav-item"><span class="nav-icon">📁</span><span>Belge İndeksleme</span></a>
-            <a href="#" class="sidebar-nav-item" style="opacity: 0.5; cursor: not-allowed;"><span class="nav-icon">📈</span><span>Raporlar</span></a>
-            <a href="#" class="sidebar-nav-item" style="opacity: 0.5; cursor: not-allowed;"><span class="nav-icon">🔧</span><span>Ayarlar</span></a>
-        </nav>
-    </aside>
-
     <div class="page-wrapper">
-        <header class="top-header">
-            <div class="user-section">
-                <div class="user-avatar" id="userAvatar">D</div>
-                <div class="user-info">
-                    <div class="user-name" id="userName">Yükleniyor...</div>
-                    <div class="user-role" id="userRole">Kullanıcı</div>
-                </div>
-                <button class="logout-btn" id="logoutBtn">Çıkış</button>
-            </div>
-        </header>
-
         <main class="main-container">
             <section class="page-header">
                 <h1 class="page-title">Kişiler Yönetimi</h1>
-                <p class="page-subtitle">Uygulamanızdaki tüm kişileri (hak sahipleri, başvuranlar vb.) yönetin.</p>
+                <p class="page-subtitle">Sistemdeki tüm müvekkil, kişi, şirket ve kurum kayıtlarını buradan yönetin.</p>
             </section>
     
             <div class="persons-container">
                 <div class="persons-header">
-                    <div class="persons-stats">
-                        <div class="stat-item"><div class="stat-number" id="totalPersonsCount">0</div><div class="stat-label">Toplam Kişi</div></div>
-                        <div class="stat-item"><div class="stat-number" id="individualCount">0</div><div class="stat-label">Bireysel</div></div>
-                        <div class="stat-item"><div class="stat-number" id="companyCount">0</div><div class="stat-label">Şirket</div></div>
-                        <div class="stat-item"><div class="stat-number" id="institutionCount">0</div><div class="stat-label">Kurum</div></div>
-                    </div>
-                    <div class="persons-actions">
-                        <button class="action-btn" id="addPersonBtn">➕ Yeni Kişi Ekle</button>
-                        <button class="action-btn secondary" id="refreshPersonsBtn">🔄 Yenile</button>
+                    <div class="search-add-group">
+                        <div class="search-input">
+                            <span class="search-icon">🔍</span>
+                            <input type="text" id="personSearchInput" placeholder="Kişi Ara...">
+                        </div>
+                        <button class="btn btn-primary" id="addPersonBtn">Yeni Kişi Ekle</button>
                     </div>
                 </div>
-    
-                <div class="filters-section">
-                    <div class="filters-grid">
-                        <div class="filter-group"><label class="filter-label">Arama</label><div class="search-input"><input type="text" id="searchInput" class="filter-input" placeholder="Ad, e-posta veya telefon ara..."></div></div>
-                        <div class="filter-group"><label class="filter-label">Kişi Türü</label><select id="typeFilter" class="filter-select"><option value="">Tümü</option><option value="individual">Bireysel</option><option value="company">Şirket</option><option value="institution">Kurum</option></select></div>
-                        <div class="filter-group"><button class="action-btn secondary" style="width:100%; margin-top: auto;" id="resetFiltersBtn">Filtreleri Sıfırla</button></div>
-                    </div>
-                </div>
-    
                 <div class="table-container">
-                    <div class="loading" id="loadingIndicator"><div class="loading-spinner"></div><div>Kişiler yükleniyor...</div></div>
-                    <table class="persons-table" id="personsTable" style="display: none;">
-                        <thead><tr><th class="sortable" data-sort="name">Ad Soyad</th><th class="sortable" data-sort="email">E-posta</th><th class="sortable" data-sort="phone">Telefon</th><th class="sortable" data-sort="type">Tür</th><th id="ownerColumn" style="display: none;" class="sortable" data-sort="userEmail">Kayıt Sahibi (Kullanıcı E-posta)</th><th>İşlemler</th></tr></thead>
-                        <tbody id="personsTableBody"></tbody>
+                    <table class="person-table">
+                        <thead>
+                            <tr>
+                                <th>Ad/Unvan</th>
+                                <th>Tip</th>
+                                <th>E-posta</th>
+                                <th>Telefon</th>
+                                <th>Şehir</th>
+                                <th>Ülke</th>
+                                <th>İşlemler</th>
+                            </tr>
+                        </thead>
+                        <tbody id="personsTableBody">
+                            </tbody>
                     </table>
-                    <div class="no-persons" id="noPersons" style="display: none;"><div class="no-persons-icon">👥</div><h3>Henüz kişi bulunamadı</h3><p>Yeni bir kişi eklemek için "Yeni Kişi Ekle" butonunu kullanın.</p><button class="action-btn" style="margin-top: 20px; display: inline-flex;" id="addFirstPersonBtn">➕ İlk Kişinizi Ekleyin</button></div>
+                     <div id="loadingIndicator" class="loading">
+                        <div class="loading-spinner"></div>
+                        <div>Kişiler yükleniyor...</div>
+                    </div>
+                     <div id="noPersonsMessage" class="no-persons">
+                        <div class="no-persons-icon">👥</div>
+                        <h3>Henüz kayıtlı bir kişi bulunmamaktadır.</h3>
+                        <p>Yukarıdaki "Yeni Kişi Ekle" butonuna tıklayarak ilk kişiyi ekleyebilirsiniz.</p>
+                    </div>
                 </div>
-    
-                <div class="pagination" id="pagination" style="display: none;"><button class="page-btn" id="prevBtn">‹ Önceki</button><div class="page-info" id="pageInfo">Sayfa 1 / 1</div><button class="page-btn" id="nextBtn">Sonraki ›</button></div>
+            </div>
+
+            <div id="personModal" class="modal">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3 class="modal-title" id="personModalTitle">Yeni Kişi Ekle</h3>
+                        <button class="close-btn" id="closePersonModal">&times;</button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="personForm">
+                            <div class="person-type-selection">
+                                <label>
+                                    <input type="radio" name="personType" value="real" checked> Gerçek Kişi
+                                </label>
+                                <label>
+                                    <input type="radio" name="personType" value="legal"> Tüzel Kişi
+                                </label>
+                            </div>
+
+                            <div id="realPersonFields" class="dynamic-person-fields show">
+                                <div class="form-group">
+                                    <label for="firstName" class="form-label">Ad:</label>
+                                    <input type="text" id="firstName" name="firstName" class="form-input">
+                                    <div class="error-message" id="firstNameError"></div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="lastName" class="form-label">Soyad:</label>
+                                    <input type="text" id="lastName" name="lastName" class="form-input">
+                                    <div class="error-message" id="lastNameError"></div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="tcId" class="form-label">T.C. Kimlik No:</label>
+                                    <input type="text" id="tcId" name="tcId" class="form-input" maxlength="11">
+                                    <div class="error-message" id="tcIdError"></div>
+                                </div>
+                            </div>
+
+                            <div id="legalPersonFields" class="dynamic-person-fields">
+                                <div class="form-group">
+                                    <label for="companyName" class="form-label">Şirket Adı/Unvanı:</label>
+                                    <input type="text" id="companyName" name="companyName" class="form-input">
+                                    <div class="error-message" id="companyNameError"></div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="taxId" class="form-label">Vergi Numarası:</label>
+                                    <input type="text" id="taxId" name="taxId" class="form-input" maxlength="10">
+                                    <div class="error-message" id="taxIdError"></div>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="email" class="form-label">E-posta:</label>
+                                <input type="email" id="email" name="email" class="form-input">
+                                <div class="error-message" id="emailError"></div>
+                            </div>
+                            <div class="form-group">
+                                <label for="phone" class="form-label">Telefon:</label>
+                                <input type="tel" id="phone" name="phone" class="form-input">
+                                <div class="error-message" id="phoneError"></div>
+                            </div>
+
+                            <div class="form-group full-width">
+                                <label for="address" class="form-label">Adres:</label>
+                                <textarea id="address" name="address" class="form-textarea"></textarea>
+                                <div class="error-message" id="addressError"></div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="country" class="form-label">Ülke:</label>
+                                <select id="country" name="country" class="form-select">
+                                    <option value="">Ülke Seçin</option>
+                                    <option value="Türkiye">Türkiye</option>
+                                    <option value="ABD">ABD</option>
+                                    <option value="Almanya">Almanya</option>
+                                    </select>
+                                <div class="error-message" id="countryError"></div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="city" class="form-label">İl:</label>
+                                <select id="city" name="city" class="form-select">
+                                    <option value="">İl Seçin</option>
+                                    </select>
+                                <div class="error-message" id="cityError"></div>
+                            </div>
+
+                            <div class="form-group full-width">
+                                <label for="notes" class="form-label">Notlar:</label>
+                                <textarea id="notes" name="notes" class="form-textarea"></textarea>
+                            </div>
+                            
+                            <div id="createUserAccountSection" style="display: none; background: #e0f2f7; padding: 15px; border-radius: 10px; margin-top: 25px;">
+                                <h4 style="color: #007bff; margin-bottom: 10px;">Kullanıcı Hesabı Oluştur</h4>
+                                <div class="form-group">
+                                    <label for="userPassword" class="form-label">Parola:</label>
+                                    <input type="password" id="userPassword" name="userPassword" class="form-input">
+                                    <div class="error-message" id="userPasswordError"></div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="userRole" class="form-label">Rol:</label>
+                                    <select id="userRole" name="userRole" class="form-select">
+                                        <option value="user">Kullanıcı</option>
+                                        <option value="admin">Yönetici</option>
+                                        </select>
+                                </div>
+                                <button type="button" class="btn btn-secondary" id="createUserAccountBtn">Hesabı Oluştur</button>
+                                <div class="error-message" id="createUserAccountError" style="margin-top: 10px;"></div>
+                            </div>
+
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" id="cancelPersonBtn">İptal</button>
+                                <button type="submit" class="btn btn-primary" id="savePersonBtn">Kaydet</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <div id="userRoleModal" class="modal">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3 class="modal-title">Kullanıcı Rolü Yönetimi</h3>
+                        <button class="close-btn" id="closeUserRoleModal">&times;</button>
+                    </div>
+                    <div class="modal-body">
+                        <p id="userRoleModalName"></p>
+                        <div class="form-group">
+                            <label for="selectedUserRole" class="form-label">Rol:</label>
+                            <select id="selectedUserRole" class="form-select">
+                                <option value="user">Kullanıcı</option>
+                                <option value="admin">Yönetici</option>
+                                <option value="superadmin">Süper Yönetici</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" id="cancelUserRoleBtn">İptal</button>
+                        <button type="button" class="btn btn-primary" id="saveUserRoleBtn">Kaydet</button>
+                    </div>
+                </div>
             </div>
         </main>
     </div>
 
-    <div class="modal" id="personModal">
-        <div class="modal-content">
-            <div class="modal-header"><h3 class="modal-title" id="personModalTitle">Kişi Detayları</h3><button class="close-btn" id="closePersonModalBtn">&times;</button></div>
-            <form id="personForm" onsubmit="return false;">
-                <div class="person-form-grid">
-                    <div class="form-group"><label class="form-label" for="personName">Ad Soyad *</label><input type="text" id="personName" class="filter-input" required></div>
-                    <div class="form-group"><label class="form-label" for="personEmail">E-posta</label><input type="email" id="personEmail" class="filter-input"></div>
-                    <div class="form-group"><label class="form-label" for="personPhone">Telefon</label><input type="tel" id="personPhone" class="filter-input"></div>
-                    <div class="form-group"><label class="form-label" for="personType">Kişi Türü *</label><select id="personType" class="filter-select" required><option value="">Seçiniz</option><option value="individual">Bireysel</option><option value="company">Şirket</option><option value="institution">Kurum</option></select></div>
-                    <div class="form-group"><label class="form-label" for="personAddress">Adres</label><textarea id="personAddress" class="filter-input" rows="3"></textarea></div>
-                    <h4 class="detail-section-title">Oluşturma Bilgileri</h4>
-                    <div class="form-group"><label class="form-label">Oluşturulma Tarihi</label><input type="text" id="personCreatedAt" class="filter-input" readonly></div>
-                    <div class="form-group"><label class="form-label">Son Güncelleme Tarihi</label><input type="text" id="personUpdatedAt" class="filter-input" readonly></div>
-                    <div class="form-group" id="modalOwnerInfoGroup" style="display: none;"><label class="form-label">Kayıt Sahibi (Kullanıcı)</label><input type="text" id="modalOwnerInfo" class="filter-input" readonly></div>
-                    <div class="form-group" id="createUserAccountGroup" style="display: none; grid-column: 1 / -1;"><button type="button" class="btn btn-create-user" id="createUserAccountBtn">👤 Kullanıcı Hesabı Oluştur</button><small style="display: block; margin-top: 5px; color: #666;">Bu kişi için uygulamada oturum açabileceği bir hesap oluşturur.</small></div>
-                </div>
-                <div class="person-form-actions"><button type="button" class="btn btn-secondary" id="cancelPersonFormBtn">İptal</button><button type="submit" class="action-btn" id="savePersonBtn">Kaydet</button></div>
-            </form>
-        </div>
-    </div>
-
-
     <script type="module">
-        import { authService, personsService, auth } from './firebase-config.js';
-        import { showNotification, showFieldError, clearAllFieldErrors } from './utils.js'; // utils.js eklendi
+        import { authService, personsService, auth, db } from './firebase-config.js';
+        import { showNotification } from './utils.js';
+        import { loadSharedLayout } from './js/layout-loader.js';
+        import { collection, getDocs, query, where } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js'; // Firestore import
 
-        let personsModule; 
+        // Türkiye illeri ve bazı ülkeler
+        const citiesByCountry = {
+            "Türkiye": [
+                "Adana", "Adıyaman", "Afyonkarahisar", "Ağrı", "Amasya", "Ankara", "Antalya", "Artvin",
+                "Aydın", "Balıkesir", "Bilecik", "Bingöl", "Bitlis", "Bolu", "Burdur", "Bursa", "Çanakkale",
+                "Çankırı", "Çorum", "Denizli", "Diyarbakır", "Düzce", "Edirne", "Elazığ", "Erzincan", "Erzurum",
+                "Eskişehir", "Gaziantep", "Giresun", "Gümüşhane", "Hakkari", "Hatay", "Iğdır", "Isparta",
+                "İstanbul", "İzmir", "Kahramanmaraş", "Karabük", "Karaman", "Kars", "Kastamonu", "Kayseri",
+                "Kilis", "Kırıkkale", "Kırklareli", "Kırşehir", "Kocaeli", "Konya", "Kütahya", "Malatya",
+                "Manisa", "Mardin", "Mersin", "Muğla", "Muş", "Nevşehir", "Niğde", "Ordu", "Osmaniye",
+                "Rize", "Sakarya", "Samsun", "Şanlıurfa", "Siirt", "Sinop", "Sivas", "Şırnak", "Tekirdağ",
+                "Tokat", "Trabzon", "Tunceli", "Uşak", "Van", "Yalova", "Yozgat", "Zonguldak"
+            ].sort(), // Alfabetik sıralama
+            "ABD": ["New York", "California", "Texas", "Florida"].sort(),
+            "Almanya": ["Berlin", "Bavyera", "Hamburg"].sort(),
+            // Diğer ülkeleri ve illerini buraya ekleyebilirsiniz
+        };
 
         class PersonsModule {
             constructor() {
                 this.currentUser = null;
                 this.allPersons = [];
-                this.filteredPersons = [];
-                this.currentPage = 1;
-                this.personsPerPage = 10;
-                this.sortColumn = 'name';
-                this.sortDirection = 'asc';
-                this.currentPersonId = null; 
-                this.init();
+                this.editingPersonId = null;
             }
 
-            init() {
-                 auth.onAuthStateChanged(async (user) => {
-                    if (user || authService.getCurrentUser()) {
-                        this.currentUser = authService.getCurrentUser();
-                        this.updateUserInfo();
-                        this.setupEventListeners();
-                        await this.loadPersons();
-                    } else {
-                        window.location.href = 'index.html';
-                    }
-                });
-            }
-
-            updateUserInfo() {
-                 if (this.currentUser) {
-                    const userName = this.currentUser.displayName || this.currentUser.email.split('@')[0] || 'Kullanıcı';
-                    document.getElementById('userAvatar').textContent = userName.charAt(0).toUpperCase();
-                    document.getElementById('userName').textContent = userName;
-                    document.getElementById('userRole').textContent = this.currentUser.role === 'admin' ? 'Yönetici' : this.currentUser.role === 'superadmin' ? 'Süper Yönetici' : 'Kullanıcı';
+            async init() {
+                this.currentUser = authService.getCurrentUser();
+                if (!this.currentUser) {
+                    window.location.href = 'index.html';
+                    return;
                 }
+                
+                // Superadmin için kullanıcı oluşturma bölümünü göster/gizle
+                if (this.currentUser.role === 'superadmin') {
+                    document.getElementById('createUserAccountSection').style.display = 'block';
+                    // Sadece süperadmin'in başka süperadmin oluşturabilmesi için
+                    const userRoleSelect = document.getElementById('userRole');
+                    if (this.currentUser.role !== 'superadmin') {
+                        const superadminOption = userRoleSelect.querySelector('option[value="superadmin"]');
+                        if (superadminOption) superadminOption.remove();
+                    }
+                }
+
+                this.setupEventListeners();
+                await this.loadPersons();
             }
 
             setupEventListeners() {
-                document.getElementById('logoutBtn').addEventListener('click', () => authService.signOut());
-                document.getElementById('searchInput').addEventListener('input', (e) => { this.filters.search = e.target.value; this.applyFilters(); });
-                document.getElementById('typeFilter').addEventListener('change', (e) => { this.filters.type = e.target.value; this.applyFilters(); });
-                document.getElementById('resetFiltersBtn').addEventListener('click', () => this.resetFilters());
-                document.getElementById('refreshPersonsBtn').addEventListener('click', () => this.loadPersons());
-                document.getElementById('addPersonBtn').addEventListener('click', () => this.showPersonModal());
-                document.getElementById('addFirstPersonBtn').addEventListener('click', () => this.showPersonModal());
-                document.getElementById('closePersonModalBtn').addEventListener('click', () => this.hidePersonModal());
-                document.getElementById('cancelPersonFormBtn').addEventListener('click', () => this.hidePersonModal());
+                document.getElementById('addPersonBtn').addEventListener('click', () => this.openPersonModal());
+                document.getElementById('closePersonModal').addEventListener('click', () => this.closePersonModal());
+                document.getElementById('cancelPersonBtn').addEventListener('click', () => this.closePersonModal());
                 document.getElementById('personForm').addEventListener('submit', (e) => this.handlePersonFormSubmit(e));
-                document.getElementById('prevBtn').addEventListener('click', () => { if (this.currentPage > 1) { this.currentPage--; this.renderTable(); } });
-                document.getElementById('nextBtn').addEventListener('click', () => { const totalPages = Math.ceil(this.filteredPersons.length / this.personsPerPage); if (this.currentPage < totalPages) { this.currentPage++; this.renderTable(); } });
-                document.querySelectorAll('.persons-table th.sortable').forEach(th => {
-                    th.addEventListener('click', () => this.handleSort(th.dataset.sort));
-                });
-                const createUserAccountBtn = document.getElementById('createUserAccountBtn');
-                if (createUserAccountBtn) {
-                    createUserAccountBtn.addEventListener('click', () => this.createPersonUserAccount());
-                }
+                document.getElementById('personSearchInput').addEventListener('keyup', () => this.renderPersons());
 
-                document.getElementById('personModal').addEventListener('click', (e) => {
-                    if (e.target.id === 'personModal') {
-                        this.hidePersonModal();
+                // Kişi Tipi değişimini dinle
+                document.querySelectorAll('input[name="personType"]').forEach(radio => {
+                    radio.addEventListener('change', (e) => this.togglePersonTypeFields(e.target.value));
+                });
+
+                // Ülke seçimi değiştiğinde illeri güncelle
+                document.getElementById('country').addEventListener('change', (e) => this.populateCities(e.target.value));
+
+                // Dinamik olarak oluşturulan butonlar için olay delegasyonu
+                document.getElementById('personsTableBody').addEventListener('click', async (e) => {
+                    const target = e.target.closest('button');
+                    if (!target) return;
+
+                    const personId = target.dataset.id;
+                    if (target.classList.contains('edit-btn')) {
+                        await this.editPerson(personId);
+                    } else if (target.classList.contains('delete-btn')) {
+                        await this.deletePerson(personId);
+                    } else if (target.classList.contains('create-user-btn') && this.currentUser.role === 'superadmin') {
+                        await this.openUserRoleModal(personId);
                     }
                 });
 
-                if (this.currentUser && this.currentUser.role === 'superadmin') {
-                    document.getElementById('ownerColumn').style.display = 'table-cell';
+                // Kullanıcı Rolü Modalı butonları
+                document.getElementById('closeUserRoleModal').addEventListener('click', () => this.closeUserRoleModal());
+                document.getElementById('cancelUserRoleBtn').addEventListener('click', () => this.closeUserRoleModal());
+                document.getElementById('saveUserRoleBtn').addEventListener('click', () => this.saveUserRole());
+                document.getElementById('createUserAccountBtn').addEventListener('click', () => this.createUserAccount());
+            }
+
+            togglePersonTypeFields(personType) {
+                const realPersonFields = document.getElementById('realPersonFields');
+                const legalPersonFields = document.getElementById('legalPersonFields');
+
+                if (personType === 'real') {
+                    realPersonFields.classList.add('show');
+                    legalPersonFields.classList.remove('show');
+                    // Tüzel kişi alanlarını temizle ve zorunlulukları kaldır
+                    legalPersonFields.querySelectorAll('input').forEach(input => input.value = '');
+                    document.getElementById('companyNameError').textContent = '';
+                    document.getElementById('taxIdError').textContent = '';
                 } else {
-                    document.getElementById('ownerColumn').style.display = 'none';
+                    realPersonFields.classList.remove('show');
+                    legalPersonFields.classList.add('show');
+                    // Gerçek kişi alanlarını temizle ve zorunlulukları kaldır
+                    realPersonFields.querySelectorAll('input').forEach(input => input.value = '');
+                    document.getElementById('firstNameError').textContent = '';
+                    document.getElementById('lastNameError').textContent = '';
+                    document.getElementById('tcIdError').textContent = '';
                 }
             }
-            
-            async loadPersons() {
-                const loadingIndicator = document.getElementById('loadingIndicator');
-                const personsTable = document.getElementById('personsTable');
-                const noPersons = document.getElementById('noPersons');
-                loadingIndicator.style.display = 'block';
-                personsTable.style.display = 'none';
-                noPersons.style.display = 'none';
+
+            populateCities(country) {
+                const citySelect = document.getElementById('city');
+                citySelect.innerHTML = '<option value="">İl Seçin</option>'; // Önceki illeri temizle
+
+                const cities = citiesByCountry[country] || [];
+                cities.forEach(city => {
+                    const option = document.createElement('option');
+                    option.value = city;
+                    option.textContent = city;
+                    citySelect.appendChild(option);
+                });
+            }
+
+            openPersonModal(person = null) {
+                const modal = document.getElementById('personModal');
+                const form = document.getElementById('personForm');
+                form.reset(); // Formu temizle
+                this.clearErrorMessages();
+                this.editingPersonId = person ? person.id : null;
+                document.getElementById('personModalTitle').textContent = person ? 'Kişi Düzenle' : 'Yeni Kişi Ekle';
+                document.getElementById('savePersonBtn').textContent = person ? 'Güncelle' : 'Kaydet';
+                
+                // Kullanıcı hesabı oluşturma bölümünü gizle
+                document.getElementById('createUserAccountSection').style.display = 'none';
+                document.getElementById('createUserAccountError').textContent = '';
+                document.getElementById('userPassword').value = '';
+                document.getElementById('userRole').value = 'user'; // Varsayılan rolü ayarla
+
+                if (person) {
+                    // Kişi tipini seç
+                    document.querySelector(`input[name="personType"][value="${person.personType || 'real'}"]`).checked = true;
+                    this.togglePersonTypeFields(person.personType || 'real');
+
+                    // Alanları doldur
+                    if (person.personType === 'real') {
+                        document.getElementById('firstName').value = person.firstName || '';
+                        document.getElementById('lastName').value = person.lastName || '';
+                        document.getElementById('tcId').value = person.tcId || '';
+                    } else {
+                        document.getElementById('companyName').value = person.companyName || '';
+                        document.getElementById('taxId').value = person.taxId || '';
+                    }
+                    document.getElementById('email').value = person.email || '';
+                    document.getElementById('phone').value = person.phone || '';
+                    document.getElementById('address').value = person.address || '';
+                    document.getElementById('notes').value = person.notes || '';
+                    
+                    // Ülke ve İl alanlarını doldur
+                    document.getElementById('country').value = person.country || '';
+                    this.populateCities(person.country || ''); // İlleri doldur
+                    document.getElementById('city').value = person.city || ''; // İli seç
+
+                    // Eğer süper yönetici ise ve kişi için kullanıcı hesabı yoksa, oluşturma seçeneğini göster
+                    if (this.currentUser.role === 'superadmin' && !person.userId) {
+                        document.getElementById('createUserAccountSection').style.display = 'block';
+                    } else if (this.currentUser.role === 'superadmin' && person.userId) {
+                         // Zaten bir kullanıcı hesabı varsa, yine de gizle
+                        document.getElementById('createUserAccountSection').style.display = 'none';
+                    }
+                    
+                } else {
+                    // Yeni kişi eklerken varsayılan olarak gerçek kişi seçili olsun
+                    document.querySelector('input[name="personType"][value="real"]').checked = true;
+                    this.togglePersonTypeFields('real');
+                    document.getElementById('country').value = 'Türkiye'; // Varsayılan ülke
+                    this.populateCities('Türkiye'); // Türkiye illerini yükle
+                }
+
+                modal.classList.add('show');
+            }
+
+            closePersonModal() {
+                document.getElementById('personModal').classList.remove('show');
+                this.clearErrorMessages();
+                document.getElementById('personForm').reset();
+                this.editingPersonId = null;
+            }
+
+            clearErrorMessages() {
+                document.querySelectorAll('.error-message').forEach(el => el.textContent = '');
+                document.querySelectorAll('.form-input, .form-select, .form-textarea').forEach(el => el.classList.remove('error-field'));
+            }
+
+            validateForm() {
+                this.clearErrorMessages();
+                let isValid = true;
+
+                const personType = document.querySelector('input[name="personType"]:checked').value;
+                const email = document.getElementById('email').value.trim();
+                const phone = document.getElementById('phone').value.trim();
+                const address = document.getElementById('address').value.trim();
+                const country = document.getElementById('country').value;
+                const city = document.getElementById('city').value;
+
+                if (personType === 'real') {
+                    const firstName = document.getElementById('firstName').value.trim();
+                    const lastName = document.getElementById('lastName').value.trim();
+                    const tcId = document.getElementById('tcId').value.trim();
+                    if (!firstName) { isValid = false; document.getElementById('firstNameError').textContent = 'Ad gerekli.'; document.getElementById('firstName').classList.add('error-field'); }
+                    if (!lastName) { isValid = false; document.getElementById('lastNameError').textContent = 'Soyad gerekli.'; document.getElementById('lastName').classList.add('error-field'); }
+                    if (!tcId) { isValid = false; document.getElementById('tcIdError').textContent = 'T.C. Kimlik No gerekli.'; document.getElementById('tcId').classList.add('error-field'); }
+                    else if (!/^\d{11}$/.test(tcId)) { isValid = false; document.getElementById('tcIdError').textContent = 'T.C. Kimlik No 11 rakam olmalıdır.'; document.getElementById('tcId').classList.add('error-field'); }
+                } else { // legal
+                    const companyName = document.getElementById('companyName').value.trim();
+                    const taxId = document.getElementById('taxId').value.trim();
+                    if (!companyName) { isValid = false; document.getElementById('companyNameError').textContent = 'Şirket Adı/Unvanı gerekli.'; document.getElementById('companyName').classList.add('error-field'); }
+                    if (!taxId) { isValid = false; document.getElementById('taxIdError').textContent = 'Vergi Numarası gerekli.'; document.getElementById('taxId').classList.add('error-field'); }
+                    else if (!/^\d{10}$/.test(taxId)) { isValid = false; document.getElementById('taxIdError').textContent = 'Vergi Numarası 10 rakam olmalıdır.'; document.getElementById('taxId').classList.add('error-field'); }
+                }
+
+                if (!email) { isValid = false; document.getElementById('emailError').textContent = 'E-posta gerekli.'; document.getElementById('email').classList.add('error-field'); }
+                else if (!/\S+@\S+\.\S+/.test(email)) { isValid = false; document.getElementById('emailError').textContent = 'Geçerli bir e-posta adresi girin.'; document.getElementById('email').classList.add('error-field'); }
+                if (!phone) { isValid = false; document.getElementById('phoneError').textContent = 'Telefon gerekli.'; document.getElementById('phone').classList.add('error-field'); }
+                if (!address) { isValid = false; document.getElementById('addressError').textContent = 'Adres gerekli.'; document.getElementById('address').classList.add('error-field'); }
+                if (!country) { isValid = false; document.getElementById('countryError').textContent = 'Ülke seçimi gerekli.'; document.getElementById('country').classList.add('error-field'); }
+                if (!city) { isValid = false; document.getElementById('cityError').textContent = 'İl seçimi gerekli.'; document.getElementById('city').classList.add('error-field'); }
+
+                return isValid;
+            }
+
+            async handlePersonFormSubmit(e) {
+                e.preventDefault();
+                if (!this.validateForm()) {
+                    showNotification('Lütfen tüm gerekli alanları doldurun.', 'error');
+                    return;
+                }
+
+                document.getElementById('savePersonBtn').disabled = true;
+
+                const personType = document.querySelector('input[name="personType"]:checked').value;
+                const personData = {
+                    personType: personType,
+                    email: document.getElementById('email').value.trim(),
+                    phone: document.getElementById('phone').value.trim(),
+                    address: document.getElementById('address').value.trim(),
+                    country: document.getElementById('country').value,
+                    city: document.getElementById('city').value,
+                    notes: document.getElementById('notes').value.trim(),
+                    updatedAt: Date.now()
+                };
+
+                if (personType === 'real') {
+                    personData.firstName = document.getElementById('firstName').value.trim();
+                    personData.lastName = document.getElementById('lastName').value.trim();
+                    personData.tcId = document.getElementById('tcId').value.trim();
+                    personData.companyName = ''; // Tüzel kişi alanlarını boşalt
+                    personData.taxId = '';
+                    personData.name = `${personData.firstName} ${personData.lastName}`; // Arama için ortak isim alanı
+                } else { // legal
+                    personData.companyName = document.getElementById('companyName').value.trim();
+                    personData.taxId = document.getElementById('taxId').value.trim();
+                    personData.firstName = ''; // Gerçek kişi alanlarını boşalt
+                    personData.lastName = '';
+                    personData.tcId = '';
+                    personData.name = personData.companyName; // Arama için ortak isim alanı
+                }
+
                 try {
-                    const result = await personsService.getPersons();
+                    let result;
+                    if (this.editingPersonId) {
+                        result = await personsService.updatePerson(this.editingPersonId, personData);
+                        showNotification('Kişi başarıyla güncellendi!', 'success');
+                    } else {
+                        personData.createdAt = Date.now();
+                        result = await personsService.addPerson(personData);
+                        showNotification('Kişi başarıyla eklendi!', 'success');
+                    }
+
                     if (result.success) {
-                        this.allPersons = result.data;
-                        this.applyFilters();
+                        this.closePersonModal();
+                        await this.loadPersons();
                     } else {
                         throw new Error(result.error);
                     }
                 } catch (error) {
-                    console.error('Error loading persons data:', error);
-                    this.allPersons = [];
-                    this.filteredPersons = [];
-                    this.showEmptyState();
-                    showNotification('Kişiler yüklenirken bir hata oluştu: ' + error.message, 'error'); // alert() yerine
+                    console.error('Kişi kaydedilirken hata:', error);
+                    showNotification('Kişi kaydedilirken bir hata oluştu: ' + error.message, 'error');
+                } finally {
+                    document.getElementById('savePersonBtn').disabled = false;
+                }
+            }
+
+            async loadPersons() {
+                const loadingIndicator = document.getElementById('loadingIndicator');
+                const personsTableBody = document.getElementById('personsTableBody');
+                const noPersonsMessage = document.getElementById('noPersonsMessage');
+                
+                loadingIndicator.style.display = 'block';
+                personsTableBody.innerHTML = '';
+                noPersonsMessage.style.display = 'none';
+
+                try {
+                    const result = await personsService.getPersons();
+                    if (result.success) {
+                        this.allPersons = result.data;
+                        this.renderPersons();
+                    } else {
+                        throw new Error(result.error);
+                    }
+                } catch (error) {
+                    console.error('Kişiler yüklenirken hata:', error);
+                    showNotification('Kişiler yüklenirken bir hata oluştu: ' + error.message, 'error');
                 } finally {
                     loadingIndicator.style.display = 'none';
                 }
             }
 
-            updateStats() {
-                document.getElementById('totalPersonsCount').textContent = this.filteredPersons.length;
-                document.getElementById('individualCount').textContent = this.filteredPersons.filter(p => p.type === 'individual').length;
-                document.getElementById('companyCount').textContent = this.filteredPersons.filter(p => p.type === 'company').length;
-                document.getElementById('institutionCount').textContent = this.filteredPersons.filter(p => p.type === 'institution').length;
-            }
+            renderPersons() {
+                const personsTableBody = document.getElementById('personsTableBody');
+                const noPersonsMessage = document.getElementById('noPersonsMessage');
+                personsTableBody.innerHTML = '';
 
-            applyFilters() {
-                this.currentPage = 1;
-                const search = document.getElementById('searchInput').value.toLowerCase();
-                const typeFilter = document.getElementById('typeFilter').value;
-
-                this.filteredPersons = this.allPersons.filter(person => {
-                    const searchMatch = search === '' || person.name.toLowerCase().includes(search) || (person.email && person.email.toLowerCase().includes(search)) || (person.phone && person.phone.includes(search));
-                    const typeMatch = typeFilter === '' || person.type === typeFilter;
-                    return searchMatch && typeMatch;
+                const searchTerm = document.getElementById('personSearchInput').value.toLowerCase();
+                let filteredPersons = this.allPersons.filter(person => {
+                    const nameToSearch = person.personType === 'real' ? `${person.firstName} ${person.lastName}` : person.companyName;
+                    return nameToSearch.toLowerCase().includes(searchTerm) ||
+                           (person.email && person.email.toLowerCase().includes(searchTerm)) ||
+                           (person.phone && person.phone.includes(searchTerm));
                 });
-                this.sortRecords();
-                this.renderTable();
-                this.updateStats();
-            }
 
-            resetFilters() {
-                document.getElementById('searchInput').value = '';
-                document.getElementById('typeFilter').value = '';
-                this.applyFilters();
-            }
-            
-            handleSort(column) {
-                if (this.sortColumn === column) {
-                    this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
-                } else {
-                    this.sortColumn = column;
-                    this.sortDirection = 'asc';
+                if (filteredPersons.length === 0) {
+                    noPersonsMessage.style.display = 'block';
+                    return;
                 }
-                this.sortRecords();
-                this.renderTable();
-            }
+                noPersonsMessage.style.display = 'none';
 
-            sortRecords() {
-                this.filteredPersons.sort((a, b) => {
-                    let aVal = a[this.sortColumn] || '';
-                    let bVal = b[this.sortColumn] || '';
+                filteredPersons.forEach(person => {
+                    const row = document.createElement('tr');
+                    const nameDisplay = person.personType === 'real' ? `${person.firstName || ''} ${person.lastName || ''}` : person.companyName || '';
+                    const personTypeDisplay = person.personType === 'real' ? 'Gerçek Kişi' : 'Tüzel Kişi';
 
-                    if (this.sortColumn === 'name' || this.sortColumn === 'email' || this.sortColumn === 'type' || this.sortColumn === 'phone' || this.sortColumn === 'userEmail') {
-                        aVal = String(aVal).toLowerCase();
-                        bVal = String(bVal).toLowerCase();
-                    }
-
-                    if (aVal < bVal) return this.sortDirection === 'asc' ? -1 : 1;
-                    if (aVal > bVal) return this.sortDirection === 'asc' ? 1 : -1;
-                    return 0;
-                });
-                this.updateSortIndicators();
-            }
-
-            updateSortIndicators() {
-                document.querySelectorAll('.persons-table th.sortable').forEach(th => {
-                    th.classList.remove('sort-asc', 'sort-desc');
-                    if (th.dataset.sort === this.sortColumn) {
-                        th.classList.add(`sort-${this.sortDirection}`);
-                    }
+                    row.innerHTML = `
+                        <td>${nameDisplay}</td>
+                        <td>${personTypeDisplay}</td>
+                        <td>${person.email || ''}</td>
+                        <td>${person.phone || ''}</td>
+                        <td>${person.city || ''}</td>
+                        <td>${person.country || ''}</td>
+                        <td>
+                            <button class="action-btn edit-btn" data-id="${person.id}">Düzenle</button>
+                            <button class="action-btn delete-btn" data-id="${person.id}">Sil</button>
+                            ${this.currentUser.role === 'superadmin' && !person.userId ? 
+                                `<button class="action-btn btn-primary create-user-btn" data-id="${person.id}" data-email="${person.email}" data-name="${nameDisplay}">Kullanıcı Oluştur</button>` : ''}
+                            ${this.currentUser.role === 'superadmin' && person.userId ? 
+                                `<button class="action-btn btn-secondary" data-id="${person.id}" data-user-id="${person.userId}" data-name="${nameDisplay}" onclick="window.personsModule.openUserRoleModal('${person.id}', '${person.userId}', '${nameDisplay}')">Rol Yönet</button>` : ''}
+                        </td>
+                    `;
+                    personsTableBody.appendChild(row);
                 });
             }
 
-            renderTable() {
-                const tbody = document.getElementById('personsTableBody');
-                const pagination = document.getElementById('pagination');
-                const personsTable = document.getElementById('personsTable');
-                const noPersons = document.getElementById('noPersons');
-                tbody.innerHTML = '';
+            async createUserAccount() {
+                const email = document.getElementById('email').value.trim();
+                const password = document.getElementById('userPassword').value;
+                const role = document.getElementById('userRole').value;
+                const createAccountErrorEl = document.getElementById('createUserAccountError');
+                createAccountErrorEl.textContent = ''; // Hata mesajını temizle
 
-                if (this.filteredPersons.length === 0) {
-                    this.showEmptyState();
+                if (!password || password.length < 6) {
+                    createAccountErrorEl.textContent = 'Parola en az 6 karakter olmalıdır.';
+                    document.getElementById('userPassword').classList.add('error-field');
+                    return;
+                }
+                
+                // Firestore'dan bu e-postaya sahip bir kullanıcı olup olmadığını kontrol et
+                const usersRef = collection(db, 'users');
+                const q = query(usersRef, where('email', '==', email));
+                const querySnapshot = await getDocs(q);
+
+                if (!querySnapshot.empty) {
+                    createAccountErrorEl.textContent = 'Bu e-posta adresi zaten kayıtlı bir kullanıcıya ait.';
+                    document.getElementById('email').classList.add('error-field');
                     return;
                 }
 
-                personsTable.style.display = 'table';
-                noPersons.style.display = 'none';
 
-                const totalPages = Math.ceil(this.filteredPersons.length / this.personsPerPage);
-                const pagePersons = this.filteredPersons.slice((this.currentPage - 1) * this.personsPerPage, this.currentPage * this.personsPerPage);
+                try {
+                    // Firebase Auth'ta kullanıcı oluştur
+                    const userCredential = await authService.createUser(email, password);
+                    const uid = userCredential.user.uid;
 
-                pagePersons.forEach(person => {
-                    tbody.appendChild(this.createTableRow(person));
+                    // Firestore'da kullanıcı bilgilerini kaydet
+                    await personsService.addUser({
+                        uid: uid,
+                        email: email,
+                        role: role,
+                        personId: this.editingPersonId, // Kişiyi kullanıcıya bağla
+                        createdAt: Date.now()
+                    });
+
+                    // İlgili kişinin kaydını userId ile güncelle
+                    await personsService.updatePerson(this.editingPersonId, { userId: uid });
+
+                    showNotification('Kullanıcı hesabı başarıyla oluşturuldu ve kişiye bağlandı!', 'success');
+                    document.getElementById('createUserAccountSection').style.display = 'none'; // Bölümü gizle
+                    document.getElementById('userPassword').value = '';
+                    document.getElementById('createUserAccountError').textContent = '';
+                    await this.loadPersons(); // Kişi listesini yenile
+                } catch (error) {
+                    console.error('Kullanıcı hesabı oluşturulurken hata:', error);
+                    createAccountErrorEl.textContent = 'Kullanıcı hesabı oluşturulurken bir hata oluştu: ' + error.message;
+                    document.getElementById('email').classList.add('error-field'); // Eğer e-posta ile ilgili bir hata varsa
+                }
+            }
+
+            // User Role Management Modal
+            openUserRoleModal(personId, userId, userName) {
+                this.editingPersonId = personId; // Bu modal için de personId'yi sakla
+                this.editingUserId = userId; // Kullanıcının UID'si
+                document.getElementById('userRoleModalName').textContent = `Kullanıcı: ${userName}`;
+                
+                // Kullanıcının mevcut rolünü yükle
+                // Firestore'dan kullanıcının mevcut rolünü çekmeliyiz.
+                const usersRef = collection(db, 'users');
+                const q = query(usersRef, where('uid', '==', userId));
+
+                getDocs(q).then(querySnapshot => {
+                    if (!querySnapshot.empty) {
+                        const userData = querySnapshot.docs[0].data();
+                        document.getElementById('selectedUserRole').value = userData.role || 'user';
+                    }
+                }).catch(error => {
+                    console.error("Kullanıcı rolü yüklenirken hata:", error);
+                    showNotification("Kullanıcı rolü yüklenirken hata oluştu.", "error");
                 });
 
-                if (totalPages > 1) {
-                    pagination.style.display = 'flex';
-                    document.getElementById('prevBtn').disabled = this.currentPage === 1;
-                    document.getElementById('nextBtn').disabled = this.currentPage === totalPages;
-                    document.getElementById('pageInfo').textContent = `Sayfa ${this.currentPage} / ${totalPages}`;
-                } else {
-                    pagination.style.display = 'none';
-                }
-                this.updateSortIndicators();
+                document.getElementById('userRoleModal').classList.add('show');
             }
 
-            createTableRow(person) {
-                const row = document.createElement('tr');
-                const typeNames = { individual: 'Bireysel', company: 'Şirket', institution: 'Kurum' };
-                row.innerHTML = `
-                    <td>${person.name}</td>
-                    <td>${person.email || '-'}</td>
-                    <td>${person.phone || '-'}</td>
-                    <td><span class="person-type ${person.type}">${typeNames[person.type] || 'Bilinmiyor'}</span></td>
-                    <td style="${this.currentUser && this.currentUser.role === 'superadmin' ? 'display: table-cell;' : 'display: none;'}" class="person-owner">${person.userEmail || '-'}</td>
-                    <td>
-                        <div class="action-buttons">
-                            <button class="table-action-btn btn-view" data-id="${person.id}" title="Görüntüle">👁️</button>
-                            <button class="table-action-btn btn-edit" data-id="${person.id}" title="Düzenle">✏️</button>
-                            <button class="table-action-btn btn-delete" data-id="${person.id}" title="Sil">🗑️</button>
-                        </div>
-                    </td>
-                `;
-                row.querySelector('.btn-view').addEventListener('click', () => this.viewPerson(person.id));
-                row.querySelector('.btn-edit').addEventListener('click', () => this.editPerson(person.id));
-                row.querySelector('.btn-delete').addEventListener('click', () => this.deletePerson(person.id));
-                return row;
+            closeUserRoleModal() {
+                document.getElementById('userRoleModal').classList.remove('show');
+                this.editingUserId = null;
+                this.editingPersonId = null;
             }
 
-            showEmptyState() {
-                document.getElementById('personsTable').style.display = 'none';
-                document.getElementById('pagination').style.display = 'none';
-                document.getElementById('noPersons').style.display = 'block';
-            }
+            async saveUserRole() {
+                const newRole = document.getElementById('selectedUserRole').value;
+                if (!this.editingUserId) return;
 
-            showPersonModal(personId = null) {
-                this.currentPersonId = personId;
-                const modal = document.getElementById('personModal');
-                const form = document.getElementById('personForm');
-                form.reset();
+                try {
+                    const usersRef = collection(db, 'users');
+                    const q = query(usersRef, where('uid', '==', this.editingUserId));
+                    const querySnapshot = await getDocs(q);
 
-                clearAllFieldErrors(); // Tüm hata mesajlarını temizle
-
-                document.getElementById('personModalTitle').textContent = personId ? 'Kişi Detayları' : 'Yeni Kişi Ekle';
-                document.getElementById('personCreatedAt').value = '';
-                document.getElementById('personUpdatedAt').value = '';
-                document.getElementById('modalOwnerInfo').value = '';
-                document.getElementById('modalOwnerInfoGroup').style.display = 'none';
-                document.getElementById('createUserAccountGroup').style.display = 'none';
-
-                if (personId) {
-                    const person = this.allPersons.find(p => p.id === personId);
-                    if (person) {
-                        document.getElementById('personName').value = person.name || '';
-                        document.getElementById('personEmail').value = person.email || '';
-                        document.getElementById('personPhone').value = person.phone || '';
-                        document.getElementById('personType').value = person.type || '';
-                        document.getElementById('personAddress').value = person.address || '';
-                        document.getElementById('personCreatedAt').value = person.createdAt ? new Date(person.createdAt).toLocaleString('tr-TR') : '-';
-                        document.getElementById('personUpdatedAt').value = person.updatedAt ? new Date(person.updatedAt).toLocaleString('tr-TR') : '-';
-
-                        if (this.currentUser.role === 'superadmin' || person.userId === this.currentUser.uid) {
-                            if (person.userEmail) {
-                                document.getElementById('modalOwnerInfo').value = person.userEmail;
-                                document.getElementById('modalOwnerInfoGroup').style.display = 'flex';
-                            }
-                            if (this.currentUser.role === 'superadmin' && person.email && !person.hasUserAccount) {
-                                document.getElementById('createUserAccountGroup').style.display = 'flex';
-                            }
-                        }
-                    }
-                }
-                modal.classList.add('show');
-            }
-
-            hidePersonModal() {
-                document.getElementById('personModal').classList.remove('show');
-            }
-
-            viewPerson(personId) {
-                this.showPersonModal(personId);
-                const formElements = document.querySelectorAll('#personForm input, #personForm select, #personForm textarea, #personForm button:not(#cancelPersonFormBtn)');
-                formElements.forEach(el => el.disabled = true);
-                document.getElementById('savePersonBtn').style.display = 'none';
-            }
-
-            editPerson(personId) {
-                this.showPersonModal(personId);
-                const formElements = document.querySelectorAll('#personForm input, #personForm select, #personForm textarea, #personForm button:not(#cancelPersonFormBtn)');
-                formElements.forEach(el => el.disabled = false);
-                document.getElementById('savePersonBtn').style.display = 'inline-block';
-            }
-
-            async handlePersonFormSubmit(event) {
-                event.preventDefault();
-                const personName = document.getElementById('personName').value.trim();
-                const personEmail = document.getElementById('personEmail').value.trim();
-                const personPhone = document.getElementById('personPhone').value.trim();
-                const personType = document.getElementById('personType').value;
-                const personAddress = document.getElementById('personAddress').value.trim();
-
-                let isValid = true;
-                clearAllFieldErrors(); // Yeni: Her gönderimde hataları temizle
-
-                if (!personName) {
-                    showFieldError('personName', 'Ad Soyad zorunludur.'); // showFieldError kullanıldı
-                    isValid = false;
-                }
-                if (!personType) {
-                    showFieldError('personType', 'Kişi Türü zorunludur.'); // showFieldError kullanıldı
-                    isValid = false;
-                }
-                if (personEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(personEmail)) {
-                    showFieldError('personEmail', 'Geçerli bir e-posta adresi girin.'); // showFieldError kullanıldı
-                    isValid = false;
-                }
-                
-                if (!isValid) return;
-
-                const personData = { name: personName, email: personEmail, phone: personPhone, type: personType, address: personAddress };
-                let result;
-                if (this.currentPersonId) {
-                    result = await personsService.updatePerson(this.currentPersonId, personData);
-                    if (result.success) {
-                        showNotification('Kişi başarıyla güncellendi!', 'success'); // alert() yerine
+                    if (!querySnapshot.empty) {
+                        const userDocRef = doc(db, 'users', querySnapshot.docs[0].id);
+                        await updateDoc(userDocRef, { role: newRole, updatedAt: Date.now() });
+                        showNotification('Kullanıcı rolü başarıyla güncellendi!', 'success');
+                        this.closeUserRoleModal();
+                        await this.loadPersons(); // Listeyi yenilemek gerekebilir (rol bilgisi değişirse)
                     } else {
-                        showNotification('Kişi güncellenirken hata: ' + result.error, 'error'); // alert() yerine
+                        throw new Error("Kullanıcı bulunamadı.");
                     }
-                } else {
-                    result = await personsService.addPerson(personData);
-                    if (result.success) {
-                        showNotification('Yeni kişi başarıyla eklendi!', 'success'); // alert() yerine
-                    } else {
-                        showNotification('Kişi eklenirken hata: ' + result.error, 'error'); // alert() yerine
-                    }
-                }
-                if (result.success) {
-                    this.hidePersonModal();
-                    await this.loadPersons();
+                } catch (error) {
+                    console.error('Kullanıcı rolü güncellenirken hata:', error);
+                    showNotification('Kullanıcı rolü güncellenirken bir hata oluştu: ' + error.message, 'error');
                 }
             }
 
-            async deletePerson(personId) {
-                const person = this.allPersons.find(p => p.id === personId);
-                if (!person) return;
+            async editPerson(id) {
+                const person = this.allPersons.find(p => p.id === id);
+                if (person) {
+                    this.openPersonModal(person);
+                } else {
+                    showNotification('Kişi bulunamadı.', 'error');
+                }
+            }
 
-                if (confirm(`'${person.name}' adlı kişiyi silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.`)) {
+            async deletePerson(id) {
+                if (confirm('Bu kişiyi silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.')) {
                     try {
-                        const result = await personsService.deletePerson(personId);
+                        const result = await personsService.deletePerson(id);
                         if (result.success) {
-                            showNotification('Kişi başarıyla silindi.', 'success'); // alert() yerine
-                            this.loadPersons();
+                            showNotification('Kişi başarıyla silindi!', 'success');
+                            await this.loadPersons();
                         } else {
                             throw new Error(result.error);
                         }
                     } catch (error) {
-                        showNotification('Kişi silinirken bir hata oluştu: ' + error.message, 'error'); // alert() yerine
+                        console.error('Kişi silinirken hata:', error);
+                        showNotification('Kişi silinirken bir hata oluştu: ' + error.message, 'error');
                     }
-                }
-            }
-
-            async createPersonUserAccount() {
-                if (!this.currentPersonId) {
-                    showNotification('Lütfen önce bir kişi seçin.', 'error'); // alert() yerine
-                    return;
-                }
-                const person = this.allPersons.find(p => p.id === this.currentPersonId);
-                if (!person || !person.email) {
-                    showNotification('Bu kişi için bir e-posta adresi bulunmuyor veya kişi seçilmedi.', 'error'); // alert() yerine
-                    return;
-                }
-
-                if (!confirm(`'${person.name}' (${person.email}) için yeni bir kullanıcı hesabı oluşturulacak. Devam etmek istiyor musunuz?`)) {
-                    return;
-                }
-
-                try {
-                    const dummyPassword = 'password123';
-                    const result = await authService.signUp(person.email, dummyPassword, person.name, 'user');
-
-                    if (result.success) {
-                        await personsService.updatePerson(person.id, { hasUserAccount: true });
-                        showNotification(`'${person.name}' için kullanıcı hesabı başarıyla oluşturuldu! Varsayılan şifre: ${dummyPassword}. Kullanıcıya bildirip şifresini değiştirmesini söyleyin.`, 'success', 10000); // alert() yerine, uzun mesaj
-                        this.hidePersonModal();
-                        this.loadPersons();
-                    } else {
-                        showNotification('Kullanıcı hesabı oluşturulurken hata: ' + result.error, 'error'); // alert() yerine
-                    }
-                } catch (error) {
-                    console.error('Kullanıcı hesabı oluşturma hatası:', error);
-                    showNotification('Kullanıcı hesabı oluşturulurken beklenmeyen bir hata oluştu: ' + error.message, 'error'); // alert() yerine
                 }
             }
         }
 
-        auth.onAuthStateChanged((user) => {
-            if (user || authService.getCurrentUser()) {
-                if (!personsModule) {
-                    personsModule = new PersonsModule();
-                    window.personsModule = personsModule;
+        let personsModule;
+        document.addEventListener('DOMContentLoaded', async () => {
+            await loadSharedLayout({ activeMenuLink: 'persons.html' }); // activeMenuLink'i güncelledik
+
+            auth.onAuthStateChanged(async (user) => {
+                if (user || authService.getCurrentUser()) {
+                    if (!personsModule) {
+                        personsModule = new PersonsModule();
+                        await personsModule.init();
+                        window.personsModule = personsModule; // Global erişim için
+                    }
+                } else {
+                    window.location.href = 'index.html';
                 }
-            } else {
-                window.location.href = 'index.html'; 
-            }
+            });
         });
-
-        document.addEventListener('DOMContentLoaded', function() {
-    const accordions = document.querySelectorAll('.accordion-header');
-    accordions.forEach(accordion => {
-        accordion.addEventListener('click', function(event) {
-            this.classList.toggle('active');
-            const content = this.nextElementSibling;
-            if (content.style.maxHeight) {
-                content.style.maxHeight = null;
-            } else {
-                content.style.maxHeight = content.scrollHeight + "px";
-            }
-        });
-    });
-
-    function setActiveMenu() {
-        const currentPage = window.location.pathname.split("/").pop() || 'dashboard.html';
-        
-        document.querySelectorAll('.sidebar-nav-item.active, .accordion-content a.active').forEach(el => el.classList.remove('active'));
-        
-        const activeLink = document.querySelector(`.sidebar-nav a[href="${currentPage}"]`);
-        if (!activeLink) return;
-
-        activeLink.classList.add('active');
-        
-        const parentAccordionContent = activeLink.closest('.accordion-content');
-        if (parentAccordionContent) {
-            const parentAccordionHeader = parentAccordionContent.previousElementSibling;
-            if (parentAccordionHeader && parentAccordionHeader.classList.contains('accordion-header')) {
-                parentAccordionHeader.classList.add('active');
-                parentAccordionContent.style.maxHeight = parentAccordionContent.scrollHeight + "px";
-            }
-        }
-    }
-
-    setActiveMenu();
-});
     </script>
 </body>
 </html>
