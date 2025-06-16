@@ -1147,7 +1147,7 @@
                     }
                 }
 
-                handleDocumentUploadForTaskCompletion(files) {
+                handleDocumentUploadForTaskCompletion(files) 
                     for (const file of files) {
                         if (this.uploadedCompletionFiles.some(f => f.name === file.name && f.size === file.size)) {
                             showNotification(`"${file.name}" dosyası zaten eklenmiş.`, 'info');
