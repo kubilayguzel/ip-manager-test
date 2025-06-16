@@ -1,38 +1,29 @@
-const functions = require('firebase-functions');
 const admin = require('firebase-admin');
+const { onSchedule } = require("firebase-functions/v2/scheduler"); // Yeni import
 
-// Firebase Admin SDK'yı başlat (Cloud Functions ortamında otomatik kimlik doğrular)
 admin.initializeApp();
 
 const db = admin.firestore();
 
-// Yardımcı fonksiyon: Tarihten belirli ay öncesini/sonrasını hesaplar
-function addMonths(date, months) {
-    const d = new Date(date);
-    d.setMonth(d.getMonth() + months);
-    return d;
-}
+// Yardımcı fonksiyonlar (addMonths, getMonthsAgo) aynı kalacak
 
-// Belirli bir tarihten 6 ay öncesini hesaplayan yardımcı fonksiyon (duplikasyon kontrolü için)
-function getMonthsAgo(date, months) {
-    const d = new Date(date);
-    d.setMonth(d.getMonth() - months);
-    return d;
-}
-
-// Her gün gece yarısı çalışacak zamanlanmış fonksiyon
-exports.checkTrademarkRenewalsAndInvalidations = functions.pubsub.schedule('*/5 * * * *')
-    .timeZone('Europe/Istanbul') // Türkiye saati
-    .onRun(async (context) => {
+// Zamanlanmış fonksiyon tanımını güncelleyin
+exports.checkTrademarkRenewalsAndInvalidations = onSchedule({
+        schedule: '0 0 * * *', // Cron ifadesi aynı kalabilir veya ihtiyaca göre değiştirin
+        timeZone: 'Europe/Istanbul'
+    },
+    async (context) => {
         console.log('Marka yenileme ve geçersiz kılma kontrol fonksiyonu çalıştı!');
 
         const today = new Date();
-        today.setHours(0, 0, 0, 0); // Sadece tarih bazında kıyaslama için saat, dakika, saniye sıfırla
+        today.setHours(0, 0, 0, 0);
 
         const twelveMonthsFromNow = addMonths(today, 12);
         const sixMonthsAgo = addMonths(today, -6);
 
         try {
+            // ... (fonksiyonun geri kalan tüm kodu buraya gelecek, değişiklik yok) ...
+
             const ipRecordsRef = db.collection('ipRecords');
             const trademarkSnapshot = await ipRecordsRef.where('type', '==', 'trademark').get();
 
@@ -51,46 +42,44 @@ exports.checkTrademarkRenewalsAndInvalidations = functions.pubsub.schedule('*/5 
                 const recordId = doc.id;
 
                 if (!record.renewalDate) {
-                    console.log(`Marka ${record.title} (${record.applicationNumber}) için yenileme tarihi yok, atlandı.`);
+                    console.log(`Marka <span class="math-inline">\{record\.title\} \(</span>{record.applicationNumber}) için yenileme tarihi yok, atlandı.`);
                     continue;
                 }
 
                 const renewalDate = new Date(record.renewalDate);
-                renewalDate.setHours(0, 0, 0, 0); // Kıyaslama için saat, dakika, saniye sıfırla
+                renewalDate.setHours(0, 0, 0, 0);
 
                 // Senaryo 1: Yaklaşan Marka Yenilemeleri (12 Ay İçinde)
-                // (Bugün <= Yenileme Tarihi <= Bugün + 12 Ay) VE henüz "Müvekkil Onayı Bekliyor" işi oluşturulmamışsa
                 if (renewalDate >= today && renewalDate <= twelveMonthsFromNow) {
-                    // Duplikasyon kontrolü: Son 12 ay içinde bu kayıt için otomatik "Müvekkil Onayı Bekliyor" işi var mı?
                     const existingTasksQuery = await db.collection('tasks')
                         .where('relatedIpRecordId', '==', recordId)
                         .where('taskType', '==', 'trademark_renewal')
-                        .where('status', '==', 'pending_client_approval') // Sadece bu statüdeki işleri kontrol et
+                        .where('status', '==', 'pending_client_approval')
                         .where('isAutomated', '==', true)
-                        .where('createdAt', '>', getMonthsAgo(today, 12).toISOString()) // Son 12 ayda oluşturulmuş otomatik iş
+                        .where('createdAt', '>', getMonthsAgo(today, 12).toISOString())
                         .limit(1)
                         .get();
 
                     if (existingTasksQuery.empty) {
-                        const newTaskId = db.collection('tasks').doc().id; // Firestore'da otomatik ID oluştur
+                        const newTaskId = db.collection('tasks').doc().id;
                         const taskData = {
                             id: newTaskId,
                             taskType: 'trademark_renewal',
-                            title: `Marka Yenileme Onayı: ${record.title} (${record.applicationNumber})`,
+                            title: `Marka Yenileme Onayı: <span class="math-inline">\{record\.title\} \(</span>{record.applicationNumber})`,
                             description: `${record.title} markasının yenileme tarihi ${record.renewalDate} yaklaşıyor. Müvekkil onayı bekleniyor.`,
                             priority: 'high',
-                            assignedTo_uid: 'S8DVLPHlt3a6aMhHxGBCHqR0ANz2', // Lütfen gerçek Admin UID ile değiştirin
-                            assignedTo_email: 'sas@gmail.com', // Lütfen gerçek Admin E-postası ile değiştirin
+                            assignedTo_uid: 'YOUR_ADMIN_UID', // Lütfen gerçek Admin UID ile değiştirin
+                            assignedTo_email: 'your_admin_email@example.com', // Lütfen gerçek Admin E-postası ile değiştirin
                             dueDate: record.renewalDate,
-                            status: 'pending_client_approval', // Yeni statü
+                            status: 'pending_client_approval',
                             relatedIpRecordId: recordId,
                             relatedIpRecordTitle: record.title,
-                            isAutomated: true, // Bu işin otomatik oluşturulduğunu işaretle
+                            isAutomated: true,
                             createdAt: new Date().toISOString(),
                             updatedAt: new Date().toISOString(),
                             history: [{
                                 timestamp: new Date().toISOString(),
-                                userId: 'automated_system', // Sistem kullanıcısı
+                                userId: 'automated_system',
                                 userEmail: 'system@ipmanager.com',
                                 action: `Otomatik olarak marka yenileme onay işi oluşturuldu. Yenileme Tarihi: ${record.renewalDate}`
                             }]
@@ -104,23 +93,20 @@ exports.checkTrademarkRenewalsAndInvalidations = functions.pubsub.schedule('*/5 
                 }
 
                 // Senaryo 2: Süresi Geçmiş ve Yenilenmemiş Markalar (6 Aydan Daha Uzun Süre Önce Geçmiş)
-                // (Yenileme Tarihi < Bugün - 6 Ay) VE markanın durumu henüz "invalid_not_renewed" değilse
                 if (renewalDate < sixMonthsAgo && record.status !== 'invalid_not_renewed') {
-                    // Kaydın statüsünü güncelle
                     batch.update(ipRecordsRef.doc(recordId), {
-                        status: 'invalid_not_renewed', // Yeni statü
+                        status: 'invalid_not_renewed',
                         updatedAt: new Date().toISOString()
                     });
                     recordsInvalidatedCount++;
-                    console.log(`Marka ${record.title} (${record.applicationNumber}) yenilememe nedeniyle geçersiz kılındı.`);
+                    console.log(`Marka <span class="math-inline">\{record\.title\} \(</span>{record.applicationNumber}) yenilememe nedeniyle geçersiz kılındı.`);
 
-                    // Hatırlatma bildirimi oluştur
-                    const notificationRef = db.collection('notifications').doc(); // Yeni koleksiyon
+                    const notificationRef = db.collection('notifications').doc();
                     const notificationData = {
                         id: notificationRef.id,
-                        userId: 'all', // Tüm kullanıcılara veya ilgili adminlere
-                        message: `Marka "${record.title}" (${record.applicationNumber}) yenilememe nedeniyle geçersiz kılınmıştır. Yenileme tarihi: ${record.renewalDate}. Lütfen kontrol edin.`,
-                        type: 'warning', // Bildirim tipi
+                        userId: 'all',
+                        message: `Marka "<span class="math-inline">\{record\.title\}" \(</span>{record.applicationNumber}) yenilememe nedeniyle geçersiz kılınmıştır. Yenileme tarihi: ${record.renewalDate}. Lütfen kontrol edin.`,
+                        type: 'warning',
                         createdAt: new Date().toISOString(),
                         isRead: false,
                         relatedRecordId: recordId,
