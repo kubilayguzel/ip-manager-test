@@ -18,7 +18,7 @@ export async function loadSharedLayout(options = {}) {
     // shared_layout_parts.html'in yolu da layout-loader.js'e göre değişir.
     // Eğer shared_layout_parts.html de layout-loader.js ile aynı dizindeyse './shared_layout_parts.html'
     // Eğer shared_layout_parts.html projenin kök dizinindeyse ve layout-loader.js bir alt klasördeyse: '../shared_layout_parts.html'
-    const sidebarResponse = await fetch('../shared_layout_parts.html'); // Bu yolu kontrol edin ve düzeltin
+    const sidebarResponse = await fetch('/ip-manager-test/shared_layout_parts.html'); // Bu yolu kontrol edin ve düzeltin
     if (sidebarResponse.ok) {
         const parser = new DOMParser();
         const doc = parser.parseFromString(await sidebarResponse.text(), 'text/html');
