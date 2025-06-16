@@ -28,6 +28,40 @@
             padding: 30px;
             margin: 0;
         }
+        .trademark-image-thumb {
+    width: 30px; /* Küçük thumbnail boyutu */
+    height: 30px; /* Küçük thumbnail boyutu */
+    object-fit: contain; /* Resmin oranını korurken kutuya sığmasını sağlar */
+    border: 1px solid #e1e8ed;
+    border-radius: 4px;
+    vertical-align: middle;
+    margin-left: 5px;
+    cursor: pointer;
+}
+
+/* Önizleme resmi (hover olduğunda büyüyen) */
+.trademark-image-preview-large {
+    position: absolute;
+    bottom: 100%; /* Thumbnail'ın hemen üzerinde çıkması için */
+    left: 50%;
+    transform: translateX(-50%) scale(0); /* Başlangıçta görünmez ve küçük */
+    max-width: 200px; /* Büyük önizleme boyutu */
+    max-height: 200px; /* Büyük önizleme boyutu */
+    border: 2px solid #1e3c72;
+    border-radius: 8px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    background: white;
+    z-index: 1001;
+    transition: transform 0.2s ease-out; /* Animasyon ekle */
+    pointer-events: none; /* Hover etkisiyle tıklanmayı engelle */
+    transform-origin: bottom center; /* Dönüşümün başlangıç noktasını ayarla */
+}
+
+/* Hover olduğunda önizleme resmini göster */
+.trademark-image-thumb-container:hover .trademark-image-preview-large {
+    transform: translateX(-50%) scale(1); /* Hover olduğunda büyüt ve göster */
+}
+        
         /* Sidebar ve Top Header stilleri shared_layout_parts.html'e taşındı */
         .sidebar { width: 260px; background: #1e3c72; color: white; display: flex; flex-direction: column; transition: width 0.3s ease; height: 100vh; position: sticky; top: 0; z-index: 1001; }
         .sidebar-header { padding: 20px; text-align: center; border-bottom: 1px solid rgba(255, 255, 255, 0.1); }
