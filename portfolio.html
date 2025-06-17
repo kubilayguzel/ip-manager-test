@@ -272,7 +272,7 @@
                 document.getElementById('closeTransactionModalBtn').addEventListener('click', (e) => this.closeModal('transactionModal'));
 
                 document.getElementById('typeFilter').addEventListener('change', (e) => this.populateStatusFilter(e.target.value));
-                this.populateStatusFilter(document.getElementById('typeFilter').value);
+                this.populateStatusFilter(document.getElementById('typeFilter').value); // Sayfa yüklendiğinde durum filtrelerini doldur
             }
 
             populateStatusFilter = (type) => {
@@ -464,6 +464,7 @@
                 const ownerNames = (record.owners || []).map(owner => owner.name || 'Bilinmiyor').join(', ');
                 
                 // Butonların HTML yapısını metin içerecek şekilde güncelledik (ikonlar kaldırıldı)
+                // Bu metinler <button> etiketi içine eklendi.
                 row.innerHTML = `
                     <td><span class="ip-type ${record.type}">${typeNames[record.type] || 'Bilinmiyor'}</span></td>
                     <td>${titleHtml}</td>
