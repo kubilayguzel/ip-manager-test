@@ -314,7 +314,7 @@
                     ]
                 };
 
-                const statuses = allStatuses[type] || []; // Doğru parametre 'type' kullanıldı
+                const statuses = allStatuses[type] || [];
                 statuses.forEach(status => {
                     const option = document.createElement('option');
                     option.value = status.value;
@@ -463,7 +463,7 @@
 
                 const ownerNames = (record.owners || []).map(owner => owner.name || 'Bilinmiyor').join(', ');
                 
-                // Buton sınıfları action-btn olarak bırakıldı. Stil shared-styles.css'ten gelecek.
+                // Butonların HTML yapısını metin ve ikon içerecek şekilde güncelledik
                 row.innerHTML = `
                     <td><span class="ip-type ${record.type}">${typeNames[record.type] || 'Bilinmiyor'}</span></td>
                     <td>${titleHtml}</td>
@@ -471,7 +471,13 @@
                     <td><span class="status-badge ${record.status}">${statusNames[record.status] || record.status}</span></td>
                     <td>${record.applicationDate ? new Date(record.applicationDate).toLocaleDateString('tr-TR') : '-'}</td>
                     <td>${ownerNames || '-'}</td>
-                    <td><div class="action-buttons"><button class="action-btn btn-view" data-id="${record.id}" title="Görüntüle">👁️</button><button class="action-btn btn-edit" data-id="${record.id}" title="Düzenle">✏️</button><button class="action-btn btn-delete" data-id="${record.id}" title="Sil">🗑️</button></div></td>`;
+                    <td>
+                        <div class="action-buttons">
+                            <button class="action-btn btn-view" data-id="${record.id}" title="Görüntüle">👁️ Görüntüle</button>
+                            <button class="action-btn btn-edit" data-id="${record.id}" title="Düzenle">✏️ Düzenle</button>
+                            <button class="action-btn btn-delete" data-id="${record.id}" title="Sil">🗑️ Sil</button>
+                        </div>
+                    </td>`;
                 
                 row.querySelector('.btn-view').addEventListener('click', () => this.viewRecord(record.id));
                 row.querySelector('.btn-edit').addEventListener('click', () => this.editRecord(record.id));
