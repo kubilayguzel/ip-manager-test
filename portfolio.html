@@ -113,6 +113,19 @@
         .trademark-image-thumb-container:hover .trademark-image-preview-large {
             transform: translateX(-50%) scale(1);
         }
+
+        /* Action Buttons within table for Portfolio */
+        /* Bu stil kaldırıldı, shared-styles.css'teki .action-btn kullanılacak */
+        /* .table-action-btn {
+            background: #6c757d;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-right: 5px;
+        } */
     </style>
 </head>
 <body>
@@ -232,7 +245,7 @@
                 this.currentPage = 1;
                 this.recordsPerPage = 10;
                 this.currentSortColumn = 'applicationDate';
-                this.currentSortDirection = 'desc'; // Varsayılan olarak en yeniye göre sırala
+                this.currentSortDirection = 'desc';
             }
 
             async init() {
@@ -272,12 +285,12 @@
                 document.getElementById('closeTransactionModalBtn').addEventListener('click', () => this.closeModal('transactionModal'));
 
                 document.getElementById('typeFilter').addEventListener('change', () => this.populateStatusFilter());
-                this.populateStatusFilter(); // Sayfa yüklendiğinde durum filtrelerini doldur
+                this.populateStatusFilter();
             }
 
-            populateStatusFilter() {
-                const selectedType = document.getElementById('typeFilter').value;
+            populateStatusFilter = (type = document.getElementById('typeFilter').value) => { // Arrow function yapıldı
                 const statusFilterSelect = document.getElementById('statusFilter');
+                if (!statusFilterSelect) return;
                 statusFilterSelect.innerHTML = '<option value="all">Tümü</option>';
 
                 const allStatuses = {
@@ -325,9 +338,9 @@
 
             async loadRecords() {
                 const loadingIndicator = document.getElementById('loadingIndicator');
-                if (loadingIndicator) loadingIndicator.style.display = 'block'; // Null check
+                if (loadingIndicator) loadingIndicator.style.display = 'block';
                 const noRecordsEl = document.getElementById('noRecords');
-                if (noRecordsEl) noRecordsEl.style.display = 'none'; // Null check
+                if (noRecordsEl) noRecordsEl.style.display = 'none';
 
                 try {
                     const result = await ipRecordsService.getRecords();
@@ -343,21 +356,28 @@
                     showNotification('Kayıtlar yüklenirken beklenmeyen bir hata oluştu.', 'error');
                     this.showEmptyState();
                 } finally {
-                    if (loadingIndicator) loadingIndicator.style.display = 'none'; // Null check
+                    if (loadingIndicator) loadingIndicator.style.display = 'none';
                 }
             }
 
-            applyFilters() {
+            applyFilters = () => { // Arrow function yapıldı
                 const typeFilter = document.getElementById('typeFilter').value;
                 const statusFilter = document.getElementById('statusFilter').value;
-                const searchTerm = document.getElementById('recordSearchInput').value.toLowerCase();
+                const recordSearchInput = document.getElementById('recordSearchInput');
+                const searchTerm = recordSearchInput ? recordSearchInput.value.toLowerCase() : '';
 
                 this.filteredRecords = this.records.filter(record => {
                     const typeMatch = typeFilter === 'all' || record.type === typeFilter;
                     const statusMatch = statusFilter === 'all' || record.status === statusFilter;
-                    const searchMatch = record.title.toLowerCase().includes(searchTerm) ||
-                                        (record.applicationNumber && record.applicationNumber.toLowerCase().includes(searchTerm)) ||
-                                        (record.owners && record.owners.map(o => (o.name || '').toLowerCase()).join(', ').includes(searchTerm));
+                    
+                    const recordTitle = record.title || '';
+                    const applicationNumber = record.applicationNumber || '';
+                    const ownerNames = (record.owners || []).map(o => (o.name || '')).join(', ');
+
+                    const searchMatch = recordTitle.toLowerCase().includes(searchTerm) ||
+                                        applicationNumber.toLowerCase().includes(searchTerm) ||
+                                        ownerNames.toLowerCase().includes(searchTerm);
+                                        
                     return typeMatch && statusMatch && searchMatch;
                 });
 
@@ -365,7 +385,7 @@
                 this.goToPage(1);
             }
 
-            sortRecords() {
+            sortRecords = () => { // Arrow function yapıldı
                 this.filteredRecords.sort((a, b) => {
                     let aValue = a[this.currentSortColumn];
                     let bValue = b[this.currentSortColumn];
@@ -386,7 +406,7 @@
                 this.updatePaginationControls();
             }
 
-            handleSort(headerElement) {
+            handleSort = (headerElement) => { // Arrow function yapıldı
                 const column = headerElement.dataset.sort;
                 if (!column) return;
 
@@ -405,16 +425,17 @@
                 this.sortRecords();
             }
 
-            goToPage(page) {
+            goToPage = (page) => { // Arrow function yapıldı
                 const totalPages = Math.ceil(this.filteredRecords.length / this.recordsPerPage);
-                if (page < 1 || page > totalPages && totalPages > 0) return;
+                if (page < 1 || (page > totalPages && totalPages > 0)) return;
                 this.currentPage = page;
                 this.renderTable();
                 this.updatePaginationControls();
             }
 
-            renderTable() {
+            renderTable = () => { // Arrow function yapıldı
                 const tableBody = document.getElementById('portfolioTableBody');
+                if (!tableBody) return;
                 tableBody.innerHTML = '';
                 const noRecordsEl = document.getElementById('noRecords');
                 const portfolioTableEl = document.getElementById('portfolioTable');
@@ -425,7 +446,6 @@
                     return;
                 }
 
-                // Null check before accessing style
                 if (noRecordsEl) noRecordsEl.style.display = 'none';
                 if (portfolioTableEl) portfolioTableEl.style.display = 'table';
                 if (paginationEl) paginationEl.style.display = 'flex';
@@ -440,7 +460,7 @@
                 });
             }
 
-            createTableRow(record) {
+            createTableRow = (record) => { // Arrow function yapıldı
                 const row = document.createElement('tr');
                 const typeNames = { patent: 'Patent', trademark: 'Marka', copyright: 'Telif Hakkı', design: 'Tasarım' };
                 const statusNames = { 
@@ -463,7 +483,7 @@
                     <td><span class="status-badge ${record.status}">${statusNames[record.status] || record.status}</span></td>
                     <td>${record.applicationDate ? new Date(record.applicationDate).toLocaleDateString('tr-TR') : '-'}</td>
                     <td>${ownerNames || '-'}</td>
-                    <td><div class="action-buttons"><button class="table-action-btn btn-view" data-id="${record.id}" title="Görüntüle">👁️</button><button class="table-action-btn btn-edit" data-id="${record.id}" title="Düzenle">✏️</button><button class="table-action-btn btn-delete" data-id="${record.id}" title="Sil">🗑️</button></div></td>`;
+                    <td><div class="action-buttons"><button class="action-btn btn-view" data-id="${record.id}" title="Görüntüle">👁️</button><button class="action-btn btn-edit" data-id="${record.id}" title="Düzenle">✏️</button><button class="action-btn btn-delete" data-id="${record.id}" title="Sil">🗑️</button></div></td>`;
                 
                 row.querySelector('.btn-view').addEventListener('click', () => this.viewRecord(record.id));
                 row.querySelector('.btn-edit').addEventListener('click', () => this.editRecord(record.id));
@@ -472,13 +492,17 @@
                 return row;
             }
 
-            viewRecord(recordId) {
+            viewRecord = (recordId) => { // Arrow function yapıldı
                 const record = this.records.find(r => r.id === recordId);
                 if (!record) return;
 
                 const modal = document.getElementById('detailModal');
-                document.getElementById('modalTitle').textContent = `Detay: ${record.title}`;
-                document.getElementById('modalTitle').dataset.recordId = record.id;
+                const modalTitleEl = document.getElementById('modalTitle');
+                const modalBodyEl = document.getElementById('modalBody');
+                if (!modal || !modalTitleEl || !modalBodyEl) return;
+
+                modalTitleEl.textContent = `Detay: ${record.title}`;
+                modalTitleEl.dataset.recordId = record.id;
 
                 const typeNames = { patent: 'Patent', trademark: 'Marka', copyright: 'Telif Hakkı', design: 'Tasarım' };
                 const statusNames = { 
@@ -542,16 +566,16 @@
                 modalContentHtml += `<h4 class="modal-detail-section-title">İşlem Geçmişi <button type="button" class="btn btn-secondary btn-small" onclick="window.portfolio.renderTransactionHistory('${record.id}', ${JSON.stringify(record.transactions || [])}, ${JSON.stringify(record.files || [])})">Tümünü Görüntüle</button></h4>`;
                 modalContentHtml += `<div id="transactionHistorySummary"></div>`;
                 
-                document.getElementById('modalBody').innerHTML = modalContentHtml;
+                modalBodyEl.innerHTML = modalContentHtml;
 
                 this.renderTransactionHistorySummary(record.transactions, record.files);
                 
                 modal.classList.add('show');
             }
 
-            renderTransactionHistorySummary(transactions, files) {
+            renderTransactionHistorySummary = (transactions, files) => { // Arrow function yapıldı
                 const historyDiv = document.getElementById('transactionHistorySummary');
-                if (!historyDiv) return; // Null check
+                if (!historyDiv) return;
                 historyDiv.innerHTML = '';
                 const sortedTransactions = [...(transactions || [])].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
                 const latestTransactions = sortedTransactions.slice(0, 3);
@@ -570,7 +594,7 @@
                             <div class="transaction-content">
                                 <div class="transaction-header">
                                     <span class="transaction-title">${tx.type || 'Bilinmeyen İşlem'}</span>
-                                    <span class="transaction-meta">${new Date(tx.timestamp).toLocaleString('tr-TR')}</span>
+                                    <span class="transaction-meta">${new Date(tx.timestamp).toLocaleString('tr-TR')}</div>
                                 </div>
                                 <div class="transaction-description">${tx.description || '-'}</div>
                                 ${fileLink}
@@ -580,11 +604,11 @@
                 });
             }
 
-            renderTransactionHistory(recordId, transactions, files) {
+            renderTransactionHistory = (recordId, transactions, files) => { // Arrow function yapıldı
                 const historyModal = document.getElementById('transactionModal');
                 const historyContentDiv = document.getElementById('transactionHistoryContent');
                 const noTransactionsDiv = document.getElementById('noTransactions');
-                if (!historyContentDiv || !noTransactionsDiv) return; // Null check
+                if (!historyContentDiv || !noTransactionsDiv) return;
                 historyContentDiv.innerHTML = '';
                 
                 const sortedTransactions = [...(transactions || [])].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
@@ -606,7 +630,7 @@
                             <div class="transaction-content">
                                 <div class="transaction-header">
                                     <span class="transaction-title">${tx.type || 'Bilinmeyen İşlem'}</span>
-                                    <span class="transaction-meta">${new Date(tx.timestamp).toLocaleString('tr-TR')}</span>
+                                    <span class="transaction-meta">${new Date(tx.timestamp).toLocaleString('tr-TR')}</div>
                                 </div>
                                 <div class="transaction-description">${tx.description || '-'}</div>
                                 ${fileLink}
@@ -614,15 +638,15 @@
                         </div>
                     `;
                 });
-                if (historyModal) historyModal.classList.add('show'); // Null check
+                if (historyModal) historyModal.classList.add('show');
             }
 
 
-            editRecord(recordId) {
+            editRecord = (recordId) => { // Arrow function yapıldı
                 window.location.href = `data-entry.html?id=${recordId}`;
             }
 
-            async deleteRecord(recordId) {
+            deleteRecord = async (recordId) => { // Arrow function yapıldı
                 if (confirm('Bu kaydı silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.')) {
                     try {
                         const result = await ipRecordsService.deleteRecord(recordId);
@@ -639,7 +663,7 @@
                 }
             }
 
-            updatePaginationControls() {
+            updatePaginationControls = () => { // Arrow function yapıldı
                 const totalPages = Math.ceil(this.filteredRecords.length / this.recordsPerPage);
                 const paginationInfo = document.getElementById('paginationInfo');
                 const prevPageBtn = document.getElementById('prevPageBtn');
@@ -650,12 +674,12 @@
                 if (nextPageBtn) nextPageBtn.disabled = this.currentPage === totalPages || totalPages === 0;
             }
 
-            closeModal(modalId) {
+            closeModal = (modalId) => { // Arrow function yapıldı
                 const modal = document.getElementById(modalId);
                 if (modal) modal.classList.remove('show');
             }
 
-            async exportData() {
+            exportData = async () => { // Arrow function yapıldı
                 if (this.filteredRecords.length === 0) {
                     showNotification('Dışa aktarılacak kayıt bulunamadı.', 'info');
                     return;
@@ -721,7 +745,7 @@
                 document.body.removeChild(link);
             }
 
-            showEmptyState() {
+            showEmptyState = () => { // Arrow function yapıldı
                 const portfolioTableEl = document.getElementById('portfolioTable');
                 const paginationEl = document.getElementById('pagination');
                 const noRecordsEl = document.getElementById('noRecords');
