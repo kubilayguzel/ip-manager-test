@@ -52,34 +52,35 @@
             transition: opacity 0.3s ease, visibility 0.3s ease; pointer-events: none;
         }
         .image-hover-container:hover .trademark-image-preview { visibility: visible; opacity: 1; }
-        
         .modal-content { max-width: 1500px; }
         .modal-detail-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 15px 25px; margin-bottom: 20px; }
         .modal-detail-item { margin-bottom: 10px; }
         .modal-detail-label { font-weight: 600; color: #333; }
         .modal-detail-value { color: #555; }
         .modal-detail-section-title { grid-column: 1 / -1; font-size: 1.1em; color: #1e3c72; margin-top: 20px; padding-bottom: 5px; border-bottom: 1px dashed #e1e8ed; }
-
+        
         /* PAGINATION GÜNCELLEMELERİ */
+        .pagination-container {
+            display: flex;
+            justify-content: flex-end; /* Ana konteyner sağa yaslar */
+            padding: 20px 0;
+            margin-top: 10px;
+        }
         .pagination {
             display: flex;
-            justify-content: flex-end; /* Sağa hizalama */
             align-items: center;
             gap: 10px;
-            margin-top: 20px;
-            padding: 10px 0;
         }
         .pagination button {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; /* Ana font ile uyum */
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             font-weight: 600;
             font-size: 0.9em;
         }
         .pagination-info {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; /* Ana font ile uyum */
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             font-size: 0.95em;
             font-weight: 500;
             color: #555;
-            align-self: center;
         }
     </style>
 </head>
@@ -117,11 +118,15 @@
                 <div id="loadingIndicator" class="loading"><div class="loading-spinner"></div></div>
                 <div id="noRecords" class="no-records"><h3>Filtrelerinize uygun kayıt bulunamadı.</h3></div>
             </div>
-            <div id="pagination" class="pagination">
-                <button id="prevPageBtn" disabled>Önceki</button>
-                <span id="paginationInfo">Sayfa 1 / 1</span>
-                <button id="nextPageBtn" disabled>Sonraki</button>
+            
+            <div class="pagination-container">
+                <div id="pagination" class="pagination">
+                    <button id="prevPageBtn" disabled>Önceki</button>
+                    <span id="paginationInfo">Sayfa 1 / 1</span>
+                    <button id="nextPageBtn" disabled>Sonraki</button>
+                </div>
             </div>
+
             <div id="detailModal" class="modal">
                 <div class="modal-content">
                     <div class="modal-header">
@@ -140,26 +145,8 @@
 
     <script type="module">
         import { authService, ipRecordsService, auth } from './firebase-config.js';
-        import { showNotification } from './utils.js';
+        import { showNotification, TYPE_NAMES, ALL_STATUS_MAP } from './utils.js';
         import { loadSharedLayout } from './js/layout-loader.js';
-
-        // HATA DÜZELTMESİ: statusNames nesnesi sınıf dışına, modül kapsamına taşındı.
-        const STATUS_NAMES = {
-            'başvuru': 'Başvuru',
-            'beklemede': 'Beklemede',
-            'onaylandı': 'Onaylandı',
-            'reddedildi': 'Reddedildi',
-            'süresi_doldu': 'Süresi Doldu',
-            'yayınlandı': 'Yayınlandı',
-            'kısmi_ret': 'Kısmi Ret',
-            'ret': 'Ret',
-            'itiraz_geldi': 'İtiraz Geldi',
-            'itiraz_edildi': 'İtiraz Edildi',
-            'tescilli': 'Tescilli',
-            'yenilenmedi': 'Yenilenmedi',
-            'başvuru_geçersiz_hükümsüz': 'Başvuru Geçersiz/Hükümsüz',
-            'yenilememe_nedeniyle_geçersiz': 'Yenilememe Nedeniyle Geçersiz'
-        };
 
         class PortfolioModule {
             constructor() {
@@ -172,7 +159,6 @@
                 this.currentSortDirection = 'desc';
                 this.activeTab = 'all';
                 this.columnFilters = {};
-                this.typeNames = { patent: 'Patent', trademark: 'Marka', design: 'Tasarım' };
             }
 
             async init() {
@@ -278,7 +264,7 @@
                         const lowerFilterValue = filterValue.toLowerCase();
 
                         switch (column) {
-                            case 'type': recordValue = this.typeNames[record.type] || record.type; break;
+                            case 'type': recordValue = TYPE_NAMES[record.type] || record.type; break;
                             case 'owners': recordValue = (record.owners || []).map(o => o.name || '').join(', '); break;
                             case 'applicationDate': recordValue = record.applicationDate ? new Date(record.applicationDate).toLocaleDateString('tr-TR') : ''; break;
                             default: recordValue = record[column] || ''; break;
@@ -331,16 +317,16 @@
             renderPortfolioTable = () => {
                 const tableEl = document.getElementById('portfolioTable');
                 const noRecordsEl = document.getElementById('noRecords');
-                const paginationEl = document.getElementById('pagination');
+                const paginationContainerEl = document.querySelector('.pagination-container');
                 tableEl.innerHTML = '';
 
                 if (this.filteredRecords.length === 0) {
                     noRecordsEl.style.display = 'block';
-                    paginationEl.style.display = 'none';
+                    if (paginationContainerEl) paginationContainerEl.style.display = 'none';
                     return;
                 }
                 noRecordsEl.style.display = 'none';
-                paginationEl.style.display = 'flex';
+                if (paginationContainerEl) paginationContainerEl.style.display = 'flex';
 
                 let headers = [
                     { key: 'type', label: 'Tip', sortable: true },
@@ -390,7 +376,7 @@
                                 } else { cellContent = '-'; }
                                 break;
                             case 'type':
-                                cellContent = `<span class="ip-type ${record.type}">${this.typeNames[record.type] || record.type}</span>`;
+                                cellContent = `<span class="ip-type ${record.type}">${TYPE_NAMES[record.type] || record.type}</span>`;
                                 break;
                             case 'title': cellContent = record.title || '-'; break;
                             case 'applicationNumber': cellContent = record.applicationNumber || '-'; break;
@@ -463,9 +449,9 @@
                 }
 
                 let modalContentHtml = `<h4 class="modal-detail-section-title">Temel Bilgiler</h4><div class="modal-detail-grid">`;
-                modalContentHtml += renderField('Kayıt Tipi', `<span class="ip-type ${record.type}">${this.typeNames[record.type] || record.type}</span>`);
+                modalContentHtml += renderField('Kayıt Tipi', `<span class="ip-type ${record.type}">${TYPE_NAMES[record.type] || record.type}</span>`);
                 modalContentHtml += renderField('Başlık', record.title);
-                modalContentHtml += renderField('Durum', record.status ? `<span class="status-badge status-${record.status.replace(/_/g, '-')}">${STATUS_NAMES[record.status] || record.status}</span>` : '-');
+                modalContentHtml += renderField('Durum', record.status ? `<span class="status-badge status-${record.status.replace(/_/g, '-')}">${ALL_STATUS_MAP[record.status] || record.status}</span>` : '-');
                 modalContentHtml += renderField('Başvuru Numarası', record.applicationNumber);
                 modalContentHtml += renderField('Başvuru Tarihi', formatDate(record.applicationDate));
                 modalContentHtml += renderField('Tescil Tarihi', formatDate(record.registrationDate));
@@ -565,7 +551,7 @@
                 this.filteredRecords.forEach(record => {
                     const escapeCsv = (value) => `"${(value || '').toString().replace(/"/g, '""')}"`;
                     const row = [
-                        this.typeNames[record.type] || record.type, record.title || '', record.applicationNumber || '',
+                        TYPE_NAMES[record.type] || record.type, record.title || '', record.applicationNumber || '',
                         record.applicationDate ? new Date(record.applicationDate).toLocaleDateString('tr-TR') : '',
                         (record.owners || []).map(o => o.name).join(', '),
                         record.isArchived ? 'Arşivlenmiş' : 'Aktif'
@@ -597,4 +583,4 @@
         });
     </script>
 </body>
-</html> 
+</html>
