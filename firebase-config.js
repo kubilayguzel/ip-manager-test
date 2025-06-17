@@ -19,7 +19,7 @@ import {
     orderBy,
     where,
     getDoc, 
-    setDoc, // setDoc eklendi
+    setDoc,
     arrayUnion, 
     arrayRemove,
     writeBatch
@@ -293,54 +293,84 @@ export const personsService = {
     },
     async updatePerson(personId, updates) {
         updates.updatedAt = new Date().toISOString();
-        // Eğer personType değişirse veya name'i etkileyen alanlar değişirse name'i yeniden oluştur
-        if (updates.personType || updates.firstName || updates.lastName || updates.companyName) {
-            if (updates.personType === 'real' || (!updates.personType && this.allPersons.find(p => p.id === personId)?.personType === 'real')) {
-                 const currentPerson = await getDoc(doc(db, 'persons', personId)); // Güncel veriyi çek
-                 const currentData = currentPerson.data();
-                 const firstName = updates.firstName !== undefined ? updates.firstName : currentData.firstName;
-                 const lastName = updates.lastName !== undefined ? updates.lastName : currentData.lastName;
-                 updates.name = `${firstName || ''} ${lastName || ''}`.trim();
-            } else if (updates.personType === 'legal' || (!updates.personType && this.allPersons.find(p => p.id === personId)?.personType === 'legal')) {
-                 const currentPerson = await getDoc(doc(db, 'persons', personId)); // Güncel veriyi çek
-                 const currentData = currentPerson.data();
-                 const companyName = updates.companyName !== undefined ? updates.companyName : currentData.companyName;
-                 updates.name = companyName || null;
-            }
-        }
         
+        // Geçerli kişinin güncel verilerini çek
+        const personDocRef = doc(db, 'persons', personId);
+        const currentPersonDoc = await getDoc(personDocRef);
+        if (!currentPersonDoc.exists()) {
+            return { success: false, error: "Güncellenecek kişi bulunamadı." };
+        }
+        const currentPersonData = currentPersonDoc.data();
+
+        // Güncelleme sonrası kişinin ad/unvanını yeniden oluştur (bu name değeri IP kayıtlarına yansıtılacak)
+        // Bu 'name' değeri artık IP kayıtlarına kopyalanmayacak, sadece 'persons' koleksiyonunda güncel tutulacak.
+        let updatedPersonName = currentPersonData.name; // Varsayılan olarak mevcut adı al
+        let updatedPersonType = updates.personType !== undefined ? updates.personType : currentPersonData.personType;
+
+        if (updatedPersonType === 'real') {
+            const firstName = updates.firstName !== undefined ? updates.firstName : currentPersonData.firstName;
+            const lastName = updates.lastName !== undefined ? updates.lastName : currentPersonData.lastName;
+            updatedPersonName = `${firstName || ''} ${lastName || ''}`.trim();
+        } else { // legal
+            const companyName = updates.companyName !== undefined ? updates.companyName : currentPersonData.companyName;
+            updatedPersonName = companyName || null;
+        }
+        updates.name = updatedPersonName; // Güncellenen 'name' alanını da 'updates' objesine ekle
+
         if (isFirebaseAvailable) {
             try {
-                await updateDoc(doc(db, 'persons', personId), updates);
+                // Adım 1: Sadece kişi belgesini güncelle
+                await updateDoc(personDocRef, updates);
+
+                // Adım 2: İlgili IP kayıtlarını güncelleme mantığı buradan KALDIRILDI.
+                // Bu kısım artık gerekli değil çünkü IP kayıtları sadece kişi ID'sini tutacak.
+                // IP kayıtlarındaki sahip bilgilerinin güncellenmesi, artık portföy sayfasında
+                // veriler çekilirken dinamik olarak yapılacak.
+
                 return { success: true };
             } catch (error) {
                 console.error("Kişi güncellenirken hata:", error);
                 return { success: false, error: error.message || "Kişi güncellenirken beklenmeyen bir hata oluştu." };
             }
         } else {
+            // Yerel depolama mantığı (eğer hala kullanılıyorsa)
             let persons = JSON.parse(localStorage.getItem('persons') || '[]');
             const index = persons.findIndex(p => p.id === personId);
-            if (index > -1) persons[index] = { ...persons[index], ...updates };
-            localStorage.setItem('persons', JSON.stringify(persons));
+            if (index > -1) {
+                persons[index] = { ...persons[index], ...updates };
+                localStorage.setItem('persons', JSON.stringify(persons));
+            }
             return { success: true };
         }
     },
     async deletePerson(personId) {
         if (isFirebaseAvailable) {
             try {
-                // Kişiye bağlı bir kullanıcı varsa Firestore'daki kullanıcı kaydını sil
-                // Firebase Auth kullanıcısını silme (Cloud Function ile yapılması daha güvenli)
+                // Adım 1: Bu kişinin herhangi bir IP kaydına sahip olup olmadığını kontrol et
+                const ipRecordsCollectionRef = collection(db, 'ipRecords');
+                // owner objesini sorgularken id'yi doğrudan kullanabiliriz.
+                // Firebase array-contains tam eşleşme bekler, bu yüzden { id: personId } objesini arıyoruz.
+                const q = query(ipRecordsCollectionRef, where('owners', 'array-contains', { id: personId }));
+                const querySnapshot = await getDocs(q);
+
+                if (!querySnapshot.empty) {
+                    return { success: false, error: "Bu kişi, bir veya daha fazla IP kaydının sahibidir ve silinemez." };
+                }
+
+                // Adım 2: Kişiye bağlı bir kullanıcı varsa, Firestore'daki kullanıcı kaydını sil
                 const personDoc = await getDoc(doc(db, 'persons', personId));
                 if (personDoc.exists() && personDoc.data().userId) {
                     const userIdToDelete = personDoc.data().userId;
                     const usersCollectionRef = collection(db, 'users');
-                    const q = query(usersCollectionRef, where('uid', '==', userIdToDelete));
-                    const querySnapshot = await getDocs(q);
-                    if (!querySnapshot.empty) {
-                        await deleteDoc(querySnapshot.docs[0].ref);
+                    const qUser = query(usersCollectionRef, where('uid', '==', userIdToDelete));
+                    const userQuerySnapshot = await getDocs(qUser);
+                    if (!userQuerySnapshot.empty) {
+                        await deleteDoc(userQuerySnapshot.docs[0].ref);
                         console.log(`Associated user ${userIdToDelete} deleted from Firestore.`);
                     }
                 }
+
+                // Adım 3: Kişiyi sil
                 await deleteDoc(doc(db, 'persons', personId));
                 return { success: true };
             } catch (error) {
@@ -348,7 +378,10 @@ export const personsService = {
                 return { success: false, error: error.message || "Kişi silinirken beklenmeyen bir hata oluştu." };
             }
         } else {
+            // Yerel depolama mantığı (eğer hala kullanılıyorsa)
             let persons = JSON.parse(localStorage.getItem('persons') || '[]').filter(p => p.id !== personId);
+            // Yerel depolama için IP kayıtları kontrolü burada daha karmaşık olurdu.
+            // Şimdilik sadece Firebase kısmı ele alındı.
             localStorage.setItem('persons', JSON.stringify(persons));
             return { success: true };
         }
@@ -401,7 +434,21 @@ export const ipRecordsService = {
         // Dosyalara benzersiz ID atayalım
         const filesWithIds = (record.files || []).map(f => ({ ...f, id: f.id || generateUUID() }));
 
-        const newRecord = { ...record, userId: user.uid, userEmail: user.email, createdAt: timestamp, updatedAt: timestamp, transactions: [], files: filesWithIds };
+        // owners dizisini sadece person ID'lerini içerecek şekilde düzenle
+        // data-entry.html'den gelen owners objeleri zaten { id, name, ... } şeklinde olabilir
+        // burada sadece id'yi saklayacak şekilde dönüştürüyoruz
+        const simplifiedOwners = (record.owners || []).map(owner => ({ id: owner.id }));
+
+        const newRecord = { 
+            ...record, 
+            owners: simplifiedOwners, // Sadece ID'leri tutuyoruz
+            userId: user.uid, 
+            userEmail: user.email, 
+            createdAt: timestamp, 
+            updatedAt: timestamp, 
+            transactions: [], 
+            files: filesWithIds 
+        };
         
         if (isFirebaseAvailable) {
             try {
@@ -457,12 +504,50 @@ export const ipRecordsService = {
             try {
                 const q = user.role === 'superadmin' ? query(collection(db, 'ipRecords'), orderBy('createdAt', 'desc')) : query(collection(db, 'ipRecords'), where('userId', '==', user.uid), orderBy('createdAt', 'desc'));
                 const snapshot = await getDocs(q);
-                return { success: true, data: snapshot.docs.map(d => ({ id: d.id, ...d.data() })) };
+                let records = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+
+                // Sahip ID'lerini topla
+                const ownerIds = new Set();
+                records.forEach(record => {
+                    (record.owners || []).forEach(owner => ownerIds.add(owner.id));
+                });
+
+                // Tüm sahipleri tek bir sorguda çek (Firestore'un 'in' sorgu sınırı 10'dur, daha fazlası için parçalamak gerekir)
+                let allOwnersMap = new Map();
+                if (ownerIds.size > 0) {
+                    const ownerIdsArray = Array.from(ownerIds);
+                    // Eğer 10'dan fazla sahip varsa, sorguyu parçalayarak çekmeliyiz.
+                    // Firebase 'in' sorgusu en fazla 10 değeri destekler.
+                    const chunkSize = 10;
+                    for (let i = 0; i < ownerIdsArray.length; i += chunkSize) {
+                        const chunk = ownerIdsArray.slice(i, i + chunkSize);
+                        const personsCollectionRef = collection(db, 'persons');
+                        const ownersQuery = query(personsCollectionRef, where('id', 'in', chunk));
+                        const ownersSnapshot = await getDocs(ownersQuery);
+                        ownersSnapshot.forEach(doc => {
+                            allOwnersMap.set(doc.id, doc.data());
+                        });
+                    }
+                }
+
+                // Kayıtlardaki sahip bilgilerini zenginleştir
+                records = records.map(record => {
+                    const enrichedOwners = (record.owners || []).map(ownerRef => {
+                        const personData = allOwnersMap.get(ownerRef.id);
+                        // Eğer kişi verisi bulunursa, id'si ile birlikte tüm kişi objesini ekle
+                        // Aksi takdirde, sadece orijinal referansı (id) bırak
+                        return personData ? { id: ownerRef.id, ...personData } : ownerRef; 
+                    });
+                    return { ...record, owners: enrichedOwners };
+                });
+
+                return { success: true, data: records };
             } catch (error) {
                 console.error("Kayıtlar alınırken hata:", error);
                 return { success: false, error: error.message || "Kayıtlar yüklenirken beklenmeyen bir hata oluştu." };
             }
         }
+        // Yerel depolama mantığı...
         return { success: true, data: JSON.parse(localStorage.getItem('ipRecords') || '[]') };
     },
     async updateRecord(recordId, updates) {
@@ -476,6 +561,13 @@ export const ipRecordsService = {
                 if (!currentDoc.exists()) return { success: false, error: "Kayıt bulunamadı." };
                 const currentData = currentDoc.data();
                 let newTransactions = [...(currentData.transactions || [])]; 
+
+                // owners dizisi güncelleniyorsa, sadece ID'leri içerecek şekilde düzenle
+                // data-entry.html'den gelen owners objeleri zaten { id, name, ... } şeklinde olabilir
+                // burada sadece id'yi saklayacak şekilde dönüştürüyoruz
+                if (updates.owners !== undefined) {
+                    updates.owners = (updates.owners || []).map(owner => ({ id: owner.id }));
+                }
 
                 // Dosya güncellemelerini yönet (mevcut dosyaları koru, yenileri ekle, eski transaction'ları güncelle)
                 let updatedFiles = currentData.files || [];
@@ -538,6 +630,7 @@ export const ipRecordsService = {
                 return { success: false, error: error.message || "Kayıt güncellenirken beklenmeyen bir hata oluştu." };
             }
         } else {
+            // Yerel depolama mantığı...
             let records = JSON.parse(localStorage.getItem('ipRecords') || '[]');
             let record = records.find(r => r.id === recordId);
             if (record) {
@@ -545,6 +638,11 @@ export const ipRecordsService = {
                 if (updates.files !== undefined) {
                     record.files = updates.files;
                     delete updates.files;
+                }
+                // owners dizisi güncelleniyorsa, yerelde de sadece ID'leri tutacak şekilde düzenle
+                if (updates.owners !== undefined) {
+                    record.owners = (updates.owners || []).map(owner => ({ id: owner.id }));
+                    delete updates.owners;
                 }
                 Object.assign(record, updates, { updatedAt: timestamp });
                 localStorage.setItem('ipRecords', JSON.stringify(records));
@@ -658,7 +756,7 @@ export const taskService = {
             const currentTaskData = currentTaskDoc.data();
 
             let updatedFilesArray = currentTaskData.files || [];
-            if (updates.files !== undefined) { // Eğer files alanı güncellemelerde varsa
+            if (updates.files !== undefined) { // Eğer files alanı günellemelerde varsa
                 const newFilesToAdd = [];
                 for (const incomingFile of updates.files) {
                     const existingFileIndex = updatedFilesArray.findIndex(f => f.id === incomingFile.id);
@@ -810,7 +908,7 @@ export const taskService = {
 };
 
 // --- Accrual Service ---
-const accrualService = {
+export const accrualService = {
     async addAccrual(accrualData) {
         if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor. Tahakkuk eklenemez." };
         const user = authService.getCurrentUser();
@@ -875,7 +973,7 @@ const accrualService = {
             }
             
             const finalUpdates = { ...updates };
-            delete finalUpdates.files; // Dosya güncellemelerini manuel olarak işledik
+            delete finalUpdates.files; // Dosya günellemelerini manuel olarak işledik
 
             await updateDoc(accrualRef, {
                 ...finalUpdates,
@@ -919,11 +1017,10 @@ export async function createDemoData() {
             return;
         }
         // Demo sahibi objesi güncellenen alanları içerecek şekilde
-        const demoOwner = { 
+        // Artık IP kayıtlarına sadece ID'yi atacağız
+        const demoOwnerRef = { 
             id: personResult.data.id, 
-            name: personResult.data.name, 
-            personType: personResult.data.personType, // personType
-            email: personResult.data.email 
+            // name, personType, email gibi detaylar artık burada kopyalanmayacak
         };
 
         const demoRecords = [
@@ -934,7 +1031,7 @@ export async function createDemoData() {
                 applicationNumber: 'PT/2024/001',
                 applicationDate: '2024-03-15',
                 description: 'Bu, lityum-iyon pillerin ömrünü uzatan yeni bir batarya teknolojisi için yapılmış bir demo patent başvurusudur.',
-                owners: [demoOwner]
+                owners: [demoOwnerRef] // Sadece referans ID'si
             },
             {
                 type: 'trademark',
@@ -944,7 +1041,7 @@ export async function createDemoData() {
                 applicationDate: '2023-11-20',
                 registrationDate: '2024-05-10',
                 description: 'Lojistik ve kargo hizmetleri için tescilli bir marka demosu.',
-                owners: [demoOwner],
+                owners: [demoOwnerRef], // Sadece referans ID'si
                 trademarkImage: {
                     name: 'logo_ornek.jpg',
                     type: 'image/jpeg',
@@ -970,4 +1067,5 @@ export async function createDemoData() {
 
 
 // --- Exports ---
-export { auth, db, accrualService };
+// Tüm servisleri burada tek bir blokta export ediyoruz
+export { auth, db, authService, personsService, ipRecordsService, taskService, accrualService };
