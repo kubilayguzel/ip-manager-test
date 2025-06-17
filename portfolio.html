@@ -6,7 +6,8 @@
     <title>IP Manager - Portföy</title>
     <link rel="stylesheet" href="css/shared-styles.css">
     <style>
-        .page-header { background: rgba(255, 255, 255, 0.95); padding: 30px; border-radius: 20px; margin-bottom: 20px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1); }
+        /* CSS'in büyük bir kısmı, sağladığınız dosyadaki ile aynıdır */
+        .page-header { background: #fff; padding: 30px; border-radius: 20px; margin-bottom: 20px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05); }
         .page-title { font-size: 2em; color: #1e3c72; margin-bottom: 10px; }
         .page-subtitle { color: #666; font-size: 1.1em; }
         .portfolio-tabs { display: flex; border-bottom: 1px solid #ddd; margin-bottom: 25px; }
@@ -17,12 +18,9 @@
             border-radius: 8px 8px 0 0; transition: all 0.3s ease;
         }
         .tab-btn:hover { color: #1e3c72; background-color: #f8f9fa; }
-        .tab-btn.active {
-            color: #1e3c72; font-weight: 600; background-color: #fff;
-            border-color: #ddd; border-bottom-color: #fff;
-        }
+        .tab-btn.active { color: #1e3c72; font-weight: 600; background-color: #fff; border-color: #ddd; border-bottom-color: #fff; }
         .portfolio-controls {
-            background: rgba(255, 255, 255, 0.95); padding: 20px 30px; border-radius: 20px;
+            background: #fff; padding: 20px 30px; border-radius: 20px;
             margin-bottom: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.05);
             display: flex; justify-content: space-between; align-items: center;
             flex-wrap: wrap; gap: 20px;
@@ -37,25 +35,42 @@
         input:checked + .slider:before { transform: translateX(26px); }
         .slider.round { border-radius: 24px; }
         .slider.round:before { border-radius: 50%; }
-        .portfolio-table-container { overflow-x: auto; }
+
+        /* Arka plan beyaz olarak güncellendi */
+        .portfolio-table-container { background: #fff; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); overflow-x: auto; }
+        
         .portfolio-table { width: 100%; border-collapse: collapse; }
         .portfolio-table th, .portfolio-table td { padding: 15px; text-align: left; border-bottom: 1px solid #f0f0f0; white-space: nowrap; }
         .portfolio-table tr.archived-record { opacity: 0.6; }
         #filter-row th { padding: 8px; background-color: #f8f9fa; }
         .column-filter { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; }
+
+        /* Arşivle butonu için sarı renk */
+        .action-btn.btn-archive { background-color: #ffc107 !important; color: #fff; }
+        .action-btn.btn-activate { background-color: #28a745 !important; color: #fff; }
+        
         .image-hover-container { position: relative; display: flex; align-items: center; justify-content: center; }
-        .trademark-image-thumb { width: 40px; height: 40px; object-fit: contain; border-radius: 4px; vertical-align: middle; }
+        .trademark-image-thumb { width: 40px; height: 40px; object-fit: contain; border-radius: 4px; }
         .trademark-image-preview {
             visibility: hidden; opacity: 0; position: absolute; z-index: 100;
             bottom: 110%; left: 50%; transform: translateX(-50%);
             width: 200px; height: 200px; object-fit: contain; background-color: #fff;
-            border: 2px solid #ddd; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-            transition: opacity 0.3s ease, visibility 0.3s ease; pointer-events: none;
+            border: 2px solid #ddd; border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+            pointer-events: none;
         }
         .image-hover-container:hover .trademark-image-preview { visibility: visible; opacity: 1; }
-        .action-btn.btn-archive { background-color: #ffc107 !important; color: #fff; }
-        .action-btn.btn-activate { background-color: #28a745 !important; color: #fff; }
+        
+        /* Modal genişliği ve diğer modal stilleri */
         .modal-content { max-width: 1500px; }
+        .modal-detail-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 15px 25px; margin-bottom: 20px; }
+        .modal-detail-item { margin-bottom: 10px; }
+        .modal-detail-label { font-weight: 600; color: #333; margin-bottom: 5px; font-size: 0.9em; }
+        .modal-detail-value { color: #555; word-break: break-word; font-size: 0.95em; }
+        .modal-detail-value.long-text { white-space: pre-wrap; background-color: #f8f9fa; padding: 8px; border-radius: 6px; max-height: 150px; overflow-y: auto; }
+        .modal-detail-section-title { grid-column: 1 / -1; font-size: 1.1em; color: #1e3c72; margin-top: 20px; padding-bottom: 5px; border-bottom: 1px dashed #e1e8ed; }
+
     </style>
 </head>
 <body>
@@ -88,20 +103,17 @@
             </div>
 
             <div class="portfolio-table-container">
-                <table class="portfolio-table" id="portfolioTable">
-                </table>
-                <div id="loadingIndicator" class="loading">
-                    <div class="loading-spinner"></div>
-                </div>
-                 <div id="noRecords" class="no-records">
-                    <h3>Filtrelerinize uygun kayıt bulunamadı.</h3>
-                </div>
+                <table class="portfolio-table" id="portfolioTable"></table>
+                <div id="loadingIndicator" class="loading"><div class="loading-spinner"></div></div>
+                <div id="noRecords" class="no-records"><h3>Filtrelerinize uygun kayıt bulunamadı.</h3></div>
             </div>
+
             <div id="pagination" class="pagination">
                 <button id="prevPageBtn" disabled>Önceki</button>
                 <span id="paginationInfo">Sayfa 1 / 1</span>
                 <button id="nextPageBtn" disabled>Sonraki</button>
             </div>
+
             <div id="detailModal" class="modal">
                 <div class="modal-content">
                     <div class="modal-header">
@@ -135,7 +147,6 @@
                 this.activeTab = 'all';
                 this.columnFilters = {};
                 this.typeNames = { patent: 'Patent', trademark: 'Marka', design: 'Tasarım' };
-                this.statusNames = { application: 'Başvuru', pending: 'Beklemede', approved: 'Onaylandı', rejected: 'Reddedildi', expired: 'Süresi Doldu', published: 'Yayınlandı', partial_refusal: 'Kısmi Ret', refused: 'Ret', opposition_received: 'İtiraz Geldi', opposition_filed: 'İtiraz Edildi', registered: 'Tescilli', not_renewed: 'Yenilenmedi', invalid_void: 'Başvuru Geçersiz/Hükümsüz', invalid_not_renewed: 'Yenilememe Nedeniyle Geçersiz' };
             }
 
             async init() {
@@ -203,8 +214,11 @@
                 document.getElementById('noRecords').style.display = 'none';
                 try {
                     const result = await ipRecordsService.getRecords();
-                    if (result.success) this.records = result.data;
-                    else showNotification('Kayıtlar yüklenirken hata: ' + result.error, 'error');
+                    if (result.success) {
+                        this.records = result.data;
+                    } else {
+                        showNotification('Kayıtlar yüklenirken hata: ' + result.error, 'error');
+                    }
                 } catch (error) {
                     showNotification('Kayıtlar yüklenirken beklenmeyen bir hata oluştu.', 'error');
                 } finally {
@@ -339,7 +353,6 @@
                 this.filteredRecords.slice(start, end).forEach(record => {
                     const row = document.createElement('tr');
                     if (record.isArchived) row.classList.add('archived-record');
-
                     let cellsHtml = '';
                     headers.forEach(h => {
                         let cellContent = '';
@@ -373,7 +386,6 @@
                     tbody.appendChild(row);
                 });
                 tableEl.appendChild(tbody);
-
                 this.rebindTableEventListeners();
                 this.updatePaginationControls();
             }
@@ -403,7 +415,6 @@
                 const paginationInfo = document.getElementById('paginationInfo');
                 const prevPageBtn = document.getElementById('prevPageBtn');
                 const nextPageBtn = document.getElementById('nextPageBtn');
-
                 if (paginationInfo) paginationInfo.textContent = `Sayfa ${this.currentPage} / ${totalPages > 0 ? totalPages : 1}`;
                 if (prevPageBtn) prevPageBtn.disabled = this.currentPage === 1;
                 if (nextPageBtn) nextPageBtn.disabled = this.currentPage === totalPages || totalPages === 0;
@@ -412,7 +423,6 @@
             viewRecord = (recordId) => {
                 const record = this.records.find(r => r.id === recordId);
                 if (!record) return;
-
                 const modal = document.getElementById('detailModal');
                 const modalTitleEl = document.getElementById('modalTitle');
                 const modalBodyEl = document.getElementById('modalBody');
@@ -421,17 +431,20 @@
                 
                 const formatDate = (date) => date ? new Date(date).toLocaleDateString('tr-TR') : '-';
                 const renderField = (label, value, isLongText = false) => {
+                    if (!value) return '';
                     const valueClass = isLongText ? 'modal-detail-value long-text' : 'modal-detail-value';
-                    return `<div class="modal-detail-item"><div class="modal-detail-label">${label}:</div><div class="${valueClass}">${value || '-'}</div></div>`;
+                    return `<div class="modal-detail-item"><div class="modal-detail-label">${label}:</div><div class="${valueClass}">${value}</div></div>`;
                 }
 
                 let modalContentHtml = `<h4 class="modal-detail-section-title">Temel Bilgiler</h4><div class="modal-detail-grid">`;
                 modalContentHtml += renderField('Kayıt Tipi', `<span class="ip-type ${record.type}">${this.typeNames[record.type]}</span>`);
                 modalContentHtml += renderField('Başlık', record.title);
+                modalContentHtml += renderField('Durum', record.status ? `<span class="status-badge status-${record.status.replace(/_/g, '-')}">${this.statusNames[record.status] || record.status}</span>` : '-');
                 modalContentHtml += renderField('Başvuru Numarası', record.applicationNumber);
                 modalContentHtml += renderField('Başvuru Tarihi', formatDate(record.applicationDate));
                 modalContentHtml += renderField('Tescil Tarihi', formatDate(record.registrationDate));
                 modalContentHtml += renderField('Hak Sahipleri', (record.owners || []).map(o => o.name).join(', '));
+                modalContentHtml += renderField('Açıklama', record.description, true);
                 modalContentHtml += `</div>`;
 
                 if (record.type === 'trademark') {
@@ -440,33 +453,27 @@
                     if (record.trademarkImage?.content) {
                         modalContentHtml += renderField('Marka Örneği', `<img src="${record.trademarkImage.content}" style="max-height: 100px; border-radius: 6px;">`);
                     }
-                    modalContentHtml += renderField('Marka Tipi', record.trademarkType || '-');
-                    modalContentHtml += renderField('Nice Sınıfı', record.niceClass || '-');
+                    modalContentHtml += renderField('Nice Sınıfı', record.niceClass);
                     modalContentHtml += renderField('Yenileme Tarihi', formatDate(record.renewalDateTrademark));
-                    modalContentHtml += renderField('Eşya ve Hizmet Listesi', record.goodsAndServicesList, true);
                     modalContentHtml += `</div>`;
                 }
-
                 if (record.type === 'patent') {
                     modalContentHtml += `<h4 class="modal-detail-section-title">Patent Detayları</h4>`;
                     modalContentHtml += `<div class="modal-detail-grid">`;
-                    modalContentHtml += renderField('Patent Sınıfı', record.patentClass || '-');
+                    modalContentHtml += renderField('Patent Sınıfı', record.patentClass);
                     modalContentHtml += renderField('Yenileme Tarihi', formatDate(record.renewalDatePatent));
                     modalContentHtml += `</div>`;
                 }
-
                 if (record.type === 'design') {
                     modalContentHtml += `<h4 class="modal-detail-section-title">Tasarım Detayları</h4>`;
                     modalContentHtml += `<div class="modal-detail-grid">`;
-                    modalContentHtml += renderField('Tasarım Sınıfı', record.designClass || '-');
-                    modalContentHtml += renderField('Locarno Sınıfı', record.locarnoClass || '-');
+                    modalContentHtml += renderField('Tasarım Sınıfı', record.designClass);
+                    modalContentHtml += renderField('Locarno Sınıfı', record.locarnoClass);
                     modalContentHtml += renderField('Yenileme Tarihi', formatDate(record.renewalDateDesign));
                     modalContentHtml += `</div>`;
                 }
 
-                modalContentHtml += `<h4 class="modal-detail-section-title">İşlem Geçmişi</h4>` +
-                                  `<div id="transactionHistoryContainer"></div>`;
-                
+                modalContentHtml += `<h4 class="modal-detail-section-title">İşlem Geçmişi</h4><div id="transactionHistoryContainer"></div>`;
                 modalBodyEl.innerHTML = modalContentHtml;
                 this.renderTransactionHistory(record.id, record.transactions, record.files);
                 modal.classList.add('show');
@@ -487,16 +494,7 @@
                         const hasChildren = children.length > 0;
                         const file = files?.find(f => f.id === tx.documentId);
                         const fileLink = file ? ` | <a href="${file.content}" download="${file.name}" class="transaction-file-link">📄 Belge</a>` : '';
-                        return `
-                            <div class="transaction-node" data-id="${tx.transactionId}">
-                                ${hasChildren ? `<button class="transaction-toggle-btn" data-target-id="${tx.transactionId}">+</button>` : ''}
-                                <div class="transaction-node-content">
-                                    <div class="transaction-description">${tx.description || tx.type}</div>
-                                    <div class="transaction-meta">${new Date(tx.timestamp).toLocaleString('tr-TR')} by ${tx.userEmail}${fileLink}</div>
-                                </div>
-                            </div>
-                            ${hasChildren ? `<div class="child-transactions" id="children-of-${tx.transactionId}">${buildTreeHtml(children)}</div>` : ''}
-                        `;
+                        return `<div class="transaction-node" data-id="${tx.transactionId}">${hasChildren ? `<button class="transaction-toggle-btn" data-target-id="${tx.transactionId}">+</button>` : ''}<div class="transaction-node-content"><div class="transaction-description">${tx.description || tx.type}</div><div class="transaction-meta">${new Date(tx.timestamp).toLocaleString('tr-TR')} by ${tx.userEmail}${fileLink}</div></div></div>${hasChildren ? `<div class="child-transactions" id="children-of-${tx.transactionId}">${buildTreeHtml(children)}</div>` : ''}`;
                     }).join('');
                 };
                 historyContentDiv.innerHTML = buildTreeHtml(sortedTransactions.filter(tx => !tx.parentId));
@@ -510,9 +508,7 @@
                 });
             }
 
-            editRecord = (recordId) => {
-                window.location.href = `data-entry.html?id=${recordId}`;
-            }
+            editRecord = (recordId) => { window.location.href = `data-entry.html?id=${recordId}`; }
 
             toggleArchiveStatus = async (recordId) => {
                 const record = this.records.find(r => r.id === recordId);
@@ -544,22 +540,18 @@
                 this.filteredRecords.forEach(record => {
                     const escapeCsv = (value) => `"${(value || '').toString().replace(/"/g, '""')}"`;
                     const row = [
-                        this.typeNames[record.type] || record.type,
-                        record.title || '',
-                        record.applicationNumber || '',
+                        this.typeNames[record.type] || record.type, record.title || '', record.applicationNumber || '',
                         record.applicationDate ? new Date(record.applicationDate).toLocaleDateString('tr-TR') : '',
                         (record.owners || []).map(o => o.name).join(', '),
                         record.isArchived ? 'Arşivlenmiş' : 'Aktif'
                     ].map(escapeCsv);
                     csvRows.push(row.join(';'));
                 });
-
                 const blob = new Blob(["\uFEFF" + csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
                 const link = document.createElement("a");
                 const url = URL.createObjectURL(blob);
                 link.setAttribute("href", url);
                 link.setAttribute("download", "portfoy_raporu.csv");
-                link.style.visibility = 'hidden';
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
