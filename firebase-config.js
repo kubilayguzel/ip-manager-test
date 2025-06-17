@@ -1068,4 +1068,4 @@ export async function createDemoData() {
 
 // --- Exports ---
 // Tüm servisleri burada tek bir blokta export ediyoruz
-export { auth, db, authService, personsService, ipRecordsService, taskService, accrualService };
+export { auth, db, authService};
