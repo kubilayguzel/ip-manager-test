@@ -11,117 +11,85 @@
         .page-title { font-size: 2em; color: #1e3c72; margin-bottom: 10px; }
         .page-subtitle { color: #666; font-size: 1.1em; }
 
-        /* GÜNCELLENMİŞ SEKMELER (TABS) İÇİN STİLLER */
         .portfolio-tabs {
-            display: flex;
-            border-bottom: 1px solid #ddd;
-            margin-bottom: 25px;
+            display: flex; border-bottom: 1px solid #ddd; margin-bottom: 25px;
         }
         .tab-btn {
-            padding: 12px 22px;
-            font-size: 1.05em;
-            font-weight: 500;
-            border: 1px solid transparent;
-            border-bottom: none;
-            background: none;
-            cursor: pointer;
-            color: #555;
-            position: relative;
-            top: 1px;
-            border-radius: 8px 8px 0 0;
-            transition: all 0.3s ease;
+            padding: 12px 22px; font-size: 1.05em; font-weight: 500;
+            border: 1px solid transparent; border-bottom: none; background: none;
+            cursor: pointer; color: #555; position: relative; top: 1px;
+            border-radius: 8px 8px 0 0; transition: all 0.3s ease;
         }
-        .tab-btn:hover {
-            color: #1e3c72;
-            background-color: #f8f9fa;
-        }
+        .tab-btn:hover { color: #1e3c72; background-color: #f8f9fa; }
         .tab-btn.active {
-            color: #1e3c72;
-            font-weight: 600;
-            background-color: #fff;
-            border-color: #ddd;
-            border-bottom-color: #fff;
+            color: #1e3c72; font-weight: 600; background-color: #fff;
+            border-color: #ddd; border-bottom-color: #fff;
         }
 
         .portfolio-controls {
-            background: rgba(255, 255, 255, 0.95);
-            padding: 20px 30px;
-            border-radius: 20px;
-            margin-bottom: 20px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 15px;
+            background: rgba(255, 255, 255, 0.95); padding: 20px 30px; border-radius: 20px;
+            margin-bottom: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+            display: flex; justify-content: space-between; align-items: center;
+            flex-wrap: wrap; gap: 20px;
         }
         .filter-group { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
         .filter-label { font-weight: 500; }
-        .filter-select { padding: 8px 12px; border-radius: 8px; border: 1px solid #ccc; }
         
+        /* YENİ: TOGGLE SWITCH STİLLERİ */
+        .switch-label { font-weight: 500; margin-right: 5px; }
+        .switch { position: relative; display: inline-block; width: 50px; height: 24px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; }
+        .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .4s; }
+        input:checked + .slider { background-color: #28a745; }
+        input:checked + .slider:before { transform: translateX(26px); }
+        .slider.round { border-radius: 24px; }
+        .slider.round:before { border-radius: 50%; }
+
         .portfolio-table-container { background: rgba(255, 255, 255, 0.95); border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); overflow-x: auto; }
         .portfolio-table { width: 100%; border-collapse: collapse; }
         .portfolio-table th, .portfolio-table td { padding: 15px; text-align: left; border-bottom: 1px solid #f0f0f0; white-space: nowrap; }
-        .portfolio-table th { background: #f8f9fa; font-weight: 600; cursor: pointer; vertical-align: middle; }
-        .portfolio-table th.sort-asc::after { content: ' ▲'; }
-        .portfolio-table th.sort-desc::after { content: ' ▼'; }
-        .portfolio-table tr:hover { background: #f8f9fa; }
+        .portfolio-table tr.archived-record { opacity: 0.6; }
         
-        .portfolio-table tr.archived-record { opacity: 0.6; background-color: #f5f5f5; }
-        .portfolio-table tr.archived-record:hover { opacity: 1; }
-        .action-btn.btn-archive { background-color: #ffc107; color: #fff; }
-        .action-btn.btn-activate { background-color: #28a745; color: #fff; }
+        #filter-row th { padding: 8px; background-color: #f8f9fa; }
+        .column-filter { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; }
 
-        /* SÜTUN FİLTRELERİ İÇİN STİLLER */
-        #filter-row th {
-            padding: 8px;
-            background-color: #f8f9fa;
+        /* YENİ: MARKA GÖRSELİ ÖNİZLEME STİLLERİ */
+        .image-hover-container {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
-        .column-filter {
-            width: 100%;
-            padding: 8px;
-            border: 1px solid #ccc;
-            border-radius: 6px;
-            box-sizing: border-box;
-            font-size: 0.9em;
-        }
-
         .trademark-image-thumb {
             width: 40px; height: 40px; object-fit: contain;
             border-radius: 4px; vertical-align: middle;
         }
-        
-        .pagination { display: flex; justify-content: center; align-items: center; gap: 10px; margin-top: 20px; padding: 10px 0; }
-        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1003; align-items: center; justify-content: center; overflow-y: auto; padding: 20px; }
-        .modal.show { display: flex; }
-        .modal-content {
-            background: white; padding: 30px; border-radius: 20px; max-width: 1500px;
-            width: 90%; max-height: 90vh; overflow-y: auto; box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        .trademark-image-preview {
+            visibility: hidden; opacity: 0;
+            position: absolute; z-index: 100;
+            bottom: 110%; /* Resmin biraz üstünde başla */
+            left: 50%;
+            transform: translateX(-50%);
+            width: 200px; height: 200px;
+            object-fit: contain; background-color: #fff;
+            border: 2px solid #ddd; border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+            pointer-events: none;
         }
-        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid #e1e8ed; }
-        .modal-title { font-size: 1.3em; color: #1e3c72; }
-        .close-btn { background: none; border: none; font-size: 1.5em; cursor: pointer; color: #666; }
-        .modal-footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; padding-top: 15px; border-top: 1px solid #e1e8ed; }
-        .modal-detail-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 15px 25px; margin-bottom: 20px; }
-        .modal-detail-item { margin-bottom: 10px; }
-        .modal-detail-label { font-weight: 600; color: #333; }
-        .modal-detail-value { color: #555; }
-        .modal-detail-section-title { grid-column: 1 / -1; font-size: 1.1em; color: #1e3c72; margin-top: 20px; padding-bottom: 5px; border-bottom: 1px dashed #e1e8ed; }
-        .transaction-node { position: relative; padding: 8px 0 8px 25px; border-bottom: 1px dashed #eee; }
-        .transaction-node:last-child { border-bottom: none; }
-        .transaction-toggle-btn { position: absolute; left: 0; top: 10px; background: #e9ecef; border: none; border-radius: 50%; width: 20px; height: 20px; font-weight: bold; cursor: pointer; }
-        .child-transactions { margin-left: 20px; padding-left: 15px; border-left: 2px solid #1e3c72; display: none; }
-        .child-transactions.show { display: block; }
+        .image-hover-container:hover .trademark-image-preview {
+            visibility: visible;
+            opacity: 1;
+        }
+        
+        .modal { max-width: 1500px; }
     </style>
 </head>
 <body>
     <div class="page-wrapper">
         <main class="main-container">
-            <section class="page-header">
-                <div class="breadcrumb" id="breadcrumbContainer"></div>
-                <h1 class="page-title">Portföy</h1>
-                <p class="page-subtitle">Tüm fikri mülkiyet kayıtlarınızı görüntüleyin ve yönetin.</p>
-            </section>
+            <section class="page-header"></section>
     
             <div class="portfolio-tabs">
                 <button class="tab-btn active" data-type="all">Hepsi</button>
@@ -134,12 +102,11 @@
 
             <div class="portfolio-controls">
                 <div class="filter-group">
-                    <label class="filter-label" for="archiveFilter">Görünüm:</label>
-                    <select id="archiveFilter" class="filter-select">
-                        <option value="active">Aktif Kayıtlar</option>
-                        <option value="archived">Arşivlenmiş Kayıtlar</option>
-                        <option value="all">Tümü</option>
-                    </select>
+                    <label class="switch-label" for="archiveToggle">Arşivlenmişleri Göster:</label>
+                    <label class="switch">
+                        <input type="checkbox" id="archiveToggle">
+                        <span class="slider round"></span>
+                    </label>
                 </div>
                 <button class="btn btn-primary" id="exportBtn">CSV İndir</button>
             </div>
@@ -147,33 +114,11 @@
             <div class="portfolio-table-container">
                 <table class="portfolio-table" id="portfolioTable">
                     </table>
-                <div id="loadingIndicator" class="loading">
-                    <div class="loading-spinner"></div>
-                </div>
-                 <div id="noRecords" class="no-records">
-                    <h3>Filtrelerinize uygun kayıt bulunamadı.</h3>
-                </div>
+                <div id="loadingIndicator" class="loading"></div>
+                 <div id="noRecords" class="no-records"></div>
             </div>
-
-            <div id="pagination" class="pagination">
-                <button id="prevPageBtn" disabled>Önceki</button>
-                <span id="paginationInfo">Sayfa 1 / 1</span>
-                <button id="nextPageBtn" disabled>Sonraki</button>
-            </div>
-
-            <div id="detailModal" class="modal">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h3 class="modal-title" id="modalTitle"></h3>
-                        <button class="close-btn" id="closeDetailModal">&times;</button>
-                    </div>
-                    <div class="modal-body" id="modalBody"></div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" id="closeModalBtn">Kapat</button>
-                        <button type="button" class="btn btn-primary" id="editRecordFromModalBtn">Düzenle</button>
-                    </div>
-                </div>
-            </div>
+            <div id="pagination" class="pagination"></div>
+            <div id="detailModal" class="modal"></div>
         </main>
     </div>
 
@@ -218,7 +163,8 @@
                     });
                 });
                 
-                document.getElementById('archiveFilter').addEventListener('change', () => this.applyFilters());
+                document.getElementById('archiveToggle').addEventListener('change', () => this.applyFilters());
+                
                 document.getElementById('exportBtn').addEventListener('click', () => this.exportData());
                 document.getElementById('closeDetailModal').addEventListener('click', () => this.closeModal('detailModal'));
                 document.getElementById('closeModalBtn').addEventListener('click', () => this.closeModal('detailModal'));
@@ -246,7 +192,7 @@
             }
 
             applyFilters = () => {
-                const archiveFilter = document.getElementById('archiveFilter').value;
+                const showArchived = document.getElementById('archiveToggle').checked;
 
                 this.filteredRecords = this.records.filter(record => {
                     if (record.type === 'copyright') return false;
@@ -258,7 +204,9 @@
                     else if (tabType === 'lawsuit') typeMatch = record.hasLawsuit === true;
                     else typeMatch = record.type === tabType;
 
-                    const archiveMatch = archiveFilter === 'all' || (archiveFilter === 'active' && !record.isArchived) || (archiveFilter === 'archived' && record.isArchived);
+                    if (!showArchived && record.isArchived) {
+                        return false;
+                    }
                     
                     const columnFilterMatch = Object.entries(this.columnFilters).every(([column, filterValue]) => {
                         if (!filterValue) return true;
@@ -275,7 +223,7 @@
                         return recordValue.toString().toLowerCase().includes(lowerFilterValue);
                     });
 
-                    return typeMatch && archiveMatch && columnFilterMatch;
+                    return typeMatch && columnFilterMatch;
                 });
                 this.sortRecords();
                 this.goToPage(1);
@@ -373,7 +321,17 @@
                         let cellContent = '';
                         switch (h.key) {
                             case 'trademarkImage':
-                                cellContent = record.trademarkImage?.content ? `<img src="${record.trademarkImage.content}" class="trademark-image-thumb">` : '-';
+                                const imageUrl = record.trademarkImage?.content;
+                                if (imageUrl) {
+                                    cellContent = `
+                                        <div class="image-hover-container">
+                                            <img src="${imageUrl}" class="trademark-image-thumb">
+                                            <img src="${imageUrl}" class="trademark-image-preview">
+                                        </div>
+                                    `;
+                                } else {
+                                    cellContent = '-';
+                                }
                                 break;
                             case 'type':
                                 cellContent = `<span class="ip-type ${record.type}">${this.typeNames[record.type] || record.type}</span>`;
@@ -433,9 +391,9 @@
                 if (prevPageBtn) prevPageBtn.disabled = this.currentPage === 1;
                 if (nextPageBtn) nextPageBtn.disabled = this.currentPage === totalPages || totalPages === 0;
             }
-
+            
             viewRecord = (recordId) => {
-                const record = this.records.find(r => r.id === recordId);
+                 const record = this.records.find(r => r.id === recordId);
                 if (!record) return;
                 const modal = document.getElementById('detailModal');
                 const modalTitleEl = document.getElementById('modalTitle');
@@ -470,14 +428,13 @@
                     historyContentDiv.innerHTML = '<p style="text-align:center; padding: 20px;">Bu kayıt için işlem geçmişi bulunmamaktadır.</p>';
                     return;
                 }
-                const buildTreeHtml = (transactionsToBuild, isChild = false) => {
-                    let html = '';
-                    transactionsToBuild.forEach(tx => {
+                const buildTreeHtml = (transactionsToBuild) => {
+                    return transactionsToBuild.map(tx => {
                         const children = sortedTransactions.filter(childTx => childTx.parentId === tx.transactionId);
                         const hasChildren = children.length > 0;
                         const file = files?.find(f => f.id === tx.documentId);
                         const fileLink = file ? ` | <a href="${file.content}" download="${file.name}" class="transaction-file-link">📄 Belge</a>` : '';
-                        html += `
+                        return `
                             <div class="transaction-node" data-id="${tx.transactionId}">
                                 ${hasChildren ? `<button class="transaction-toggle-btn" data-target-id="${tx.transactionId}">+</button>` : ''}
                                 <div class="transaction-node-content">
@@ -485,10 +442,9 @@
                                     <div class="transaction-meta">${new Date(tx.timestamp).toLocaleString('tr-TR')} by ${tx.userEmail}${fileLink}</div>
                                 </div>
                             </div>
-                            ${hasChildren ? `<div class="child-transactions" id="children-of-${tx.transactionId}">${buildTreeHtml(children, true)}</div>` : ''}
+                            ${hasChildren ? `<div class="child-transactions" id="children-of-${tx.transactionId}">${buildTreeHtml(children)}</div>` : ''}
                         `;
-                    });
-                    return html;
+                    }).join('');
                 };
                 historyContentDiv.innerHTML = buildTreeHtml(sortedTransactions.filter(tx => !tx.parentId));
                 historyContentDiv.querySelectorAll('.transaction-toggle-btn').forEach(button => {
@@ -521,7 +477,8 @@
             }
 
             closeModal = (modalId) => {
-                document.getElementById(modalId).classList.remove('show');
+                const modal = document.getElementById(modalId);
+                if(modal) modal.classList.remove('show');
             }
             
             exportData = () => {
