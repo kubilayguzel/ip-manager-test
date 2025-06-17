@@ -62,8 +62,43 @@
         .image-upload-icon { font-size: 3em; color: #1e3c72; margin-bottom: 10px; }
 
         /* Hak Sahibi Seçimi */
-        .owner-selection-group { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 15px; }
+        .owner-selection-group { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 15px; position: relative; /* Arama sonuçları için */ }
         .owner-search-input { flex-grow: 1; padding: 8px 12px; border-radius: 8px; border: 1px solid #ccc; }
+        
+        /* Yeni: Ana formdaki arama sonuçları listesi */
+        .main-owner-search-results {
+            position: absolute;
+            top: 100%; /* Arama kutusunun hemen altında */
+            left: 0;
+            right: 0;
+            z-index: 100; /* Diğer elementlerin üzerinde */
+            background: white;
+            border: 1px solid #e1e8ed;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            max-height: 200px;
+            overflow-y: auto;
+            display: none; /* Varsayılan olarak gizli */
+        }
+        .main-owner-search-results.show {
+            display: block;
+        }
+        .main-owner-search-item {
+            padding: 10px 15px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .main-owner-search-item:last-child {
+            border-bottom: none;
+        }
+        .main-owner-search-item:hover {
+            background-color: #f0f4f8;
+        }
+
+
         .owner-list-container { max-height: 150px; overflow-y: auto; border: 1px solid #e1e8ed; border-radius: 8px; background: white; margin-top: 10px; }
         .owner-list-item { padding: 10px 15px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
         .owner-list-item:hover { background-color: #f0f4f8; }
@@ -227,6 +262,7 @@
                         <label class="form-label">Hak Sahipleri:</label>
                         <div class="owner-selection-group">
                             <input type="text" id="ownerSearchInput" class="owner-search-input" placeholder="Hak Sahibi Ara...">
+                            <div id="mainOwnerSearchResults" class="main-owner-search-results"></div> 
                             <button type="button" class="btn btn-secondary btn-small" id="searchOwnerBtn">Ara</button>
                             <button type="button" class="btn btn-primary btn-small" id="addPersonToOwnerBtn">Yeni Kişi Ekle</button>
                         </div>
@@ -355,7 +391,6 @@
         import { showNotification, readFileAsDataURL } from './utils.js';
         import { loadSharedLayout } from './js/layout-loader.js';
 
-        // Türkiye illeri ve bazı ülkeler (persons.html'den kopyalandı)
         const citiesByCountry = {
             "Türkiye": [
                 "Adana", "Adıyaman", "Afyonkarahisar", "Ağrı", "Amasya", "Ankara", "Antalya", "Artvin",
@@ -367,10 +402,9 @@
                 "Manisa", "Mardin", "Mersin", "Muğla", "Muş", "Nevşehir", "Niğde", "Ordu", "Osmaniye",
                 "Rize", "Sakarya", "Samsun", "Şanlıurfa", "Siirt", "Sinop", "Sivas", "Şırnak", "Tekirdağ",
                 "Tokat", "Trabzon", "Tunceli", "Uşak", "Van", "Yalova", "Yozgat", "Zonguldak"
-            ].sort(), // Alfabetik sıralama
+            ].sort(),
             "ABD": ["New York", "California", "Texas", "Florida"].sort(),
             "Almanya": ["Berlin", "Bavyera", "Hamburg"].sort(),
-            // Diğer ülkeleri ve illerini buraya ekleyebilirsiniz
         };
 
         class DataEntryModule {
@@ -380,10 +414,6 @@
                 this.uploadedImage = null;
                 this.selectedOwners = [];
                 this.allPersons = [];
-
-                // Tüm metotları sınıf özelliği olarak arrow fonksiyon şeklinde tanımlıyoruz.
-                // Bu, 'this' bağlamının her zaman sınıf örneğine bağlanmasını sağlar.
-                // Constructor içinde bind etmeye gerek kalmaz.
             }
 
             async init() {
@@ -398,7 +428,7 @@
 
                 await this.loadInitialData();
                 this.setupEventListeners();
-                this.populateStatusOptions(); // İlk yüklemede durumları doldur
+                this.populateStatusOptions();
                 
                 if (this.recordId) {
                     await this.loadRecordForEdit(this.recordId);
@@ -417,9 +447,6 @@
             }
 
             setupEventListeners() {
-                // Event listener'lara doğrudan sınıf metotlarını atarken arrow fonksiyonlarını kullanın
-                // veya metotları sınıf özelliği arrow fonksiyonu olarak tanımlayın.
-                // Aşağıdaki metotlar artık sınıf özelliği arrow fonksiyonlar olduğu için doğrudan referans verilebilir.
                 document.getElementById('type').addEventListener('change', (e) => this.handleTypeChange(e.target.value));
                 document.getElementById('recordForm').addEventListener('submit', (e) => this.handleSubmit(e));
                 document.getElementById('cancelRecordBtn').addEventListener('click', () => {
@@ -439,7 +466,6 @@
                 document.getElementById('cancelSearchPersonModal').addEventListener('click', this.hideSearchPersonModal);
                 document.getElementById('modalPersonSearchInput').addEventListener('keyup', this.searchPersons);
                 
-                // Hak sahibi arama sonuçları modalındaki "Ekle" butonuna tıklama olayı
                 document.getElementById('modalSearchResults').addEventListener('click', (e) => {
                     const addButton = e.target.closest('button.btn-primary.btn-small');
                     if (addButton) {
@@ -470,9 +496,41 @@
                         this.removeOwner(personIdToRemove);
                     }
                 });
+
+                // Yeni: Ana formdaki ownerSearchInput için arama ve seçim işlevselliği
+                const ownerSearchInput = document.getElementById('ownerSearchInput');
+                const mainOwnerSearchResults = document.getElementById('mainOwnerSearchResults');
+
+                ownerSearchInput.addEventListener('input', () => this.searchMainOwners(ownerSearchInput.value));
+                
+                // Input alanından focus kaybedildiğinde veya tıklama dışında gizle
+                ownerSearchInput.addEventListener('blur', () => {
+                    setTimeout(() => { // Tıklama olayının tetiklenmesine izin vermek için kısa bir gecikme
+                        mainOwnerSearchResults.classList.remove('show');
+                    }, 200);
+                });
+                ownerSearchInput.addEventListener('focus', () => {
+                    // Odaklandığında eğer arama terimi varsa tekrar göster
+                    if (ownerSearchInput.value.trim().length > 0) {
+                        this.searchMainOwners(ownerSearchInput.value);
+                    }
+                });
+
+                mainOwnerSearchResults.addEventListener('click', (e) => {
+                    const selectedItem = e.target.closest('.main-owner-search-item');
+                    if (selectedItem) {
+                        const personId = selectedItem.dataset.id;
+                        const person = this.allPersons.find(p => p.id === personId);
+                        if (person) {
+                            this.addOwnerToGrid(person);
+                            ownerSearchInput.value = ''; // Seçtikten sonra input'u temizle
+                            mainOwnerSearchResults.classList.remove('show'); // Sonuçları gizle
+                        }
+                    }
+                });
             }
 
-            populateStatusOptions = (type = document.getElementById('type').value) => { // Default değer ile arrow function yapıldı
+            populateStatusOptions = (type = document.getElementById('type').value) => {
                 const statusSelect = document.getElementById('status');
                 statusSelect.innerHTML = '<option value="">Durum Seçin</option>';
 
@@ -595,7 +653,7 @@
                 });
             }
 
-            addOwnerToGrid = (person) => { // Arrow function yapıldı
+            addOwnerToGrid = (person) => { 
                 if (!this.selectedOwners.some(owner => owner.id === person.id)) {
                     this.selectedOwners.push({ id: person.id });
                     this.renderOwnerList();
@@ -651,6 +709,45 @@
                 });
             }
 
+            // Yeni: Ana formdaki arama işlevi
+            searchMainOwners = (searchTerm) => {
+                searchTerm = searchTerm.toLowerCase();
+                const mainOwnerSearchResults = document.getElementById('mainOwnerSearchResults');
+                mainOwnerSearchResults.innerHTML = '';
+
+                if (searchTerm.length < 2) { // 2 karakterden kısa ise arama yapma
+                    mainOwnerSearchResults.classList.remove('show');
+                    return;
+                }
+
+                const filtered = this.allPersons.filter(person => {
+                    const name = (person.name || '').toLowerCase(); 
+                    const email = (person.email || '').toLowerCase();
+                    const phone = (person.phone || ''); 
+
+                    return name.includes(searchTerm) ||
+                           email.includes(searchTerm) ||
+                           phone.includes(searchTerm);
+                });
+
+                if (filtered.length === 0) {
+                    mainOwnerSearchResults.innerHTML = '<p style="padding: 10px; text-align: center; color: #666;">Sonuç bulunamadı.</p>';
+                    mainOwnerSearchResults.classList.add('show');
+                    return;
+                }
+
+                filtered.forEach(person => {
+                    const item = document.createElement('div');
+                    item.className = 'main-owner-search-item'; // Yeni stil sınıfı
+                    item.dataset.id = person.id;
+                    const displayName = person.personType === 'real' ? `${person.firstName || ''} ${person.lastName || ''}`.trim() : person.companyName || '';
+                    item.innerHTML = `<span>${displayName} (${person.email || ''})</span>`;
+                    mainOwnerSearchResults.appendChild(item);
+                });
+                mainOwnerSearchResults.classList.add('show');
+            }
+
+
             showAddPersonModal = () => { 
                 document.getElementById('addPersonModal').classList.add('show');
                 document.getElementById('addPersonForm').reset();
@@ -701,7 +798,7 @@
                 document.querySelectorAll('#addPersonModal .form-input, #addPersonModal .form-select, #addPersonModal .form-textarea').forEach(el => el.classList.remove('error-field'));
             }
 
-            savePerson = async (e) => { // savePerson da arrow function yapıldı
+            savePerson = async (e) => { 
                 e.preventDefault();
 
                 document.getElementById('saveNewPersonBtn').disabled = true;
@@ -744,7 +841,7 @@
                 }
             }
 
-            loadRecordForEdit = async (recordId) => { // loadRecordForEdit de arrow function yapıldı
+            loadRecordForEdit = async (recordId) => { 
                 const result = await ipRecordsService.getRecords();
                 if (result.success) {
                     const record = result.data.find(r => r.id === recordId);
@@ -760,7 +857,7 @@
                 }
             }
 
-            fillFormWithRecordData = (record) => { // fillFormWithRecordData de arrow function yapıldı
+            fillFormWithRecordData = (record) => { 
                 document.getElementById('type').value = record.type;
                 this.handleTypeChange(record.type);
                 document.getElementById('title').value = record.title;
@@ -797,7 +894,7 @@
                 this.renderOwnerList();
             }
 
-            resetForm = () => { // resetForm de arrow function yapıldı
+            resetForm = () => { 
                 document.getElementById('recordForm').reset();
                 this.selectedType = null;
                 this.recordId = null;
@@ -813,12 +910,12 @@
                 document.getElementById('saveRecordBtn').textContent = 'Kaydet';
             }
 
-            clearErrorMessages = () => { // clearErrorMessages de arrow function yapıldı
+            clearErrorMessages = () => { 
                 document.querySelectorAll('.error-message').forEach(el => el.textContent = '');
                 document.querySelectorAll('.form-input, .form-select, .form-textarea').forEach(el => el.classList.remove('error-field'));
             }
 
-            getFormData = () => { // getFormData de arrow function yapıldı
+            getFormData = () => { 
                 const formData = {
                     type: this.selectedType,
                     title: document.getElementById('title').value.trim(),
@@ -848,7 +945,7 @@
                 return formData;
             }
 
-            handleSubmit = async (event) => { // handleSubmit de arrow function yapıldı
+            handleSubmit = async (event) => { 
                 event.preventDefault();
 
                 document.getElementById('saveRecordBtn').disabled = true;
