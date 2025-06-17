@@ -33,9 +33,8 @@
             flex-wrap: wrap; gap: 20px;
         }
         .filter-group { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-        .filter-label { font-weight: 500; }
         
-        /* YENİ: TOGGLE SWITCH STİLLERİ */
+        /* TOGGLE SWITCH STİLLERİ */
         .switch-label { font-weight: 500; margin-right: 5px; }
         .switch { position: relative; display: inline-block; width: 50px; height: 24px; }
         .switch input { opacity: 0; width: 0; height: 0; }
@@ -54,7 +53,7 @@
         #filter-row th { padding: 8px; background-color: #f8f9fa; }
         .column-filter { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; }
 
-        /* YENİ: MARKA GÖRSELİ ÖNİZLEME STİLLERİ */
+        /* MARKA GÖRSELİ ÖNİZLEME STİLLERİ */
         .image-hover-container {
             position: relative;
             display: flex;
@@ -68,7 +67,7 @@
         .trademark-image-preview {
             visibility: hidden; opacity: 0;
             position: absolute; z-index: 100;
-            bottom: 110%; /* Resmin biraz üstünde başla */
+            bottom: 110%;
             left: 50%;
             transform: translateX(-50%);
             width: 200px; height: 200px;
@@ -89,7 +88,11 @@
 <body>
     <div class="page-wrapper">
         <main class="main-container">
-            <section class="page-header"></section>
+            <section class="page-header">
+                <div class="breadcrumb" id="breadcrumbContainer"></div>
+                <h1 class="page-title">Portföy</h1>
+                <p class="page-subtitle">Tüm fikri mülkiyet kayıtlarınızı görüntüleyin ve yönetin.</p>
+            </section>
     
             <div class="portfolio-tabs">
                 <button class="tab-btn active" data-type="all">Hepsi</button>
@@ -114,11 +117,31 @@
             <div class="portfolio-table-container">
                 <table class="portfolio-table" id="portfolioTable">
                     </table>
-                <div id="loadingIndicator" class="loading"></div>
-                 <div id="noRecords" class="no-records"></div>
+                <div id="loadingIndicator" class="loading">
+                    <div class="loading-spinner"></div>
+                </div>
+                 <div id="noRecords" class="no-records">
+                    <h3>Filtrelerinize uygun kayıt bulunamadı.</h3>
+                </div>
             </div>
-            <div id="pagination" class="pagination"></div>
-            <div id="detailModal" class="modal"></div>
+            <div id="pagination" class="pagination">
+                <button id="prevPageBtn" disabled>Önceki</button>
+                <span id="paginationInfo">Sayfa 1 / 1</span>
+                <button id="nextPageBtn" disabled>Sonraki</button>
+            </div>
+            <div id="detailModal" class="modal">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3 class="modal-title" id="modalTitle"></h3>
+                        <button class="close-btn" id="closeDetailModal">&times;</button>
+                    </div>
+                    <div class="modal-body" id="modalBody"></div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" id="closeModalBtn">Kapat</button>
+                        <button type="button" class="btn btn-primary" id="editRecordFromModalBtn">Düzenle</button>
+                    </div>
+                </div>
+            </div>
         </main>
     </div>
 
@@ -163,17 +186,44 @@
                     });
                 });
                 
-                document.getElementById('archiveToggle').addEventListener('change', () => this.applyFilters());
+                // --- HATA DÜZELTMESİ: IF KONTROLÜ EKLENDİ ---
+                const archiveToggleEl = document.getElementById('archiveToggle');
+                if (archiveToggleEl) {
+                    archiveToggleEl.addEventListener('change', () => this.applyFilters());
+                }
+
+                const exportBtnEl = document.getElementById('exportBtn');
+                if (exportBtnEl) {
+                    exportBtnEl.addEventListener('click', () => this.exportData());
+                }
+
+                const closeDetailModalEl = document.getElementById('closeDetailModal');
+                if (closeDetailModalEl) {
+                    closeDetailModalEl.addEventListener('click', () => this.closeModal('detailModal'));
+                }
+
+                const closeModalBtnEl = document.getElementById('closeModalBtn');
+                if (closeModalBtnEl) {
+                    closeModalBtnEl.addEventListener('click', () => this.closeModal('detailModal'));
+                }
                 
-                document.getElementById('exportBtn').addEventListener('click', () => this.exportData());
-                document.getElementById('closeDetailModal').addEventListener('click', () => this.closeModal('detailModal'));
-                document.getElementById('closeModalBtn').addEventListener('click', () => this.closeModal('detailModal'));
-                document.getElementById('editRecordFromModalBtn').addEventListener('click', () => {
-                    const recordId = document.getElementById('modalTitle').dataset.recordId;
-                    if (recordId) window.location.href = `data-entry.html?id=${recordId}`;
-                });
-                document.getElementById('prevPageBtn').addEventListener('click', () => this.goToPage(this.currentPage - 1));
-                document.getElementById('nextPageBtn').addEventListener('click', () => this.goToPage(this.currentPage + 1));
+                const editRecordFromModalBtnEl = document.getElementById('editRecordFromModalBtn');
+                if(editRecordFromModalBtnEl) {
+                    editRecordFromModalBtnEl.addEventListener('click', () => {
+                        const recordId = document.getElementById('modalTitle').dataset.recordId;
+                        if (recordId) window.location.href = `data-entry.html?id=${recordId}`;
+                    });
+                }
+                
+                const prevPageBtnEl = document.getElementById('prevPageBtn');
+                if(prevPageBtnEl) {
+                    prevPageBtnEl.addEventListener('click', () => this.goToPage(this.currentPage - 1));
+                }
+
+                const nextPageBtnEl = document.getElementById('nextPageBtn');
+                if(nextPageBtnEl) {
+                    nextPageBtnEl.addEventListener('click', () => this.goToPage(this.currentPage + 1));
+                }
             }
 
             async loadRecords() {
@@ -192,7 +242,8 @@
             }
 
             applyFilters = () => {
-                const showArchived = document.getElementById('archiveToggle').checked;
+                const archiveToggleEl = document.getElementById('archiveToggle');
+                const showArchived = archiveToggleEl ? archiveToggleEl.checked : false;
 
                 this.filteredRecords = this.records.filter(record => {
                     if (record.type === 'copyright') return false;
