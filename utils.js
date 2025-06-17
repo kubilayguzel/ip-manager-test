@@ -109,10 +109,33 @@ export function formatFileSize(bytes) {
 }
 
 /**
+ * Belirli bir form alanında hata mesajı gösterir ve alanı vurgular.
+ * @param {string} fieldId - Hata gösterilecek alanın ID'si.
+ * @param {string} message - Gösterilecek hata mesajı.
+ */
+export function showFieldError(fieldId, message) {
+    const field = document.getElementById(fieldId);
+    // Hata mesajı elementi `fieldId` + "Error" olarak varsayılır. Örn: "email" -> "emailError"
+    const errorElement = document.getElementById(`${fieldId}Error`);
+
+    if (field) {
+        field.classList.add('error-field');
+    }
+    if (errorElement) {
+        errorElement.textContent = message;
+        errorElement.style.display = 'block';
+    }
+}
+
+/**
  * Formlardaki tüm hata mesajlarını ve alan vurgularını temizler.
- * BU FONKSİYON YENİDEN EKLENDİ.
  */
 export function clearAllFieldErrors() {
-    document.querySelectorAll('.error-message').forEach(el => el.textContent = '');
-    document.querySelectorAll('.form-input.error-field, .form-select.error-field').forEach(el => el.classList.remove('error-field'));
+    document.querySelectorAll('.error-message').forEach(el => {
+        el.textContent = '';
+        el.style.display = 'none';
+    });
+    document.querySelectorAll('.form-input.error-field, .form-select.error-field').forEach(el => {
+        el.classList.remove('error-field');
+    });
 }
