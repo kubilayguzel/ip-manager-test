@@ -113,6 +113,47 @@
         .trademark-image-thumb-container:hover .trademark-image-preview-large {
             transform: translateX(-50%) scale(1);
         }
+
+        /* Akordiyon stilindeki işlem geçmişi elemanları */
+        .transaction-node {
+            position: relative;
+            padding: 8px 0 8px 25px; /* Ok işareti için soldan boşluk */
+            border-bottom: 1px dashed #eee;
+        }
+        .transaction-node:last-child {
+            border-bottom: none;
+        }
+        .transaction-toggle-btn {
+            position: absolute;
+            left: 0;
+            top: 10px;
+            background: #e9ecef;
+            border: none;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            font-size: 1em;
+            font-weight: bold;
+            line-height: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: background 0.2s ease, transform 0.2s ease;
+        }
+        .transaction-toggle-btn:hover {
+            background: #d0d0d0;
+        }
+        .transaction-toggle-btn.expanded {
+            transform: rotate(45deg); /* Açıkken artı işaretini çarpıya çevir */
+        }
+        .child-transactions {
+            margin-left: 20px; /* İç içe geçmiş öğeler için girinti */
+            padding: 15px;
+            border-left: 2px solid #1e3c72; /* Çocuk işlemler için dikey çizgi */
+            display: none; /* Varsayılan olarak gizli */
+        }
+        .child-transactions.show {
+            display: block;
+        }
     </style>
 </head>
 <body>
@@ -278,7 +319,7 @@
             populateStatusFilter = (type) => {
                 const statusFilterSelect = document.getElementById('statusFilter');
                 if (!statusFilterSelect) return;
-                statusFilterSelect.innerHTML = '<option value="all">Tümü</option>';
+                statusFilterSelect.innerHTML = '<option value="">Tümü</option>';
 
                 const allStatuses = {
                     'patent': [
@@ -616,23 +657,60 @@
                 noTransactionsDiv.style.display = 'none';
                 historyContentDiv.style.display = 'block';
 
+                // Parent-child ilişkisini gösteren akordeon yapısını oluştur
+                const transactionsMap = new Map(sortedTransactions.map(tx => [tx.transactionId, tx]));
+                const childrenMap = new Map();
+
                 sortedTransactions.forEach(tx => {
-                    const file = files?.find(f => f.id === tx.documentId);
-                    const fileLink = file ? `<a href="${file.content}" target="_blank" class="transaction-file-link">${file.name}</a>` : '';
-                    historyContentDiv.innerHTML += `
-                        <div class="transaction-item">
-                            <div class="transaction-icon">📜</div>
-                            <div class="transaction-content">
-                                <div class="transaction-header">
-                                    <span class="transaction-title">${tx.type || 'Bilinmeyen İşlem'}</span>
-                                    <span class="transaction-meta">${new Date(tx.timestamp).toLocaleString('tr-TR')}</div>
-                                </div>
-                                <div class="transaction-description">${tx.description || '-'}</div>
-                                ${fileLink}
-                            </div>
-                        </div>
-                    `;
+                    if (tx.parentId && transactionsMap.has(tx.parentId)) {
+                        if (!childrenMap.has(tx.parentId)) childrenMap.set(tx.parentId, []);
+                        childrenMap.get(tx.parentId).push(tx);
+                    }
                 });
+
+                const buildTreeHtml = (transactionsToBuild) => {
+                    let html = '';
+                    transactionsToBuild.forEach(tx => {
+                        const children = childrenMap.get(tx.transactionId) || [];
+                        const hasChildren = children.length > 0;
+                        let documentLinkHtml = '';
+                        if (tx.documentId && files) {
+                            const relatedFile = files.find(file => file.id === tx.documentId);
+                            if (relatedFile) documentLinkHtml = ` | <a href="${relatedFile.content}" download="${relatedFile.name}" class="transaction-file-link">📄 Belge</a>`;
+                        }
+                        html += `
+                            <div class="transaction-node" data-id="${tx.transactionId}">
+                                ${hasChildren ? `<button class="transaction-toggle-btn" data-target-id="${tx.transactionId}">+</button>` : ''}
+                                <div class="transaction-node-content">
+                                    <div class="transaction-info">
+                                        <div class="transaction-description">${tx.description || tx.type}</div> 
+                                        <div class="transaction-meta">${new Date(tx.timestamp).toLocaleString('tr-TR')} by ${tx.userEmail}${documentLinkHtml}</div>
+                                    </div>
+                                    <div class="transaction-actions">
+                                        </div>
+                                </div>
+                            </div>
+                            ${hasChildren ? `<div class="child-transactions" id="children-of-${tx.transactionId}">${buildTreeHtml(children)}</div>` : ''}`;
+                    });
+                    return html;
+                };
+
+                const rootTransactions = sortedTransactions.filter(tx => !tx.parentId || !transactionsMap.has(tx.parentId));
+                historyContentDiv.innerHTML = buildTreeHtml(rootTransactions);
+
+                // Akordiyon butonlarına event listener ekle
+                historyContentDiv.querySelectorAll('.transaction-toggle-btn').forEach(button => {
+                    button.addEventListener('click', () => {
+                        const targetId = button.dataset.targetId;
+                        const childContainer = document.getElementById(`children-of-${targetId}`);
+                        if (childContainer) {
+                            childContainer.classList.toggle('show');
+                            button.classList.toggle('expanded');
+                            button.textContent = childContainer.classList.contains('show') ? '−' : '+'; // Buton metnini değiştir
+                        }
+                    });
+                });
+
                 if (historyModal) historyModal.classList.add('show');
             }
 
