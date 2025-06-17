@@ -304,9 +304,10 @@
     </div>
 
     <script type="module">
-        import { authService, ipRecordsService, personsService, auth } from './firebase-config.js';
-        import { showNotification, readFileAsDataURL } from './utils.js';
-        import { loadSharedLayout } from './js/layout-loader.js';
+    import { authService, ipRecordsService, personsService, auth } from './firebase-config.js';
+    // STATUSES ve TYPE_NAMES artık utils.js'den import ediliyor
+    import { showNotification, readFileAsDataURL, STATUSES } from './utils.js';
+    import { loadSharedLayout } from './js/layout-loader.js';
     
         class DataEntryModule {
             constructor() {
@@ -450,17 +451,11 @@
                 const statusSelect = document.getElementById('status');
                 statusSelect.innerHTML = '<option value="">Durum Seçin</option>';
     
-                const statuses = {
-                    patent: ['Başvuru', 'Yayınlandı', 'Onaylandı', 'Reddedildi', 'Süresi Doldu'],
-                    trademark: ['Başvuru', 'Yayınlandı', 'Tescilli', 'Reddedildi', 'Kısmi Ret', 'Yenilenmedi', 'İtiraz Geldi', 'İtiraz Edildi', 'Başvuru Geçersiz/Hükümsüz', 'Yenilememe Nedeniyle Geçersiz'],
-                    copyright: ['Beklemede', 'Tescilli', 'Süresi Doldu'],
-                    design: ['Başvuru', 'Yayınlandı', 'Onaylandı', 'Reddedildi', 'Süresi Doldu']
-                };
-    
-                const options = statuses[this.selectedType] || [];
-                options.forEach(option => {
-                    const value = option.toLowerCase().replace(/ /g, '_').replace(/\//g, '_');
-                    statusSelect.add(new Option(option, value));
+   
+            // Seçenekler artık merkezi yerden alınıyor
+            const options = STATUSES[this.selectedType] || [];
+            options.forEach(status => {
+                statusSelect.add(new Option(status.text, status.value));
                 });
             }
     
