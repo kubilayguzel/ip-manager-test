@@ -459,21 +459,20 @@ export const ipRecordsService = {
             const snapshot = await getDocs(q);
             let records = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
 
-            // --- DEĞİŞİKLİK BURADA BAŞLIYOR ---
-            // Tüm kişileri tek seferde çekelim (daha basit ve genelde performanslı bir çözüm)
-            const allPersonsSnapshot = await getDocs(collection(db, 'persons'));
-            const allPersonsMap = new Map();
+            // --- DÜZELTME BURADA BAŞLIYOR ---
+            // 'allPersonsMap' yerine 'allOwnersMap' olarak tanımlandı
+            const allOwnersMap = new Map(); 
+            const allPersonsSnapshot = await getDocs(collection(db, 'persons')); // Tüm kişileri çekiyoruz
             allPersonsSnapshot.forEach(personDoc => {
-                // Firestore belge ID'si (doc.id) ile kişinin kendi 'id' alanını (personDoc.data().id) eşleştirerek
-                // Map'e ekliyoruz. Daha önce personsService.addPerson'da belge ID'sini kişinin id'si olarak belirlemiştik.
-                allPersonsMap.set(personDoc.id, personDoc.data()); 
+                // allOwnersMap'e kişinin Firestore belge ID'si ile tüm verisini ekliyoruz
+                allOwnersMap.set(personDoc.id, personDoc.data()); 
             });
-            // --- DEĞİŞİKLİK BURADA BİTİYOR ---
+            // --- DÜZELTME BURADA BİTİYOR ---
 
             // Kayıtlardaki sahip bilgilerini zenginleştir
             records = records.map(record => {
                 const enrichedOwners = (record.owners || []).map(ownerRef => {
-                    // ownerRef.id, IP kaydında sakladığımız kişi ID'si
+                    // Artık 'allOwnersMap' doğru isimle kullanılıyor
                     const personData = allOwnersMap.get(ownerRef.id); 
                     // Eğer kişi verisi bulunursa, id'si ile birlikte tüm kişi objesini ekle
                     // Aksi takdirde, sadece orijinal referansı (id) bırak
