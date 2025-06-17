@@ -872,6 +872,16 @@ body {
     font-weight: 500;
     color: white;
 }
+.child-transactions {
+    margin-left: 25px;
+    padding-left: 15px;
+    border-left: 2px dashed #ccc;
+    display: none;
+}
+
+.child-transactions.show {
+    display: block;
+}
 
 .status-open { background-color: #007bff; }
 .status-in_progress { background-color: #ffc107; color: #212529; }
@@ -887,3 +897,4 @@ body {
 .status-badge.rejected, .status-badge.refused, .status-badge.partial_refusal { background: #f8d7da; color: #721c24; }
 .status-badge.expired, .status-badge.not_renewed, .status-badge.invalid_void { background: #e2e3e5; color: #383d41; }
 .status-badge.invalid_not_renewed { background-color: #e2e3e5; color: #383d41; } /* Yenilememe Nedeniyle Geçersiz için */
+
