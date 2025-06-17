@@ -723,7 +723,7 @@
             const childContainer = document.getElementById(`children-of-${targetId}`);
             if (childContainer) {
                 const isOpen = childContainer.classList.toggle('show');
-                button.textContent = isOpen ? '−' : '+';
+                button.textContent = isOpen ? '-' : '+';
                 button.classList.toggle('expanded', isOpen);
             }
         });
