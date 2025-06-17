@@ -6,7 +6,6 @@
     <title>IP Manager - Yeni Kayıt</title>
     <link rel="stylesheet" href="css/shared-styles.css">
     <style>
-        /* BODY VE YENİ LAYOUT */
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             color: #333;
@@ -28,10 +27,8 @@
             margin: 0;
         }
         
-        /* ESKİ HEADER'ı GİZLE */
         body > .header { display: none; }
 
-        /* Sayfaya özel ana konteyner stilleri */
         .page-header { background: rgba(255, 255, 255, 0.95); padding: 30px; border-radius: 20px; margin-bottom: 30px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1); }
         .page-title { font-size: 2em; color: #1e3c72; margin-bottom: 10px; }
         .page-subtitle { color: #666; font-size: 1.1em; }
@@ -42,7 +39,6 @@
             padding: 30px;
         }
 
-        /* Form Stilleri */
         .form-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
@@ -89,12 +85,12 @@
         }
 
         .dynamic-fields {
-            display: none; /* Başlangıçta gizli */
+            display: none;
             animation: fadeIn 0.3s ease forwards;
         }
         
         .dynamic-fields.show {
-            display: grid; /* Gösterildiğinde grid yapısına döner */
+            display: grid;
         }
         
         @keyframes fadeIn {
@@ -102,24 +98,24 @@
             to { opacity: 1; transform: translateY(0); }
         }
 
+        /* BUTON DİZİLİMİ DÜZELTMESİ */
         .owner-selection-group {
             position: relative;
+            display: flex;
+            gap: 10px;
+            align-items: center;
         }
         
         .owner-search-input {
-            width: calc(100% - 220px); /* Butonlar için yer bırak */
-            padding: 12px 15px;
-            border: 2px solid #e1e8ed;
-            border-radius: 10px;
-            font-size: 1em;
-            margin-right: 10px;
+            flex-grow: 1; /* Arama kutusunun kalan boşluğu doldurmasını sağlar */
         }
         
         #mainOwnerSearchResults {
             position: absolute;
             top: 100%;
             left: 0;
-            width: calc(100% - 220px);
+            width: auto;
+            right: 220px; /* Butonların yaklaşık genişliği kadar boşluk bırakır */
             background: white;
             border: 1px solid #ddd;
             border-radius: 0 0 10px 10px;
@@ -157,30 +153,23 @@
         }
         
         .owner-tag .remove-owner {
-            background: none;
-            border: none;
-            color: #6c757d;
-            cursor: pointer;
-            margin-left: 10px;
-            font-size: 1.2em;
-            line-height: 1;
+            background: none; border: none; color: #6c757d;
+            cursor: pointer; margin-left: 10px; font-size: 1.2em; line-height: 1;
         }
         
+        /* BUTON DİZİLİMİ DÜZELTMESİ */
         .form-actions {
-            text-align: right;
+            display: flex;
+            justify-content: flex-end; /* Butonları sağa hizalar */
+            gap: 10px; /* Butonlar arasına boşluk ekler */
             padding-top: 20px;
             border-top: 1px solid #e9ecef;
             margin-top: 20px;
         }
         
-        /* Image Upload Area */
         .image-upload-area {
-            border: 2px dashed #e1e8ed;
-            border-radius: 10px;
-            padding: 30px;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.3s ease;
+            border: 2px dashed #e1e8ed; border-radius: 10px; padding: 30px;
+            text-align: center; cursor: pointer; transition: all 0.3s ease;
         }
         
         .image-upload-area:hover, .image-upload-area.drag-over {
@@ -188,17 +177,11 @@
             background-color: #f8f9fa;
         }
         
-        .image-upload-icon {
-            font-size: 2.5em;
-            color: #6c757d;
-        }
+        .image-upload-icon { font-size: 2.5em; color: #6c757d; }
         
         .image-preview {
-            max-width: 200px;
-            max-height: 200px;
-            margin-top: 15px;
-            border-radius: 10px;
-            border: 2px solid #e1e8ed;
+            max-width: 200px; max-height: 200px; margin-top: 15px;
+            border-radius: 10px; border: 2px solid #e1e8ed;
         }
     </style>
 </head>
@@ -302,17 +285,17 @@
                     <div class="form-group full-width">
                         <label class="form-label">Hak Sahipleri:</label>
                         <div class="owner-selection-group">
-                            <input type="text" id="ownerSearchInput" class="owner-search-input" placeholder="Hak Sahibi Ara...">
-                             <div id="mainOwnerSearchResults" class="main-owner-search-results"></div> 
+                            <input type="text" id="ownerSearchInput" class="form-input owner-search-input" placeholder="Hak Sahibi Ara...">
                             <button type="button" class="btn btn-secondary btn-small" id="searchOwnerBtn">Ara</button>
                             <button type="button" class="btn btn-primary btn-small" id="addPersonToOwnerBtn">Yeni Kişi Ekle</button>
+                            <div id="mainOwnerSearchResults" class="main-owner-search-results"></div> 
                         </div>
                         <div id="selectedOwnersGrid" class="owner-grid"></div>
                     </div>
                     
                     <div class="form-actions full-width">
-                        <button type="submit" class="btn btn-primary" id="saveRecordBtn">Kaydet</button>
                         <button type="button" class="btn btn-secondary" id="cancelRecordBtn">İptal</button>
+                        <button type="submit" class="btn btn-primary" id="saveRecordBtn">Kaydet</button>
                     </div>
                 </form>
             </div>
@@ -328,8 +311,8 @@
             constructor() {
                 this.selectedType = null;
                 this.recordId = null;
-                this.uploadedImage = null; // Holds the File object for new uploads
-                this.existingImageUrl = null; // Holds the URL for existing images
+                this.uploadedImage = null;
+                this.existingImageUrl = null;
                 this.selectedOwners = [];
                 this.allPersons = [];
             }
@@ -344,20 +327,19 @@
                 const urlParams = new URLSearchParams(window.location.search);
                 this.recordId = urlParams.get('id');
 
-                // DÜZENLEME MODU KONTROLÜ
                 if (this.recordId) {
                     document.querySelector('.page-title').textContent = 'Portföy Kaydı Güncelleme';
                     document.querySelector('.page-subtitle').textContent = 'Mevcut bir patent, marka, telif hakkı veya tasarım kaydını düzenleyin.';
                     document.getElementById('saveRecordBtn').textContent = 'Kaydı Güncelle';
                 } else {
                     document.querySelector('.page-title').textContent = 'Yeni Kayıt Ekle';
-                    document.querySelector('.page-subtitle').textContent = 'Yeni bir patent, marka, telif hakkı veya tasarım kaydı oluşturun.';
+                    document.querySelector('.page-subtitle').textContent = 'Yeni bir patent, marka, telif hakkı veya tasarım kaydını oluşturun.';
                     document.getElementById('saveRecordBtn').textContent = 'Kaydet';
                 }
     
                 await this.loadInitialData();
                 this.setupEventListeners();
-                this.populateStatusOptions(); // Initialize with no type
+                this.populateStatusOptions();
                 
                 if (this.recordId) {
                     await this.loadRecordForEdit(this.recordId);
@@ -380,12 +362,25 @@
                 document.getElementById('recordForm').addEventListener('submit', this.handleFormSubmit);
                 document.getElementById('cancelRecordBtn').addEventListener('click', () => window.history.back());
     
-                // Owner search and selection
                 const ownerSearchInput = document.getElementById('ownerSearchInput');
-                ownerSearchInput.addEventListener('keyup', this.handleOwnerSearch);
+                const searchButton = document.getElementById('searchOwnerBtn');
+
+                // "Ara" butonu için click dinleyicisi eklendi
+                if (searchButton) {
+                    searchButton.addEventListener('click', () => {
+                        this.performOwnerSearch(ownerSearchInput.value);
+                    });
+                }
+                
+                // Arama kutusuna yazarken de arama yapması için keyup dinleyicisi
+                if (ownerSearchInput) {
+                    ownerSearchInput.addEventListener('keyup', (event) => {
+                        this.performOwnerSearch(event.target.value);
+                    });
+                }
+
                 document.getElementById('addPersonToOwnerBtn').addEventListener('click', () => window.location.href = 'persons.html');
                 
-                // Event delegation for dynamically created search results
                 document.getElementById('mainOwnerSearchResults').addEventListener('click', (event) => {
                     if (event.target.classList.contains('search-result-item')) {
                         const personId = event.target.dataset.id;
@@ -394,6 +389,36 @@
                         document.getElementById('mainOwnerSearchResults').style.display = 'none';
                     }
                 });
+            }
+
+            // Arama mantığı bu fonksiyonda birleştirildi
+            performOwnerSearch = (searchTerm) => {
+                const lowerSearchTerm = searchTerm.toLowerCase();
+                const resultsContainer = document.getElementById('mainOwnerSearchResults');
+                resultsContainer.innerHTML = '';
+    
+                if (lowerSearchTerm.length < 1) { // 1 karakterden sonra aramaya başlasın
+                    resultsContainer.style.display = 'none';
+                    return;
+                }
+    
+                const filtered = this.allPersons.filter(person =>
+                    person.name.toLowerCase().includes(lowerSearchTerm) &&
+                    !this.selectedOwners.some(p => p.id === person.id) // Zaten ekli olanları gösterme
+                );
+    
+                if (filtered.length > 0) {
+                    filtered.forEach(person => {
+                        const item = document.createElement('div');
+                        item.classList.add('search-result-item');
+                        item.textContent = `${person.name} (${person.personType === 'real' ? 'Gerçek' : 'Tüzel'})`;
+                        item.dataset.id = person.id;
+                        resultsContainer.appendChild(item);
+                    });
+                    resultsContainer.style.display = 'block';
+                } else {
+                    resultsContainer.style.display = 'none';
+                }
             }
     
             handleTypeChange = (event) => {
@@ -404,10 +429,7 @@
     
             toggleDynamicFields() {
                 ['patentFields', 'trademarkFields', 'copyrightFields', 'designFields'].forEach(id => {
-                    const el = document.getElementById(id);
-                    if (el) {
-                        el.classList.remove('show');
-                    }
+                    document.getElementById(id).classList.remove('show');
                 });
     
                 if (this.selectedType) {
@@ -444,12 +466,11 @@
 
                 if (!uploadArea || !fileInput) return;
 
-                uploadArea.addEventListener('click', () => fileInput.click());
+                uploadArea.onclick = () => fileInput.click();
                 
                 ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
                     uploadArea.addEventListener(eventName, this.preventDefaults, false);
                 });
-
                 ['dragenter', 'dragover'].forEach(eventName => {
                     uploadArea.addEventListener(eventName, () => uploadArea.classList.add('drag-over'), false);
                 });
@@ -458,8 +479,8 @@
                 });
 
                 uploadArea.addEventListener('drop', this.handleImageDrop, false);
-                fileInput.addEventListener('change', this.handleImageSelect, false);
-                removeButton.addEventListener('click', this.removeImage, false);
+                fileInput.onchange = this.handleImageSelect;
+                removeButton.onclick = this.removeImage;
             }
     
             preventDefaults = (e) => {
@@ -470,18 +491,14 @@
             handleImageDrop = (e) => {
                 const dt = e.dataTransfer;
                 const files = dt.files;
-                if(files.length > 0) {
-                    this.handleImageFile(files[0]);
-                }
+                if(files.length > 0) this.handleImageFile(files[0]);
             }
             
             handleImageSelect = (e) => {
-                if(e.target.files.length > 0) {
-                    this.handleImageFile(e.target.files[0]);
-                }
+                if(e.target.files.length > 0) this.handleImageFile(e.target.files[0]);
             }
             
-            handleImageFile(file) {
+            handleImageFile = (file) => {
                 if(file && file.type.startsWith('image/')) {
                     this.uploadedImage = file;
                     this.displayImagePreview(file);
@@ -490,17 +507,14 @@
                 }
             }
             
-            displayImagePreview(fileOrUrl) {
+            displayImagePreview = (fileOrUrl) => {
                 const preview = document.getElementById('trademarkImagePreview');
                 const removeButton = document.getElementById('removeTrademarkImage');
-                
-                if (typeof fileOrUrl === 'string') { // URL
+                if (typeof fileOrUrl === 'string') {
                     preview.src = fileOrUrl;
-                } else { // File object
+                } else {
                     const reader = new FileReader();
-                    reader.onload = (e) => {
-                        preview.src = e.target.result;
-                    };
+                    reader.onload = (e) => { preview.src = e.target.result; };
                     reader.readAsDataURL(fileOrUrl);
                 }
                 preview.style.display = 'block';
@@ -511,41 +525,12 @@
                 const preview = document.getElementById('trademarkImagePreview');
                 const removeButton = document.getElementById('removeTrademarkImage');
                 const fileInput = document.getElementById('trademarkImage');
-
                 preview.src = '#';
                 preview.style.display = 'none';
                 removeButton.style.display = 'none';
-                fileInput.value = ''; // Reset file input
+                fileInput.value = '';
                 this.uploadedImage = null;
                 this.existingImageUrl = null;
-            }
-
-            handleOwnerSearch = (event) => {
-                const searchTerm = event.target.value.toLowerCase();
-                const resultsContainer = document.getElementById('mainOwnerSearchResults');
-                resultsContainer.innerHTML = '';
-    
-                if (searchTerm.length < 2) {
-                    resultsContainer.style.display = 'none';
-                    return;
-                }
-    
-                const filtered = this.allPersons.filter(person =>
-                    person.name.toLowerCase().includes(searchTerm)
-                );
-    
-                if (filtered.length > 0) {
-                    filtered.forEach(person => {
-                        const item = document.createElement('div');
-                        item.classList.add('search-result-item');
-                        item.textContent = `${person.name} (${person.personType === 'real' ? 'Gerçek' : 'Tüzel'})`;
-                        item.dataset.id = person.id;
-                        resultsContainer.appendChild(item);
-                    });
-                    resultsContainer.style.display = 'block';
-                } else {
-                    resultsContainer.style.display = 'none';
-                }
             }
     
             addOwner(personId) {
@@ -571,14 +556,9 @@
                 this.selectedOwners.forEach(person => {
                     const tag = document.createElement('div');
                     tag.classList.add('owner-tag');
-                    tag.innerHTML = `
-                        <span>${person.name}</span>
-                        <button type="button" class="remove-owner" data-id="${person.id}">&times;</button>
-                    `;
+                    tag.innerHTML = `<span>${person.name}</span><button type="button" class="remove-owner" data-id="${person.id}">&times;</button>`;
                     grid.appendChild(tag);
                 });
-    
-                // Add event listeners to new remove buttons
                 grid.querySelectorAll('.remove-owner').forEach(btn => {
                     btn.addEventListener('click', (e) => this.removeOwner(e.target.dataset.id));
                 });
@@ -601,22 +581,17 @@
                     this.selectedType = record.type;
                     this.toggleDynamicFields();
                     this.populateStatusOptions();
-    
-                    // Populate all form fields
                     Object.keys(record).forEach(key => {
                         const element = document.getElementById(key);
-                        if (element && element.tagName !== 'SELECT') {
-                           if(element.type !== 'file') element.value = record[key];
+                        if (element && element.tagName !== 'SELECT' && element.type !== 'file') {
+                           element.value = record[key];
                         }
                     });
-                    
                     if(record.status) document.getElementById('status').value = record.status;
-
                     if (record.trademarkImage) {
                         this.existingImageUrl = record.trademarkImage.content;
                         this.displayImagePreview(this.existingImageUrl);
                     }
-                    
                     if (record.owners) {
                         this.selectedOwners = record.owners;
                         this.renderSelectedOwners();
@@ -630,7 +605,6 @@
             handleFormSubmit = async (event) => {
                 event.preventDefault();
                 document.getElementById('saveRecordBtn').disabled = true;
-    
                 try {
                     const form = event.target;
                     const formData = {
@@ -644,7 +618,6 @@
                         owners: this.selectedOwners.map(p => ({ id: p.id, name: p.name, personType: p.personType })),
                         updatedAt: new Date().toISOString()
                     };
-    
                     if (form.type.value === 'patent') {
                         formData.patentClass = form.patentClass.value;
                         formData.renewalDatePatent = form.renewalDatePatent.value;
@@ -657,7 +630,6 @@
                         formData.designClass = form.designClass.value;
                         formData.renewalDateDesign = form.renewalDateDesign.value;
                     }
-
                     if (this.uploadedImage) {
                         formData.trademarkImage = await readFileAsDataURL(this.uploadedImage);
                     } else if (this.existingImageUrl) {
@@ -665,7 +637,6 @@
                     } else {
                         formData.trademarkImage = null;
                     }
-    
                     let result;
                     if (this.recordId) {
                         result = await ipRecordsService.updateRecord(this.recordId, formData);
@@ -674,13 +645,11 @@
                         result = await ipRecordsService.addRecord(formData);
                         showNotification('Kayıt başarıyla eklendi!', 'success');
                     }
-    
                     if (result.success) {
                         window.location.href = 'portfolio.html';
                     } else {
                         throw new Error(result.error);
                     }
-    
                 } catch (error) {
                     console.error('Kayıt kaydedilirken hata:', error);
                     showNotification('Kayıt kaydedilirken bir hata oluştu: ' + error.message, 'error');
@@ -693,7 +662,6 @@
         let dataEntryModule;
         document.addEventListener('DOMContentLoaded', async () => {
             await loadSharedLayout({ activeMenuLink: 'data-entry.html' });
-    
             auth.onAuthStateChanged(async (user) => {
                 if (user || authService.getCurrentUser()) {
                     if (!dataEntryModule) {
