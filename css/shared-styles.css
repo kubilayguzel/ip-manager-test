@@ -364,8 +364,8 @@ body {
 
 /* Belirli aksiyon buton renkleri */
 /* Task Management ve My Tasks'taki renkleri baz alalım */
-.action-btn.view-btn { background-color: #17a2b8; /* Bilgi / Mavi */ }
-.action-btn.view-btn:hover { background-color: #138496; }
+.action-btn.btn-view { background-color: #17a2b8; /* Bilgi / Mavi */ }
+.action-btn.btn-view:hover { background-color: #138496; }
 
 .action-btn.edit-btn { background-color: #ffc107; color: #212529; /* Uyarı / Sarı */ }
 .action-btn.edit-btn:hover { background-color: #e0a800; }
