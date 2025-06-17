@@ -27,7 +27,7 @@ body {
 .main-container {
     max-width: 100% !important; /* Tam genişlikte olmasını sağlar ve diğer stilleri ezer */
     margin: 0 !important;      /* Yatayda otomatik marjini kaldırır ve diğer stilleri ezer */
-    padding: 30px;  /* İç padding'i korur veya ayarlar */
+    padding: 30px; /* İç padding'i korur veya ayarlar */
 }
 
 /* Sol Menü (Sidebar) */
@@ -275,6 +275,7 @@ body {
     display: flex;
     align-items: center;
     gap: 8px;
+    justify-content: center; /* İçeriği ortala */
 }
 
 .btn-primary {
@@ -318,6 +319,7 @@ body {
     align-items: center;
     gap: 5px;
     box-shadow: 0 4px 8px rgba(0, 123, 255, 0.2); /* Hafif gölge */
+    justify-content: center; /* İçeriği ortala */
 }
 
 .btn-add-person:hover {
@@ -326,7 +328,8 @@ body {
     background: linear-gradient(45deg, #388E3C, #4CAF50);
 }
 
-.action-btn { /* Tablo içindeki aksiyon butonları */
+/* Tablo içindeki aksiyon butonları (Görüntüle, Düzenle, Sil) */
+.action-btn { 
     background: #6c757d;
     color: white;
     border: none;
@@ -335,19 +338,43 @@ body {
     cursor: pointer;
     transition: all 0.3s ease;
     margin-right: 5px;
+    font-size: 0.9em; /* Font boyutunu ayarla */
+    display: inline-flex; /* İkon ve metni hizalamak için */
+    align-items: center; /* Dikey hizalama */
+    justify-content: center; /* Yatay hizalama */
+    min-width: 35px; /* Küçük ikon butonları için minimum genişlik */
+    height: 35px; /* Küçük ikon butonları için yükseklik */
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1); /* Hafif gölge */
 }
 
-.action-btn.view-btn { background-color: #17a2b8; }
-.action-btn.view-btn:hover { background-color: #138496; }
+.action-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+}
+
+.action-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    box-shadow: none;
+    transform: none;
+}
+
+/* Belirli aksiyon buton renkleri */
+.action-btn.btn-view { background-color: #17a2b8; }
+.action-btn.btn-view:hover { background-color: #138496; }
+
 .action-btn.edit-btn { background-color: #ffc107; color: #212529; }
 .action-btn.edit-btn:hover { background-color: #e0a800; }
+
 .action-btn.delete-btn { background-color: #dc3545; }
 .action-btn.delete-btn:hover { background-color: #c82333; }
+
 .action-btn.complete-btn { background-color: #28a745; }
 .action-btn.complete-btn:hover { background-color: #218838; }
+
 .action-btn.add-accrual-btn { background-color: #28a745; }
 .action-btn.add-accrual-btn:hover { background-color: #218838; }
-.action-btn:disabled { background-color: #6c757d; opacity: 0.5; cursor: not-allowed; }
+
 .btn-reassign { background-color: #5a6268; }
 .btn-reassign:hover { background-color: #4a5258; }
 
@@ -672,8 +699,8 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    flex-shrink: 0; /* Küçülmesini engeller */
-    margin-left: 10px;
+    transition: background 0.3s ease;
+    flex-shrink: 0;
 }
 
 .remove-doc-btn:hover {
