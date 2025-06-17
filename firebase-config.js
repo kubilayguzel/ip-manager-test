@@ -451,20 +451,46 @@ export const ipRecordsService = {
         }
     },
     async getRecords() {
-        if (isFirebaseAvailable) {
-            const user = authService.getCurrentUser();
-            if(!user) return {success: true, data:[]};
-            try {
-                const q = user.role === 'superadmin' ? query(collection(db, 'ipRecords'), orderBy('createdAt', 'desc')) : query(collection(db, 'ipRecords'), where('userId', '==', user.uid), orderBy('createdAt', 'desc'));
-                const snapshot = await getDocs(q);
-                return { success: true, data: snapshot.docs.map(d => ({ id: d.id, ...d.data() })) };
-            } catch (error) {
-                console.error("Kayıtlar alınırken hata:", error);
-                return { success: false, error: error.message || "Kayıtlar yüklenirken beklenmeyen bir hata oluştu." };
-            }
+    if (isFirebaseAvailable) {
+        const user = authService.getCurrentUser();
+        if(!user) return {success: true, data:[]};
+        try {
+            const q = user.role === 'superadmin' ? query(collection(db, 'ipRecords'), orderBy('createdAt', 'desc')) : query(collection(db, 'ipRecords'), where('userId', '==', user.uid), orderBy('createdAt', 'desc'));
+            const snapshot = await getDocs(q);
+            let records = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+
+            // --- DEĞİŞİKLİK BURADA BAŞLIYOR ---
+            // Tüm kişileri tek seferde çekelim (daha basit ve genelde performanslı bir çözüm)
+            const allPersonsSnapshot = await getDocs(collection(db, 'persons'));
+            const allPersonsMap = new Map();
+            allPersonsSnapshot.forEach(personDoc => {
+                // Firestore belge ID'si (doc.id) ile kişinin kendi 'id' alanını (personDoc.data().id) eşleştirerek
+                // Map'e ekliyoruz. Daha önce personsService.addPerson'da belge ID'sini kişinin id'si olarak belirlemiştik.
+                allPersonsMap.set(personDoc.id, personDoc.data()); 
+            });
+            // --- DEĞİŞİKLİK BURADA BİTİYOR ---
+
+            // Kayıtlardaki sahip bilgilerini zenginleştir
+            records = records.map(record => {
+                const enrichedOwners = (record.owners || []).map(ownerRef => {
+                    // ownerRef.id, IP kaydında sakladığımız kişi ID'si
+                    const personData = allOwnersMap.get(ownerRef.id); 
+                    // Eğer kişi verisi bulunursa, id'si ile birlikte tüm kişi objesini ekle
+                    // Aksi takdirde, sadece orijinal referansı (id) bırak
+                    return personData ? { id: ownerRef.id, ...personData } : ownerRef; 
+                });
+                return { ...record, owners: enrichedOwners };
+            });
+
+            return { success: true, data: records };
+        } catch (error) {
+            console.error("Kayıtlar alınırken hata:", error);
+            return { success: false, error: error.message || "Kayıtlar yüklenirken beklenmeyen bir hata oluştu." };
         }
-        return { success: true, data: JSON.parse(localStorage.getItem('ipRecords') || '[]') };
-    },
+    }
+    // Yerel depolama mantığı...
+    return { success: true, data: JSON.parse(localStorage.getItem('ipRecords') || '[]') };
+},
     async updateRecord(recordId, updates) {
         const user = authService.getCurrentUser();
         if(!user) return {success: false, error: "Kullanıcı girişi yapılmamış."};
