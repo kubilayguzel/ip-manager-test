@@ -624,6 +624,37 @@
                 modal.classList.add('show');
             }
 
+            renderTransactionHistorySummary = (transactions, files) => {
+                const historyDiv = document.getElementById('transactionHistorySummary');
+                if (!historyDiv) return;
+                historyDiv.innerHTML = '';
+                const sortedTransactions = [...(transactions || [])].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+                const latestTransactions = sortedTransactions.slice(0, 3);
+
+                if (latestTransactions.length === 0) {
+                    historyDiv.innerHTML = '<p class="no-transactions">Bu kayıt için henüz bir işlem bulunmamaktadır.</p>';
+                    return;
+                }
+
+                latestTransactions.forEach(tx => {
+                    const file = files?.find(f => f.id === tx.documentId);
+                    const fileLink = file ? `<a href="${file.content}" target="_blank" class="transaction-file-link">${file.name}</a>` : '';
+                    historyDiv.innerHTML += `
+                        <div class="transaction-item">
+                            <div class="transaction-icon">📜</div>
+                            <div class="transaction-content">
+                                <div class="transaction-header">
+                                    <span class="transaction-title">${tx.type || 'Bilinmeyen İşlem'}</span>
+                                    <span class="transaction-meta">${new Date(tx.timestamp).toLocaleString('tr-TR')}</div>
+                                </div>
+                                <div class="transaction-description">${tx.description || '-'}</div>
+                                ${fileLink}
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+
             renderTransactionHistory = (recordId, transactions, files) => {
     const historyModal = document.getElementById('transactionModal');
     const historyContentDiv = document.getElementById('transactionHistoryContent');
