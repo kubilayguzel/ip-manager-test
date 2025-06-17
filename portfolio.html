@@ -399,15 +399,15 @@
             }
 
             applyFilters = () => {
-                const typeFilter = document.getElementById('typeFilter').value;
-                const statusFilter = document.getElementById('statusFilter').value;
-                const recordSearchInput = document.getElementById('recordSearchInput');
-                const searchTerm = recordSearchInput ? recordSearchInput.value.toLowerCase() : '';
+            const typeFilter = document.getElementById('typeFilter').value;
+            const statusFilter = document.getElementById('statusFilter').value;
+            const recordSearchInput = document.getElementById('recordSearchInput');
+            const searchTerm = recordSearchInput ? recordSearchInput.value.toLowerCase() : '';
 
                 this.filteredRecords = this.records.filter(record => {
-                    const typeMatch = typeFilter === 'all' || record.type === typeFilter;
-                    const statusMatch = statusFilter === 'all' || record.status === statusFilter;
-                    
+                    const typeMatch = typeFilter === 'all' || typeFilter === '' || record.type === typeFilter;
+                    const statusMatch = statusFilter === 'all' || statusFilter === '' || record.status === statusFilter;
+
                     const recordTitle = record.title || '';
                     const applicationNumber = record.applicationNumber || '';
                     const ownerNames = (record.owners || []).map(o => (o.name || '')).join(', ');
@@ -415,23 +415,17 @@
                     const searchMatch = recordTitle.toLowerCase().includes(searchTerm) ||
                                         applicationNumber.toLowerCase().includes(searchTerm) ||
                                         ownerNames.toLowerCase().includes(searchTerm);
-                                        
+
                     return typeMatch && statusMatch && searchMatch;
                 });
 
                 this.sortRecords();
                 this.goToPage(1);
 
-                // Filtreleme sonrası tablo ve mesaj görünürlüğünü güncelle
-                if (this.filteredRecords.length > 0) {
-                    document.getElementById('portfolioTable').style.display = 'table';
-                    document.getElementById('pagination').style.display = 'flex';
-                    document.getElementById('noRecords').style.display = 'none';
-                } else {
-                    document.getElementById('portfolioTable').style.display = 'none';
-                    document.getElementById('pagination').style.display = 'none';
-                    document.getElementById('noRecords').style.display = 'block';
-                }
+                const hasRecords = this.filteredRecords.length > 0;
+                document.getElementById('portfolioTable').style.display = hasRecords ? 'table' : 'none';
+                document.getElementById('pagination').style.display = hasRecords ? 'flex' : 'none';
+                document.getElementById('noRecords').style.display = hasRecords ? 'none' : 'block';
             }
 
             sortRecords = () => {
