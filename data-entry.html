@@ -381,12 +381,9 @@
                 this.selectedOwners = [];
                 this.allPersons = [];
 
-                // Metotları 'this' bağlamına bind et (Class property arrow functions daha temiz bir çözümdür)
-                // Bu metotları doğrudan class içinde arrow fonksiyon olarak tanımlayacağız.
-                // this.addOwnerToGrid = this.addOwnerToGrid.bind(this);
-                // this.removeOwner = this.removeOwner.bind(this);
-                // this.hideSearchPersonModal = this.hideSearchPersonModal.bind(this);
-                // this.searchPersons = this.searchPersons.bind(this); // searchPersons'ı da ekleyelim
+                // Tüm metotları sınıf özelliği olarak arrow fonksiyon şeklinde tanımlıyoruz.
+                // Bu, 'this' bağlamının her zaman sınıf örneğine bağlanmasını sağlar.
+                // Constructor içinde bind etmeye gerek kalmaz.
             }
 
             async init() {
@@ -401,8 +398,8 @@
 
                 await this.loadInitialData();
                 this.setupEventListeners();
-                this.populateStatusOptions();
-
+                this.populateStatusOptions(); // İlk yüklemede durumları doldur
+                
                 if (this.recordId) {
                     await this.loadRecordForEdit(this.recordId);
                 } else {
@@ -420,6 +417,9 @@
             }
 
             setupEventListeners() {
+                // Event listener'lara doğrudan sınıf metotlarını atarken arrow fonksiyonlarını kullanın
+                // veya metotları sınıf özelliği arrow fonksiyonu olarak tanımlayın.
+                // Aşağıdaki metotlar artık sınıf özelliği arrow fonksiyonlar olduğu için doğrudan referans verilebilir.
                 document.getElementById('type').addEventListener('change', (e) => this.handleTypeChange(e.target.value));
                 document.getElementById('recordForm').addEventListener('submit', (e) => this.handleSubmit(e));
                 document.getElementById('cancelRecordBtn').addEventListener('click', () => {
@@ -430,17 +430,16 @@
 
                 document.getElementById('trademarkImageUploadArea').addEventListener('click', () => document.getElementById('trademarkImage').click());
                 document.getElementById('trademarkImage').addEventListener('change', (e) => this.handleImageUpload(e));
-                document.getElementById('removeTrademarkImage').addEventListener('click', () => this.removeTrademarkImage());
+                document.getElementById('removeTrademarkImage').addEventListener('click', this.removeTrademarkImage);
 
-                document.getElementById('searchOwnerBtn').addEventListener('click', this.showSearchPersonModal); // Bind edilmiş metod kullanıldı
-                document.getElementById('addPersonToOwnerBtn').addEventListener('click', this.showAddPersonModal); // Bind edilmiş metod kullanıldı
+                document.getElementById('searchOwnerBtn').addEventListener('click', this.showSearchPersonModal);
+                document.getElementById('addPersonToOwnerBtn').addEventListener('click', this.showAddPersonModal);
 
-                document.getElementById('closeSearchPersonModal').addEventListener('click', this.hideSearchPersonModal); // Bind edilmiş metod kullanıldı
-                document.getElementById('cancelSearchPersonModal').addEventListener('click', this.hideSearchPersonModal); // Bind edilmiş metod kullanıldı
-                document.getElementById('modalPersonSearchInput').addEventListener('keyup', this.searchPersons); // Bind edilmiş metod kullanıldı
+                document.getElementById('closeSearchPersonModal').addEventListener('click', this.hideSearchPersonModal);
+                document.getElementById('cancelSearchPersonModal').addEventListener('click', this.hideSearchPersonModal);
+                document.getElementById('modalPersonSearchInput').addEventListener('keyup', this.searchPersons);
                 
-                // BURADAKİ EVENT LISTENER'I TEKRAR DÜZENLİYORUZ
-                // Event delegasyonu ile 'Ekle' butonuna tıklamayı yönet
+                // Hak sahibi arama sonuçları modalındaki "Ekle" butonuna tıklama olayı
                 document.getElementById('modalSearchResults').addEventListener('click', (e) => {
                     const addButton = e.target.closest('button.btn-primary.btn-small');
                     if (addButton) {
@@ -449,7 +448,6 @@
                             const personId = selectedItem.dataset.id;
                             const person = this.allPersons.find(p => p.id === personId);
                             if (person) {
-                                // Bu metotlar artık sınıf özelliği olarak tanımlandığı için 'this' doğru olacak
                                 this.addOwnerToGrid(person); 
                                 this.hideSearchPersonModal();
                             }
@@ -457,8 +455,8 @@
                     }
                 });
 
-                document.getElementById('closeAddPersonModal').addEventListener('click', this.hideAddPersonModal); // Bind edildi
-                document.getElementById('cancelAddPersonBtn').addEventListener('click', this.hideAddPersonModal); // Bind edildi
+                document.getElementById('closeAddPersonModal').addEventListener('click', this.hideAddPersonModal);
+                document.getElementById('cancelAddPersonBtn').addEventListener('click', this.hideAddPersonModal);
                 document.getElementById('addPersonForm').addEventListener('submit', (e) => this.savePerson(e));
                 document.querySelectorAll('input[name="modalPersonType"]').forEach(radio => {
                     radio.addEventListener('change', (e) => this.toggleModalPersonTypeFields(e.target.value));
@@ -469,13 +467,12 @@
                     const removeBtn = e.target.closest('.remove-btn');
                     if (removeBtn) {
                         const personIdToRemove = removeBtn.dataset.id;
-                        this.removeOwner(personIdToRemove); // removeOwner da bind edildi
+                        this.removeOwner(personIdToRemove);
                     }
                 });
             }
 
-            populateStatusOptions = (type) => { // Arrow function yapıldı
-                type = type || document.getElementById('type').value; // Eğer type gelmezse input'tan al
+            populateStatusOptions = (type = document.getElementById('type').value) => { // Default değer ile arrow function yapıldı
                 const statusSelect = document.getElementById('status');
                 statusSelect.innerHTML = '<option value="">Durum Seçin</option>';
 
@@ -522,7 +519,7 @@
                 });
             }
 
-            handleTypeChange = (type) => { // Arrow function yapıldı
+            handleTypeChange = (type) => { 
                 this.selectedType = type;
                 document.querySelectorAll('.dynamic-fields').forEach(div => div.classList.remove('show'));
                 document.getElementById('trademarkImagePreview').style.display = 'none';
@@ -535,11 +532,11 @@
                     if (fieldsDiv) {
                         fieldsDiv.classList.add('show');
                     }
-                    this.populateStatusOptions(type); // type parametresi geçildi
+                    this.populateStatusOptions(type);
                 }
             }
 
-            handleImageUpload = async (event) => { // Arrow function yapıldı
+            handleImageUpload = async (event) => { 
                 const file = event.target.files[0];
                 if (!file) return;
 
@@ -567,7 +564,7 @@
                 }
             }
 
-            removeTrademarkImage = () => { // Arrow function yapıldı
+            removeTrademarkImage = () => { 
                 this.uploadedImage = null;
                 document.getElementById('trademarkImage').value = '';
                 document.getElementById('trademarkImagePreview').src = '#';
@@ -576,7 +573,7 @@
                 showNotification('Marka görseli kaldırıldı.', 'info');
             }
 
-            renderOwnerList = () => { // Arrow function yapıldı
+            renderOwnerList = () => { 
                 const selectedOwnersGrid = document.getElementById('selectedOwnersGrid');
                 selectedOwnersGrid.innerHTML = '';
                 if (this.selectedOwners.length === 0) {
@@ -588,7 +585,7 @@
                     if (person) {
                         const ownerItem = document.createElement('div');
                         ownerItem.className = 'owner-grid-item';
-                        const displayName = person.personType === 'real' ? `${person.firstName} ${person.lastName}` : person.companyName;
+                        const displayName = person.personType === 'real' ? `${person.firstName || ''} ${person.lastName || ''}`.trim() : person.companyName || '';
                         ownerItem.innerHTML = `
                             <span>${displayName} (${person.personType === 'real' ? 'Gerçek' : 'Tüzel'})</span>
                             <button type="button" class="remove-btn" data-id="${person.id}">&times;</button>
@@ -598,24 +595,33 @@
                 });
             }
 
-            removeOwner = (personId) => { // Arrow function yapıldı
+            addOwnerToGrid = (person) => { // Arrow function yapıldı
+                if (!this.selectedOwners.some(owner => owner.id === person.id)) {
+                    this.selectedOwners.push({ id: person.id });
+                    this.renderOwnerList();
+                } else {
+                    showNotification('Bu kişi zaten hak sahipleri listesinde.', 'info');
+                }
+            }
+
+            removeOwner = (personId) => { 
                 this.selectedOwners = this.selectedOwners.filter(owner => owner.id !== personId);
                 this.renderOwnerList();
                 showNotification('Hak sahibi listeden kaldırıldı.', 'info');
             }
 
-            showSearchPersonModal = () => { // Arrow function yapıldı
+            showSearchPersonModal = () => { 
                 document.getElementById('searchPersonModal').classList.add('show');
                 document.getElementById('modalPersonSearchInput').value = '';
                 this.searchPersons();
             }
 
-            hideSearchPersonModal = () => { // Arrow function yapıldı
+            hideSearchPersonModal = () => { 
                 document.getElementById('searchPersonModal').classList.remove('show');
                 document.getElementById('modalSearchResults').innerHTML = '';
             }
 
-            searchPersons = () => { // Arrow function yapıldı
+            searchPersons = () => { 
                 const searchTerm = document.getElementById('modalPersonSearchInput').value.toLowerCase();
                 const searchResultsDiv = document.getElementById('modalSearchResults');
                 searchResultsDiv.innerHTML = '';
@@ -645,7 +651,7 @@
                 });
             }
 
-            showAddPersonModal = () => { // Arrow function yapıldı
+            showAddPersonModal = () => { 
                 document.getElementById('addPersonModal').classList.add('show');
                 document.getElementById('addPersonForm').reset();
                 this.clearModalPersonErrors();
@@ -655,13 +661,13 @@
                 this.populateModalCities('Türkiye');
             }
 
-            hideAddPersonModal = () => { // Arrow function yapıldı
+            hideAddPersonModal = () => { 
                 document.getElementById('addPersonModal').classList.remove('show');
                 document.getElementById('addPersonForm').reset();
                 this.clearModalPersonErrors();
             }
 
-            toggleModalPersonTypeFields = (personType) => { // Arrow function yapıldı
+            toggleModalPersonTypeFields = (personType) => { 
                 const realPersonFields = document.getElementById('modalRealPersonFields');
                 const legalPersonFields = document.getElementById('modalLegalPersonFields');
 
@@ -677,7 +683,7 @@
                 this.clearModalPersonErrors();
             }
 
-            populateModalCities = (country) => { // Arrow function yapıldı
+            populateModalCities = (country) => { 
                 const citySelect = document.getElementById('modalCity');
                 citySelect.innerHTML = '<option value="">İl Seçin</option>';
 
@@ -690,12 +696,12 @@
                 });
             }
 
-            clearModalPersonErrors = () => { // Arrow function yapıldı
+            clearModalPersonErrors = () => { 
                 document.querySelectorAll('#addPersonModal .error-message').forEach(el => el.textContent = '');
                 document.querySelectorAll('#addPersonModal .form-input, #addPersonModal .form-select, #addPersonModal .form-textarea').forEach(el => el.classList.remove('error-field'));
             }
 
-            async savePerson(e) {
+            savePerson = async (e) => { // savePerson da arrow function yapıldı
                 e.preventDefault();
 
                 document.getElementById('saveNewPersonBtn').disabled = true;
@@ -738,7 +744,7 @@
                 }
             }
 
-            async loadRecordForEdit(recordId) {
+            loadRecordForEdit = async (recordId) => { // loadRecordForEdit de arrow function yapıldı
                 const result = await ipRecordsService.getRecords();
                 if (result.success) {
                     const record = result.data.find(r => r.id === recordId);
@@ -754,7 +760,7 @@
                 }
             }
 
-            fillFormWithRecordData(record) {
+            fillFormWithRecordData = (record) => { // fillFormWithRecordData de arrow function yapıldı
                 document.getElementById('type').value = record.type;
                 this.handleTypeChange(record.type);
                 document.getElementById('title').value = record.title;
@@ -791,7 +797,7 @@
                 this.renderOwnerList();
             }
 
-            resetForm() {
+            resetForm = () => { // resetForm de arrow function yapıldı
                 document.getElementById('recordForm').reset();
                 this.selectedType = null;
                 this.recordId = null;
@@ -807,12 +813,12 @@
                 document.getElementById('saveRecordBtn').textContent = 'Kaydet';
             }
 
-            clearErrorMessages() {
+            clearErrorMessages = () => { // clearErrorMessages de arrow function yapıldı
                 document.querySelectorAll('.error-message').forEach(el => el.textContent = '');
                 document.querySelectorAll('.form-input, .form-select, .form-textarea').forEach(el => el.classList.remove('error-field'));
             }
 
-            getFormData() {
+            getFormData = () => { // getFormData de arrow function yapıldı
                 const formData = {
                     type: this.selectedType,
                     title: document.getElementById('title').value.trim(),
@@ -842,7 +848,7 @@
                 return formData;
             }
 
-            async handleSubmit(event) {
+            handleSubmit = async (event) => { // handleSubmit de arrow function yapıldı
                 event.preventDefault();
 
                 document.getElementById('saveRecordBtn').disabled = true;
