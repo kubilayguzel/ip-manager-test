@@ -34,7 +34,6 @@
         }
         .filter-group { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
         
-        /* TOGGLE SWITCH STİLLERİ */
         .switch-label { font-weight: 500; margin-right: 5px; }
         .switch { position: relative; display: inline-block; width: 50px; height: 24px; }
         .switch input { opacity: 0; width: 0; height: 0; }
@@ -53,12 +52,9 @@
         #filter-row th { padding: 8px; background-color: #f8f9fa; }
         .column-filter { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; }
 
-        /* MARKA GÖRSELİ ÖNİZLEME STİLLERİ */
         .image-hover-container {
-            position: relative;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            position: relative; display: flex;
+            align-items: center; justify-content: center;
         }
         .trademark-image-thumb {
             width: 40px; height: 40px; object-fit: contain;
@@ -67,22 +63,18 @@
         .trademark-image-preview {
             visibility: hidden; opacity: 0;
             position: absolute; z-index: 100;
-            bottom: 110%;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 200px; height: 200px;
-            object-fit: contain; background-color: #fff;
+            bottom: 110%; left: 50%; transform: translateX(-50%);
+            width: 200px; height: 200px; object-fit: contain; background-color: #fff;
             border: 2px solid #ddd; border-radius: 8px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.2);
             transition: opacity 0.3s ease, visibility 0.3s ease;
             pointer-events: none;
         }
         .image-hover-container:hover .trademark-image-preview {
-            visibility: visible;
-            opacity: 1;
+            visibility: visible; opacity: 1;
         }
         
-        .modal { max-width: 1500px; }
+        .modal-content { max-width: 1500px; } /* Modal genişliği güncellendi */
     </style>
 </head>
 <body>
@@ -186,7 +178,6 @@
                     });
                 });
                 
-                // --- HATA DÜZELTMESİ: IF KONTROLÜ EKLENDİ ---
                 const archiveToggleEl = document.getElementById('archiveToggle');
                 if (archiveToggleEl) {
                     archiveToggleEl.addEventListener('change', () => this.applyFilters());
@@ -340,6 +331,8 @@
                 ];
 
                 if (this.activeTab === 'trademark') {
+                    // Marka sekmesindeyse, 'Tip' kolonunu çıkar ve 'Marka Örneği' kolonunu başa ekle
+                    headers = headers.filter(h => h.key !== 'type');
                     headers.unshift({ key: 'trademarkImage', label: 'Marka Örneği', sortable: false });
                 }
 
@@ -374,15 +367,8 @@
                             case 'trademarkImage':
                                 const imageUrl = record.trademarkImage?.content;
                                 if (imageUrl) {
-                                    cellContent = `
-                                        <div class="image-hover-container">
-                                            <img src="${imageUrl}" class="trademark-image-thumb">
-                                            <img src="${imageUrl}" class="trademark-image-preview">
-                                        </div>
-                                    `;
-                                } else {
-                                    cellContent = '-';
-                                }
+                                    cellContent = `<div class="image-hover-container"><img src="${imageUrl}" class="trademark-image-thumb"><img src="${imageUrl}" class="trademark-image-preview"></div>`;
+                                } else { cellContent = '-'; }
                                 break;
                             case 'type':
                                 cellContent = `<span class="ip-type ${record.type}">${this.typeNames[record.type] || record.type}</span>`;
@@ -432,7 +418,7 @@
                 });
             }
 
-            updatePaginationControls = () => {
+            updatePaginationControls() {
                 const totalPages = Math.ceil(this.filteredRecords.length / this.recordsPerPage);
                 const paginationInfo = document.getElementById('paginationInfo');
                 const prevPageBtn = document.getElementById('prevPageBtn');
