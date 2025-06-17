@@ -260,35 +260,35 @@
             }
 
             setupEventListeners() {
-                document.getElementById('typeFilter').addEventListener('change', () => this.applyFilters());
-                document.getElementById('statusFilter').addEventListener('change', () => this.applyFilters());
-                document.getElementById('recordSearchInput').addEventListener('keyup', () => this.applyFilters());
+                document.getElementById('typeFilter').addEventListener('change', (e) => this.applyFilters());
+                document.getElementById('statusFilter').addEventListener('change', (e) => this.applyFilters());
+                document.getElementById('recordSearchInput').addEventListener('keyup', (e) => this.applyFilters());
 
                 document.querySelectorAll('.portfolio-table th[data-sort]').forEach(header => {
                     header.addEventListener('click', (e) => this.handleSort(e.target));
                 });
 
-                document.getElementById('prevPageBtn').addEventListener('click', () => this.goToPage(this.currentPage - 1));
-                document.getElementById('nextPageBtn').addEventListener('click', () => this.goToPage(this.currentPage + 1));
+                document.getElementById('prevPageBtn').addEventListener('click', (e) => this.goToPage(this.currentPage - 1));
+                document.getElementById('nextPageBtn').addEventListener('click', (e) => this.goToPage(this.currentPage + 1));
                 
-                document.getElementById('closeDetailModal').addEventListener('click', () => this.closeModal('detailModal'));
-                document.getElementById('closeModalBtn').addEventListener('click', () => this.closeModal('detailModal'));
-                document.getElementById('editRecordFromModalBtn').addEventListener('click', () => {
+                document.getElementById('closeDetailModal').addEventListener('click', (e) => this.closeModal('detailModal'));
+                document.getElementById('closeModalBtn').addEventListener('click', (e) => this.closeModal('detailModal'));
+                document.getElementById('editRecordFromModalBtn').addEventListener('click', (e) => {
                     const recordId = document.getElementById('modalTitle').dataset.recordId;
                     if (recordId) {
                         window.location.href = `data-entry.html?id=${recordId}`;
                     }
                 });
 
-                document.getElementById('exportBtn').addEventListener('click', () => this.exportData());
-                document.getElementById('closeTransactionModal').addEventListener('click', () => this.closeModal('transactionModal'));
-                document.getElementById('closeTransactionModalBtn').addEventListener('click', () => this.closeModal('transactionModal'));
+                document.getElementById('exportBtn').addEventListener('click', (e) => this.exportData());
+                document.getElementById('closeTransactionModal').addEventListener('click', (e) => this.closeModal('transactionModal'));
+                document.getElementById('closeTransactionModalBtn').addEventListener('click', (e) => this.closeModal('transactionModal'));
 
-                document.getElementById('typeFilter').addEventListener('change', () => this.populateStatusFilter());
-                this.populateStatusFilter();
+                document.getElementById('typeFilter').addEventListener('change', (e) => this.populateStatusFilter());
+                this.populateStatusFilter(); // Sayfa yüklendiğinde durum filtrelerini doldur
             }
 
-            populateStatusFilter = (type = document.getElementById('typeFilter').value) => { // Arrow function yapıldı
+            populateStatusFilter = (type = document.getElementById('typeFilter').value) => {
                 const statusFilterSelect = document.getElementById('statusFilter');
                 if (!statusFilterSelect) return;
                 statusFilterSelect.innerHTML = '<option value="all">Tümü</option>';
@@ -327,12 +327,12 @@
                     ]
                 };
 
-                const statuses = allStatuses[selectedType] || [];
+                const statuses = allStatuses[type] || [];
                 statuses.forEach(status => {
                     const option = document.createElement('option');
                     option.value = status.value;
                     option.textContent = status.text;
-                    statusFilterSelect.appendChild(option);
+                    statusSelect.appendChild(option);
                 });
             }
 
@@ -360,7 +360,7 @@
                 }
             }
 
-            applyFilters = () => { // Arrow function yapıldı
+            applyFilters = () => {
                 const typeFilter = document.getElementById('typeFilter').value;
                 const statusFilter = document.getElementById('statusFilter').value;
                 const recordSearchInput = document.getElementById('recordSearchInput');
@@ -385,7 +385,7 @@
                 this.goToPage(1);
             }
 
-            sortRecords = () => { // Arrow function yapıldı
+            sortRecords = () => {
                 this.filteredRecords.sort((a, b) => {
                     let aValue = a[this.currentSortColumn];
                     let bValue = b[this.currentSortColumn];
@@ -406,7 +406,7 @@
                 this.updatePaginationControls();
             }
 
-            handleSort = (headerElement) => { // Arrow function yapıldı
+            handleSort = (headerElement) => {
                 const column = headerElement.dataset.sort;
                 if (!column) return;
 
@@ -425,7 +425,7 @@
                 this.sortRecords();
             }
 
-            goToPage = (page) => { // Arrow function yapıldı
+            goToPage = (page) => {
                 const totalPages = Math.ceil(this.filteredRecords.length / this.recordsPerPage);
                 if (page < 1 || (page > totalPages && totalPages > 0)) return;
                 this.currentPage = page;
@@ -433,7 +433,7 @@
                 this.updatePaginationControls();
             }
 
-            renderTable = () => { // Arrow function yapıldı
+            renderTable = () => {
                 const tableBody = document.getElementById('portfolioTableBody');
                 if (!tableBody) return;
                 tableBody.innerHTML = '';
@@ -460,7 +460,7 @@
                 });
             }
 
-            createTableRow = (record) => { // Arrow function yapıldı
+            createTableRow = (record) => {
                 const row = document.createElement('tr');
                 const typeNames = { patent: 'Patent', trademark: 'Marka', copyright: 'Telif Hakkı', design: 'Tasarım' };
                 const statusNames = { 
@@ -492,7 +492,7 @@
                 return row;
             }
 
-            viewRecord = (recordId) => { // Arrow function yapıldı
+            viewRecord = (recordId) => {
                 const record = this.records.find(r => r.id === recordId);
                 if (!record) return;
 
@@ -573,7 +573,7 @@
                 modal.classList.add('show');
             }
 
-            renderTransactionHistorySummary = (transactions, files) => { // Arrow function yapıldı
+            renderTransactionHistorySummary = (transactions, files) => {
                 const historyDiv = document.getElementById('transactionHistorySummary');
                 if (!historyDiv) return;
                 historyDiv.innerHTML = '';
@@ -604,7 +604,7 @@
                 });
             }
 
-            renderTransactionHistory = (recordId, transactions, files) => { // Arrow function yapıldı
+            renderTransactionHistory = (recordId, transactions, files) => {
                 const historyModal = document.getElementById('transactionModal');
                 const historyContentDiv = document.getElementById('transactionHistoryContent');
                 const noTransactionsDiv = document.getElementById('noTransactions');
@@ -642,11 +642,11 @@
             }
 
 
-            editRecord = (recordId) => { // Arrow function yapıldı
+            editRecord = (recordId) => {
                 window.location.href = `data-entry.html?id=${recordId}`;
             }
 
-            deleteRecord = async (recordId) => { // Arrow function yapıldı
+            deleteRecord = async (recordId) => {
                 if (confirm('Bu kaydı silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.')) {
                     try {
                         const result = await ipRecordsService.deleteRecord(recordId);
@@ -663,7 +663,7 @@
                 }
             }
 
-            updatePaginationControls = () => { // Arrow function yapıldı
+            updatePaginationControls = () => {
                 const totalPages = Math.ceil(this.filteredRecords.length / this.recordsPerPage);
                 const paginationInfo = document.getElementById('paginationInfo');
                 const prevPageBtn = document.getElementById('prevPageBtn');
@@ -674,12 +674,12 @@
                 if (nextPageBtn) nextPageBtn.disabled = this.currentPage === totalPages || totalPages === 0;
             }
 
-            closeModal = (modalId) => { // Arrow function yapıldı
+            closeModal = (modalId) => {
                 const modal = document.getElementById(modalId);
                 if (modal) modal.classList.remove('show');
             }
 
-            exportData = async () => { // Arrow function yapıldı
+            exportData = async () => {
                 if (this.filteredRecords.length === 0) {
                     showNotification('Dışa aktarılacak kayıt bulunamadı.', 'info');
                     return;
@@ -745,7 +745,7 @@
                 document.body.removeChild(link);
             }
 
-            showEmptyState = () => { // Arrow function yapıldı
+            showEmptyState = () => {
                 const portfolioTableEl = document.getElementById('portfolioTable');
                 const paginationEl = document.getElementById('pagination');
                 const noRecordsEl = document.getElementById('noRecords');
