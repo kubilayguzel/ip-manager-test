@@ -6,14 +6,10 @@
     <title>IP Manager - Portföy</title>
     <link rel="stylesheet" href="css/shared-styles.css">
     <style>
-        /* Bu sayfaya özel stil ayarlamaları */
         .page-header { background: rgba(255, 255, 255, 0.95); padding: 30px; border-radius: 20px; margin-bottom: 20px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1); }
         .page-title { font-size: 2em; color: #1e3c72; margin-bottom: 10px; }
         .page-subtitle { color: #666; font-size: 1.1em; }
-
-        .portfolio-tabs {
-            display: flex; border-bottom: 1px solid #ddd; margin-bottom: 25px;
-        }
+        .portfolio-tabs { display: flex; border-bottom: 1px solid #ddd; margin-bottom: 25px; }
         .tab-btn {
             padding: 12px 22px; font-size: 1.05em; font-weight: 500;
             border: 1px solid transparent; border-bottom: none; background: none;
@@ -25,7 +21,6 @@
             color: #1e3c72; font-weight: 600; background-color: #fff;
             border-color: #ddd; border-bottom-color: #fff;
         }
-
         .portfolio-controls {
             background: rgba(255, 255, 255, 0.95); padding: 20px 30px; border-radius: 20px;
             margin-bottom: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.05);
@@ -33,7 +28,6 @@
             flex-wrap: wrap; gap: 20px;
         }
         .filter-group { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-        
         .switch-label { font-weight: 500; margin-right: 5px; }
         .switch { position: relative; display: inline-block; width: 50px; height: 24px; }
         .switch input { opacity: 0; width: 0; height: 0; }
@@ -43,38 +37,25 @@
         input:checked + .slider:before { transform: translateX(26px); }
         .slider.round { border-radius: 24px; }
         .slider.round:before { border-radius: 50%; }
-
-        .portfolio-table-container { background: rgba(255, 255, 255, 0.95); border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); overflow-x: auto; }
+        .portfolio-table-container { overflow-x: auto; }
         .portfolio-table { width: 100%; border-collapse: collapse; }
         .portfolio-table th, .portfolio-table td { padding: 15px; text-align: left; border-bottom: 1px solid #f0f0f0; white-space: nowrap; }
         .portfolio-table tr.archived-record { opacity: 0.6; }
-        
         #filter-row th { padding: 8px; background-color: #f8f9fa; }
         .column-filter { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; }
-
-        .image-hover-container {
-            position: relative; display: flex;
-            align-items: center; justify-content: center;
-        }
-        .trademark-image-thumb {
-            width: 40px; height: 40px; object-fit: contain;
-            border-radius: 4px; vertical-align: middle;
-        }
+        .image-hover-container { position: relative; display: flex; align-items: center; justify-content: center; }
+        .trademark-image-thumb { width: 40px; height: 40px; object-fit: contain; border-radius: 4px; vertical-align: middle; }
         .trademark-image-preview {
-            visibility: hidden; opacity: 0;
-            position: absolute; z-index: 100;
+            visibility: hidden; opacity: 0; position: absolute; z-index: 100;
             bottom: 110%; left: 50%; transform: translateX(-50%);
             width: 200px; height: 200px; object-fit: contain; background-color: #fff;
-            border: 2px solid #ddd; border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-            transition: opacity 0.3s ease, visibility 0.3s ease;
-            pointer-events: none;
+            border: 2px solid #ddd; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            transition: opacity 0.3s ease, visibility 0.3s ease; pointer-events: none;
         }
-        .image-hover-container:hover .trademark-image-preview {
-            visibility: visible; opacity: 1;
-        }
-        
-        .modal-content { max-width: 1500px; } /* Modal genişliği güncellendi */
+        .image-hover-container:hover .trademark-image-preview { visibility: visible; opacity: 1; }
+        .action-btn.btn-archive { background-color: #ffc107 !important; color: #fff; }
+        .action-btn.btn-activate { background-color: #28a745 !important; color: #fff; }
+        .modal-content { max-width: 1500px; }
     </style>
 </head>
 <body>
@@ -108,7 +89,7 @@
 
             <div class="portfolio-table-container">
                 <table class="portfolio-table" id="portfolioTable">
-                    </table>
+                </table>
                 <div id="loadingIndicator" class="loading">
                     <div class="loading-spinner"></div>
                 </div>
@@ -331,7 +312,6 @@
                 ];
 
                 if (this.activeTab === 'trademark') {
-                    // Marka sekmesindeyse, 'Tip' kolonunu çıkar ve 'Marka Örneği' kolonunu başa ekle
                     headers = headers.filter(h => h.key !== 'type');
                     headers.unshift({ key: 'trademarkImage', label: 'Marka Örneği', sortable: false });
                 }
@@ -430,8 +410,9 @@
             }
             
             viewRecord = (recordId) => {
-                 const record = this.records.find(r => r.id === recordId);
+                const record = this.records.find(r => r.id === recordId);
                 if (!record) return;
+
                 const modal = document.getElementById('detailModal');
                 const modalTitleEl = document.getElementById('modalTitle');
                 const modalBodyEl = document.getElementById('modalBody');
@@ -439,17 +420,52 @@
                 modalTitleEl.dataset.recordId = record.id;
                 
                 const formatDate = (date) => date ? new Date(date).toLocaleDateString('tr-TR') : '-';
-                const renderField = (label, value) => `<div class="modal-detail-item"><div class="modal-detail-label">${label}:</div><div class="modal-detail-value">${value || '-'}</div></div>`;
+                const renderField = (label, value, isLongText = false) => {
+                    const valueClass = isLongText ? 'modal-detail-value long-text' : 'modal-detail-value';
+                    return `<div class="modal-detail-item"><div class="modal-detail-label">${label}:</div><div class="${valueClass}">${value || '-'}</div></div>`;
+                }
 
-                let modalContentHtml = `<div class="modal-detail-grid">` +
-                    renderField('Kayıt Tipi', `<span class="ip-type ${record.type}">${this.typeNames[record.type]}</span>`) +
-                    renderField('Başlık', record.title) +
-                    renderField('Başvuru No', record.applicationNumber) +
-                    renderField('Başvuru Tarihi', formatDate(record.applicationDate)) +
-                    renderField('Tescil Tarihi', formatDate(record.registrationDate)) +
-                    renderField('Hak Sahipleri', (record.owners || []).map(o => o.name).join(', ')) +
-                    `</div><h4 class="modal-detail-section-title">İşlem Geçmişi</h4>` +
-                    `<div id="transactionHistoryContainer"></div>`;
+                let modalContentHtml = `<h4 class="modal-detail-section-title">Temel Bilgiler</h4><div class="modal-detail-grid">`;
+                modalContentHtml += renderField('Kayıt Tipi', `<span class="ip-type ${record.type}">${this.typeNames[record.type]}</span>`);
+                modalContentHtml += renderField('Başlık', record.title);
+                modalContentHtml += renderField('Başvuru Numarası', record.applicationNumber);
+                modalContentHtml += renderField('Başvuru Tarihi', formatDate(record.applicationDate));
+                modalContentHtml += renderField('Tescil Tarihi', formatDate(record.registrationDate));
+                modalContentHtml += renderField('Hak Sahipleri', (record.owners || []).map(o => o.name).join(', '));
+                modalContentHtml += `</div>`;
+
+                if (record.type === 'trademark') {
+                    modalContentHtml += `<h4 class="modal-detail-section-title">Marka Detayları</h4>`;
+                    modalContentHtml += `<div class="modal-detail-grid">`;
+                    if (record.trademarkImage?.content) {
+                        modalContentHtml += renderField('Marka Örneği', `<img src="${record.trademarkImage.content}" style="max-height: 100px; border-radius: 6px;">`);
+                    }
+                    modalContentHtml += renderField('Marka Tipi', record.trademarkType || '-');
+                    modalContentHtml += renderField('Nice Sınıfı', record.niceClass || '-');
+                    modalContentHtml += renderField('Yenileme Tarihi', formatDate(record.renewalDateTrademark));
+                    modalContentHtml += renderField('Eşya ve Hizmet Listesi', record.goodsAndServicesList, true);
+                    modalContentHtml += `</div>`;
+                }
+
+                if (record.type === 'patent') {
+                    modalContentHtml += `<h4 class="modal-detail-section-title">Patent Detayları</h4>`;
+                    modalContentHtml += `<div class="modal-detail-grid">`;
+                    modalContentHtml += renderField('Patent Sınıfı', record.patentClass || '-');
+                    modalContentHtml += renderField('Yenileme Tarihi', formatDate(record.renewalDatePatent));
+                    modalContentHtml += `</div>`;
+                }
+
+                if (record.type === 'design') {
+                    modalContentHtml += `<h4 class="modal-detail-section-title">Tasarım Detayları</h4>`;
+                    modalContentHtml += `<div class="modal-detail-grid">`;
+                    modalContentHtml += renderField('Tasarım Sınıfı', record.designClass || '-');
+                    modalContentHtml += renderField('Locarno Sınıfı', record.locarnoClass || '-');
+                    modalContentHtml += renderField('Yenileme Tarihi', formatDate(record.renewalDateDesign));
+                    modalContentHtml += `</div>`;
+                }
+
+                modalContentHtml += `<h4 class="modal-detail-section-title">İşlem Geçmişi</h4>` +
+                                  `<div id="transactionHistoryContainer"></div>`;
                 
                 modalBodyEl.innerHTML = modalContentHtml;
                 this.renderTransactionHistory(record.id, record.transactions, record.files);
