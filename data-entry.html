@@ -432,8 +432,9 @@
                 document.getElementById('cancelSearchPersonModal').addEventListener('click', () => this.hideSearchPersonModal());
                 // Hak sahipleri arama kutusuna yazı yazıldığında arama yapması için 'keyup' event'i
                 document.getElementById('modalPersonSearchInput').addEventListener('keyup', () => this.searchPersons());
+                // BURADA DÜZELTME: Arrow fonksiyonu ile 'this' bağlamını koruyoruz.
+                // Bu event listener'ı setupEventListeners içindeki 'this' bağlamını (yani DataEntryModule örneğini) koruyacaktır.
                 document.getElementById('modalSearchResults').addEventListener('click', (e) => {
-                    // Eğer tıklanan element veya ebeveynlerinden biri bir buton ise
                 const addButton = e.target.closest('button.btn-primary.btn-small');
                 if (addButton) {
                     const selectedItem = addButton.closest('.owner-list-item');
@@ -441,7 +442,8 @@
                         const personId = selectedItem.dataset.id;
                         const person = this.allPersons.find(p => p.id === personId);
                         if (person) {
-                            this.addOwnerToGrid(person);
+                            // 'this' artık DataEntryModule örneğini gösteriyor.
+                            this.addOwnerToGrid(person); 
                             this.hideSearchPersonModal();
                         }
                     }
