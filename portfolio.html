@@ -6,7 +6,6 @@
     <title>IP Manager - Portföy</title>
     <link rel="stylesheet" href="css/shared-styles.css">
     <style>
-        /* CSS'in büyük bir kısmı, sağladığınız dosyadaki ile aynıdır */
         .page-header { background: #fff; padding: 30px; border-radius: 20px; margin-bottom: 20px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05); }
         .page-title { font-size: 2em; color: #1e3c72; margin-bottom: 10px; }
         .page-subtitle { color: #666; font-size: 1.1em; }
@@ -35,41 +34,53 @@
         input:checked + .slider:before { transform: translateX(26px); }
         .slider.round { border-radius: 24px; }
         .slider.round:before { border-radius: 50%; }
-
-        /* Arka plan beyaz olarak güncellendi */
         .portfolio-table-container { background: #fff; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); overflow-x: auto; }
-        
         .portfolio-table { width: 100%; border-collapse: collapse; }
         .portfolio-table th, .portfolio-table td { padding: 15px; text-align: left; border-bottom: 1px solid #f0f0f0; white-space: nowrap; }
         .portfolio-table tr.archived-record { opacity: 0.6; }
         #filter-row th { padding: 8px; background-color: #f8f9fa; }
         .column-filter { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; }
-
-        /* Arşivle butonu için sarı renk */
         .action-btn.btn-archive { background-color: #ffc107 !important; color: #fff; }
         .action-btn.btn-activate { background-color: #28a745 !important; color: #fff; }
-        
         .image-hover-container { position: relative; display: flex; align-items: center; justify-content: center; }
         .trademark-image-thumb { width: 40px; height: 40px; object-fit: contain; border-radius: 4px; }
         .trademark-image-preview {
             visibility: hidden; opacity: 0; position: absolute; z-index: 100;
             bottom: 110%; left: 50%; transform: translateX(-50%);
             width: 200px; height: 200px; object-fit: contain; background-color: #fff;
-            border: 2px solid #ddd; border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-            transition: opacity 0.3s ease, visibility 0.3s ease;
-            pointer-events: none;
+            border: 2px solid #ddd; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            transition: opacity 0.3s ease, visibility 0.3s ease; pointer-events: none;
         }
         .image-hover-container:hover .trademark-image-preview { visibility: visible; opacity: 1; }
         
-        /* Modal genişliği ve diğer modal stilleri */
         .modal-content { max-width: 1500px; }
         .modal-detail-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 15px 25px; margin-bottom: 20px; }
         .modal-detail-item { margin-bottom: 10px; }
-        .modal-detail-label { font-weight: 600; color: #333; margin-bottom: 5px; font-size: 0.9em; }
-        .modal-detail-value { color: #555; word-break: break-word; font-size: 0.95em; }
-        .modal-detail-value.long-text { white-space: pre-wrap; background-color: #f8f9fa; padding: 8px; border-radius: 6px; max-height: 150px; overflow-y: auto; }
+        .modal-detail-label { font-weight: 600; color: #333; }
+        .modal-detail-value { color: #555; }
         .modal-detail-section-title { grid-column: 1 / -1; font-size: 1.1em; color: #1e3c72; margin-top: 20px; padding-bottom: 5px; border-bottom: 1px dashed #e1e8ed; }
+
+        /* PAGINATION GÜNCELLEMELERİ */
+        .pagination {
+            display: flex;
+            justify-content: flex-end; /* Sağa hizalama */
+            align-items: center;
+            gap: 10px;
+            margin-top: 20px;
+            padding: 10px 0; /* Üstten ve alttan boşluk */
+        }
+        .pagination button {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; /* Ana font ile aynı */
+            font-weight: 600;
+            font-size: 0.9em;
+        }
+        .pagination-info {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; /* Ana font ile aynı */
+            font-size: 0.95em;
+            font-weight: 500;
+            color: #555;
+            align-self: center;
+        }
 
     </style>
 </head>
@@ -107,13 +118,11 @@
                 <div id="loadingIndicator" class="loading"><div class="loading-spinner"></div></div>
                 <div id="noRecords" class="no-records"><h3>Filtrelerinize uygun kayıt bulunamadı.</h3></div>
             </div>
-
             <div id="pagination" class="pagination">
                 <button id="prevPageBtn" disabled>Önceki</button>
                 <span id="paginationInfo">Sayfa 1 / 1</span>
                 <button id="nextPageBtn" disabled>Sonraki</button>
             </div>
-
             <div id="detailModal" class="modal">
                 <div class="modal-content">
                     <div class="modal-header">
@@ -147,6 +156,24 @@
                 this.activeTab = 'all';
                 this.columnFilters = {};
                 this.typeNames = { patent: 'Patent', trademark: 'Marka', design: 'Tasarım' };
+                
+                // HATA DÜZELTMESİ: Anahtarlar Türkçe ve küçük harf olacak şekilde güncellendi
+                this.statusNames = {
+                    'başvuru': 'Başvuru',
+                    'beklemede': 'Beklemede',
+                    'onaylandı': 'Onaylandı',
+                    'reddedildi': 'Reddedildi',
+                    'süresi_doldu': 'Süresi Doldu',
+                    'yayınlandı': 'Yayınlandı',
+                    'kısmi_ret': 'Kısmi Ret',
+                    'ret': 'Ret',
+                    'itiraz_geldi': 'İtiraz Geldi',
+                    'itiraz_edildi': 'İtiraz Edildi',
+                    'tescilli': 'Tescilli',
+                    'yenilenmedi': 'Yenilenmedi',
+                    'başvuru_geçersiz_hükümsüz': 'Başvuru Geçersiz/Hükümsüz',
+                    'yenilememe_nedeniyle_geçersiz': 'Yenilememe Nedeniyle Geçersiz'
+                };
             }
 
             async init() {
@@ -437,7 +464,7 @@
                 }
 
                 let modalContentHtml = `<h4 class="modal-detail-section-title">Temel Bilgiler</h4><div class="modal-detail-grid">`;
-                modalContentHtml += renderField('Kayıt Tipi', `<span class="ip-type ${record.type}">${this.typeNames[record.type]}</span>`);
+                modalContentHtml += renderField('Kayıt Tipi', `<span class="ip-type ${record.type}">${this.typeNames[record.type] || record.type}</span>`);
                 modalContentHtml += renderField('Başlık', record.title);
                 modalContentHtml += renderField('Durum', record.status ? `<span class="status-badge status-${record.status.replace(/_/g, '-')}">${this.statusNames[record.status] || record.status}</span>` : '-');
                 modalContentHtml += renderField('Başvuru Numarası', record.applicationNumber);
@@ -482,7 +509,6 @@
             renderTransactionHistory = (recordId, transactions, files) => {
                 const historyContentDiv = document.getElementById('transactionHistoryContainer');
                 if (!historyContentDiv) return;
-                
                 const sortedTransactions = [...(transactions || [])].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
                 if (sortedTransactions.length === 0) {
                     historyContentDiv.innerHTML = '<p style="text-align:center; padding: 20px;">Bu kayıt için işlem geçmişi bulunmamaktadır.</p>';
