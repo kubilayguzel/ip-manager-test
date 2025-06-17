@@ -624,111 +624,82 @@
                 modal.classList.add('show');
             }
 
-            renderTransactionHistorySummary = (transactions, files) => {
-                const historyDiv = document.getElementById('transactionHistorySummary');
-                if (!historyDiv) return;
-                historyDiv.innerHTML = '';
-                const sortedTransactions = [...(transactions || [])].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-                const latestTransactions = sortedTransactions.slice(0, 3);
-
-                if (latestTransactions.length === 0) {
-                    historyDiv.innerHTML = '<p class="no-transactions">Bu kayıt için henüz bir işlem bulunmamaktadır.</p>';
-                    return;
-                }
-
-                latestTransactions.forEach(tx => {
-                    const file = files?.find(f => f.id === tx.documentId);
-                    const fileLink = file ? `<a href="${file.content}" target="_blank" class="transaction-file-link">${file.name}</a>` : '';
-                    historyDiv.innerHTML += `
-                        <div class="transaction-item">
-                            <div class="transaction-icon">📜</div>
-                            <div class="transaction-content">
-                                <div class="transaction-header">
-                                    <span class="transaction-title">${tx.type || 'Bilinmeyen İşlem'}</span>
-                                    <span class="transaction-meta">${new Date(tx.timestamp).toLocaleString('tr-TR')}</div>
-                                </div>
-                                <div class="transaction-description">${tx.description || '-'}</div>
-                                ${fileLink}
-                            </div>
-                        </div>
-                    `;
-                });
-            }
-
             renderTransactionHistory = (recordId, transactions, files) => {
-                const historyModal = document.getElementById('transactionModal');
-                const historyContentDiv = document.getElementById('transactionHistoryContent');
-                const noTransactionsDiv = document.getElementById('noTransactions');
-                if (!historyContentDiv || !noTransactionsDiv) return;
-                historyContentDiv.innerHTML = '';
-                
-                const sortedTransactions = [...(transactions || [])].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+    const historyModal = document.getElementById('transactionModal');
+    const historyContentDiv = document.getElementById('transactionHistoryContent');
+    const noTransactionsDiv = document.getElementById('noTransactions');
+    if (!historyContentDiv || !noTransactionsDiv) return;
 
-                if (sortedTransactions.length === 0) {
-                    noTransactionsDiv.style.display = 'block';
-                    historyContentDiv.style.display = 'none';
-                    return;
-                }
-                noTransactionsDiv.style.display = 'none';
-                historyContentDiv.style.display = 'block';
+    historyContentDiv.innerHTML = '';
 
-                // Parent-child ilişkisini gösteren akordeon yapısını oluştur
-                const transactionsMap = new Map(sortedTransactions.map(tx => [tx.transactionId, tx]));
-                const childrenMap = new Map();
+    if (!transactions || transactions.length === 0) {
+        noTransactionsDiv.style.display = 'block';
+        historyContentDiv.style.display = 'none';
+        return;
+    }
 
-                sortedTransactions.forEach(tx => {
-                    if (tx.parentId && transactionsMap.has(tx.parentId)) {
-                        if (!childrenMap.has(tx.parentId)) childrenMap.set(tx.parentId, []);
-                        childrenMap.get(tx.parentId).push(tx);
-                    }
-                });
+    noTransactionsDiv.style.display = 'none';
+    historyContentDiv.style.display = 'block';
 
-                const buildTreeHtml = (transactionsToBuild) => {
-                    let html = '';
-                    transactionsToBuild.forEach(tx => {
-                        const children = childrenMap.get(tx.transactionId) || [];
-                        const hasChildren = children.length > 0;
-                        let documentLinkHtml = '';
-                        if (tx.documentId && files) {
-                            const relatedFile = files.find(file => file.id === tx.documentId);
-                            if (relatedFile) documentLinkHtml = ` | <a href="${relatedFile.content}" download="${relatedFile.name}" class="transaction-file-link">📄 Belge</a>`;
-                        }
-                        html += `
-                            <div class="transaction-node" data-id="${tx.transactionId}">
-                                ${hasChildren ? `<button class="transaction-toggle-btn" data-target-id="${tx.transactionId}">+</button>` : ''}
-                                <div class="transaction-node-content">
-                                    <div class="transaction-info">
-                                        <div class="transaction-description">${tx.description || tx.type}</div> 
-                                        <div class="transaction-meta">${new Date(tx.timestamp).toLocaleString('tr-TR')} by ${tx.userEmail}${documentLinkHtml}</div>
-                                    </div>
-                                    <div class="transaction-actions">
-                                        </div>
-                                </div>
-                            </div>
-                            ${hasChildren ? `<div class="child-transactions" id="children-of-${tx.transactionId}">${buildTreeHtml(children)}</div>` : ''}`;
-                    });
-                    return html;
-                };
+    // 1. Tüm işlemleri bir harita içine al
+    const transactionsMap = new Map(transactions.map(tx => [tx.transactionId, tx]));
 
-                const rootTransactions = sortedTransactions.filter(tx => !tx.parentId || !transactionsMap.has(tx.parentId));
-                historyContentDiv.innerHTML = buildTreeHtml(rootTransactions);
-
-                // Akordiyon butonlarına event listener ekle
-                historyContentDiv.querySelectorAll('.transaction-toggle-btn').forEach(button => {
-                    button.addEventListener('click', () => {
-                        const targetId = button.dataset.targetId;
-                        const childContainer = document.getElementById(`children-of-${targetId}`);
-                        if (childContainer) {
-                            childContainer.classList.toggle('show');
-                            button.classList.toggle('expanded');
-                            button.textContent = childContainer.classList.contains('show') ? '−' : '+'; // Buton metnini değiştir
-                        }
-                    });
-                });
-
-                if (historyModal) historyModal.classList.add('show');
+    // 2. Her işlem için varsa child'larını grupla
+    const childrenMap = new Map();
+    transactions.forEach(tx => {
+        if (tx.parentId && transactionsMap.has(tx.parentId)) {
+            if (!childrenMap.has(tx.parentId)) {
+                childrenMap.set(tx.parentId, []);
             }
+            childrenMap.get(tx.parentId).push(tx);
+        }
+    });
 
+    // 3. HTML'yi oluşturmak için recursive fonksiyon
+    const buildAccordion = (txList, level = 0) => {
+        return txList.map(tx => {
+            const children = childrenMap.get(tx.transactionId) || [];
+            const hasChildren = children.length > 0;
+            const file = files?.find(f => f.id === tx.documentId);
+            const fileLink = file ? `<a href="${file.content}" target="_blank" class="transaction-file-link">${file.name}</a>` : '';
+            const paddingLeft = 15 + level * 20;
+
+            return `
+                <div class="transaction-node" style="padding-left: ${paddingLeft}px;">
+                    ${hasChildren ? `<button class="transaction-toggle-btn" data-target-id="${tx.transactionId}">+</button>` : ''}
+                    <div class="transaction-info">
+                        <div class="transaction-description"><strong>${tx.type}</strong>: ${tx.description || '-'}</div>
+                        <div class="transaction-meta">${new Date(tx.timestamp).toLocaleString('tr-TR')} – ${tx.userEmail} ${fileLink}</div>
+                    </div>
+                </div>
+                ${hasChildren ? `
+                    <div class="child-transactions" id="children-of-${tx.transactionId}">
+                        ${buildAccordion(children, level + 1)}
+                    </div>
+                ` : ''}
+            `;
+        }).join('');
+    };
+
+    // 4. En üstteki işlemler parent olmayanlardır
+    const rootTransactions = transactions.filter(tx => !tx.parentId || !transactionsMap.has(tx.parentId));
+    historyContentDiv.innerHTML = buildAccordion(rootTransactions);
+
+    // 5. Toggle işlevi bağla
+    historyContentDiv.querySelectorAll('.transaction-toggle-btn').forEach(button => {
+        button.addEventListener('click', () => {
+            const targetId = button.dataset.targetId;
+            const childContainer = document.getElementById(`children-of-${targetId}`);
+            if (childContainer) {
+                const isOpen = childContainer.classList.toggle('show');
+                button.textContent = isOpen ? '−' : '+';
+                button.classList.toggle('expanded', isOpen);
+            }
+        });
+    });
+
+    if (historyModal) historyModal.classList.add('show');
+};
 
             editRecord = (recordId) => {
                 window.location.href = `data-entry.html?id=${recordId}`;
