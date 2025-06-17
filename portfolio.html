@@ -113,19 +113,6 @@
         .trademark-image-thumb-container:hover .trademark-image-preview-large {
             transform: translateX(-50%) scale(1);
         }
-
-        /* Action Buttons within table for Portfolio */
-        /* Bu stil kaldırıldı, shared-styles.css'teki .action-btn kullanılacak */
-        /* .table-action-btn {
-            background: #6c757d;
-            color: white;
-            border: none;
-            padding: 8px 12px;
-            border-radius: 6px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            margin-right: 5px;
-        } */
     </style>
 </head>
 <body>
@@ -284,11 +271,12 @@
                 document.getElementById('closeTransactionModal').addEventListener('click', (e) => this.closeModal('transactionModal'));
                 document.getElementById('closeTransactionModalBtn').addEventListener('click', (e) => this.closeModal('transactionModal'));
 
-                document.getElementById('typeFilter').addEventListener('change', (e) => this.populateStatusFilter());
+                document.getElementById('typeFilter').addEventListener('change', (e) => this.populateStatusFilter(e.target.value)); // type parametresi e.target.value olarak geçirildi
                 this.populateStatusFilter(); // Sayfa yüklendiğinde durum filtrelerini doldur
             }
 
-            populateStatusFilter = (type = document.getElementById('typeFilter').value) => {
+            // populateStatusFilter metodu güncellendi
+            populateStatusFilter = (type) => { // type parametresi kullanıldı
                 const statusFilterSelect = document.getElementById('statusFilter');
                 if (!statusFilterSelect) return;
                 statusFilterSelect.innerHTML = '<option value="all">Tümü</option>';
@@ -327,7 +315,7 @@
                     ]
                 };
 
-                const statuses = allStatuses[type] || [];
+                const statuses = allStatuses[type] || []; // selectedType yerine type kullanıldı
                 statuses.forEach(status => {
                     const option = document.createElement('option');
                     option.value = status.value;
