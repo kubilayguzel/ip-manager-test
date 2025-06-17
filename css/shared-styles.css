@@ -333,7 +333,7 @@ body {
     background: #6c757d; /* Varsayılan arka plan rengi */
     color: white; /* Varsayılan metin rengi */
     border: none;
-    padding: 6px 10px; /* Daha kompakt hale getirildi */
+    padding: 6px 10px; /* Daha kompakt ve metin+ikon için uygun padding */
     border-radius: 6px;
     cursor: pointer;
     transition: all 0.3s ease;
@@ -342,7 +342,7 @@ body {
     display: inline-flex; /* İkon ve metni yanyana ve ortalı hizalamak için */
     align-items: center; /* Dikeyde ortala */
     justify-content: center; /* Yatayda ortala */
-    min-width: 40px; /* Butonların minimum genişliği */
+    min-width: 70px; /* Metinle birlikte butonların minimum genişliği */
     height: 30px; /* Butonların yüksekliği */
     gap: 5px; /* İkon ve metin arası boşluk */
     box-shadow: 0 2px 5px rgba(0,0,0,0.1); /* Hafif gölge */
@@ -362,23 +362,24 @@ body {
     transform: none;
 }
 
-/* Belirli aksiyon buton renkleri ve hover efektleri */
-.action-btn.btn-view { background-color: #17a2b8; /* Turkuaz */ }
-.action-btn.btn-view:hover { background-color: #138496; }
+/* Belirli aksiyon buton renkleri */
+/* Task Management ve My Tasks'taki renkleri baz alalım */
+.action-btn.view-btn { background-color: #17a2b8; /* Bilgi / Mavi */ }
+.action-btn.view-btn:hover { background-color: #138496; }
 
-.action-btn.edit-btn { background-color: #ffc107; color: #212529; /* Sarı, koyu metin */ }
+.action-btn.edit-btn { background-color: #ffc107; color: #212529; /* Uyarı / Sarı */ }
 .action-btn.edit-btn:hover { background-color: #e0a800; }
 
-.action-btn.delete-btn { background-color: #dc3545; /* Kırmızı */ }
+.action-btn.delete-btn { background-color: #dc3545; /* Tehlike / Kırmızı */ }
 .action-btn.delete-btn:hover { background-color: #c82333; }
 
-.action-btn.complete-btn { background-color: #28a745; /* Yeşil */ }
+.action-btn.complete-btn { background-color: #28a745; /* Başarılı / Yeşil */ }
 .action-btn.complete-btn:hover { background-color: #218838; }
 
-.action-btn.add-accrual-btn { background-color: #28a745; /* Yeşil */ }
+.action-btn.add-accrual-btn { background-color: #28a745; /* Başarılı / Yeşil */ }
 .action-btn.add-accrual-btn:hover { background-color: #218838; }
 
-.btn-reassign { background-color: #5a6268; }
+.btn-reassign { background-color: #5a6268; /* Orta Gri */ }
 .btn-reassign:hover { background-color: #4a5258; }
 
 
