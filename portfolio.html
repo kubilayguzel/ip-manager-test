@@ -655,82 +655,43 @@
                 });
             }
 
-            renderTransactionHistory = (recordId, transactions, files) => {
-    const historyModal = document.getElementById('transactionModal');
-    const historyContentDiv = document.getElementById('transactionHistoryContent');
-    const noTransactionsDiv = document.getElementById('noTransactions');
-    if (!historyContentDiv || !noTransactionsDiv) return;
+            renderTransactionHistory(record) {
+            const historyContainer = document.getElementById('transactionHistory');
+            historyContainer.innerHTML = buildAccordion(record.transactions).join('');
 
-    historyContentDiv.innerHTML = '';
-
-    if (!transactions || transactions.length === 0) {
-        noTransactionsDiv.style.display = 'block';
-        historyContentDiv.style.display = 'none';
-        return;
-    }
-
-    noTransactionsDiv.style.display = 'none';
-    historyContentDiv.style.display = 'block';
-
-    // 1. Tüm işlemleri bir harita içine al
-    const transactionsMap = new Map(transactions.map(tx => [tx.transactionId, tx]));
-
-    // 2. Her işlem için varsa child'larını grupla
-    const childrenMap = new Map();
-    transactions.forEach(tx => {
-        if (tx.parentId && transactionsMap.has(tx.parentId)) {
-            if (!childrenMap.has(tx.parentId)) {
-                childrenMap.set(tx.parentId, []);
+            // Accordion butonlarına click event tanımla
+            document.querySelectorAll('.transaction-toggle-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                const targetId = btn.getAttribute('data-target');
+                const targetDiv = document.getElementById(`children-of-${targetId}`);
+                const isVisible = targetDiv.style.display === 'block';
+                targetDiv.style.display = isVisible ? 'none' : 'block';
+                btn.textContent = isVisible ? '+' : '−';
+                });
+            });
             }
-            childrenMap.get(tx.parentId).push(tx);
-        }
-    });
 
-    // 3. HTML'yi oluşturmak için recursive fonksiyon
-    const buildAccordion = (txList, level = 0) => {
-        return txList.map(tx => {
-            const children = childrenMap.get(tx.transactionId) || [];
-            const hasChildren = children.length > 0;
-            const file = files?.find(f => f.id === tx.documentId);
-            const fileLink = file ? `<a href="${file.content}" target="_blank" class="transaction-file-link">${file.name}</a>` : '';
-            const paddingLeft = 15 + level * 20;
-
-            return `
-                <div class="transaction-node" style="padding-left: ${paddingLeft}px;">
-                    ${hasChildren ? `<button class="transaction-toggle-btn" data-target-id="${tx.transactionId}">+</button>` : ''}
-                    <div class="transaction-info">
-                        <div class="transaction-description"><strong>${tx.type}</strong>: ${tx.description || '-'}</div>
-                        <div class="transaction-meta">${new Date(tx.timestamp).toLocaleString('tr-TR')} – ${tx.userEmail} ${fileLink}</div>
-                    </div>
+            // Yardımcı fonksiyon: Parent-child ilişkiyi DOM olarak kur
+            buildAccordion(transactions, parentId = null) {
+            const children = transactions.filter(tx => tx.parentId === parentId);
+            return children.map(tx => {
+                const nestedChildren = buildAccordion(transactions, tx.transactionId).join('');
+                const hasChildren = nestedChildren !== '';
+                return `
+                <div class="transaction-node" style="margin-left: ${parentId ? '20px' : '0'}; margin-top: 8px;">
+                    ${hasChildren
+                    ? `<button class="transaction-toggle-btn" data-target="${tx.transactionId}" style="margin-right: 6px;">+</button>`
+                    : '<span style="display:inline-block; width: 24px;"></span>'}
+                    <span><strong>${tx.type}:</strong> ${tx.description || ''}</span>
+                    ${hasChildren
+                    ? `<div class="child-transactions" id="children-of-${tx.transactionId}" style="display: none; padding-left: 20px;">${nestedChildren}</div>`
+                    : ''
+                    }
                 </div>
-                ${hasChildren ? `
-                    <div class="child-transactions" id="children-of-${tx.transactionId}">
-                        ${buildAccordion(children, level + 1)}
-                    </div>
-                ` : ''}
-            `;
-        }).join('');
-    };
-
-    // 4. En üstteki işlemler parent olmayanlardır
-    const rootTransactions = transactions.filter(tx => !tx.parentId || !transactionsMap.has(tx.parentId));
-    historyContentDiv.innerHTML = buildAccordion(rootTransactions);
-
-    // 5. Toggle işlevi bağla
-    historyContentDiv.querySelectorAll('.transaction-toggle-btn').forEach(button => {
-        button.addEventListener('click', () => {
-            const targetId = button.dataset.targetId;
-            const childContainer = document.getElementById(`children-of-${targetId}`);
-            if (childContainer) {
-                const isOpen = childContainer.classList.toggle('show');
-                button.textContent = isOpen ? '\u2212' : '+';
-                button.classList.toggle('expanded', isOpen);
+                `;
+            });
             }
-        });
-    });
 
-    if (historyModal) historyModal.classList.add('show');
-};
 
             editRecord = (recordId) => {
                 window.location.href = `data-entry.html?id=${recordId}`;
