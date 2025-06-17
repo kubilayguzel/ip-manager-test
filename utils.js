@@ -1,106 +1,84 @@
 // utils.js
 
-/**
- * Kullanıcıya bildirim mesajı gösterir.
- * @param {string} message - Gösterilecek mesaj.
- * @param {'success' | 'error' | 'info'} type - Bildirim tipi (success, error, info).
- * @param {number} duration - Bildirimin ekranda kalma süresi (ms cinsinden, varsayılan 5000ms).
- */
-export function showNotification(message, type = 'info', duration = 5000) {
-    const successMessage = document.getElementById('successMessage');
-    const errorMessage = document.getElementById('errorMessage');
-    const infoMessage = document.getElementById('infoMessage');
+// Merkezi Durum Tanımlamaları
+export const STATUSES = {
+    patent: [
+        { text: 'Başvuru', value: 'başvuru' },
+        { text: 'Yayınlandı', value: 'yayınlandı' },
+        { text: 'Onaylandı', value: 'onaylandı' },
+        { text: 'Reddedildi', value: 'reddedildi' },
+        { text: 'Süresi Doldu', value: 'süresi_doldu' }
+    ],
+    trademark: [
+        { text: 'Başvuru', value: 'başvuru' },
+        { text: 'Yayınlandı', value: 'yayınlandı' },
+        { text: 'Tescilli', value: 'tescilli' },
+        { text: 'Reddedildi', value: 'reddedildi' },
+        { text: 'Kısmi Ret', value: 'kısmi_ret' },
+        { text: 'Yenilenmedi', value: 'yenilenmedi' },
+        { text: 'İtiraz Geldi', value: 'itiraz_geldi' },
+        { text: 'İtiraz Edildi', value: 'itiraz_edildi' },
+        { text: 'Başvuru Geçersiz/Hükümsüz', value: 'başvuru_geçersiz_hükümsüz' },
+        { text: 'Yenilememe Nedeniyle Geçersiz', value: 'yenilememe_nedeniyle_geçersiz' }
+    ],
+    copyright: [
+        { text: 'Beklemede', value: 'beklemede' },
+        { text: 'Tescilli', value: 'tescilli' },
+        { text: 'Süresi Doldu', value: 'süresi_doldu' }
+    ],
+    design: [
+        { text: 'Başvuru', value: 'başvuru' },
+        { text: 'Yayınlandı', value: 'yayınlandı' },
+        { text: 'Onaylandı', value: 'onaylandı' },
+        { text: 'Reddedildi', value: 'reddedildi' },
+        { text: 'Süresi Doldu', value: 'süresi_doldu' }
+    ]
+};
 
-    // Tüm mesajları gizle
-    if (successMessage) successMessage.style.display = 'none';
-    if (errorMessage) errorMessage.style.display = 'none';
-    if (infoMessage) infoMessage.style.display = 'none';
+// Merkezi Tip Tanımlamaları
+export const TYPE_NAMES = { 
+    patent: 'Patent', 
+    trademark: 'Marka', 
+    design: 'Tasarım',
+    copyright: 'Telif Hakkı'
+};
 
-    let targetMessage;
-    let targetText;
+// Tüm durumları tek bir haritada birleştirerek kolay erişim sağla
+export const ALL_STATUS_MAP = Object.values(STATUSES).flat().reduce((map, status) => {
+    map[status.value] = status.text;
+    return map;
+}, {});
 
-    // Hedef mesaj elementini ve metin elementini belirle
-    switch (type) {
-        case 'success':
-            targetMessage = successMessage;
-            targetText = document.getElementById('successText');
-            break;
-        case 'error':
-            targetMessage = errorMessage;
-            targetText = document.getElementById('errorText');
-            break;
-        case 'info':
-            targetMessage = infoMessage;
-            targetText = document.getElementById('infoText');
-            break;
-        default:
-            targetMessage = infoMessage;
-            targetText = document.getElementById('infoText');
-    }
 
-    if (targetMessage && targetText) {
-        targetText.textContent = message;
-        targetMessage.style.display = 'flex'; // Flex olarak göster
-        setTimeout(() => {
-            targetMessage.style.display = 'none';
-        }, duration);
-    }
+export function showNotification(message, type = 'info') {
+    const container = document.getElementById('notification-container') || createNotificationContainer();
+    const notification = document.createElement('div');
+    notification.className = `notification notification-${type}`;
+    notification.textContent = message;
+    container.appendChild(notification);
+    setTimeout(() => {
+        notification.classList.add('hide');
+        setTimeout(() => notification.remove(), 500);
+    }, 5000);
 }
 
-/**
- * Belirli bir alandaki hata mesajını gösterir.
- * @param {string} fieldId - Hata mesajı gösterilecek input veya elementin ID'si.
- * @param {string} message - Gösterilecek hata mesajı.
- */
-export function showFieldError(fieldId, message) {
-    const field = document.getElementById(fieldId);
-    const errorDiv = document.getElementById(`${fieldId}-error`);
-    
-    if (field) {
-        field.classList.add('error-field'); // Hata stilini uygula
-    }
-    if (errorDiv) {
-        errorDiv.textContent = message;
-        errorDiv.style.display = 'block';
-    }
+function createNotificationContainer() {
+    const container = document.createElement('div');
+    container.id = 'notification-container';
+    document.body.appendChild(container);
+    return container;
 }
 
-/**
- * Tüm hata mesajlarını temizler ve alanlardan hata stilini kaldırır.
- */
-export function clearAllFieldErrors() {
-    document.querySelectorAll('.error-field').forEach(field => {
-        field.classList.remove('error-field');
-    });
-    document.querySelectorAll('.error-message').forEach(errorDiv => {
-        errorDiv.style.display = 'none';
-        errorDiv.textContent = ''; // Mesajı da temizle
-    });
-}
-
-/**
- * Verilen bir tarihin dosya boyutu formatını döndürür.
- * @param {number} bytes - Bayt cinsinden dosya boyutu.
- * @returns {string} Okunabilir dosya boyutu.
- */
-export function formatFileSize(bytes) {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-}
-
-/**
- * Bir dosyayı Data URL olarak okur.
- * @param {File} file - Okunacak dosya objesi.
- * @returns {Promise<string>} Data URL stringi.
- */
 export function readFileAsDataURL(file) {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
-        reader.onload = () => resolve(reader.result);
-        reader.onerror = reject;
+        reader.onload = () => resolve({
+            name: file.name,
+            type: file.type,
+            size: file.size,
+            content: reader.result
+        });
+        reader.onerror = (error) => reject(error);
         reader.readAsDataURL(file);
     });
 }
