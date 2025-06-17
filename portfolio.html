@@ -614,84 +614,80 @@
 
                 modalContentHtml += `</div>`;
 
-                modalContentHtml += `<h4 class="modal-detail-section-title">İşlem Geçmişi <button type="button" class="btn btn-secondary btn-small" onclick="window.portfolio.renderTransactionHistory('${record.id}', ${JSON.stringify(record.transactions || [])}, ${JSON.stringify(record.files || [])})">Tümünü Görüntüle</button></h4>`;
-                modalContentHtml += `<div id="transactionHistorySummary"></div>`;
+                modalContentHtml += `<h4 class="modal-detail-section-title">İşlem Geçmişi</h4>`;
+                modalContentHtml += `<div id="transactionHistoryContainer"></div>`;
                 
                 modalBodyEl.innerHTML = modalContentHtml;
 
-                this.renderTransactionHistorySummary(record.transactions, record.files);
+                this.renderTransactionHistory(record.id, record.transactions, record.files);
                 
                 modal.classList.add('show');
             }
 
-            renderTransactionHistorySummary = (transactions, files) => {
-                const historyDiv = document.getElementById('transactionHistorySummary');
-                if (!historyDiv) return;
-                historyDiv.innerHTML = '';
+            renderTransactionHistory = (recordId, transactions, files) => {
+                const historyContentDiv = document.getElementById('transactionHistoryContainer');
+                if (!historyContentDiv) return;
+                historyContentDiv.innerHTML = '';
+            
                 const sortedTransactions = [...(transactions || [])].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-                const latestTransactions = sortedTransactions.slice(0, 3);
-
-                if (latestTransactions.length === 0) {
-                    historyDiv.innerHTML = '<p class="no-transactions">Bu kayıt için henüz bir işlem bulunmamaktadır.</p>';
+            
+                if (sortedTransactions.length === 0) {
+                    historyContentDiv.innerHTML = '<p class="no-transactions" style="padding: 20px; text-align: center;">Bu kayıt için henüz bir işlem bulunmamaktadır.</p>';
                     return;
                 }
-
-                latestTransactions.forEach(tx => {
-                    const file = files?.find(f => f.id === tx.documentId);
-                    const fileLink = file ? `<a href="${file.content}" target="_blank" class="transaction-file-link">${file.name}</a>` : '';
-                    historyDiv.innerHTML += `
-                        <div class="transaction-item">
-                            <div class="transaction-icon">📜</div>
-                            <div class="transaction-content">
-                                <div class="transaction-header">
-                                    <span class="transaction-title">${tx.type || 'Bilinmeyen İşlem'}</span>
-                                    <span class="transaction-meta">${new Date(tx.timestamp).toLocaleString('tr-TR')}</div>
-                                </div>
-                                <div class="transaction-description">${tx.description || '-'}</div>
-                                ${fileLink}
-                            </div>
-                        </div>
-                    `;
-                });
-            }
-
-            renderTransactionHistory(record) {
-            const historyContainer = document.getElementById('transactionHistory');
-            historyContainer.innerHTML = buildAccordion(record.transactions).join('');
-
-            // Accordion butonlarına click event tanımla
-            document.querySelectorAll('.transaction-toggle-btn').forEach(btn => {
-                btn.addEventListener('click', () => {
-                const targetId = btn.getAttribute('data-target');
-                const targetDiv = document.getElementById(`children-of-${targetId}`);
-                const isVisible = targetDiv.style.display === 'block';
-                targetDiv.style.display = isVisible ? 'none' : 'block';
-                btn.textContent = isVisible ? '+' : '−';
-                });
-            });
-            }
-
-            // Yardımcı fonksiyon: Parent-child ilişkiyi DOM olarak kur
-            buildAccordion(transactions, parentId = null) {
-            const children = transactions.filter(tx => tx.parentId === parentId);
-            return children.map(tx => {
-                const nestedChildren = buildAccordion(transactions, tx.transactionId).join('');
-                const hasChildren = nestedChildren !== '';
-                return `
-                <div class="transaction-node" style="margin-left: ${parentId ? '20px' : '0'}; margin-top: 8px;">
-                    ${hasChildren
-                    ? `<button class="transaction-toggle-btn" data-target="${tx.transactionId}" style="margin-right: 6px;">+</button>`
-                    : '<span style="display:inline-block; width: 24px;"></span>'}
-                    <span><strong>${tx.type}:</strong> ${tx.description || ''}</span>
-                    ${hasChildren
-                    ? `<div class="child-transactions" id="children-of-${tx.transactionId}" style="display: none; padding-left: 20px;">${nestedChildren}</div>`
-                    : ''
+            
+                const transactionsMap = new Map(sortedTransactions.map(tx => [tx.transactionId, tx]));
+                const childrenMap = new Map();
+            
+                sortedTransactions.forEach(tx => {
+                    if (tx.parentId && transactionsMap.has(tx.parentId)) {
+                        if (!childrenMap.has(tx.parentId)) childrenMap.set(tx.parentId, []);
+                        childrenMap.get(tx.parentId).push(tx);
                     }
-                </div>
-                `;
-            });
+                });
+            
+                const buildTreeHtml = (transactionsToBuild) => {
+                    let html = '';
+                    transactionsToBuild.forEach(tx => {
+                        const children = childrenMap.get(tx.transactionId) || [];
+                        const hasChildren = children.length > 0;
+                        let documentLinkHtml = '';
+                        if (tx.documentId && files) {
+                            const relatedFile = files.find(file => file.id === tx.documentId);
+                            if (relatedFile) documentLinkHtml = ` | <a href="${relatedFile.content}" download="${relatedFile.name}" class="transaction-file-link">📄 Belge</a>`;
+                        }
+                        html += `
+                            <div class="transaction-node" data-id="${tx.transactionId}">
+                                ${hasChildren ? `<button class="transaction-toggle-btn" data-target-id="${tx.transactionId}">+</button>` : ''}
+                                <div class="transaction-node-content">
+                                    <div class="transaction-info">
+                                        <div class="transaction-description">${tx.description || tx.type}</div> 
+                                        <div class="transaction-meta">${new Date(tx.timestamp).toLocaleString('tr-TR')} by ${tx.userEmail}${documentLinkHtml}</div>
+                                    </div>
+                                    <div class="transaction-actions">
+                                        </div>
+                                </div>
+                            </div>
+                            ${hasChildren ? `<div class="child-transactions" id="children-of-${tx.transactionId}">${buildTreeHtml(children)}</div>` : ''}`;
+                    });
+                    return html;
+                };
+            
+                const rootTransactions = sortedTransactions.filter(tx => !tx.parentId || !transactionsMap.has(tx.parentId));
+                historyContentDiv.innerHTML = buildTreeHtml(rootTransactions);
+            
+                historyContentDiv.querySelectorAll('.transaction-toggle-btn').forEach(button => {
+                    button.addEventListener('click', () => {
+                        const targetId = button.dataset.targetId;
+                        const childContainer = document.getElementById(`children-of-${targetId}`);
+                        if (childContainer) {
+                            childContainer.classList.toggle('show');
+                            button.classList.toggle('expanded');
+                            button.textContent = childContainer.classList.contains('show') ? '−' : '+';
+                        }
+                    });
+                });
             }
-
 
             editRecord = (recordId) => {
                 window.location.href = `data-entry.html?id=${recordId}`;
