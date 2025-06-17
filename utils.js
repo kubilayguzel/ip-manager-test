@@ -81,4 +81,4 @@ export function readFileAsDataURL(file) {
         reader.onerror = (error) => reject(error);
         reader.readAsDataURL(file);
     });
-}
+} 
