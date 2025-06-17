@@ -4,6 +4,7 @@ import {
     signInWithEmailAndPassword,
     createUserWithEmailAndPassword,
     signOut,
+    onAuthStateChanged,
     updateProfile
 } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
 import {
@@ -13,13 +14,14 @@ import {
     getDocs,
     doc,
     updateDoc,
-    deleteDoc,
+    deleteDoc, 
     query,
     orderBy,
     where,
-    getDoc,
-    setDoc,
-    arrayUnion,
+    getDoc, 
+    setDoc, // setDoc eklendi
+    arrayUnion, 
+    arrayRemove,
     writeBatch
 } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 
@@ -47,6 +49,16 @@ try {
     console.error('⚠️ Firebase initialization failed:', error.message);
     isFirebaseAvailable = false;
 }
+
+// >>> EMÜLATÖR KULLANACAKSANIZ BU SATIRLARI AKTİF EDİN <<<
+// Firestore ve Auth emülatörlerini import edin
+// import { connectAuthEmulator } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+// import { connectFirestoreEmulator } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+
+// connectAuthEmulator(auth, 'http://localhost:9099'); // Auth emülatörü
+// connectFirestoreEmulator(db, 'localhost', 8080); // Firestore emülatörü
+// >>> EMÜLATÖR KULLANACAKSANIZ BU SATIRLARI AKTİF EDİN <<<
+
 
 // --- Helper Functions & Constants ---
 export function generateUUID() {
@@ -124,7 +136,7 @@ export const authService = {
             const role = await this.getUserRole(user.uid) || 'user'; // Rolü çek veya varsayılan atama
             const userData = { uid: user.uid, email: user.email, displayName: user.displayName, role, isSuperAdmin: role === 'superadmin' };
             localStorage.setItem('currentUser', JSON.stringify(userData));
-            return { success: true, user: userData, message: "Giriş başarılı!" };
+            return { success: true, user: userData, message: "Giriş başarılı!" }; // Mesaj eklendi
         } catch (error) {
             let errorMessage = "Giriş başarısız oldu.";
             if (error.code) {
@@ -155,10 +167,10 @@ export const authService = {
             await updateProfile(user, { displayName });
             const setRoleResult = await this.setUserRole(user.uid, email, displayName, initialRole);
             if (!setRoleResult.success) throw new Error(setRoleResult.error); // Rol atama hatası fırlat
-
+            
             const userData = { uid: user.uid, email, displayName, role: initialRole, isSuperAdmin: initialRole === 'superadmin' };
             localStorage.setItem('currentUser', JSON.stringify(userData));
-            return { success: true, user: userData, message: "Kayıt başarılı!" };
+            return { success: true, user: userData, message: "Kayıt başarılı!" }; // Mesaj eklendi
         } catch (error) {
             let errorMessage = "Kayıt başarısız oldu.";
             if (error.code) {
@@ -226,14 +238,14 @@ export const authService = {
 export const personsService = {
     async addPerson(personData) {
         const user = authService.getCurrentUser();
-        if (!user) return { success: false, error: "Kullanıcı girişi yapılmamış." };
+        if(!user) return {success: false, error: "Kullanıcı girişi yapılmamış."};
         // persons.html'den gelen yeni alanları handle et
-        const newPerson = {
-            ...personData,
-            id: generateUUID(),
-            userId: user.uid,
-            userEmail: user.email,
-            createdAt: new Date().toISOString(),
+        const newPerson = { 
+            ...personData, 
+            id: generateUUID(), 
+            userId: user.uid, 
+            userEmail: user.email, 
+            createdAt: new Date().toISOString(), 
             updatedAt: new Date().toISOString(),
             // Yeni eklenen alanlar
             personType: personData.personType, // 'real' veya 'legal'
@@ -247,7 +259,7 @@ export const personsService = {
             // name alanı kişinin tipine göre oluşturulacak
             name: personData.personType === 'real' ? `${personData.firstName || ''} ${personData.lastName || ''}`.trim() : personData.companyName || null
         };
-
+        
         if (isFirebaseAvailable) {
             try {
                 await setDoc(doc(db, 'persons', newPerson.id), newPerson);
@@ -266,8 +278,9 @@ export const personsService = {
     async getPersons() {
         if (isFirebaseAvailable) {
             const user = authService.getCurrentUser();
-            if (!user) return { success: true, data: [] };
+            if(!user) return {success: true, data:[]};
             try {
+                // 'name' alanı üzerinden sıralama yapılacak
                 const q = user.role === 'superadmin' ? query(collection(db, 'persons'), orderBy('name')) : query(collection(db, 'persons'), where('userId', '==', user.uid), orderBy('name'));
                 const snapshot = await getDocs(q);
                 return { success: true, data: snapshot.docs.map(d => ({ id: d.id, ...d.data() })) };
@@ -282,19 +295,20 @@ export const personsService = {
         updates.updatedAt = new Date().toISOString();
         // Eğer personType değişirse veya name'i etkileyen alanlar değişirse name'i yeniden oluştur
         if (updates.personType || updates.firstName || updates.lastName || updates.companyName) {
-            const currentPerson = await getDoc(doc(db, 'persons', personId)); // Güncel veriyi çek
-            const currentData = currentPerson.data();
-
-            if (updates.personType === 'real' || (currentData.personType === 'real' && updates.personType === undefined)) {
-                const firstName = updates.firstName !== undefined ? updates.firstName : currentData.firstName;
-                const lastName = updates.lastName !== undefined ? updates.lastName : currentData.lastName;
-                updates.name = `${firstName || ''} ${lastName || ''}`.trim();
-            } else if (updates.personType === 'legal' || (currentData.personType === 'legal' && updates.personType === undefined)) {
-                const companyName = updates.companyName !== undefined ? updates.companyName : currentData.companyName;
-                updates.name = companyName || null;
+            if (updates.personType === 'real' || (!updates.personType && this.allPersons.find(p => p.id === personId)?.personType === 'real')) {
+                 const currentPerson = await getDoc(doc(db, 'persons', personId)); // Güncel veriyi çek
+                 const currentData = currentPerson.data();
+                 const firstName = updates.firstName !== undefined ? updates.firstName : currentData.firstName;
+                 const lastName = updates.lastName !== undefined ? updates.lastName : currentData.lastName;
+                 updates.name = `${firstName || ''} ${lastName || ''}`.trim();
+            } else if (updates.personType === 'legal' || (!updates.personType && this.allPersons.find(p => p.id === personId)?.personType === 'legal')) {
+                 const currentPerson = await getDoc(doc(db, 'persons', personId)); // Güncel veriyi çek
+                 const currentData = currentPerson.data();
+                 const companyName = updates.companyName !== undefined ? updates.companyName : currentData.companyName;
+                 updates.name = companyName || null;
             }
         }
-
+        
         if (isFirebaseAvailable) {
             try {
                 await updateDoc(doc(db, 'persons', personId), updates);
@@ -382,13 +396,13 @@ export const ipRecordsService = {
     },
     async addRecord(record) {
         const user = authService.getCurrentUser();
-        if (!user) return { success: false, error: "Kullanıcı girişi yapılmamış." };
+        if(!user) return {success: false, error: "Kullanıcı girişi yapılmamış."};
         const timestamp = new Date().toISOString();
         // Dosyalara benzersiz ID atayalım
         const filesWithIds = (record.files || []).map(f => ({ ...f, id: f.id || generateUUID() }));
 
         const newRecord = { ...record, userId: user.uid, userEmail: user.email, createdAt: timestamp, updatedAt: timestamp, transactions: [], files: filesWithIds };
-
+        
         if (isFirebaseAvailable) {
             try {
                 const docRef = await addDoc(collection(db, 'ipRecords'), newRecord);
@@ -406,28 +420,28 @@ export const ipRecordsService = {
     },
     async addTransactionToRecord(recordId, transactionData) {
         const user = authService.getCurrentUser();
-        if (!user) return { success: false, error: "Kullanıcı girişi yapılmamış." };
+        if(!user) return {success: false, error: "Kullanıcı girişi yapılmamış."};
         if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor. İşlem eklenemez." };
-
+        
         try {
             const recordRef = doc(db, 'ipRecords', recordId);
             const currentDoc = await getDoc(recordRef);
             if (!currentDoc.exists()) return { success: false, error: "Kayıt bulunamadı." };
 
-            let currentTransactions = currentDoc.data().transactions || [];
-
+            let currentTransactions = currentDoc.data().transactions || []; 
+            
             const newTransaction = {
                 transactionId: generateUUID(),
                 timestamp: new Date().toISOString(),
                 userId: user.uid,
                 userEmail: user.email,
-                ...transactionData
+                ...transactionData 
             };
 
-            currentTransactions.push(newTransaction);
+            currentTransactions.push(newTransaction); 
 
             await updateDoc(recordRef, {
-                transactions: currentTransactions,
+                transactions: currentTransactions, 
                 updatedAt: new Date().toISOString()
             });
             return { success: true, transaction: newTransaction };
@@ -437,40 +451,48 @@ export const ipRecordsService = {
         }
     },
     async getRecords() {
-        if (isFirebaseAvailable) {
-            const user = authService.getCurrentUser();
-            if (!user) return { success: true, data: [] };
-            try {
-                const q = user.role === 'superadmin' ? query(collection(db, 'ipRecords'), orderBy('createdAt', 'desc')) : query(collection(db, 'ipRecords'), where('userId', '==', user.uid), orderBy('createdAt', 'desc'));
-                const snapshot = await getDocs(q);
-                let records = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+    if (isFirebaseAvailable) {
+        const user = authService.getCurrentUser();
+        if(!user) return {success: true, data:[]};
+        try {
+            const q = user.role === 'superadmin' ? query(collection(db, 'ipRecords'), orderBy('createdAt', 'desc')) : query(collection(db, 'ipRecords'), where('userId', '==', user.uid), orderBy('createdAt', 'desc'));
+            const snapshot = await getDocs(q);
+            let records = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
 
-                const allOwnersMap = new Map();
-                const allPersonsSnapshot = await getDocs(collection(db, 'persons'));
-                allPersonsSnapshot.forEach(personDoc => {
-                    allOwnersMap.set(personDoc.id, personDoc.data());
+            // --- DÜZELTME BURADA BAŞLIYOR ---
+            // 'allPersonsMap' yerine 'allOwnersMap' olarak tanımlandı
+            const allOwnersMap = new Map(); 
+            const allPersonsSnapshot = await getDocs(collection(db, 'persons')); // Tüm kişileri çekiyoruz
+            allPersonsSnapshot.forEach(personDoc => {
+                // allOwnersMap'e kişinin Firestore belge ID'si ile tüm verisini ekliyoruz
+                allOwnersMap.set(personDoc.id, personDoc.data()); 
+            });
+            // --- DÜZELTME BURADA BİTİYOR ---
+
+            // Kayıtlardaki sahip bilgilerini zenginleştir
+            records = records.map(record => {
+                const enrichedOwners = (record.owners || []).map(ownerRef => {
+                    // Artık 'allOwnersMap' doğru isimle kullanılıyor
+                    const personData = allOwnersMap.get(ownerRef.id); 
+                    // Eğer kişi verisi bulunursa, id'si ile birlikte tüm kişi objesini ekle
+                    // Aksi takdirde, sadece orijinal referansı (id) bırak
+                    return personData ? { id: ownerRef.id, ...personData } : ownerRef; 
                 });
+                return { ...record, owners: enrichedOwners };
+            });
 
-                // Kayıtlardaki sahip bilgilerini zenginleştir
-                records = records.map(record => {
-                    const enrichedOwners = (record.owners || []).map(ownerRef => {
-                        const personData = allOwnersMap.get(ownerRef.id);
-                        return personData ? { id: ownerRef.id, ...personData } : ownerRef;
-                    });
-                    return { ...record, owners: enrichedOwners };
-                });
-
-                return { success: true, data: records };
-            } catch (error) {
-                console.error("Kayıtlar alınırken hata:", error);
-                return { success: false, error: error.message || "Kayıtlar yüklenirken beklenmeyen bir hata oluştu." };
-            }
+            return { success: true, data: records };
+        } catch (error) {
+            console.error("Kayıtlar alınırken hata:", error);
+            return { success: false, error: error.message || "Kayıtlar yüklenirken beklenmeyen bir hata oluştu." };
         }
-        return { success: true, data: JSON.parse(localStorage.getItem('ipRecords') || '[]') };
-    },
+    }
+    // Yerel depolama mantığı...
+    return { success: true, data: JSON.parse(localStorage.getItem('ipRecords') || '[]') };
+},
     async updateRecord(recordId, updates) {
         const user = authService.getCurrentUser();
-        if (!user) return { success: false, error: "Kullanıcı girişi yapılmamış." };
+        if(!user) return {success: false, error: "Kullanıcı girişi yapılmamış."};
         const timestamp = new Date().toISOString();
         if (isFirebaseAvailable) {
             try {
@@ -478,7 +500,7 @@ export const ipRecordsService = {
                 const currentDoc = await getDoc(recordRef);
                 if (!currentDoc.exists()) return { success: false, error: "Kayıt bulunamadı." };
                 const currentData = currentDoc.data();
-                let newTransactions = [...(currentData.transactions || [])];
+                let newTransactions = [...(currentData.transactions || [])]; 
 
                 // Dosya güncellemelerini yönet (mevcut dosyaları koru, yenileri ekle, eski transaction'ları güncelle)
                 let updatedFiles = currentData.files || [];
@@ -501,34 +523,39 @@ export const ipRecordsService = {
 
                     // Yeni eklenen dosyalar için transaction oluştur
                     newFilesToAdd.forEach(newFile => {
+                        const transactionType = newFile.indexingType || (newFile.parentTransactionId ? "Document Sub-Indexed" : "Document Indexed");
+                        const transactionDescription = newFile.indexingName || newFile.name;
+                        
+                        // İndeksleme modülünden gelen özel tipleri dikkate al
                         const effectiveTransactionType = newFile.indexingType || (newFile.documentDesignation === 'Ödeme Dekontu' ? 'Ödeme Dekontu Eklendi' : 'Belge Eklendi');
                         const effectiveDescription = newFile.indexingName || `${newFile.documentDesignation} - ${newFile.name}`;
 
-                        newTransactions.push({
-                            transactionId: generateUUID(),
-                            type: effectiveTransactionType,
-                            description: effectiveDescription,
-                            documentId: newFile.id,
-                            documentName: newFile.name,
-                            documentDesignation: newFile.documentDesignation,
-                            subDesignation: newFile.subDesignation,
-                            timestamp: newFile.uploadedAt || timestamp,
-                            userId: user.uid,
-                            userEmail: user.email,
-                            parentId: newFile.parentTransactionId || null
+
+                        newTransactions.push({ 
+                            transactionId: generateUUID(), 
+                            type: effectiveTransactionType, // Yeni tip
+                            description: effectiveDescription, // Yeni açıklama
+                            documentId: newFile.id, 
+                            documentName: newFile.name, 
+                            documentDesignation: newFile.documentDesignation, 
+                            subDesignation: newFile.subDesignation, 
+                            timestamp: newFile.uploadedAt || timestamp, 
+                            userId: user.uid, 
+                            userEmail: user.email, 
+                            parentId: newFile.parentTransactionId || null 
                         });
                     });
                 }
-
+                
                 // Güncelleme nesnesinden 'files' özelliğini çıkar, çünkü yukarıda manuel olarak güncelledik
                 const finalUpdates = { ...updates };
                 delete finalUpdates.files;
 
-                await updateDoc(recordRef, {
-                    ...finalUpdates,
+                await updateDoc(recordRef, { 
+                    ...finalUpdates, 
                     files: updatedFiles, // Güncellenmiş dosyalar dizisi
-                    updatedAt: timestamp,
-                    transactions: newTransactions
+                    updatedAt: timestamp, 
+                    transactions: newTransactions 
                 });
                 return { success: true };
             } catch (error) {
@@ -628,13 +655,13 @@ export const taskService = {
             return { success: false, error: error.message || "İş oluşturulurken beklenmeyen bir hata oluştu." };
         }
     },
-
+    
     async updateTask(taskId, updates) {
         if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor. İş güncellenemez." };
         try {
             const taskRef = doc(db, "tasks", taskId);
             const user = authService.getCurrentUser();
-
+            
             let actionMessage = `İş güncellendi.`;
             if (updates.status) {
                 actionMessage = `İş durumu "${updates.status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}" olarak güncellendi.`;
@@ -651,7 +678,7 @@ export const taskService = {
                 userEmail: user.email,
                 action: actionMessage
             };
-
+            
             const currentTaskDoc = await getDoc(taskRef);
             const currentTaskData = currentTaskDoc.data();
 
@@ -668,7 +695,7 @@ export const taskService = {
                 }
                 updatedFilesArray = updatedFilesArray.filter(existingFile => updates.files.some(incomingFile => incomingFile.id === existingFile.id)).concat(newFilesToAdd);
             }
-
+            
             const finalUpdates = { ...updates };
             delete finalUpdates.files; // files alanını manuel olarak işledik
 
@@ -735,6 +762,7 @@ export const taskService = {
             let tasks = JSON.parse(localStorage.getItem('tasks') || '[]');
             const taskToDelete = tasks.find(t => t.id === taskId);
             if (taskToDelete && taskToDelete.relatedIpRecordId && taskToDelete.transactionIdForDeletion) {
+                // Yerel modda deleteTransaction desteklenmediği için uyarı
                 console.warn("Yerel modda ilgili IP kaydından işlem silme desteklenmiyor.");
             }
             tasks = tasks.filter(task => task.id !== taskId);
@@ -756,10 +784,10 @@ export const taskService = {
             return { success: false, error: error.message || "İş silinirken beklenmeyen bir hata oluştu." };
         }
     },
-
+    
     async reassignTasks(taskIds, newUserId, newUserEmail) {
         if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor. İşler atanamaz." };
-
+        
         const user = authService.getCurrentUser();
         if (!user) return { success: false, error: "Kullanıcı girişi yapılmamış." };
 
@@ -812,7 +840,7 @@ const accrualService = {
         if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor. Tahakkuk eklenemez." };
         const user = authService.getCurrentUser();
         if (!user) return { success: false, error: "Kullanıcı girişi yapılmamış." };
-
+        
         try {
             const newAccrual = {
                 ...accrualData,
@@ -837,7 +865,7 @@ const accrualService = {
         try {
             const q = query(collection(db, 'accruals'), orderBy('createdAt', 'desc'));
             const querySnapshot = await getDocs(q);
-            return { success: true, data: querySnapshot.docs.map(d => ({ id: d.id, ...d.data() })) };
+            return { success: true, data: querySnapshot.docs.map(d => ({id: d.id, ...d.data()})) };
         } catch (error) {
             console.error("Tahakkuklar alınırken hata:", error);
             return { success: false, error: error.message || "Tahakkuklar yüklenirken beklenmeyen bir hata oluştu.", data: [] };
@@ -857,6 +885,8 @@ const accrualService = {
             let updatedFiles = currentAccrualData.files || [];
             if (updates.files !== undefined) {
                 const newFilesToAdd = [];
+                // incoming files içinde eski id'li olanlar varsa, mevcutları güncelleriz.
+                // yeni id'li olanlar varsa, onları ekleriz.
                 for (const incomingFile of updates.files) {
                     const existingFileIndex = updatedFiles.findIndex(f => f.id === incomingFile.id);
                     if (existingFileIndex > -1) {
@@ -865,9 +895,10 @@ const accrualService = {
                         newFilesToAdd.push({ ...incomingFile, id: incomingFile.id || generateUUID() });
                     }
                 }
+                // updates.files içinde olmayan ve updatedFiles içinde kalanları temizle
                 updatedFiles = updatedFiles.filter(existingFile => updates.files.some(incomingFile => incomingFile.id === existingFile.id)).concat(newFilesToAdd);
             }
-
+            
             const finalUpdates = { ...updates };
             delete finalUpdates.files; // Dosya güncellemelerini manuel olarak işledik
 
@@ -882,6 +913,86 @@ const accrualService = {
         }
     }
 };
+
+
+// --- Demo Data Function ---
+export async function createDemoData() {
+    console.log('🧪 Demo verisi oluşturuluyor...');
+    const user = authService.getCurrentUser();
+    if (!user) {
+        console.error('Demo verisi oluşturmak için kullanıcı girişi yapılmamış.');
+        return;
+    }
+
+    try {
+        // Yeni kişi modeliyle demo kişi oluştur
+        const demoPersonEmail = `demo.owner.${Date.now()}@example.com`;
+        const demoPerson = {
+            personType: 'real', // Demo kişi artık "real" tipinde
+            firstName: 'Demo',
+            lastName: 'Hak Sahibi',
+            name: 'Demo Hak Sahibi', // Eklenen name alanı
+            email: demoPersonEmail,
+            phone: '0555 123 4567',
+            address: 'Demo Adres, No:1, İstanbul',
+            country: 'Türkiye', // Yeni
+            city: 'İstanbul' // Yeni
+        };
+        const personResult = await personsService.addPerson(demoPerson);
+        if (!personResult.success) {
+            console.error("Demo kişi oluşturulamadı:", personResult.error);
+            return;
+        }
+        // Demo sahibi objesi güncellenen alanları içerecek şekilde
+        const demoOwner = { 
+            id: personResult.data.id, 
+            name: personResult.data.name, 
+            personType: personResult.data.personType, // personType
+            email: personResult.data.email 
+        };
+
+        const demoRecords = [
+            {
+                type: 'patent',
+                title: 'Örnek Mobil Cihaz Batarya Teknolojisi',
+                status: 'application',
+                applicationNumber: 'PT/2024/001',
+                applicationDate: '2024-03-15',
+                description: 'Bu, lityum-iyon pillerin ömrünü uzatan yeni bir batarya teknolojisi için yapılmış bir demo patent başvurusudur.',
+                owners: [demoOwner]
+            },
+            {
+                type: 'trademark',
+                title: 'Hızlı Kargo Lojistik',
+                status: 'registered',
+                applicationNumber: 'TM/2023/105',
+                applicationDate: '2023-11-20',
+                registrationDate: '2024-05-10',
+                description: 'Lojistik ve kargo hizmetleri için tescilli bir marka demosu.',
+                owners: [demoOwner],
+                trademarkImage: {
+                    name: 'logo_ornek.jpg',
+                    type: 'image/jpeg',
+                    size: 1024,
+                    content: 'data:image/jpeg;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII='
+                },
+                renewalDate: '2025-06-15' // Örnek yenileme tarihi eklendi
+            }
+        ];
+
+        for (const record of demoRecords) {
+            const addRecordResult = await ipRecordsService.addRecord(record);
+            if (!addRecordResult.success) {
+                console.error("Demo kayıt oluşturulamadı:", addRecordResult.error);
+            }
+        }
+        console.log('✅ Demo verisi başarıyla oluşturuldu!');
+
+    } catch (error) {
+        console.error('Demo verisi oluşturulurken hata:', error);
+    }
+}
+
 
 // --- Exports ---
 export { auth, db, accrualService };
