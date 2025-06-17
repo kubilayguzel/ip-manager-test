@@ -28,7 +28,7 @@
             margin: 0;
         }
         
-        /* ESKİ HEADER'I GİZLE */
+        /* ESKİ HEADER'ı GİZLE */
         body > .header { display: none; }
 
         /* Sayfaya özel ana konteyner stilleri */
@@ -378,8 +378,13 @@
                 this.selectedType = null;
                 this.recordId = null;
                 this.uploadedImage = null;
-                this.selectedOwners = []; // Sadece ID'ler ile tutulacak
-                this.allPersons = []; 
+                this.selectedOwners = [];
+                this.allPersons = [];
+
+                // Metotları 'this' bağlamına bind et
+                this.addOwnerToGrid = this.addOwnerToGrid.bind(this);
+                this.removeOwner = this.removeOwner.bind(this);
+                this.hideSearchPersonModal = this.hideSearchPersonModal.bind(this); // Ekledim
             }
 
             async init() {
@@ -428,26 +433,25 @@
                 document.getElementById('searchOwnerBtn').addEventListener('click', () => this.showSearchPersonModal());
                 document.getElementById('addPersonToOwnerBtn').addEventListener('click', () => this.showAddPersonModal());
 
-                document.getElementById('closeSearchPersonModal').addEventListener('click', () => this.hideSearchPersonModal());
-                document.getElementById('cancelSearchPersonModal').addEventListener('click', () => this.hideSearchPersonModal());
-                // Hak sahipleri arama kutusuna yazı yazıldığında arama yapması için 'keyup' event'i
+                document.getElementById('closeSearchPersonModal').addEventListener('click', this.hideSearchPersonModal); // Bind edilmiş metod kullanıldı
+                document.getElementById('cancelSearchPersonModal').addEventListener('click', this.hideSearchPersonModal); // Bind edilmiş metod kullanıldı
                 document.getElementById('modalPersonSearchInput').addEventListener('keyup', () => this.searchPersons());
-                // BURADA DÜZELTME: Arrow fonksiyonu ile 'this' bağlamını koruyoruz.
-                // Bu event listener'ı setupEventListeners içindeki 'this' bağlamını (yani DataEntryModule örneğini) koruyacaktır.
+                
+                // BURADAKİ EVENT LISTENER'I GÜNCELLENDİ
                 document.getElementById('modalSearchResults').addEventListener('click', (e) => {
-                const addButton = e.target.closest('button.btn-primary.btn-small');
-                if (addButton) {
-                    const selectedItem = addButton.closest('.owner-list-item');
-                    if (selectedItem) {
-                        const personId = selectedItem.dataset.id;
-                        const person = this.allPersons.find(p => p.id === personId);
-                        if (person) {
-                            // 'this' artık DataEntryModule örneğini gösteriyor.
-                            this.addOwnerToGrid(person); 
-                            this.hideSearchPersonModal();
+                    const addButton = e.target.closest('button.btn-primary.btn-small');
+                    if (addButton) {
+                        const selectedItem = addButton.closest('.owner-list-item');
+                        if (selectedItem) {
+                            const personId = selectedItem.dataset.id;
+                            const person = this.allPersons.find(p => p.id === personId);
+                            if (person) {
+                                // this.addOwnerToGrid ve this.hideSearchPersonModal artık constructor'da bind edildi
+                                this.addOwnerToGrid(person); 
+                                this.hideSearchPersonModal();
+                            }
                         }
                     }
-                }
                 });
 
                 document.getElementById('closeAddPersonModal').addEventListener('click', () => this.hideAddPersonModal());
@@ -462,7 +466,7 @@
                     const removeBtn = e.target.closest('.remove-btn');
                     if (removeBtn) {
                         const personIdToRemove = removeBtn.dataset.id;
-                        this.removeOwner(personIdToRemove);
+                        this.removeOwner(personIdToRemove); // removeOwner da bind edildi
                     }
                 });
             }
@@ -663,8 +667,8 @@
                     legalPersonFields.classList.remove('show');
                     legalPersonFields.querySelectorAll('input').forEach(input => input.value = '');
                 } else {
-                    realPersonFields.classList.remove('show');
                     legalPersonFields.classList.add('show');
+                    realPersonFields.classList.remove('show');
                     realPersonFields.querySelectorAll('input').forEach(input => input.value = '');
                 }
                 this.clearModalPersonErrors();
@@ -776,11 +780,8 @@
                     document.getElementById('renewalDateDesign').value = record.renewalDateDesign || '';
                 }
 
-                // Hak sahipleri listesini doldur (artık ownersService.getPersons() çağrısına ihtiyacımız yok
-                // çünkü ipRecordsService.getRecords() zaten sahipleri zenginleştirmiş olarak getiriyor)
                 this.selectedOwners = (record.owners || []).map(owner => ({ 
                     id: owner.id, 
-                    // name ve personType zaten owners içinde olacak
                     name: owner.name, 
                     personType: owner.personType 
                 }));
@@ -817,8 +818,7 @@
                     applicationDate: document.getElementById('applicationDate').value || null,
                     registrationDate: document.getElementById('registrationDate').value || null,
                     description: document.getElementById('description').value.trim(),
-                    // owners dizisini sadece ID'leri içerecek şekilde gönderiyoruz
-                    owners: this.selectedOwners.map(o => ({ id: o.id })), // Güncellendi
+                    owners: this.selectedOwners.map(o => ({ id: o.id })),
                     files: this.uploadedFiles,
                 };
 
@@ -841,7 +841,6 @@
 
             async handleSubmit(event) {
                 event.preventDefault();
-                // if (!this.validateForm()) { showNotification('Lütfen tüm gerekli alanları doldurun.', 'error'); return; }
 
                 document.getElementById('saveRecordBtn').disabled = true;
 
@@ -870,8 +869,6 @@
                     document.getElementById('saveRecordBtn').disabled = false;
                 }
             }
-
-            // validateForm() { /* Şimdilik devre dışı */ return true; }
         }
 
         let dataEntryModule;
