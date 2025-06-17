@@ -272,10 +272,10 @@
                 document.getElementById('closeTransactionModalBtn').addEventListener('click', (e) => this.closeModal('transactionModal'));
 
                 document.getElementById('typeFilter').addEventListener('change', (e) => this.populateStatusFilter(e.target.value));
-                this.populateStatusFilter(document.getElementById('typeFilter').value); // Sayfa yüklendiğinde durum filtrelerini doldur
+                this.populateStatusFilter(document.getElementById('typeFilter').value);
             }
 
-            populateStatusFilter = (type) => { // type parametresi kullanıldı
+            populateStatusFilter = (type) => {
                 const statusFilterSelect = document.getElementById('statusFilter');
                 if (!statusFilterSelect) return;
                 statusFilterSelect.innerHTML = '<option value="all">Tümü</option>';
@@ -463,7 +463,7 @@
 
                 const ownerNames = (record.owners || []).map(owner => owner.name || 'Bilinmiyor').join(', ');
                 
-                // Butonların HTML yapısını metin ve ikon içerecek şekilde güncelledik
+                // Butonların HTML yapısını metin içerecek şekilde güncelledik (ikonlar kaldırıldı)
                 row.innerHTML = `
                     <td><span class="ip-type ${record.type}">${typeNames[record.type] || 'Bilinmiyor'}</span></td>
                     <td>${titleHtml}</td>
@@ -473,9 +473,9 @@
                     <td>${ownerNames || '-'}</td>
                     <td>
                         <div class="action-buttons">
-                            <button class="action-btn btn-view" data-id="${record.id}" title="Görüntüle">👁️ Görüntüle</button>
-                            <button class="action-btn btn-edit" data-id="${record.id}" title="Düzenle">✏️ Düzenle</button>
-                            <button class="action-btn btn-delete" data-id="${record.id}" title="Sil">🗑️ Sil</button>
+                            <button class="action-btn btn-view" data-id="${record.id}" title="Görüntüle">Görüntüle</button>
+                            <button class="action-btn btn-edit" data-id="${record.id}" title="Düzenle">Düzenle</button>
+                            <button class="action-btn btn-delete" data-id="${record.id}" title="Sil">Sil</button>
                         </div>
                     </td>`;
                 
