@@ -67,21 +67,20 @@
             align-items: center;
             gap: 10px;
             margin-top: 20px;
-            padding: 10px 0; /* Üstten ve alttan boşluk */
+            padding: 10px 0;
         }
         .pagination button {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; /* Ana font ile aynı */
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; /* Ana font ile uyum */
             font-weight: 600;
             font-size: 0.9em;
         }
         .pagination-info {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; /* Ana font ile aynı */
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; /* Ana font ile uyum */
             font-size: 0.95em;
             font-weight: 500;
             color: #555;
             align-self: center;
         }
-
     </style>
 </head>
 <body>
@@ -144,6 +143,24 @@
         import { showNotification } from './utils.js';
         import { loadSharedLayout } from './js/layout-loader.js';
 
+        // HATA DÜZELTMESİ: statusNames nesnesi sınıf dışına, modül kapsamına taşındı.
+        const STATUS_NAMES = {
+            'başvuru': 'Başvuru',
+            'beklemede': 'Beklemede',
+            'onaylandı': 'Onaylandı',
+            'reddedildi': 'Reddedildi',
+            'süresi_doldu': 'Süresi Doldu',
+            'yayınlandı': 'Yayınlandı',
+            'kısmi_ret': 'Kısmi Ret',
+            'ret': 'Ret',
+            'itiraz_geldi': 'İtiraz Geldi',
+            'itiraz_edildi': 'İtiraz Edildi',
+            'tescilli': 'Tescilli',
+            'yenilenmedi': 'Yenilenmedi',
+            'başvuru_geçersiz_hükümsüz': 'Başvuru Geçersiz/Hükümsüz',
+            'yenilememe_nedeniyle_geçersiz': 'Yenilememe Nedeniyle Geçersiz'
+        };
+
         class PortfolioModule {
             constructor() {
                 this.currentUser = null;
@@ -156,24 +173,6 @@
                 this.activeTab = 'all';
                 this.columnFilters = {};
                 this.typeNames = { patent: 'Patent', trademark: 'Marka', design: 'Tasarım' };
-                
-                // HATA DÜZELTMESİ: Anahtarlar Türkçe ve küçük harf olacak şekilde güncellendi
-                this.statusNames = {
-                    'başvuru': 'Başvuru',
-                    'beklemede': 'Beklemede',
-                    'onaylandı': 'Onaylandı',
-                    'reddedildi': 'Reddedildi',
-                    'süresi_doldu': 'Süresi Doldu',
-                    'yayınlandı': 'Yayınlandı',
-                    'kısmi_ret': 'Kısmi Ret',
-                    'ret': 'Ret',
-                    'itiraz_geldi': 'İtiraz Geldi',
-                    'itiraz_edildi': 'İtiraz Edildi',
-                    'tescilli': 'Tescilli',
-                    'yenilenmedi': 'Yenilenmedi',
-                    'başvuru_geçersiz_hükümsüz': 'Başvuru Geçersiz/Hükümsüz',
-                    'yenilememe_nedeniyle_geçersiz': 'Yenilememe Nedeniyle Geçersiz'
-                };
             }
 
             async init() {
@@ -466,7 +465,7 @@
                 let modalContentHtml = `<h4 class="modal-detail-section-title">Temel Bilgiler</h4><div class="modal-detail-grid">`;
                 modalContentHtml += renderField('Kayıt Tipi', `<span class="ip-type ${record.type}">${this.typeNames[record.type] || record.type}</span>`);
                 modalContentHtml += renderField('Başlık', record.title);
-                modalContentHtml += renderField('Durum', record.status ? `<span class="status-badge status-${record.status.replace(/_/g, '-')}">${this.statusNames[record.status] || record.status}</span>` : '-');
+                modalContentHtml += renderField('Durum', record.status ? `<span class="status-badge status-${record.status.replace(/_/g, '-')}">${STATUS_NAMES[record.status] || record.status}</span>` : '-');
                 modalContentHtml += renderField('Başvuru Numarası', record.applicationNumber);
                 modalContentHtml += renderField('Başvuru Tarihi', formatDate(record.applicationDate));
                 modalContentHtml += renderField('Tescil Tarihi', formatDate(record.registrationDate));
