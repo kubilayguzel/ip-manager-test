@@ -1,4 +1,12 @@
-// utils.js
+// --- Merkezi Sabitler ---
+
+// Merkezi Tip Tanımlamaları
+export const TYPE_NAMES = { 
+    patent: 'Patent', 
+    trademark: 'Marka', 
+    design: 'Tasarım',
+    copyright: 'Telif Hakkı'
+};
 
 // Merkezi Durum Tanımlamaları
 export const STATUSES = {
@@ -35,21 +43,20 @@ export const STATUSES = {
     ]
 };
 
-// Merkezi Tip Tanımlamaları
-export const TYPE_NAMES = { 
-    patent: 'Patent', 
-    trademark: 'Marka', 
-    design: 'Tasarım',
-    copyright: 'Telif Hakkı'
-};
-
-// Tüm durumları tek bir haritada birleştirerek kolay erişim sağla
+// Tüm durumları, değerine göre metnini kolayca almak için bir haritaya dönüştürür.
 export const ALL_STATUS_MAP = Object.values(STATUSES).flat().reduce((map, status) => {
     map[status.value] = status.text;
     return map;
 }, {});
 
 
+// --- Yardımcı Fonksiyonlar ---
+
+/**
+ * Ekranda bilgilendirme mesajı gösterir.
+ * @param {string} message - Gösterilecek mesaj.
+ * @param {'info' | 'success' | 'error'} type - Mesajın türü.
+ */
 export function showNotification(message, type = 'info') {
     const container = document.getElementById('notification-container') || createNotificationContainer();
     const notification = document.createElement('div');
@@ -69,6 +76,11 @@ function createNotificationContainer() {
     return container;
 }
 
+/**
+ * Bir dosyayı Base64 formatına çevirir.
+ * @param {File} file - Çevrilecek dosya.
+ * @returns {Promise<object>} Dosya adı, tipi, boyutu ve base64 içeriğini içeren bir nesne.
+ */
 export function readFileAsDataURL(file) {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -81,4 +93,26 @@ export function readFileAsDataURL(file) {
         reader.onerror = (error) => reject(error);
         reader.readAsDataURL(file);
     });
-} 
+}
+
+/**
+ * Dosya boyutunu okunabilir bir formata çevirir (örn: KB, MB).
+ * @param {number} bytes - Dosya boyutu (byte cinsinden).
+ * @returns {string} Formatlanmış dosya boyutu.
+ */
+export function formatFileSize(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+/**
+ * Formlardaki tüm hata mesajlarını ve alan vurgularını temizler.
+ * BU FONKSİYON YENİDEN EKLENDİ.
+ */
+export function clearAllFieldErrors() {
+    document.querySelectorAll('.error-message').forEach(el => el.textContent = '');
+    document.querySelectorAll('.form-input.error-field, .form-select.error-field').forEach(el => el.classList.remove('error-field'));
+}
