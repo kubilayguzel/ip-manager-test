@@ -271,11 +271,10 @@
                 document.getElementById('closeTransactionModal').addEventListener('click', (e) => this.closeModal('transactionModal'));
                 document.getElementById('closeTransactionModalBtn').addEventListener('click', (e) => this.closeModal('transactionModal'));
 
-                document.getElementById('typeFilter').addEventListener('change', (e) => this.populateStatusFilter(e.target.value)); // type parametresi e.target.value olarak geçirildi
-                this.populateStatusFilter(); // Sayfa yüklendiğinde durum filtrelerini doldur
+                document.getElementById('typeFilter').addEventListener('change', (e) => this.populateStatusFilter(e.target.value));
+                this.populateStatusFilter(document.getElementById('typeFilter').value); // Sayfa yüklendiğinde durum filtrelerini doldur
             }
 
-            // populateStatusFilter metodu güncellendi
             populateStatusFilter = (type) => { // type parametresi kullanıldı
                 const statusFilterSelect = document.getElementById('statusFilter');
                 if (!statusFilterSelect) return;
@@ -315,7 +314,7 @@
                     ]
                 };
 
-                const statuses = allStatuses[type] || []; // selectedType yerine type kullanıldı
+                const statuses = allStatuses[type] || []; // Doğru parametre 'type' kullanıldı
                 statuses.forEach(status => {
                     const option = document.createElement('option');
                     option.value = status.value;
@@ -464,6 +463,7 @@
 
                 const ownerNames = (record.owners || []).map(owner => owner.name || 'Bilinmiyor').join(', ');
                 
+                // Buton sınıfları action-btn olarak bırakıldı. Stil shared-styles.css'ten gelecek.
                 row.innerHTML = `
                     <td><span class="ip-type ${record.type}">${typeNames[record.type] || 'Bilinmiyor'}</span></td>
                     <td>${titleHtml}</td>
