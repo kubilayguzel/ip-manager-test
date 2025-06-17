@@ -655,79 +655,83 @@
                 });
             }
 
-            renderTransactionHistory = (recordId, transactions, files) => {
-                const historyModal = document.getElementById('transactionModal');
-                const historyContentDiv = document.getElementById('transactionHistoryContent');
-                const noTransactionsDiv = document.getElementById('noTransactions');
-                if (!historyContentDiv || !noTransactionsDiv) return;
-                historyContentDiv.innerHTML = '';
-                
-                const sortedTransactions = [...(transactions || [])].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+renderTransactionHistory = (recordId, transactions, files) => {
+    const historyModal = document.getElementById('transactionModal');
+    const historyContentDiv = document.getElementById('transactionHistoryContent');
+    const noTransactionsDiv = document.getElementById('noTransactions');
+    if (!historyContentDiv || !noTransactionsDiv) return;
 
-                if (sortedTransactions.length === 0) {
-                    noTransactionsDiv.style.display = 'block';
-                    historyContentDiv.style.display = 'none';
-                    return;
-                }
-                noTransactionsDiv.style.display = 'none';
-                historyContentDiv.style.display = 'block';
+    historyContentDiv.innerHTML = '';
 
-                // Parent-child ilişkisini gösteren akordeon yapısını oluştur
-                const transactionsMap = new Map(sortedTransactions.map(tx => [tx.transactionId, tx]));
-                const childrenMap = new Map();
+    const sortedTransactions = [...(transactions || [])].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
 
-                sortedTransactions.forEach(tx => {
-                    if (tx.parentId && transactionsMap.has(tx.parentId)) {
-                        if (!childrenMap.has(tx.parentId)) childrenMap.set(tx.parentId, []);
-                        childrenMap.get(tx.parentId).push(tx);
-                    }
-                });
+    if (sortedTransactions.length === 0) {
+        noTransactionsDiv.style.display = 'block';
+        historyContentDiv.style.display = 'none';
+        return;
+    }
 
-                const buildTreeHtml = (transactionsToBuild) => {
-                    let html = '';
-                    transactionsToBuild.forEach(tx => {
-                        const children = childrenMap.get(tx.transactionId) || [];
-                        const hasChildren = children.length > 0;
-                        let documentLinkHtml = '';
-                        if (tx.documentId && files) {
-                            const relatedFile = files.find(file => file.id === tx.documentId);
-                            if (relatedFile) documentLinkHtml = ` | <a href="${relatedFile.content}" download="${relatedFile.name}" class="transaction-file-link">📄 Belge</a>`;
-                        }
-                        html += `
-                            <div class="transaction-node" data-id="${tx.transactionId}">
-                                ${hasChildren ? `<button class="transaction-toggle-btn" data-target-id="${tx.transactionId}">+</button>` : ''}
-                                <div class="transaction-node-content">
-                                    <div class="transaction-info">
-                                        <div class="transaction-description">${tx.description || tx.type}</div> 
-                                        <div class="transaction-meta">${new Date(tx.timestamp).toLocaleString('tr-TR')} by ${tx.userEmail}${documentLinkHtml}</div>
-                                    </div>
-                                    <div class="transaction-actions">
-                                        </div>
-                                </div>
-                            </div>
-                            ${hasChildren ? `<div class="child-transactions" id="children-of-${tx.transactionId}">${buildTreeHtml(children)}</div>` : ''}`;
-                    });
-                    return html;
-                };
+    noTransactionsDiv.style.display = 'none';
+    historyContentDiv.style.display = 'block';
 
-                const rootTransactions = sortedTransactions.filter(tx => !tx.parentId || !transactionsMap.has(tx.parentId));
-                historyContentDiv.innerHTML = buildTreeHtml(rootTransactions);
+    // Parent-Child ilişkileri oluştur
+    const transactionsMap = new Map(sortedTransactions.map(tx => [tx.transactionId, tx]));
+    const childrenMap = new Map();
 
-                // Akordiyon butonlarına event listener ekle
-                historyContentDiv.querySelectorAll('.transaction-toggle-btn').forEach(button => {
-                    button.addEventListener('click', () => {
-                        const targetId = button.dataset.targetId;
-                        const childContainer = document.getElementById(`children-of-${targetId}`);
-                        if (childContainer) {
-                            childContainer.classList.toggle('show');
-                            button.classList.toggle('expanded');
-                            button.textContent = childContainer.classList.contains('show') ? '−' : '+'; // Buton metnini değiştir
-                        }
-                    });
-                });
+    sortedTransactions.forEach(tx => {
+        if (tx.parentId && transactionsMap.has(tx.parentId)) {
+            if (!childrenMap.has(tx.parentId)) childrenMap.set(tx.parentId, []);
+            childrenMap.get(tx.parentId).push(tx);
+        }
+    });
 
-                if (historyModal) historyModal.classList.add('show');
+    // Akordiyon HTML üretici
+    const buildAccordion = (txList, level = 0) => {
+        return txList.map(tx => {
+            const children = childrenMap.get(tx.transactionId) || [];
+            const hasChildren = children.length > 0;
+
+            const file = files?.find(f => f.id === tx.documentId);
+            const fileLink = file ? `<a href="${file.content}" target="_blank" class="transaction-file-link">${file.name}</a>` : '';
+
+            const indentStyle = `padding-left: ${level * 20}px`;
+
+            return `
+                <div class="transaction-node" data-id="${tx.transactionId}" style="${indentStyle}">
+                    ${hasChildren ? `<button class="transaction-toggle-btn" data-target-id="${tx.transactionId}">+</button>` : ''}
+                    <div class="transaction-info">
+                        <div class="transaction-description"><strong>${tx.type}</strong>: ${tx.description || '-'}</div>
+                        <div class="transaction-meta">${new Date(tx.timestamp).toLocaleString('tr-TR')} - ${tx.userEmail} ${fileLink}</div>
+                    </div>
+                </div>
+                ${hasChildren ? `<div class="child-transactions" id="children-of-${tx.transactionId}" style="display: none;">
+                    ${buildAccordion(children, level + 1)}
+                </div>` : ''}
+            `;
+        }).join('');
+    };
+
+    // Sadece root işlemlerden başla
+    const rootTransactions = sortedTransactions.filter(tx => !tx.parentId || !transactionsMap.has(tx.parentId));
+    historyContentDiv.innerHTML = buildAccordion(rootTransactions);
+
+    // Event listener ekle
+    historyContentDiv.querySelectorAll('.transaction-toggle-btn').forEach(button => {
+        button.addEventListener('click', () => {
+            const targetId = button.dataset.targetId;
+            const childContainer = document.getElementById(`children-of-${targetId}`);
+            if (childContainer) {
+                const expanded = childContainer.style.display === 'block';
+                childContainer.style.display = expanded ? 'none' : 'block';
+                button.textContent = expanded ? '+' : '−';
+                button.classList.toggle('expanded', !expanded);
             }
+        });
+    });
+
+    if (historyModal) historyModal.classList.add('show');
+};
+
 
 
             editRecord = (recordId) => {
