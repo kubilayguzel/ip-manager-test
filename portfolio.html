@@ -284,7 +284,7 @@
                 }
 
                 this.setupEventListeners();
-                await this.loadRecords();
+                await this.loadRecords(); // init içinde çağrı var
             }
 
             setupEventListeners() {
@@ -375,6 +375,16 @@
                     if (result.success) {
                         this.records = result.data;
                         this.applyFilters();
+                         // Veri yüklendikten sonra tabloyu gösterme veya boş durumu gösterme
+                        if (this.filteredRecords.length > 0) {
+                            document.getElementById('portfolioTable').style.display = 'table';
+                            document.getElementById('pagination').style.display = 'flex';
+                            document.getElementById('noRecords').style.display = 'none';
+                        } else {
+                            document.getElementById('portfolioTable').style.display = 'none';
+                            document.getElementById('pagination').style.display = 'none';
+                            document.getElementById('noRecords').style.display = 'block';
+                        }
                     } else {
                         showNotification('Kayıtlar yüklenirken bir hata oluştu: ' + result.error, 'error');
                         this.showEmptyState();
@@ -411,6 +421,17 @@
 
                 this.sortRecords();
                 this.goToPage(1);
+
+                // Filtreleme sonrası tablo ve mesaj görünürlüğünü güncelle
+                if (this.filteredRecords.length > 0) {
+                    document.getElementById('portfolioTable').style.display = 'table';
+                    document.getElementById('pagination').style.display = 'flex';
+                    document.getElementById('noRecords').style.display = 'none';
+                } else {
+                    document.getElementById('portfolioTable').style.display = 'none';
+                    document.getElementById('pagination').style.display = 'none';
+                    document.getElementById('noRecords').style.display = 'block';
+                }
             }
 
             sortRecords = () => {
