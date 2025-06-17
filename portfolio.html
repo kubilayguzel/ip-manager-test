@@ -11,30 +11,36 @@
         .page-title { font-size: 2em; color: #1e3c72; margin-bottom: 10px; }
         .page-subtitle { color: #666; font-size: 1.1em; }
 
-        /* YENİ EKLENEN SEKMELER (TABS) İÇİN STİLLER */
+        /* GÜNCELLENMİŞ SEKMELER (TABS) İÇİN STİLLER */
         .portfolio-tabs {
             display: flex;
-            gap: 5px;
-            border-bottom: 2px solid #dee2e6;
-            margin-bottom: 20px;
+            border-bottom: 1px solid #ddd;
+            margin-bottom: 25px;
         }
         .tab-btn {
-            padding: 12px 20px;
-            font-size: 1em;
-            font-weight: 600;
-            border: none;
+            padding: 12px 22px;
+            font-size: 1.05em;
+            font-weight: 500;
+            border: 1px solid transparent;
+            border-bottom: none;
             background: none;
             cursor: pointer;
-            color: #6c757d;
-            border-bottom: 3px solid transparent;
+            color: #555;
+            position: relative;
+            top: 1px;
+            border-radius: 8px 8px 0 0;
             transition: all 0.3s ease;
         }
         .tab-btn:hover {
             color: #1e3c72;
+            background-color: #f8f9fa;
         }
         .tab-btn.active {
             color: #1e3c72;
-            border-bottom-color: #1e3c72;
+            font-weight: 600;
+            background-color: #fff;
+            border-color: #ddd;
+            border-bottom-color: #fff;
         }
 
         .portfolio-controls {
@@ -52,86 +58,55 @@
         .filter-group { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
         .filter-label { font-weight: 500; }
         .filter-select { padding: 8px 12px; border-radius: 8px; border: 1px solid #ccc; }
-        .search-input { position: relative; }
-        .search-input input { padding: 8px 12px 8px 35px; border-radius: 8px; border: 1px solid #ccc; }
-        .search-input .search-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: #666; }
-
-        .portfolio-table-container { background: rgba(255, 255, 255, 0.95); border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); overflow: hidden; }
+        
+        .portfolio-table-container { background: rgba(255, 255, 255, 0.95); border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); overflow-x: auto; }
         .portfolio-table { width: 100%; border-collapse: collapse; }
-        .portfolio-table th, .portfolio-table td { padding: 15px; text-align: left; border-bottom: 1px solid #f0f0f0; }
-        .portfolio-table th { background: #f8f9fa; font-weight: 600; cursor: pointer; }
+        .portfolio-table th, .portfolio-table td { padding: 15px; text-align: left; border-bottom: 1px solid #f0f0f0; white-space: nowrap; }
+        .portfolio-table th { background: #f8f9fa; font-weight: 600; cursor: pointer; vertical-align: middle; }
         .portfolio-table th.sort-asc::after { content: ' ▲'; }
         .portfolio-table th.sort-desc::after { content: ' ▼'; }
         .portfolio-table tr:hover { background: #f8f9fa; }
         
-        .portfolio-table tr.archived-record {
-            opacity: 0.6;
-            background-color: #f5f5f5;
-        }
-        .portfolio-table tr.archived-record:hover {
-            opacity: 1;
-        }
+        .portfolio-table tr.archived-record { opacity: 0.6; background-color: #f5f5f5; }
+        .portfolio-table tr.archived-record:hover { opacity: 1; }
         .action-btn.btn-archive { background-color: #ffc107; color: #fff; }
         .action-btn.btn-activate { background-color: #28a745; color: #fff; }
 
+        /* SÜTUN FİLTRELERİ İÇİN STİLLER */
+        #filter-row th {
+            padding: 8px;
+            background-color: #f8f9fa;
+        }
+        .column-filter {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            box-sizing: border-box;
+            font-size: 0.9em;
+        }
+
         .pagination { display: flex; justify-content: center; align-items: center; gap: 10px; margin-top: 20px; padding: 10px 0; }
-        .pagination button { background: #1e3c72; color: white; border: none; padding: 8px 15px; border-radius: 8px; cursor: pointer; transition: background 0.3s ease; }
-        .pagination button:disabled { background: #ccc; cursor: not-allowed; }
-        .pagination button:hover:not(:disabled) { background: #2a5298; }
-        .pagination-info { font-weight: 500; }
-
-        .loading { text-align: center; padding: 50px; }
-        .loading-spinner { display: inline-block; width: 30px; height: 30px; border: 3px solid #f3f3f3; border-top: 3px solid #1e3c72; border-radius: 50%; animation: spin 1s linear infinite; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        
-        .no-records { text-align: center; padding: 50px; color: #666; display: none; }
-        .no-records-icon { font-size: 3em; margin-bottom: 20px; }
-
-        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.6); z-index: 1003; align-items: center; justify-content: center; overflow-y: auto; padding: 20px; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1003; align-items: center; justify-content: center; overflow-y: auto; padding: 20px; }
         .modal.show { display: flex; }
         .modal-content {
-            background: white;
-            padding: 30px;
-            border-radius: 20px;
-            max-width: 1500px; /* GENİŞLİK AYARI */
-            width: 90%;
-            max-height: 90vh;
-            overflow-y: auto;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            background: white; padding: 30px; border-radius: 20px; max-width: 1500px;
+            width: 90%; max-height: 90vh; overflow-y: auto; box-shadow: 0 10px 40px rgba(0,0,0,0.2);
         }
         .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid #e1e8ed; }
         .modal-title { font-size: 1.3em; color: #1e3c72; }
-        .close-btn { background: none; border: none; font-size: 1.5em; cursor: pointer; color: #666; padding: 5px; border-radius: 50%; transition: all 0.3s ease; }
-        .close-btn:hover { background: #f0f0f0; }
+        .close-btn { background: none; border: none; font-size: 1.5em; cursor: pointer; color: #666; }
         .modal-footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; padding-top: 15px; border-top: 1px solid #e1e8ed; }
-        
         .modal-detail-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 15px 25px; margin-bottom: 20px; }
         .modal-detail-item { margin-bottom: 10px; }
-        .modal-detail-label { font-weight: 600; color: #333; margin-bottom: 5px; font-size: 0.9em; }
-        .modal-detail-value { color: #555; word-break: break-word; font-size: 0.95em; }
-        .modal-detail-value.long-text { white-space: pre-wrap; background-color: #f8f9fa; padding: 8px; border-radius: 6px; }
-        .modal-detail-section-title { grid-column: 1 / -1; font-size: 1.1em; color: #1e3c72; margin-top: 20px; margin-bottom: 15px; padding-bottom: 5px; border-bottom: 1px dashed #e1e8ed; }
-
-        .transaction-node {
-            position: relative;
-            padding: 8px 0 8px 25px;
-            border-bottom: 1px dashed #eee;
-        }
+        .modal-detail-label { font-weight: 600; color: #333; }
+        .modal-detail-value { color: #555; }
+        .modal-detail-section-title { grid-column: 1 / -1; font-size: 1.1em; color: #1e3c72; margin-top: 20px; padding-bottom: 5px; border-bottom: 1px dashed #e1e8ed; }
+        .transaction-node { position: relative; padding: 8px 0 8px 25px; border-bottom: 1px dashed #eee; }
         .transaction-node:last-child { border-bottom: none; }
-        .transaction-toggle-btn {
-            position: absolute; left: 0; top: 10px; background: #e9ecef; border: none; border-radius: 50%;
-            width: 20px; height: 20px; font-size: 1em; font-weight: bold; line-height: 20px;
-            text-align: center; cursor: pointer; transition: all 0.2s ease;
-        }
-        .transaction-toggle-btn:hover { background: #d0d0d0; }
-        .transaction-toggle-btn.expanded { transform: rotate(45deg); }
-        .child-transactions {
-            margin-left: 20px; padding-left: 15px;
-            border-left: 2px solid #1e3c72; display: none;
-        }
+        .transaction-toggle-btn { position: absolute; left: 0; top: 10px; background: #e9ecef; border: none; border-radius: 50%; width: 20px; height: 20px; font-weight: bold; cursor: pointer; }
+        .child-transactions { margin-left: 20px; padding-left: 15px; border-left: 2px solid #1e3c72; display: none; }
         .child-transactions.show { display: block; }
-        .transaction-file-link { color: #007bff; text-decoration: none; font-weight: 500; }
-        .transaction-file-link:hover { text-decoration: underline; }
     </style>
 </head>
 <body>
@@ -167,10 +142,6 @@
                         <option value="all">Tümü</option>
                     </select>
                 </div>
-                <div class="search-input">
-                    <span class="search-icon">🔍</span>
-                    <input type="text" id="recordSearchInput" placeholder="Kayıt Ara...">
-                </div>
                 <button class="btn btn-primary" id="exportBtn">CSV İndir</button>
             </div>
 
@@ -186,30 +157,34 @@
                             <th>Hak Sahipleri</th>
                             <th>İşlemler</th>
                         </tr>
+                        <tr id="filter-row">
+                            <th><input type="text" class="column-filter" data-column="type" placeholder="Tip ara..."></th>
+                            <th><input type="text" class="column-filter" data-column="title" placeholder="Başlık ara..."></th>
+                            <th><input type="text" class="column-filter" data-column="applicationNumber" placeholder="No ara..."></th>
+                            <th><input type="text" class="column-filter" data-column="status" placeholder="Durum ara..."></th>
+                            <th><input type="text" class="column-filter" data-column="applicationDate" placeholder="Tarih ara..."></th>
+                            <th><input type="text" class="column-filter" data-column="owners" placeholder="Hak sahibi ara..."></th>
+                            <th></th>
+                        </tr>
                     </thead>
                     <tbody id="portfolioTableBody"></tbody>
                 </table>
                 <div id="loadingIndicator" class="loading">
                     <div class="loading-spinner"></div>
-                    <div>Kayıtlar yükleniyor...</div>
                 </div>
                  <div id="noRecords" class="no-records">
-                    <div class="no-records-icon">📄</div>
                     <h3>Filtrelerinize uygun kayıt bulunamadı.</h3>
-                    <p>Filtreleri temizleyerek veya yeni bir kayıt ekleyerek başlayabilirsiniz.</p>
                 </div>
             </div>
-
             <div id="pagination" class="pagination">
                 <button id="prevPageBtn" disabled>Önceki</button>
                 <span id="paginationInfo">Sayfa 1 / 1</span>
                 <button id="nextPageBtn" disabled>Sonraki</button>
             </div>
-
             <div id="detailModal" class="modal">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h3 class="modal-title" id="modalTitle">Kayıt Detayı</h3>
+                        <h3 class="modal-title" id="modalTitle"></h3>
                         <button class="close-btn" id="closeDetailModal">&times;</button>
                     </div>
                     <div class="modal-body" id="modalBody"></div>
@@ -237,6 +212,9 @@
                 this.currentSortColumn = 'applicationDate';
                 this.currentSortDirection = 'desc';
                 this.activeTab = 'all';
+                this.columnFilters = {};
+                this.typeNames = { patent: 'Patent', trademark: 'Marka', design: 'Tasarım' };
+                this.statusNames = { application: 'Başvuru', pending: 'Beklemede', approved: 'Onaylandı', rejected: 'Reddedildi', expired: 'Süresi Doldu', published: 'Yayınlandı', partial_refusal: 'Kısmi Ret', refused: 'Ret', opposition_received: 'İtiraz Geldi', opposition_filed: 'İtiraz Edildi', registered: 'Tescilli', not_renewed: 'Yenilenmedi', invalid_void: 'Başvuru Geçersiz/Hükümsüz', invalid_not_renewed: 'Yenilememe Nedeniyle Geçersiz' };
             }
 
             async init() {
@@ -260,10 +238,17 @@
                         this.applyFilters();
                     });
                 });
+                
+                document.querySelectorAll('.column-filter').forEach(input => {
+                    input.addEventListener('keyup', (e) => {
+                        const column = e.target.dataset.column;
+                        this.columnFilters[column] = e.target.value;
+                        this.applyFilters();
+                    });
+                });
 
                 document.getElementById('statusFilter').addEventListener('change', () => this.applyFilters());
                 document.getElementById('archiveFilter').addEventListener('change', () => this.applyFilters());
-                document.getElementById('recordSearchInput').addEventListener('keyup', () => this.applyFilters());
 
                 document.querySelectorAll('.portfolio-table th[data-sort]').forEach(header => {
                     header.addEventListener('click', (e) => this.handleSort(e.target));
@@ -325,29 +310,47 @@
             applyFilters = () => {
                 const statusFilter = document.getElementById('statusFilter').value;
                 const archiveFilter = document.getElementById('archiveFilter').value;
-                const searchTerm = document.getElementById('recordSearchInput').value.toLowerCase();
 
                 this.filteredRecords = this.records.filter(record => {
                     if (record.type === 'copyright') return false;
 
                     const tabType = this.activeTab;
                     let typeMatch = false;
-                    if (tabType === 'all') {
-                        typeMatch = true;
-                    } else if (tabType === 'opposition') {
-                        typeMatch = record.hasOpposition === true;
-                    } else if (tabType === 'lawsuit') {
-                        typeMatch = record.hasLawsuit === true;
-                    } else {
-                        typeMatch = record.type === tabType;
-                    }
+                    if (tabType === 'all') typeMatch = true;
+                    else if (tabType === 'opposition') typeMatch = record.hasOpposition === true;
+                    else if (tabType === 'lawsuit') typeMatch = record.hasLawsuit === true;
+                    else typeMatch = record.type === tabType;
 
                     const statusMatch = statusFilter === 'all' || record.status === statusFilter;
                     const archiveMatch = archiveFilter === 'all' || (archiveFilter === 'active' && !record.isArchived) || (archiveFilter === 'archived' && record.isArchived);
-                    const ownerNames = (record.owners || []).map(o => o.name || '').join(', ').toLowerCase();
-                    const searchMatch = (record.title || '').toLowerCase().includes(searchTerm) || (record.applicationNumber || '').toLowerCase().includes(searchTerm) || ownerNames.includes(searchTerm);
                     
-                    return typeMatch && statusMatch && archiveMatch && searchMatch;
+                    const columnFilterMatch = Object.entries(this.columnFilters).every(([column, filterValue]) => {
+                        if (!filterValue) return true;
+                        
+                        let recordValue = '';
+                        const lowerFilterValue = filterValue.toLowerCase();
+
+                        switch (column) {
+                            case 'type':
+                                recordValue = this.typeNames[record.type] || record.type;
+                                break;
+                            case 'status':
+                                recordValue = this.statusNames[record.status] || record.status;
+                                break;
+                            case 'applicationDate':
+                                recordValue = record.applicationDate ? new Date(record.applicationDate).toLocaleDateString('tr-TR') : '';
+                                break;
+                            case 'owners':
+                                recordValue = (record.owners || []).map(o => o.name || '').join(', ');
+                                break;
+                            default:
+                                recordValue = record[column] || '';
+                                break;
+                        }
+                        return recordValue.toString().toLowerCase().includes(lowerFilterValue);
+                    });
+
+                    return typeMatch && statusMatch && archiveMatch && columnFilterMatch;
                 });
                 this.sortRecords();
                 this.goToPage(1);
@@ -417,18 +420,15 @@
             createTableRow = (record) => {
                 const row = document.createElement('tr');
                 if (record.isArchived) row.classList.add('archived-record');
-
-                const typeNames = { patent: 'Patent', trademark: 'Marka', design: 'Tasarım' };
-                const statusNames = { application: 'Başvuru', pending: 'Beklemede', approved: 'Onaylandı', rejected: 'Reddedildi', expired: 'Süresi Doldu', published: 'Yayınlandı', partial_refusal: 'Kısmi Ret', refused: 'Ret', opposition_received: 'İtiraz Geldi', opposition_filed: 'İtiraz Edildi', registered: 'Tescilli', not_renewed: 'Yenilenmedi', invalid_void: 'Başvuru Geçersiz/Hükümsüz', invalid_not_renewed: 'Yenilememe Nedeniyle Geçersiz' };
                 const ownerNames = (record.owners || []).map(o => o.name).join(', ');
                 const archiveButtonText = record.isArchived ? 'Aktif Et' : 'Arşivle';
                 const archiveButtonClass = record.isArchived ? 'btn-activate' : 'btn-archive';
                 
                 row.innerHTML = `
-                    <td><span class="ip-type ${record.type}">${typeNames[record.type] || record.type}</span></td>
+                    <td><span class="ip-type ${record.type}">${this.typeNames[record.type] || record.type}</span></td>
                     <td>${record.title || '-'}</td>
                     <td>${record.applicationNumber || '-'}</td>
-                    <td><span class="status-badge ${record.status}">${statusNames[record.status] || record.status}</span></td>
+                    <td><span class="status-badge ${record.status}">${this.statusNames[record.status] || record.status}</span></td>
                     <td>${record.applicationDate ? new Date(record.applicationDate).toLocaleDateString('tr-TR') : '-'}</td>
                     <td>${ownerNames || '-'}</td>
                     <td>
@@ -456,15 +456,13 @@
                 modalTitleEl.textContent = `Detay: ${record.title}`;
                 modalTitleEl.dataset.recordId = record.id;
                 
-                const typeNames = { patent: 'Patent', trademark: 'Marka', design: 'Tasarım' };
-                const statusNames = { application: 'Başvuru', pending: 'Beklemede', approved: 'Onaylandı', rejected: 'Reddedildi', expired: 'Süresi Doldu', published: 'Yayınlandı', partial_refusal: 'Kısmi Ret', refused: 'Ret', opposition_received: 'İtiraz Geldi', opposition_filed: 'İtiraz Edildi', registered: 'Tescilli', not_renewed: 'Yenilenmedi', invalid_void: 'Başvuru Geçersiz/Hükümsüz', invalid_not_renewed: 'Yenilememe Nedeniyle Geçersiz' };
                 const formatDate = (date) => date ? new Date(date).toLocaleDateString('tr-TR') : '-';
                 const renderField = (label, value) => `<div class="modal-detail-item"><div class="modal-detail-label">${label}:</div><div class="modal-detail-value">${value || '-'}</div></div>`;
 
                 let modalContentHtml = `<div class="modal-detail-grid">` +
-                    renderField('Kayıt Tipi', `<span class="ip-type ${record.type}">${typeNames[record.type]}</span>`) +
+                    renderField('Kayıt Tipi', `<span class="ip-type ${record.type}">${this.typeNames[record.type]}</span>`) +
                     renderField('Başlık', record.title) +
-                    renderField('Durum', `<span class="status-badge ${record.status}">${statusNames[record.status]}</span>`) +
+                    renderField('Durum', `<span class="status-badge ${record.status}">${this.statusNames[record.status]}</span>`) +
                     renderField('Başvuru No', record.applicationNumber) +
                     renderField('Başvuru Tarihi', formatDate(record.applicationDate)) +
                     renderField('Tescil Tarihi', formatDate(record.registrationDate)) +
@@ -570,15 +568,14 @@
                 }
                 const headers = ["Tip", "Başlık", "Başvuru Numarası", "Durum", "Başvuru Tarihi", "Hak Sahipleri", "Arşiv Durumu"];
                 const csvRows = [headers.join(';')];
-                const typeNames = { patent: 'Patent', trademark: 'Marka', design: 'Tasarım' };
                 
                 this.filteredRecords.forEach(record => {
                     const escapeCsv = (value) => `"${(value || '').toString().replace(/"/g, '""')}"`;
                     const row = [
-                        typeNames[record.type] || record.type,
+                        this.typeNames[record.type] || record.type,
                         record.title || '',
                         record.applicationNumber || '',
-                        record.status || '',
+                        this.statusNames[record.status] || record.status,
                         record.applicationDate ? new Date(record.applicationDate).toLocaleDateString('tr-TR') : '',
                         (record.owners || []).map(o => o.name).join(', '),
                         record.isArchived ? 'Arşivlenmiş' : 'Aktif'
