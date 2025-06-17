@@ -1,4 +1,4 @@
-/* css/shared-styles.css */
+/* shared-styles.css */
 
 /* Temel Sıfırlama ve Body Stilleri */
 * {
@@ -102,7 +102,7 @@ body {
     background: #2a5298; /* Açık mavi */
     color: white;
     font-weight: bold;
-    border-left: 4px solid #4ecdc4; /* Turkuaz çizgi */
+    border-left: 44px solid #4ecdc4; /* Turkuaz çizgi */
     padding-left: 16px; /* Çizgi için boşluk */
 }
 
@@ -330,21 +330,24 @@ body {
 
 /* Tablo içindeki aksiyon butonları (Görüntüle, Düzenle, Sil) */
 .action-btn { 
-    background: #6c757d;
-    color: white;
+    background: #6c757d; /* Varsayılan arka plan rengi */
+    color: white; /* Varsayılan metin rengi */
     border: none;
-    padding: 8px 12px;
+    padding: 6px 10px; /* Daha kompakt hale getirildi */
     border-radius: 6px;
     cursor: pointer;
     transition: all 0.3s ease;
-    margin-right: 5px;
-    font-size: 0.9em; /* Font boyutunu ayarla */
-    display: inline-flex; /* İkon ve metni hizalamak için */
-    align-items: center; /* Dikey hizalama */
-    justify-content: center; /* Yatay hizalama */
-    min-width: 35px; /* Küçük ikon butonları için minimum genişlik */
-    height: 35px; /* Küçük ikon butonları için yükseklik */
+    margin-right: 5px; /* Butonlar arası boşluk */
+    font-size: 0.85em; /* Font boyutunu biraz küçülttük */
+    display: inline-flex; /* İkon ve metni yanyana ve ortalı hizalamak için */
+    align-items: center; /* Dikeyde ortala */
+    justify-content: center; /* Yatayda ortala */
+    min-width: 40px; /* Butonların minimum genişliği */
+    height: 30px; /* Butonların yüksekliği */
+    gap: 5px; /* İkon ve metin arası boşluk */
     box-shadow: 0 2px 5px rgba(0,0,0,0.1); /* Hafif gölge */
+    text-decoration: none; /* Link olarak kullanılıyorsa alt çizgiyi kaldırır */
+    white-space: nowrap; /* Metnin tek satırda kalmasını sağlar */
 }
 
 .action-btn:hover {
@@ -359,20 +362,20 @@ body {
     transform: none;
 }
 
-/* Belirli aksiyon buton renkleri */
-.action-btn.btn-view { background-color: #17a2b8; }
+/* Belirli aksiyon buton renkleri ve hover efektleri */
+.action-btn.btn-view { background-color: #17a2b8; /* Turkuaz */ }
 .action-btn.btn-view:hover { background-color: #138496; }
 
-.action-btn.edit-btn { background-color: #ffc107; color: #212529; }
+.action-btn.edit-btn { background-color: #ffc107; color: #212529; /* Sarı, koyu metin */ }
 .action-btn.edit-btn:hover { background-color: #e0a800; }
 
-.action-btn.delete-btn { background-color: #dc3545; }
+.action-btn.delete-btn { background-color: #dc3545; /* Kırmızı */ }
 .action-btn.delete-btn:hover { background-color: #c82333; }
 
-.action-btn.complete-btn { background-color: #28a745; }
+.action-btn.complete-btn { background-color: #28a745; /* Yeşil */ }
 .action-btn.complete-btn:hover { background-color: #218838; }
 
-.action-btn.add-accrual-btn { background-color: #28a745; }
+.action-btn.add-accrual-btn { background-color: #28a745; /* Yeşil */ }
 .action-btn.add-accrual-btn:hover { background-color: #218838; }
 
 .btn-reassign { background-color: #5a6268; }
