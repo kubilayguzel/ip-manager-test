@@ -98,26 +98,30 @@
             to { opacity: 1; transform: translateY(0); }
         }
 
-        /* BUTON DİZİLİMİ DÜZELTMESİ */
+        /* YENİ VE GÜNCELLENMİŞ BUTON DİZİLİMİ STİLLERİ */
         .owner-selection-group {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+        .search-input-wrapper {
+            flex-grow: 1;
             position: relative;
+        }
+        .search-button-wrapper {
             display: flex;
             gap: 10px;
-            align-items: center;
-        }
-        
-        .owner-search-input {
-            flex-grow: 1; /* Arama kutusunun kalan boşluğu doldurmasını sağlar */
+            flex-shrink: 0; /* Butonların küçülmesini engeller */
         }
         
         #mainOwnerSearchResults {
             position: absolute;
             top: 100%;
             left: 0;
-            width: auto;
-            right: 220px; /* Butonların yaklaşık genişliği kadar boşluk bırakır */
+            width: 100%; /* Arama kutusu ile aynı genişlikte */
             background: white;
             border: 1px solid #ddd;
+            border-top: none;
             border-radius: 0 0 10px 10px;
             z-index: 1000;
             max-height: 200px;
@@ -125,14 +129,8 @@
             display: none;
         }
         
-        .search-result-item {
-            padding: 10px;
-            cursor: pointer;
-        }
-        
-        .search-result-item:hover {
-            background-color: #f0f0f0;
-        }
+        .search-result-item { padding: 10px; cursor: pointer; }
+        .search-result-item:hover { background-color: #f0f0f0; }
         
         .owner-grid {
             display: grid;
@@ -157,7 +155,6 @@
             cursor: pointer; margin-left: 10px; font-size: 1.2em; line-height: 1;
         }
         
-        /* BUTON DİZİLİMİ DÜZELTMESİ */
         .form-actions {
             display: flex;
             justify-content: flex-end; /* Butonları sağa hizalar */
@@ -285,10 +282,14 @@
                     <div class="form-group full-width">
                         <label class="form-label">Hak Sahipleri:</label>
                         <div class="owner-selection-group">
-                            <input type="text" id="ownerSearchInput" class="form-input owner-search-input" placeholder="Hak Sahibi Ara...">
-                            <button type="button" class="btn btn-secondary btn-small" id="searchOwnerBtn">Ara</button>
-                            <button type="button" class="btn btn-primary btn-small" id="addPersonToOwnerBtn">Yeni Kişi Ekle</button>
-                            <div id="mainOwnerSearchResults" class="main-owner-search-results"></div> 
+                            <div class="search-input-wrapper">
+                                <input type="text" id="ownerSearchInput" class="form-input" placeholder="Hak Sahibi Ara...">
+                                <div id="mainOwnerSearchResults" class="main-owner-search-results"></div> 
+                            </div>
+                            <div class="search-button-wrapper">
+                                <button type="button" class="btn btn-secondary btn-small" id="searchOwnerBtn">Ara</button>
+                                <button type="button" class="btn btn-primary btn-small" id="addPersonToOwnerBtn">Yeni Kişi Ekle</button>
+                            </div>
                         </div>
                         <div id="selectedOwnersGrid" class="owner-grid"></div>
                     </div>
@@ -365,16 +366,21 @@
                 const ownerSearchInput = document.getElementById('ownerSearchInput');
                 const searchButton = document.getElementById('searchOwnerBtn');
 
-                // "Ara" butonu için click dinleyicisi eklendi
                 if (searchButton) {
                     searchButton.addEventListener('click', () => {
                         this.performOwnerSearch(ownerSearchInput.value);
                     });
                 }
                 
-                // Arama kutusuna yazarken de arama yapması için keyup dinleyicisi
                 if (ownerSearchInput) {
                     ownerSearchInput.addEventListener('keyup', (event) => {
+                        // Enter tuşuna basıldığında da arama yapabilir
+                        if (event.key === 'Enter') {
+                            this.performOwnerSearch(event.target.value);
+                        }
+                    });
+                     ownerSearchInput.addEventListener('input', (event) => {
+                        // Yazarken arama sonuçlarını göstermek için (isteğe bağlı)
                         this.performOwnerSearch(event.target.value);
                     });
                 }
@@ -391,20 +397,19 @@
                 });
             }
 
-            // Arama mantığı bu fonksiyonda birleştirildi
             performOwnerSearch = (searchTerm) => {
                 const lowerSearchTerm = searchTerm.toLowerCase();
                 const resultsContainer = document.getElementById('mainOwnerSearchResults');
                 resultsContainer.innerHTML = '';
     
-                if (lowerSearchTerm.length < 1) { // 1 karakterden sonra aramaya başlasın
+                if (lowerSearchTerm.length < 1) {
                     resultsContainer.style.display = 'none';
                     return;
                 }
     
                 const filtered = this.allPersons.filter(person =>
                     person.name.toLowerCase().includes(lowerSearchTerm) &&
-                    !this.selectedOwners.some(p => p.id === person.id) // Zaten ekli olanları gösterme
+                    !this.selectedOwners.some(p => p.id === person.id)
                 );
     
                 if (filtered.length > 0) {
@@ -483,10 +488,7 @@
                 removeButton.onclick = this.removeImage;
             }
     
-            preventDefaults = (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-            }
+            preventDefaults = (e) => { e.preventDefault(); e.stopPropagation(); }
     
             handleImageDrop = (e) => {
                 const dt = e.dataTransfer;
