@@ -433,15 +433,19 @@
                 // Hak sahipleri arama kutusuna yazı yazıldığında arama yapması için 'keyup' event'i
                 document.getElementById('modalPersonSearchInput').addEventListener('keyup', () => this.searchPersons());
                 document.getElementById('modalSearchResults').addEventListener('click', (e) => {
-                    const selectedItem = e.target.closest('.owner-list-item');
+                    // Eğer tıklanan element veya ebeveynlerinden biri bir buton ise
+                const addButton = e.target.closest('button.btn-primary.btn-small');
+                if (addButton) {
+                    const selectedItem = addButton.closest('.owner-list-item');
                     if (selectedItem) {
                         const personId = selectedItem.dataset.id;
                         const person = this.allPersons.find(p => p.id === personId);
                         if (person) {
-                            this.addOwnerToGrid(person); // Sadece ID ile ekleyecek
+                            this.addOwnerToGrid(person);
                             this.hideSearchPersonModal();
                         }
                     }
+                }
                 });
 
                 document.getElementById('closeAddPersonModal').addEventListener('click', () => this.hideAddPersonModal());
