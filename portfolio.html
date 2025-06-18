@@ -3,231 +3,583 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Portföy Yönetimi - IP Manager</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/dataTables.bootstrap5.min.css">
-    <link href="css/shared-styles.css" rel="stylesheet">
+    <title>IP Manager - Portföy</title>
+    <link rel="stylesheet" href="css/shared-styles.css">
+    <style>
+        .page-header { background: #fff; padding: 30px; border-radius: 20px; margin-bottom: 20px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05); }
+        .page-title { font-size: 2em; color: #1e3c72; margin-bottom: 10px; }
+        .page-subtitle { color: #666; font-size: 1.1em; }
+        .portfolio-tabs { display: flex; border-bottom: 1px solid #ddd; margin-bottom: 25px; }
+        .tab-btn {
+            padding: 12px 22px; font-size: 1.05em; font-weight: 500;
+            border: 1px solid transparent; border-bottom: none; background: none;
+            cursor: pointer; color: #555; position: relative; top: 1px;
+            border-radius: 8px 8px 0 0; transition: all 0.3s ease;
+        }
+        .tab-btn:hover { color: #1e3c72; background-color: #f8f9fa; }
+        .tab-btn.active { color: #1e3c72; font-weight: 600; background-color: #fff; border-color: #ddd; border-bottom-color: #fff; }
+        .portfolio-controls {
+            background: #fff; padding: 20px 30px; border-radius: 20px;
+            margin-bottom: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+            display: flex; justify-content: space-between; align-items: center;
+            flex-wrap: wrap; gap: 20px;
+        }
+        .filter-group { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+        .switch-label { font-weight: 500; margin-right: 5px; }
+        .switch { position: relative; display: inline-block; width: 50px; height: 24px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; }
+        .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .4s; }
+        input:checked + .slider { background-color: #28a745; }
+        input:checked + .slider:before { transform: translateX(26px); }
+        .slider.round { border-radius: 24px; }
+        .slider.round:before { border-radius: 50%; }
+        .portfolio-table-container { background: #fff; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); overflow-x: auto; }
+        .portfolio-table { width: 100%; border-collapse: collapse; }
+        .portfolio-table th, .portfolio-table td { padding: 15px; text-align: left; border-bottom: 1px solid #f0f0f0; white-space: nowrap; }
+        .portfolio-table tr.archived-record { opacity: 0.6; }
+        #filter-row th { padding: 8px; background-color: #f8f9fa; }
+        .column-filter { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; }
+        .action-btn.btn-archive { background-color: #ffc107 !important; color: #fff; }
+        .action-btn.btn-activate { background-color: #28a745 !important; color: #fff; }
+        .image-hover-container { position: relative; display: flex; align-items: center; justify-content: center; }
+        .trademark-image-thumb { width: 40px; height: 40px; object-fit: contain; border-radius: 4px; }
+        .trademark-image-preview {
+            visibility: hidden; opacity: 0; position: absolute; z-index: 100;
+            bottom: 110%; left: 50%; transform: translateX(-50%);
+            width: 200px; height: 200px; object-fit: contain; background-color: #fff;
+            border: 2px solid #ddd; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            transition: opacity 0.3s ease, visibility 0.3s ease; pointer-events: none;
+        }
+        .image-hover-container:hover .trademark-image-preview { visibility: visible; opacity: 1; }
+        .modal-content { max-width: 1500px; }
+        .modal-detail-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 15px 25px; margin-bottom: 20px; }
+        .modal-detail-item { margin-bottom: 10px; }
+        .modal-detail-label { font-weight: 600; color: #333; }
+        .modal-detail-value { color: #555; }
+        .modal-detail-section-title { grid-column: 1 / -1; font-size: 1.1em; color: #1e3c72; margin-top: 20px; padding-bottom: 5px; border-bottom: 1px dashed #e1e8ed; }
+        
+        /* PAGINATION GÜNCELLEMELERİ */
+        .pagination-container {
+            display: flex;
+            justify-content: flex-end; /* Ana konteyner sağa yaslar */
+            padding: 20px 0;
+            margin-top: 10px;
+        }
+        .pagination {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .pagination button {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-weight: 600;
+            font-size: 0.9em;
+        }
+        .pagination-info {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-size: 0.95em;
+            font-weight: 500;
+            color: #555;
+        }
+    </style>
 </head>
 <body>
-    <div id="layout-placeholder"></div>
+    <div class="page-wrapper">
+        <main class="main-container">
+            <section class="page-header">
+                <div class="breadcrumb" id="breadcrumbContainer"></div>
+                <h1 class="page-title">Portföy</h1>
+                <p class="page-subtitle">Tüm fikri mülkiyet kayıtlarınızı görüntüleyin ve yönetin.</p>
+            </section>
+    
+            <div class="portfolio-tabs">
+                <button class="tab-btn active" data-type="all">Hepsi</button>
+                <button class="tab-btn" data-type="patent">Patent</button>
+                <button class="tab-btn" data-type="trademark">Marka</button>
+                <button class="tab-btn" data-type="design">Tasarım</button>
+                <button class="tab-btn" data-type="opposition">İtirazlar</button>
+                <button class="tab-btn" data-type="lawsuit">Davalar</button>
+            </div>
 
-    <main class="container-fluid mt-4">
-        <div class="card p-4">
-            <h2 class="card-title mb-4">Portföy Yönetimi</h2>
-            <table id="portfolio-table" class="table table-striped" style="width:100%">
-                <thead>
-                    <tr>
-                        <th>Başlık</th>
-                        <th>Başvuru Sahibi</th>
-                        <th>Başvuru Numarası</th>
-                        <th>Başvuru Tarihi</th>
-                        <th>Durum</th>
-                        <th>İşlemler</th>
-                    </tr>
-                </thead>
-                <tbody>
-                </tbody>
-            </table>
-        </div>
-    </main>
+            <div class="portfolio-controls">
+                <div class="filter-group">
+                    <label class="switch-label" for="archiveToggle">Arşivlenmişleri Göster:</label>
+                    <label class="switch">
+                        <input type="checkbox" id="archiveToggle">
+                        <span class="slider round"></span>
+                    </label>
+                </div>
+                <button class="btn btn-primary" id="exportBtn">CSV İndir</button>
+            </div>
 
-    <div class="modal fade" id="recordDetailModal" tabindex="-1" aria-labelledby="recordDetailModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-xl modal-dialog-scrollable">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="recordDetailModalLabel">Kayıt Detayları</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <div id="modal-body-content">
-                        </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
+            <div class="portfolio-table-container">
+                <table class="portfolio-table" id="portfolioTable"></table>
+                <div id="loadingIndicator" class="loading"><div class="loading-spinner"></div></div>
+                <div id="noRecords" class="no-records"><h3>Filtrelerinize uygun kayıt bulunamadı.</h3></div>
+            </div>
+            
+            <div class="pagination-container">
+                <div id="pagination" class="pagination">
+                    <button id="prevPageBtn" disabled>Önceki</button>
+                    <span id="paginationInfo">Sayfa 1 / 1</span>
+                    <button id="nextPageBtn" disabled>Sonraki</button>
                 </div>
             </div>
-        </div>
+
+            <div id="detailModal" class="modal">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3 class="modal-title" id="modalTitle"></h3>
+                        <button class="close-btn" id="closeDetailModal">&times;</button>
+                    </div>
+                    <div class="modal-body" id="modalBody"></div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" id="closeModalBtn">Kapat</button>
+                        <button type="button" class="btn btn-primary" id="editRecordFromModalBtn">Düzenle</button>
+                    </div>
+                </div>
+            </div>
+        </main>
     </div>
 
-    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdn.datatables.net/1.13.8/js/jquery.dataTables.min.js"></script>
-    <script src="https://cdn.datatables.net/1.13.8/js/dataTables.bootstrap5.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script type="module">
-        import { ipRecordsService, authService } from './firebase-config.js';
+        import { authService, ipRecordsService, auth } from './firebase-config.js';
+        import { showNotification, TYPE_NAMES, ALL_STATUS_MAP } from './utils.js';
         import { loadSharedLayout } from './js/layout-loader.js';
-        import { showNotification } from './utils.js';
 
-        class PortfolioManager {
+        class PortfolioModule {
             constructor() {
-                this.dataTable = null;
-                this.allRecords = [];
-                this.init();
+                this.currentUser = null;
+                this.records = [];
+                this.filteredRecords = [];
+                this.currentPage = 1;
+                this.recordsPerPage = 10;
+                this.currentSortColumn = 'applicationDate';
+                this.currentSortDirection = 'desc';
+                this.activeTab = 'all';
+                this.columnFilters = {};
             }
 
             async init() {
-                await loadSharedLayout({ activeMenuLink: 'portfolio.html' });
-                this.dataTable = this.initDataTable();
-                await this.loadAndRenderData();
-                this.bindEvents();
-            }
-
-            initDataTable() {
-                return new DataTable('#portfolio-table', {
-                    responsive: true,
-                    language: {
-                        url: 'https://cdn.datatables.net/plug-ins/1.13.8/i18n/tr.json'
-                    }
-                });
-            }
-
-            async loadAndRenderData() {
-                const response = await ipRecordsService.getRecords();
-                if (response.success) {
-                    this.allRecords = response.data;
-                    this.renderDataTable(this.allRecords);
-                } else {
-                    showNotification('Portföy yüklenirken bir hata oluştu: ' + response.error, 'error');
+                this.currentUser = authService.getCurrentUser();
+                if (!this.currentUser) {
+                    window.location.href = 'index.html';
+                    return;
                 }
+                this.setupEventListeners();
+                await this.loadRecords();
+            }
+
+            setupEventListeners() {
+                document.querySelectorAll('.tab-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const activeBtn = document.querySelector('.tab-btn.active');
+                        if (activeBtn) activeBtn.classList.remove('active');
+                        e.currentTarget.classList.add('active');
+                        this.activeTab = e.currentTarget.dataset.type;
+                        this.applyFilters();
+                    });
+                });
+                
+                const archiveToggleEl = document.getElementById('archiveToggle');
+                if (archiveToggleEl) {
+                    archiveToggleEl.addEventListener('change', () => this.applyFilters());
+                }
+
+                const exportBtnEl = document.getElementById('exportBtn');
+                if (exportBtnEl) {
+                    exportBtnEl.addEventListener('click', () => this.exportData());
+                }
+
+                const closeDetailModalEl = document.getElementById('closeDetailModal');
+                if (closeDetailModalEl) {
+                    closeDetailModalEl.addEventListener('click', () => this.closeModal('detailModal'));
+                }
+
+                const closeModalBtnEl = document.getElementById('closeModalBtn');
+                if (closeModalBtnEl) {
+                    closeModalBtnEl.addEventListener('click', () => this.closeModal('detailModal'));
+                }
+                
+                const editRecordFromModalBtnEl = document.getElementById('editRecordFromModalBtn');
+                if(editRecordFromModalBtnEl) {
+                    editRecordFromModalBtnEl.addEventListener('click', () => {
+                        const recordId = document.getElementById('modalTitle').dataset.recordId;
+                        if (recordId) window.location.href = `data-entry.html?id=${recordId}`;
+                    });
+                }
+                
+                const prevPageBtnEl = document.getElementById('prevPageBtn');
+                if(prevPageBtnEl) {
+                    prevPageBtnEl.addEventListener('click', () => this.goToPage(this.currentPage - 1));
+                }
+
+                const nextPageBtnEl = document.getElementById('nextPageBtn');
+                if(nextPageBtnEl) {
+                    nextPageBtnEl.addEventListener('click', () => this.goToPage(this.currentPage + 1));
+                }
+            }
+
+            async loadRecords() {
+                document.getElementById('loadingIndicator').style.display = 'block';
+                document.getElementById('noRecords').style.display = 'none';
+                try {
+                    const result = await ipRecordsService.getRecords();
+                    if (result.success) {
+                        this.records = result.data;
+                    } else {
+                        showNotification('Kayıtlar yüklenirken hata: ' + result.error, 'error');
+                    }
+                } catch (error) {
+                    showNotification('Kayıtlar yüklenirken beklenmeyen bir hata oluştu.', 'error');
+                } finally {
+                    document.getElementById('loadingIndicator').style.display = 'none';
+                    this.applyFilters();
+                }
+            }
+
+            applyFilters = () => {
+                const archiveToggleEl = document.getElementById('archiveToggle');
+                const showArchived = archiveToggleEl ? archiveToggleEl.checked : false;
+
+                this.filteredRecords = this.records.filter(record => {
+                    if (record.type === 'copyright') return false;
+
+                    const tabType = this.activeTab;
+                    let typeMatch = false;
+                    if (tabType === 'all') typeMatch = true;
+                    else if (tabType === 'opposition') typeMatch = record.hasOpposition === true;
+                    else if (tabType === 'lawsuit') typeMatch = record.hasLawsuit === true;
+                    else typeMatch = record.type === tabType;
+
+                    if (!showArchived && record.isArchived) {
+                        return false;
+                    }
+                    
+                    const columnFilterMatch = Object.entries(this.columnFilters).every(([column, filterValue]) => {
+                        if (!filterValue) return true;
+                        
+                        let recordValue = '';
+                        const lowerFilterValue = filterValue.toLowerCase();
+
+                        switch (column) {
+                            case 'type': recordValue = TYPE_NAMES[record.type] || record.type; break;
+                            case 'owners': recordValue = (record.owners || []).map(o => o.name || '').join(', '); break;
+                            case 'applicationDate': recordValue = record.applicationDate ? new Date(record.applicationDate).toLocaleDateString('tr-TR') : ''; break;
+                            default: recordValue = record[column] || ''; break;
+                        }
+                        return recordValue.toString().toLowerCase().includes(lowerFilterValue);
+                    });
+
+                    return typeMatch && columnFilterMatch;
+                });
+                this.sortRecords();
+                this.goToPage(1);
             }
             
-            renderDataTable(records) {
-                this.dataTable.clear();
-                records.forEach(record => {
-                    this.dataTable.row.add([
-                        record.title || 'N/A',
-                        record.owners?.map(o => o.name).join(', ') || 'N/A',
-                        record.applicationNumber || 'N/A',
-                        record.applicationDate ? new Date(record.applicationDate).toLocaleDateString('tr-TR') : 'N/A',
-                        record.status || 'N/A',
-                        `<button class="btn btn-sm btn-primary view-btn" data-id="${record.id}"><i class="bi bi-eye"></i></button>
-                         <button class="btn btn-sm btn-danger delete-btn" data-id="${record.id}"><i class="bi bi-trash"></i></button>`
-                    ]);
-                });
-                this.dataTable.draw();
-            }
-
-            bindEvents() {
-                $('#portfolio-table tbody').on('click', '.view-btn', (e) => {
-                    const recordId = $(e.currentTarget).data('id');
-                    this.showRecordDetails(recordId);
-                });
-
-                $('#portfolio-table tbody').on('click', '.delete-btn', async (e) => {
-                    const recordId = $(e.currentTarget).data('id');
-                    if(confirm('Bu kaydı silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.')) {
-                        const result = await ipRecordsService.deleteRecord(recordId);
-                        if(result.success) {
-                            showNotification('Kayıt başarıyla silindi.', 'success');
-                            this.loadAndRenderData();
-                        } else {
-                            showNotification('Kayıt silinirken hata: ' + result.error, 'error');
-                        }
+            sortRecords = () => {
+                this.filteredRecords.sort((a, b) => {
+                    let aValue = a[this.currentSortColumn] || '';
+                    let bValue = b[this.currentSortColumn] || '';
+                    if (this.currentSortColumn.includes('Date')) {
+                        aValue = aValue ? new Date(aValue).getTime() : 0;
+                        bValue = bValue ? new Date(bValue).getTime() : 0;
                     }
+                    if (typeof aValue === 'string') aValue = aValue.toLowerCase();
+                    if (typeof bValue === 'string') bValue = bValue.toLowerCase();
+                    if (aValue < bValue) return this.currentSortDirection === 'asc' ? -1 : 1;
+                    if (aValue > bValue) return this.currentSortDirection === 'asc' ? 1 : -1;
+                    return 0;
                 });
             }
 
-            showRecordDetails(recordId) {
-                const record = this.allRecords.find(r => r.id === recordId);
-                if (!record) return;
-
-                const modalContent = $('#modal-body-content');
-                modalContent.html(`
-                    <h4>${record.title}</h4>
-                    <hr>
-                    <div class="row">
-                        <div class="col-md-6">
-                            <h5><i class="bi bi-info-circle-fill"></i> Temel Bilgiler</h5>
-                            <p><strong>Başvuru Numarası:</strong> ${record.applicationNumber || 'Belirtilmemiş'}</p>
-                            <p><strong>Başvuru Tarihi:</strong> ${record.applicationDate ? new Date(record.applicationDate).toLocaleDateString('tr-TR') : 'Belirtilmemiş'}</p>
-                            <p><strong>Tescil Numarası:</strong> ${record.registrationNumber || 'Belirtilmemiş'}</p>
-                            <p><strong>Tescil Tarihi:</strong> ${record.registrationDate ? new Date(record.registrationDate).toLocaleDateString('tr-TR') : 'Belirtilmemiş'}</p>
-                            <p><strong>Durum:</strong> ${record.status || 'Belirtilmemiş'}</p>
-                        </div>
-                        <div class="col-md-6">
-                            <h5><i class="bi bi-people-fill"></i> Başvuru Sahipleri</h5>
-                            <ul>
-                                ${record.owners?.map(owner => `<li>${owner.name} (${owner.personType})</li>`).join('') || '<li>Belirtilmemiş</li>'}
-                            </ul>
-                        </div>
-                    </div>
-                    <hr>
-                    <h5><i class="bi bi-journal-text"></i> İşlem Geçmişi</h5>
-                    <div class="accordion" id="transactionHistoryAccordion">
-                        ${this.renderTransactionHistory(record.transactions || [])}
-                    </div>
-                `);
-
-                const detailModal = new bootstrap.Modal(document.getElementById('recordDetailModal'));
-                detailModal.show();
+            handleSort = (headerElement) => {
+                const column = headerElement.dataset.sort;
+                if (!column) return;
+                if (this.currentSortColumn === column) {
+                    this.currentSortDirection = this.currentSortDirection === 'asc' ? 'desc' : 'asc';
+                } else {
+                    this.currentSortColumn = column;
+                    this.currentSortDirection = 'asc';
+                }
+                this.sortRecords();
+                this.renderPortfolioTable();
             }
 
-            // *** DÜZELTİLEN FONKSİYON ***
-            renderTransactionHistory(transactions) {
-                if (!transactions || transactions.length === 0) {
-                    return '<p>Bu kayıt için işlem geçmişi bulunmuyor.</p>';
+            goToPage = (page) => {
+                const totalPages = Math.ceil(this.filteredRecords.length / this.recordsPerPage);
+                if (page < 1 || (page > totalPages && totalPages > 0)) return;
+                this.currentPage = page;
+                this.renderPortfolioTable();
+            }
+            
+            renderPortfolioTable = () => {
+                const tableEl = document.getElementById('portfolioTable');
+                const noRecordsEl = document.getElementById('noRecords');
+                const paginationContainerEl = document.querySelector('.pagination-container');
+                tableEl.innerHTML = '';
+
+                if (this.filteredRecords.length === 0) {
+                    noRecordsEl.style.display = 'block';
+                    if (paginationContainerEl) paginationContainerEl.style.display = 'none';
+                    return;
+                }
+                noRecordsEl.style.display = 'none';
+                if (paginationContainerEl) paginationContainerEl.style.display = 'flex';
+
+                let headers = [
+                    { key: 'type', label: 'Tip', sortable: true },
+                    { key: 'title', label: 'Başlık', sortable: true },
+                    { key: 'applicationNumber', label: 'Başvuru No', sortable: true },
+                    { key: 'applicationDate', label: 'Başvuru Tarihi', sortable: true },
+                    { key: 'owners', label: 'Hak Sahipleri', sortable: false },
+                    { key: 'actions', label: 'İşlemler', sortable: false }
+                ];
+
+                if (this.activeTab === 'trademark') {
+                    headers = headers.filter(h => h.key !== 'type');
+                    headers.unshift({ key: 'trademarkImage', label: 'Marka Örneği', sortable: false });
                 }
 
-                const container = document.createElement('div');
-                
-                // İşlemleri ana ve alt işlemler olarak ayır
-                const parentTransactions = transactions.filter(t => !t.parentId);
-                const childTransactions = transactions.filter(t => t.parentId);
-
-                parentTransactions.sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp));
-
-                parentTransactions.forEach((parentTx, index) => {
-                    const accordionId = `accordion-${parentTx.transactionId || index}`;
-                    const headerId = `heading-${parentTx.transactionId || index}`;
-                    const collapseId = `collapse-${parentTx.transactionId || index}`;
-
-                    // Bu ana işleme ait alt işlemleri bul
-                    const relatedChildren = childTransactions
-                        .filter(child => child.parentId === parentTx.transactionId)
-                        .sort((a,b) => new Date(a.timestamp) - new Date(b.timestamp));
-
-                    let childrenHtml = '';
-                    if (relatedChildren.length > 0) {
-                        childrenHtml = '<ul class="list-group mt-2">';
-                        relatedChildren.forEach(child => {
-                             const childDate = new Date(child.timestamp).toLocaleDateString('tr-TR');
-                             childrenHtml += `<li class="list-group-item"><strong>${child.description || child.type}</strong> - ${childDate}</li>`;
-                        });
-                        childrenHtml += '</ul>';
+                const thead = document.createElement('thead');
+                let headerRowHtml = '<tr>';
+                let filterRowHtml = '<tr id="filter-row">';
+                headers.forEach(h => {
+                    const sortClass = h.key === this.currentSortColumn ? `sort-${this.currentSortDirection}` : '';
+                    headerRowHtml += `<th data-sort="${h.sortable ? h.key : ''}" class="${sortClass}">${h.label}</th>`;
+                    if (h.key === 'actions' || h.key === 'trademarkImage') {
+                        filterRowHtml += '<th></th>';
+                    } else {
+                        filterRowHtml += `<th><input type="text" class="column-filter" data-column="${h.key}" placeholder="${h.label} ara..." value="${this.columnFilters[h.key] || ''}"></th>`;
                     }
-
-                    const item = document.createElement('div');
-                    item.className = 'accordion-item';
-
-                    const parentDate = new Date(parentTx.timestamp).toLocaleDateString('tr-TR');
-                    
-                    item.innerHTML = `
-                        <h2 class="accordion-header" id="${headerId}">
-                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#${collapseId}" aria-expanded="false" aria-controls="${collapseId}">
-                                <strong>${parentTx.description || parentTx.type}</strong> - ${parentDate}
-                            </button>
-                        </h2>
-                        <div id="${collapseId}" class="accordion-collapse collapse" aria-labelledby="${headerId}" data-bs-parent="#transactionHistoryAccordion">
-                            <div class="accordion-body">
-                                <p><strong>İşlem Detayları:</strong></p>
-                                <p><strong>İşlem ID:</strong> ${parentTx.transactionId || 'N/A'}</p>
-                                <p><strong>Oluşturan:</strong> ${parentTx.userEmail || 'N/A'}</p>
-                                ${childrenHtml || '<p>Bu işleme bağlı alt işlem bulunmamaktadır.</p>'}
-                            </div>
-                        </div>
-                    `;
-                    container.appendChild(item);
                 });
+                headerRowHtml += '</tr>';
+                filterRowHtml += '</tr>';
+                thead.innerHTML = headerRowHtml + filterRowHtml;
+                tableEl.appendChild(thead);
 
-                return container.innerHTML;
+                const tbody = document.createElement('tbody');
+                const start = (this.currentPage - 1) * this.recordsPerPage;
+                const end = start + this.recordsPerPage;
+                this.filteredRecords.slice(start, end).forEach(record => {
+                    const row = document.createElement('tr');
+                    if (record.isArchived) row.classList.add('archived-record');
+                    let cellsHtml = '';
+                    headers.forEach(h => {
+                        let cellContent = '';
+                        switch (h.key) {
+                            case 'trademarkImage':
+                                const imageUrl = record.trademarkImage?.content;
+                                if (imageUrl) {
+                                    cellContent = `<div class="image-hover-container"><img src="${imageUrl}" class="trademark-image-thumb"><img src="${imageUrl}" class="trademark-image-preview"></div>`;
+                                } else { cellContent = '-'; }
+                                break;
+                            case 'type':
+                                cellContent = `<span class="ip-type ${record.type}">${TYPE_NAMES[record.type] || record.type}</span>`;
+                                break;
+                            case 'title': cellContent = record.title || '-'; break;
+                            case 'applicationNumber': cellContent = record.applicationNumber || '-'; break;
+                            case 'applicationDate': cellContent = record.applicationDate ? new Date(record.applicationDate).toLocaleDateString('tr-TR') : '-'; break;
+                            case 'owners': cellContent = (record.owners || []).map(o => o.name).join(', ') || '-'; break;
+                            case 'actions':
+                                const archiveButtonText = record.isArchived ? 'Aktif Et' : 'Arşivle';
+                                const archiveButtonClass = record.isArchived ? 'btn-activate' : 'btn-archive';
+                                cellContent = `<div class="action-buttons">
+                                    <button class="action-btn btn-view" data-id="${record.id}">Görüntüle</button>
+                                    <button class="action-btn btn-edit" data-id="${record.id}">Düzenle</button>
+                                    <button class="action-btn ${archiveButtonClass}" data-id="${record.id}">${archiveButtonText}</button>
+                                </div>`;
+                                break;
+                        }
+                        cellsHtml += `<td>${cellContent}</td>`;
+                    });
+                    row.innerHTML = cellsHtml;
+                    tbody.appendChild(row);
+                });
+                tableEl.appendChild(tbody);
+                this.rebindTableEventListeners();
+                this.updatePaginationControls();
+            }
+            
+            rebindTableEventListeners() {
+                document.querySelectorAll('#portfolioTable th[data-sort]').forEach(header => {
+                    header.addEventListener('click', (e) => this.handleSort(e.currentTarget));
+                });
+                document.querySelectorAll('.column-filter').forEach(input => {
+                    input.addEventListener('keyup', (e) => {
+                        this.columnFilters[e.target.dataset.column] = e.target.value;
+                        this.applyFilters();
+                    });
+                });
+                document.querySelectorAll('#portfolioTable .action-btn').forEach(btn => {
+                    const recordId = btn.dataset.id;
+                    if (btn.classList.contains('btn-view')) btn.addEventListener('click', () => this.viewRecord(recordId));
+                    if (btn.classList.contains('btn-edit')) btn.addEventListener('click', () => this.editRecord(recordId));
+                    if (btn.classList.contains('btn-archive') || btn.classList.contains('btn-activate')) {
+                        btn.addEventListener('click', () => this.toggleArchiveStatus(recordId));
+                    }
+                });
+            }
+
+            updatePaginationControls() {
+                const totalPages = Math.ceil(this.filteredRecords.length / this.recordsPerPage);
+                const paginationInfo = document.getElementById('paginationInfo');
+                const prevPageBtn = document.getElementById('prevPageBtn');
+                const nextPageBtn = document.getElementById('nextPageBtn');
+                if (paginationInfo) paginationInfo.textContent = `Sayfa ${this.currentPage} / ${totalPages > 0 ? totalPages : 1}`;
+                if (prevPageBtn) prevPageBtn.disabled = this.currentPage === 1;
+                if (nextPageBtn) nextPageBtn.disabled = this.currentPage === totalPages || totalPages === 0;
+            }
+            
+            viewRecord = (recordId) => {
+                const record = this.records.find(r => r.id === recordId);
+                if (!record) return;
+                const modal = document.getElementById('detailModal');
+                const modalTitleEl = document.getElementById('modalTitle');
+                const modalBodyEl = document.getElementById('modalBody');
+                modalTitleEl.textContent = `Detay: ${record.title}`;
+                modalTitleEl.dataset.recordId = record.id;
+                
+                const formatDate = (date) => date ? new Date(date).toLocaleDateString('tr-TR') : '-';
+                const renderField = (label, value, isLongText = false) => {
+                    if (!value) return '';
+                    const valueClass = isLongText ? 'modal-detail-value long-text' : 'modal-detail-value';
+                    return `<div class="modal-detail-item"><div class="modal-detail-label">${label}:</div><div class="${valueClass}">${value}</div></div>`;
+                }
+
+                let modalContentHtml = `<h4 class="modal-detail-section-title">Temel Bilgiler</h4><div class="modal-detail-grid">`;
+                modalContentHtml += renderField('Kayıt Tipi', `<span class="ip-type ${record.type}">${TYPE_NAMES[record.type] || record.type}</span>`);
+                modalContentHtml += renderField('Başlık', record.title);
+                modalContentHtml += renderField('Durum', record.status ? `<span class="status-badge status-${record.status.replace(/_/g, '-')}">${ALL_STATUS_MAP[record.status] || record.status}</span>` : '-');
+                modalContentHtml += renderField('Başvuru Numarası', record.applicationNumber);
+                modalContentHtml += renderField('Başvuru Tarihi', formatDate(record.applicationDate));
+                modalContentHtml += renderField('Tescil Tarihi', formatDate(record.registrationDate));
+                modalContentHtml += renderField('Hak Sahipleri', (record.owners || []).map(o => o.name).join(', '));
+                modalContentHtml += renderField('Açıklama', record.description, true);
+                modalContentHtml += `</div>`;
+
+                if (record.type === 'trademark') {
+                    modalContentHtml += `<h4 class="modal-detail-section-title">Marka Detayları</h4>`;
+                    modalContentHtml += `<div class="modal-detail-grid">`;
+                    if (record.trademarkImage?.content) {
+                        modalContentHtml += renderField('Marka Örneği', `<img src="${record.trademarkImage.content}" style="max-height: 100px; border-radius: 6px;">`);
+                    }
+                    modalContentHtml += renderField('Nice Sınıfı', record.niceClass);
+                    modalContentHtml += renderField('Yenileme Tarihi', formatDate(record.renewalDateTrademark));
+                    modalContentHtml += `</div>`;
+                }
+                if (record.type === 'patent') {
+                    modalContentHtml += `<h4 class="modal-detail-section-title">Patent Detayları</h4>`;
+                    modalContentHtml += `<div class="modal-detail-grid">`;
+                    modalContentHtml += renderField('Patent Sınıfı', record.patentClass);
+                    modalContentHtml += renderField('Yenileme Tarihi', formatDate(record.renewalDatePatent));
+                    modalContentHtml += `</div>`;
+                }
+                if (record.type === 'design') {
+                    modalContentHtml += `<h4 class="modal-detail-section-title">Tasarım Detayları</h4>`;
+                    modalContentHtml += `<div class="modal-detail-grid">`;
+                    modalContentHtml += renderField('Tasarım Sınıfı', record.designClass);
+                    modalContentHtml += renderField('Locarno Sınıfı', record.locarnoClass);
+                    modalContentHtml += renderField('Yenileme Tarihi', formatDate(record.renewalDateDesign));
+                    modalContentHtml += `</div>`;
+                }
+
+                modalContentHtml += `<h4 class="modal-detail-section-title">İşlem Geçmişi</h4><div id="transactionHistoryContainer"></div>`;
+                modalBodyEl.innerHTML = modalContentHtml;
+                this.renderTransactionHistory(record.id, record.transactions, record.files);
+                modal.classList.add('show');
+            }
+
+            renderTransactionHistory = (recordId, transactions, files) => {
+                const historyContentDiv = document.getElementById('transactionHistoryContainer');
+                if (!historyContentDiv) return;
+                const sortedTransactions = [...(transactions || [])].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+                if (sortedTransactions.length === 0) {
+                    historyContentDiv.innerHTML = '<p style="text-align:center; padding: 20px;">Bu kayıt için işlem geçmişi bulunmamaktadır.</p>';
+                    return;
+                }
+                const buildTreeHtml = (transactionsToBuild) => {
+                    return transactionsToBuild.map(tx => {
+                        const children = sortedTransactions.filter(childTx => childTx.parentId === tx.transactionId);
+                        const hasChildren = children.length > 0;
+                        const file = files?.find(f => f.id === tx.documentId);
+                        const fileLink = file ? ` | <a href="${file.content}" download="${file.name}" class="transaction-file-link">📄 Belge</a>` : '';
+                        return `<div class="transaction-node" data-id="${tx.transactionId}">${hasChildren ? `<button class="transaction-toggle-btn" data-target-id="${tx.transactionId}">+</button>` : ''}<div class="transaction-node-content"><div class="transaction-description">${tx.description || tx.type}</div><div class="transaction-meta">${new Date(tx.timestamp).toLocaleString('tr-TR')} by ${tx.userEmail}${fileLink}</div></div></div>${hasChildren ? `<div class="child-transactions" id="children-of-${tx.transactionId}">${buildTreeHtml(children)}</div>` : ''}`;
+                    }).join('');
+                };
+                historyContentDiv.innerHTML = buildTreeHtml(sortedTransactions.filter(tx => !tx.parentId));
+                historyContentDiv.querySelectorAll('.transaction-toggle-btn').forEach(button => {
+                    button.addEventListener('click', (e) => {
+                        const targetId = e.currentTarget.dataset.targetId;
+                        const childContainer = document.getElementById(`children-of-${targetId}`);
+                        childContainer.classList.toggle('show');
+                        e.currentTarget.textContent = childContainer.classList.contains('show') ? '−' : '+';
+                    });
+                });
+            }
+
+            editRecord = (recordId) => { window.location.href = `data-entry.html?id=${recordId}`; }
+
+            toggleArchiveStatus = async (recordId) => {
+                const record = this.records.find(r => r.id === recordId);
+                const newArchivedState = !record.isArchived;
+                const actionText = newArchivedState ? 'arşivlemek' : 'aktif hale getirmek';
+                if (confirm(`Bu kaydı ${actionText} istediğinizden emin misiniz?`)) {
+                    const result = await ipRecordsService.updateRecord(recordId, { isArchived: newArchivedState });
+                    if (result.success) {
+                        showNotification('İşlem başarılı!', 'success');
+                        await this.loadRecords();
+                    } else {
+                        showNotification('Hata: ' + result.error, 'error');
+                    }
+                }
+            }
+
+            closeModal = (modalId) => {
+                const modal = document.getElementById(modalId);
+                if(modal) modal.classList.remove('show');
+            }
+            
+            exportData = () => {
+                if (this.filteredRecords.length === 0) {
+                    showNotification('Dışa aktarılacak kayıt bulunamadı.', 'info');
+                    return;
+                }
+                const headers = ["Tip", "Başlık", "Başvuru Numarası", "Başvuru Tarihi", "Hak Sahipleri", "Arşiv Durumu"];
+                const csvRows = [headers.join(';')];
+                this.filteredRecords.forEach(record => {
+                    const escapeCsv = (value) => `"${(value || '').toString().replace(/"/g, '""')}"`;
+                    const row = [
+                        TYPE_NAMES[record.type] || record.type, record.title || '', record.applicationNumber || '',
+                        record.applicationDate ? new Date(record.applicationDate).toLocaleDateString('tr-TR') : '',
+                        (record.owners || []).map(o => o.name).join(', '),
+                        record.isArchived ? 'Arşivlenmiş' : 'Aktif'
+                    ].map(escapeCsv);
+                    csvRows.push(row.join(';'));
+                });
+                const blob = new Blob(["\uFEFF" + csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement("a");
+                const url = URL.createObjectURL(blob);
+                link.setAttribute("href", url);
+                link.setAttribute("download", "portfoy_raporu.csv");
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
             }
         }
 
-        document.addEventListener('DOMContentLoaded', () => {
-            new PortfolioManager();
+        document.addEventListener('DOMContentLoaded', async () => {
+            await loadSharedLayout({ topHeaderLeftContentId: 'breadcrumbContainer', activeMenuLink: 'portfolio.html' });
+            const portfolio = new PortfolioModule();
+            auth.onAuthStateChanged(user => {
+                if (user) {
+                    portfolio.init();
+                    window.portfolio = portfolio;
+                } else {
+                    window.location.href = 'index.html';
+                }
+            });
         });
     </script>
 </body>
