@@ -943,8 +943,7 @@
                                     const transactionAddResult = await ipRecordsService.addTransactionToRecord(currentSelectedRecord.id, newTransactionData); 
 
                                     if (!transactionAddResult.success) {
-                                        // Hata mesajını yakalamak için .addError kullanıldı.
-                                        throw new Error(transactionAddResult.error || 'Yeni işlem oluşturulurken hata oluştu.'); 
+                                        throw new Error(transactionAddResult.error || 'Yeni işlem oluşturulurken hata oluştu.');
                                     }
                                     transactionIdToAssociateFiles = transactionAddResult.data.transactionId;
                                     transactionDesignationForFiles = transactionDesignation;
@@ -1340,6 +1339,31 @@
                         const row = tableBody.insertRow();
                         row.dataset.jobId = job.jobId;
 
+                        // Her bir iş için parent select box'ını doldurmak için fonksiyon
+                        const populateParentSelectHtml = (jobId, currentParentId) => {
+                            const currentRecord = this.allRecords.find(r => r.id === job.matchedRecordId);
+                            if (!currentRecord) return `<select disabled><option>Kayıt Yok</option></select>`;
+
+                            const parentTransactions = (currentRecord.transactions || [])
+                                .filter(tx => tx.transactionHierarchy === 'parent' || !tx.transactionHierarchy)
+                                .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+                            
+                            let optionsHtml = '<option value="">Parent Seçin...</option>'; // Varsayılan boş seçenek
+                            if (parentTransactions.length === 0) {
+                                optionsHtml = '<option value="">Ana İşlem Yok</option>';
+                            } else {
+                                parentTransactions.forEach(tx => {
+                                    const selected = tx.transactionId === currentParentId ? 'selected' : '';
+                                    optionsHtml += `<option value="${tx.transactionId}" ${selected}>${tx.designation || tx.transactionType} (${new Date(tx.timestamp).toLocaleDateString('tr-TR')})</option>`;
+                                });
+                            }
+                            return `
+                                <select class="form-select bulk-parent-select" data-job-id="${jobId}">
+                                    ${optionsHtml}
+                                </select>
+                            `;
+                        };
+
                         row.innerHTML = `
                             <td>${job.fileName}</td>
                             <td>${job.extractedAppNumber || '-'}</td>
@@ -1354,6 +1378,11 @@
                                             placeholder="Manuel kayıt ara...">
                                         <div class="search-results-container bulk-search-results-container" data-job-id="${job.jobId}"></div>
                                     </div>` : ''}
+                                    ${job.matchedRecordId ? populateParentSelectHtml(job.jobId, job.selectedParentTransactionId) : ''}
+                                    <div class="form-group" style="margin-top: 5px;">
+                                        <label class="form-label" style="font-size:0.8em; margin-bottom: 2px;">Tebliğ Tarihi:</label>
+                                        <input type="date" class="form-input bulk-job-delivery-date" data-job-id="${job.jobId}" value="${job.tebligDate || ''}">
+                                    </div>
                             </td>
                             <td><span class="status-text ${job.status}">${job.status === 'pending' ? 'Beklemede' : job.status === 'ready' ? 'Hazır' : job.status === 'processing' ? 'İşleniyor' : job.status === 'success' ? 'Başarılı' : 'Hata'}</span>
                                 ${job.errorMessage ? `<br><small style="color:red;">${job.errorMessage}</small>` : ''}
@@ -1365,23 +1394,30 @@
                         `;
                     });
 
-                    // Tablo içindeki manuel arama inputları ve butonlara listener ekle
+                    // Tablo içindeki input ve butonlara listener ekle
                     tableBody.querySelectorAll('.bulk-record-manual-search-input').forEach(input => {
-                        input.addEventListener('input', (e) => this.searchRecordsForBulkJob(e.target.value, e.target.dataset.jobId));
+                        input.addEventListener('input', this.searchRecordsForBulkJob);
                         input.addEventListener('blur', (e) => {
                             setTimeout(() => {
                                 document.querySelector(`.bulk-search-results-container[data-job-id="${e.target.dataset.jobId}"]`).style.display = 'none';
                             }, 200);
                         });
-                        // Focus olduğunda sonuçları göstermesi için
                         input.addEventListener('focus', (e) => {
-                            // Eğer önceden arama yapılmışsa, tekrar göster
                             const container = document.querySelector(`.bulk-search-results-container[data-job-id="${e.target.dataset.jobId}"]`);
                             if (container.innerHTML.trim() !== '<p class="no-results-message p-2">Arama yapmak için en az 3 karakter girin.</p>' && container.innerHTML.trim() !== '<p class="no-results-message p-2">Kayıt bulunamadı.</p>') {
                                 container.style.display = 'block';
                             }
                         });
                     });
+
+                    // Yeni eklenen listener'lar: parent seçimi ve tebliğ tarihi
+                    tableBody.querySelectorAll('.bulk-parent-select').forEach(select => {
+                        select.addEventListener('change', (e) => this.selectParentForBulkJob(e.target.value, e.target.dataset.jobId));
+                    });
+                    tableBody.querySelectorAll('.bulk-job-delivery-date').forEach(input => {
+                        input.addEventListener('change', (e) => this.updateJobSpecificDeliveryDate(e.target.value, e.target.dataset.jobId));
+                    });
+
                     tableBody.querySelectorAll('.bulk-skip-btn').forEach(btn => {
                         btn.addEventListener('click', this.skipBulkJob); 
                     });
@@ -1401,7 +1437,7 @@
                     this.checkFormCompleteness();
                 }
 
-                // Yeni: Tablo içindeki arama
+                // Yeni: Tablo içindeki arama (query ve jobId parametreleriyle)
                 searchRecordsForBulkJob = (query, jobId) => { 
                     const container = document.querySelector(`.bulk-search-results-container[data-job-id="${jobId}"]`);
                     container.innerHTML = '';
@@ -1436,10 +1472,50 @@
                     if (job && selectedRecord) {
                         job.matchedRecordId = selectedRecord.id;
                         job.matchedRecordDisplay = `${selectedRecord.title} (${selectedRecord.applicationNumber})`;
-                        job.status = 'ready'; 
-                        this.renderBulkIndexingTable(); 
+                        job.status = 'pending'; // Manuel seçildi, parent seçimi gerekiyor, o yüzden pending
+                        this.renderBulkIndexingTable(); // UI'ı güncelle, parent seçici belirecek
                     }
                     this.checkFormCompleteness();
+                }
+
+                // Yeni: Tablo içindeki parent seçimi
+                selectParentForBulkJob = (parentTransactionId, jobId) => {
+                    const job = this.pendingBulkIndexJobs.find(j => j.jobId === jobId);
+                    if (job) {
+                        job.selectedParentTransactionId = parentTransactionId;
+                        // Seçilen parent'ın displayName'ini bulup kaydet (gerekirse)
+                        const currentRecord = this.allRecords.find(r => r.id === job.matchedRecordId);
+                        if (currentRecord && parentTransactionId) {
+                            const parentTx = currentRecord.transactions.find(tx => tx.transactionId === parentTransactionId);
+                            job.selectedParentTransactionDisplay = parentTx ? (parentTx.designation || parentTx.transactionType) : 'Seçili Parent';
+                        } else {
+                            job.selectedParentTransactionDisplay = 'Parent Seçilmedi';
+                        }
+                        
+                        // Tüm gerekli alanlar seçiliyse durumu 'ready' yap
+                        if (job.matchedRecordId && job.selectedParentTransactionId && job.childTransactionType && job.tebligDate) {
+                             job.status = 'ready';
+                        } else {
+                             job.status = 'pending';
+                        }
+                        this.renderBulkIndexingTable(); // UI'ı güncelle
+                    }
+                    this.checkFormCompleteness();
+                }
+
+                // Yeni: Tablo içindeki işe özel tebliğ tarihini güncelleme
+                updateJobSpecificDeliveryDate = (newDate, jobId) => {
+                    const job = this.pendingBulkIndexJobs.find(j => j.jobId === jobId);
+                    if (job) {
+                        job.tebligDate = newDate;
+                        // Tüm gerekli alanlar seçiliyse durumu 'ready' yap
+                        if (job.matchedRecordId && job.selectedParentTransactionId && job.childTransactionType && job.tebligDate) {
+                             job.status = 'ready';
+                        } else {
+                             job.status = 'pending';
+                        }
+                        this.checkFormCompleteness();
+                    }
                 }
 
                 // Yeni: Toplu indeksleme işini atla
@@ -1472,8 +1548,11 @@
                     const newDate = e.target.value;
                     this.pendingBulkIndexJobs.forEach(job => {
                         job.tebligDate = newDate;
+                        // Ortak değer değiştiğinde job'ın durumu değişmez, sadece tebligDate güncellenir
+                        // job.status = 'pending' veya 'ready' kalır
                     });
                     this.checkFormCompleteness();
+                    this.renderBulkIndexingTable(); // Tebliğ tarihi inputunun değerini güncellemek için
                 }
 
                 // Yeni: Toplu işlerdeki alt işlem türünü güncelle
@@ -1481,8 +1560,11 @@
                     const newType = e.target.value;
                     this.pendingBulkIndexJobs.forEach(job => {
                         job.childTransactionType = newType;
+                        // Ortak değer değiştiğinde job'ın durumu değişmez, sadece childTransactionType güncellenir
+                        // job.status = 'pending' veya 'ready' kalır
                     });
                     this.checkFormCompleteness();
+                    this.renderBulkIndexingTable(); // Alt işlem türü inputunun değerini güncellemek için
                 }
             }
             
