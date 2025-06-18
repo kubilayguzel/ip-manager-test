@@ -11,7 +11,6 @@
             color: #333;
             display: flex;
         }
-        
         .page-wrapper {
             flex-grow: 1;
             display: flex;
@@ -20,15 +19,12 @@
             overflow-y: auto;
             background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
         }
-        
         .main-container {
             width: 100%;
             padding: 30px;
             margin: 0;
         }
-        
         body > .header { display: none; }
-
         .page-header { background: rgba(255, 255, 255, 0.95); padding: 30px; border-radius: 20px; margin-bottom: 30px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1); }
         .page-title { font-size: 2em; color: #1e3c72; margin-bottom: 10px; }
         .page-subtitle { color: #666; font-size: 1.1em; }
@@ -38,30 +34,25 @@
             box-shadow: 0 10px 30px rgba(0,0,0,0.1);
             padding: 30px;
         }
-
         .form-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
             gap: 20px;
         }
-
         .form-group {
             margin-bottom: 25px;
             display: flex;
             flex-direction: column;
         }
-        
         .form-group.full-width {
             grid-column: 1 / -1;
         }
-
         .form-label {
             display: block;
             margin-bottom: 8px;
             color: #333;
             font-weight: 500;
         }
-
         .form-input, .form-select, .form-textarea {
             width: 100%;
             padding: 12px 15px;
@@ -72,37 +63,31 @@
             background: white;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
-
         .form-input:focus, .form-select:focus, .form-textarea:focus {
             outline: none;
             border-color: #1e3c72;
             box-shadow: 0 0 0 3px rgba(30, 60, 114, 0.1);
         }
-
         .form-textarea {
             min-height: 120px;
             resize: vertical;
         }
-
         .dynamic-fields {
             display: none;
             animation: fadeIn 0.3s ease forwards;
         }
-        
         .dynamic-fields.show {
             display: grid;
         }
-        
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(20px); }
             to { opacity: 1; transform: translateY(0); }
         }
-
-        /* YENİ VE GÜNCELLENMİŞ BUTON DİZİLİMİ STİLLERİ */
         .owner-selection-group {
+            position: relative;
             display: flex;
-            align-items: flex-start;
             gap: 10px;
+            align-items: flex-start;
         }
         .search-input-wrapper {
             flex-grow: 1;
@@ -111,14 +96,14 @@
         .search-button-wrapper {
             display: flex;
             gap: 10px;
-            flex-shrink: 0; /* Butonların küçülmesini engeller */
+            flex-shrink: 0;
+            padding-top: 33px; /* Etiketle aynı hizaya getirmek için */
         }
-        
         #mainOwnerSearchResults {
             position: absolute;
             top: 100%;
             left: 0;
-            width: 100%; /* Arama kutusu ile aynı genişlikte */
+            width: 100%;
             background: white;
             border: 1px solid #ddd;
             border-top: none;
@@ -128,17 +113,14 @@
             overflow-y: auto;
             display: none;
         }
-        
         .search-result-item { padding: 10px; cursor: pointer; }
         .search-result-item:hover { background-color: #f0f0f0; }
-        
         .owner-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
             gap: 10px;
             margin-top: 15px;
         }
-        
         .owner-tag {
             background: #e9ecef;
             color: #495057;
@@ -149,33 +131,27 @@
             justify-content: space-between;
             font-size: 0.9em;
         }
-        
         .owner-tag .remove-owner {
             background: none; border: none; color: #6c757d;
             cursor: pointer; margin-left: 10px; font-size: 1.2em; line-height: 1;
         }
-        
         .form-actions {
             display: flex;
-            justify-content: flex-end; /* Butonları sağa hizalar */
-            gap: 10px; /* Butonlar arasına boşluk ekler */
+            justify-content: flex-end;
+            gap: 10px;
             padding-top: 20px;
             border-top: 1px solid #e9ecef;
             margin-top: 20px;
         }
-        
         .image-upload-area {
             border: 2px dashed #e1e8ed; border-radius: 10px; padding: 30px;
             text-align: center; cursor: pointer; transition: all 0.3s ease;
         }
-        
         .image-upload-area:hover, .image-upload-area.drag-over {
             border-color: #1e3c72;
             background-color: #f8f9fa;
         }
-        
         .image-upload-icon { font-size: 2.5em; color: #6c757d; }
-        
         .image-preview {
             max-width: 200px; max-height: 200px; margin-top: 15px;
             border-radius: 10px; border: 2px solid #e1e8ed;
@@ -304,10 +280,9 @@
     </div>
 
     <script type="module">
-    import { authService, ipRecordsService, personsService, auth } from './firebase-config.js';
-    // STATUSES ve TYPE_NAMES artık utils.js'den import ediliyor
-    import { showNotification, readFileAsDataURL, STATUSES } from './utils.js';
-    import { loadSharedLayout } from './js/layout-loader.js';
+        import { authService, ipRecordsService, personsService, auth } from './firebase-config.js';
+        import { showNotification, readFileAsDataURL, STATUSES } from './utils.js';
+        import { loadSharedLayout } from './js/layout-loader.js';
     
         class DataEntryModule {
             constructor() {
@@ -367,6 +342,7 @@
                 const ownerSearchInput = document.getElementById('ownerSearchInput');
                 const searchButton = document.getElementById('searchOwnerBtn');
 
+                // "Ara" butonu için click dinleyicisi
                 if (searchButton) {
                     searchButton.addEventListener('click', () => {
                         this.performOwnerSearch(ownerSearchInput.value);
@@ -375,13 +351,6 @@
                 
                 if (ownerSearchInput) {
                     ownerSearchInput.addEventListener('keyup', (event) => {
-                        // Enter tuşuna basıldığında da arama yapabilir
-                        if (event.key === 'Enter') {
-                            this.performOwnerSearch(event.target.value);
-                        }
-                    });
-                     ownerSearchInput.addEventListener('input', (event) => {
-                        // Yazarken arama sonuçlarını göstermek için (isteğe bağlı)
                         this.performOwnerSearch(event.target.value);
                     });
                 }
@@ -397,7 +366,7 @@
                     }
                 });
             }
-
+            
             performOwnerSearch = (searchTerm) => {
                 const lowerSearchTerm = searchTerm.toLowerCase();
                 const resultsContainer = document.getElementById('mainOwnerSearchResults');
@@ -423,10 +392,11 @@
                     });
                     resultsContainer.style.display = 'block';
                 } else {
-                    resultsContainer.style.display = 'none';
+                    resultsContainer.innerHTML = '<p style="padding: 10px; text-align: center; color: #666;">Sonuç bulunamadı.</p>';
+                    resultsContainer.style.display = 'block';
                 }
             }
-    
+
             handleTypeChange = (event) => {
                 this.selectedType = event.target.value;
                 this.toggleDynamicFields();
@@ -450,12 +420,9 @@
             populateStatusOptions() {
                 const statusSelect = document.getElementById('status');
                 statusSelect.innerHTML = '<option value="">Durum Seçin</option>';
-    
-   
-            // Seçenekler artık merkezi yerden alınıyor
-            const options = STATUSES[this.selectedType] || [];
-            options.forEach(status => {
-                statusSelect.add(new Option(status.text, status.value));
+                const options = STATUSES[this.selectedType] || [];
+                options.forEach(status => {
+                    statusSelect.add(new Option(status.text, status.value));
                 });
             }
     
@@ -531,7 +498,7 @@
             }
     
             addOwner(personId) {
-                if (this.selectedOwners.find(p => p.id === personId)) {
+                if (this.selectedOwners.some(p => p.id === personId)) {
                     showNotification('Bu kişi zaten eklenmiş.', 'info');
                     return;
                 }
@@ -571,34 +538,46 @@
             }
     
             async loadRecordForEdit(id) {
+                // DÜZELTME: Sadece ilgili kaydı çekmek için getRecordById kullanıldı.
                 const result = await ipRecordsService.getRecordById(id);
                 if (result.success && result.data) {
                     const record = result.data;
-                    document.getElementById('type').value = record.type;
-                    this.selectedType = record.type;
-                    this.toggleDynamicFields();
-                    this.populateStatusOptions();
-                    Object.keys(record).forEach(key => {
-                        const element = document.getElementById(key);
-                        if (element && element.tagName !== 'SELECT' && element.type !== 'file') {
-                           element.value = record[key];
-                        }
-                    });
-                    if(record.status) document.getElementById('status').value = record.status;
-                    if (record.trademarkImage) {
-                        this.existingImageUrl = record.trademarkImage.content;
-                        this.displayImagePreview(this.existingImageUrl);
-                    }
-                    if (record.owners) {
-                        this.selectedOwners = record.owners;
-                        this.renderSelectedOwners();
-                    }
+                    this.fillFormWithRecordData(record);
                 } else {
                     showNotification("Kayıt verileri yüklenemedi.", "error");
                     console.error(result.error);
+                    window.location.href = 'portfolio.html';
                 }
             }
     
+            fillFormWithRecordData = (record) => {
+                document.getElementById('type').value = record.type;
+                this.selectedType = record.type;
+                this.toggleDynamicFields();
+                this.populateStatusOptions();
+                
+                Object.keys(record).forEach(key => {
+                    const element = document.getElementById(key);
+                    if (element && element.tagName !== 'SELECT' && element.type !== 'file') {
+                       element.value = record[key];
+                    }
+                });
+                
+                if(record.status) {
+                    document.getElementById('status').value = record.status;
+                }
+                
+                if (record.trademarkImage) {
+                    this.existingImageUrl = record.trademarkImage.content;
+                    this.displayImagePreview(this.existingImageUrl);
+                }
+                
+                if (record.owners) {
+                    this.selectedOwners = record.owners;
+                    this.renderSelectedOwners();
+                }
+            }
+
             handleFormSubmit = async (event) => {
                 event.preventDefault();
                 document.getElementById('saveRecordBtn').disabled = true;
@@ -673,4 +652,4 @@
         });
     </script>
 </body>
-</html> 
+</html>
