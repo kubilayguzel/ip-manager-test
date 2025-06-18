@@ -51,7 +51,7 @@
         .tab-btn { padding: 0.75rem 1.25rem; border: none; background: none; cursor: pointer; font-size: 1rem; font-weight: 500; color: #6c757d; border-bottom: 2px solid transparent; margin-bottom: -2px; }
         .tab-btn.active { color: #1e3c72; border-color: #1e3c72; }
         .tab-pane { display: none; }
-        .tab-pane.active { display: block; } /* Bu kural çok önemli, shared-styles.css'te de olmalı */
+        .tab-pane.active { display: block; } 
         .transaction-list-container { max-height: 200px; overflow-y: auto; border: 1px solid #e1e8ed; border-radius: 8px; padding: 5px; }
         .transaction-list-item { padding: 10px; cursor: pointer; border-radius: 6px; }
         .transaction-list-item:hover { background-color: #f0f4f8; }
@@ -137,14 +137,14 @@
             padding: 8px 10px;
             font-size: 0.9em;
             border-radius: 8px;
-            width: 100%; /* Tablo içinde genişliği ayarla */
+            width: 100%; 
         }
         .bulk-indexing-table td .search-wrapper {
-            position: relative; /* Arama sonuçları için konumlandırma */
+            position: relative; 
         }
         .bulk-indexing-table td .search-results-container {
-            max-height: 150px; /* Tablo içindeki arama sonuçları için daha küçük */
-            top: 100%; /* Dropdown pozisyonu */
+            max-height: 150px; 
+            top: 100%; 
             left: 0;
             width: 100%;
             box-shadow: 0 5px 10px rgba(0,0,0,0.1);
@@ -181,7 +181,7 @@
             display: block;
             width: 100%;
             padding: 12px 15px;
-            border: 2px solid #1e3c72; /* Ana renk */
+            border: 2px solid #1e3c72; 
             border-radius: 10px;
             font-size: 1em;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -739,7 +739,7 @@
                     btn.disabled = true;
                     showNotification('İşlem kaydediliyor...', 'info');
 
-                    if (!this.selectedRecord) {
+                    if (!this.selectedRecord && this.activeTab !== 'bulk-indexing-pane') { // Toplu indekslemede genel kayıt seçimi zorunlu değil
                         showNotification('Lütfen bir kayıt seçin.', 'error');
                         btn.disabled = false; return;
                     }
@@ -1113,3 +1113,4 @@
         </script>
     </body>
     </html>
+    ```
