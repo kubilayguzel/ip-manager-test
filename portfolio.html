@@ -520,6 +520,8 @@
                 const buildTreeHtml = (transactionsToBuild) => {
                     return transactionsToBuild.map(tx => {
                         const children = sortedTransactions.filter(childTx => childTx.parentId === tx.transactionId);
+                        console.log('📌 Parent işlem ID:', tx.transactionId);
+                        console.log('   ↳ Bağlı çocuklar:', sortedTransactions.filter(childTx => childTx.parentId === tx.transactionId));
                         const hasChildren = children.length > 0;
                         const file = files?.find(f => f.id === tx.documentId);
                         const fileLink = file ? ` | <a href="${file.content}" download="${file.name}" class="transaction-file-link">📄 Belge</a>` : '';
