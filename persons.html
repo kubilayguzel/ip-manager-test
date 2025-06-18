@@ -7,49 +7,30 @@
     <link rel="stylesheet" href="css/shared-styles.css">
     <style>
         .page-header {
-            background: rgba(255, 255, 255, 0.95);
-            padding: 30px;
-            border-radius: 20px;
-            margin-bottom: 30px;
+            background: rgba(255, 255, 255, 0.95); padding: 30px;
+            border-radius: 20px; margin-bottom: 30px;
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
         }
-        .page-title {
-            font-size: 2em;
-            color: #1e3c72;
-            margin-bottom: 10px;
-        }
-        .page-subtitle {
-            color: #666;
-            font-size: 1.1em;
-        }
-        .controls {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 20px;
-        }
-        .search-input {
-            width: 300px;
-            padding: 10px;
-            border: 1px solid #ccc;
-            border-radius: 8px;
-        }
+        .page-title { font-size: 2em; color: #1e3c72; margin-bottom: 10px; }
+        .page-subtitle { color: #666; font-size: 1.1em; }
+        .controls { display: flex; justify-content: space-between; margin-bottom: 20px; }
+        .search-input { width: 300px; padding: 10px; border: 1px solid #ccc; border-radius: 8px; }
         .table-container {
             background: rgba(255, 255, 255, 0.95);
             border-radius: 20px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.1);
             overflow: hidden;
         }
-        .persons-table {
-            width: 100%;
-            border-collapse: collapse;
-        }
+        .persons-table { width: 100%; border-collapse: collapse; }
         .persons-table th, .persons-table td {
-            padding: 15px;
-            text-align: left;
+            padding: 15px; text-align: left;
             border-bottom: 1px solid #f0f0f0;
         }
-        .persons-table th {
-            background: #f8f9fa;
+        .persons-table th { background: #f8f9fa; }
+        
+        /* GÜNCELLEME: Modal genişliği artırıldı */
+        #personModal .modal-content {
+            max-width: 1500px;
         }
     </style>
 </head>
@@ -114,8 +95,16 @@
                     <div class="form-group"><label for="email">E-posta:</label><input type="email" id="email" name="email" class="form-input"></div>
                     <div class="form-group"><label for="phone">Telefon:</label><input type="tel" id="phone" name="phone" class="form-input"></div>
                     <div class="form-group"><label for="address">Adres:</label><textarea id="address" name="address" class="form-textarea"></textarea></div>
-                    <div class="form-group"><label for="country">Ülke:</label><input type="text" id="country" name="country" class="form-input"></div>
-                    <div class="form-group"><label for="city">Şehir:</label><input type="text" id="city" name="city" class="form-input"></div>
+                    
+                    <div class="form-group">
+                        <label for="country">Ülke:</label>
+                        <select id="country" name="country" class="form-select"></select>
+                    </div>
+                    <div class="form-group">
+                        <label for="city">Şehir:</label>
+                        <select id="city" name="city" class="form-select"></select>
+                    </div>
+
                     <div class="form-group"><label for="notes">Notlar:</label><textarea id="notes" name="notes" class="form-textarea"></textarea></div>
 
                     <div class="modal-footer">
@@ -132,6 +121,15 @@
         import { showNotification } from './utils.js';
         import { loadSharedLayout } from './js/layout-loader.js';
 
+        // GÜNCELLEME: Ülke ve il verileri eklendi
+        const CITIES_BY_COUNTRY = {
+            "Türkiye": ["Adana", "Adıyaman", "Afyonkarahisar", "Ağrı", "Amasya", "Ankara", "Antalya", "Artvin", "Aydın", "Balıkesir", "Bilecik", "Bingöl", "Bitlis", "Bolu", "Burdur", "Bursa", "Çanakkale", "Çankırı", "Çorum", "Denizli", "Diyarbakır", "Düzce", "Edirne", "Elazığ", "Erzincan", "Erzurum", "Eskişehir", "Gaziantep", "Giresun", "Gümüşhane", "Hakkari", "Hatay", "Iğdır", "Isparta", "İstanbul", "İzmir", "Kahramanmaraş", "Karabük", "Karaman", "Kars", "Kastamonu", "Kayseri", "Kilis", "Kırıkkale", "Kırklareli", "Kırşehir", "Kocaeli", "Konya", "Kütahya", "Malatya", "Manisa", "Mardin", "Mersin", "Muğla", "Muş", "Nevşehir", "Niğde", "Ordu", "Osmaniye", "Rize", "Sakarya", "Samsun", "Şanlıurfa", "Siirt", "Sinop", "Sivas", "Şırnak", "Tekirdağ", "Tokat", "Trabzon", "Tunceli", "Uşak", "Van", "Yalova", "Yozgat", "Zonguldak"].sort(),
+            "ABD": ["New York", "California", "Texas", "Florida"].sort(),
+            "Almanya": ["Berlin", "Bavyera", "Hamburg"].sort(),
+            "Diğer": []
+        };
+        const ALL_COUNTRIES = Object.keys(CITIES_BY_COUNTRY).sort();
+
         class PersonsModule {
             constructor() {
                 this.allPersons = [];
@@ -141,6 +139,7 @@
             async init() {
                 await this.loadPersons();
                 this.setupEventListeners();
+                this.populateCountries(); // Ülkeleri başlangıçta yükle
             }
 
             setupEventListeners() {
@@ -150,6 +149,27 @@
                 document.getElementById('personForm').addEventListener('submit', (e) => this.handlePersonFormSubmit(e));
                 document.getElementById('personType').addEventListener('change', this.togglePersonTypeFields);
                 document.getElementById('personSearchInput').addEventListener('input', (e) => this.filterPersons(e.target.value));
+                // GÜNCELLEME: Ülke seçimi değiştiğinde illeri doldur
+                document.getElementById('country').addEventListener('change', (e) => this.populateCities(e.target.value));
+            }
+
+            // GÜNCELLEME: Yeni fonksiyon
+            populateCountries() {
+                const countrySelect = document.getElementById('country');
+                countrySelect.innerHTML = '<option value="">Ülke Seçiniz...</option>';
+                ALL_COUNTRIES.forEach(countryName => {
+                    countrySelect.add(new Option(countryName, countryName));
+                });
+            }
+
+            // GÜNCELLEME: Yeni fonksiyon
+            populateCities(selectedCountry) {
+                const citySelect = document.getElementById('city');
+                citySelect.innerHTML = '<option value="">İl Seçiniz...</option>';
+                const cities = CITIES_BY_COUNTRY[selectedCountry] || [];
+                cities.forEach(cityName => {
+                    citySelect.add(new Option(cityName, cityName));
+                });
             }
 
             async loadPersons() {
@@ -212,6 +232,7 @@
                 
                 form.reset();
                 this.editingPersonId = null;
+                this.populateCities(''); // Modal açıldığında illeri temizle
 
                 if (person) {
                     this.editingPersonId = person.id;
@@ -223,10 +244,17 @@
 
                     Object.keys(person).forEach(key => {
                         const element = form.elements[key];
-                        if (element) {
+                        if (element && element.tagName !== 'SELECT') { // Select'ler ayrı yönetilecek
                             element.value = person[key] || '';
                         }
                     });
+
+                    // GÜNCELLEME: Ülke ve il select-box'larını doldurma
+                    const countrySelect = document.getElementById('country');
+                    countrySelect.value = person.country || '';
+                    this.populateCities(countrySelect.value); // İlgili ülkenin illerini yükle
+                    document.getElementById('city').value = person.city || ''; // Kayıtlı ili seç
+
                 } else {
                     modalTitle.textContent = 'Yeni Kişi Ekle';
                     saveButton.textContent = 'Kaydet';
@@ -241,16 +269,8 @@
 
             togglePersonTypeFields = () => {
                 const personType = document.getElementById('personType').value;
-                const realPersonFields = document.getElementById('realPersonFields');
-                const legalPersonFields = document.getElementById('legalPersonFields');
-
-                if (personType === 'real') {
-                    realPersonFields.style.display = 'block';
-                    legalPersonFields.style.display = 'none';
-                } else {
-                    realPersonFields.style.display = 'none';
-                    legalPersonFields.style.display = 'block';
-                }
+                document.getElementById('realPersonFields').style.display = personType === 'real' ? 'block' : 'none';
+                document.getElementById('legalPersonFields').style.display = personType === 'legal' ? 'block' : 'none';
             }
             
             async handlePersonFormSubmit(event) {
@@ -263,12 +283,11 @@
                     email: form.email.value.trim(),
                     phone: form.phone.value.trim(),
                     address: form.address.value.trim(),
-                    country: form.country.value.trim(),
-                    city: form.city.value.trim(),
+                    country: form.country.value,
+                    city: form.city.value,
                     notes: form.notes.value.trim()
                 };
 
-                // 'name' alanı burada tutarlı bir şekilde oluşturuluyor
                 if (personType === 'real') {
                     const firstName = form.firstName.value.trim();
                     const lastName = form.lastName.value.trim();
@@ -277,7 +296,7 @@
                     personData.tcId = form.tcId.value.trim();
                     personData.name = `${firstName} ${lastName}`.trim();
                     personData.companyName = ''; 
-                } else { // legal
+                } else {
                     const companyName = form.companyName.value.trim();
                     personData.companyName = companyName;
                     personData.taxId = form.taxId.value.trim();
