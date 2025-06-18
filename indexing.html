@@ -6,147 +6,56 @@
     <title>IP Manager - Belge İndeksleme</title>
     <link rel="stylesheet" href="css/shared-styles.css"> 
     <style>
-        .main-container {
-            width: 100%;
-            padding: 30px;
-            margin: 0;
-        }
-
-        .page-header-section {
-            background: rgba(255, 255, 255, 0.95);
-            padding: 30px;
-            border-radius: 20px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-            text-align: center;
-            margin-bottom: 30px;
-        }
-        .page-title {
-            font-size: 2em;
-            color: #1e3c72;
-            margin-bottom: 10px;
-        }
-        .page-subtitle {
-            color: #666;
-            font-size: 1.1em;
-        }
-        .form-container {
-            background: rgba(255, 255, 255, 0.95);
-            padding: 40px;
-            border-radius: 20px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-        }
-        .form-section {
-            border-bottom: 1px solid #e1e8ed;
-            padding-bottom: 25px;
-            margin-bottom: 25px;
-        }
-        .form-section:last-child {
-            border-bottom: none;
-        }
-        .section-title {
-            font-size: 1.3em;
-            color: #1e3c72;
-            margin-bottom: 20px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        .form-label {
-            display: block;
-            margin-bottom: 8px;
-            color: #333;
-            font-weight: 500;
-        }
-        .form-input, .form-select {
-            width: 100%;
-            padding: 12px 15px;
-            border: 2px solid #e1e8ed;
-            border-radius: 10px;
-            font-size: 1em;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-        .form-actions {
-            display: flex;
-            gap: 15px;
-            margin-top: 40px;
-            padding-top: 30px;
-            border-top: 2px solid #e1e8ed;
-            justify-content: flex-end;
-        }
-        .btn {
-            padding: 15px 30px;
-            border-radius: 10px;
-            font-size: 1.1em;
-            font-weight: 600;
-        }
+        .main-container { width: 100%; padding: 30px; margin: 0; }
+        .page-header-section { background: rgba(255, 255, 255, 0.95); padding: 30px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1); text-align: center; margin-bottom: 30px; }
+        .page-title { font-size: 2em; color: #1e3c72; margin-bottom: 10px; }
+        .page-subtitle { color: #666; font-size: 1.1em; }
+        .form-container { background: rgba(255, 255, 255, 0.95); padding: 40px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1); }
+        .form-section { border-bottom: 1px solid #e1e8ed; padding-bottom: 25px; margin-bottom: 25px; }
+        .form-section:last-child { border-bottom: none; }
+        .section-title { font-size: 1.3em; color: #1e3c72; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+        .form-label { display: block; margin-bottom: 8px; color: #333; font-weight: 500; }
+        .form-input, .form-select { width: 100%; padding: 12px 15px; border: 2px solid #e1e8ed; border-radius: 10px; font-size: 1em; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .form-actions { display: flex; gap: 15px; margin-top: 40px; padding-top: 30px; border-top: 2px solid #e1e8ed; justify-content: flex-end; }
+        .btn { padding: 15px 30px; border-radius: 10px; font-size: 1.1em; font-weight: 600; }
+        
+        /* GÜNCELLEME: Arama sonuçları için konumlandırma stilleri */
+        .search-wrapper { position: relative; }
         .search-results-container {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            width: 100%;
             max-height: 250px;
             overflow-y: auto;
             border: 1px solid #e1e8ed;
-            border-radius: 8px;
-            margin-top: 15px;
+            border-top: none;
+            border-radius: 0 0 8px 8px;
+            background-color: white;
+            z-index: 100;
+            display: none; /* JS ile kontrol edilecek */
         }
-        .record-search-item {
-            display: flex; align-items: center; padding: 10px 15px;
-            border-bottom: 1px dashed #e1e8ed; cursor: pointer;
-        }
+        
+        .record-search-item { display: flex; align-items: center; padding: 10px 15px; border-bottom: 1px dashed #e1e8ed; cursor: pointer; }
         .record-search-item:hover { background-color: #f0f4f8; }
+        .record-search-item:last-child { border-bottom: none; }
         .record-search-item.selected { background-color: #e6f2ff; }
+
         .file-list { margin-top: 15px; }
         .file-item { display: flex; flex-direction: column; padding: 10px; background: #f8f9fa; border-radius: 8px; margin-bottom: 10px; }
         .file-item-controls { display: flex; align-items: flex-start; gap: 10px; flex-wrap: wrap; width: 100%; margin-top: 5px; }
         .file-item-select { flex-grow: 1; min-width: 150px; padding: 5px 8px; border: 1px solid #ccc; border-radius: 5px; font-size: 0.85em; }
         .remove-file { background: #ff6b6b; color: white; border: none; border-radius: 50%; width: 25px; height: 25px; cursor: pointer; flex-shrink: 0; align-self: center; }
 
-        /* YENİ EKLENEN TAB STİLLERİ */
-        .tabs-container {
-            display: flex;
-            border-bottom: 2px solid #dee2e6;
-            margin-bottom: 1rem;
-        }
-        .tab-btn {
-            padding: 0.75rem 1.25rem;
-            border: none;
-            background: none;
-            cursor: pointer;
-            font-size: 1rem;
-            font-weight: 500;
-            color: #6c757d;
-            border-bottom: 2px solid transparent;
-            margin-bottom: -2px;
-        }
-        .tab-btn.active {
-            color: #1e3c72;
-            border-color: #1e3c72;
-        }
-        .tab-pane {
-            display: none;
-        }
-        .tab-pane.active {
-            display: block;
-        }
-
-        /* YENİ EKLENEN İŞLEM LİSTESİ STİLLERİ */
-        .transaction-list-container {
-            max-height: 200px;
-            overflow-y: auto;
-            border: 1px solid #e1e8ed;
-            border-radius: 8px;
-            padding: 5px;
-        }
-        .transaction-list-item {
-            padding: 10px;
-            cursor: pointer;
-            border-radius: 6px;
-        }
-        .transaction-list-item:hover {
-            background-color: #f0f4f8;
-        }
-        .transaction-list-item.selected {
-            background-color: #e6f2ff;
-            color: #1e3c72;
-            font-weight: bold;
-        }
+        .tabs-container { display: flex; border-bottom: 2px solid #dee2e6; margin-bottom: 1rem; }
+        .tab-btn { padding: 0.75rem 1.25rem; border: none; background: none; cursor: pointer; font-size: 1rem; font-weight: 500; color: #6c757d; border-bottom: 2px solid transparent; margin-bottom: -2px; }
+        .tab-btn.active { color: #1e3c72; border-color: #1e3c72; }
+        .tab-pane { display: none; }
+        .tab-pane.active { display: block; }
+        .transaction-list-container { max-height: 200px; overflow-y: auto; border: 1px solid #e1e8ed; border-radius: 8px; padding: 5px; }
+        .transaction-list-item { padding: 10px; cursor: pointer; border-radius: 6px; }
+        .transaction-list-item:hover { background-color: #f0f4f8; }
+        .transaction-list-item.selected { background-color: #e6f2ff; color: #1e3c72; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -163,9 +72,17 @@
                 <form id="indexingForm" onsubmit="return false;">
                     <div class="form-section record-search-section">
                         <h2 class="section-title"><span>1.</span>Kayıt Seçin</h2>
-                        <div class="form-group"><label class="form-label" for="recordSearchInput">Başvuru Numarası veya Başlık ile Ara</label><input type="text" id="recordSearchInput" class="form-input" placeholder="Örn: TR2024/123, Proje X..."></div>
-                        <div class="search-results-container" id="searchResultsContainer"><p class="no-results-message">Arama yapmak için yukarıya yazın.</p></div>
-                        <div class="form-group" style="margin-top: 20px;"><label class="form-label">Seçili Kayıt:</label><input type="text" id="selectedRecordDisplay" class="form-input" readonly placeholder="Henüz kayıt seçilmedi."></div>
+                        <div class="form-group search-wrapper">
+                            <label class="form-label" for="recordSearchInput">Başvuru Numarası veya Başlık ile Ara</label>
+                            <input type="text" id="recordSearchInput" class="form-input" placeholder="Örn: TR2024/123, Proje X..." autocomplete="off">
+                            <div class="search-results-container" id="searchResultsContainer">
+                                <p class="no-results-message p-2">Arama yapmak için yukarıya yazın.</p>
+                            </div>
+                        </div>
+                        <div class="form-group" style="margin-top: 20px;">
+                            <label class="form-label">Seçili Kayıt:</label>
+                            <input type="text" id="selectedRecordDisplay" class="form-input" readonly placeholder="Henüz kayıt seçilmedi.">
+                        </div>
                     </div>
     
                     <div class="form-section document-upload-section" id="documentUploadSection" style="display: none;">
@@ -227,7 +144,6 @@
     <script type="module">
         import { authService, ipRecordsService, auth, generateUUID } from './firebase-config.js';
         import { showNotification, formatFileSize, readFileAsDataURL } from './utils.js';
-        // Düzeltme: `loadLayout` yerine `loadSharedLayout` import ediliyor
         import { loadSharedLayout } from './js/layout-loader.js';
 
         class IndexingModule {
@@ -235,7 +151,7 @@
                 this.currentUser = null;
                 this.allRecords = []; 
                 this.selectedRecord = null; 
-                this.uploadedFiles = new Map(); // Sekmeler için ayrı dosya listeleri
+                this.uploadedFiles = new Map();
                 this.selectedTransactionId = null;
                 this.activeTab = 'existing-transaction-pane';
                 this.indexingTypes = ['Kabul Kararı', 'Ret Kararı', 'Eksiklik Bildirimi', 'Genel', 'Diğer'];
@@ -256,56 +172,85 @@
             }
 
             setupEventListeners() {
-                document.getElementById('recordSearchInput').addEventListener('input', (e) => this.searchRecords(e.target.value));
+                const searchInput = document.getElementById('recordSearchInput');
+                searchInput.addEventListener('input', (e) => this.searchRecords(e.target.value));
+                // GÜNCELLEME: Arama kutusundan focus gidince sonuçları gizle
+                searchInput.addEventListener('blur', () => {
+                    setTimeout(() => {
+                        document.getElementById('searchResultsContainer').style.display = 'none';
+                    }, 200); // 200ms bekleme, tıklama olayının yakalanmasına izin verir
+                });
+                
                 document.getElementById('filesExisting').addEventListener('change', (e) => this.handleFileChange(e, 'existing-transaction-pane'));
                 document.getElementById('filesManual').addEventListener('change', (e) => this.handleFileChange(e, 'manual-indexing-pane'));
                 document.getElementById('indexDocumentsBtn').addEventListener('click', () => this.handleSubmit());
                 document.getElementById('resetIndexingFormBtn').addEventListener('click', () => this.resetForm());
                 
-                // Tab butonları için olay dinleyicileri
                 document.querySelectorAll('.tab-btn').forEach(btn => {
                     btn.addEventListener('click', (e) => {
                         const targetTab = e.currentTarget.dataset.tab;
                         this.activeTab = targetTab;
                         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
                         e.currentTarget.classList.add('active');
-
                         document.querySelectorAll('.tab-pane').forEach(pane => pane.classList.remove('active'));
                         document.getElementById(targetTab).classList.add('active');
                     });
+                });
+                
+                // GÜNCELLEME: Yüklenen dosya listesindeki olayları delege et
+                document.addEventListener('change', (e) => {
+                    if (e.target.classList.contains('file-indexing-type-select')) {
+                        const fileId = e.target.dataset.fileId;
+                        const tabKey = e.target.dataset.tabKey;
+                        const newType = e.target.value;
+                        const files = this.uploadedFiles.get(tabKey) || [];
+                        const fileToUpdate = files.find(f => f.id === fileId);
+                        if (fileToUpdate) fileToUpdate.indexingType = newType;
+                    }
+                });
+
+                document.addEventListener('click', (e) => {
+                    if (e.target.classList.contains('remove-uploaded-file')) {
+                        const fileId = e.target.dataset.fileId;
+                        const tabKey = e.target.dataset.tabKey;
+                        let files = this.uploadedFiles.get(tabKey) || [];
+                        this.uploadedFiles.set(tabKey, files.filter(f => f.id !== fileId));
+                        this.renderUploadedFilesList(tabKey);
+                    }
                 });
             }
 
             searchRecords(query) {
                 const container = document.getElementById('searchResultsContainer');
-                container.innerHTML = '';
                 if (query.length < 3) {
-                    container.innerHTML = '<p class="no-results-message">Arama yapmak için en az 3 karakter girin.</p>';
+                    container.innerHTML = '<p class="no-results-message p-2">Arama yapmak için en az 3 karakter girin.</p>';
+                    container.style.display = 'block';
                     return;
                 }
+                container.innerHTML = '';
                 const filtered = this.allRecords.filter(r => 
                     (r.title && r.title.toLowerCase().includes(query.toLowerCase())) ||
                     (r.applicationNumber && r.applicationNumber.toLowerCase().includes(query.toLowerCase()))
                 );
                 
                 if(filtered.length === 0) {
-                    container.innerHTML = '<p class="no-results-message">Kayıt bulunamadı.</p>';
-                    return;
+                    container.innerHTML = '<p class="no-results-message p-2">Kayıt bulunamadı.</p>';
+                } else {
+                    filtered.forEach(record => {
+                        const item = document.createElement('div');
+                        item.className = 'record-search-item';
+                        item.innerHTML = `<div class="record-info"><div>${record.title}</div><small>${record.applicationNumber}</small></div>`;
+                        item.addEventListener('click', () => this.selectRecord(record.id));
+                        container.appendChild(item);
+                    });
                 }
-
-                filtered.forEach(record => {
-                    const item = document.createElement('div');
-                    item.className = 'record-search-item';
-                    item.innerHTML = `<div class="record-info"><div>${record.title}</div><small>${record.applicationNumber}</small></div>`;
-                    item.addEventListener('click', () => this.selectRecord(record.id));
-                    container.appendChild(item);
-                });
+                container.style.display = 'block';
             }
 
             selectRecord(recordId) {
                 this.selectedRecord = this.allRecords.find(r => r.id === recordId);
                 document.getElementById('selectedRecordDisplay').value = `${this.selectedRecord.title} (${this.selectedRecord.applicationNumber})`;
-                document.getElementById('searchResultsContainer').innerHTML = '';
+                document.getElementById('searchResultsContainer').style.display = 'none';
                 document.getElementById('documentUploadSection').style.display = 'block';
                 this.renderTransactionsForSelection();
                 this.checkFormCompleteness();
@@ -315,13 +260,11 @@
                 const container = document.getElementById('transactions-list-for-selection');
                 container.innerHTML = '';
                 this.selectedTransactionId = null;
-
                 const transactions = this.selectedRecord.transactions || [];
                 if (transactions.length === 0) {
                     container.innerHTML = '<p class="text-muted p-2">Dosya eklenecek mevcut işlem yok. Manuel sekmesini kullanabilirsiniz.</p>';
                     return;
                 }
-
                 transactions.sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp)).forEach(tx => {
                     const item = document.createElement('div');
                     item.className = 'transaction-list-item';
@@ -337,19 +280,17 @@
                 });
             }
             
-            async handleFileChange(event, tabKey) {
+            handleFileChange(event, tabKey) {
                 const fileInput = event.target;
                 const files = Array.from(fileInput.files);
                 const currentFiles = this.uploadedFiles.get(tabKey) || [];
-
-                for (const file of files) {
+                files.forEach(file => {
                     currentFiles.push({
                         id: `temp_${Date.now()}_${file.name}`,
                         fileObject: file,
-                        indexingType: this.indexingTypes[0] // Default indexing type
+                        indexingType: this.indexingTypes[0]
                     });
-                }
-                
+                });
                 this.uploadedFiles.set(tabKey, currentFiles);
                 this.renderUploadedFilesList(tabKey);
                 this.checkFormCompleteness();
@@ -360,19 +301,21 @@
                 const container = document.getElementById(containerId);
                 container.innerHTML = '';
                 const files = this.uploadedFiles.get(tabKey) || [];
+                if (files.length === 0) return;
 
                 files.forEach(fileData => {
                     const selectOptions = this.indexingTypes.map(type => `<option value="${type}" ${fileData.indexingType === type ? 'selected' : ''}>${type}</option>`).join('');
                     const fileItem = document.createElement('div');
                     fileItem.className = 'file-item';
                     fileItem.innerHTML = `
-                        <div>
-                            <span>${fileData.fileObject.name} (${formatFileSize(fileData.fileObject.size)})</span>
-                            <div class="file-item-controls">
-                                <select class="file-item-select file-indexing-type-select" data-file-id="${fileData.id}" data-tab-key="${tabKey}">${selectOptions}</select>
-                            </div>
+                        <div class="d-flex justify-content-between w-100">
+                            <strong>${fileData.fileObject.name}</strong>
+                            <button type="button" class="remove-file remove-uploaded-file" data-file-id="${fileData.id}" data-tab-key="${tabKey}">&times;</button>
                         </div>
-                        <button type="button" class="remove-file remove-uploaded-file" data-file-id="${fileData.id}" data-tab-key="${tabKey}">&times;</button>
+                        <div class="file-item-controls">
+                            <label class="form-label small mb-0">İndeksleme Tipi:</label>
+                            <select class="file-item-select file-indexing-type-select" data-file-id="${fileData.id}" data-tab-key="${tabKey}">${selectOptions}</select>
+                        </div>
                     `;
                     container.appendChild(fileItem);
                 });
@@ -384,13 +327,13 @@
             }
 
             async handleSubmit() {
-                document.getElementById('indexDocumentsBtn').disabled = true;
+                const btn = document.getElementById('indexDocumentsBtn');
+                btn.disabled = true;
 
                 const filesToProcess = this.uploadedFiles.get(this.activeTab) || [];
                 if (filesToProcess.length === 0) {
                     showNotification('Lütfen en az bir dosya yükleyin.', 'error');
-                    document.getElementById('indexDocumentsBtn').disabled = false;
-                    return;
+                    btn.disabled = false; return;
                 }
 
                 let newTransaction = null;
@@ -401,19 +344,11 @@
                 };
 
                 if (this.activeTab === 'existing-transaction-pane') {
-                    if (!this.selectedTransactionId) {
-                        showNotification('Lütfen dosyaları bağlamak için bir işlem seçin.', 'error');
-                        document.getElementById('indexDocumentsBtn').disabled = false;
-                        return;
-                    }
+                    if (!this.selectedTransactionId) { showNotification('Lütfen dosyaları bağlamak için bir işlem seçin.', 'error'); btn.disabled = false; return; }
                     parentIdForFiles = this.selectedTransactionId;
-                } else { // Manual indexing
+                } else {
                     const specificTaskType = document.getElementById('specificTaskType').value;
-                    if (!specificTaskType) {
-                        showNotification('Lütfen yeni işlem için bir tür seçin.', 'error');
-                        document.getElementById('indexDocumentsBtn').disabled = false;
-                        return;
-                    }
+                    if (!specificTaskType) { showNotification('Lütfen yeni işlem için bir tür seçin.', 'error'); btn.disabled = false; return; }
                     newTransaction = {
                         transactionId: generateUUID(),
                         timestamp: new Date().toISOString(),
@@ -436,21 +371,18 @@
                         documentDesignation: fileData.indexingType,
                         content: await readFileAsDataURL(fileData.fileObject)
                     })));
-
                     updates.files.push(...uploadedFileData);
 
                     const result = await ipRecordsService.updateRecord(this.selectedRecord.id, updates);
                     if (result.success) {
                         showNotification('Belgeler başarıyla yüklendi ve indekslendi!', 'success');
                         this.resetForm();
-                        await this.loadRecords(); // Refresh data
-                    } else {
-                        throw new Error(result.error);
-                    }
+                        await this.loadRecords();
+                    } else { throw new Error(result.error); }
                 } catch (error) {
                     showNotification(`Bir hata oluştu: ${error.message}`, 'error');
                 } finally {
-                    document.getElementById('indexDocumentsBtn').disabled = false;
+                    btn.disabled = false;
                 }
             }
 
@@ -469,11 +401,9 @@
         }
         
         document.addEventListener('DOMContentLoaded', async () => {
-            // Düzeltme: `loadLayout` yerine `loadSharedLayout` çağrılıyor
             await loadSharedLayout({ activeMenuLink: 'indexing.html' });
             new IndexingModule();
         });
-
     </script>
 </body>
 </html>
