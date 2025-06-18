@@ -4,432 +4,476 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>IP Manager - Belge İndeksleme</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-    <link href="css/shared-styles.css" rel="stylesheet">
+    <link rel="stylesheet" href="css/shared-styles.css"> 
     <style>
-        /* Sayfaya özel ek stiller */
-        .select2-container--bootstrap-5 .select2-selection {
+        .main-container {
+            width: 100%;
+            padding: 30px;
+            margin: 0;
+        }
+
+        .page-header-section {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .page-title {
+            font-size: 2em;
+            color: #1e3c72;
+            margin-bottom: 10px;
+        }
+        .page-subtitle {
+            color: #666;
+            font-size: 1.1em;
+        }
+        .form-container {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+        .form-section {
+            border-bottom: 1px solid #e1e8ed;
+            padding-bottom: 25px;
+            margin-bottom: 25px;
+        }
+        .form-section:last-child {
+            border-bottom: none;
+        }
+        .section-title {
+            font-size: 1.3em;
+            color: #1e3c72;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 500;
+        }
+        .form-input, .form-select {
+            width: 100%;
+            padding: 12px 15px;
             border: 2px solid #e1e8ed;
-            padding: 0.5rem 1rem;
-            min-height: 48px;
+            border-radius: 10px;
+            font-size: 1em;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
+        .form-actions {
+            display: flex;
+            gap: 15px;
+            margin-top: 40px;
+            padding-top: 30px;
+            border-top: 2px solid #e1e8ed;
+            justify-content: flex-end;
+        }
+        .btn {
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 1.1em;
+            font-weight: 600;
+        }
+        .search-results-container {
+            max-height: 250px;
+            overflow-y: auto;
+            border: 1px solid #e1e8ed;
+            border-radius: 8px;
+            margin-top: 15px;
+        }
+        .record-search-item {
+            display: flex; align-items: center; padding: 10px 15px;
+            border-bottom: 1px dashed #e1e8ed; cursor: pointer;
+        }
+        .record-search-item:hover { background-color: #f0f4f8; }
+        .record-search-item.selected { background-color: #e6f2ff; }
+        .file-list { margin-top: 15px; }
+        .file-item { display: flex; flex-direction: column; padding: 10px; background: #f8f9fa; border-radius: 8px; margin-bottom: 10px; }
+        .file-item-controls { display: flex; align-items: flex-start; gap: 10px; flex-wrap: wrap; width: 100%; margin-top: 5px; }
+        .file-item-select { flex-grow: 1; min-width: 150px; padding: 5px 8px; border: 1px solid #ccc; border-radius: 5px; font-size: 0.85em; }
+        .remove-file { background: #ff6b6b; color: white; border: none; border-radius: 50%; width: 25px; height: 25px; cursor: pointer; flex-shrink: 0; align-self: center; }
 
-        .transaction-list-group .list-group-item {
+        /* YENİ EKLENEN TAB STİLLERİ */
+        .tabs-container {
+            display: flex;
+            border-bottom: 2px solid #dee2e6;
+            margin-bottom: 1rem;
+        }
+        .tab-btn {
+            padding: 0.75rem 1.25rem;
+            border: none;
+            background: none;
             cursor: pointer;
-            transition: background-color 0.2s ease;
+            font-size: 1rem;
+            font-weight: 500;
+            color: #6c757d;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -2px;
         }
-
-        .transaction-list-group .list-group-item.selected {
-            background-color: #1e3c72;
-            color: white;
+        .tab-btn.active {
+            color: #1e3c72;
             border-color: #1e3c72;
         }
-        .file-item-card {
-            border: 1px solid #ddd;
-            border-left: 4px solid #0d6efd;
+        .tab-pane {
+            display: none;
         }
-        .file-item-card .card-body {
-            padding: 1rem;
+        .tab-pane.active {
+            display: block;
+        }
+
+        /* YENİ EKLENEN İŞLEM LİSTESİ STİLLERİ */
+        .transaction-list-container {
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #e1e8ed;
+            border-radius: 8px;
+            padding: 5px;
+        }
+        .transaction-list-item {
+            padding: 10px;
+            cursor: pointer;
+            border-radius: 6px;
+        }
+        .transaction-list-item:hover {
+            background-color: #f0f4f8;
+        }
+        .transaction-list-item.selected {
+            background-color: #e6f2ff;
+            color: #1e3c72;
+            font-weight: bold;
         }
     </style>
 </head>
 <body>
     <div id="layout-placeholder"></div>
 
-    <main class="container-fluid mt-4">
-        <div class="card p-4 shadow-sm">
-            <div class="page-header mb-4 text-center">
-                <h1 class="page-title">Belge İndeksleme ve Yönetimi</h1>
-                <p class="page-subtitle">Mevcut kayıtlara yeni belgeler ekleyin veya var olanları yönetin.</p>
+    <div class="page-wrapper">
+        <main class="main-container">
+            <div class="page-header-section">
+                <h1 class="page-title">Belge İndeksleme</h1>
+                <p class="page-subtitle">Mevcut fikri mülkiyet kayıtlarına belge ekleyin ve indeksleyin.</p>
             </div>
-
-            <div class="row mb-4">
-                <div class="col-md-12">
-                    <label for="ipRecordSelect" class="form-label fs-5">1. İşlem Yapılacak Kaydı Seçin</label>
-                    <select id="ipRecordSelect" class="form-control" style="width: 100%;">
-                        <option></option>
-                    </select>
-                </div>
-            </div>
-
-            <div id="indexing-content" class="d-none">
-                <div class="card bg-light p-3 mb-4">
-                    <h5><i class="bi bi-file-earmark-text"></i> Seçilen Kayıt Bilgileri</h5>
-                    <div id="record-details" class="p-2"></div>
-                </div>
-
-                <div class="card p-3 mb-4">
-                    <h5 class="mb-3"><i class="bi bi-folder2-open"></i> Kayıtlı Dosyalar ve İşlemler</h5>
-                    <div id="files-list" class="p-2">Dosyaları görmek için bir kayıt seçin.</div>
-                </div>
-
-                <div class="card p-3">
-                    <h5 class="mb-3"><i class="bi bi-file-earmark-arrow-up"></i> 2. Yeni Belge Ekle</h5>
-                    
-                    <ul class="nav nav-tabs" id="indexingTab" role="tablist">
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link active" id="existing-transaction-tab" data-bs-toggle="tab"
-                                data-bs-target="#existing-transaction-pane" type="button" role="tab"
-                                aria-controls="existing-transaction-pane" aria-selected="true">Mevcut İşleme Ekle</button>
-                        </li>
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link" id="manual-indexing-tab" data-bs-toggle="tab"
-                                data-bs-target="#manual-indexing-pane" type="button" role="tab"
-                                aria-controls="manual-indexing-pane" aria-selected="false">Manuel İşlem Oluştur</button>
-                        </li>
-                    </ul>
-
-                    <div class="tab-content border border-top-0 p-3" id="indexingTabContent">
-                        <div class="tab-pane fade show active" id="existing-transaction-pane" role="tabpanel"
-                            aria-labelledby="existing-transaction-tab" tabindex="0">
-                            <form id="upload-form-existing" class="mt-3">
-                                <div class="mb-3">
-                                    <label class="form-label">A. Dosyanın Ekleneceği İşlemi Seçin</label>
-                                    <div id="transactions-list-container">
-                                        <p class="text-muted">Lütfen önce bir IP kaydı seçin.</p>
+    
+            <div class="form-container">
+                <form id="indexingForm" onsubmit="return false;">
+                    <div class="form-section record-search-section">
+                        <h2 class="section-title"><span>1.</span>Kayıt Seçin</h2>
+                        <div class="form-group"><label class="form-label" for="recordSearchInput">Başvuru Numarası veya Başlık ile Ara</label><input type="text" id="recordSearchInput" class="form-input" placeholder="Örn: TR2024/123, Proje X..."></div>
+                        <div class="search-results-container" id="searchResultsContainer"><p class="no-results-message">Arama yapmak için yukarıya yazın.</p></div>
+                        <div class="form-group" style="margin-top: 20px;"><label class="form-label">Seçili Kayıt:</label><input type="text" id="selectedRecordDisplay" class="form-input" readonly placeholder="Henüz kayıt seçilmedi."></div>
+                    </div>
+    
+                    <div class="form-section document-upload-section" id="documentUploadSection" style="display: none;">
+                        <h2 class="section-title"><span>2.</span>Belgeleri Yükleyin ve İndeksleyin</h2>
+                        
+                        <div class="tabs-container">
+                            <button type="button" class="tab-btn active" data-tab="existing-transaction-pane">İşleme Dosya Ekle</button>
+                            <button type="button" class="tab-btn" data-tab="manual-indexing-pane">Manuel İşlem Oluştur</button>
+                        </div>
+                        
+                        <div class="tab-content-container">
+                            <div id="existing-transaction-pane" class="tab-pane active">
+                                <div class="form-group">
+                                    <label class="form-label">A) Dosyanın Ekleneceği İşlemi Seçin</label>
+                                    <div id="transactions-list-for-selection" class="transaction-list-container">
+                                        <p class="text-muted p-2">Lütfen bir kayıt seçin.</p>
                                     </div>
                                 </div>
-                                <div class="mb-3">
-                                    <label for="files" class="form-label">B. Dosyaları Yükleyin</label>
-                                    <input type="file" class="form-control" id="files" name="files[]" multiple>
+                                <div class="form-group">
+                                    <label class="form-label" for="filesExisting">B) Dosyaları Yükle</label>
+                                    <input type="file" id="filesExisting" class="form-control" multiple>
                                 </div>
-                                <div id="existing-file-list" class="mb-3"></div>
-                                <button type="submit" class="btn btn-primary w-100 mt-2">Seçilen İşleme Yükle</button>
-                            </form>
-                        </div>
+                                <div class="file-list" id="fileListExisting"></div>
+                            </div>
 
-                        <div class="tab-pane fade" id="manual-indexing-pane" role="tabpanel"
-                            aria-labelledby="manual-indexing-tab" tabindex="0">
-                            <form id="upload-form-manual" class="mt-3">
-                                 <div class="mb-3">
-                                    <label class="form-label">A. Yeni İşlem Türünü Seçin</label>
+                            <div id="manual-indexing-pane" class="tab-pane">
+                                <div class="form-group">
+                                    <label class="form-label" for="specificTaskType">A) Yeni İşlem Türünü Seçin</label>
                                     <select id="specificTaskType" class="form-select">
                                         <option value="" disabled selected>İşlem türü seçin...</option>
-                                        <option value="application">Başvuru</option>
-                                        <option value="renewal">Yenileme</option>
-                                        <option value="assignment">Devir</option>
-                                        <option value="merger">Birleşme</option>
-                                        <option value="license">Lisans</option>
-                                        <option value="appeal">Karara İtiraz</option>
-                                        <option value="opposition">Yayına İtiraz</option>
-                                        <option value="response_to_opposition">İtiraza Cevap</option>
-                                        <option value="payment">Ödeme</option>
-                                        <option value="general_document">Genel Doküman</option>
+                                        <option value="Basvuru">Başvuru</option>
+                                        <option value="Yenileme">Yenileme</option>
+                                        <option value="Devir">Devir</option>
+                                        <option value="Lisans">Lisans</option>
+                                        <option value="Karara_Itiraz">Karara İtiraz</option>
+                                        <option value="Yayina_Itiraz">Yayına İtiraz</option>
+                                        <option value="Itiraza_Cevap">İtiraza Cevap</option>
+                                        <option value="Odeme">Ödeme</option>
                                     </select>
                                 </div>
-                                <div class="mb-3">
-                                    <label for="manual-files" class="form-label">B. Dosyaları Yükleyin</label>
-                                    <input type="file" class="form-control" id="manual-files" name="manual-files[]" multiple>
+                                <div class="form-group">
+                                    <label class="form-label" for="filesManual">B) Dosyaları Yükle</label>
+                                    <input type="file" id="filesManual" class="form-control" multiple>
                                 </div>
-                                <div id="manual-file-list" class="mb-3"></div>
-                                <button type="submit" class="btn btn-secondary w-100 mt-2">Yeni İşlem Olarak Yükle</button>
-                            </form>
+                                 <div class="file-list" id="fileListManual"></div>
+                            </div>
                         </div>
                     </div>
-                </div>
+    
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-secondary" id="resetIndexingFormBtn">Temizle</button>
+                        <button type="submit" class="btn btn-primary" id="indexDocumentsBtn" disabled>Değişiklikleri Kaydet</button>
+                    </div>
+                </form>
             </div>
-        </div>
-    </main>
-
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+        </main>
+    </div>
+    
     <script type="module">
-        import { ipRecordsService } from './firebase-config.js';
-        import { loadLayout } from './js/layout-loader.js';
-        import { readFileAsDataURL, formatFileSize } from './utils.js';
+        import { authService, ipRecordsService, auth, generateUUID } from './firebase-config.js';
+        import { showNotification, formatFileSize, readFileAsDataURL } from './utils.js';
+        // Düzeltme: `loadLayout` yerine `loadSharedLayout` import ediliyor
+        import { loadSharedLayout } from './js/layout-loader.js';
 
         class IndexingModule {
             constructor() {
-                this.selectedRecord = null;
+                this.currentUser = null;
+                this.allRecords = []; 
+                this.selectedRecord = null; 
+                this.uploadedFiles = new Map(); // Sekmeler için ayrı dosya listeleri
                 this.selectedTransactionId = null;
-                this.allIpRecords = [];
-                this.uploadedFiles = new Map(); // Use map to handle files for both tabs separately
+                this.activeTab = 'existing-transaction-pane';
                 this.indexingTypes = ['Kabul Kararı', 'Ret Kararı', 'Eksiklik Bildirimi', 'Genel', 'Diğer'];
-                this.init();
             }
 
-            init() {
-                loadLayout().then(() => {
-                    this.initSelect2();
-                    this.bindEvents();
-                }).catch(error => console.error("Layout yüklenirken hata:", error));
+            async init() {
+                this.currentUser = authService.getCurrentUser();
+                if(!this.currentUser) window.location.href = 'index.html';
+
+                await this.loadRecords();
+                this.setupEventListeners();
             }
 
-            initSelect2() {
-                const $select = $('#ipRecordSelect');
-                $select.select2({
-                    placeholder: 'Bir IP kaydı arayın veya seçin (Başlık, Başvuru No)',
-                    allowClear: true,
-                    theme: 'bootstrap-5'
-                });
-
-                ipRecordsService.getRecords().then(response => {
-                    if (response.success) {
-                        this.allIpRecords = response.data;
-                        const options = this.allIpRecords.map(record => {
-                            const text = `${record.title} (${record.applicationNumber || 'No App. No'})`;
-                            return new Option(text, record.id, false, false);
-                        });
-                        $select.append(options).trigger('change');
-                    }
-                });
+            async loadRecords() {
+                const result = await ipRecordsService.getRecords();
+                if (result.success) this.allRecords = result.data;
+                else showNotification('Kayıtlar yüklenemedi: ' + result.error, 'error');
             }
 
-            bindEvents() {
-                $('#ipRecordSelect').on('change', (e) => this.handleRecordSelection(e.target.value));
-                $('#upload-form-existing').on('submit', (e) => this.handleSubmit(e, 'existing'));
-                $('#upload-form-manual').on('submit', (e) => this.handleSubmit(e, 'manual'));
+            setupEventListeners() {
+                document.getElementById('recordSearchInput').addEventListener('input', (e) => this.searchRecords(e.target.value));
+                document.getElementById('filesExisting').addEventListener('change', (e) => this.handleFileChange(e, 'existing-transaction-pane'));
+                document.getElementById('filesManual').addEventListener('change', (e) => this.handleFileChange(e, 'manual-indexing-pane'));
+                document.getElementById('indexDocumentsBtn').addEventListener('click', () => this.handleSubmit());
+                document.getElementById('resetIndexingFormBtn').addEventListener('click', () => this.resetForm());
                 
-                $('#files').on('change', (e) => this.handleFileChange(e, 'existing'));
-                $('#manual-files').on('change', (e) => this.handleFileChange(e, 'manual'));
+                // Tab butonları için olay dinleyicileri
+                document.querySelectorAll('.tab-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const targetTab = e.currentTarget.dataset.tab;
+                        this.activeTab = targetTab;
+                        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                        e.currentTarget.classList.add('active');
 
-                $(document).on('click', '.transaction-list-group .list-group-item', (e) => {
-                    this.selectedTransactionId = $(e.currentTarget).data('id');
-                    $('.transaction-list-group .list-group-item').removeClass('selected active');
-                    $(e.currentTarget).addClass('selected active');
-                });
-                
-                $(document).on('change', '.file-indexing-type-select', (e) => {
-                    const fileId = $(e.target).data('fileId');
-                    const tabKey = $(e.target).data('tabKey');
-                    const newType = $(e.target).val();
-                    const files = this.uploadedFiles.get(tabKey) || [];
-                    const fileToUpdate = files.find(f => f.id === fileId);
-                    if(fileToUpdate) fileToUpdate.indexingType = newType;
-                });
-                
-                $(document).on('click', '.remove-uploaded-file', (e) => {
-                    const fileId = $(e.currentTarget).data('fileId');
-                    const tabKey = $(e.currentTarget).data('tabKey');
-                    let files = this.uploadedFiles.get(tabKey) || [];
-                    this.uploadedFiles.set(tabKey, files.filter(f => f.id !== fileId));
-                    this.renderUploadedFilesList(tabKey);
+                        document.querySelectorAll('.tab-pane').forEach(pane => pane.classList.remove('active'));
+                        document.getElementById(targetTab).classList.add('active');
+                    });
                 });
             }
 
-            handleRecordSelection(recordId) {
-                if (!recordId) {
-                    $('#indexing-content').addClass('d-none');
-                    this.selectedRecord = null;
+            searchRecords(query) {
+                const container = document.getElementById('searchResultsContainer');
+                container.innerHTML = '';
+                if (query.length < 3) {
+                    container.innerHTML = '<p class="no-results-message">Arama yapmak için en az 3 karakter girin.</p>';
                     return;
                 }
-                this.selectedRecord = this.allIpRecords.find(r => r.id === recordId);
-                if (this.selectedRecord) {
-                    this.renderRecordDetails();
-                    this.renderFilesAndTransactions();
-                    this.renderTransactionsForSelection();
-                    // Reset file inputs and lists
-                    this.uploadedFiles.clear();
-                    $('#files, #manual-files').val('');
-                    $('#existing-file-list, #manual-file-list').html('');
-                    $('#indexing-content').removeClass('d-none');
-                }
-            }
-
-            renderRecordDetails() {
-                const detailsHtml = `
-                    <dl class="row">
-                        <dt class="col-sm-3">Başlık</dt><dd class="col-sm-9">${this.selectedRecord.title}</dd>
-                        <dt class="col-sm-3">Başvuru No</dt><dd class="col-sm-9">${this.selectedRecord.applicationNumber || 'N/A'}</dd>
-                        <dt class="col-sm-3">Durum</dt><dd class="col-sm-9">${this.selectedRecord.status || 'N/A'}</dd>
-                    </dl>
-                `;
-                $('#record-details').html(detailsHtml);
-            }
-
-            renderFilesAndTransactions() {
-                const container = $('#files-list');
-                container.html('');
-                const transactions = this.selectedRecord.transactions || [];
-                const files = this.selectedRecord.files || [];
-
-                if (transactions.length === 0 && files.length === 0) {
-                    container.html('<p class="text-muted">Bu kayıt için gösterilecek dosya veya işlem bulunmuyor.</p>');
+                const filtered = this.allRecords.filter(r => 
+                    (r.title && r.title.toLowerCase().includes(query.toLowerCase())) ||
+                    (r.applicationNumber && r.applicationNumber.toLowerCase().includes(query.toLowerCase()))
+                );
+                
+                if(filtered.length === 0) {
+                    container.innerHTML = '<p class="no-results-message">Kayıt bulunamadı.</p>';
                     return;
                 }
 
-                transactions.forEach(tx => {
-                    const txDate = new Date(tx.timestamp).toLocaleDateString('tr-TR');
-                    const card = $(`
-                        <div class="card mb-2">
-                            <div class="card-header bg-light">
-                                <strong>İşlem:</strong> ${tx.description || tx.type} <span class="text-muted float-end">${txDate}</span>
-                            </div>
-                            <ul class="list-group list-group-flush" id="files-for-tx-${tx.transactionId}"></ul>
-                        </div>`);
-                    container.append(card);
+                filtered.forEach(record => {
+                    const item = document.createElement('div');
+                    item.className = 'record-search-item';
+                    item.innerHTML = `<div class="record-info"><div>${record.title}</div><small>${record.applicationNumber}</small></div>`;
+                    item.addEventListener('click', () => this.selectRecord(record.id));
+                    container.appendChild(item);
                 });
+            }
 
-                files.forEach(file => {
-                    const fileHtml = `<li class="list-group-item"><i class="bi bi-file-earmark"></i> ${file.name}</li>`;
-                    const parentContainer = $(`#files-for-tx-${file.parentId}`);
-                    if (file.parentId && parentContainer.length) {
-                        parentContainer.append(fileHtml);
-                    } else {
-                        if ($('#files-for-unassigned').length === 0) {
-                             container.prepend(`<div class="card mb-2"><div class="card-header"><strong>İlişkisiz Dosyalar</strong></div><ul class="list-group list-group-flush" id="files-for-unassigned"></ul></div>`);
-                        }
-                        $('#files-for-unassigned').append(fileHtml);
-                    }
-                });
+            selectRecord(recordId) {
+                this.selectedRecord = this.allRecords.find(r => r.id === recordId);
+                document.getElementById('selectedRecordDisplay').value = `${this.selectedRecord.title} (${this.selectedRecord.applicationNumber})`;
+                document.getElementById('searchResultsContainer').innerHTML = '';
+                document.getElementById('documentUploadSection').style.display = 'block';
+                this.renderTransactionsForSelection();
+                this.checkFormCompleteness();
             }
 
             renderTransactionsForSelection() {
-                const container = $('#transactions-list-container');
-                container.html('');
+                const container = document.getElementById('transactions-list-for-selection');
+                container.innerHTML = '';
                 this.selectedTransactionId = null;
+
                 const transactions = this.selectedRecord.transactions || [];
                 if (transactions.length === 0) {
-                    container.html('<p class="text-danger">Dosya eklemek için uygun bir işlem bulunamadı. "Manuel İşlem Oluştur" sekmesini kullanabilirsiniz.</p>');
+                    container.innerHTML = '<p class="text-muted p-2">Dosya eklenecek mevcut işlem yok. Manuel sekmesini kullanabilirsiniz.</p>';
                     return;
                 }
-                const list = $('<div class="list-group transaction-list-group"></div>');
-                transactions.sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp)).forEach(tx => {
-                    const txDate = new Date(tx.timestamp).toLocaleDateString('tr-TR');
-                    const item = $(`<a href="#" class="list-group-item list-group-item-action" data-id="${tx.transactionId}">${tx.description || tx.type} - <strong>${txDate}</strong></a>`);
-                    list.append(item);
-                });
-                container.append(list);
-            }
 
-            handleFileChange(event, tabKey) {
-                const files = Array.from(event.target.files);
+                transactions.sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp)).forEach(tx => {
+                    const item = document.createElement('div');
+                    item.className = 'transaction-list-item';
+                    item.dataset.id = tx.transactionId;
+                    item.textContent = `${tx.description || tx.type} - ${new Date(tx.timestamp).toLocaleDateString('tr-TR')}`;
+                    item.addEventListener('click', (e) => {
+                        this.selectedTransactionId = e.currentTarget.dataset.id;
+                        document.querySelectorAll('.transaction-list-item').forEach(el => el.classList.remove('selected'));
+                        e.currentTarget.classList.add('selected');
+                        this.checkFormCompleteness();
+                    });
+                    container.appendChild(item);
+                });
+            }
+            
+            async handleFileChange(event, tabKey) {
+                const fileInput = event.target;
+                const files = Array.from(fileInput.files);
                 const currentFiles = this.uploadedFiles.get(tabKey) || [];
-                files.forEach(file => {
+
+                for (const file of files) {
                     currentFiles.push({
                         id: `temp_${Date.now()}_${file.name}`,
                         fileObject: file,
-                        indexingType: this.indexingTypes[0]
+                        indexingType: this.indexingTypes[0] // Default indexing type
                     });
-                });
+                }
+                
                 this.uploadedFiles.set(tabKey, currentFiles);
                 this.renderUploadedFilesList(tabKey);
+                this.checkFormCompleteness();
             }
 
             renderUploadedFilesList(tabKey) {
-                const containerId = tabKey === 'existing' ? '#existing-file-list' : '#manual-file-list';
-                const container = $(containerId);
-                container.html('');
+                const containerId = tabKey === 'existing-transaction-pane' ? 'fileListExisting' : 'fileListManual';
+                const container = document.getElementById(containerId);
+                container.innerHTML = '';
                 const files = this.uploadedFiles.get(tabKey) || [];
 
-                if(files.length > 0) {
-                     container.append('<h6>Yüklenecek Dosyalar ve Tipleri</h6>');
-                }
-                
                 files.forEach(fileData => {
                     const selectOptions = this.indexingTypes.map(type => `<option value="${type}" ${fileData.indexingType === type ? 'selected' : ''}>${type}</option>`).join('');
-                    const fileCard = $(`
-                        <div class="card file-item-card mb-2">
-                            <div class="card-body d-flex justify-content-between align-items-center">
-                                <div>
-                                    <strong>${fileData.fileObject.name}</strong>
-                                    <small class="text-muted ms-2">(${formatFileSize(fileData.fileObject.size)})</small>
-                                </div>
-                                <div class="d-flex align-items-center gap-2" style="min-width: 250px;">
-                                    <select class="form-select form-select-sm file-indexing-type-select" data-file-id="${fileData.id}" data-tab-key="${tabKey}">
-                                        ${selectOptions}
-                                    </select>
-                                    <button type="button" class="btn btn-sm btn-outline-danger remove-uploaded-file" data-file-id="${fileData.id}" data-tab-key="${tabKey}">&times;</button>
-                                </div>
+                    const fileItem = document.createElement('div');
+                    fileItem.className = 'file-item';
+                    fileItem.innerHTML = `
+                        <div>
+                            <span>${fileData.fileObject.name} (${formatFileSize(fileData.fileObject.size)})</span>
+                            <div class="file-item-controls">
+                                <select class="file-item-select file-indexing-type-select" data-file-id="${fileData.id}" data-tab-key="${tabKey}">${selectOptions}</select>
                             </div>
                         </div>
-                    `);
-                    container.append(fileCard);
+                        <button type="button" class="remove-file remove-uploaded-file" data-file-id="${fileData.id}" data-tab-key="${tabKey}">&times;</button>
+                    `;
+                    container.appendChild(fileItem);
                 });
             }
 
-            async handleSubmit(event, tabKey) {
-                event.preventDefault();
-                const form = event.target;
-                form.querySelector('button[type="submit"]').disabled = true;
+            checkFormCompleteness() {
+                const filesExist = (this.uploadedFiles.get(this.activeTab) || []).length > 0;
+                document.getElementById('indexDocumentsBtn').disabled = !this.selectedRecord || !filesExist;
+            }
 
-                if (!this.selectedRecord) {
-                    alert('Lütfen bir IP kaydı seçin.');
-                    form.querySelector('button[type="submit"]').disabled = false;
-                    return;
-                }
-                
-                const filesToProcess = this.uploadedFiles.get(tabKey) || [];
+            async handleSubmit() {
+                document.getElementById('indexDocumentsBtn').disabled = true;
+
+                const filesToProcess = this.uploadedFiles.get(this.activeTab) || [];
                 if (filesToProcess.length === 0) {
-                    alert('Lütfen en az bir dosya seçin.');
-                    form.querySelector('button[type="submit"]').disabled = false;
+                    showNotification('Lütfen en az bir dosya yükleyin.', 'error');
+                    document.getElementById('indexDocumentsBtn').disabled = false;
                     return;
                 }
 
                 let newTransaction = null;
                 let parentIdForFiles = null;
+                let updates = {
+                    files: [...(this.selectedRecord.files || [])],
+                    transactions: [...(this.selectedRecord.transactions || [])]
+                };
 
-                if(tabKey === 'existing') {
-                     if (!this.selectedTransactionId) {
-                        alert('Lütfen dosyayı eklemek için bir işlem seçin.');
-                        form.querySelector('button[type="submit"]').disabled = false;
+                if (this.activeTab === 'existing-transaction-pane') {
+                    if (!this.selectedTransactionId) {
+                        showNotification('Lütfen dosyaları bağlamak için bir işlem seçin.', 'error');
+                        document.getElementById('indexDocumentsBtn').disabled = false;
                         return;
                     }
                     parentIdForFiles = this.selectedTransactionId;
-                } else if (tabKey === 'manual') {
-                    const specificTaskType = $('#specificTaskType').val();
+                } else { // Manual indexing
+                    const specificTaskType = document.getElementById('specificTaskType').value;
                     if (!specificTaskType) {
-                        alert('Lütfen bir parent işlem türü seçin.');
-                        form.querySelector('button[type="submit"]').disabled = false;
+                        showNotification('Lütfen yeni işlem için bir tür seçin.', 'error');
+                        document.getElementById('indexDocumentsBtn').disabled = false;
                         return;
                     }
                     newTransaction = {
-                        transactionId: `tx_${Date.now()}`,
+                        transactionId: generateUUID(),
                         timestamp: new Date().toISOString(),
                         type: specificTaskType,
-                        description: $(`#specificTaskType option[value='${specificTaskType}']`).text(),
-                        parentId: null // Manual transactions are top-level
+                        description: document.getElementById('specificTaskType').options[document.getElementById('specificTaskType').selectedIndex].text,
+                        parentId: null,
+                        userEmail: this.currentUser.email
                     };
+                    updates.transactions.push(newTransaction);
                     parentIdForFiles = newTransaction.transactionId;
                 }
 
                 try {
-                    const fileUploadPromises = filesToProcess.map(async fileData => ({
-                        id: `file_${Date.now()}_${fileData.fileObject.name}`,
+                    const uploadedFileData = await Promise.all(filesToProcess.map(async fileData => ({
+                        id: generateUUID(),
                         name: fileData.fileObject.name,
                         type: fileData.fileObject.type,
                         size: fileData.fileObject.size,
-                        lastModified: fileData.fileObject.lastModified,
                         parentId: parentIdForFiles,
-                        indexingType: fileData.indexingType,
+                        documentDesignation: fileData.indexingType,
                         content: await readFileAsDataURL(fileData.fileObject)
-                    }));
-                    
-                    const uploadedFileData = await Promise.all(fileUploadPromises);
-                    
-                    const currentFiles = this.selectedRecord.files || [];
-                    const currentTransactions = this.selectedRecord.transactions || [];
-                    
-                    const updates = {
-                        files: [...currentFiles, ...uploadedFileData],
-                        transactions: newTransaction ? [...currentTransactions, newTransaction] : currentTransactions
-                    };
+                    })));
+
+                    updates.files.push(...uploadedFileData);
 
                     const result = await ipRecordsService.updateRecord(this.selectedRecord.id, updates);
                     if (result.success) {
-                        alert('Dosyalar başarıyla yüklendi ve indekslendi!');
-                        // Refresh the page or just the data
-                        this.handleRecordSelection(this.selectedRecord.id);
-                        form.reset();
-                        this.uploadedFiles.set(tabKey, []);
-                        this.renderUploadedFilesList(tabKey);
-
+                        showNotification('Belgeler başarıyla yüklendi ve indekslendi!', 'success');
+                        this.resetForm();
+                        await this.loadRecords(); // Refresh data
                     } else {
                         throw new Error(result.error);
                     }
                 } catch (error) {
-                    console.error('Dosya yükleme hatası:', error);
-                    alert(`Bir hata oluştu: ${error.message}`);
+                    showNotification(`Bir hata oluştu: ${error.message}`, 'error');
                 } finally {
-                     form.querySelector('button[type="submit"]').disabled = false;
+                    document.getElementById('indexDocumentsBtn').disabled = false;
                 }
             }
-        }
 
-        $(document).ready(() => { new IndexingModule(); });
+            resetForm() {
+                this.selectedRecord = null;
+                this.uploadedFiles.clear();
+                this.selectedTransactionId = null;
+                this.activeTab = 'existing-transaction-pane';
+                document.getElementById('indexingForm').reset();
+                document.getElementById('documentUploadSection').style.display = 'none';
+                document.getElementById('fileListExisting').innerHTML = '';
+                document.getElementById('fileListManual').innerHTML = '';
+                document.getElementById('transactions-list-for-selection').innerHTML = '<p class="text-muted p-2">Lütfen bir kayıt seçin.</p>';
+                this.checkFormCompleteness();
+            }
+        }
+        
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Düzeltme: `loadLayout` yerine `loadSharedLayout` çağrılıyor
+            await loadSharedLayout({ activeMenuLink: 'indexing.html' });
+            new IndexingModule();
+        });
+
     </script>
 </body>
 </html>
