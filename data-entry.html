@@ -74,21 +74,8 @@
             display: flex; justify-content: flex-end; gap: 10px;
             padding-top: 20px; border-top: 1px solid #e9ecef; margin-top: 20px;
         }
-        
-        /* GÖRSEL YÜKLEME ALANI ORİJİNAL STİLLERİ */
-        .image-upload-area {
-            border: 2px dashed #e1e8ed; border-radius: 10px; padding: 30px;
-            text-align: center; cursor: pointer; transition: all 0.3s ease;
-        }
-        .image-upload-area:hover, .image-upload-area.drag-over {
-            border-color: #1e3c72;
-            background-color: #f8f9fa;
-        }
-        .image-upload-icon { font-size: 2.5em; color: #6c757d; }
-        .image-preview {
-            max-width: 200px; max-height: 200px; margin-top: 15px;
-            border-radius: 10px; border: 2px solid #e1e8ed;
-        }
+        .image-upload-area { border: 2px dashed #e1e8ed; border-radius: 10px; padding: 30px; text-align: center; cursor: pointer; }
+        .image-preview { max-width: 200px; max-height: 200px; margin-top: 15px; border-radius: 10px; border: 2px solid #e1e8ed; }
     </style>
 </head>
 <body>
@@ -118,8 +105,7 @@
                         <div class="form-group date-picker-group"><label for="registrationDate" class="form-label">Tescil Tarihi (Varsa):</label><input type="date" id="registrationDate" name="registrationDate" class="form-input"></div>
                     </div>
 
-                    <div id="type-specific-fields">
-                        </div>
+                    <div id="type-specific-fields"></div>
 
                     <div class="form-group full-width"><label for="description" class="form-label">Açıklama:</label><textarea id="description" name="description" class="form-textarea"></textarea></div>
 
@@ -286,28 +272,7 @@
                         fieldsHtml = `<div class="dynamic-fields show form-grid"><div class="form-group"><label for="patentClass" class="form-label">Patent Sınıfı:</label><input type="text" id="patentClass" name="patentClass" class="form-input"></div><div class="form-group date-picker-group"><label for="renewalDatePatent" class="form-label">Yenileme Tarihi:</label><input type="date" id="renewalDatePatent" name="renewalDatePatent" class="form-input"></div></div>`;
                         break;
                     case 'trademark':
-                        // Orijinal görsel yükleme alanı HTML'i geri getirildi
-                        fieldsHtml = `
-                            <div class="dynamic-fields show form-grid">
-                                <div class="form-group">
-                                    <label for="niceClass" class="form-label">Nice Sınıfı:</label>
-                                    <input type="text" id="niceClass" name="niceClass" class="form-input">
-                                </div>
-                                <div class="form-group date-picker-group">
-                                    <label for="renewalDateTrademark" class="form-label">Yenileme Tarihi:</label>
-                                    <input type="date" id="renewalDateTrademark" name="renewalDateTrademark" class="form-input">
-                                </div>
-                                <div class="form-group full-width">
-                                    <label for="trademarkImage" class="form-label">Marka Görseli (JPG, PNG):</label>
-                                    <input type="file" id="trademarkImage" name="trademarkImage" accept="image/jpeg,image/png" style="display: none;">
-                                    <div class="image-upload-area" id="trademarkImageUploadArea">
-                                        <span class="image-upload-icon">🖼️</span>
-                                        <p>Görsel Yüklemek İçin Tıklayın veya Sürükleyin</p>
-                                    </div>
-                                    <img id="trademarkImagePreview" class="image-preview" src="#" alt="Görsel Önizleme" style="display: none;">
-                                    <button type="button" id="removeTrademarkImage" style="display: none; margin-top: 10px;" class="btn btn-secondary btn-small">Görseli Kaldır</button>
-                                </div>
-                            </div>`;
+                        fieldsHtml = `<div class="dynamic-fields show form-grid"><div class="form-group"><label for="niceClass" class="form-label">Nice Sınıfı:</label><input type="text" id="niceClass" name="niceClass" class="form-input"></div><div class="form-group date-picker-group"><label for="renewalDateTrademark" class="form-label">Yenileme Tarihi:</label><input type="date" id="renewalDateTrademark" name="renewalDateTrademark" class="form-input"></div><div class="form-group full-width"><label for="trademarkImage" class="form-label">Marka Görseli (JPG, PNG):</label><input type="file" id="trademarkImage" name="trademarkImage" accept="image/jpeg,image/png" style="display: none;"><div class="image-upload-area" id="trademarkImageUploadArea"><span class="image-upload-icon">🖼️</span><p>Görsel Yüklemek İçin Tıklayın veya Sürükleyin</p></div><img id="trademarkImagePreview" class="image-preview" src="#" alt="Görsel Önizleme" style="display: none;"><button type="button" id="removeTrademarkImage" style="display: none; margin-top: 10px;" class="btn btn-secondary btn-small">Görseli Kaldır</button></div></div>`;
                         break;
                     case 'copyright':
                         fieldsHtml = `<div class="dynamic-fields show form-grid"><div class="form-group"><label for="copyrightType" class="form-label">Telif Hakkı Tipi:</label><input type="text" id="copyrightType" name="copyrightType" class="form-input"></div></div>`;
@@ -457,7 +422,7 @@
                         type: form.type.value,
                         title: form.title.value,
                         status: form.status.value,
-                        owners: this.selectedOwners.map(p => ({ id: p.id, name: p.name, personType: p.personType })),
+                        owners: this.selectedOwners.map(p => ({ id: p.id })),
                     };
 
                     const addFieldIfValue = (key, value) => { if (value) recordData[key] = value; };
