@@ -306,7 +306,22 @@ export const ipRecordsService = {
         if (!isFirebaseAvailable) return { success: true, data: JSON.parse(localStorage.getItem('ipRecords') || '[]') };
         try {
             const snapshot = await getDocs(collection(db, 'ipRecords'));
-            return { success: true, data: snapshot.docs.map(d => ({ id: d.id, ...d.data() })) };
+            const records = await Promise.all(snapshot.docs.map(async docSnap => {
+                const recordData = docSnap.data();
+                const recordId = docSnap.id;
+                recordData.id = recordId;
+
+                // Alt koleksiyon olarak işlem geçmişini çek
+                const transactionsSnapshot = await getDocs(collection(db, `ipRecords/${recordId}/transactions`));
+                recordData.transactions = transactionsSnapshot.docs.map(txSnap => ({
+                    transactionId: txSnap.id,
+                    ...txSnap.data()
+                }));
+
+                return recordData;
+            }));
+
+            return { success: true, data: records };
         } catch (error) {
             return { success: false, error: error.message };
         }
@@ -321,7 +336,16 @@ export const ipRecordsService = {
             const docRef = doc(db, "ipRecords", recordId);
             const docSnap = await getDoc(docRef);
             if (docSnap.exists()) {
-                return { success: true, data: { id: docSnap.id, ...docSnap.data() } };
+                const recordData = { id: docSnap.id, ...docSnap.data() };
+
+                // Alt koleksiyon olarak işlem geçmişini çek
+                const transactionsSnapshot = await getDocs(collection(db, `ipRecords/${recordId}/transactions`));
+                recordData.transactions = transactionsSnapshot.docs.map(txSnap => ({
+                    transactionId: txSnap.id,
+                    ...txSnap.data()
+                }));
+
+                return { success: true, data: recordData };
             } else {
                 return { success: false, error: "Kayıt bulunamadı." };
             }
@@ -361,10 +385,8 @@ export const ipRecordsService = {
             return { success: false, error: error.message };
         }
     },
-    // YENİ EKLENEN FONKSİYON
     async addTransactionToRecord(recordId, transactionData) {
         if (!isFirebaseAvailable) {
-            // Yerel depolama için işlem
             let records = JSON.parse(localStorage.getItem('ipRecords') || '[]');
             const recordIndex = records.findIndex(r => r.id === recordId);
             if (recordIndex > -1) {
@@ -385,43 +407,28 @@ export const ipRecordsService = {
             return { success: false, error: "Record not found in local storage." };
         }
         try {
-            const recordRef = doc(db, 'ipRecords', recordId);
             const user = authService.getCurrentUser();
             const newTransaction = {
                 ...transactionData,
-                transactionId: generateUUID(),
                 timestamp: new Date().toISOString(),
                 userId: user.uid,
                 userEmail: user.email
             };
-            // arrayUnion, transactions dizisine yeni işlemi ekler
-            await updateDoc(recordRef, {
-                transactions: arrayUnion(newTransaction)
-            });
-            return { success: true };
+            const txRef = await addDoc(collection(db, `ipRecords/${recordId}/transactions`), newTransaction);
+            return { success: true, transactionId: txRef.id };
         } catch (error) {
             console.error("Error adding transaction to record:", error);
             return { success: false, error: error.message };
         }
     },
-    // YENİ EKLENEN FONKSİYON
     async deleteTransaction(recordId, transactionId) {
         if (!isFirebaseAvailable) {
             console.warn("Local storage transaction deletion not implemented.");
-            return { success: true }; // Yerel için sessizce başarısız ol
+            return { success: true };
         }
         try {
-            const recordRef = doc(db, "ipRecords", recordId);
-            const recordSnap = await getDoc(recordRef);
-            if (recordSnap.exists()) {
-                const recordData = recordSnap.data();
-                const transactions = recordData.transactions || [];
-                const updatedTransactions = transactions.filter(tx => tx.transactionId !== transactionId);
-                await updateDoc(recordRef, { transactions: updatedTransactions });
-                return { success: true };
-            } else {
-                return { success: false, error: "Record not found." };
-            }
+            await deleteDoc(doc(db, `ipRecords/${recordId}/transactions/${transactionId}`));
+            return { success: true };
         } catch (error) {
             console.error("Error deleting transaction:", error);
             return { success: false, error: error.message };
