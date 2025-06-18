@@ -109,24 +109,40 @@
 
                             <div id="manual-indexing-pane" class="tab-pane">
                                 <div class="form-group">
-                                    <label class="form-label" for="specificTaskType">A) Yeni İşlem Türünü Seçin</label>
-                                    <select id="specificTaskType" class="form-select">
+                                    <label class="form-label" for="specificTransactionDesignation">A) Yeni İşlem Başlığı (Örn: Ret Kararı, Yenileme)</label>
+                                    <input type="text" id="specificTransactionDesignation" class="form-input" placeholder="İşlem başlığını girin...">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label" for="specificTransactionType">Yeni İşlem Türünü Seçin</label>
+                                    <select id="specificTransactionType" class="form-select">
                                         <option value="" disabled selected>İşlem türü seçin...</option>
-                                        <option value="Basvuru">Başvuru</option>
+                                        <option value="Başvuru">Başvuru</option>
                                         <option value="Yenileme">Yenileme</option>
                                         <option value="Devir">Devir</option>
                                         <option value="Lisans">Lisans</option>
-                                        <option value="Karara_Itiraz">Karara İtiraz</option>
-                                        <option value="Yayina_Itiraz">Yayına İtiraz</option>
-                                        <option value="Itiraza_Cevap">İtiraza Cevap</option>
-                                        <option value="Odeme">Ödeme</option>
+                                        <option value="Karara İtiraz">Karara İtiraz</option>
+                                        <option value="Yayına İtiraz">Yayına İtiraz</option>
+                                        <option value="İtiraza Cevap">İtiraza Cevap</option>
+                                        <option value="Ödeme">Ödeme</option>
+                                        <option value="Genel">Genel</option>
+                                        <option value="Diğer">Diğer</option>
                                     </select>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label" for="specificTransactionNotes">Notlar (İsteğe Bağlı)</label>
+                                    <textarea id="specificTransactionNotes" class="form-input" rows="3" placeholder="İşlemle ilgili notlar..."></textarea>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label" for="specificTransactionParentId">Parent İşlem Seç (Bu bir çocuk işlemse)</label>
+                                    <select id="specificTransactionParentId" class="form-select">
+                                        <option value="">Yok (Ana İşlem)</option>
+                                        </select>
                                 </div>
                                 <div class="form-group">
                                     <label class="form-label" for="filesManual">B) Dosyaları Yükle</label>
                                     <input type="file" id="filesManual" class="form-control" multiple>
                                 </div>
-                                 <div class="file-list" id="fileListManual"></div>
+                                <div class="file-list" id="fileListManual"></div>
                             </div>
                         </div>
                     </div>
@@ -144,16 +160,19 @@
         import { authService, ipRecordsService, auth, generateUUID } from './firebase-config.js';
         import { showNotification, formatFileSize, readFileAsDataURL } from './utils.js';
         import { loadSharedLayout } from './js/layout-loader.js';
+        import { documentDesignationTranslations } from './firebase-config.js'; // documentDesignationTranslations'ı da import et
+
+        // documentDesignationTranslations objesini bir diziye çevirelim
+        const DOCUMENT_DESIGNATION_TYPES = Object.values(documentDesignationTranslations);
 
         class IndexingModule {
             constructor() {
                 this.currentUser = null;
                 this.allRecords = []; 
                 this.selectedRecord = null; 
-                this.uploadedFiles = new Map();
-                this.selectedTransactionId = null;
+                this.uploadedFiles = new Map(); // Key: tabKey (existing/manual), Value: Array of { id, fileObject, documentDesignation }
+                this.selectedTransactionId = null; // Sadece 'existing-transaction-pane' için kullanılır
                 this.activeTab = 'existing-transaction-pane';
-                this.indexingTypes = ['Kabul Kararı', 'Ret Kararı', 'Eksiklik Bildirimi', 'Genel', 'Diğer'];
                 
                 // *** DÜZELTME: init() fonksiyonu constructor içinde çağrılıyor. ***
                 this.init();
@@ -168,6 +187,7 @@
 
                 await this.loadRecords();
                 this.setupEventListeners();
+                this.activateTab(this.activeTab); // İlk yüklemede aktif tabı ayarla
             }
 
             async loadRecords() {
@@ -190,14 +210,10 @@
                 document.getElementById('indexDocumentsBtn').addEventListener('click', () => this.handleSubmit());
                 document.getElementById('resetIndexingFormBtn').addEventListener('click', () => this.resetForm());
                 
-                document.querySelectorAll('.tab-btn').forEach(btn => {
+                document.querySelectorAll('.tabs-container .tab-btn').forEach(btn => { // .tabs-container ile daha spesifik hedefle
                     btn.addEventListener('click', (e) => {
                         const targetTab = e.currentTarget.dataset.tab;
-                        this.activeTab = targetTab;
-                        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-                        e.currentTarget.classList.add('active');
-                        document.querySelectorAll('.tab-pane').forEach(pane => pane.classList.remove('active'));
-                        document.getElementById(targetTab).classList.add('active');
+                        this.activateTab(targetTab); // Yeni activateTab fonksiyonunu kullan
                     });
                 });
                 
@@ -208,7 +224,7 @@
                         const newType = e.target.value;
                         const files = this.uploadedFiles.get(tabKey) || [];
                         const fileToUpdate = files.find(f => f.id === fileId);
-                        if (fileToUpdate) fileToUpdate.indexingType = newType;
+                        if (fileToUpdate) fileToUpdate.documentDesignation = newType; // documentDesignation olarak güncellendi
                     }
                 });
 
@@ -221,6 +237,22 @@
                         this.renderUploadedFilesList(tabKey);
                     }
                 });
+                
+                // Manuel işlem sekmesindeki parent işlem seçiciyi doldur
+                document.getElementById('specificTransactionParentId').addEventListener('focus', () => {
+                    if (this.selectedRecord) {
+                        this.populateParentTransactionSelect(this.selectedRecord.transactions);
+                    }
+                });
+            }
+
+            activateTab(tabName) {
+                this.activeTab = tabName;
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                document.querySelector(`.tab-btn[data-tab="${tabName}"]`).classList.add('active');
+                document.querySelectorAll('.tab-pane').forEach(pane => pane.classList.remove('active'));
+                document.getElementById(tabName).classList.add('active');
+                this.checkFormCompleteness(); // Her tab değiştiğinde formu kontrol et
             }
 
             searchRecords(query) {
@@ -256,31 +288,59 @@
                 document.getElementById('searchResultsContainer').style.display = 'none';
                 document.getElementById('recordSearchInput').value = '';
                 document.getElementById('documentUploadSection').style.display = 'block';
-                this.renderTransactionsForSelection();
+                this.renderTransactionsForSelection(); // Mevcut işlemleri listele
+                this.populateParentTransactionSelect(this.selectedRecord.transactions); // Manuel işlem için parent listesini doldur
                 this.checkFormCompleteness();
             }
 
             renderTransactionsForSelection() {
                 const container = document.getElementById('transactions-list-for-selection');
                 container.innerHTML = '';
-                this.selectedTransactionId = null;
+                this.selectedTransactionId = null; // Seçimi sıfırla
                 const transactions = this.selectedRecord.transactions || [];
+
                 if (transactions.length === 0) {
-                    container.innerHTML = '<p class="text-muted p-2">Dosya eklenecek mevcut işlem yok. Manuel sekmesini kullanabilirsiniz.</p>';
+                    container.innerHTML = '<p class="text-muted p-2">Dosya eklenecek mevcut işlem yok. "Manuel İşlem Oluştur" sekmesini kullanabilirsiniz.</p>';
                     return;
                 }
-                transactions.sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp)).forEach(tx => {
+                // Sadece parent işlemlerin listelenmesi için filtreleme ve sıralama
+                const parentTransactions = transactions
+                    .filter(tx => tx.transactionHierarchy === 'parent' || !tx.transactionHierarchy) // Hierarşi belirtilmemişleri de parent say
+                    .sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp)); // En yeniyi üste al
+
+                if (parentTransactions.length === 0) {
+                     container.innerHTML = '<p class="text-muted p-2">Dosya eklenecek mevcut ana işlem bulunamadı. "Manuel İşlem Oluştur" sekmesini kullanabilirsiniz.</p>';
+                     return;
+                }
+
+                parentTransactions.forEach(tx => {
                     const item = document.createElement('div');
                     item.className = 'transaction-list-item';
                     item.dataset.id = tx.transactionId;
-                    item.textContent = `${tx.description || tx.type} - ${new Date(tx.timestamp).toLocaleDateString('tr-TR')}`;
+                    item.textContent = `${tx.designation || tx.transactionType} - ${new Date(tx.timestamp).toLocaleDateString('tr-TR')}`;
                     item.addEventListener('click', (e) => {
                         this.selectedTransactionId = e.currentTarget.dataset.id;
-                        document.querySelectorAll('.transaction-list-item').forEach(el => el.classList.remove('selected'));
+                        document.querySelectorAll('#transactions-list-for-selection .transaction-list-item').forEach(el => el.classList.remove('selected'));
                         e.currentTarget.classList.add('selected');
                         this.checkFormCompleteness();
                     });
                     container.appendChild(item);
+                });
+            }
+
+            populateParentTransactionSelect(transactions) {
+                const selectEl = document.getElementById('specificTransactionParentId');
+                selectEl.innerHTML = '<option value="">Yok (Ana İşlem)</option>'; // Varsayılan seçenek
+
+                const parentTransactions = (transactions || [])
+                    .filter(tx => tx.transactionHierarchy === 'parent' || !tx.transactionHierarchy) // Parent veya tanımsızları al
+                    .sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp)); // Yeni olanlar üstte
+
+                parentTransactions.forEach(tx => {
+                    const option = document.createElement('option');
+                    option.value = tx.transactionId;
+                    option.textContent = `${tx.designation || tx.transactionType} (${new Date(tx.timestamp).toLocaleDateString('tr-TR')})`;
+                    selectEl.appendChild(option);
                 });
             }
             
@@ -290,9 +350,9 @@
                 const currentFiles = this.uploadedFiles.get(tabKey) || [];
                 files.forEach(file => {
                     currentFiles.push({
-                        id: `temp_${Date.now()}_${file.name}`,
+                        id: `temp_${Date.now()}_${generateUUID()}`, // Benzersiz temp ID
                         fileObject: file,
-                        indexingType: this.indexingTypes[0]
+                        documentDesignation: DOCUMENT_DESIGNATION_TYPES[0] || 'Diğer Belge' // Varsayılan doküman türü
                     });
                 });
                 this.uploadedFiles.set(tabKey, currentFiles);
@@ -308,7 +368,9 @@
                 if (files.length === 0) return;
 
                 files.forEach(fileData => {
-                    const selectOptions = this.indexingTypes.map(type => `<option value="${type}" ${fileData.indexingType === type ? 'selected' : ''}>${type}</option>`).join('');
+                    const selectOptions = DOCUMENT_DESIGNATION_TYPES.map(type => 
+                        `<option value="${type}" ${fileData.documentDesignation === type ? 'selected' : ''}>${type}</option>`
+                    ).join('');
                     const fileItem = document.createElement('div');
                     fileItem.className = 'file-item';
                     fileItem.innerHTML = `
@@ -317,7 +379,7 @@
                             <button type="button" class="remove-file remove-uploaded-file" data-file-id="${fileData.id}" data-tab-key="${tabKey}">&times;</button>
                         </div>
                         <div class="file-item-controls">
-                            <label class="form-label small mb-0">İndeksleme Tipi:</label>
+                            <label class="form-label small mb-0">Belge Tipi:</label>
                             <select class="file-item-select file-indexing-type-select" data-file-id="${fileData.id}" data-tab-key="${tabKey}">${selectOptions}</select>
                         </div>
                     `;
@@ -327,64 +389,107 @@
 
             checkFormCompleteness() {
                 const filesExist = (this.uploadedFiles.get(this.activeTab) || []).length > 0;
-                document.getElementById('indexDocumentsBtn').disabled = !this.selectedRecord || !filesExist;
+                let canSubmit = false;
+
+                if (!this.selectedRecord) {
+                    canSubmit = false;
+                } else if (this.activeTab === 'existing-transaction-pane') {
+                    canSubmit = filesExist && this.selectedTransactionId !== null;
+                } else { // manual-indexing-pane
+                    const specificTransactionDesignation = document.getElementById('specificTransactionDesignation').value.trim();
+                    const specificTransactionType = document.getElementById('specificTransactionType').value;
+                    canSubmit = filesExist && specificTransactionDesignation !== '' && specificTransactionType !== '';
+                }
+                document.getElementById('indexDocumentsBtn').disabled = !canSubmit;
             }
 
             async handleSubmit() {
                 const btn = document.getElementById('indexDocumentsBtn');
                 btn.disabled = true;
+                showNotification('İşlem kaydediliyor...', 'info');
 
                 const filesToProcess = this.uploadedFiles.get(this.activeTab) || [];
                 if (filesToProcess.length === 0) {
                     showNotification('Lütfen en az bir dosya yükleyin.', 'error');
                     btn.disabled = false; return;
                 }
-
-                let newTransaction = null;
-                let parentIdForFiles = null;
-                let updates = {
-                    files: [...(this.selectedRecord.files || [])],
-                    transactions: [...(this.selectedRecord.transactions || [])]
-                };
-
-                if (this.activeTab === 'existing-transaction-pane') {
-                    if (!this.selectedTransactionId) { showNotification('Lütfen dosyaları bağlamak için bir işlem seçin.', 'error'); btn.disabled = false; return; }
-                    parentIdForFiles = this.selectedTransactionId;
-                } else {
-                    const specificTaskType = document.getElementById('specificTaskType').value;
-                    if (!specificTaskType) { showNotification('Lütfen yeni işlem için bir tür seçin.', 'error'); btn.disabled = false; return; }
-                    newTransaction = {
-                        transactionId: generateUUID(),
-                        timestamp: new Date().toISOString(),
-                        type: specificTaskType,
-                        description: document.getElementById('specificTaskType').options[document.getElementById('specificTaskType').selectedIndex].text,
-                        parentId: null,
-                        userEmail: this.currentUser.email
-                    };
-                    updates.transactions.push(newTransaction);
-                    parentIdForFiles = newTransaction.transactionId;
+                if (!this.selectedRecord) {
+                    showNotification('Lütfen bir kayıt seçin.', 'error');
+                    btn.disabled = false; return;
                 }
 
-                try {
-                    const uploadedFileData = await Promise.all(filesToProcess.map(async fileData => ({
-                        id: generateUUID(),
-                        name: fileData.fileObject.name,
-                        type: fileData.fileObject.type,
-                        size: fileData.fileObject.size,
-                        parentId: parentIdForFiles,
-                        documentDesignation: fileData.indexingType,
-                        content: await readFileAsDataURL(fileData.fileObject)
-                    })));
-                    updates.files.push(...uploadedFileData);
+                let transactionIdToAssociateFiles = null; // Dosyaların bağlanacağı transaction ID'si
 
-                    const result = await ipRecordsService.updateRecord(this.selectedRecord.id, updates);
-                    if (result.success) {
-                        showNotification('Belgeler başarıyla yüklendi ve indekslendi!', 'success');
-                        this.resetForm();
-                        await this.loadRecords();
-                    } else { throw new Error(result.error); }
+                try {
+                    // --- Manuel İşlem Oluşturma Sekmesi ---
+                    if (this.activeTab === 'manual-indexing-pane') {
+                        const specificTransactionDesignation = document.getElementById('specificTransactionDesignation').value.trim();
+                        const specificTransactionType = document.getElementById('specificTransactionType').value;
+                        const specificTransactionNotes = document.getElementById('specificTransactionNotes').value.trim();
+                        const specificTransactionParentId = document.getElementById('specificTransactionParentId').value || null; // Eğer boşsa null
+
+                        if (!specificTransactionDesignation || !specificTransactionType) {
+                            showNotification('Lütfen yeni işlem için başlık ve tür seçin.', 'error');
+                            btn.disabled = false; return;
+                        }
+
+                        const newTransactionData = {
+                            designation: specificTransactionDesignation,
+                            transactionType: specificTransactionType,
+                            notes: specificTransactionNotes,
+                            transactionHierarchy: specificTransactionParentId ? 'child' : 'parent', // Parent ID varsa child, yoksa parent
+                            parentId: specificTransactionParentId,
+                        };
+
+                        const transactionAddResult = await ipRecordsService.addTransactionToRecord(this.selectedRecord.id, newTransactionData);
+
+                        if (!transactionAddResult.success) {
+                            throw new Error(transactionAddResult.error || 'Yeni işlem oluşturulurken hata oluştu.');
+                        }
+                        transactionIdToAssociateFiles = transactionAddResult.data.transactionId; // Yeni işlemin ID'sini al
+                        showNotification('Yeni işlem başarıyla oluşturuldu.', 'success');
+
+                    } else { // --- Mevcut İşleme Dosya Ekle Sekmesi ---
+                        if (!this.selectedTransactionId) {
+                            showNotification('Lütfen dosyaları bağlamak için bir işlem seçin.', 'error');
+                            btn.disabled = false; return;
+                        }
+                        transactionIdToAssociateFiles = this.selectedTransactionId;
+                    }
+
+                    // --- Dosyaları Yükleme ve İlişkilendirme ---
+                    for (const fileData of filesToProcess) {
+                        try {
+                            // Gerçek Firebase Storage yükleme işlemi burada olmalı.
+                            // Şimdilik readFileAsDataURL ile base64'e çevirip kaydediyoruz.
+                            // Gelecekte burayı Firebase Storage API'si ile değiştirin.
+                            const fileContent = await readFileAsDataURL(fileData.fileObject); 
+                            
+                            const fileToUpload = {
+                                fileName: fileData.fileObject.name,
+                                fileType: fileData.fileObject.type,
+                                fileSize: fileData.fileObject.size,
+                                fileUrl: fileContent, // BU ALAN GERÇEKTE STORAGE URL'si OLMALI
+                                relatedTransactionId: transactionIdToAssociateFiles, // İşlem ID'si
+                                documentDesignation: fileData.documentDesignation // Seçilen belge tipi
+                            };
+                            const fileAddResult = await ipRecordsService.addFileToRecord(this.selectedRecord.id, fileToUpload);
+                            if (!fileAddResult.success) {
+                                console.error(`Dosya yüklenirken hata (${fileData.fileObject.name}): ${fileAddResult.error}`);
+                                showNotification(`Dosya yüklenirken hata (${fileData.fileObject.name}): ${fileAddResult.error}`, 'error');
+                            }
+                        } catch (fileError) {
+                            console.error(`Dosya işlenirken hata (${fileData.fileObject.name}):`, fileError);
+                            showNotification(`Dosya işlenirken hata (${fileData.fileObject.name}): ${fileError.message}`, 'error');
+                        }
+                    }
+                    
+                    showNotification('Tüm işlemler ve belgeler başarıyla kaydedildi!', 'success');
+                    this.resetForm();
+                    await this.loadRecords(); // Yeni verileri yansıtmak için kayıtları yeniden yükle
+
                 } catch (error) {
-                    showNotification(`Bir hata oluştu: ${error.message}`, 'error');
+                    showNotification(`Genel hata oluştu: ${error.message}`, 'error');
                 } finally {
                     btn.disabled = false;
                 }
@@ -394,18 +499,22 @@
                 this.selectedRecord = null;
                 this.uploadedFiles.clear();
                 this.selectedTransactionId = null;
-                this.activeTab = 'existing-transaction-pane';
+                this.activeTab = 'existing-transaction-pane'; // Varsayılan olarak ilk sekmeyi aktif yap
                 document.getElementById('indexingForm').reset();
                 document.getElementById('documentUploadSection').style.display = 'none';
                 document.getElementById('fileListExisting').innerHTML = '';
                 document.getElementById('fileListManual').innerHTML = '';
                 document.getElementById('transactions-list-for-selection').innerHTML = '<p class="text-muted p-2">Lütfen bir kayıt seçin.</p>';
+                this.activateTab('existing-transaction-pane'); // Tabları da sıfırla
                 this.checkFormCompleteness();
             }
         }
         
         document.addEventListener('DOMContentLoaded', async () => {
             await loadSharedLayout({ activeMenuLink: 'indexing.html' });
+            // auth.onAuthStateChanged listener'ı kaldırıldı, çünkü IndexingModule constructor'da init çağırıyor
+            // ve init içinde authService.getCurrentUser() çağrısı var.
+            // Bu daha basit bir akış sağlar. Eğer oturum yoksa init() içinde yönlendirme yapılır.
             new IndexingModule();
         });
     </script>
