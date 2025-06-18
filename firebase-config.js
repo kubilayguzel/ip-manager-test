@@ -26,7 +26,7 @@ import {
 
 // --- Firebase App Initialization ---
 const firebaseConfig = {
-    apiKey: "YOUR_API_KEY",
+    apiKey: "AIzaSyCbhoIXJT9g5ftW62YUlo44M4BOzM9tJ7M",
     authDomain: "ip-manager-production.firebaseapp.com",
     projectId: "ip-manager-production",
     storageBucket: "ip-manager-production.firebasestorage.app",
