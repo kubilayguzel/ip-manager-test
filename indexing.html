@@ -644,8 +644,9 @@
                     const selectedRecordDisplayExisting = document.getElementById('selectedRecordDisplayExisting'); // Readonly
                     const recordSearchInputManual = document.getElementById('recordSearchInputManual');
                     const selectedRecordDisplayManual = document.getElementById('selectedRecordDisplayManual'); // Readonly
-                    const recordSearchInputBulk = document.getElementById('recordSearchInputBulk'); 
-                    const selectedRecordDisplayBulk = document.getElementById('selectedRecordDisplayBulk'); // Readonly
+                    // Toplu indekslemede bu filtre alanları kaldırıldığı için buradan da kaldırıldı.
+                    // const recordSearchInputBulk = document.getElementById('recordSearchInputBulk'); 
+                    // const selectedRecordDisplayBulk = document.getElementById('selectedRecordDisplayBulk'); 
 
                     const specificChildTransactionType = document.getElementById('specificChildTransactionType');
                     const filesExisting = document.getElementById('filesExisting');
@@ -662,7 +663,7 @@
                     [
                         recordSearchInputExisting, selectedRecordDisplayExisting,
                         recordSearchInputManual, selectedRecordDisplayManual,
-                        recordSearchInputBulk, selectedRecordDisplayBulk, 
+                        // recordSearchInputBulk, selectedRecordDisplayBulk, // Kaldırıldı
                         specificChildTransactionType, filesExisting, 
                         specificManualTransactionType, specificManualChildTransactionType, filesManual,
                         bulkDeliveryDate, // bulkChildTransactionType, // Kaldırıldı
@@ -887,21 +888,19 @@
                             canSubmit = (specificManualTransactionType !== '' || specificManualChildTransactionType !== '' || filesExist);
                         }
                     } else if (this.activeTab === 'bulk-indexing-pane') { 
-                        const bulkDeliveryDateEl = document.getElementById('bulkDeliveryDate'); // Elementi al
-                        const bulkDeliveryDate = bulkDeliveryDateEl ? bulkDeliveryDateEl.value : ''; // Değerini güvenle al
+                        const bulkDeliveryDateEl = document.getElementById('bulkDeliveryDate');
+                        const bulkDeliveryDate = bulkDeliveryDateEl ? bulkDeliveryDateEl.value : ''; // Hata önleme
                         const filesExist = (document.getElementById('bulkFiles').files || []).length > 0;
 
                         // Sadece SEÇİLİ olan işler için geçerlilik kontrolü
                         const selectedJobs = this.pendingBulkIndexJobs.filter(job => job.isSelected);
 
+                        // En az bir seçili iş var mı ve tüm seçili işler geçerli mi kontrol et
                         const allSelectedJobsValid = selectedJobs.every(job => 
-                            job.matchedRecordId !== null &&                // Kayıt eşleşmeli
-                            job.selectedParentTransactionId !== '' &&      // Parent seçilmeli
-                            job.childTransactionType !== '' &&             // Alt işlem türü seçilmeli
-                            job.tebligDate !== '' &&                       // Tebliğ tarihi girilmeli (Boş olmamalı)
-                            job.status !== 'error'                         // Hatalı olmamalı
+                            this.checkJobCompleteness(job) // Her işin kendi completeness'ı
                         );
-                        // En az bir SEÇİLİ ve geçerli iş olmalı
+                        
+                        // Ortak tebliğ tarihi ve dosya yüklemesi zorunlu, VE seçili işler var VE tüm seçili işler geçerli
                         canSubmit = bulkDeliveryDate !== '' && filesExist && selectedJobs.length > 0 && allSelectedJobsValid;
                     }
                     document.getElementById('indexDocumentsBtn').disabled = !canSubmit;
@@ -1129,9 +1128,9 @@
                             this.resetForm();
                             await this.loadRecords(); 
                         } else if (this.activeTab === 'bulk-indexing-pane') { 
-                            const bulkDeliveryDate = document.getElementById('bulkDeliveryDate').value; // Ortak tebliğ tarihi
+                            const bulkDeliveryDateFromInput = document.getElementById('bulkDeliveryDate').value; // Ortak tebliğ tarihi inputundan al
                             
-                            if (!bulkDeliveryDate) { 
+                            if (!bulkDeliveryDateFromInput) { // Ortak tebliğ tarihi kontrolü
                                 showNotification('Lütfen toplu işlem için tebliğ tarihi seçin.', 'error');
                                 btn.disabled = false; return;
                             }
@@ -1150,11 +1149,12 @@
 
                             for (const job of selectedBulkJobs) { 
                                 // Job'ın son doğrulamasını tekrar yap (her ihtimale karşı)
-                                if (!job.matchedRecordId || !job.selectedParentTransactionId || !job.childTransactionType || !job.tebligDate || job.status === 'error') {
+                                // checkJobCompleteness'i kullanarak tüm alanları kontrol et
+                                if (!this.checkJobCompleteness(job)) { // checkJobCompleteness'i kullandık
                                     job.status = 'error';
                                     job.errorMessage = job.errorMessage || 'Eksik veya hatalı bilgi.';
                                     failedJobs++;
-                                    this.renderBulkIndexingTable(); // UI'ı güncelle
+                                    this.renderBulkIndexingTable(); 
                                     showNotification(`'${job.fileName}' işlenemedi: Eksik bilgi.`, 'error', 8000);
                                     continue;
                                 }
@@ -1177,17 +1177,16 @@
                                     const parentTransactionForChild = (recordToUpdate.transactions || []).find(tx => tx.transactionId === job.selectedParentTransactionId);
 
                                     if (!parentTransactionForChild) {
-                                        // Bu durumda hata ver, çünkü seçilen parent olmalı
                                         throw new Error('Seçilen parent işlem bulunamadı veya geçersiz.');
                                     }
 
                                     const newChildTransactionData = {
-                                        designation: job.childTransactionType, // Job'a özel alt işlem türü
+                                        designation: job.childTransactionType, 
                                         transactionType: job.childTransactionType,
                                         notes: `Toplu indeksleme ile eklenen PDF (${job.fileName}).`, 
                                         transactionHierarchy: 'child',
                                         parentId: parentTransactionForChild.transactionId, 
-                                        deliveryDate: new Date(job.tebligDate).toISOString() // Job'a özel tebliğ tarihi
+                                        deliveryDate: new Date(job.tebligDate).toISOString() 
                                     };
                                     const childTransactionAddResult = await ipRecordsService.addTransactionToRecord(recordToUpdate.id, newChildTransactionData);
                                     
@@ -1203,7 +1202,7 @@
                                         fileSize: job.fileObject.size,
                                         fileUrl: fileContent, 
                                         relatedTransactionId: newChildTransactionId, 
-                                        documentDesignation: job.childTransactionType // Belge tipi alt işlem türüyle aynı
+                                        documentDesignation: job.childTransactionType 
                                     };
                                     const fileAddResult = await ipRecordsService.addFileToRecord(recordToUpdate.id, fileToUpload);
                                     
@@ -1282,6 +1281,7 @@
                     this.selectedRecordBulk = null; 
                     this.pendingBulkIndexJobs = [];
                     document.getElementById('bulkDeliveryDate').value = '';
+                    // document.getElementById('bulkChildTransactionType').value = ''; // Ortak Alt İşlem Türü inputu kaldırıldığı için
                     document.getElementById('bulkFilesInfo').textContent = 'Henüz PDF dosyası seçilmedi.';
                     document.getElementById('bulkIndexingTableContainer').style.display = 'none';
                     document.getElementById('bulkIndexingTable').querySelector('tbody').innerHTML = '';
@@ -1303,6 +1303,10 @@
                     }
                     
                     showNotification('PDF dosyaları işleniyor...', 'info', 3000);
+
+                    // Ortak tebliğ tarihi inputundan değeri güvenli bir şekilde al
+                    const commonTebligDateInput = document.getElementById('bulkDeliveryDate');
+                    const commonTebligDate = commonTebligDateInput ? commonTebligDateInput.value : '';
 
                     for (const file of files) {
                         // Mükerrer dosya kontrolü (fileName ve size kombinasyonuna göre)
@@ -1332,28 +1336,22 @@
                             // Eşleştirmeyi yaparken case-insensitive ve format uyumlu hale getiriyoruz
                             matchedRecord = this.allRecords.find(r => 
                                 r.applicationNumber && 
+                                // Portföydeki başvuru numarasını da aynı şekilde formatlayıp karşılaştır
                                 r.applicationNumber.toLowerCase().replace(/[-_]/g, '/') === extractedAppNumber.toLowerCase()
                             );
 
                             if (matchedRecord) {
                                 matchedRecordDisplay = `${matchedRecord.title} (${matchedRecord.applicationNumber})`;
-                                status = 'ready'; // Otomatik eşleşirse başlangıçta hazır olsun
+                                // Eğer eşleşme varsa ve genel tebliğ tarihi/alt işlem türü boş değilse, durumu hazır yap
+                                status = 'ready'; // Başlangıçta hazır statüsü verme, manuel kontroller tetikleyecek
                             } else {
                                 matchedRecordDisplay = `Eşleşme Yok (Başvuru No: ${extractedAppNumber})`; 
-                                status = 'pending'; // Manuel müdahale gerekecek
+                                status = 'pending'; 
                             }
                         } else {
                             matchedRecordDisplay = 'Başvuru No Dosya Adında Yok'; 
                             status = 'pending'; 
                         }
-
-                        // Ortak tebliğ tarihi ve alt işlem türünü varsayılan olarak atıyoruz
-                        const commonTebligDate = document.getElementById('bulkDeliveryDate').value;
-                        const commonChildType = document.getElementById('bulkChildTransactionType').value; // Ortak alt işlem türü inputu kaldırıldı, ama eğer varsayılan bir değer alınacaksa burayı kontrol etmeliyiz.
-                                                                                                        // Şu anki HTML'de bu input yok, bu yüzden commonChildType varsayılan olarak boş kalacak veya bir hata verebilir.
-                                                                                                        // Çözüm: Her job'ın childTransactionType'ı da kullanıcının girdiği tebliğ tarihi gibi başlangıçta ortak bir değer almalı
-                                                                                                        // veya tabloda seçilmelidir.
-                                                                                                        // Tablodaki her select kutusunun başlatılması önemli.
 
                         this.pendingBulkIndexJobs.push({
                             jobId: generateUUID(),
@@ -1364,9 +1362,9 @@
                             matchedRecordDisplay: matchedRecordDisplay,
                             selectedParentTransactionId: '', // Başlangıçta boş
                             selectedParentTransactionDisplay: 'Parent Seçilmedi', 
-                            childTransactionType: commonChildType, // Ortak alandan varsayılanı al
-                            tebligDate: commonTebligDate, // Ortak alandan varsayılanı al
-                            status: status, 
+                            childTransactionType: '', // Başlangıçta boş
+                            tebligDate: commonTebligDate, // Ortak tebliğ tarihini varsayılan olarak set et
+                            status: status, // İlk statü eşleşmeye göre 'ready' veya 'pending'
                             errorMessage: '',
                             isSelected: status === 'ready' // Otomatik eşleşirse varsayılan olarak seçili gelsin
                         });
@@ -1621,6 +1619,7 @@
                         // Alt işlem türü değiştiğinde, durumu yeniden değerlendir
                         job.status = this.checkJobCompleteness(job) ? 'ready' : 'pending';
                         
+                        this.renderBulkIndexingTable(); // UI'ı güncellemek için
                         this.checkFormCompleteness();
                     }
                 }
@@ -1634,6 +1633,7 @@
                         // Tebliğ tarihi değiştiğinde, durumu yeniden değerlendir
                         job.status = this.checkJobCompleteness(job) ? 'ready' : 'pending';
                         
+                        this.renderBulkIndexingTable(); // UI'ı güncellemek için
                         this.checkFormCompleteness();
                     }
                 }
@@ -1665,18 +1665,24 @@
                 }
                 
                 // updateBulkJobsTebligDate artık ortak bir tebliğ tarihi alanı yok, sadece checkFormCompleteness'e etki eder
+                // BU METOT ARTIK SADECE checkFormCompleteness'i TETİKLEMELİ, DEĞER GÜNCELLEMESİ YAPMAMALI
                 updateBulkJobsTebligDate = (e) => { 
-                    // Bu fonksiyon artık tüm job'ların tebligDate'ini güncellemiyor, çünkü her job'ın kendi alanı var
-                    // Sadece checkFormCompleteness'i tetikliyor.
+                    // Ortak tebliğ tarihi inputunun değeri değiştiğinde
+                    // Her job'ın tebligDate'i bu noktada güncellenmez.
+                    // Sadece formun genel tamamlanma durumunu tekrar kontrol etmeliyiz.
                     this.checkFormCompleteness();
                 }
 
                 // updateBulkJobsChildType artık ortak bir alt işlem türü alanı yok
-                updateBulkJobsChildType = (e) => { 
-                    // Bu fonksiyon kaldırıldı, çünkü her job'ın kendi childTransactionType'ı var.
-                    // Sadece checkFormCompleteness'i tetikliyor.
-                    this.checkFormCompleteness();
-                }
+                // BU METOT KALDIRILDI, ÇÜNKÜ HER JOB'IN KENDİ childTransactionType'ı VAR.
+                // updateBulkJobsChildType = (e) => { 
+                //     const newType = e.target.value;
+                //     this.pendingBulkIndexJobs.forEach(job => {
+                //         job.childTransactionType = newType;
+                //     });
+                //     this.checkFormCompleteness();
+                //     this.renderBulkIndexingTable(); 
+                // }
             }
             
             document.addEventListener('DOMContentLoaded', async () => {
