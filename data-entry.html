@@ -118,7 +118,6 @@
                                 <div id="mainOwnerSearchResults" class="main-owner-search-results"></div> 
                             </div>
                             <div class="search-button-wrapper">
-                                <button type="button" class="btn btn-secondary btn-small" id="searchOwnerBtn">Ara</button>
                                 <button type="button" class="btn btn-primary btn-small" id="addPersonToOwnerBtn">Yeni Kişi Ekle</button>
                             </div>
                         </div>
@@ -164,8 +163,7 @@
                     document.querySelector('.page-subtitle').textContent = 'Mevcut bir kaydın detaylarını düzenleyin.';
                     document.getElementById('saveRecordBtn').textContent = 'Kaydı Güncelle';
                 }
-                
-                // DÜZELTME: Olay dinleyicilerini kurmadan ÖNCE veriyi yükle ve bekle
+    
                 await this.loadInitialData();
                 this.setupEventListeners();
                 
@@ -189,14 +187,8 @@
                 document.getElementById('cancelRecordBtn').addEventListener('click', () => window.history.back());
     
                 const ownerSearchInput = document.getElementById('ownerSearchInput');
-                const searchButton = document.getElementById('searchOwnerBtn');
-
-                if (searchButton) {
-                    searchButton.addEventListener('click', (e) => {
-                        e.preventDefault();
-                        this.performOwnerSearch(ownerSearchInput.value);
-                    });
-                }
+                
+                // "Ara" butonu kaldırıldığı için click dinleyicisi de kaldırıldı.
                 
                 if (ownerSearchInput) {
                     ownerSearchInput.addEventListener('input', (event) => {
