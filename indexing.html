@@ -6,6 +6,7 @@
     <title>IP Manager - Belge İndeksleme</title>
     <link rel="stylesheet" href="css/shared-styles.css"> 
     <style>
+        /* CSS stilleriniz burada kalacak, önceki değişikliklerle birlikte */
         .main-container { width: 100%; padding: 30px; margin: 0; }
         .page-header-section { background: rgba(255, 255, 255, 0.95); padding: 30px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1); text-align: center; margin-bottom: 30px; }
         .page-title { font-size: 2em; color: #1e3c72; margin-bottom: 10px; }
@@ -112,7 +113,7 @@
     </style>
 </head>
 <body>
-    <div id="layout-placeholder"></div>
+    <div id="notification-container" class="notification-container"></div> <div id="layout-placeholder"></div>
 
     <div class="page-wrapper">
         <main class="main-container">
@@ -164,6 +165,7 @@
                                             </select>
                                     </div>
                                 </div>
+
                                 <div class="form-group">
                                     <label class="form-label" for="filesExisting">C- Dosya Yükleyin <span style="color: red;">*</span></label>
                                     <div class="file-upload-wrapper">
@@ -180,24 +182,25 @@
                                     <label class="form-label" for="specificManualTransactionType">A- Ana İşlem Seçin</label>
                                     <select id="specificManualTransactionType" class="form-select" name="specificManualTransactionType">
                                         <option value="" disabled selected>İşlem türü seçin...</option>
-                                        <option value="Başvuru">Başvuru</option>
-                                        <option value="Yenileme">Yenileme</option>
-                                        <option value="Devir">Devir</option>
-                                        <option value="Lisans">Lisans</option>
-                                        <option value="Genel">Genel</option>
-                                        <option value="Diğer">Diğer</option>
-                                    </select>
+                                        </select>
                                 </div>
 
                                 <div class="form-group">
-                                    <label class="form-label" for="specificManualTransactionParentId">B- Alt İşlem Seçin (İsteğe Bağlı)</label>
+                                    <label class="form-label" for="specificManualChildTransactionType">B- Alt İşlem Seçin (İsteğe Bağlı)</label>
+                                    <select id="specificManualChildTransactionType" class="form-select" name="specificManualChildTransactionType">
+                                        <option value="" disabled selected>Alt işlem türü seçin...</option>
+                                        </select>
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="form-label" for="specificManualTransactionParentId">C- Bağlı Parent İşlem Seçin (Alt İşlem İçin)</label>
                                     <select id="specificManualTransactionParentId" class="form-select" name="specificManualTransactionParentId">
                                         <option value="">Yok (Ana İşlem)</option>
                                         </select>
                                 </div>
 
                                 <div class="form-group">
-                                    <label class="form-label" for="filesManual">C- Dosya Yükleyin (İsteğe Bağlı)</label>
+                                    <label class="form-label" for="filesManual">D- Dosya Yükleyin (İsteğe Bağlı)</label>
                                     <div class="file-upload-wrapper">
                                         <input type="file" id="filesManual" multiple name="filesManual">
                                         <div class="file-upload-button" id="filesManualButton">Dosya Seç</div>
@@ -272,6 +275,7 @@
                 this.setupEventListeners();
                 this.populateChildTransactionTypeSelect(); 
                 this.populateManualTransactionTypeSelect(); 
+                this.populateManualChildTransactionTypeSelect(); // Yeni: Manuel alt işlem türü select box'ını doldur
                 this.activateTab(this.activeTab); 
             }
 
@@ -333,6 +337,7 @@
                 document.getElementById('specificChildTransactionType').addEventListener('change', () => this.checkFormCompleteness());
                 
                 document.getElementById('specificManualTransactionType').addEventListener('change', () => this.checkFormCompleteness());
+                document.getElementById('specificManualChildTransactionType').addEventListener('change', () => this.checkFormCompleteness()); // Yeni: Manuel alt işlem türü değiştiğinde kontrol et
                 document.getElementById('specificManualTransactionParentId').addEventListener('change', () => this.checkFormCompleteness());
 
             }
@@ -359,6 +364,18 @@
                 });
             }
 
+            // Yeni fonksiyon: Manuel alt işlem türü select box'ını doldur
+            populateManualChildTransactionTypeSelect() {
+                const selectEl = document.getElementById('specificManualChildTransactionType');
+                selectEl.innerHTML = '<option value="" disabled selected>Alt işlem türü seçin...</option>';
+                CHILD_TRANSACTION_TYPES.forEach(type => {
+                    const option = document.createElement('option');
+                    option.value = type;
+                    option.textContent = type;
+                    selectEl.appendChild(option);
+                });
+            }
+
             activateTab(tabName) {
                 this.activeTab = tabName;
                 document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -366,20 +383,20 @@
                 document.querySelectorAll('.tab-pane').forEach(pane => pane.classList.remove('active'));
                 document.getElementById(tabName).classList.add('active');
                 
-                // Aktif sekmeye göre 'required' özelliklerini ayarla
                 this.setRequiredFieldsForActiveTab(); 
                 this.checkFormCompleteness(); 
             }
             
-            // Yeni fonksiyon: Aktif sekmeye göre zorunlu alanları ayarla
             setRequiredFieldsForActiveTab() {
                 const specificChildTransactionType = document.getElementById('specificChildTransactionType');
                 const filesExisting = document.getElementById('filesExisting');
                 const specificManualTransactionType = document.getElementById('specificManualTransactionType');
+                const specificManualChildTransactionType = document.getElementById('specificManualChildTransactionType'); // Yeni eklenen
+                const specificManualTransactionParentId = document.getElementById('specificManualTransactionParentId');
                 const filesManual = document.getElementById('filesManual');
 
                 // Tüm inputlardan 'required' özelliğini kaldır
-                [specificChildTransactionType, filesExisting, specificManualTransactionType, filesManual].forEach(el => {
+                [specificChildTransactionType, filesExisting, specificManualTransactionType, specificManualChildTransactionType, specificManualTransactionParentId, filesManual].forEach(el => {
                     if (el) {
                         el.removeAttribute('required');
                     }
@@ -389,6 +406,7 @@
                 if (this.activeTab === 'existing-transaction-pane') {
                     if (specificChildTransactionType) specificChildTransactionType.setAttribute('required', 'required');
                     if (filesExisting) filesExisting.setAttribute('required', 'required');
+                    // Ana İşlem seçili olmalı, bu JS tarafından kontrol ediliyor
                 } else { // manual-indexing-pane
                     // Manuel sekmede zorunluluklar opsiyonel, checkFormCompleteness yönetiyor
                     // Ancak tarayıcının hata vermemesi için burada required eklemiyoruz
@@ -442,7 +460,6 @@
                 document.getElementById('filesExistingInfo').textContent = 'Henüz dosya seçilmedi.';
                 document.getElementById('filesManualInfo').textContent = 'Henüz dosya seçilmedi.';
 
-                // Kayıt seçildiğinde zorunlu alanları yeniden ayarla
                 this.setRequiredFieldsForActiveTab();
             }
 
@@ -558,11 +575,12 @@
                     canSubmit = this.selectedTransactionId !== null && specificChildTransactionType !== '' && filesExist;
 
                 } else { // manual-indexing-pane (Manuel İşlem Oluştur)
-                    // Manuel İşlem Oluştur tabı: Ana işlem türü veya alt işlem parent ID veya dosya yükleme, en az biri yeterli.
+                    // Manuel İşlem Oluştur tabı: Ana işlem türü VEYA alt işlem türü VEYA parent ID VEYA dosya yükleme, en az biri yeterli.
                     const specificManualTransactionType = document.getElementById('specificManualTransactionType').value;
+                    const specificManualChildTransactionType = document.getElementById('specificManualChildTransactionType').value; // Yeni eklenen
                     const specificManualTransactionParentId = document.getElementById('specificManualTransactionParentId').value;
                     
-                    canSubmit = (specificManualTransactionType !== '' || specificManualTransactionParentId !== '' || filesExist);
+                    canSubmit = (specificManualTransactionType !== '' || specificManualChildTransactionType !== '' || specificManualTransactionParentId !== '' || filesExist);
                 }
                 document.getElementById('indexDocumentsBtn').disabled = !canSubmit;
             }
@@ -584,43 +602,108 @@
                 try {
                     if (this.activeTab === 'manual-indexing-pane') {
                         const specificManualTransactionType = document.getElementById('specificManualTransactionType').value;
+                        const specificManualChildTransactionType = document.getElementById('specificManualChildTransactionType').value; // Yeni eklenen
                         const specificManualTransactionParentId = document.getElementById('specificManualTransactionParentId').value || null; 
                         
                         let isTransactionCreated = false;
 
-                        if (specificManualTransactionType !== '') { 
-                            const newTransactionData = {
-                                designation: specificManualTransactionType, 
-                                transactionType: specificManualTransactionType,
-                                notes: '', // Notlar alanı kaldırıldığı için boş bırakıldı
-                                transactionHierarchy: specificManualTransactionParentId ? 'child' : 'parent', 
-                                parentId: specificManualTransactionParentId,
-                            };
-                            const transactionAddResult = await ipRecordsService.addTransactionToRecord(this.selectedRecord.id, newTransactionData);
+                        // Manuel tabda yeni bir işlem oluşturulacaksa
+                        if (specificManualTransactionType !== '' || specificManualChildTransactionType !== '') {
+                            let transactionDesignation;
+                            let transactionType;
+                            let transactionHierarchy;
+                            let parentId = null;
 
-                            if (!transactionAddResult.success) {
-                                throw new Error(transactionAddResult.error || 'Yeni işlem oluşturulurken hata oluştu.');
+                            if (specificManualTransactionType !== '' && specificManualChildTransactionType === '') { // Sadece ana işlem seçildi
+                                transactionDesignation = specificManualTransactionType;
+                                transactionType = specificManualTransactionType;
+                                transactionHierarchy = 'parent';
+                                parentId = null; // Ana işlem olduğu için parentId null
+                            } else if (specificManualChildTransactionType !== '' && specificManualTransactionType === '' && specificManualTransactionParentId) { // Sadece alt işlem seçildi ve parent'ı var
+                                transactionDesignation = specificManualChildTransactionType;
+                                transactionType = specificManualChildTransactionType;
+                                transactionHierarchy = 'child';
+                                parentId = specificManualTransactionParentId;
+                            } else if (specificManualTransactionType !== '' && specificManualChildTransactionType !== '' && specificManualTransactionParentId) { // Hem ana işlem hem de alt işlem seçildi (alt işlem parent'a bağlı)
+                                // Bu senaryoda ana işlem (specificManualTransactionType) ve onun altında alt işlem (specificManualChildTransactionType) oluşacak
+                                // İlk olarak ana işlemi oluşturalım
+                                const mainTransactionData = {
+                                    designation: specificManualTransactionType,
+                                    transactionType: specificManualTransactionType,
+                                    notes: '',
+                                    transactionHierarchy: 'parent',
+                                    parentId: null,
+                                };
+                                const mainTransactionResult = await ipRecordsService.addTransactionToRecord(this.selectedRecord.id, mainTransactionData);
+                                if (!mainTransactionResult.success) {
+                                    throw new Error(mainTransactionResult.error || 'Manuel ana işlem oluşturulurken hata oluştu.');
+                                }
+                                showNotification('Manuel ana işlem başarıyla oluşturuldu.', 'success');
+
+                                // Ardından bu ana işlemin altına alt işlemi oluşturalım
+                                const childTransactionData = {
+                                    designation: specificManualChildTransactionType,
+                                    transactionType: specificManualChildTransactionType,
+                                    notes: '',
+                                    transactionHierarchy: 'child',
+                                    parentId: mainTransactionResult.data.transactionId, // Yeni oluşturulan ana işlemin ID'si
+                                };
+                                const childTransactionResult = await ipRecordsService.addTransactionToRecord(this.selectedRecord.id, childTransactionData);
+                                if (!childTransactionResult.success) {
+                                    throw new Error(childTransactionResult.error || 'Manuel alt işlem oluşturulurken hata oluştu.');
+                                }
+                                transactionIdToAssociateFiles = childTransactionResult.data.transactionId; // Dosyaları alt işleme bağla
+                                transactionDesignationForFiles = specificManualChildTransactionType;
+                                isTransactionCreated = true;
+                                showNotification('Manuel alt işlem başarıyla oluşturuldu.', 'success');
+                                // Bu durumda artık döngüden çıkıp dosya yükleme adımına geçebiliriz
+                                if (filesToProcess.length === 0) { // Sadece işlem oluşturulduysa
+                                    showNotification('İşlemler başarıyla kaydedildi!', 'success');
+                                    this.resetForm();
+                                    await this.loadRecords();
+                                    return;
+                                }
+                                
+                            } else { // Diğer kombinasyonlar veya geçersiz seçimler
+                                showNotification('Lütfen manuel işlem için geçerli bir kombinasyon seçin (Ana İşlem VEYA Alt İşlem + Parent).', 'error');
+                                btn.disabled = false;
+                                return;
                             }
-                            transactionIdToAssociateFiles = transactionAddResult.data.transactionId;
-                            transactionDesignationForFiles = specificManualTransactionType;
-                            isTransactionCreated = true;
-                            showNotification('Yeni işlem başarıyla oluşturuldu.', 'success');
-                        } else if (specificManualTransactionParentId) { 
+                            
+                            if (!isTransactionCreated) { // Eğer zaten yukarıda isTransactionCreated = true yapılmadıysa
+                                const newTransactionData = {
+                                    designation: transactionDesignation,
+                                    transactionType: transactionType,
+                                    notes: '',
+                                    transactionHierarchy: transactionHierarchy, 
+                                    parentId: parentId,
+                                };
+                                const transactionAddResult = await ipRecordsService.addTransactionToRecord(this.selectedRecord.id, newTransactionData);
+
+                                if (!transactionAddResult.success) {
+                                    throw new Error(transactionAddResult.error || 'Yeni işlem oluşturulurken hata oluştu.');
+                                }
+                                transactionIdToAssociateFiles = transactionAddResult.data.transactionId;
+                                transactionDesignationForFiles = transactionDesignation;
+                                isTransactionCreated = true;
+                                showNotification('Yeni işlem başarıyla oluşturuldu.', 'success');
+                            }
+                        } else if (specificManualTransactionParentId) { // Sadece parent seçilmiş, yeni işlem oluşturulmayacak, dosya mevcut parent'a bağlanacak
                             transactionIdToAssociateFiles = specificManualTransactionParentId;
                             const parentTx = (this.selectedRecord.transactions || []).find(tx => tx.transactionId === specificManualTransactionParentId);
                             transactionDesignationForFiles = parentTx ? parentTx.designation : 'Ek Belge';
-                            isTransactionCreated = true; 
-                        } else {
-                            transactionDesignationForFiles = 'Genel Belge';
+                            isTransactionCreated = true; // Dosya bir işleme bağlanıyor
+                            showNotification('Dosyalar mevcut parent işleme bağlanıyor.', 'info');
                         }
-                        
+
+                        // Manuel sekmede dosya yükleme zorunlu değilse ve dosya yoksa, sadece işlemi kaydet ve bitir
                         if (filesToProcess.length === 0 && !isTransactionCreated) {
                             showNotification('Kaydedilecek bir işlem veya dosya bulunamadı.', 'error');
                             btn.disabled = false;
                             return;
                         }
 
-                    } else { // --- Mevcut İşleme Dosya Ekle Sekmesi ---
+                    } else { // --- Mevcut İşleme Dosya Ekle Sekmesi (Child İşlem Oluşturma) ---
                         if (!this.selectedTransactionId) {
                             showNotification('Lütfen dosyaları bağlamak için bir ANA işlem seçin.', 'error');
                             btn.disabled = false; return;
@@ -653,6 +736,7 @@
                         showNotification('Yeni alt işlem başarıyla oluşturuldu.', 'success');
                     }
 
+                    // --- Dosyaları Yükleme ve İlişkilendirme ---
                     for (const fileData of filesToProcess) {
                         try {
                             const fileContent = await readFileAsDataURL(fileData.fileObject); 
@@ -708,7 +792,13 @@
                 document.getElementById('filesExistingInfo').textContent = 'Henüz dosya seçilmedi.';
                 document.getElementById('filesManualInfo').textContent = 'Henüz dosya seçilmedi.';
 
-                this.setRequiredFieldsForActiveTab(); // Reset sonrası zorunlu alanları tekrar ayarla
+                // Manuel sekmedeki select box'ları da sıfırla
+                document.getElementById('specificManualTransactionType').value = '';
+                document.getElementById('specificManualChildTransactionType').value = '';
+                document.getElementById('specificManualTransactionParentId').value = '';
+
+
+                this.setRequiredFieldsForActiveTab(); 
                 this.checkFormCompleteness();
             }
         }
