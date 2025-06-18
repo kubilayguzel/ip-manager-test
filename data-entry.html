@@ -252,6 +252,9 @@
                 const personsResult = await personsService.getPersons();
                 if (personsResult.success) {
                     this.allPersons = personsResult.data;
+                    // 🔍 Tanı koymak için buraya ekleyin:
+        console.log("Kişiler sonucu:", personsResult);
+        console.log("Yüklenen kişiler:", this.allPersons);
                 } else {
                     showNotification('Kişiler yüklenemedi: ' + personsResult.error, 'error');
                 }
