@@ -19,7 +19,7 @@ import {
     orderBy,
     where,
     getDoc, 
-    setDoc, 
+    setDoc,
     arrayUnion, 
     writeBatch
 } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
@@ -131,7 +131,6 @@ export const authService = {
                 switch (error.code) {
                     case 'auth/user-not-found':
                     case 'auth/wrong-password':
-                    case 'auth/invalid-credential':
                         errorMessage = "Hatalı e-posta veya şifre.";
                         break;
                     case 'auth/invalid-email':
@@ -243,14 +242,11 @@ export const personsService = {
     },
     async getPersons() {
         if (isFirebaseAvailable) {
-            const user = authService.getCurrentUser();
-            if(!user) return {success: true, data:[]};
             try {
-                const q = user.role === 'superadmin' ? query(collection(db, 'persons'), orderBy('createdAt', 'desc')) : query(collection(db, 'persons'), where('userId', '==', user.uid), orderBy('createdAt', 'desc'));
+                const q = query(collection(db, 'persons'), orderBy('name'));
                 const snapshot = await getDocs(q);
                 return { success: true, data: snapshot.docs.map(d => ({ id: d.id, ...d.data() })) };
             } catch (error) {
-                console.error("Kişiler alınırken hata:", error);
                 return { success: false, error: error.message };
             }
         }
@@ -291,6 +287,30 @@ export const personsService = {
 
 // --- IP Records Service ---
 export const ipRecordsService = {
+    async addRecord(record) {
+        if (!isFirebaseAvailable) {
+            const records = JSON.parse(localStorage.getItem('ipRecords') || '[]');
+            const newRecord = { ...record, id: generateUUID(), createdAt: new Date().toISOString() };
+            records.push(newRecord);
+            localStorage.setItem('ipRecords', JSON.stringify(records));
+            return { success: true, id: newRecord.id };
+        }
+        try {
+            const docRef = await addDoc(collection(db, 'ipRecords'), { ...record, createdAt: new Date().toISOString() });
+            return { success: true, id: docRef.id };
+        } catch (error) {
+            return { success: false, error: error.message };
+        }
+    },
+    async getRecords() {
+        if (!isFirebaseAvailable) return { success: true, data: JSON.parse(localStorage.getItem('ipRecords') || '[]') };
+        try {
+            const snapshot = await getDocs(collection(db, 'ipRecords'));
+            return { success: true, data: snapshot.docs.map(d => ({ id: d.id, ...d.data() })) };
+        } catch (error) {
+            return { success: false, error: error.message };
+        }
+    },
     async getRecordById(recordId) {
         if (!isFirebaseAvailable) {
             const records = JSON.parse(localStorage.getItem('ipRecords') || '[]');
@@ -301,15 +321,7 @@ export const ipRecordsService = {
             const docRef = doc(db, "ipRecords", recordId);
             const docSnap = await getDoc(docRef);
             if (docSnap.exists()) {
-                let recordData = { id: docSnap.id, ...docSnap.data() };
-                if (recordData.owners && recordData.owners.length > 0) {
-                    const allPersonsResult = await personsService.getPersons();
-                    if (allPersonsResult.success) {
-                        const allPersonsMap = new Map(allPersonsResult.data.map(p => [p.id, p]));
-                        recordData.owners = recordData.owners.map(ownerRef => allPersonsMap.get(ownerRef.id) || ownerRef);
-                    }
-                }
-                return { success: true, data: recordData };
+                return { success: true, data: { id: docSnap.id, ...docSnap.data() } };
             } else {
                 return { success: false, error: "Kayıt bulunamadı." };
             }
@@ -318,160 +330,228 @@ export const ipRecordsService = {
             return { success: false, error: error.message };
         }
     },
-    findAllDescendants(transactionId, transactions) {
-        const children = transactions.filter(tx => tx.parentId === transactionId);
-        return children.reduce((acc, child) => [...acc, child.transactionId, ...this.findAllDescendants(child.transactionId, transactions)], []);
-    },
-    async addRecord(record) {
-        const user = authService.getCurrentUser();
-        if(!user) return {success: false, error: "Kullanıcı girişi yapılmamış."};
-        const timestamp = new Date().toISOString();
-        const filesWithIds = (record.files || []).map(f => ({ ...f, id: f.id || generateUUID() }));
-        const newRecord = { ...record, userId: user.uid, userEmail: user.email, createdAt: timestamp, updatedAt: timestamp, transactions: [], files: filesWithIds };
-        if (isFirebaseAvailable) {
-            try {
-                const docRef = await addDoc(collection(db, 'ipRecords'), newRecord);
-                return { success: true, id: docRef.id };
-            } catch (error) {
-                return { success: false, error: error.message };
-            }
-        }
-        const records = JSON.parse(localStorage.getItem('ipRecords') || '[]');
-        newRecord.id = generateUUID();
-        records.push(newRecord);
-        localStorage.setItem('ipRecords', JSON.stringify(records));
-        return { success: true, id: newRecord.id };
-    },
-    async addTransactionToRecord(recordId, transactionData) {
-        const user = authService.getCurrentUser();
-        if(!user) return {success: false, error: "Kullanıcı girişi yapılmamış."};
-        if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor." };
-        try {
-            const recordRef = doc(db, 'ipRecords', recordId);
-            const newTransaction = {
-                transactionId: generateUUID(),
-                timestamp: new Date().toISOString(),
-                userId: user.uid,
-                userEmail: user.email,
-                ...transactionData 
-            };
-            await updateDoc(recordRef, {
-                transactions: arrayUnion(newTransaction), 
-                updatedAt: new Date().toISOString()
-            });
-            return { success: true, transaction: newTransaction };
-        } catch (error) {
-            return { success: false, error: error.message };
-        }
-    },
-    async getRecords() {
-        if (isFirebaseAvailable) {
-            const user = authService.getCurrentUser();
-            if(!user) return {success: true, data:[]};
-            try {
-                const q = user.role === 'superadmin' ? query(collection(db, 'ipRecords'), orderBy('createdAt', 'desc')) : query(collection(db, 'ipRecords'), where('userId', '==', user.uid), orderBy('createdAt', 'desc'));
-                const snapshot = await getDocs(q);
-                let records = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-                const allOwnersMap = new Map(); 
-                const allPersonsSnapshot = await getDocs(collection(db, 'persons'));
-                allPersonsSnapshot.forEach(personDoc => allOwnersMap.set(personDoc.id, personDoc.data()));
-                records = records.map(record => {
-                    const enrichedOwners = (record.owners || []).map(ownerRef => {
-                        const personData = allOwnersMap.get(ownerRef.id); 
-                        return personData ? { id: ownerRef.id, ...personData } : ownerRef; 
-                    });
-                    return { ...record, owners: enrichedOwners };
-                });
-                return { success: true, data: records };
-            } catch (error) {
-                return { success: false, error: error.message };
-            }
-        }
-        return { success: true, data: JSON.parse(localStorage.getItem('ipRecords') || '[]') };
-    },
     async updateRecord(recordId, updates) {
-        const user = authService.getCurrentUser();
-        if(!user) return {success: false, error: "Kullanıcı girişi yapılmamış."};
-        const timestamp = new Date().toISOString();
-        if (isFirebaseAvailable) {
-            try {
-                const recordRef = doc(db, 'ipRecords', recordId);
-                await updateDoc(recordRef, { ...updates, updatedAt: timestamp });
-                return { success: true };
-            } catch (error) {
-                return { success: false, error: error.message };
-            }
-        } else {
+        if (!isFirebaseAvailable) {
             let records = JSON.parse(localStorage.getItem('ipRecords') || '[]');
-            let record = records.find(r => r.id === recordId);
-            if (record) {
-                Object.assign(record, updates, { updatedAt: timestamp });
+            const index = records.findIndex(r => r.id === recordId);
+            if (index > -1) {
+                records[index] = { ...records[index], ...updates };
                 localStorage.setItem('ipRecords', JSON.stringify(records));
                 return { success: true };
             }
             return { success: false, error: "Kayıt yerel depolamada bulunamadı." };
         }
+        try {
+            await updateDoc(doc(db, 'ipRecords', recordId), updates);
+            return { success: true };
+        } catch (error) {
+            return { success: false, error: error.message };
+        }
     },
     async deleteRecord(recordId) {
-        if (isFirebaseAvailable) {
-            try {
-                await deleteDoc(doc(db, 'ipRecords', recordId));
-                return { success: true };
-            } catch (error) {
-                return { success: false, error: error.message };
-            }
-        } else {
+        if (!isFirebaseAvailable) {
             const records = JSON.parse(localStorage.getItem('ipRecords') || '[]').filter(r => r.id !== recordId);
             localStorage.setItem('ipRecords', JSON.stringify(records));
             return { success: true };
         }
-    }
-};
-
-// --- Task Service ---
-export const taskService = {
-    async createTask(taskData) {
-        if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor." };
         try {
-            const user = authService.getCurrentUser();
-            const docRef = await addDoc(collection(db, 'tasks'), {
-                ...taskData,
-                createdBy_uid: user.uid, createdBy_email: user.email,
-                createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
-                history: [{ timestamp: new Date().toISOString(), userId: user.uid, userEmail: user.email, action: `İş oluşturuldu ve ${taskData.assignedTo_email} kişisine atandı.` }]
-            });
-            return { success: true, id: docRef.id };
-        } catch (error) {
-            return { success: false, error: error.message };
-        }
-    },
-    async updateTask(taskId, updates) {
-        if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor." };
-        try {
-            const taskRef = doc(db, "tasks", taskId);
-            const user = authService.getCurrentUser();
-            let actionMessage = `İş güncellendi.`;
-            if (updates.status) {
-                actionMessage = `İş durumu "${updates.status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}" olarak güncellendi.`;
-            }
-            const updateAction = { timestamp: new Date().toISOString(), userId: user.uid, userEmail: user.email, action: actionMessage };
-            await updateDoc(taskRef, { ...updates, updatedAt: new Date().toISOString(), history: arrayUnion(updateAction) });
+            await deleteDoc(doc(db, 'ipRecords', recordId));
             return { success: true };
         } catch (error) {
             return { success: false, error: error.message };
         }
+    }
+};
+
+// --- Task Service (For Workflow Management) ---
+export const taskService = {
+    async createTask(taskData) {
+        if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor. İş oluşturulamaz." };
+        try {
+            const user = authService.getCurrentUser();
+            const docRef = await addDoc(collection(db, 'tasks'), {
+                ...taskData,
+                createdBy_uid: user.uid,
+                createdBy_email: user.email,
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+                history: [{
+                    timestamp: new Date().toISOString(),
+                    userId: user.uid,
+                    userEmail: user.email,
+                    action: `İş oluşturuldu ve ${taskData.assignedTo_email} kişisine atandı.`
+                }]
+            });
+            return { success: true, id: docRef.id };
+        } catch (error) {
+            console.error("İş oluşturulurken hata:", error);
+            return { success: false, error: error.message || "İş oluşturulurken beklenmeyen bir hata oluştu." };
+        }
     },
+    
+    async updateTask(taskId, updates) {
+        if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor. İş güncellenemez." };
+        try {
+            const taskRef = doc(db, "tasks", taskId);
+            const user = authService.getCurrentUser();
+            
+            let actionMessage = `İş güncellendi.`;
+            if (updates.status) {
+                actionMessage = `İş durumu "${updates.status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}" olarak güncellendi.`;
+            } else {
+                const changedFields = Object.keys(updates).filter(key => key !== 'updatedAt' && key !== 'history' && key !== 'files');
+                if (changedFields.length > 0) {
+                    actionMessage = `İş güncellendi. Değişen alanlar: ${changedFields.join(', ')}.`;
+                }
+            }
+
+            const updateAction = {
+                timestamp: new Date().toISOString(),
+                userId: user.uid,
+                userEmail: user.email,
+                action: actionMessage
+            };
+            
+            const currentTaskDoc = await getDoc(taskRef);
+            const currentTaskData = currentTaskDoc.data();
+
+            let updatedFilesArray = currentTaskData.files || [];
+            if (updates.files !== undefined) {
+                const newFilesToAdd = [];
+                for (const incomingFile of updates.files) {
+                    const existingFileIndex = updatedFilesArray.findIndex(f => f.id === incomingFile.id);
+                    if (existingFileIndex > -1) {
+                        updatedFilesArray[existingFileIndex] = { ...updatedFilesArray[existingFileIndex], ...incomingFile };
+                    } else {
+                        newFilesToAdd.push({ ...incomingFile, id: incomingFile.id || generateUUID() });
+                    }
+                }
+                updatedFilesArray = updatedFilesArray.filter(existingFile => updates.files.some(incomingFile => incomingFile.id === existingFile.id)).concat(newFilesToAdd);
+            }
+            
+            const finalUpdates = { ...updates };
+            delete finalUpdates.files;
+
+            await updateDoc(taskRef, {
+                ...finalUpdates,
+                files: updatedFilesArray,
+                updatedAt: new Date().toISOString(),
+                history: arrayUnion(updateAction)
+            });
+            return { success: true };
+        } catch (error) {
+            console.error("İş güncellenirken hata:", error);
+            return { success: false, error: error.message || "İş güncellenirken beklenmeyen bir hata oluştu." };
+        }
+    },
+
+    async getTasksForUser(userId) {
+        if (!isFirebaseAvailable) return { success: true, data: [] };
+        try {
+            const q = query(collection(db, 'tasks'), where('assignedTo_uid', '==', userId), orderBy('dueDate', 'asc'));
+            const querySnapshot = await getDocs(q);
+            const tasks = querySnapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+            return { success: true, data: tasks };
+        } catch (error) {
+            console.error("Kullanıcı için işler alınırken hata:", error);
+            return { success: false, error: error.message || "İşler yüklenirken beklenmeyen bir hata oluştu.", data: [] };
+        }
+    },
+
     async getAllTasks() {
         if (!isFirebaseAvailable) return { success: true, data: [] };
         try {
             const q = query(collection(db, 'tasks'), orderBy('createdAt', 'desc'));
             const querySnapshot = await getDocs(q);
-            return { success: true, data: querySnapshot.docs.map(d => ({ id: d.id, ...d.data() })) };
+            const tasks = querySnapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+            return { success: true, data: tasks };
         } catch (error) {
-            return { success: false, error: error.message };
+            console.error("Tüm işler alınırken hata:", error);
+            return { success: false, error: error.message || "İşler yüklenirken beklenmeyen bir hata oluştu.", data: [] };
         }
     },
-    // DÜZELTME: Eksik olan fonksiyon eklendi.
+
+    async getTaskById(taskId) {
+        if (!isFirebaseAvailable) {
+            const allTasks = JSON.parse(localStorage.getItem('tasks') || '[]');
+            const task = allTasks.find(t => t.id === taskId);
+            return { success: !!task, data: task, error: task ? undefined : "İş yerel depolamada bulunamadı." };
+        }
+        try {
+            const taskDoc = await getDoc(doc(db, 'tasks', taskId));
+            if (taskDoc.exists()) {
+                return { success: true, data: { id: taskDoc.id, ...taskDoc.data() } };
+            } else {
+                return { success: false, error: "İş bulunamadı." };
+            }
+        } catch (error) {
+            console.error("İş ID ile alınırken hata:", error);
+            return { success: false, error: error.message || "İş yüklenirken beklenmeyen bir hata oluştu." };
+        }
+    },
+
+    async deleteTask(taskId) {
+        if (!isFirebaseAvailable) {
+            let tasks = JSON.parse(localStorage.getItem('tasks') || '[]');
+            const taskToDelete = tasks.find(t => t.id === taskId);
+            if (taskToDelete && taskToDelete.relatedIpRecordId && taskToDelete.transactionIdForDeletion) {
+                console.warn("Yerel modda ilgili IP kaydından işlem silme desteklenmiyor.");
+            }
+            tasks = tasks.filter(task => task.id !== taskId);
+            localStorage.setItem('tasks', JSON.stringify(tasks));
+            return { success: true };
+        }
+        try {
+            const taskDoc = await getDoc(doc(db, 'tasks', taskId));
+            if (taskDoc.exists()) {
+                const taskData = taskDoc.data();
+                if (taskData.relatedIpRecordId && taskData.transactionIdForDeletion) {
+                    await ipRecordsService.deleteTransaction(taskData.relatedIpRecordId, taskData.transactionIdForDeletion);
+                }
+            }
+            await deleteDoc(doc(db, 'tasks', taskId));
+            return { success: true };
+        } catch (error) {
+            console.error("İş silinirken hata:", error);
+            return { success: false, error: error.message || "İş silinirken beklenmeyen bir hata oluştu." };
+        }
+    },
+    
+    async reassignTasks(taskIds, newUserId, newUserEmail) {
+        if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor. İşler atanamaz." };
+        
+        const user = authService.getCurrentUser();
+        if (!user) return { success: false, error: "Kullanıcı girişi yapılmamış." };
+
+        const batch = writeBatch(db);
+
+        const actionMessage = `İş, ${user.email} tarafından ${newUserEmail} kullanıcısına atandı.`;
+        const updateAction = {
+            timestamp: new Date().toISOString(),
+            userId: user.uid,
+            userEmail: user.email,
+            action: actionMessage
+        };
+
+        taskIds.forEach(taskId => {
+            const taskRef = doc(db, "tasks", taskId);
+            batch.update(taskRef, {
+                assignedTo_uid: newUserId,
+                assignedTo_email: newUserEmail,
+                updatedAt: new Date().toISOString(),
+                history: arrayUnion(updateAction)
+            });
+        });
+
+        try {
+            await batch.commit();
+            return { success: true };
+        } catch (error) {
+            console.error("Toplu iş ataması sırasında hata:", error);
+            return { success: false, error: error.message || "Toplu iş ataması sırasında beklenmeyen bir hata oluştu." };
+        }
+    },
+
     async getAllUsers() {
         if (!isFirebaseAvailable) return { success: true, data: [] };
         try {
@@ -481,10 +561,164 @@ export const taskService = {
             return { success: true, data: users };
         } catch (error) {
             console.error("Tüm kullanıcılar alınırken hata:", error);
-            return { success: false, error: error.message, data: [] };
+            return { success: false, error: error.message || "Kullanıcılar yüklenirken beklenmeyen bir hata oluştu.", data: [] };
         }
     }
 };
+
+// --- Accrual Service ---
+export const accrualService = {
+    async addAccrual(accrualData) {
+        if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor. Tahakkuk eklenemez." };
+        const user = authService.getCurrentUser();
+        if (!user) return { success: false, error: "Kullanıcı girişi yapılmamış." };
+        
+        try {
+            const newAccrual = {
+                ...accrualData,
+                id: generateUUID(),
+                status: 'unpaid',
+                createdAt: new Date().toISOString(),
+                createdBy_uid: user.uid,
+                createdBy_email: user.email,
+                files: (accrualData.files || []).map(f => ({ ...f, id: f.id || generateUUID() })),
+                paymentDate: null
+            };
+            await setDoc(doc(db, 'accruals', newAccrual.id), newAccrual);
+            return { success: true, data: newAccrual };
+        } catch (error) {
+            console.error("Tahakkuk oluşturulurken hata:", error);
+            return { success: false, error: error.message || "Tahakkuk oluşturulurken beklenmeyen bir hata oluştu." };
+        }
+    },
+
+    async getAccruals() {
+        if (!isFirebaseAvailable) return { success: true, data: [] };
+        try {
+            const q = query(collection(db, 'accruals'), orderBy('createdAt', 'desc'));
+            const querySnapshot = await getDocs(q);
+            return { success: true, data: querySnapshot.docs.map(d => ({id: d.id, ...d.data()})) };
+        } catch (error) {
+            console.error("Tahakkuklar alınırken hata:", error);
+            return { success: false, error: error.message || "Tahakkuklar yüklenirken beklenmeyen bir hata oluştu.", data: [] };
+        }
+    },
+
+    async updateAccrual(accrualId, updates) {
+        if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor. Tahakkuk güncellenemez." };
+        try {
+            const accrualRef = doc(db, 'accruals', accrualId);
+            const currentAccrualDoc = await getDoc(accrualRef);
+            if (!currentAccrualDoc.exists()) {
+                return { success: false, error: "Tahakkuk bulunamadı." };
+            }
+            const currentAccrualData = currentAccrualDoc.data();
+
+            let updatedFiles = currentAccrualData.files || [];
+            if (updates.files !== undefined) {
+                const newFilesToAdd = [];
+                for (const incomingFile of updates.files) {
+                    const existingFileIndex = updatedFiles.findIndex(f => f.id === incomingFile.id);
+                    if (existingFileIndex > -1) {
+                        updatedFiles[existingFileIndex] = { ...updatedFiles[existingFileIndex], ...incomingFile };
+                    } else {
+                        newFilesToAdd.push({ ...incomingFile, id: incomingFile.id || generateUUID() });
+                    }
+                }
+                updatedFiles = updatedFiles.filter(existingFile => updates.files.some(incomingFile => incomingFile.id === existingFile.id)).concat(newFilesToAdd);
+            }
+            
+            const finalUpdates = { ...updates };
+            delete finalUpdates.files;
+
+            await updateDoc(accrualRef, {
+                ...finalUpdates,
+                files: updatedFiles
+            });
+            return { success: true };
+        } catch (error) {
+            console.error("Tahakkuk güncellenirken hata:", error);
+            return { success: false, error: error.message || "Tahakkuk güncellenirken beklenmeyen bir hata oluştu." };
+        }
+    }
+};
+
+// --- Demo Data Function ---
+export async function createDemoData() {
+    console.log('🧪 Demo verisi oluşturuluyor...');
+    const user = authService.getCurrentUser();
+    if (!user) {
+        console.error('Demo verisi oluşturmak için kullanıcı girişi yapılmamış.');
+        return;
+    }
+
+    try {
+        const demoPersonEmail = `demo.owner.${Date.now()}@example.com`;
+        const demoPerson = {
+            personType: 'real',
+            firstName: 'Demo',
+            lastName: 'Hak Sahibi',
+            name: 'Demo Hak Sahibi',
+            email: demoPersonEmail,
+            phone: '0555 123 4567',
+            address: 'Demo Adres, No:1, İstanbul',
+            country: 'Türkiye',
+            city: 'İstanbul'
+        };
+        const personResult = await personsService.addPerson(demoPerson);
+        if (!personResult.success) {
+            console.error("Demo kişi oluşturulamadı:", personResult.error);
+            return;
+        }
+        const demoOwner = { 
+            id: personResult.data.id, 
+            name: personResult.data.name, 
+            personType: personResult.data.personType,
+            email: personResult.data.email 
+        };
+
+        const demoRecords = [
+            {
+                type: 'patent',
+                title: 'Örnek Mobil Cihaz Batarya Teknolojisi',
+                status: 'application',
+                applicationNumber: 'PT/2024/001',
+                applicationDate: '2024-03-15',
+                description: 'Bu, lityum-iyon pillerin ömrünü uzatan yeni bir batarya teknolojisi için yapılmış bir demo patent başvurusudur.',
+                owners: [demoOwner]
+            },
+            {
+                type: 'trademark',
+                title: 'Hızlı Kargo Lojistik',
+                status: 'registered',
+                applicationNumber: 'TM/2023/105',
+                applicationDate: '2023-11-20',
+                registrationDate: '2024-05-10',
+                description: 'Lojistik ve kargo hizmetleri için tescilli bir marka demosu.',
+                owners: [demoOwner],
+                trademarkImage: {
+                    name: 'logo_ornek.jpg',
+                    type: 'image/jpeg',
+                    size: 1024,
+                    content: 'data:image/jpeg;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII='
+                },
+                renewalDate: '2025-06-15'
+            }
+        ];
+
+        for (const record of demoRecords) {
+            const addRecordResult = await ipRecordsService.addRecord(record);
+            if (!addRecordResult.success) {
+                console.error("Demo kayıt oluşturulamadı:", addRecordResult.error);
+            }
+        }
+        console.log('✅ Demo verisi başarıyla oluşturuldu!');
+
+    } catch (error) {
+        console.error('Demo verisi oluşturulurken hata:', error);
+    }
+}
+
 
 // --- Exports ---
 export { auth, db };
