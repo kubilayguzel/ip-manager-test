@@ -164,7 +164,8 @@
                     document.querySelector('.page-subtitle').textContent = 'Mevcut bir kaydın detaylarını düzenleyin.';
                     document.getElementById('saveRecordBtn').textContent = 'Kaydı Güncelle';
                 }
-    
+                
+                // DÜZELTME: Olay dinleyicilerini kurmadan ÖNCE veriyi yükle ve bekle
                 await this.loadInitialData();
                 this.setupEventListeners();
                 
