@@ -214,42 +214,64 @@
         }
         .bulk-indexing-table th:nth-child(2), /* PDF Dosya Adı */
         .bulk-indexing-table td:nth-child(2) {
-            width: 15%; /* Azaltıldı */
-            max-width: 120px; /* Azaltıldı */
+            width: 12%; /* Daha da azaltıldı */
+            max-width: 100px; /* Daha da azaltıldı */
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: normal; /* Metnin kaydırılmasına izin ver */
         }
         .bulk-indexing-table th:nth-child(3), /* Başvuru No */
         .bulk-indexing-table td:nth-child(3) {
-            width: 10%;
-            max-width: 90px; /* Azaltıldı */
+            width: 8%; /* Azaltıldı */
+            max-width: 80px; /* Azaltıldı */
         }
         .bulk-indexing-table th:nth-child(4), /* İlgili Portföy Kaydı */
         .bulk-indexing-table td:nth-child(4) {
-            width: 25%; /* Azaltıldı */
-            max-width: 200px; /* Azaltıldı */
+            width: 20%; /* Azaltıldı */
+            max-width: 180px; /* Azaltıldı */
             white-space: normal;
         }
-        .bulk-indexing-table th:nth-child(5), /* Alt İşlem Türü */
+        .bulk-indexing-table th:nth-child(5), /* Parent İşlem Türü */
         .bulk-indexing-table td:nth-child(5) {
-            width: 15%; /* Arttırıldı */
-            max-width: 120px; /* Arttırıldı */
+            width: 15%; /* Yeni Sütun Genişliği */
+            max-width: 120px;
+            white-space: normal;
         }
-        .bulk-indexing-table th:nth-child(6), /* Tebliğ Tarihi */
+        .bulk-indexing-table th:nth-child(6), /* Alt İşlem Türü */
         .bulk-indexing-table td:nth-child(6) {
-            width: 10%;
-            max-width: 100px;
+            width: 10%; /* Arttırıldı */
+            max-width: 90px; /* Azaltıldı */
         }
-        .bulk-indexing-table th:nth-child(7), /* Durum */
+        .bulk-indexing-table th:nth-child(7), /* Tebliğ Tarihi */
         .bulk-indexing-table td:nth-child(7) {
             width: 10%;
             max-width: 100px;
         }
-        .bulk-indexing-table th:nth-child(8), /* Aksiyonlar */
+        .bulk-indexing-table th:nth-child(8), /* Durum */
         .bulk-indexing-table td:nth-child(8) {
+            width: 10%;
+            max-width: 100px;
+        }
+        .bulk-indexing-table th:nth-child(9), /* Aksiyonlar */
+        .bulk-indexing-table td:nth-child(9) {
             width: 8%; /* Azaltıldı */
             max-width: 80px; /* Azaltıldı */
+        }
+        /* Yeni CSS: İşlem Görmüş ve Beklemede Tabloları */
+        .bulk-indexing-section .table-title {
+            font-size: 1.2em;
+            color: #1e3c72;
+            margin-top: 30px;
+            margin-bottom: 15px;
+        }
+        .bulk-indexing-section .table-section {
+            margin-bottom: 40px;
+            padding-bottom: 20px;
+            border-bottom: 1px dashed #e1e8ed;
+        }
+        .bulk-indexing-section .table-section:last-of-type {
+            margin-bottom: 0;
+            border-bottom: none;
         }
     </style>
 </head>
@@ -384,21 +406,48 @@
                                     <div class="bulk-file-info" id="bulkFilesInfo">Henüz PDF dosyası seçilmedi.</div>
                                 </div>
 
-                                <div class="bulk-indexing-table-container" id="bulkIndexingTableContainer" style="display:none;">
-                                    <table class="bulk-indexing-table" id="bulkIndexingTable">
-                                        <thead>
-                                            <tr>
-                                                <th><input type="checkbox" id="selectAllBulkJobs"></th> <th>PDF Dosya Adı</th>
-                                                <th>Başvuru No</th>
-                                                <th>İlgili Portföy Kaydı</th>
-                                                <th>Parent İşlem Türü</th> <th>Alt İşlem Türü</th> <th>Tebliğ Tarihi</th> <th>Durum</th>
-                                                <th>Aksiyonlar</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            </tbody>
-                                    </table>
-                                    <p id="bulkTableNoJobs" style="text-align:center; padding: 20px; display:none;">Yüklenecek PDF bulunamadı veya işlenecek dosya yok.</p>
+                                <div class="bulk-indexing-section">
+                                    <div class="table-section pending-jobs-section">
+                                        <h3 class="table-title">Beklemede Olan / İşlenecek PDF'ler</h3>
+                                        <div class="bulk-indexing-table-container" id="bulkIndexingTableContainer">
+                                            <table class="bulk-indexing-table" id="bulkIndexingTable">
+                                                <thead>
+                                                    <tr>
+                                                        <th><input type="checkbox" id="selectAllBulkJobs"></th> <th>PDF Dosya Adı</th>
+                                                        <th>Başvuru No</th>
+                                                        <th>İlgili Portföy Kaydı</th>
+                                                        <th>Parent İşlem Türü</th> <th>Alt İşlem Türü</th> <th>Tebliğ Tarihi</th> <th>Durum</th>
+                                                        <th>Aksiyonlar</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    </tbody>
+                                            </table>
+                                            <p id="bulkTableNoJobs" style="text-align:center; padding: 20px; display:none;">Yüklenecek PDF bulunamadı veya işlenecek dosya yok.</p>
+                                        </div>
+                                    </div>
+
+                                    <div class="table-section indexed-jobs-section" style="display:none;">
+                                        <h3 class="table-title">İndekslenen PDF'ler</h3>
+                                        <div class="bulk-indexing-table-container">
+                                            <table class="bulk-indexing-table" id="indexedBulkTable">
+                                                <thead>
+                                                    <tr>
+                                                        <th>PDF Dosya Adı</th>
+                                                        <th>Başvuru No</th>
+                                                        <th>İlgili Portföy Kaydı</th>
+                                                        <th>Parent İşlem Türü</th>
+                                                        <th>Alt İşlem Türü</th>
+                                                        <th>Tebliğ Tarihi</th>
+                                                        <th>Durum</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    </tbody>
+                                            </table>
+                                            <p id="indexedBulkTableNoJobs" style="text-align:center; padding: 20px; display:none;">İndekslenmiş PDF bulunamadı.</p>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                             </div>
@@ -447,12 +496,13 @@
                     this.allRecords = []; 
                     this.selectedRecordExisting = null; 
                     this.selectedRecordManual = null; 
-                    // this.selectedRecordBulk = null; // Toplu indeksleme için seçili master kayıt filtresi kaldırıldı
+                    this.selectedRecordBulk = null; // Toplu indeksleme için seçili master kayıt filtresi kaldırıldı
                     this.uploadedFiles = new Map(); 
                     this.selectedTransactionId = null; 
                     this.activeTab = 'existing-transaction-pane';
                     
-                    this.pendingBulkIndexJobs = []; 
+                    this.pendingBulkIndexJobs = []; // Beklemede/işlenecek işler
+                    this.indexedBulkJobs = []; // Başarıyla indekslenmiş işler
                     this.bulkIndexingRecordsCache = new Map(); // Kayıtları getRecordById ile çekerken önbellek
 
                     this.init();
@@ -1196,7 +1246,7 @@
                                         fileName: job.fileName,
                                         fileType: job.fileObject.type,
                                         fileSize: job.fileObject.size,
-                                        fileUrl: fileContent, 
+                                        fileUrl: fileContent, // Düzeltme: fileContent olmalı
                                         relatedTransactionId: newChildTransactionId, 
                                         documentDesignation: job.childTransactionType 
                                     };
@@ -1223,8 +1273,17 @@
                             } 
 
                             showNotification(`Toplu indeksleme tamamlandı. Başarılı: ${successfulJobs}, Hata: ${failedJobs}`, 'info', 5000);
-                            this.resetForm();
-                            await this.loadRecords(); 
+                            
+                            // Başarılı işleri pendingBulkIndexJobs'tan indexedBulkJobs'a taşı
+                            this.pendingBulkIndexJobs = this.pendingBulkIndexJobs.filter(job => job.status !== 'success');
+                            selectedBulkJobs.forEach(job => {
+                                if (job.status === 'success') {
+                                    this.indexedBulkJobs.push(job);
+                                }
+                            });
+                            
+                            this.resetForm(); // Formun genelini sıfırla, ama indexedBulkJobs'u koru
+                            await this.loadRecords(); // Kayıtları yeniden yükle (güncel transaction'ları almak için)
                         }
                     } catch (error) {
                         showNotification(`Genel hata oluştu: ${error.message}`, 'error');
@@ -1275,13 +1334,15 @@
 
                     // Toplu indeksleme tabı sıfırlama
                     this.selectedRecordBulk = null; 
-                    this.pendingBulkIndexJobs = [];
+                    this.pendingBulkIndexJobs = []; // Bekleyen işleri temizle
                     document.getElementById('bulkDeliveryDate').value = '';
-                    // document.getElementById('bulkChildTransactionType').value = ''; // Ortak Alt İşlem Türü inputu kaldırıldığı için
                     document.getElementById('bulkFilesInfo').textContent = 'Henüz PDF dosyası seçilmedi.';
                     document.getElementById('bulkIndexingTableContainer').style.display = 'none';
                     document.getElementById('bulkIndexingTable').querySelector('tbody').innerHTML = '';
                     document.getElementById('bulkTableNoJobs').style.display = 'none';
+
+                    // İndekslenen işleri tekrar render etmek için
+                    this.renderIndexedBulkTable();
 
                     this.setRequiredFieldsForActiveTab();
                 }
@@ -1300,6 +1361,14 @@
                     
                     showNotification('PDF dosyaları işleniyor...', 'info', 3000);
 
+                    // Tüm Firestore kayıtlarındaki dosyaları önbelleğe al
+                    const allIndexedFiles = new Set(); // {fileName_fileSize} formatında benzersiz dosyalar
+                    this.allRecords.forEach(record => {
+                        (record.files || []).forEach(file => {
+                            allIndexedFiles.add(`${file.fileName}_${file.fileSize}`);
+                        });
+                    });
+
                     // Ortak tebliğ tarihi inputundan değeri güvenli bir şekilde al
                     const commonTebligDateInput = document.getElementById('bulkDeliveryDate');
                     const commonTebligDate = commonTebligDateInput ? commonTebligDateInput.value : '';
@@ -1314,11 +1383,18 @@
 
                     for (const file of files) {
                         // Mükerrer dosya kontrolü (fileName ve size kombinasyonuna göre)
-                        const isDuplicate = this.pendingBulkIndexJobs.some(job => 
+                        const fileIdentifier = `${file.name}_${file.size}`;
+                        if (allIndexedFiles.has(fileIdentifier)) { // Firestore'daki dosya geçmişini kontrol et
+                            showNotification(`'${file.name}' (${formatFileSize(file.size)}) zaten indekslenmiş ve atlandı.`, 'warning', 6000);
+                            continue;
+                        }
+                        
+                        // Pending Jobs listesindeki mükerrer dosya kontrolü
+                        const isDuplicateInPendingJobs = this.pendingBulkIndexJobs.some(job => 
                             job.fileName === file.name && job.fileObject.size === file.size
                         );
-                        if (isDuplicate) {
-                            showNotification(`'${file.name}' zaten listede mevcut ve atlandı.`, 'warning');
+                        if (isDuplicateInPendingJobs) {
+                            showNotification(`'${file.name}' zaten işlenecekler listesinde mevcut ve atlandı.`, 'warning');
                             continue;
                         }
 
@@ -1391,16 +1467,15 @@
                     const tableBody = document.getElementById('bulkIndexingTable').querySelector('tbody');
                     const tableContainer = document.getElementById('bulkIndexingTableContainer');
                     const noJobsMessage = document.getElementById('bulkTableNoJobs');
-                    tableBody.innerHTML = '';
+                    tableBody.innerHTML = ''; // Bekleyenler tablosunu temizle
 
                     if (this.pendingBulkIndexJobs.length === 0) {
                         tableContainer.style.display = 'none';
                         noJobsMessage.style.display = 'block';
-                        return;
+                    } else {
+                        tableContainer.style.display = 'block';
+                        noJobsMessage.style.display = 'none';
                     }
-
-                    tableContainer.style.display = 'block';
-                    noJobsMessage.style.display = 'none';
 
                     // Tümünü Seç checkbox'ının durumunu güncelle
                     const selectAllBulkJobsCheckbox = document.getElementById('selectAllBulkJobs');
@@ -1472,8 +1547,9 @@
                                             ${!isJobSelectable ? 'disabled' : ''}>
                                         <div class="search-results-container bulk-search-results-container" data-job-id="${job.jobId}"></div>
                                     </div>` : ''}
+                                    ${job.matchedRecordId ? populateParentSelectHtml(job.jobId, job.matchedRecordId, job.selectedParentTransactionId) : '<select disabled><option value="">Önce Kayıt Seçin</option></select>'}
                             </td>
-                            <td>${job.matchedRecordId ? populateParentSelectHtml(job.jobId, job.matchedRecordId, job.selectedParentTransactionId) : '<select disabled><option value="">Önce Kayıt Seçin</option></select>'}</td> <td>${populateChildTypeSelectHtml(job.jobId, job.childTransactionType)}</td> <td><input type="date" class="form-input bulk-job-delivery-date" data-job-id="${job.jobId}" value="${job.tebligDate || ''}" ${!isJobSelectable ? 'disabled' : ''}></td> <td><span class="status-text ${job.status}">${job.status === 'pending' ? 'Beklemede' : job.status === 'ready' ? 'Hazır' : job.status === 'processing' ? 'İşleniyor' : job.status === 'success' ? 'Başarılı' : 'Hata'}</span>
+                            <td>${populateChildTypeSelectHtml(job.jobId, job.childTransactionType)}</td> <td><input type="date" class="form-input bulk-job-delivery-date" data-job-id="${job.jobId}" value="${job.tebligDate || ''}" ${!isJobSelectable ? 'disabled' : ''}></td> <td><span class="status-text ${job.status}">${job.status === 'pending' ? 'Beklemede' : job.status === 'ready' ? 'Hazır' : job.status === 'processing' ? 'İşleniyor' : job.status === 'success' ? 'Başarılı' : 'Hata'}</span>
                                 ${job.errorMessage ? `<br><small style="color:red;">${job.errorMessage}</small>` : ''}
                             </td>
                             <td>
@@ -1533,6 +1609,9 @@
                     });
 
                     this.checkFormCompleteness();
+
+                    // İndekslenenler tablosunu da render et
+                    this.renderIndexedBulkTable();
                 }
 
                 // Job'ın tamamlanma durumunu kontrol eden yeni yardımcı fonksiyon
@@ -1652,9 +1731,9 @@
                     const jobId = e.target.dataset.jobId;
                     const job = this.pendingBulkIndexJobs.find(j => j.jobId === jobId);
                     if (job) {
-                        job.status = 'pending'; 
+                        job.status = 'pending'; // Tekrar denemek için "Beklemede" durumuna al
                         job.errorMessage = ''; 
-                        job.isSelected = true; 
+                        job.isSelected = true; // Tekrar denendiğinde seçili olsun
                         showNotification(`İşlem tekrar denenmek üzere işaretlendi: ${job.fileName}`, 'info');
                         this.renderBulkIndexingTable();
                         this.checkFormCompleteness();
@@ -1664,21 +1743,19 @@
                 // updateBulkJobsTebligDate artık ortak bir tebliğ tarihi alanı yok, sadece checkFormCompleteness'e etki eder
                 updateBulkJobsTebligDate = (e) => { 
                     const newDate = e.target.value;
-                    // Tüm işlerin tebligDate'ini güncellemek yerine, sadece formdaki değeri alıp Job'ları yeniden render etmeliyiz.
-                    // Ya da şöyle yapalım: Eğer PDF'ler yüklendikten sonra bu alan değişirse, sadece Beklemede/Hazır durumundaki Job'ların tebligDate'ini güncelleyelim.
+                    // Eğer yeni tarih boşsa ve bazı job'lar "Hazır" durumundaysa, onları "Beklemede"ye çek
+                    // Yoksa, sadece checkFormCompleteness'i tetikle
                     this.pendingBulkIndexJobs.forEach(job => {
-                        // Sadece pending veya ready durumundaki job'ları güncelle, işlenmişleri elleme
-                        if (job.status === 'pending' || job.status === 'ready') {
-                            job.tebligDate = newDate;
-                            // Durumu yeniden kontrol et
+                        // Job'ın tebligDate'ini ortak tarihe set et (eğer henüz işlenmediyse)
+                        if (job.status === 'pending' || job.status === 'ready' || job.status === 'error') {
+                            job.tebligDate = newDate; // Değeri set et
+                            // Durumu yeniden değerlendir
                             job.status = this.checkJobCompleteness(job) ? 'ready' : 'pending';
                         }
                     });
                     this.renderBulkIndexingTable(); // UI'ı güncelle
                     this.checkFormCompleteness();
                 }
-
-                // updateBulkJobsChildType kaldırıldığı için bu fonksiyon da kaldırıldı.
             }
             
             document.addEventListener('DOMContentLoaded', async () => {
