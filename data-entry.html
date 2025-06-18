@@ -6,27 +6,89 @@
     <title>IP Manager - Yeni Kayıt</title>
     <link rel="stylesheet" href="css/shared-styles.css">
     <style>
-        /* CSS stilleri öncekiyle aynıdır, değişiklik yoktur */
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333; display: flex; }
-        .page-wrapper { flex-grow: 1; display: flex; flex-direction: column; height: 100vh; overflow-y: auto; background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #333;
+            display: flex;
+        }
+        .page-wrapper {
+            flex-grow: 1; display: flex; flex-direction: column;
+            height: 100vh; overflow-y: auto;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        }
         .main-container { width: 100%; padding: 30px; margin: 0; }
+        body > .header { display: none; }
         .page-header { background: rgba(255, 255, 255, 0.95); padding: 30px; border-radius: 20px; margin-bottom: 30px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1); }
-        .form-container { background: rgba(255, 255, 255, 0.95); border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); padding: 30px; }
+        .page-title { font-size: 2em; color: #1e3c72; margin-bottom: 10px; }
+        .page-subtitle { color: #666; font-size: 1.1em; }
+        .form-container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            padding: 30px;
+        }
         .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
         .form-group { margin-bottom: 25px; display: flex; flex-direction: column; }
         .form-group.full-width { grid-column: 1 / -1; }
         .form-label { display: block; margin-bottom: 8px; color: #333; font-weight: 500; }
-        .form-input, .form-select, .form-textarea { width: 100%; padding: 12px 15px; border: 2px solid #e1e8ed; border-radius: 10px; font-size: 1em; transition: all 0.3s ease; background: white; }
-        .form-input:focus, .form-select:focus, .form-textarea:focus { outline: none; border-color: #1e3c72; box-shadow: 0 0 0 3px rgba(30, 60, 114, 0.1); }
+        .form-input, .form-select, .form-textarea {
+            width: 100%; padding: 12px 15px; border: 2px solid #e1e8ed;
+            border-radius: 10px; font-size: 1em; transition: all 0.3s ease;
+            background: white; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .form-input:focus, .form-select:focus, .form-textarea:focus {
+            outline: none; border-color: #1e3c72;
+            box-shadow: 0 0 0 3px rgba(30, 60, 114, 0.1);
+        }
+        .form-textarea { min-height: 120px; resize: vertical; }
         .dynamic-fields { display: none; animation: fadeIn 0.3s ease forwards; }
         .dynamic-fields.show { display: grid; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        
         .owner-selection-group { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; }
         .search-input-wrapper { flex: 1 1 400px; position: relative; }
         .search-button-wrapper { display: flex; gap: 10px; flex-shrink: 0; }
-        #mainOwnerSearchResults { position: absolute; top: 100%; left: 0; width: 100%; background: white; border: 1px solid #ddd; border-top: none; border-radius: 0 0 10px 10px; z-index: 1000; max-height: 200px; overflow-y: auto; display: none; }
-        .owner-grid { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 10px; margin-top: 15px; }
-        .form-actions { display: flex; justify-content: flex-end; gap: 10px; padding-top: 20px; border-top: 1px solid #e9ecef; margin-top: 20px; }
+        #mainOwnerSearchResults {
+            position: absolute; top: 100%; left: 0; width: 100%;
+            background: white; border: 1px solid #ddd; border-top: none;
+            border-radius: 0 0 10px 10px; z-index: 1000;
+            max-height: 200px; overflow-y: auto; display: none;
+        }
+        .search-result-item { padding: 10px; cursor: pointer; }
+        .search-result-item:hover { background-color: #f0f0f0; }
+        .owner-grid {
+            grid-column: 1 / -1; display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 10px; margin-top: 15px;
+        }
+        .owner-tag {
+            background: #e9ecef; color: #495057; padding: 8px 12px;
+            border-radius: 20px; display: flex; align-items: center;
+            justify-content: space-between; font-size: 0.9em;
+        }
+        .owner-tag .remove-owner {
+            background: none; border: none; color: #6c757d;
+            cursor: pointer; margin-left: 10px; font-size: 1.2em; line-height: 1;
+        }
+        .form-actions {
+            display: flex; justify-content: flex-end; gap: 10px;
+            padding-top: 20px; border-top: 1px solid #e9ecef; margin-top: 20px;
+        }
+        
+        /* GÖRSEL YÜKLEME ALANI ORİJİNAL STİLLERİ */
+        .image-upload-area {
+            border: 2px dashed #e1e8ed; border-radius: 10px; padding: 30px;
+            text-align: center; cursor: pointer; transition: all 0.3s ease;
+        }
+        .image-upload-area:hover, .image-upload-area.drag-over {
+            border-color: #1e3c72;
+            background-color: #f8f9fa;
+        }
+        .image-upload-icon { font-size: 2.5em; color: #6c757d; }
+        .image-preview {
+            max-width: 200px; max-height: 200px; margin-top: 15px;
+            border-radius: 10px; border: 2px solid #e1e8ed;
+        }
     </style>
 </head>
 <body>
@@ -55,8 +117,12 @@
                         <div class="form-group date-picker-group"><label for="applicationDate" class="form-label">Başvuru Tarihi:</label><input type="date" id="applicationDate" name="applicationDate" class="form-input"></div>
                         <div class="form-group date-picker-group"><label for="registrationDate" class="form-label">Tescil Tarihi (Varsa):</label><input type="date" id="registrationDate" name="registrationDate" class="form-input"></div>
                     </div>
-                    <div id="type-specific-fields"></div>
+
+                    <div id="type-specific-fields">
+                        </div>
+
                     <div class="form-group full-width"><label for="description" class="form-label">Açıklama:</label><textarea id="description" name="description" class="form-textarea"></textarea></div>
+
                     <div class="form-group full-width">
                         <label class="form-label">Hak Sahipleri:</label>
                         <div class="owner-selection-group">
@@ -72,6 +138,7 @@
                         </div>
                         <div id="selectedOwnersGrid" class="owner-grid"></div>
                     </div>
+                    
                     <div class="form-actions full-width">
                         <button type="button" class="btn btn-secondary" id="cancelRecordBtn">İptal</button>
                         <button type="submit" class="btn btn-primary" id="saveRecordBtn">Kaydet</button>
@@ -219,7 +286,28 @@
                         fieldsHtml = `<div class="dynamic-fields show form-grid"><div class="form-group"><label for="patentClass" class="form-label">Patent Sınıfı:</label><input type="text" id="patentClass" name="patentClass" class="form-input"></div><div class="form-group date-picker-group"><label for="renewalDatePatent" class="form-label">Yenileme Tarihi:</label><input type="date" id="renewalDatePatent" name="renewalDatePatent" class="form-input"></div></div>`;
                         break;
                     case 'trademark':
-                        fieldsHtml = `<div class="dynamic-fields show form-grid"><div class="form-group"><label for="niceClass" class="form-label">Nice Sınıfı:</label><input type="text" id="niceClass" name="niceClass" class="form-input"></div><div class="form-group date-picker-group"><label for="renewalDateTrademark" class="form-label">Yenileme Tarihi:</label><input type="date" id="renewalDateTrademark" name="renewalDateTrademark" class="form-input"></div><div class="form-group full-width"><label for="trademarkImage" class="form-label">Marka Görseli (JPG, PNG):</label><input type="file" id="trademarkImage" name="trademarkImage" accept="image/jpeg,image/png" style="display: none;"><div class="image-upload-area" id="trademarkImageUploadArea"><span class="image-upload-icon">🖼️</span><p>Görsel Yüklemek İçin Tıklayın veya Sürükleyin</p></div><img id="trademarkImagePreview" class="image-preview" src="#" alt="Görsel Önizleme" style="display: none;"><button type="button" id="removeTrademarkImage" style="display: none; margin-top: 10px;" class="btn btn-secondary btn-small">Görseli Kaldır</button></div></div>`;
+                        // Orijinal görsel yükleme alanı HTML'i geri getirildi
+                        fieldsHtml = `
+                            <div class="dynamic-fields show form-grid">
+                                <div class="form-group">
+                                    <label for="niceClass" class="form-label">Nice Sınıfı:</label>
+                                    <input type="text" id="niceClass" name="niceClass" class="form-input">
+                                </div>
+                                <div class="form-group date-picker-group">
+                                    <label for="renewalDateTrademark" class="form-label">Yenileme Tarihi:</label>
+                                    <input type="date" id="renewalDateTrademark" name="renewalDateTrademark" class="form-input">
+                                </div>
+                                <div class="form-group full-width">
+                                    <label for="trademarkImage" class="form-label">Marka Görseli (JPG, PNG):</label>
+                                    <input type="file" id="trademarkImage" name="trademarkImage" accept="image/jpeg,image/png" style="display: none;">
+                                    <div class="image-upload-area" id="trademarkImageUploadArea">
+                                        <span class="image-upload-icon">🖼️</span>
+                                        <p>Görsel Yüklemek İçin Tıklayın veya Sürükleyin</p>
+                                    </div>
+                                    <img id="trademarkImagePreview" class="image-preview" src="#" alt="Görsel Önizleme" style="display: none;">
+                                    <button type="button" id="removeTrademarkImage" style="display: none; margin-top: 10px;" class="btn btn-secondary btn-small">Görseli Kaldır</button>
+                                </div>
+                            </div>`;
                         break;
                     case 'copyright':
                         fieldsHtml = `<div class="dynamic-fields show form-grid"><div class="form-group"><label for="copyrightType" class="form-label">Telif Hakkı Tipi:</label><input type="text" id="copyrightType" name="copyrightType" class="form-input"></div></div>`;
@@ -365,8 +453,6 @@
 
                 try {
                     const form = event.target;
-                    
-                    // DÜZELTME: Veri nesnesi sadece dolu olan alanlarla oluşturuluyor
                     const recordData = {
                         type: form.type.value,
                         title: form.title.value,
@@ -374,10 +460,7 @@
                         owners: this.selectedOwners.map(p => ({ id: p.id, name: p.name, personType: p.personType })),
                     };
 
-                    const addFieldIfValue = (key, value) => {
-                        if (value) recordData[key] = value;
-                    };
-
+                    const addFieldIfValue = (key, value) => { if (value) recordData[key] = value; };
                     addFieldIfValue('applicationNumber', form.applicationNumber.value);
                     addFieldIfValue('applicationDate', form.applicationDate.value);
                     addFieldIfValue('registrationDate', form.registrationDate.value);
@@ -389,11 +472,8 @@
                     } else if (recordData.type === 'trademark') {
                         addFieldIfValue('niceClass', form.niceClass.value);
                         addFieldIfValue('renewalDateTrademark', form.renewalDateTrademark.value);
-                        if(this.uploadedImage){
-                           recordData.trademarkImage = await readFileAsDataURL(this.uploadedImage);
-                        } else if (this.existingImageUrl) {
-                           recordData.trademarkImage = { content: this.existingImageUrl, name: 'existing_image' };
-                        }
+                        if(this.uploadedImage){ recordData.trademarkImage = await readFileAsDataURL(this.uploadedImage); }
+                        else if (this.existingImageUrl) { recordData.trademarkImage = { content: this.existingImageUrl, name: 'existing_image' }; }
                     } else if (recordData.type === 'copyright') {
                         addFieldIfValue('copyrightType', form.copyrightType.value);
                     } else if (recordData.type === 'design') {
