@@ -19,7 +19,6 @@
         .form-actions { display: flex; gap: 15px; margin-top: 40px; padding-top: 30px; border-top: 2px solid #e1e8ed; justify-content: flex-end; }
         .btn { padding: 15px 30px; border-radius: 10px; font-size: 1.1em; font-weight: 600; }
         
-        /* GÜNCELLEME: Arama sonuçları için konumlandırma stilleri */
         .search-wrapper { position: relative; }
         .search-results-container {
             position: absolute;
@@ -33,7 +32,7 @@
             border-radius: 0 0 8px 8px;
             background-color: white;
             z-index: 100;
-            display: none; /* JS ile kontrol edilecek */
+            display: none;
         }
         
         .record-search-item { display: flex; align-items: center; padding: 10px 15px; border-bottom: 1px dashed #e1e8ed; cursor: pointer; }
@@ -155,11 +154,17 @@
                 this.selectedTransactionId = null;
                 this.activeTab = 'existing-transaction-pane';
                 this.indexingTypes = ['Kabul Kararı', 'Ret Kararı', 'Eksiklik Bildirimi', 'Genel', 'Diğer'];
+                
+                // *** DÜZELTME: init() fonksiyonu constructor içinde çağrılıyor. ***
+                this.init();
             }
 
             async init() {
                 this.currentUser = authService.getCurrentUser();
-                if(!this.currentUser) window.location.href = 'index.html';
+                if(!this.currentUser) {
+                    window.location.href = 'index.html';
+                    return; // Stop execution if no user
+                }
 
                 await this.loadRecords();
                 this.setupEventListeners();
@@ -174,11 +179,10 @@
             setupEventListeners() {
                 const searchInput = document.getElementById('recordSearchInput');
                 searchInput.addEventListener('input', (e) => this.searchRecords(e.target.value));
-                // GÜNCELLEME: Arama kutusundan focus gidince sonuçları gizle
                 searchInput.addEventListener('blur', () => {
                     setTimeout(() => {
                         document.getElementById('searchResultsContainer').style.display = 'none';
-                    }, 200); // 200ms bekleme, tıklama olayının yakalanmasına izin verir
+                    }, 200);
                 });
                 
                 document.getElementById('filesExisting').addEventListener('change', (e) => this.handleFileChange(e, 'existing-transaction-pane'));
@@ -197,7 +201,6 @@
                     });
                 });
                 
-                // GÜNCELLEME: Yüklenen dosya listesindeki olayları delege et
                 document.addEventListener('change', (e) => {
                     if (e.target.classList.contains('file-indexing-type-select')) {
                         const fileId = e.target.dataset.fileId;
@@ -251,6 +254,7 @@
                 this.selectedRecord = this.allRecords.find(r => r.id === recordId);
                 document.getElementById('selectedRecordDisplay').value = `${this.selectedRecord.title} (${this.selectedRecord.applicationNumber})`;
                 document.getElementById('searchResultsContainer').style.display = 'none';
+                document.getElementById('recordSearchInput').value = '';
                 document.getElementById('documentUploadSection').style.display = 'block';
                 this.renderTransactionsForSelection();
                 this.checkFormCompleteness();
