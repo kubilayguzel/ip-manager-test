@@ -410,6 +410,34 @@
             this.pendingBulkIndexJobs = []; 
             this.bulkIndexingRecordsCache = new Map(); 
             
+            // Hata veren handleBulkFilesChange metodunu constructor'da bağla
+            this.handleBulkFilesChange = this.handleBulkFilesChange.bind(this);
+            // Diğer metodları da aynı şekilde bağlamak iyi bir pratik olabilir, özellikle event listener'larda kullanılacaklarsa
+            this.handleSubmit = this.handleSubmit.bind(this);
+            this.resetForm = this.resetForm.bind(this);
+            this.activateTab = this.activateTab.bind(this);
+            this.searchRecords = this.searchRecords.bind(this);
+            this.selectRecordBasedOnTab = this.selectRecordBasedOnTab.bind(this);
+            this.renderTransactionsForSelection = this.renderTransactionsForSelection.bind(this);
+            this.handleFileChange = this.handleFileChange.bind(this);
+            this.renderUploadedFilesList = this.renderUploadedFilesList.bind(this);
+            this.checkFormCompleteness = this.checkFormCompleteness.bind(this);
+            this.populateChildTransactionTypeSelect = this.populateChildTransactionTypeSelect.bind(this);
+            this.populateManualTransactionTypeSelect = this.populateManualTransactionTypeSelect.bind(this);
+            this.populateManualChildTransactionTypeSelect = this.populateManualChildTransactionTypeSelect.bind(this);
+            this.populateBulkChildTransactionTypeSelect = this.populateBulkChildTransactionTypeSelect.bind(this);
+            this.setRequiredFieldsForActiveTab = this.setRequiredFieldsForActiveTab.bind(this);
+            this.updateBulkJobsTebligDate = this.updateBulkJobsTebligDate.bind(this);
+            this.updateBulkJobsChildType = this.updateBulkJobsChildType.bind(this);
+            this.extractApplicationNumberFromFileName = this.extractApplicationNumberFromFileName.bind(this);
+            this.renderBulkIndexingTable = this.renderBulkIndexingTable.bind(this);
+            this.searchRecordsForBulkJob = this.searchRecordsForBulkJob.bind(this);
+            this.selectRecordForBulkJob = this.selectRecordForBulkJob.bind(this);
+            this.skipBulkJob = this.skipBulkJob.bind(this);
+            this.retryBulkJob = this.retryBulkJob.bind(this);
+            this.resetFormTabSpecifics = this.resetFormTabSpecifics.bind(this);
+
+
             this.init();
         }
 
@@ -455,8 +483,8 @@
                 this.handleFileChange(e, 'manual-indexing-pane');
                 document.getElementById('filesManualInfo').textContent = e.target.files.length > 0 ? `${e.target.files.length} dosya seçildi.` : 'Henüz dosya seçilmedi.';
             });
-            // Hata veren kısım düzeltildi: .bind(this) eklendi
-            document.getElementById('bulkFiles').addEventListener('change', this.handleBulkFilesChange.bind(this));
+            // Hata veren kısım düzeltildi: `this.handleBulkFilesChange.bind(this)` yerine doğrudan `this.handleBulkFilesChange` kullanılıyor çünkü constructor'da bağlandı
+            document.getElementById('bulkFiles').addEventListener('change', this.handleBulkFilesChange);
             document.getElementById('bulkFilesInfo').textContent = (document.getElementById('bulkFiles').files.length > 0 ? `${document.getElementById('bulkFiles').files.length} PDF dosyası seçildi.` : 'Henüz PDF dosyası seçilmedi.');
 
 
@@ -465,8 +493,8 @@
             document.getElementById('bulkFilesButton').addEventListener('click', () => document.getElementById('bulkFiles').click()); 
 
 
-            document.getElementById('indexDocumentsBtn').addEventListener('click', () => this.handleSubmit());
-            document.getElementById('resetIndexingFormBtn').addEventListener('click', () => this.resetForm());
+            document.getElementById('indexDocumentsBtn').addEventListener('click', this.handleSubmit);
+            document.getElementById('resetIndexingFormBtn').addEventListener('click', this.resetForm);
             
             document.querySelectorAll('.tabs-container .tab-btn').forEach(btn => { 
                 btn.addEventListener('click', (e) => {
@@ -553,7 +581,6 @@
         }
         
         setRequiredFieldsForActiveTab() {
-            // Tüm kayıt arama inputlarını ve ilgili alanları getir
             const recordSearchInputExisting = document.getElementById('recordSearchInputExisting');
             const selectedRecordDisplayExisting = document.getElementById('selectedRecordDisplayExisting');
             const recordSearchInputManual = document.getElementById('recordSearchInputManual');
@@ -586,12 +613,11 @@
             // Aktif sekmeye göre 'required' ekle
             if (this.activeTab === 'existing-transaction-pane') {
                 if (recordSearchInputExisting) recordSearchInputExisting.setAttribute('required', 'required');
-                // if (selectedRecordDisplayExisting) selectedRecordDisplayExisting.setAttribute('required', 'required'); // Zaten readonly
                 if (specificChildTransactionType) specificChildTransactionType.setAttribute('required', 'required');
                 if (filesExisting) filesExisting.setAttribute('required', 'required');
             } else if (this.activeTab === 'manual-indexing-pane') {
-                if (recordSearchInputManual) recordSearchInputManual.setAttribute('required', 'required');
-                // if (selectedRecordDisplayManual) selectedRecordDisplayManual.setAttribute('required', 'required'); // Zaten readonly
+                // Manuel tabda zorunluluklar checkFormCompleteness tarafından yönetiliyor.
+                // HTML'den `required` kaldırıldı.
             } else if (this.activeTab === 'bulk-indexing-pane') { 
                 if (bulkDeliveryDate) bulkDeliveryDate.setAttribute('required', 'required');
                 if (bulkChildTransactionType) bulkChildTransactionType.setAttribute('required', 'required');
@@ -626,7 +652,6 @@
                 filtered.forEach(record => {
                     const item = document.createElement('div');
                     item.className = 'record-search-item';
-                    // Buradaki hata düzeltildi! Template literal doğru kullanıldı.
                     item.innerHTML = `<div class="record-info"><div>${record.title}</div><small>${record.applicationNumber}</small></div>`;
                     item.addEventListener('click', (e) => {
                         e.preventDefault(); 
@@ -647,31 +672,24 @@
             const recordSearchInputId = tabContext === 'existing' ? 'recordSearchInputExisting' : 'recordSearchInputManual';
             const searchResultsContainerId = tabContext === 'existing' ? 'searchResultsContainerExisting' : 'searchResultsContainerManual';
 
-            // Buradaki hata düzeltildi! Template literal doğru kullanıldı.
             document.getElementById(selectedRecordDisplayId).value = `${record.title} (${record.applicationNumber})`;
             document.getElementById(recordSearchInputId).value = '';
             document.getElementById(searchResultsContainerId).style.display = 'none';
 
             if (tabContext === 'existing') {
                 this.selectedRecordExisting = record;
-                this.renderTransactionsForSelection(); // Existing tab için işlem listesini güncelle
+                this.renderTransactionsForSelection(); 
             } else if (tabContext === 'manual') {
                 this.selectedRecordManual = record;
-                // Manuel tab için parent transaction select'i doldur (artık genel selectedRecord kullanılmıyor)
                 const specificManualTransactionParentId = document.getElementById('specificManualTransactionParentId');
-                if(specificManualTransactionParentId) { // Eğer HTML'de hala bu element varsa
+                if(specificManualTransactionParentId) { 
                     this.populateParentTransactionSelectForManual(record.transactions);
                 }
             }
             this.checkFormCompleteness();
         }
 
-        // Yeni: Manuel tab için parent transaction select doldurma fonksiyonu (önceden populateParentTransactionSelect idi)
         populateParentTransactionSelectForManual(transactions) {
-            // NOTE: Bu fonksiyon, HTML'deki "Bağlı Parent İşlem Seçin" select box'ı kaldırıldığı için artık çağrılmamalıdır.
-            // Ancak eğer başka bir yerde kullanılmaya devam ediyorsa, bu fonksiyonun içeriğini tutabilirsiniz.
-            // Şu anki HTML'de bu select box'ı kaldırdığımızı varsayarsak, bu fonksiyona gerek kalmaz.
-            // Yine de tanımlı bırakıyorum, olası bir hata durumunda debugging kolaylığı için.
             const selectEl = document.getElementById('specificManualTransactionParentId');
             if (!selectEl) return; 
 
@@ -702,7 +720,6 @@
                 document.getElementById('existingChildTransactionDeliveryDate').value = ''; 
             }
 
-            // selectedRecordExisting kullanıldı
             const transactions = this.selectedRecordExisting ? this.selectedRecordExisting.transactions || [] : []; 
 
             if (transactions.length === 0) {
@@ -767,7 +784,8 @@
             files.forEach(fileData => {
                 const fileItem = document.createElement('div');
                 fileItem.className = 'file-item';
-                item.innerHTML = `
+                // Buradaki hata düzeltildi! Template literal doğru kullanıldı.
+                fileItem.innerHTML = `
                     <div class="d-flex justify-content-between w-100">
                         <strong>${fileData.fileObject.name}</strong>
                         <button type="button" class="remove-file remove-uploaded-file" data-file-id="${fileData.id}" data-tab-key="${tabKey}">&times;</button>
@@ -781,7 +799,6 @@
             let canSubmit = false;
 
             if (this.activeTab === 'existing-transaction-pane') {
-                // Kayıt seçilmemişse false
                 if (!this.selectedRecordExisting) {
                     canSubmit = false;
                 } else {
@@ -790,7 +807,6 @@
                     canSubmit = this.selectedTransactionId !== null && specificChildTransactionType !== '' && filesExist;
                 }
             } else if (this.activeTab === 'manual-indexing-pane') {
-                // Kayıt seçilmemişse false
                 if (!this.selectedRecordManual) {
                     canSubmit = false;
                 } else {
@@ -805,9 +821,6 @@
                 const bulkChildTransactionType = document.getElementById('bulkChildTransactionType').value;
                 const filesExist = (document.getElementById('bulkFiles').files || []).length > 0;
 
-                // Toplu indekslemede, tüm işlerin (job) ilgili kayıt ID'si ve Alt İşlem Türü seçili olmalı
-                // ve en az bir işin durumu "işlenecek" veya "beklemede" olmalı.
-                // Not: filesExist kontrolü buraya taşındı, çünkü bulkFiles inputu bu tabda yer alıyor.
                 const allJobsValid = this.pendingBulkIndexJobs.every(job => 
                     job.matchedRecordId !== null && 
                     job.childTransactionType !== '' &&
@@ -1068,13 +1081,12 @@
                         this.renderBulkIndexingTable(); 
 
                         try {
-                            // Kayıtları allRecords'tan al veya Firebase'den çek
                             let recordToUpdate = this.allRecords.find(r => r.id === job.matchedRecordId); 
-                            if (!recordToUpdate) { // Eğer allRecords'ta yoksa (yeni eklenmiş olabilir veya manuel seçildi)
+                            if (!recordToUpdate) {
                                 const recordResult = await ipRecordsService.getRecordById(job.matchedRecordId);
                                 if (recordResult.success) {
                                     recordToUpdate = recordResult.data;
-                                    this.bulkIndexingRecordsCache.set(job.matchedRecordId, recordToUpdate); // Önbelleğe ekle
+                                    this.bulkIndexingRecordsCache.set(job.matchedRecordId, recordToUpdate); 
                                 } else {
                                     throw new Error(`Kayıt bulunamadı: ${job.matchedRecordId}`);
                                 }
@@ -1097,7 +1109,7 @@
                                 if (parentAddResult.success) {
                                     parentTransactionForChild = parentAddResult.data;
                                     if (!recordToUpdate.transactions) recordToUpdate.transactions = [];
-                                    recordToUpdate.transactions.push(parentTransactionForChild); // Ön bellekteki kaydı güncelle
+                                    recordToUpdate.transactions.push(parentTransactionForChild); 
                                 } else {
                                     throw new Error('Otomatik parent oluşturulamadı.');
                                 }
@@ -1216,6 +1228,6 @@
         await loadSharedLayout({ activeMenuLink: 'indexing.html' });
         new IndexingModule();
     });
-        </script>
+</script>
     </body>
     </html>
