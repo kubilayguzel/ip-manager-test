@@ -426,7 +426,6 @@
                     this.pendingBulkIndexJobs = []; 
                     this.bulkIndexingRecordsCache = new Map(); 
                     
-                    // Metotları constructor'da bağlamaya gerek yok, arrow function olarak tanımlanacaklar
                     this.init();
                 }
 
@@ -838,7 +837,7 @@
                     document.getElementById('indexDocumentsBtn').disabled = !canSubmit;
                 }
 
-                handleSubmit = async () => { // handleSubmit'i de arrow function yaptık
+                handleSubmit = async () => { 
                     const btn = document.getElementById('indexDocumentsBtn');
                     btn.disabled = true;
                     showNotification('İşlem kaydediliyor...', 'info');
@@ -850,7 +849,7 @@
                     } else if (this.activeTab === 'manual-indexing-pane') {
                         currentSelectedRecord = this.selectedRecordManual;
                     } 
-                    // Bulk tab'da ise her job'ın kendi matchedRecordId'si var, genel bir currentSelectedRecord'a gerek yok.
+                    // Bulk tab'da ise her job'ın kendi matchedRecordId'si var.
 
                     // Toplu indeksleme dışındaki tablarda kayıt seçimi zorunlu
                     if (!currentSelectedRecord && this.activeTab !== 'bulk-indexing-pane') { 
@@ -897,7 +896,7 @@
                                     };
                                     const placeholderParentResult = await ipRecordsService.addTransactionToRecord(currentSelectedRecord.id, placeholderParentData); 
                                     if (!placeholderParentResult.success) {
-                                        throw new Error(placeholderParentResult.addError || 'Otomatik ana işlem oluşturulurken hata oluştu.');
+                                        throw new Error(placeholderParentResult.error || 'Otomatik ana işlem oluşturulurken hata oluştu.');
                                     }
                                     newParentTransactionId = placeholderParentResult.data.transactionId;
                                     showNotification('Otomatik ana işlem başarıyla oluşturuldu.', 'success');
@@ -917,7 +916,7 @@
                                     };
                                     const mainTransactionResult = await ipRecordsService.addTransactionToRecord(currentSelectedRecord.id, mainTransactionData); 
                                     if (!mainTransactionResult.success) {
-                                        throw new Error(mainTransactionResult.addError || 'Manuel ana işlem oluşturulurken hata oluştu.');
+                                        throw new Error(mainTransactionResult.error || 'Manuel ana işlem oluşturulurken hata oluştu.');
                                     }
                                     newParentTransactionId = mainTransactionResult.data.transactionId; 
                                     showNotification('Manuel ana işlem başarıyla oluşturuldu.', 'success');
@@ -944,7 +943,7 @@
                                     const transactionAddResult = await ipRecordsService.addTransactionToRecord(currentSelectedRecord.id, newTransactionData); 
 
                                     if (!transactionAddResult.success) {
-                                        throw new Error(transactionAddResult.addError || 'Yeni işlem oluşturulurken hata oluştu.');
+                                        throw new Error(transactionAddResult.error || 'Yeni işlem oluşturulurken hata oluştu.');
                                     }
                                     transactionIdToAssociateFiles = transactionAddResult.data.transactionId;
                                     transactionDesignationForFiles = transactionDesignation;
@@ -981,8 +980,8 @@
                                     };
                                     const fileAddResult = await ipRecordsService.addFileToRecord(currentSelectedRecord.id, fileToUpload); 
                                     if (!fileAddResult.success) {
-                                        console.error(`Dosya yüklenirken hata (${fileData.fileObject.name}): ${fileAddResult.addError}`);
-                                        showNotification(`Dosya yüklenirken hata (${fileData.fileObject.name}): ${fileAddResult.addError}`, 'error');
+                                        console.error(`Dosya yüklenirken hata (${fileData.fileObject.name}): ${fileAddResult.error}`);
+                                        showNotification(`Dosya yüklenirken hata (${fileData.fileObject.name}): ${fileAddResult.error}`, 'error');
                                     }
                                 } catch (fileError) {
                                     console.error(`Dosya işlenirken hata (${fileData.fileObject.name}):`, fileError);
@@ -1027,7 +1026,7 @@
                             };
                             const childTransactionAddResult = await ipRecordsService.addTransactionToRecord(currentSelectedRecord.id, newChildTransactionData); 
                             if (!childTransactionAddResult.success) {
-                                throw new Error(childTransactionAddResult.addError || 'Yeni alt işlem oluşturulurken hata oluştu.');
+                                throw new Error(childTransactionAddResult.error || 'Yeni alt işlem oluşturulurken hata oluştu.');
                             }
                             transactionIdToAssociateFiles = childTransactionAddResult.data.transactionId; 
                             transactionDesignationForFiles = specificChildTransactionType; 
@@ -1047,8 +1046,8 @@
                                     };
                                     const fileAddResult = await ipRecordsService.addFileToRecord(currentSelectedRecord.id, fileToUpload); 
                                     if (!fileAddResult.success) {
-                                        console.error(`Dosya yüklenirken hata (${fileData.fileObject.name}): ${fileAddResult.addError}`);
-                                        showNotification(`Dosya yüklenirken hata (${fileData.fileObject.name}): ${fileAddResult.addError}`, 'error');
+                                        console.error(`Dosya yüklenirken hata (${fileData.fileObject.name}): ${fileAddResult.error}`);
+                                        showNotification(`Dosya yüklenirken hata (${fileData.fileObject.name}): ${fileAddResult.error}`, 'error');
                                     }
                                 } catch (fileError) {
                                     console.error(`Dosya işlenirken hata (${fileData.fileObject.name}):`, fileError);
@@ -1088,7 +1087,7 @@
                                 try {
                                     // job.matchedRecordId'yi kullanarak kaydı bul
                                     let recordToUpdate = this.allRecords.find(r => r.id === job.matchedRecordId); 
-                                    if (!recordToUpdate) { // Eğer allRecords'ta yoksa (yeni eklenmiş olabilir veya manuel seçildi)
+                                    if (!recordToUpdate) {
                                         const recordResult = await ipRecordsService.getRecordById(job.matchedRecordId);
                                         if (recordResult.success) {
                                             recordToUpdate = recordResult.data;
@@ -1132,7 +1131,7 @@
                                     const childTransactionAddResult = await ipRecordsService.addTransactionToRecord(recordToUpdate.id, newChildTransactionData);
                                     
                                     if (!childTransactionAddResult.success) {
-                                        throw new Error(childTransactionAddResult.addError || 'Alt işlem oluşturulurken hata oluştu.');
+                                        throw new Error(childTransactionAddResult.error || 'Alt işlem oluşturulurken hata oluştu.');
                                     }
                                     const newChildTransactionId = childTransactionAddResult.data.transactionId;
                                     
@@ -1148,8 +1147,8 @@
                                     const fileAddResult = await ipRecordsService.addFileToRecord(recordToUpdate.id, fileToUpload);
                                     
                                     if (!fileAddResult.success) {
-                                        console.error(`Dosya yüklenirken hata (${fileData.fileObject.name}): ${fileAddResult.addError}`);
-                                        throw new Error(fileAddResult.addError || 'Dosya yüklenirken hata oluştu.'); 
+                                        console.error(`Dosya yüklenirken hata (${job.fileName}): ${fileAddResult.error}`); // job.fileName kullanıldı
+                                        throw new Error(fileAddResult.error || 'Dosya yüklenirken hata oluştu.'); 
                                     }
                                     
                                     job.status = 'success';
@@ -1245,7 +1244,10 @@
                     
                     showNotification('PDF dosyaları işleniyor...', 'info', 3000);
 
-                    const appNumberRegex = /(TR\d{4}[_\-\/]?\d+)/i; // Başvuru Numarası Regex
+                    // Başvuru numarası regex (örnek: TRYYYY/NNNNN veya TRYYYY_NNNNN)
+                    // Bu regex, dosya adınızdaki başvuru numarası formatına göre ayarlanmalıdır
+                    // Örneğin: TR2024/123, TR2024-123, tr_2024_123
+                    const appNumberRegex = /(TR\d{4}[_\-\/]?\d+)/i; 
 
                     for (const file of files) {
                         if (file.type !== 'application/pdf') {
@@ -1255,10 +1257,9 @@
 
                         let extractedAppNumber = this.extractApplicationNumberFromFileName(file.name);
                         
-                        // BURADA DEĞİŞİKLİK YAPILDI: Çekilen başvuru numarasını formatla
+                        // BURADA DEĞİŞİKLİK YAPILDI: Çekilen başvuru numarasındaki TIRE (-) işaretini SLASH (/) işaretine çevir
                         if (extractedAppNumber) {
-                            // Eğer başvuru numarası TR2025-1 gibi ise, TR2025/1 yap
-                            extractedAppNumber = extractedAppNumber.replace(/[-_]/g, '/');
+                            extractedAppNumber = extractedAppNumber.replace(/[-_]/g, '/'); // Hem - hem de _ karakterlerini / ile değiştir
                         }
 
 
@@ -1268,7 +1269,12 @@
 
                         if (extractedAppNumber) {
                             // allRecords listesi üzerinde eşleşme ara
-                            matchedRecord = this.allRecords.find(r => r.applicationNumber && r.applicationNumber.toLowerCase() === extractedAppNumber.toLowerCase());
+                            // Eşleştirmeyi yaparken case-insensitive ve format uyumlu hale getiriyoruz
+                            matchedRecord = this.allRecords.find(r => 
+                                r.applicationNumber && 
+                                r.applicationNumber.toLowerCase().replace(/[-_]/g, '/') === extractedAppNumber.toLowerCase()
+                            );
+
                             if (matchedRecord) {
                                 matchedRecordDisplay = `${matchedRecord.title} (${matchedRecord.applicationNumber})`;
                                 status = 'ready'; 
@@ -1285,7 +1291,7 @@
                             jobId: generateUUID(),
                             fileName: file.name,
                             fileObject: file, 
-                            extractedAppNumber: extractedAppNumber,
+                            extractedAppNumber: extractedAppNumber, // Bu artık formatlanmış numara olacak
                             matchedRecordId: matchedRecord ? matchedRecord.id : null,
                             matchedRecordDisplay: matchedRecordDisplay,
                             childTransactionType: document.getElementById('bulkChildTransactionType').value, 
@@ -1300,10 +1306,11 @@
 
                 // Yeni: Dosya adından başvuru numarasını çek
                 extractApplicationNumberFromFileName = (fileName) => { 
+                    // Bu fonksiyon sadece regex ile eşleşen kısmı çeker.
+                    // Formatlama (tire yerine slash) handleBulkFilesChange içinde yapılır.
                     const regex = /(TR\d{4}[_\-\/]?\d+)/i; 
                     const match = fileName.match(regex);
-                    // Bulunan eşleşmeyi temizle ve formatla (örn. TR2024_001 -> TR2024/001, TR2024-001 -> TR2024/001)
-                    return match ? match[1].replace(/[-_]/g, '/') : ''; 
+                    return match ? match[1] : ''; // Sadece eşleşen kısmı döndür, formatlama handleBulkFilesChange'de yapılır
                 }
 
                 // Yeni: Toplu indeksleme tablosunu render et
@@ -1369,10 +1376,10 @@
                         });
                     });
                     tableBody.querySelectorAll('.bulk-skip-btn').forEach(btn => {
-                        btn.addEventListener('click', this.skipBulkJob); // Arrow function olduğu için bind gerekmez
+                        btn.addEventListener('click', this.skipBulkJob); 
                     });
                     tableBody.querySelectorAll('.bulk-retry-btn').forEach(btn => {
-                        btn.addEventListener('click', this.retryBulkJob); // Arrow function olduğu için bind gerekmez
+                        btn.addEventListener('click', this.retryBulkJob); 
                     });
 
                     tableBody.querySelectorAll('.bulk-search-results-container').forEach(container => {
@@ -1429,7 +1436,7 @@
                 }
 
                 // Yeni: Toplu indeksleme işini atla
-                skipBulkJob = (e) => { // e parametresi event objesi olacak
+                skipBulkJob = (e) => { 
                     const jobId = e.target.dataset.jobId;
                     const jobIndex = this.pendingBulkIndexJobs.findIndex(j => j.jobId === jobId);
                     if (jobIndex > -1) {
@@ -1441,7 +1448,7 @@
                 }
                 
                 // Yeni: Hatalı toplu indeksleme işini tekrar dene
-                retryBulkJob = (e) => { // e parametresi event objesi olacak
+                retryBulkJob = (e) => { 
                     const jobId = e.target.dataset.jobId;
                     const job = this.pendingBulkIndexJobs.find(j => j.jobId === jobId);
                     if (job) {
@@ -1454,7 +1461,7 @@
                 }
                 
                 // Yeni: Toplu işlerdeki tebliğ tarihini güncelle
-                updateBulkJobsTebligDate = (e) => { // e parametresi event objesi olacak
+                updateBulkJobsTebligDate = (e) => { 
                     const newDate = e.target.value;
                     this.pendingBulkIndexJobs.forEach(job => {
                         job.tebligDate = newDate;
@@ -1463,7 +1470,7 @@
                 }
 
                 // Yeni: Toplu işlerdeki alt işlem türünü güncelle
-                updateBulkJobsChildType = (e) => { // e parametresi event objesi olacak
+                updateBulkJobsChildType = (e) => { 
                     const newType = e.target.value;
                     this.pendingBulkIndexJobs.forEach(job => {
                         job.childTransactionType = newType;
