@@ -360,7 +360,73 @@ export const ipRecordsService = {
         } catch (error) {
             return { success: false, error: error.message };
         }
-    }
+    },
+    // YENİ EKLENEN FONKSİYON
+    async addTransactionToRecord(recordId, transactionData) {
+        if (!isFirebaseAvailable) {
+            // Yerel depolama için işlem
+            let records = JSON.parse(localStorage.getItem('ipRecords') || '[]');
+            const recordIndex = records.findIndex(r => r.id === recordId);
+            if (recordIndex > -1) {
+                if (!records[recordIndex].transactions) {
+                    records[recordIndex].transactions = [];
+                }
+                const user = authService.getCurrentUser();
+                records[recordIndex].transactions.push({
+                    ...transactionData,
+                    transactionId: generateUUID(),
+                    timestamp: new Date().toISOString(),
+                    userId: user.uid,
+                    userEmail: user.email
+                });
+                localStorage.setItem('ipRecords', JSON.stringify(records));
+                return { success: true };
+            }
+            return { success: false, error: "Record not found in local storage." };
+        }
+        try {
+            const recordRef = doc(db, 'ipRecords', recordId);
+            const user = authService.getCurrentUser();
+            const newTransaction = {
+                ...transactionData,
+                transactionId: generateUUID(),
+                timestamp: new Date().toISOString(),
+                userId: user.uid,
+                userEmail: user.email
+            };
+            // arrayUnion, transactions dizisine yeni işlemi ekler
+            await updateDoc(recordRef, {
+                transactions: arrayUnion(newTransaction)
+            });
+            return { success: true };
+        } catch (error) {
+            console.error("Error adding transaction to record:", error);
+            return { success: false, error: error.message };
+        }
+    },
+    // YENİ EKLENEN FONKSİYON
+    async deleteTransaction(recordId, transactionId) {
+        if (!isFirebaseAvailable) {
+            console.warn("Local storage transaction deletion not implemented.");
+            return { success: true }; // Yerel için sessizce başarısız ol
+        }
+        try {
+            const recordRef = doc(db, "ipRecords", recordId);
+            const recordSnap = await getDoc(recordRef);
+            if (recordSnap.exists()) {
+                const recordData = recordSnap.data();
+                const transactions = recordData.transactions || [];
+                const updatedTransactions = transactions.filter(tx => tx.transactionId !== transactionId);
+                await updateDoc(recordRef, { transactions: updatedTransactions });
+                return { success: true };
+            } else {
+                return { success: false, error: "Record not found." };
+            }
+        } catch (error) {
+            console.error("Error deleting transaction:", error);
+            return { success: false, error: error.message };
+        }
+    },
 };
 
 // --- Task Service (For Workflow Management) ---
