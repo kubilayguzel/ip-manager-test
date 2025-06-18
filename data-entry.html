@@ -455,7 +455,6 @@
                 document.getElementById('type').value = record.type;
                 this.handleTypeChange(record.type);
                 
-                // Kısa bir gecikme ile doldurma işlemi
                 setTimeout(() => {
                     document.getElementById('title').value = record.title || '';
                     document.getElementById('status').value = record.status || '';
@@ -485,7 +484,7 @@
                         this.selectedOwners = record.owners;
                         this.renderSelectedOwners();
                     }
-                }, 100); // 100ms gecikme, DOM'un güncellenmesine zaman tanır
+                }, 100);
             }
 
             handleFormSubmit = async (event) => {
@@ -549,7 +548,6 @@
             }
         }
     
-        // DÜZELTME: Modülün doğru şekilde başlatılması sağlandı.
         let dataEntryModule;
         document.addEventListener('DOMContentLoaded', async () => {
             await loadSharedLayout({ activeMenuLink: 'data-entry.html' });
