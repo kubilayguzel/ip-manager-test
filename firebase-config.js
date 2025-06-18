@@ -306,22 +306,7 @@ export const ipRecordsService = {
         if (!isFirebaseAvailable) return { success: true, data: JSON.parse(localStorage.getItem('ipRecords') || '[]') };
         try {
             const snapshot = await getDocs(collection(db, 'ipRecords'));
-            const records = await Promise.all(snapshot.docs.map(async docSnap => {
-                const recordData = docSnap.data();
-                const recordId = docSnap.id;
-                recordData.id = recordId;
-
-                // Alt koleksiyon olarak işlem geçmişini çek
-                const transactionsSnapshot = await getDocs(collection(db, `ipRecords/${recordId}/transactions`));
-                recordData.transactions = transactionsSnapshot.docs.map(txSnap => ({
-                    transactionId: txSnap.id,
-                    ...txSnap.data()
-                }));
-
-                return recordData;
-            }));
-
-            return { success: true, data: records };
+            return { success: true, data: snapshot.docs.map(d => ({ id: d.id, ...d.data() })) };
         } catch (error) {
             return { success: false, error: error.message };
         }
@@ -336,16 +321,7 @@ export const ipRecordsService = {
             const docRef = doc(db, "ipRecords", recordId);
             const docSnap = await getDoc(docRef);
             if (docSnap.exists()) {
-                const recordData = { id: docSnap.id, ...docSnap.data() };
-
-                // Alt koleksiyon olarak işlem geçmişini çek
-                const transactionsSnapshot = await getDocs(collection(db, `ipRecords/${recordId}/transactions`));
-                recordData.transactions = transactionsSnapshot.docs.map(txSnap => ({
-                    transactionId: txSnap.id,
-                    ...txSnap.data()
-                }));
-
-                return { success: true, data: recordData };
+                return { success: true, data: { id: docSnap.id, ...docSnap.data() } };
             } else {
                 return { success: false, error: "Kayıt bulunamadı." };
             }
@@ -384,56 +360,7 @@ export const ipRecordsService = {
         } catch (error) {
             return { success: false, error: error.message };
         }
-    },
-    async addTransactionToRecord(recordId, transactionData) {
-        if (!isFirebaseAvailable) {
-            let records = JSON.parse(localStorage.getItem('ipRecords') || '[]');
-            const recordIndex = records.findIndex(r => r.id === recordId);
-            if (recordIndex > -1) {
-                if (!records[recordIndex].transactions) {
-                    records[recordIndex].transactions = [];
-                }
-                const user = authService.getCurrentUser();
-                records[recordIndex].transactions.push({
-                    ...transactionData,
-                    transactionId: generateUUID(),
-                    timestamp: new Date().toISOString(),
-                    userId: user.uid,
-                    userEmail: user.email
-                });
-                localStorage.setItem('ipRecords', JSON.stringify(records));
-                return { success: true };
-            }
-            return { success: false, error: "Record not found in local storage." };
-        }
-        try {
-            const user = authService.getCurrentUser();
-            const newTransaction = {
-                ...transactionData,
-                timestamp: new Date().toISOString(),
-                userId: user.uid,
-                userEmail: user.email
-            };
-            const txRef = await addDoc(collection(db, `ipRecords/${recordId}/transactions`), newTransaction);
-            return { success: true, transactionId: txRef.id };
-        } catch (error) {
-            console.error("Error adding transaction to record:", error);
-            return { success: false, error: error.message };
-        }
-    },
-    async deleteTransaction(recordId, transactionId) {
-        if (!isFirebaseAvailable) {
-            console.warn("Local storage transaction deletion not implemented.");
-            return { success: true };
-        }
-        try {
-            await deleteDoc(doc(db, `ipRecords/${recordId}/transactions/${transactionId}`));
-            return { success: true };
-        } catch (error) {
-            console.error("Error deleting transaction:", error);
-            return { success: false, error: error.message };
-        }
-    },
+    }
 };
 
 // --- Task Service (For Workflow Management) ---
