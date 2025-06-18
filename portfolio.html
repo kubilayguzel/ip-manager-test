@@ -452,6 +452,7 @@
             
             viewRecord = (recordId) => {
                 const record = this.records.find(r => r.id === recordId);
+                console.log("🔍 Kayıt işlem geçmişi:", record.transactions);  // ← BUNU EKLE
                 if (!record) return;
                 const modal = document.getElementById('detailModal');
                 const modalTitleEl = document.getElementById('modalTitle');
