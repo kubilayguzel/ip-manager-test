@@ -46,7 +46,6 @@ try {
     console.log('🔥 Firebase initialized successfully');
 } catch (error) {
     console.error('⚠️ Firebase initialization failed:', error.message);
-    isFirebaseAvailable = false;
 }
 
 // --- Helper Functions & Constants ---
@@ -247,7 +246,7 @@ export const personsService = {
             const user = authService.getCurrentUser();
             if(!user) return {success: true, data:[]};
             try {
-                const q = user.role === 'superadmin' ? query(collection(db, 'persons'), orderBy('name')) : query(collection(db, 'persons'), where('userId', '==', user.uid), orderBy('name'));
+                const q = user.role === 'superadmin' ? query(collection(db, 'persons'), orderBy('createdAt', 'desc')) : query(collection(db, 'persons'), where('userId', '==', user.uid), orderBy('createdAt', 'desc'));
                 const snapshot = await getDocs(q);
                 return { success: true, data: snapshot.docs.map(d => ({ id: d.id, ...d.data() })) };
             } catch (error) {
@@ -292,31 +291,6 @@ export const personsService = {
 
 // --- IP Records Service ---
 export const ipRecordsService = {
-    async addRecord(record) {
-        if (!isFirebaseAvailable) {
-            const records = JSON.parse(localStorage.getItem('ipRecords') || '[]');
-            const newRecord = { ...record, id: generateUUID(), createdAt: new Date().toISOString() };
-            records.push(newRecord);
-            localStorage.setItem('ipRecords', JSON.stringify(records));
-            return { success: true, id: newRecord.id };
-        }
-        try {
-            const docRef = await addDoc(collection(db, 'ipRecords'), { ...record, createdAt: new Date().toISOString() });
-            return { success: true, id: docRef.id };
-        } catch (error) {
-            return { success: false, error: error.message };
-        }
-    },
-    async getRecords() {
-        if (!isFirebaseAvailable) return { success: true, data: JSON.parse(localStorage.getItem('ipRecords') || '[]') };
-        try {
-            const snapshot = await getDocs(collection(db, 'ipRecords'));
-            return { success: true, data: snapshot.docs.map(d => ({ id: d.id, ...d.data() })) };
-        } catch (error) {
-            return { success: false, error: error.message };
-        }
-    },
-    // EKSİK FONKSİYON BURAYA EKLENDİ
     async getRecordById(recordId) {
         if (!isFirebaseAvailable) {
             const records = JSON.parse(localStorage.getItem('ipRecords') || '[]');
@@ -344,42 +318,34 @@ export const ipRecordsService = {
             return { success: false, error: error.message };
         }
     },
-    async updateRecord(recordId, updates) {
-        if (!isFirebaseAvailable) {
-            let records = JSON.parse(localStorage.getItem('ipRecords') || '[]');
-            const index = records.findIndex(r => r.id === recordId);
-            if (index > -1) {
-                records[index] = { ...records[index], ...updates };
-                localStorage.setItem('ipRecords', JSON.stringify(records));
-                return { success: true };
-            }
-            return { success: false, error: "Kayıt yerel depolamada bulunamadı." };
-        }
-        try {
-            await updateDoc(doc(db, 'ipRecords', recordId), updates);
-            return { success: true };
-        } catch (error) {
-            return { success: false, error: error.message };
-        }
+    findAllDescendants(transactionId, transactions) {
+        const children = transactions.filter(tx => tx.parentId === transactionId);
+        return children.reduce((acc, child) => [...acc, child.transactionId, ...this.findAllDescendants(child.transactionId, transactions)], []);
     },
-    async deleteRecord(recordId) {
-        if (!isFirebaseAvailable) {
-            const records = JSON.parse(localStorage.getItem('ipRecords') || '[]').filter(r => r.id !== recordId);
-            localStorage.setItem('ipRecords', JSON.stringify(records));
-            return { success: true };
+    async addRecord(record) {
+        const user = authService.getCurrentUser();
+        if(!user) return {success: false, error: "Kullanıcı girişi yapılmamış."};
+        const timestamp = new Date().toISOString();
+        const filesWithIds = (record.files || []).map(f => ({ ...f, id: f.id || generateUUID() }));
+        const newRecord = { ...record, userId: user.uid, userEmail: user.email, createdAt: timestamp, updatedAt: timestamp, transactions: [], files: filesWithIds };
+        if (isFirebaseAvailable) {
+            try {
+                const docRef = await addDoc(collection(db, 'ipRecords'), newRecord);
+                return { success: true, id: docRef.id };
+            } catch (error) {
+                return { success: false, error: error.message };
+            }
         }
-        try {
-            await deleteDoc(doc(db, 'ipRecords', recordId));
-            return { success: true };
-        } catch (error) {
-            return { success: false, error: error.message };
-        }
+        const records = JSON.parse(localStorage.getItem('ipRecords') || '[]');
+        newRecord.id = generateUUID();
+        records.push(newRecord);
+        localStorage.setItem('ipRecords', JSON.stringify(records));
+        return { success: true, id: newRecord.id };
     },
     async addTransactionToRecord(recordId, transactionData) {
         const user = authService.getCurrentUser();
         if(!user) return {success: false, error: "Kullanıcı girişi yapılmamış."};
-        if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor. İşlem eklenemez." };
-        
+        if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor." };
         try {
             const recordRef = doc(db, 'ipRecords', recordId);
             const newTransaction = {
@@ -389,37 +355,90 @@ export const ipRecordsService = {
                 userEmail: user.email,
                 ...transactionData 
             };
-
             await updateDoc(recordRef, {
                 transactions: arrayUnion(newTransaction), 
                 updatedAt: new Date().toISOString()
             });
             return { success: true, transaction: newTransaction };
         } catch (error) {
-            console.error("Kayda işlem eklenirken hata:", error);
             return { success: false, error: error.message };
+        }
+    },
+    async getRecords() {
+        if (isFirebaseAvailable) {
+            const user = authService.getCurrentUser();
+            if(!user) return {success: true, data:[]};
+            try {
+                const q = user.role === 'superadmin' ? query(collection(db, 'ipRecords'), orderBy('createdAt', 'desc')) : query(collection(db, 'ipRecords'), where('userId', '==', user.uid), orderBy('createdAt', 'desc'));
+                const snapshot = await getDocs(q);
+                let records = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+                const allOwnersMap = new Map(); 
+                const allPersonsSnapshot = await getDocs(collection(db, 'persons'));
+                allPersonsSnapshot.forEach(personDoc => allOwnersMap.set(personDoc.id, personDoc.data()));
+                records = records.map(record => {
+                    const enrichedOwners = (record.owners || []).map(ownerRef => {
+                        const personData = allOwnersMap.get(ownerRef.id); 
+                        return personData ? { id: ownerRef.id, ...personData } : ownerRef; 
+                    });
+                    return { ...record, owners: enrichedOwners };
+                });
+                return { success: true, data: records };
+            } catch (error) {
+                return { success: false, error: error.message };
+            }
+        }
+        return { success: true, data: JSON.parse(localStorage.getItem('ipRecords') || '[]') };
+    },
+    async updateRecord(recordId, updates) {
+        const user = authService.getCurrentUser();
+        if(!user) return {success: false, error: "Kullanıcı girişi yapılmamış."};
+        const timestamp = new Date().toISOString();
+        if (isFirebaseAvailable) {
+            try {
+                const recordRef = doc(db, 'ipRecords', recordId);
+                await updateDoc(recordRef, { ...updates, updatedAt: timestamp });
+                return { success: true };
+            } catch (error) {
+                return { success: false, error: error.message };
+            }
+        } else {
+            let records = JSON.parse(localStorage.getItem('ipRecords') || '[]');
+            let record = records.find(r => r.id === recordId);
+            if (record) {
+                Object.assign(record, updates, { updatedAt: timestamp });
+                localStorage.setItem('ipRecords', JSON.stringify(records));
+                return { success: true };
+            }
+            return { success: false, error: "Kayıt yerel depolamada bulunamadı." };
+        }
+    },
+    async deleteRecord(recordId) {
+        if (isFirebaseAvailable) {
+            try {
+                await deleteDoc(doc(db, 'ipRecords', recordId));
+                return { success: true };
+            } catch (error) {
+                return { success: false, error: error.message };
+            }
+        } else {
+            const records = JSON.parse(localStorage.getItem('ipRecords') || '[]').filter(r => r.id !== recordId);
+            localStorage.setItem('ipRecords', JSON.stringify(records));
+            return { success: true };
         }
     }
 };
 
-// --- Task Service (For Workflow Management) ---
+// --- Task Service ---
 export const taskService = {
     async createTask(taskData) {
-        if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor. İş oluşturulamaz." };
+        if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor." };
         try {
             const user = authService.getCurrentUser();
             const docRef = await addDoc(collection(db, 'tasks'), {
                 ...taskData,
-                createdBy_uid: user.uid,
-                createdBy_email: user.email,
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString(),
-                history: [{
-                    timestamp: new Date().toISOString(),
-                    userId: user.uid,
-                    userEmail: user.email,
-                    action: `İş oluşturuldu ve ${taskData.assignedTo_email} kişisine atandı.`
-                }]
+                createdBy_uid: user.uid, createdBy_email: user.email,
+                createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+                history: [{ timestamp: new Date().toISOString(), userId: user.uid, userEmail: user.email, action: `İş oluşturuldu ve ${taskData.assignedTo_email} kişisine atandı.` }]
             });
             return { success: true, id: docRef.id };
         } catch (error) {
@@ -427,28 +446,16 @@ export const taskService = {
         }
     },
     async updateTask(taskId, updates) {
-        if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor. İş güncellenemez." };
+        if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor." };
         try {
             const taskRef = doc(db, "tasks", taskId);
             const user = authService.getCurrentUser();
-            
             let actionMessage = `İş güncellendi.`;
             if (updates.status) {
                 actionMessage = `İş durumu "${updates.status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}" olarak güncellendi.`;
             }
-            
-            const updateAction = {
-                timestamp: new Date().toISOString(),
-                userId: user.uid,
-                userEmail: user.email,
-                action: actionMessage
-            };
-            
-            await updateDoc(taskRef, {
-                ...updates,
-                updatedAt: new Date().toISOString(),
-                history: arrayUnion(updateAction)
-            });
+            const updateAction = { timestamp: new Date().toISOString(), userId: user.uid, userEmail: user.email, action: actionMessage };
+            await updateDoc(taskRef, { ...updates, updatedAt: new Date().toISOString(), history: arrayUnion(updateAction) });
             return { success: true };
         } catch (error) {
             return { success: false, error: error.message };
@@ -459,89 +466,25 @@ export const taskService = {
         try {
             const q = query(collection(db, 'tasks'), orderBy('createdAt', 'desc'));
             const querySnapshot = await getDocs(q);
-            const tasks = querySnapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-            return { success: true, data: tasks };
+            return { success: true, data: querySnapshot.docs.map(d => ({ id: d.id, ...d.data() })) };
         } catch (error) {
-            return { success: false, error: error.message };
-        }
-    }
-};
-
-// --- Accrual Service ---
-export const accrualService = {
-    async addAccrual(accrualData) {
-        if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor. Tahakkuk eklenemez." };
-        const user = authService.getCurrentUser();
-        if (!user) return { success: false, error: "Kullanıcı girişi yapılmamış." };
-        
-        try {
-            const newAccrual = {
-                ...accrualData,
-                id: generateUUID(),
-                status: 'unpaid',
-                createdAt: new Date().toISOString(),
-                createdBy_uid: user.uid,
-                createdBy_email: user.email,
-                files: (accrualData.files || []).map(f => ({ ...f, id: f.id || generateUUID() })),
-                paymentDate: null
-            };
-            await setDoc(doc(db, 'accruals', newAccrual.id), newAccrual);
-            return { success: true, data: newAccrual };
-        } catch (error) {
-            console.error("Tahakkuk oluşturulurken hata:", error);
             return { success: false, error: error.message };
         }
     },
-
-    async getAccruals() {
+    // DÜZELTME: Eksik olan fonksiyon eklendi.
+    async getAllUsers() {
         if (!isFirebaseAvailable) return { success: true, data: [] };
         try {
-            const q = query(collection(db, 'accruals'), orderBy('createdAt', 'desc'));
+            const q = query(collection(db, 'users'), orderBy('displayName', 'asc'));
             const querySnapshot = await getDocs(q);
-            return { success: true, data: querySnapshot.docs.map(d => ({id: d.id, ...d.data()})) };
+            const users = querySnapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+            return { success: true, data: users };
         } catch (error) {
-            console.error("Tahakkuklar alınırken hata:", error);
-            return { success: false, error: error.message };
-        }
-    },
-
-    async updateAccrual(accrualId, updates) {
-        if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor. Tahakkuk güncellenemez." };
-        try {
-            const accrualRef = doc(db, 'accruals', accrualId);
-            const currentAccrualDoc = await getDoc(accrualRef);
-            if (!currentAccrualDoc.exists()) {
-                return { success: false, error: "Tahakkuk bulunamadı." };
-            }
-            const currentAccrualData = currentAccrualDoc.data();
-
-            let updatedFiles = currentAccrualData.files || [];
-            if (updates.files !== undefined) {
-                const newFilesToAdd = [];
-                for (const incomingFile of updates.files) {
-                    const existingFileIndex = updatedFiles.findIndex(f => f.id === incomingFile.id);
-                    if (existingFileIndex > -1) {
-                        updatedFiles[existingFileIndex] = { ...updatedFiles[existingFileIndex], ...incomingFile };
-                    } else {
-                        newFilesToAdd.push({ ...incomingFile, id: incomingFile.id || generateUUID() });
-                    }
-                }
-                updatedFiles = updatedFiles.filter(existingFile => updates.files.some(incomingFile => incomingFile.id === existingFile.id)).concat(newFilesToAdd);
-            }
-            
-            const finalUpdates = { ...updates };
-            delete finalUpdates.files;
-
-            await updateDoc(accrualRef, {
-                ...finalUpdates,
-                files: updatedFiles
-            });
-            return { success: true };
-        } catch (error) {
-            console.error("Tahakkuk güncellenirken hata:", error);
-            return { success: false, error: error.message };
+            console.error("Tüm kullanıcılar alınırken hata:", error);
+            return { success: false, error: error.message, data: [] };
         }
     }
 };
 
+// --- Exports ---
 export { auth, db };
