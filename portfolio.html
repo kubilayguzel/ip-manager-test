@@ -59,10 +59,9 @@
         .modal-detail-value { color: #555; }
         .modal-detail-section-title { grid-column: 1 / -1; font-size: 1.1em; color: #1e3c72; margin-top: 20px; padding-bottom: 5px; border-bottom: 1px dashed #e1e8ed; }
         
-        /* PAGINATION GÜNCELLEMELERİ */
         .pagination-container {
             display: flex;
-            justify-content: flex-end; /* Ana konteyner sağa yaslar */
+            justify-content: flex-end;
             padding: 20px 0;
             margin-top: 10px;
         }
@@ -82,6 +81,25 @@
             font-weight: 500;
             color: #555;
         }
+        
+        /* GÜNCELLEME: İşlem geçmişi akordeonu için gerekli stiller eklendi */
+        .transaction-node { display: flex; align-items: flex-start; padding: 8px 0; }
+        .transaction-toggle-btn {
+            flex-shrink: 0; width: 20px; height: 20px;
+            margin-right: 8px; cursor: pointer; border: 1px solid #ccc;
+            background-color: #f0f0f0; line-height: 18px; text-align: center;
+            font-family: monospace; font-weight: bold;
+        }
+        .child-transactions {
+            display: none; /* Çocukları varsayılan olarak gizle */
+            padding-left: 28px; /* Hiyerarşi için girinti ver */
+            border-left: 1px dashed #ccc;
+            margin-left: 10px;
+        }
+        .child-transactions.show {
+            display: block; /* .show sınıfı eklendiğinde çocukları göster */
+        }
+        
     </style>
 </head>
 <body>
@@ -347,11 +365,11 @@
                 let filterRowHtml = '<tr id="filter-row">';
                 headers.forEach(h => {
                     const sortClass = h.key === this.currentSortColumn ? `sort-${this.currentSortDirection}` : '';
-                    headerRowHtml += `<th data-sort="${h.sortable ? h.key : ''}" class="${sortClass}">${h.label}</th>`;
+                    headerRowHtml += `<th data-sort="<span class="math-inline">\{h\.sortable ? h\.key \: ''\}" class\="</span>{sortClass}">${h.label}</th>`;
                     if (h.key === 'actions' || h.key === 'trademarkImage') {
                         filterRowHtml += '<th></th>';
                     } else {
-                        filterRowHtml += `<th><input type="text" class="column-filter" data-column="${h.key}" placeholder="${h.label} ara..." value="${this.columnFilters[h.key] || ''}"></th>`;
+                        filterRowHtml += `<th><input type="text" class="column-filter" data-column="<span class="math-inline">\{h\.key\}" placeholder\="</span>{h.label} ara..." value="${this.columnFilters[h.key] || ''}"></th>`;
                     }
                 });
                 headerRowHtml += '</tr>';
@@ -372,11 +390,11 @@
                             case 'trademarkImage':
                                 const imageUrl = record.trademarkImage?.content;
                                 if (imageUrl) {
-                                    cellContent = `<div class="image-hover-container"><img src="${imageUrl}" class="trademark-image-thumb"><img src="${imageUrl}" class="trademark-image-preview"></div>`;
+                                    cellContent = `<div class="image-hover-container"><img src="<span class="math-inline">\{imageUrl\}" class\="trademark\-image\-thumb"\><img src\="</span>{imageUrl}" class="trademark-image-preview"></div>`;
                                 } else { cellContent = '-'; }
                                 break;
                             case 'type':
-                                cellContent = `<span class="ip-type ${record.type}">${TYPE_NAMES[record.type] || record.type}</span>`;
+                                cellContent = `<span class="ip-type <span class="math-inline">\{record\.type\}"\></span>{TYPE_NAMES[record.type] || record.type}</span>`;
                                 break;
                             case 'title': cellContent = record.title || '-'; break;
                             case 'applicationNumber': cellContent = record.applicationNumber || '-'; break;
@@ -386,9 +404,9 @@
                                 const archiveButtonText = record.isArchived ? 'Aktif Et' : 'Arşivle';
                                 const archiveButtonClass = record.isArchived ? 'btn-activate' : 'btn-archive';
                                 cellContent = `<div class="action-buttons">
-                                    <button class="action-btn btn-view" data-id="${record.id}">Görüntüle</button>
-                                    <button class="action-btn btn-edit" data-id="${record.id}">Düzenle</button>
-                                    <button class="action-btn ${archiveButtonClass}" data-id="${record.id}">${archiveButtonText}</button>
+                                    <button class="action-btn btn-view" data-id="<span class="math-inline">\{record\.id\}"\>Görüntüle</button\>
+<button class\="action\-btn btn\-edit" data\-id\="</span>{record.id}">Düzenle</button>
+                                    <button class="action-btn <span class="math-inline">\{archiveButtonClass\}" data\-id\="</span>{record.id}">${archiveButtonText}</button>
                                 </div>`;
                                 break;
                         }
@@ -445,13 +463,13 @@
                 const renderField = (label, value, isLongText = false) => {
                     if (!value) return '';
                     const valueClass = isLongText ? 'modal-detail-value long-text' : 'modal-detail-value';
-                    return `<div class="modal-detail-item"><div class="modal-detail-label">${label}:</div><div class="${valueClass}">${value}</div></div>`;
+                    return `<div class="modal-detail-item"><div class="modal-detail-label"><span class="math-inline">\{label\}\:</div\><div class\="</span>{valueClass}">${value}</div></div>`;
                 }
 
                 let modalContentHtml = `<h4 class="modal-detail-section-title">Temel Bilgiler</h4><div class="modal-detail-grid">`;
-                modalContentHtml += renderField('Kayıt Tipi', `<span class="ip-type ${record.type}">${TYPE_NAMES[record.type] || record.type}</span>`);
+                modalContentHtml += renderField('Kayıt Tipi', `<span class="ip-type <span class="math-inline">\{record\.type\}"\></span>{TYPE_NAMES[record.type] || record.type}</span>`);
                 modalContentHtml += renderField('Başlık', record.title);
-                modalContentHtml += renderField('Durum', record.status ? `<span class="status-badge status-${record.status.replace(/_/g, '-')}">${ALL_STATUS_MAP[record.status] || record.status}</span>` : '-');
+                modalContentHtml += renderField('Durum', record.status ? `<span class="status-badge status-<span class="math-inline">\{record\.status\.replace\(/\_/g, '\-'\)\}"\></span>{ALL_STATUS_MAP[record.status] || record.status}</span>` : '-');
                 modalContentHtml += renderField('Başvuru Numarası', record.applicationNumber);
                 modalContentHtml += renderField('Başvuru Tarihi', formatDate(record.applicationDate));
                 modalContentHtml += renderField('Tescil Tarihi', formatDate(record.registrationDate));
@@ -490,31 +508,56 @@
                 this.renderTransactionHistory(record.id, record.transactions, record.files);
                 modal.classList.add('show');
             }
-
+            
+            // Orijinal JavaScript mantığı ve HTML yapısı korunmuştur.
             renderTransactionHistory = (recordId, transactions, files) => {
                 const historyContentDiv = document.getElementById('transactionHistoryContainer');
                 if (!historyContentDiv) return;
+
                 const sortedTransactions = [...(transactions || [])].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
                 if (sortedTransactions.length === 0) {
                     historyContentDiv.innerHTML = '<p style="text-align:center; padding: 20px;">Bu kayıt için işlem geçmişi bulunmamaktadır.</p>';
                     return;
                 }
+                
+                // Hiyerarşiyi oluşturacak olan özyineli (recursive) fonksiyon
                 const buildTreeHtml = (transactionsToBuild) => {
                     return transactionsToBuild.map(tx => {
+                        // Mevcut işleme ait çocukları bul
                         const children = sortedTransactions.filter(childTx => childTx.parentId === tx.transactionId);
                         const hasChildren = children.length > 0;
                         const file = files?.find(f => f.id === tx.documentId);
-                        const fileLink = file ? ` | <a href="${file.content}" download="${file.name}" class="transaction-file-link">📄 Belge</a>` : '';
-                        return `<div class="transaction-node" data-id="${tx.transactionId}">${hasChildren ? `<button class="transaction-toggle-btn" data-target-id="${tx.transactionId}">+</button>` : ''}<div class="transaction-node-content"><div class="transaction-description">${tx.description || tx.type}</div><div class="transaction-meta">${new Date(tx.timestamp).toLocaleString('tr-TR')} by ${tx.userEmail}${fileLink}</div></div></div>${hasChildren ? `<div class="child-transactions" id="children-of-${tx.transactionId}">${buildTreeHtml(children)}</div>` : ''}`;
+                        const fileLink = file ? ` | <a href="<span class="math-inline">\{file\.content\}" download\="</span>{file.name}" class="transaction-file-link">📄 Belge</a>` : '';
+                        
+                        // Çocukları için HTML'i özyineli olarak oluştur
+                        const childrenHtml = hasChildren ? `<div class="child-transactions" id="children-of-<span class="math-inline">\{tx\.transactionId\}"\></span>{buildTreeHtml(children)}</div>` : '';
+
+                        // Mevcut işlemin HTML'ini oluştur
+                        return `
+                            <div class="transaction-node" data-id="${tx.transactionId}">
+                                ${hasChildren ? `<button class="transaction-toggle-btn" data-target-id="${tx.transactionId}">+</button>` : '<span style="display:inline-block; width: 20px; margin-right: 8px;"></span>'}
+                                <div class="transaction-node-content">
+                                    <div class="transaction-description"><span class="math-inline">\{tx\.description \|\| tx\.type\}</div\>
+<div class\="transaction\-meta"\></span>{new Date(tx.timestamp).toLocaleString('tr-TR')} by <span class="math-inline">\{tx\.userEmail\}</span>{fileLink}</div>
+                                </div>
+                            </div>
+                            ${childrenHtml}
+                        `;
                     }).join('');
                 };
+
+                // Ağacı sadece ana işlemlerle (parentId'si olmayan) başlat
                 historyContentDiv.innerHTML = buildTreeHtml(sortedTransactions.filter(tx => !tx.parentId));
+                
+                // Butonlara tıklama olaylarını ekle
                 historyContentDiv.querySelectorAll('.transaction-toggle-btn').forEach(button => {
                     button.addEventListener('click', (e) => {
                         const targetId = e.currentTarget.dataset.targetId;
                         const childContainer = document.getElementById(`children-of-${targetId}`);
-                        childContainer.classList.toggle('show');
-                        e.currentTarget.textContent = childContainer.classList.contains('show') ? '−' : '+';
+                        if (childContainer) {
+                             childContainer.classList.toggle('show');
+                             e.currentTarget.textContent = childContainer.classList.contains('show') ? '−' : '+';
+                        }
                     });
                 });
             }
@@ -525,7 +568,7 @@
                 const record = this.records.find(r => r.id === recordId);
                 const newArchivedState = !record.isArchived;
                 const actionText = newArchivedState ? 'arşivlemek' : 'aktif hale getirmek';
-                if (confirm(`Bu kaydı ${actionText} istediğinizden emin misiniz?`)) {
+                if (confirm(`Bu kaydı ${actiontext} istediğinizden emin misiniz?`)) {
                     const result = await ipRecordsService.updateRecord(recordId, { isArchived: newArchivedState });
                     if (result.success) {
                         showNotification('İşlem başarılı!', 'success');
