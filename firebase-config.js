@@ -303,9 +303,18 @@ export const ipRecordsService = {
         }
     },
     async getRecords() {
-        if (!isFirebaseAvailable) return { success: true, data: JSON.parse(localStorage.getItem('ipRecords') || '[]') };
+        if (!isFirebaseAvailable) {
+            const records = JSON.parse(localStorage.getItem('ipRecords') || '[]');
+            // Yerel depolamada da parent/child ayrımı yaparak veriyi döndürebiliriz.
+            // Ancak, yerel depolama örneğinde transactions zaten dizinin bir parçasıdır.
+            // Bu kısım UI katmanında işlenmelidir.
+            return { success: true, data: records };
+        }
         try {
             const snapshot = await getDocs(collection(db, 'ipRecords'));
+            // Firestore'dan gelen verilerde transactions dizisi zaten dahil olacaktır,
+            // çünkü bu bir dokümanın alanıdır (alt koleksiyon değil).
+            // Parent/child ayrımını UI katmanında yapmalısınız.
             return { success: true, data: snapshot.docs.map(d => ({ id: d.id, ...d.data() })) };
         } catch (error) {
             return { success: false, error: error.message };
@@ -360,7 +369,82 @@ export const ipRecordsService = {
         } catch (error) {
             return { success: false, error: error.message };
         }
-    }
+    },
+    // Güncellenmiş addTransactionToRecord fonksiyonu
+    async addTransactionToRecord(recordId, transactionData) {
+        if (!isFirebaseAvailable) {
+            // Yerel depolama için işlem
+            let records = JSON.parse(localStorage.getItem('ipRecords') || '[]');
+            const recordIndex = records.findIndex(r => r.id === recordId);
+            if (recordIndex > -1) {
+                if (!records[recordIndex].transactions) {
+                    records[recordIndex].transactions = [];
+                }
+                const user = authService.getCurrentUser();
+                const newTransaction = {
+                    ...transactionData,
+                    transactionId: generateUUID(),
+                    timestamp: new Date().toISOString(),
+                    userId: user.uid,
+                    userEmail: user.email,
+                    // Eğer transactionData içinde yoksa varsayılan olarak 'parent' ayarla
+                    type: transactionData.type || 'parent', 
+                    // Eğer transactionData içinde yoksa varsayılan olarak null ayarla
+                    parentId: transactionData.parentId || null 
+                };
+                records[recordIndex].transactions.push(newTransaction);
+                localStorage.setItem('ipRecords', JSON.stringify(records));
+                return { success: true, data: newTransaction }; // Eklenen işlemi de döndürebiliriz
+            }
+            return { success: false, error: "Record not found in local storage." };
+        }
+        try {
+            const recordRef = doc(db, 'ipRecords', recordId);
+            const user = authService.getCurrentUser();
+            const newTransaction = {
+                ...transactionData,
+                transactionId: generateUUID(),
+                timestamp: new Date().toISOString(),
+                userId: user.uid,
+                userEmail: user.email,
+                // Eğer transactionData içinde yoksa varsayılan olarak 'parent' ayarla
+                type: transactionData.type || 'parent', 
+                // Eğer transactionData içinde yoksa varsayılan olarak null ayarla
+                parentId: transactionData.parentId || null 
+            };
+            // arrayUnion, transactions dizisine yeni işlemi ekler
+            await updateDoc(recordRef, {
+                transactions: arrayUnion(newTransaction)
+            });
+            return { success: true, data: newTransaction }; // Eklenen işlemi de döndürebiliriz
+        } catch (error) {
+            console.error("Error adding transaction to record:", error);
+            return { success: false, error: error.message };
+        }
+    },
+    // Mevcut deleteTransaction fonksiyonu
+    async deleteTransaction(recordId, transactionId) {
+        if (!isFirebaseAvailable) {
+            console.warn("Local storage transaction deletion not implemented.");
+            return { success: true }; // Yerel için sessizce başarısız ol
+        }
+        try {
+            const recordRef = doc(db, "ipRecords", recordId);
+            const recordSnap = await getDoc(recordRef);
+            if (recordSnap.exists()) {
+                const recordData = recordSnap.data();
+                const transactions = recordData.transactions || [];
+                const updatedTransactions = transactions.filter(tx => tx.transactionId !== transactionId);
+                await updateDoc(recordRef, { transactions: updatedTransactions });
+                return { success: true };
+            } else {
+                return { success: false, error: "Record not found." };
+            }
+        } catch (error) {
+            console.error("Error deleting transaction:", error);
+            return { success: false, error: error.message };
+        }
+    },
 };
 
 // --- Task Service (For Workflow Management) ---
@@ -685,7 +769,16 @@ export async function createDemoData() {
                 applicationNumber: 'PT/2024/001',
                 applicationDate: '2024-03-15',
                 description: 'Bu, lityum-iyon pillerin ömrünü uzatan yeni bir batarya teknolojisi için yapılmış bir demo patent başvurusudur.',
-                owners: [demoOwner]
+                owners: [demoOwner],
+                transactions: [ // İlk parent transaction
+                    { 
+                        transactionId: generateUUID(), 
+                        designation: 'Başvuru Yapıldı', 
+                        date: '2024-03-15', 
+                        type: 'parent',
+                        notes: 'Patent başvurusu ilgili kuruma yapıldı.'
+                    }
+                ]
             },
             {
                 type: 'trademark',
@@ -702,7 +795,23 @@ export async function createDemoData() {
                     size: 1024,
                     content: 'data:image/jpeg;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII='
                 },
-                renewalDate: '2025-06-15'
+                renewalDate: '2025-06-15',
+                transactions: [ // İlk parent transaction
+                    { 
+                        transactionId: generateUUID(), 
+                        designation: 'Marka Başvurusu', 
+                        date: '2023-11-20', 
+                        type: 'parent',
+                        notes: 'Marka için ilk başvuru yapıldı.'
+                    },
+                    { 
+                        transactionId: generateUUID(), 
+                        designation: 'Yayın Kararı Geldi', 
+                        date: '2024-01-10', 
+                        type: 'parent', // Bu da bir parent işlem olabilir
+                        notes: 'Başvuru resmi bültende yayına çıktı.'
+                    }
+                ]
             }
         ];
 
@@ -710,6 +819,26 @@ export async function createDemoData() {
             const addRecordResult = await ipRecordsService.addRecord(record);
             if (!addRecordResult.success) {
                 console.error("Demo kayıt oluşturulamadı:", addRecordResult.error);
+                continue; // Bir sonraki kayda geç
+            }
+
+            // Marka kaydına özel child işlem ekleyelim (ikinci kayıt için)
+            if (record.type === 'trademark' && addRecordResult.id) {
+                const parentTransactionId = record.transactions[0].transactionId; // İlk parent işlemin ID'sini al
+                await ipRecordsService.addTransactionToRecord(addRecordResult.id, {
+                    designation: 'Yayına İtiraz Geldi',
+                    date: '2024-02-01',
+                    type: 'child',
+                    parentId: parentTransactionId, // Parent ID'si ile ilişkilendir
+                    notes: 'Marka başvurusuna üçüncü bir taraf itiraz etti.'
+                });
+                await ipRecordsService.addTransactionToRecord(addRecordResult.id, {
+                    designation: 'İtiraza Cevap Sunuldu',
+                    date: '2024-03-05',
+                    type: 'child',
+                    parentId: parentTransactionId, // Yine aynı parent ile ilişkilendir
+                    notes: 'İtiraza karşı görüşümüzü sunduk.'
+                });
             }
         }
         console.log('✅ Demo verisi başarıyla oluşturuldu!');
