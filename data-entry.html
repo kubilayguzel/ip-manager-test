@@ -211,7 +211,6 @@
     </div>
 
     <script type="module">
-        // DÜZELTME: Eksik olan 'auth' import edildi.
         import { authService, ipRecordsService, personsService, auth } from './firebase-config.js';
         import { showNotification, readFileAsDataURL, STATUSES } from './utils.js';
         import { loadSharedLayout } from './js/layout-loader.js';
@@ -456,36 +455,39 @@
                 document.getElementById('type').value = record.type;
                 this.handleTypeChange(record.type);
                 
-                document.getElementById('title').value = record.title || '';
-                document.getElementById('status').value = record.status || '';
-                document.getElementById('applicationNumber').value = record.applicationNumber || '';
-                document.getElementById('applicationDate').value = record.applicationDate || '';
-                document.getElementById('registrationDate').value = record.registrationDate || '';
-                document.getElementById('description').value = record.description || '';
+                // Kısa bir gecikme ile doldurma işlemi
+                setTimeout(() => {
+                    document.getElementById('title').value = record.title || '';
+                    document.getElementById('status').value = record.status || '';
+                    document.getElementById('applicationNumber').value = record.applicationNumber || '';
+                    document.getElementById('applicationDate').value = record.applicationDate || '';
+                    document.getElementById('registrationDate').value = record.registrationDate || '';
+                    document.getElementById('description').value = record.description || '';
 
-                if (record.type === 'patent') {
-                    document.getElementById('patentClass').value = record.patentClass || '';
-                    document.getElementById('renewalDatePatent').value = record.renewalDatePatent || '';
-                } else if (record.type === 'trademark') {
-                    document.getElementById('niceClass').value = record.niceClass || '';
-                    document.getElementById('renewalDateTrademark').value = record.renewalDateTrademark || '';
-                    if (record.trademarkImage?.content) {
-                        this.existingImageUrl = record.trademarkImage.content;
-                        this.displayImagePreview(this.existingImageUrl);
+                    if (record.type === 'patent') {
+                        document.getElementById('patentClass').value = record.patentClass || '';
+                        document.getElementById('renewalDatePatent').value = record.renewalDatePatent || '';
+                    } else if (record.type === 'trademark') {
+                        document.getElementById('niceClass').value = record.niceClass || '';
+                        document.getElementById('renewalDateTrademark').value = record.renewalDateTrademark || '';
+                        if (record.trademarkImage?.content) {
+                            this.existingImageUrl = record.trademarkImage.content;
+                            this.displayImagePreview(this.existingImageUrl);
+                        }
+                    } else if (record.type === 'copyright') {
+                        document.getElementById('copyrightType').value = record.copyrightType || '';
+                    } else if (record.type === 'design') {
+                        document.getElementById('designClass').value = record.designClass || '';
+                        document.getElementById('renewalDateDesign').value = record.renewalDateDesign || '';
                     }
-                } else if (record.type === 'copyright') {
-                    document.getElementById('copyrightType').value = record.copyrightType || '';
-                } else if (record.type === 'design') {
-                    document.getElementById('designClass').value = record.designClass || '';
-                    document.getElementById('renewalDateDesign').value = record.renewalDateDesign || '';
-                }
-                
-                if (record.owners) {
-                    this.selectedOwners = record.owners;
-                    this.renderSelectedOwners();
-                }
+                    
+                    if (record.owners) {
+                        this.selectedOwners = record.owners;
+                        this.renderSelectedOwners();
+                    }
+                }, 100); // 100ms gecikme, DOM'un güncellenmesine zaman tanır
             }
-    
+
             handleFormSubmit = async (event) => {
                 event.preventDefault();
                 document.getElementById('saveRecordBtn').disabled = true;
@@ -547,12 +549,14 @@
             }
         }
     
+        // DÜZELTME: Modülün doğru şekilde başlatılması sağlandı.
+        let dataEntryModule;
         document.addEventListener('DOMContentLoaded', async () => {
             await loadSharedLayout({ activeMenuLink: 'data-entry.html' });
-            const dataEntry = new DataEntryModule();
+            dataEntryModule = new DataEntryModule();
             auth.onAuthStateChanged(async (user) => {
                 if (user || authService.getCurrentUser()) {
-                    await dataEntry.init();
+                    await dataEntryModule.init();
                     window.dataEntryModule = dataEntryModule;
                 } else {
                     window.location.href = 'index.html';
