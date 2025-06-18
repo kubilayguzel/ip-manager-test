@@ -83,23 +83,44 @@
         }
         
         /* GÜNCELLEME: İşlem geçmişi (akordeon) için gerekli stiller eklendi */
-        .transaction-node { display: flex; align-items: flex-start; padding: 8px 0; }
-        .transaction-toggle-btn {
-            flex-shrink: 0; width: 20px; height: 20px;
-            margin-right: 8px; cursor: pointer; border: 1px solid #ccc;
-            background-color: #f0f0f0; line-height: 18px; text-align: center;
-            font-family: monospace; font-weight: bold;
+        .transaction-node { 
+            display: flex; 
+            align-items: flex-start; 
+            padding: 8px 0; 
+            background-color: #fcfcfc;
+            border-bottom: 1px dashed #eee;
         }
+        .transaction-node:last-of-type {
+            border-bottom: none;
+        }
+
+        .transaction-toggle-btn {
+            flex-shrink: 0; width: 24px; height: 24px;
+            margin-right: 8px; cursor: pointer; border: 1px solid #ccc;
+            background-color: #e0e0e0; line-height: 22px; text-align: center;
+            font-family: monospace; font-weight: bold; border-radius: 4px;
+            font-size: 1.1em;
+        }
+        .transaction-node-content {
+            flex-grow: 1; /* İçeriğin kalan alanı kaplamasını sağla */
+            padding-right: 10px; /* Sağa biraz boşluk */
+        }
+        .transaction-description { font-weight: 600; color: #333; }
+        .transaction-meta { font-size: 0.9em; color: #777; margin-top: 2px; }
+        .transaction-file-link { margin-left: 8px; color: #007bff; text-decoration: none; }
+        .transaction-file-link:hover { text-decoration: underline; }
+
         .child-transactions {
             display: none; /* Çocukları varsayılan olarak gizle */
-            padding-left: 28px; /* Hiyerarşi için girinti ver */
+            padding-left: 36px; /* Hiyerarşi için girinti ver (toggle buton + margin) */
             border-left: 1px dashed #ccc;
             margin-left: 10px;
+            padding-top: 5px;
+            padding-bottom: 5px;
         }
         .child-transactions.show {
             display: block; /* .show sınıfı eklendiğinde çocukları göster */
         }
-        
     </style>
 </head>
 <body>
@@ -129,6 +150,7 @@
                     </label>
                 </div>
                 <button class="btn btn-primary" id="exportBtn">CSV İndir</button>
+                <button class="btn btn-secondary" id="createDemoDataBtn">Demo Verisi Oluştur</button>
             </div>
 
             <div class="portfolio-table-container">
@@ -162,10 +184,82 @@
     </div>
 
     <script type="module">
-        import { authService, ipRecordsService, auth } from './firebase-config.js';
+        import { authService, ipRecordsService, auth } from './firebase-config.js'; // firebase.js yerine firebase-config.js
         import { showNotification, TYPE_NAMES, ALL_STATUS_MAP } from './utils.js';
         import { loadSharedLayout } from './js/layout-loader.js';
+        import { createDemoData } from './firebase-config.js'; // Demo verisi oluşturmak için import
 
+        // --- Helper Functions for UI Logic (Modül Kapsamında Tanımlandı) ---
+
+        /**
+         * İşlemleri hiyerarşik olarak gruplandırır (parent-child ilişkisine göre).
+         * @param {Array<Object>} transactions - IP kaydının tüm işlem dizisi.
+         * @returns {Array<Object>} Parent işlemleri içeren ve çocukları iç içe geçmiş bir dizi.
+         */
+        function groupTransactions(transactions) {
+            if (!transactions) return [];
+
+            const grouped = {};
+            const children = [];
+
+            transactions.forEach(tx => {
+                // transactionHierarchy alanı "parent" ise veya hiç belirtilmemişse (eski verilerle uyumluluk için)
+                if (tx.transactionHierarchy === 'parent' || !tx.transactionHierarchy) {
+                    grouped[tx.transactionId] = { ...tx, children: [] };
+                } else { // child olması durumunda
+                    children.push(tx);
+                }
+            });
+
+            children.forEach(childTx => {
+                // Eğer child ise ve parentId'si varsa ve parent'ı grouped içinde bulabiliyorsak
+                if (childTx.transactionHierarchy === 'child' && childTx.parentId && grouped[childTx.parentId]) {
+                    grouped[childTx.parentId].children.push(childTx);
+                }
+            });
+
+            // Sonucu, parent işlemleri içeren bir dizi olarak döndür
+            // Her parent objesi içinde 'children' dizisi ile bağlı çocukları olacaktır.
+            return Object.values(grouped).sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)); // Tarihe göre azalan sırala
+        }
+
+        /**
+         * Dosyaları ilgili işlemlerle gruplar ve işlem nesnelerine ekler (rekürsif).
+         * @param {Array<Object>} files - IP kaydının tüm dosya dizisi.
+         * @param {Array<Object>} transactionsToProcess - groupTransactions tarafından organize edilmiş işlem dizisi.
+         * @returns {Array<Object>} Dosyaların eklenmiş olduğu organize edilmiş işlem dizisi.
+         */
+        function groupFilesByTransaction(files, transactionsToProcess) {
+            const groupedFiles = {};
+            
+            // Önce tüm dosyaları relatedTransactionId'lerine göre grupla
+            if (files) {
+                files.forEach(file => {
+                    if (file.relatedTransactionId) {
+                        if (!groupedFiles[file.relatedTransactionId]) {
+                            groupedFiles[file.relatedTransactionId] = [];
+                        }
+                        groupedFiles[file.relatedTransactionId].push(file);
+                    }
+                });
+            }
+
+            // Şimdi organize edilmiş işlemleri dönüp, ilgili dosyaları ekleyelim
+            const addFilesToTransactionsRecursive = (currentTransactions) => {
+                return currentTransactions.map(tx => {
+                    const txWithFiles = { ...tx, attachedFiles: groupedFiles[tx.transactionId] || [] };
+                    if (tx.children && tx.children.length > 0) {
+                        txWithFiles.children = addFilesToTransactionsRecursive(tx.children);
+                    }
+                    return txWithFiles;
+                });
+            };
+
+            return addFilesToTransactionsRecursive(transactionsToProcess);
+        }
+
+
+        // --- PortfolioModule Sınıfı ---
         class PortfolioModule {
             constructor() {
                 this.currentUser = null;
@@ -236,6 +330,17 @@
                 const nextPageBtnEl = document.getElementById('nextPageBtn');
                 if(nextPageBtnEl) {
                     nextPageBtnEl.addEventListener('click', () => this.goToPage(this.currentPage + 1));
+                }
+
+                // Demo Verisi Oluşturma Butonu Listener'ı
+                const createDemoDataButton = document.getElementById('createDemoDataBtn');
+                if (createDemoDataButton) {
+                    createDemoDataButton.addEventListener('click', async () => {
+                        console.log("Demo verisi oluşturuluyor...");
+                        await createDemoData(); // firebase-config.js'den import edilen fonksiyon
+                        showNotification('Demo verisi başarıyla oluşturuldu!', 'success');
+                        await this.loadRecords(); // Yeni verileri yükle
+                    });
                 }
             }
 
@@ -452,8 +557,8 @@
             
             viewRecord = (recordId) => {
                 const record = this.records.find(r => r.id === recordId);
-                console.log("🔍 Kayıt işlem geçmişi:", record.transactions);  // ← BUNU EKLE
                 if (!record) return;
+
                 const modal = document.getElementById('detailModal');
                 const modalTitleEl = document.getElementById('modalTitle');
                 const modalBodyEl = document.getElementById('modalBody');
@@ -462,7 +567,7 @@
                 
                 const formatDate = (date) => date ? new Date(date).toLocaleDateString('tr-TR') : '-';
                 const renderField = (label, value, isLongText = false) => {
-                    if (!value) return '';
+                    if (!value && value !== false) return ''; // False değerini de göstermek için kontrol
                     const valueClass = isLongText ? 'modal-detail-value long-text' : 'modal-detail-value';
                     return `<div class="modal-detail-item"><div class="modal-detail-label">${label}:</div><div class="${valueClass}">${value}</div></div>`;
                 }
@@ -504,49 +609,73 @@
                     modalContentHtml += `</div>`;
                 }
 
-                modalContentHtml += `<h4 class="modal-detail-section-title">İşlem Geçmişi</h4><div id="transactionHistoryContainer"></div>`;
+                modalContentHtml += `<h4 class="modal-detail-section-title">İşlem Geçmişi ve Dosyalar</h4><div id="transactionHistoryContainer"></div>`;
                 modalBodyEl.innerHTML = modalContentHtml;
-                this.renderTransactionHistory(record.id, record.transactions, record.files);
+                
+                // İşlem ve dosya verilerini render etmek için yeni çağrı
+                this.renderTransactionHistory(record.transactions, record.files);
+                
                 modal.classList.add('show');
             }
             
-            renderTransactionHistory = (recordId, transactions, files) => {
+            // GÜNCELLENMİŞ renderTransactionHistory FONKSİYONU
+            renderTransactionHistory = (transactions, files) => {
                 const historyContentDiv = document.getElementById('transactionHistoryContainer');
                 if (!historyContentDiv) return;
-                const sortedTransactions = [...(transactions || [])].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-                if (sortedTransactions.length === 0) {
+
+                // 1. İşlemleri hiyerarşik olarak grupla
+                const organizedTransactions = groupTransactions(transactions || []);
+                
+                // 2. Dosyaları işlemlere bağla
+                const transactionsWithFiles = groupFilesByTransaction(files, organizedTransactions);
+
+                if (transactionsWithFiles.length === 0) {
                     historyContentDiv.innerHTML = '<p style="text-align:center; padding: 20px;">Bu kayıt için işlem geçmişi bulunmamaktadır.</p>';
                     return;
                 }
-                const buildTreeHtml = (transactionsToBuild) => {
-                    return transactionsToBuild.map(tx => {
-                        const children = sortedTransactions.filter(childTx => childTx.parentId === tx.transactionId);
-                        console.log('📌 Parent işlem ID:', tx.transactionId);
-                        console.log('   ↳ Bağlı çocuklar:', sortedTransactions.filter(childTx => childTx.parentId === tx.transactionId));
-                        const hasChildren = children.length > 0;
-                        const file = files?.find(f => f.id === tx.documentId);
-                        const fileLink = file ? ` | <a href="${file.content}" download="${file.name}" class="transaction-file-link">📄 Belge</a>` : '';
-                        const childrenHtml = hasChildren ? `<div class="child-transactions" id="children-of-${tx.transactionId}">${buildTreeHtml(children)}</div>` : '';
+
+                // Rekürsif olarak HTML ağacını oluştur
+                const buildTransactionHtml = (txList) => {
+                    return txList.map(tx => {
+                        const hasChildren = tx.children && tx.children.length > 0;
+                        const formattedTimestamp = new Date(tx.timestamp).toLocaleString('tr-TR');
+                        
+                        let fileLinksHtml = '';
+                        if (tx.attachedFiles && tx.attachedFiles.length > 0) {
+                            tx.attachedFiles.forEach(file => {
+                                fileLinksHtml += ` <a href="${file.fileUrl}" download="${file.fileName}" class="transaction-file-link" title="${file.documentDesignation || 'Belge'}">📄 ${file.fileName}</a>`;
+                            });
+                        }
+
+                        const childrenHtml = hasChildren ? 
+                            `<div class="child-transactions" id="children-of-${tx.transactionId}">${buildTransactionHtml(tx.children)}</div>` : '';
+                        
                         return `
                             <div class="transaction-node" data-id="${tx.transactionId}">
-                                ${hasChildren ? `<button class="transaction-toggle-btn" data-target-id="${tx.transactionId}">+</button>` : '<span style="display:inline-block; width: 20px; margin-right: 8px;"></span>'}
+                                ${hasChildren ? `<button class="transaction-toggle-btn" data-target-id="${tx.transactionId}">+</button>` : '<span style="display:inline-block; width: 24px; margin-right: 8px;"></span>'}
                                 <div class="transaction-node-content">
-                                    <div class="transaction-description">${tx.description || tx.type}</div>
-                                    <div class="transaction-meta">${new Date(tx.timestamp).toLocaleString('tr-TR')} by ${tx.userEmail}${fileLink}</div>
+                                    <div class="transaction-description">${tx.designation || tx.transactionType || 'Tanımsız İşlem'} 
+                                        <span style="font-weight: normal; color: #888;">(${tx.transactionType || 'Genel'})</span>
+                                    </div>
+                                    <div class="transaction-meta">${formattedTimestamp} by ${tx.userEmail}${fileLinksHtml}</div>
+                                    ${tx.notes ? `<div class="transaction-notes" style="font-size: 0.85em; color: #999; margin-top: 4px;">Not: ${tx.notes}</div>` : ''}
                                 </div>
                             </div>
                             ${childrenHtml}
                         `;
                     }).join('');
                 };
-                historyContentDiv.innerHTML = buildTreeHtml(sortedTransactions.filter(tx => !tx.parentId));
+
+                historyContentDiv.innerHTML = buildTransactionHtml(transactionsWithFiles); // Zaten parent'lar geliyor
+
+                // Toggle butonlarına event listener ekle
                 historyContentDiv.querySelectorAll('.transaction-toggle-btn').forEach(button => {
                     button.addEventListener('click', (e) => {
                         const targetId = e.currentTarget.dataset.targetId;
                         const childContainer = document.getElementById(`children-of-${targetId}`);
                         if (childContainer) {
-                             childContainer.classList.toggle('show');
-                             e.currentTarget.textContent = childContainer.classList.contains('show') ? '−' : '+';
+                            childContainer.classList.toggle('show');
+                            e.currentTarget.textContent = childContainer.classList.contains('show') ? '−' : '+';
                         }
                     });
                 });
@@ -602,6 +731,7 @@
             }
         }
 
+        // --- Initialization ---
         document.addEventListener('DOMContentLoaded', async () => {
             await loadSharedLayout({ topHeaderLeftContentId: 'breadcrumbContainer', activeMenuLink: 'portfolio.html' });
             const portfolio = new PortfolioModule();
