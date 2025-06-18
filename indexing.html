@@ -55,6 +55,14 @@
         .transaction-list-item { padding: 10px; cursor: pointer; border-radius: 6px; }
         .transaction-list-item:hover { background-color: #f0f4f8; }
         .transaction-list-item.selected { background-color: #e6f2ff; color: #1e3c72; font-weight: bold; }
+
+        /* Yeni eklenecek child işlem tanımı alanı için stil */
+        .child-transaction-inputs {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px dashed #e1e8ed;
+            display: none; /* Varsayılan olarak gizli */
+        }
     </style>
 </head>
 <body>
@@ -95,9 +103,35 @@
                         <div class="tab-content-container">
                             <div id="existing-transaction-pane" class="tab-pane active">
                                 <div class="form-group">
-                                    <label class="form-label">A) Dosyanın Ekleneceği İşlemi Seçin</label>
+                                    <label class="form-label">A) Dosyanın Ekleneceği PARENT İşlemi Seçin</label>
                                     <div id="transactions-list-for-selection" class="transaction-list-container">
                                         <p class="text-muted p-2">Lütfen bir kayıt seçin.</p>
+                                    </div>
+                                </div>
+
+                                <div id="childTransactionInputs" class="child-transaction-inputs">
+                                    <h4 class="section-title" style="font-size: 1.1em;"><span>A-1.</span> Yeni Çocuk İşlem Oluştur (Opsiyonel)</h4>
+                                    <div class="form-group">
+                                        <label class="form-label" for="specificChildTransactionDesignation">Çocuk İşlem Başlığı (Örn: Ret Kararı)</label>
+                                        <input type="text" id="specificChildTransactionDesignation" class="form-input" placeholder="Çocuk işlem başlığını girin...">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label" for="specificChildTransactionType">Çocuk İşlem Türünü Seçin</label>
+                                        <select id="specificChildTransactionType" class="form-select">
+                                            <option value="" disabled selected>İşlem türü seçin...</option>
+                                            <option value="Karara İtiraz">Karara İtiraz</option>
+                                            <option value="Yayına İtiraz">Yayına İtiraz</option>
+                                            <option value="İtiraza Cevap">İtiraza Cevap</option>
+                                            <option value="Ret Kararı">Ret Kararı</option>
+                                            <option value="Kabul Kararı">Kabul Kararı</option>
+                                            <option value="Eksiklik Bildirimi">Eksiklik Bildirimi</option>
+                                            <option value="Genel">Genel</option>
+                                            <option value="Diğer">Diğer</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label" for="specificChildTransactionNotes">Notlar (İsteğe Bağlı)</label>
+                                        <textarea id="specificChildTransactionNotes" class="form-input" rows="2" placeholder="Çocuk işlemle ilgili notlar..."></textarea>
                                     </div>
                                 </div>
                                 <div class="form-group">
@@ -160,7 +194,7 @@
         import { authService, ipRecordsService, auth, generateUUID } from './firebase-config.js';
         import { showNotification, formatFileSize, readFileAsDataURL } from './utils.js';
         import { loadSharedLayout } from './js/layout-loader.js';
-        import { documentDesignationTranslations } from './firebase-config.js'; // documentDesignationTranslations'ı da import et
+        import { documentDesignationTranslations } from './firebase-config.js'; 
 
         // documentDesignationTranslations objesini bir diziye çevirelim
         const DOCUMENT_DESIGNATION_TYPES = Object.values(documentDesignationTranslations);
@@ -171,10 +205,9 @@
                 this.allRecords = []; 
                 this.selectedRecord = null; 
                 this.uploadedFiles = new Map(); // Key: tabKey (existing/manual), Value: Array of { id, fileObject, documentDesignation }
-                this.selectedTransactionId = null; // Sadece 'existing-transaction-pane' için kullanılır
+                this.selectedTransactionId = null; // 'existing-transaction-pane' için seçilen parent transaction ID'si
                 this.activeTab = 'existing-transaction-pane';
                 
-                // *** DÜZELTME: init() fonksiyonu constructor içinde çağrılıyor. ***
                 this.init();
             }
 
@@ -182,12 +215,12 @@
                 this.currentUser = authService.getCurrentUser();
                 if(!this.currentUser) {
                     window.location.href = 'index.html';
-                    return; // Stop execution if no user
+                    return; 
                 }
 
                 await this.loadRecords();
                 this.setupEventListeners();
-                this.activateTab(this.activeTab); // İlk yüklemede aktif tabı ayarla
+                this.activateTab(this.activeTab); 
             }
 
             async loadRecords() {
@@ -210,10 +243,10 @@
                 document.getElementById('indexDocumentsBtn').addEventListener('click', () => this.handleSubmit());
                 document.getElementById('resetIndexingFormBtn').addEventListener('click', () => this.resetForm());
                 
-                document.querySelectorAll('.tabs-container .tab-btn').forEach(btn => { // .tabs-container ile daha spesifik hedefle
+                document.querySelectorAll('.tabs-container .tab-btn').forEach(btn => { 
                     btn.addEventListener('click', (e) => {
                         const targetTab = e.currentTarget.dataset.tab;
-                        this.activateTab(targetTab); // Yeni activateTab fonksiyonunu kullan
+                        this.activateTab(targetTab); 
                     });
                 });
                 
@@ -224,8 +257,9 @@
                         const newType = e.target.value;
                         const files = this.uploadedFiles.get(tabKey) || [];
                         const fileToUpdate = files.find(f => f.id === fileId);
-                        if (fileToUpdate) fileToUpdate.documentDesignation = newType; // documentDesignation olarak güncellendi
+                        if (fileToUpdate) fileToUpdate.documentDesignation = newType;
                     }
+                    this.checkFormCompleteness(); // Her select değiştiğinde formu kontrol et
                 });
 
                 document.addEventListener('click', (e) => {
@@ -238,12 +272,15 @@
                     }
                 });
                 
-                // Manuel işlem sekmesindeki parent işlem seçiciyi doldur
                 document.getElementById('specificTransactionParentId').addEventListener('focus', () => {
                     if (this.selectedRecord) {
                         this.populateParentTransactionSelect(this.selectedRecord.transactions);
                     }
                 });
+
+                // Yeni eklenen çocuk işlem inputları için listenerlar
+                document.getElementById('specificChildTransactionDesignation').addEventListener('input', () => this.checkFormCompleteness());
+                document.getElementById('specificChildTransactionType').addEventListener('change', () => this.checkFormCompleteness());
             }
 
             activateTab(tabName) {
@@ -252,7 +289,7 @@
                 document.querySelector(`.tab-btn[data-tab="${tabName}"]`).classList.add('active');
                 document.querySelectorAll('.tab-pane').forEach(pane => pane.classList.remove('active'));
                 document.getElementById(tabName).classList.add('active');
-                this.checkFormCompleteness(); // Her tab değiştiğinde formu kontrol et
+                this.checkFormCompleteness(); 
             }
 
             searchRecords(query) {
@@ -291,22 +328,38 @@
                 this.renderTransactionsForSelection(); // Mevcut işlemleri listele
                 this.populateParentTransactionSelect(this.selectedRecord.transactions); // Manuel işlem için parent listesini doldur
                 this.checkFormCompleteness();
+
+                // Kayıt seçildiğinde child işlem inputlarını gizle/göster (varsayılan gizli)
+                const childTransactionInputsEl = document.getElementById('childTransactionInputs');
+                if (childTransactionInputsEl) {
+                    childTransactionInputsEl.style.display = 'none'; // İlk başta gizle
+                }
+                this.selectedTransactionId = null; // Yeni kayıt seçildiğinde transaction seçimi sıfırla
             }
 
             renderTransactionsForSelection() {
                 const container = document.getElementById('transactions-list-for-selection');
                 container.innerHTML = '';
-                this.selectedTransactionId = null; // Seçimi sıfırla
+                this.selectedTransactionId = null; 
+                
+                const childTransactionInputsEl = document.getElementById('childTransactionInputs');
+                if (childTransactionInputsEl) {
+                    childTransactionInputsEl.style.display = 'none'; // Parent seçimi değişince gizle
+                    document.getElementById('specificChildTransactionDesignation').value = '';
+                    document.getElementById('specificChildTransactionType').value = '';
+                    document.getElementById('specificChildTransactionNotes').value = '';
+                }
+
                 const transactions = this.selectedRecord.transactions || [];
 
                 if (transactions.length === 0) {
                     container.innerHTML = '<p class="text-muted p-2">Dosya eklenecek mevcut işlem yok. "Manuel İşlem Oluştur" sekmesini kullanabilirsiniz.</p>';
                     return;
                 }
-                // Sadece parent işlemlerin listelenmesi için filtreleme ve sıralama
+                
                 const parentTransactions = transactions
-                    .filter(tx => tx.transactionHierarchy === 'parent' || !tx.transactionHierarchy) // Hierarşi belirtilmemişleri de parent say
-                    .sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp)); // En yeniyi üste al
+                    .filter(tx => tx.transactionHierarchy === 'parent' || !tx.transactionHierarchy) 
+                    .sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp)); 
 
                 if (parentTransactions.length === 0) {
                      container.innerHTML = '<p class="text-muted p-2">Dosya eklenecek mevcut ana işlem bulunamadı. "Manuel İşlem Oluştur" sekmesini kullanabilirsiniz.</p>';
@@ -319,9 +372,15 @@
                     item.dataset.id = tx.transactionId;
                     item.textContent = `${tx.designation || tx.transactionType} - ${new Date(tx.timestamp).toLocaleDateString('tr-TR')}`;
                     item.addEventListener('click', (e) => {
+                        // Parent işlem seçildiğinde
                         this.selectedTransactionId = e.currentTarget.dataset.id;
                         document.querySelectorAll('#transactions-list-for-selection .transaction-list-item').forEach(el => el.classList.remove('selected'));
                         e.currentTarget.classList.add('selected');
+                        
+                        // Child işlem inputlarını göster
+                        if (childTransactionInputsEl) {
+                            childTransactionInputsEl.style.display = 'block'; 
+                        }
                         this.checkFormCompleteness();
                     });
                     container.appendChild(item);
@@ -330,11 +389,11 @@
 
             populateParentTransactionSelect(transactions) {
                 const selectEl = document.getElementById('specificTransactionParentId');
-                selectEl.innerHTML = '<option value="">Yok (Ana İşlem)</option>'; // Varsayılan seçenek
+                selectEl.innerHTML = '<option value="">Yok (Ana İşlem)</option>'; 
 
                 const parentTransactions = (transactions || [])
-                    .filter(tx => tx.transactionHierarchy === 'parent' || !tx.transactionHierarchy) // Parent veya tanımsızları al
-                    .sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp)); // Yeni olanlar üstte
+                    .filter(tx => tx.transactionHierarchy === 'parent' || !tx.transactionHierarchy) 
+                    .sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp)); 
 
                 parentTransactions.forEach(tx => {
                     const option = document.createElement('option');
@@ -350,9 +409,9 @@
                 const currentFiles = this.uploadedFiles.get(tabKey) || [];
                 files.forEach(file => {
                     currentFiles.push({
-                        id: `temp_${Date.now()}_${generateUUID()}`, // Benzersiz temp ID
+                        id: `temp_${Date.now()}_${generateUUID()}`, 
                         fileObject: file,
-                        documentDesignation: DOCUMENT_DESIGNATION_TYPES[0] || 'Diğer Belge' // Varsayılan doküman türü
+                        documentDesignation: DOCUMENT_DESIGNATION_TYPES[0] || 'Diğer Belge' 
                     });
                 });
                 this.uploadedFiles.set(tabKey, currentFiles);
@@ -394,7 +453,17 @@
                 if (!this.selectedRecord) {
                     canSubmit = false;
                 } else if (this.activeTab === 'existing-transaction-pane') {
-                    canSubmit = filesExist && this.selectedTransactionId !== null;
+                    // Bu sekmede hem parent işlem seçili olmalı hem de (eğer girilmişse) çocuk işlem başlığı/türü dolu olmalı
+                    const specificChildTransactionDesignation = document.getElementById('specificChildTransactionDesignation').value.trim();
+                    const specificChildTransactionType = document.getElementById('specificChildTransactionType').value;
+
+                    // Eğer çocuk işlem tanımları boşsa, sadece parent seçimi yeterli
+                    // Eğer çocuk işlem tanımları dolduruluyorsa, ikisi de dolu olmalı
+                    const childTransactionFieldsFilled = specificChildTransactionDesignation !== '' && specificChildTransactionType !== '';
+                    const childTransactionFieldsEmpty = specificChildTransactionDesignation === '' && specificChildTransactionType === '';
+
+                    canSubmit = filesExist && this.selectedTransactionId !== null && (childTransactionFieldsFilled || childTransactionFieldsEmpty);
+
                 } else { // manual-indexing-pane
                     const specificTransactionDesignation = document.getElementById('specificTransactionDesignation').value.trim();
                     const specificTransactionType = document.getElementById('specificTransactionType').value;
@@ -426,7 +495,7 @@
                         const specificTransactionDesignation = document.getElementById('specificTransactionDesignation').value.trim();
                         const specificTransactionType = document.getElementById('specificTransactionType').value;
                         const specificTransactionNotes = document.getElementById('specificTransactionNotes').value.trim();
-                        const specificTransactionParentId = document.getElementById('specificTransactionParentId').value || null; // Eğer boşsa null
+                        const specificTransactionParentId = document.getElementById('specificTransactionParentId').value || null; 
 
                         if (!specificTransactionDesignation || !specificTransactionType) {
                             showNotification('Lütfen yeni işlem için başlık ve tür seçin.', 'error');
@@ -437,7 +506,7 @@
                             designation: specificTransactionDesignation,
                             transactionType: specificTransactionType,
                             notes: specificTransactionNotes,
-                            transactionHierarchy: specificTransactionParentId ? 'child' : 'parent', // Parent ID varsa child, yoksa parent
+                            transactionHierarchy: specificTransactionParentId ? 'child' : 'parent', 
                             parentId: specificTransactionParentId,
                         };
 
@@ -446,32 +515,53 @@
                         if (!transactionAddResult.success) {
                             throw new Error(transactionAddResult.error || 'Yeni işlem oluşturulurken hata oluştu.');
                         }
-                        transactionIdToAssociateFiles = transactionAddResult.data.transactionId; // Yeni işlemin ID'sini al
+                        transactionIdToAssociateFiles = transactionAddResult.data.transactionId;
                         showNotification('Yeni işlem başarıyla oluşturuldu.', 'success');
 
                     } else { // --- Mevcut İşleme Dosya Ekle Sekmesi ---
                         if (!this.selectedTransactionId) {
-                            showNotification('Lütfen dosyaları bağlamak için bir işlem seçin.', 'error');
+                            showNotification('Lütfen dosyaları bağlamak için bir PARENT işlem seçin.', 'error');
                             btn.disabled = false; return;
                         }
-                        transactionIdToAssociateFiles = this.selectedTransactionId;
+                        
+                        const specificChildTransactionDesignation = document.getElementById('specificChildTransactionDesignation').value.trim();
+                        const specificChildTransactionType = document.getElementById('specificChildTransactionType').value;
+                        const specificChildTransactionNotes = document.getElementById('specificChildTransactionNotes').value.trim();
+
+                        // Eğer çocuk işlem bilgileri girildiyse, yeni bir çocuk işlem oluştur
+                        if (specificChildTransactionDesignation && specificChildTransactionType) {
+                            const newChildTransactionData = {
+                                designation: specificChildTransactionDesignation,
+                                transactionType: specificChildTransactionType,
+                                notes: specificChildTransactionNotes,
+                                transactionHierarchy: 'child',
+                                parentId: this.selectedTransactionId, // Seçilen parent işlem
+                            };
+                            const childTransactionAddResult = await ipRecordsService.addTransactionToRecord(this.selectedRecord.id, newChildTransactionData);
+                            if (!childTransactionAddResult.success) {
+                                throw new Error(childTransactionAddResult.error || 'Yeni çocuk işlem oluşturulurken hata oluştu.');
+                            }
+                            transactionIdToAssociateFiles = childTransactionAddResult.data.transactionId; // Dosyaları bu yeni child'a bağla
+                            showNotification('Yeni çocuk işlem başarıyla oluşturuldu.', 'success');
+                        } else {
+                            // Çocuk işlem bilgileri girilmediyse, dosyaları doğrudan seçilen parent'a bağla
+                            transactionIdToAssociateFiles = this.selectedTransactionId;
+                            showNotification('Dosyalar mevcut PARENT işleme bağlanıyor.', 'info');
+                        }
                     }
 
                     // --- Dosyaları Yükleme ve İlişkilendirme ---
                     for (const fileData of filesToProcess) {
                         try {
-                            // Gerçek Firebase Storage yükleme işlemi burada olmalı.
-                            // Şimdilik readFileAsDataURL ile base64'e çevirip kaydediyoruz.
-                            // Gelecekte burayı Firebase Storage API'si ile değiştirin.
                             const fileContent = await readFileAsDataURL(fileData.fileObject); 
                             
                             const fileToUpload = {
                                 fileName: fileData.fileObject.name,
                                 fileType: fileData.fileObject.type,
                                 fileSize: fileData.fileObject.size,
-                                fileUrl: fileContent, // BU ALAN GERÇEKTE STORAGE URL'si OLMALI
+                                fileUrl: fileContent, 
                                 relatedTransactionId: transactionIdToAssociateFiles, // İşlem ID'si
-                                documentDesignation: fileData.documentDesignation // Seçilen belge tipi
+                                documentDesignation: fileData.documentDesignation 
                             };
                             const fileAddResult = await ipRecordsService.addFileToRecord(this.selectedRecord.id, fileToUpload);
                             if (!fileAddResult.success) {
@@ -486,7 +576,7 @@
                     
                     showNotification('Tüm işlemler ve belgeler başarıyla kaydedildi!', 'success');
                     this.resetForm();
-                    await this.loadRecords(); // Yeni verileri yansıtmak için kayıtları yeniden yükle
+                    await this.loadRecords(); 
 
                 } catch (error) {
                     showNotification(`Genel hata oluştu: ${error.message}`, 'error');
@@ -499,22 +589,29 @@
                 this.selectedRecord = null;
                 this.uploadedFiles.clear();
                 this.selectedTransactionId = null;
-                this.activeTab = 'existing-transaction-pane'; // Varsayılan olarak ilk sekmeyi aktif yap
+                this.activeTab = 'existing-transaction-pane'; 
                 document.getElementById('indexingForm').reset();
                 document.getElementById('documentUploadSection').style.display = 'none';
                 document.getElementById('fileListExisting').innerHTML = '';
                 document.getElementById('fileListManual').innerHTML = '';
                 document.getElementById('transactions-list-for-selection').innerHTML = '<p class="text-muted p-2">Lütfen bir kayıt seçin.</p>';
-                this.activateTab('existing-transaction-pane'); // Tabları da sıfırla
+                this.activateTab('existing-transaction-pane'); 
+                
+                // Çocuk işlem inputlarını da sıfırla ve gizle
+                const childTransactionInputsEl = document.getElementById('childTransactionInputs');
+                if (childTransactionInputsEl) {
+                    childTransactionInputsEl.style.display = 'none';
+                    document.getElementById('specificChildTransactionDesignation').value = '';
+                    document.getElementById('specificChildTransactionType').value = '';
+                    document.getElementById('specificChildTransactionNotes').value = '';
+                }
+
                 this.checkFormCompleteness();
             }
         }
         
         document.addEventListener('DOMContentLoaded', async () => {
             await loadSharedLayout({ activeMenuLink: 'indexing.html' });
-            // auth.onAuthStateChanged listener'ı kaldırıldı, çünkü IndexingModule constructor'da init çağırıyor
-            // ve init içinde authService.getCurrentUser() çağrısı var.
-            // Bu daha basit bir akış sağlar. Eğer oturum yoksa init() içinde yönlendirme yapılır.
             new IndexingModule();
         });
     </script>
