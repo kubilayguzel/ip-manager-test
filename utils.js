@@ -49,30 +49,67 @@ export const ALL_STATUS_MAP = Object.values(STATUSES).flat().reduce((map, status
     return map;
 }, {});
 
+// GÜNCEL: Bildirim türleri için sabitler
+export const NOTIFICATION_TYPES = {
+    SUCCESS: 'success',
+    ERROR: 'error',
+    INFO: 'info',
+    WARNING: 'warning' // Bu türü de ekledik, istersen kullanabilirsin
+};
 
 // --- Yardımcı Fonksiyonlar ---
 
 /**
  * Ekranda bilgilendirme mesajı gösterir.
  * @param {string} message - Gösterilecek mesaj.
- * @param {'info' | 'success' | 'error'} type - Mesajın türü.
+ * @param {string} type - Mesajın türü (örn: 'success', 'error', 'info', 'warning').
+ * @param {number} duration - Bildirimin ekranda kalma süresi (ms). Varsayılan 3000ms.
  */
-export function showNotification(message, type = 'info') {
-    const container = document.getElementById('notification-container') || createNotificationContainer();
+export function showNotification(message, type = NOTIFICATION_TYPES.INFO, duration = 3000) {
+    // Bildirim kapsayıcısını bul veya oluştur
+    const notificationContainer = document.getElementById('notification-container') || createNotificationContainer();
+    
     const notification = document.createElement('div');
-    notification.className = `notification notification-${type}`;
-    notification.textContent = message;
-    container.appendChild(notification);
+    // GÜNCEL: notification-item sınıfını ekliyoruz
+    notification.classList.add('notification-item'); 
+    notification.classList.add(`notification-${type}`); 
+
+    const messageSpan = document.createElement('span');
+    messageSpan.textContent = message;
+    notification.appendChild(messageSpan);
+
+    const closeButton = document.createElement('button');
+    closeButton.textContent = '×'; // Çarpı işareti
+    closeButton.classList.add('notification-close-btn');
+    closeButton.addEventListener('click', () => {
+        notification.classList.add('hide'); // Gizleme animasyonu için 'hide' sınıfı ekle
+        // Animasyon bittikten sonra elementi DOM'dan kaldır
+        notification.addEventListener('transitionend', () => notification.remove(), { once: true });
+    });
+    notification.appendChild(closeButton);
+
+    notificationContainer.appendChild(notification);
+
+    // Bildirimi otomatik olarak gizle
     setTimeout(() => {
-        notification.classList.add('hide');
-        setTimeout(() => notification.remove(), 500);
-    }, 5000);
+        notification.classList.add('hide'); // Gizleme animasyonunu başlat
+        // Animasyon bittikten sonra elementi DOM'dan kaldır
+        notification.addEventListener('transitionend', () => notification.remove(), { once: true });
+    }, duration);
 }
 
+// GÜNCEL: createNotificationContainer fonksiyonu
 function createNotificationContainer() {
-    const container = document.createElement('div');
+    // Eğer element zaten varsa, onu döndür, yoksa oluştur
+    let container = document.getElementById('notification-container');
+    if (container) {
+        return container;
+    }
+
+    container = document.createElement('div');
     container.id = 'notification-container';
-    document.body.appendChild(container);
+    container.classList.add('notification-container'); // GÜNCEL: CSS sınıfını da ekle
+    document.body.appendChild(container); // Body'nin sonuna ekle
     return container;
 }
 
