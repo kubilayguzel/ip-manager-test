@@ -526,7 +526,7 @@
                         const childrenHtml = hasChildren ? `<div class="child-transactions" id="children-of-${tx.transactionId}">${buildTreeHtml(children)}</div>` : '';
                         return `
                             <div class="transaction-node" data-id="${tx.transactionId}">
-                                <button class="transaction-toggle-btn" data-target-id="${tx.transactionId}">+</button>
+                                ${hasChildren ? `<button class="transaction-toggle-btn" data-target-id="${tx.transactionId}">+</button>` : '<span style="display:inline-block; width: 20px; margin-right: 8px;"></span>'}
                                 <div class="transaction-node-content">
                                     <div class="transaction-description">${tx.description || tx.type}</div>
                                     <div class="transaction-meta">${new Date(tx.timestamp).toLocaleString('tr-TR')} by ${tx.userEmail}${fileLink}</div>
