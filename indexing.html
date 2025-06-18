@@ -219,12 +219,13 @@
             <div class="form-container">
                 <form id="indexingForm" onsubmit="return false;">
                     <div class="form-section document-upload-section" id="documentUploadSection">
-                        <h2 class="section-title"><span>1.</span>Belgeleri Yükleyin ve İndeksleyin</h2>
+                        <h2 class="section-title"><span>1.</span>Belgeleri Yükleyin ve İndeksleyin</h2> 
                         
                         <div class="tabs-container">
                             <button type="button" class="tab-btn active" data-tab="existing-transaction-pane">İşleme Dosya Ekle</button>
                             <button type="button" class="tab-btn" data-tab="manual-indexing-pane">Manuel İşlem Oluştur</button>
-                            <button type="button" class="tab-btn" data-tab="bulk-indexing-pane">Toplu İndeksleme</button> </div>
+                            <button type="button" class="tab-btn" data-tab="bulk-indexing-pane">Toplu İndeksleme</button> 
+                        </div>
                         
                         <div class="tab-content-container">
                             <div id="existing-transaction-pane" class="tab-pane active">
@@ -322,17 +323,17 @@
 
                             <div id="bulk-indexing-pane" class="tab-pane">
                                 <div class="form-section record-search-section">
-                                    <h2 class="section-title"><span>1.1</span>Kayıt Seçin (Opsiyonel, sadece başlangıç filtresi için)</h2>
+                                    <h2 class="section-title"><span>1.1</span>Kayıt Filtresi (Opsiyonel)</h2>
                                     <div class="form-group search-wrapper">
                                         <label class="form-label" for="recordSearchInputBulk">Başvuru Numarası veya Başlık ile Ara</label>
-                                        <input type="text" id="recordSearchInputBulk" class="form-input" placeholder="Örn: TR2024/123, Proje X..." autocomplete="off">
+                                        <input type="text" id="recordSearchInputBulk" class="form-input" placeholder="Tüm PDF'ler için başlangıç filtresi..." autocomplete="off">
                                         <div class="search-results-container" id="searchResultsContainerBulk">
                                             <p class="no-results-message p-2">Arama yapmak için yukarıya yazın.</p>
                                         </div>
                                     </div>
                                     <div class="form-group" style="margin-top: 20px;">
-                                        <label class="form-label">Seçili Kayıt:</label>
-                                        <input type="text" id="selectedRecordDisplayBulk" class="form-input" readonly placeholder="Henüz kayıt seçilmedi.">
+                                        <label class="form-label">Seçili Başlangıç Kayıt Filtresi:</label>
+                                        <input type="text" id="selectedRecordDisplayBulk" class="form-input" readonly placeholder="Henüz filtre seçilmedi.">
                                     </div>
                                 </div>
 
@@ -418,6 +419,7 @@
                     this.allRecords = []; 
                     this.selectedRecordExisting = null; 
                     this.selectedRecordManual = null; 
+                    this.selectedRecordBulk = null; // Toplu indeksleme için seçili master kayıt filtresi
                     this.uploadedFiles = new Map(); 
                     this.selectedTransactionId = null; 
                     this.activeTab = 'existing-transaction-pane';
@@ -425,11 +427,7 @@
                     this.pendingBulkIndexJobs = []; 
                     this.bulkIndexingRecordsCache = new Map(); 
                     
-                    // Metotları constructor'da bağlamak yerine, tanımlarını arrow function olarak değiştirdik
-                    // Bu satırları kaldırabilirsiniz
-                    // this.handleBulkFilesChange = this.handleBulkFilesChange.bind(this);
-                    // ... diğer bind'ler ...
-
+                    // Metotları constructor'da bağlamaya gerek yok, arrow function olarak tanımlanacaklar
                     this.init();
                 }
 
@@ -481,7 +479,7 @@
                         this.handleFileChange(e, 'manual-indexing-pane');
                         document.getElementById('filesManualInfo').textContent = e.target.files.length > 0 ? `${e.target.files.length} dosya seçildi.` : 'Henüz dosya seçilmedi.';
                     });
-                    document.getElementById('bulkFiles').addEventListener('change', this.handleBulkFilesChange); // Artık constructor'da bağlandığı için .bind(this) gerekmez
+                    document.getElementById('bulkFiles').addEventListener('change', this.handleBulkFilesChange); // Artık arrow function olduğu için .bind(this) gerekmez
                     document.getElementById('bulkFilesInfo').textContent = (document.getElementById('bulkFiles').files.length > 0 ? `${document.getElementById('bulkFiles').files.length} PDF dosyası seçildi.` : 'Henüz PDF dosyası seçilmedi.');
 
 
@@ -511,15 +509,15 @@
                         }
                     });
                     
-                    document.getElementById('specificChildTransactionType').addEventListener('change', () => this.checkFormCompleteness());
-                    document.getElementById('existingChildTransactionDeliveryDate').addEventListener('change', () => this.checkFormCompleteness()); 
+                    document.getElementById('specificChildTransactionType').addEventListener('change', this.checkFormCompleteness);
+                    document.getElementById('existingChildTransactionDeliveryDate').addEventListener('change', this.checkFormCompleteness); 
 
-                    document.getElementById('specificManualTransactionType').addEventListener('change', () => this.checkFormCompleteness());
-                    document.getElementById('specificManualChildTransactionType').addEventListener('change', () => this.checkFormCompleteness()); 
-                    document.getElementById('manualChildTransactionDeliveryDate').addEventListener('change', () => this.checkFormCompleteness()); 
+                    document.getElementById('specificManualTransactionType').addEventListener('change', this.checkFormCompleteness);
+                    document.getElementById('specificManualChildTransactionType').addEventListener('change', this.checkFormCompleteness); 
+                    document.getElementById('manualChildTransactionDeliveryDate').addEventListener('change', this.checkFormCompleteness); 
 
-                    document.getElementById('bulkDeliveryDate').addEventListener('change', this.updateBulkJobsTebligDate); // Arrow function olduğu için .bind(this) gerekmez
-                    document.getElementById('bulkChildTransactionType').addEventListener('change', this.updateBulkJobsChildType); // Arrow function olduğu için .bind(this) gerekmez
+                    document.getElementById('bulkDeliveryDate').addEventListener('change', this.updateBulkJobsTebligDate);
+                    document.getElementById('bulkChildTransactionType').addEventListener('change', this.updateBulkJobsChildType);
                 }
 
                 populateChildTransactionTypeSelect = () => {
@@ -578,13 +576,13 @@
                 }
                 
                 setRequiredFieldsForActiveTab = () => {
-                    // Tüm kayıt arama inputlarını ve ilgili alanları getir
+                    // Kayıt arama inputları ve ilgili alanları getir
                     const recordSearchInputExisting = document.getElementById('recordSearchInputExisting');
-                    const selectedRecordDisplayExisting = document.getElementById('selectedRecordDisplayExisting');
+                    const selectedRecordDisplayExisting = document.getElementById('selectedRecordDisplayExisting'); // Readonly
                     const recordSearchInputManual = document.getElementById('recordSearchInputManual');
-                    const selectedRecordDisplayManual = document.getElementById('selectedRecordDisplayManual');
-                    const recordSearchInputBulk = document.getElementById('recordSearchInputBulk'); // Yeni
-                    const selectedRecordDisplayBulk = document.getElementById('selectedRecordDisplayBulk'); // Yeni
+                    const selectedRecordDisplayManual = document.getElementById('selectedRecordDisplayManual'); // Readonly
+                    const recordSearchInputBulk = document.getElementById('recordSearchInputBulk'); 
+                    const selectedRecordDisplayBulk = document.getElementById('selectedRecordDisplayBulk'); // Readonly
 
                     const specificChildTransactionType = document.getElementById('specificChildTransactionType');
                     const filesExisting = document.getElementById('filesExisting');
@@ -601,7 +599,7 @@
                     [
                         recordSearchInputExisting, selectedRecordDisplayExisting,
                         recordSearchInputManual, selectedRecordDisplayManual,
-                        recordSearchInputBulk, selectedRecordDisplayBulk, // Yeni
+                        recordSearchInputBulk, selectedRecordDisplayBulk, 
                         specificChildTransactionType, filesExisting, 
                         specificManualTransactionType, specificManualChildTransactionType, filesManual,
                         bulkDeliveryDate, bulkChildTransactionType, bulkFiles 
@@ -618,6 +616,7 @@
                         if (filesExisting) filesExisting.setAttribute('required', 'required');
                     } else if (this.activeTab === 'manual-indexing-pane') {
                         if (recordSearchInputManual) recordSearchInputManual.setAttribute('required', 'required');
+                        // Manuel tabda zorunluluklar checkFormCompleteness tarafından yönetiliyor.
                     } else if (this.activeTab === 'bulk-indexing-pane') { 
                         if (bulkDeliveryDate) bulkDeliveryDate.setAttribute('required', 'required');
                         if (bulkChildTransactionType) bulkChildTransactionType.setAttribute('required', 'required');
@@ -658,16 +657,7 @@
                             item.innerHTML = `<div class="record-info"><div>${record.title}</div><small>${record.applicationNumber}</small></div>`;
                             item.addEventListener('click', (e) => {
                                 e.preventDefault(); 
-                                if (tabContext === 'bulk') { // Toplu indekslemede ayrı selectRecordForBulkJob
-                                    const bulkJobInput = document.getElementById(recordSearchInputId);
-                                    const bulkJobDisplay = document.getElementById(selectedRecordDisplayId);
-                                    bulkJobInput.value = `${record.title} (${record.applicationNumber})`;
-                                    bulkJobDisplay.value = `${record.title} (${record.applicationNumber})`; // Display field'ı da güncelle
-                                    container.style.display = 'none';
-                                    this.selectRecordForBulkMaster(record.id); // Toplu indekslemede genel kayıt seçimi için yeni metod
-                                } else {
-                                    this.selectRecordBasedOnTab(record.id, tabContext);
-                                }
+                                this.selectRecordBasedOnTab(record.id, tabContext);
                             });
                             container.appendChild(item);
                         });
@@ -675,26 +665,17 @@
                     container.style.display = 'block';
                 }
 
-                // Yeni: Toplu indeksleme master kayıt seçimi (genel filtre için)
-                selectRecordForBulkMaster = (recordId) => {
-                    // Bu, sadece başlangıçtaki filtreleme/seçme alanını günceller.
-                    // Tablodaki her bir job'ın kayıt eşleşmesini etkilemez.
-                    this.selectedRecordBulk = this.allRecords.find(r => r.id === recordId);
-                    document.getElementById('selectedRecordDisplayBulk').value = `${this.selectedRecordBulk.title} (${this.selectedRecordBulk.applicationNumber})`;
-                    // Eğer pendingBulkIndexJobs varsa, bu kayda göre filtreleme yapabiliriz.
-                    // Şimdilik sadece display amaçlı kullanılıyor.
-                    this.checkFormCompleteness();
-                }
-
-
                 // Yeni: Tab bazlı kayıt seçimi
                 selectRecordBasedOnTab = (recordId, tabContext) => {
                     const record = this.allRecords.find(r => r.id === recordId);
                     if (!record) return;
 
-                    const selectedRecordDisplayId = tabContext === 'existing' ? 'selectedRecordDisplayExisting' : 'selectedRecordDisplayManual';
-                    const recordSearchInputId = tabContext === 'existing' ? 'recordSearchInputExisting' : 'recordSearchInputManual';
-                    const searchResultsContainerId = tabContext === 'existing' ? 'searchResultsContainerExisting' : 'searchResultsContainerManual';
+                    const selectedRecordDisplayId = tabContext === 'existing' ? 'selectedRecordDisplayExisting' : 
+                                                    tabContext === 'manual' ? 'selectedRecordDisplayManual' : 'selectedRecordDisplayBulk';
+                    const recordSearchInputId = tabContext === 'existing' ? 'recordSearchInputExisting' : 
+                                                tabContext === 'manual' ? 'recordSearchInputManual' : 'recordSearchInputBulk';
+                    const searchResultsContainerId = tabContext === 'existing' ? 'searchResultsContainerExisting' : 
+                                                    tabContext === 'manual' ? 'searchResultsContainerManual' : 'searchResultsContainerBulk';
 
                     document.getElementById(selectedRecordDisplayId).value = `${record.title} (${record.applicationNumber})`;
                     document.getElementById(recordSearchInputId).value = '';
@@ -705,11 +686,12 @@
                         this.renderTransactionsForSelection(); 
                     } else if (tabContext === 'manual') {
                         this.selectedRecordManual = record;
-                        // Manuel tab için parent transaction select'i doldur (artık genel selectedRecord kullanılmıyor)
                         const specificManualTransactionParentId = document.getElementById('specificManualTransactionParentId');
-                        if(specificManualTransactionParentId) { // Eğer HTML'de hala bu element varsa
+                        if(specificManualTransactionParentId) { 
                             this.populateParentTransactionSelectForManual(record.transactions);
                         }
+                    } else if (tabContext === 'bulk') { // Toplu indeksleme tabında master kayıt filtresi seçildiğinde
+                        this.selectedRecordBulk = record; // Sadece filtre amaçlı kullanılır, işlerin kendisini etkilemez
                     }
                     this.checkFormCompleteness();
                 }
@@ -857,7 +839,7 @@
                     document.getElementById('indexDocumentsBtn').disabled = !canSubmit;
                 }
 
-                async handleSubmit() { // handleSubmit'i de arrow function yaptık
+                handleSubmit = async () => { // handleSubmit'i de arrow function yaptık
                     const btn = document.getElementById('indexDocumentsBtn');
                     btn.disabled = true;
                     showNotification('İşlem kaydediliyor...', 'info');
@@ -869,6 +851,7 @@
                     } else if (this.activeTab === 'manual-indexing-pane') {
                         currentSelectedRecord = this.selectedRecordManual;
                     } 
+                    // Bulk tab'da ise her job'ın kendi matchedRecordId'si var.
 
                     // Toplu indeksleme dışındaki tablarda kayıt seçimi zorunlu
                     if (!currentSelectedRecord && this.activeTab !== 'bulk-indexing-pane') { 
@@ -962,7 +945,7 @@
                                     const transactionAddResult = await ipRecordsService.addTransactionToRecord(currentSelectedRecord.id, newTransactionData); 
 
                                     if (!transactionAddResult.success) {
-                                        throw new Error(transactionAddResult.error || 'Yeni işlem oluşturulurken hata oluştu.');
+                                        throw new Error(transactionAddResult.addError || 'Yeni işlem oluşturulurken hata oluştu.');
                                     }
                                     transactionIdToAssociateFiles = transactionAddResult.data.transactionId;
                                     transactionDesignationForFiles = transactionDesignation;
@@ -999,8 +982,8 @@
                                     };
                                     const fileAddResult = await ipRecordsService.addFileToRecord(currentSelectedRecord.id, fileToUpload); 
                                     if (!fileAddResult.success) {
-                                        console.error(`Dosya yüklenirken hata (${fileData.fileObject.name}): ${fileAddResult.error}`);
-                                        showNotification(`Dosya yüklenirken hata (${fileData.fileObject.name}): ${fileAddResult.error}`, 'error');
+                                        console.error(`Dosya yüklenirken hata (${fileData.fileObject.name}): ${fileAddResult.addError}`);
+                                        showNotification(`Dosya yüklenirken hata (${fileData.fileObject.name}): ${fileAddResult.addError}`, 'error');
                                     }
                                 } catch (fileError) {
                                     console.error(`Dosya işlenirken hata (${fileData.fileObject.name}):`, fileError);
@@ -1045,7 +1028,7 @@
                             };
                             const childTransactionAddResult = await ipRecordsService.addTransactionToRecord(currentSelectedRecord.id, newChildTransactionData); 
                             if (!childTransactionAddResult.success) {
-                                throw new Error(childTransactionAddResult.error || 'Yeni alt işlem oluşturulurken hata oluştu.');
+                                throw new Error(childTransactionAddResult.addError || 'Yeni alt işlem oluşturulurken hata oluştu.');
                             }
                             transactionIdToAssociateFiles = childTransactionAddResult.data.transactionId; 
                             transactionDesignationForFiles = specificChildTransactionType; 
@@ -1065,8 +1048,8 @@
                                     };
                                     const fileAddResult = await ipRecordsService.addFileToRecord(currentSelectedRecord.id, fileToUpload); 
                                     if (!fileAddResult.success) {
-                                        console.error(`Dosya yüklenirken hata (${fileData.fileObject.name}): ${fileAddResult.error}`);
-                                        showNotification(`Dosya yüklenirken hata (${fileData.fileObject.name}): ${fileAddResult.error}`, 'error');
+                                        console.error(`Dosya yüklenirken hata (${fileData.fileObject.name}): ${fileAddResult.addError}`);
+                                        showNotification(`Dosya yüklenirken hata (${fileData.fileObject.name}): ${fileAddResult.addError}`, 'error');
                                     }
                                 } catch (fileError) {
                                     console.error(`Dosya işlenirken hata (${fileData.fileObject.name}):`, fileError);
@@ -1104,8 +1087,9 @@
                                 this.renderBulkIndexingTable(); 
 
                                 try {
+                                    // allRecords yerine job.matchedRecordId kullanıldı
                                     let recordToUpdate = this.allRecords.find(r => r.id === job.matchedRecordId); 
-                                    if (!recordToUpdate) {
+                                    if (!recordToUpdate) { // Eğer allRecords'ta yoksa (yeni eklenmiş olabilir veya manuel seçildi)
                                         const recordResult = await ipRecordsService.getRecordById(job.matchedRecordId);
                                         if (recordResult.success) {
                                             recordToUpdate = recordResult.data;
@@ -1149,7 +1133,7 @@
                                     const childTransactionAddResult = await ipRecordsService.addTransactionToRecord(recordToUpdate.id, newChildTransactionData);
                                     
                                     if (!childTransactionAddResult.success) {
-                                        throw new Error(childTransactionAddResult.error || 'Alt işlem oluşturulurken hata oluştu.');
+                                        throw new Error(childTransactionAddResult.addError || 'Alt işlem oluşturulurken hata oluştu.');
                                     }
                                     const newChildTransactionId = childTransactionAddResult.data.transactionId;
                                     
@@ -1165,7 +1149,8 @@
                                     const fileAddResult = await ipRecordsService.addFileToRecord(recordToUpdate.id, fileToUpload);
                                     
                                     if (!fileAddResult.success) {
-                                        throw new Error(fileAddResult.error || 'Dosya yüklenirken hata oluştu.');
+                                        console.error(`Dosya yüklenirken hata (${fileData.fileObject.name}): ${fileAddResult.addError}`);
+                                        throw new Error(fileAddResult.addError || 'Dosya yüklenirken hata oluştu.'); // Hata fırlat ki catch bloğuna düşsün
                                     }
                                     
                                     job.status = 'success';
@@ -1203,8 +1188,8 @@
                     document.getElementById('selectedRecordDisplayExisting').value = '';
                     document.getElementById('recordSearchInputManual').value = '';
                     document.getElementById('selectedRecordDisplayManual').value = '';
-                    document.getElementById('recordSearchInputBulk').value = ''; // Yeni
-                    document.getElementById('selectedRecordDisplayBulk').value = ''; // Yeni
+                    document.getElementById('recordSearchInputBulk').value = ''; 
+                    document.getElementById('selectedRecordDisplayBulk').value = ''; 
 
 
                     this.resetFormTabSpecifics(); 
@@ -1238,7 +1223,7 @@
                     // Manuel tabdaki bağlı parent inputu artık yok
 
                     // Toplu indeksleme tabı sıfırlama
-                    this.selectedRecordBulk = null; // Yeni: Bulk için de master kayıt sıfırlama
+                    this.selectedRecordBulk = null; 
                     this.pendingBulkIndexJobs = [];
                     document.getElementById('bulkDeliveryDate').value = '';
                     document.getElementById('bulkChildTransactionType').value = '';
@@ -1248,6 +1233,233 @@
                     document.getElementById('bulkTableNoJobs').style.display = 'none';
 
                     this.setRequiredFieldsForActiveTab();
+                }
+
+                // Yeni: Toplu indeksleme dosyası değiştiğinde
+                handleBulkFilesChange = async (event) => { // Arrow function yapıldı
+                    const fileInput = event.target;
+                    const files = Array.from(fileInput.files);
+                    this.pendingBulkIndexJobs = []; // Mevcut işleri sıfırla
+
+                    if (files.length === 0) {
+                        this.renderBulkIndexingTable(); // Tabloyu boşalt
+                        this.checkFormCompleteness();
+                        return;
+                    }
+                    
+                    showNotification('PDF dosyaları işleniyor...', 'info', 3000);
+
+                    // Başvuru numarası regex (örnek: TRYYYY/NNNNN veya TRYYYY_NNNNN)
+                    // Bu regex, dosya adınızdaki başvuru numarası formatına göre ayarlanmalıdır
+                    const appNumberRegex = /(TR\d{4}[_\-]?\d+)/i; 
+
+                    for (const file of files) {
+                        if (file.type !== 'application/pdf') {
+                            showNotification(`'${file.name}' bir PDF dosyası değil ve atlandı.`, 'error');
+                            continue; // PDF olmayanları atla
+                        }
+
+                        const extractedAppNumber = this.extractApplicationNumberFromFileName(file.name);
+                        let matchedRecord = null;
+                        let matchedRecordDisplay = 'Eşleşme Yok';
+                        let status = 'pending'; // Başlangıçta 'pending'
+
+                        if (extractedAppNumber) {
+                            matchedRecord = this.allRecords.find(r => r.applicationNumber && r.applicationNumber.toLowerCase() === extractedAppNumber.toLowerCase());
+                            if (matchedRecord) {
+                                matchedRecordDisplay = `${matchedRecord.title} (${matchedRecord.applicationNumber})`;
+                                status = 'ready'; // Otomatik eşleşirse hazır
+                            } else {
+                                matchedRecordDisplay = `Eşleşme Yok (${extractedAppNumber})`; // Başvuru No bulundu ama kayıt eşleşmedi
+                                status = 'pending'; // Manuel müdahale gerekecek
+                            }
+                        } else {
+                            matchedRecordDisplay = 'Başvuru No Yok'; // Dosya adında numara yok
+                            status = 'pending'; // Manuel müdahale gerekecek
+                        }
+
+                        this.pendingBulkIndexJobs.push({
+                            jobId: generateUUID(),
+                            fileName: file.name,
+                            fileObject: file, // Dosyanın kendisi
+                            extractedAppNumber: extractedAppNumber,
+                            matchedRecordId: matchedRecord ? matchedRecord.id : null,
+                            matchedRecordDisplay: matchedRecordDisplay,
+                            childTransactionType: document.getElementById('bulkChildTransactionType').value, // Ortak alandan varsayılanı al
+                            tebligDate: document.getElementById('bulkDeliveryDate').value, // Ortak alandan varsayılanı al
+                            status: status, // pending, ready, processing, success, error
+                            errorMessage: ''
+                        });
+                    }
+                    this.renderBulkIndexingTable();
+                    this.checkFormCompleteness();
+                }
+
+                // Yeni: Dosya adından başvuru numarasını çek
+                extractApplicationNumberFromFileName = (fileName) => { // Arrow function yapıldı
+                    // Örnek: "TR2024_12345.pdf", "BaşvuruNo-TR12345.pdf", "TR2024/001-Belge.pdf"
+                    // Regex: TR ile başlayıp / veya _ veya - ile ayrılmış numaraları arar.
+                    const regex = /(TR\d{4}[_\-\/]?\d+)/i; 
+                    const match = fileName.match(regex);
+                    // Bulunan eşleşmeyi temizle (örn. TR2024_001 -> TR2024/001)
+                    return match ? match[1].replace(/[_ -]/g, '/') : ''; 
+                }
+
+                // Yeni: Toplu indeksleme tablosunu render et
+                renderBulkIndexingTable = () => { // Arrow function yapıldı
+                    const tableBody = document.getElementById('bulkIndexingTable').querySelector('tbody');
+                    const tableContainer = document.getElementById('bulkIndexingTableContainer');
+                    const noJobsMessage = document.getElementById('bulkTableNoJobs');
+                    tableBody.innerHTML = '';
+
+                    if (this.pendingBulkIndexJobs.length === 0) {
+                        tableContainer.style.display = 'none';
+                        noJobsMessage.style.display = 'block';
+                        return;
+                    }
+
+                    tableContainer.style.display = 'block';
+                    noJobsMessage.style.display = 'none';
+
+                    this.pendingBulkIndexJobs.forEach(job => {
+                        const row = tableBody.insertRow();
+                        row.dataset.jobId = job.jobId;
+
+                        row.innerHTML = `
+                            <td>${job.fileName}</td>
+                            <td>${job.extractedAppNumber || '-'}</td>
+                            <td class="search-wrapper">
+                                <span class="matched-record-display-text">${job.matchedRecordDisplay}</span>
+                                <div class="search-results-container bulk-search-results-container" data-job-id="${job.jobId}" style="display:none;"></div>
+                                ${job.status === 'pending' || job.status === 'error' ? 
+                                `<input type="text" class="form-input bulk-record-search-input" 
+                                    data-job-id="${job.jobId}" 
+                                    value="" 
+                                    placeholder="Manuel kayıt ara..."
+                                    autocomplete="off"
+                                    style="margin-top: 5px;">` : ''}
+                            </td>
+                            <td><span class="status-text ${job.status}">${job.status === 'pending' ? 'Beklemede' : job.status === 'ready' ? 'Hazır' : job.status === 'processing' ? 'İşleniyor' : job.status === 'success' ? 'Başarılı' : 'Hata'}</span>
+                                ${job.errorMessage ? `<br><small style="color:red;">${job.errorMessage}</small>` : ''}
+                            </td>
+                            <td>
+                                ${job.status === 'error' ? `<button class="btn btn-sm btn-info bulk-retry-btn" data-job-id="${job.jobId}">Tekrar Dene</button>` : 
+                                    job.status === 'ready' || job.status === 'pending' ? `<button class="btn btn-sm btn-danger bulk-skip-btn" data-job-id="${job.jobId}">Atla</button>` : ''}
+                            </td>
+                        `;
+                    });
+
+                    // Tablo içindeki input ve butonlara listener ekle
+                    tableBody.querySelectorAll('.bulk-record-search-input').forEach(input => {
+                        // Burada da arrow function'lar veya bind kullanılması gerekebilir, setupEventListeners içinde dinamik ekleniyorsa
+                        input.addEventListener('input', (e) => this.searchRecordsForBulkJob(e.target.value, e.target.dataset.jobId));
+                        input.addEventListener('blur', (e) => {
+                            setTimeout(() => {
+                                document.querySelector(`.bulk-search-results-container[data-job-id="${e.target.dataset.jobId}"]`).style.display = 'none';
+                            }, 200);
+                        });
+                    });
+                    tableBody.querySelectorAll('.bulk-skip-btn').forEach(btn => {
+                        btn.addEventListener('click', (e) => this.skipBulkJob(e.target.dataset.jobId));
+                    });
+                    tableBody.querySelectorAll('.bulk-retry-btn').forEach(btn => {
+                        btn.addEventListener('click', (e) => this.retryBulkJob(e.target.dataset.jobId));
+                    });
+
+                    // Arama sonuçları container'ına tıklandığında eleman seçimi (bu da arrow function)
+                    tableBody.querySelectorAll('.bulk-search-results-container').forEach(container => {
+                        container.addEventListener('mousedown', (e) => { 
+                            if (e.target.classList.contains('record-search-item')) {
+                                const jobId = e.currentTarget.dataset.jobId;
+                                const recordId = e.target.dataset.id;
+                                this.selectRecordForBulkJob(recordId, jobId);
+                            }
+                        });
+                    });
+                    this.checkFormCompleteness();
+                }
+
+                // Yeni: Tablo içindeki arama
+                searchRecordsForBulkJob = (query, jobId) => { // Arrow function yapıldı
+                    const container = document.querySelector(`.bulk-search-results-container[data-job-id="${jobId}"]`);
+                    container.innerHTML = '';
+                    if (query.length < 3) {
+                        container.innerHTML = '<p class="no-results-message p-2">Arama yapmak için en az 3 karakter girin.</p>';
+                        container.style.display = 'block';
+                        return;
+                    }
+                    const filtered = this.allRecords.filter(r => 
+                        (r.title && r.title.toLowerCase().includes(query.toLowerCase())) ||
+                        (r.applicationNumber && r.applicationNumber.toLowerCase().includes(query.toLowerCase()))
+                    );
+                    
+                    if(filtered.length === 0) {
+                        container.innerHTML = '<p class="no-results-message p-2">Kayıt bulunamadı.</p>';
+                    } else {
+                        filtered.forEach(record => {
+                            const item = document.createElement('div');
+                            item.className = 'record-search-item';
+                            item.dataset.id = record.id; 
+                            item.innerHTML = `<div class="record-info"><div>${record.title}</div><small>${record.applicationNumber}</small></div>`;
+                            container.appendChild(item);
+                        });
+                    }
+                    container.style.display = 'block';
+                }
+
+                // Yeni: Tablo içinde kayıt seçimi
+                selectRecordForBulkJob = (recordId, jobId) => { // Arrow function yapıldı
+                    const job = this.pendingBulkIndexJobs.find(j => j.jobId === jobId);
+                    const selectedRecord = this.allRecords.find(r => r.id === recordId);
+                    if (job && selectedRecord) {
+                        job.matchedRecordId = selectedRecord.id;
+                        job.matchedRecordDisplay = `${selectedRecord.title} (${selectedRecord.applicationNumber})`;
+                        job.status = 'ready'; 
+                        this.renderBulkIndexingTable(); 
+                    }
+                    this.checkFormCompleteness();
+                }
+
+                // Yeni: Toplu indeksleme işini atla
+                skipBulkJob = (jobId) => { // Arrow function yapıldı
+                    const jobIndex = this.pendingBulkIndexJobs.findIndex(j => j.jobId === jobId);
+                    if (jobIndex > -1) {
+                        const skippedJob = this.pendingBulkIndexJobs.splice(jobIndex, 1)[0];
+                        showNotification(`İşlem atlandı: ${skippedJob.fileName}`, 'info');
+                        this.renderBulkIndexingTable();
+                        this.checkFormCompleteness();
+                    }
+                }
+                
+                // Yeni: Hatalı toplu indeksleme işini tekrar dene
+                retryBulkJob = (jobId) => { // Arrow function yapıldı
+                    const job = this.pendingBulkIndexJobs.find(j => j.jobId === jobId);
+                    if (job) {
+                        job.status = 'ready'; 
+                        job.errorMessage = ''; 
+                        showNotification(`İşlem tekrar denenmek üzere işaretlendi: ${job.fileName}`, 'info');
+                        this.renderBulkIndexingTable();
+                        this.checkFormCompleteness();
+                    }
+                }
+                
+                // Yeni: Toplu işlerdeki tebliğ tarihini güncelle
+                updateBulkJobsTebligDate = (newDate) => { // Arrow function yapıldı
+                    this.pendingBulkIndexJobs.forEach(job => {
+                        job.tebligDate = newDate;
+                    });
+                    // Tabloyu render etmiyoruz, sadece değer güncelleniyor.
+                    // İşlem bittiğinde bu değer kullanılacak.
+                    this.checkFormCompleteness();
+                }
+
+                // Yeni: Toplu işlerdeki alt işlem türünü güncelle
+                updateBulkJobsChildType = (newType) => { // Arrow function yapıldı
+                    this.pendingBulkIndexJobs.forEach(job => {
+                        job.childTransactionType = newType;
+                    });
+                    // Tabloyu render etmiyoruz, sadece değer güncelleniyor.
+                    this.checkFormCompleteness();
                 }
             }
             
