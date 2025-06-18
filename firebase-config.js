@@ -345,6 +345,8 @@ export const ipRecordsService = {
             return { success: false, error: "Kayıt yerel depolamada bulunamadı." };
         }
         try {
+            // updateRecord zaten files'ı doğrudan güncelleyebilir, arrayUnion/arrayRemove gibi
+            // eklemeler/silmeler için addFileToRecord veya deleteFileFromRecord kullanmak daha mantıklı.
             await updateDoc(doc(db, 'ipRecords', recordId), updates);
             return { success: true };
         } catch (error) {
@@ -364,7 +366,7 @@ export const ipRecordsService = {
             return { success: false, error: error.message };
         }
     },
-    // GÜNCELLENMİŞ addTransactionToRecord FONKSİYONU
+    // addTransactionToRecord: Sadece işlem (olay) kaydı için
     async addTransactionToRecord(recordId, transactionData) {
         if (!isFirebaseAvailable) {
             let records = JSON.parse(localStorage.getItem('ipRecords') || '[]');
@@ -380,11 +382,8 @@ export const ipRecordsService = {
                     timestamp: new Date().toISOString(),
                     userId: user.uid,
                     userEmail: user.email,
-                    // İşlemin kategorik türü (Devir, Yenileme, Başvuru, İtiraz vb.)
                     transactionType: transactionData.transactionType || 'Genel İşlem', 
-                    // İşlemin hiyerarşik tipi ('parent' veya 'child')
                     transactionHierarchy: transactionData.transactionHierarchy || 'parent', 
-                    // Eğer child ise parent ID'si
                     parentId: transactionData.parentId || null 
                 };
                 records[recordIndex].transactions.push(newTransaction);
@@ -402,11 +401,8 @@ export const ipRecordsService = {
                 timestamp: new Date().toISOString(),
                 userId: user.uid,
                 userEmail: user.email,
-                // İşlemin kategorik türü (Devir, Yenileme, Başvuru, İtiraz vb.)
                 transactionType: transactionData.transactionType || 'Genel İşlem', 
-                // İşlemin hiyerarşik tipi ('parent' veya 'child')
                 transactionHierarchy: transactionData.transactionHierarchy || 'parent', 
-                // Eğer child ise parent ID'si
                 parentId: transactionData.parentId || null 
             };
             await updateDoc(recordRef, {
@@ -418,7 +414,76 @@ export const ipRecordsService = {
             return { success: false, error: error.message };
         }
     },
-    // Mevcut deleteTransaction fonksiyonu
+    // Yeni fonksiyon: addFileToRecord - Doküman kaydı için
+    async addFileToRecord(recordId, fileData) {
+        if (!isFirebaseAvailable) {
+            let records = JSON.parse(localStorage.getItem('ipRecords') || '[]');
+            const recordIndex = records.findIndex(r => r.id === recordId);
+            if (recordIndex > -1) {
+                if (!records[recordIndex].files) {
+                    records[recordIndex].files = [];
+                }
+                const user = authService.getCurrentUser();
+                const newFile = {
+                    ...fileData,
+                    fileId: generateUUID(), // Dosya için benzersiz ID
+                    uploadedAt: new Date().toISOString(),
+                    uploadedBy_uid: user.uid,
+                    uploadedBy_email: user.email,
+                    // Eğer dosya bir işlemle ilişkiliyse
+                    relatedTransactionId: fileData.relatedTransactionId || null 
+                };
+                records[recordIndex].files.push(newFile);
+                localStorage.setItem('ipRecords', JSON.stringify(records));
+                return { success: true, data: newFile };
+            }
+            return { success: false, error: "Record not found in local storage for file addition." };
+        }
+        try {
+            const recordRef = doc(db, 'ipRecords', recordId);
+            const user = authService.getCurrentUser();
+            const newFile = {
+                ...fileData,
+                fileId: generateUUID(),
+                uploadedAt: new Date().toISOString(),
+                uploadedBy_uid: user.uid,
+                uploadedBy_email: user.email,
+                relatedTransactionId: fileData.relatedTransactionId || null 
+            };
+            await updateDoc(recordRef, {
+                files: arrayUnion(newFile)
+            });
+            return { success: true, data: newFile };
+        } catch (error) {
+            console.error("Error adding file to record:", error);
+            return { success: false, error: error.message };
+        }
+    },
+    // Doküman silme fonksiyonu (isteğe bağlı)
+    async deleteFileFromRecord(recordId, fileId) {
+        if (!isFirebaseAvailable) {
+            console.warn("Local storage file deletion not implemented.");
+            return { success: true }; 
+        }
+        try {
+            const recordRef = doc(db, "ipRecords", recordId);
+            const recordSnap = await getDoc(recordRef);
+            if (recordSnap.exists()) {
+                const recordData = recordSnap.data();
+                const files = recordData.files || [];
+                const updatedFiles = files.filter(f => f.fileId !== fileId);
+                await updateDoc(recordRef, { files: updatedFiles });
+                return { success: true };
+            } else {
+                return { success: false, error: "Record not found." };
+            }
+        } catch (error) {
+            console.error("Error deleting file from record:", error);
+            return { success: false, error: error.message };
+        }
+    },
+
+    // Mevcut deleteTransaction fonksiyonu - Doküman silme mantığı içermez
     async deleteTransaction(recordId, transactionId) {
         if (!isFirebaseAvailable) {
             console.warn("Local storage transaction deletion not implemented.");
@@ -432,6 +497,11 @@ export const ipRecordsService = {
                 const transactions = recordData.transactions || [];
                 const updatedTransactions = transactions.filter(tx => tx.transactionId !== transactionId);
                 await updateDoc(recordRef, { transactions: updatedTransactions });
+                
+                // NOT: Eğer bir işlem silindiğinde o işlemle ilişkili dosyaların da silinmesini istiyorsanız,
+                // burada ek bir mantık eklemeniz gerekir. Örneğin:
+                // await ipRecordsService.deleteFilesRelatedToTransaction(recordId, transactionId);
+                
                 return { success: true };
             } else {
                 return { success: false, error: "Record not found." };
@@ -496,25 +566,22 @@ export const taskService = {
             const currentTaskData = currentTaskDoc.data();
 
             let updatedFilesArray = currentTaskData.files || [];
+            // NOT: files alanı artık addFileToRecord ile yönetilmeli.
+            // Bu updateTask fonksiyonu genel güncellemeler için kalsın.
             if (updates.files !== undefined) {
-                const newFilesToAdd = [];
-                for (const incomingFile of updates.files) {
-                    const existingFileIndex = updatedFilesArray.findIndex(f => f.id === incomingFile.id);
-                    if (existingFileIndex > -1) {
-                        updatedFilesArray[existingFileIndex] = { ...updatedFilesArray[existingFileIndex], ...incomingFile };
-                    } else {
-                        newFilesToAdd.push({ ...incomingFile, id: incomingFile.id || generateUUID() });
-                    }
-                }
-                updatedFilesArray = updatedFilesArray.filter(existingFile => updates.files.some(incomingFile => incomingFile.id === existingFile.id)).concat(newFilesToAdd);
+                // Burada mevcut dosyalara updates.files içindeki dosyaları eklememelisiniz
+                // çünkü bu update sadece mevcut dosyaların güncellenmesini veya tamamen değiştirilmesini sağlar.
+                // Yeni dosya eklemek için addFileToRecord kullanılmalı.
+                // Bu kısmı sadece dosyaların tamamının güncellenmesi gerektiğinde kullanın.
+                updatedFilesArray = updates.files; 
             }
             
             const finalUpdates = { ...updates };
-            delete finalUpdates.files;
+            delete finalUpdates.files; // files'ı doğrudan güncellemek yerine addFileToRecord kullanın
 
             await updateDoc(taskRef, {
                 ...finalUpdates,
-                files: updatedFilesArray,
+                files: updatedFilesArray, // Eğer bu alanda bir güncelleme gelirse yaz.
                 updatedAt: new Date().toISOString(),
                 history: arrayUnion(updateAction)
             });
@@ -586,6 +653,8 @@ export const taskService = {
             if (taskDoc.exists()) {
                 const taskData = taskDoc.data();
                 if (taskData.relatedIpRecordId && taskData.transactionIdForDeletion) {
+                    // İşlemle ilişkili dosyaları da silmek isterseniz burada mantık ekleyin
+                    // Örneğin: await ipRecordsService.deleteFilesRelatedToTransaction(taskData.relatedIpRecordId, taskData.transactionIdForDeletion);
                     await ipRecordsService.deleteTransaction(taskData.relatedIpRecordId, taskData.transactionIdForDeletion);
                 }
             }
@@ -695,6 +764,8 @@ export const accrualService = {
             const currentAccrualData = currentAccrualDoc.data();
 
             let updatedFiles = currentAccrualData.files || [];
+            // Not: Accrual service'de de files'ı addFileToRecord benzeri bir fonksiyonla yönetebilirsiniz.
+            // Şimdilik updateAccrual içindeki files yönetimi mevcut şekliyle bırakıldı.
             if (updates.files !== undefined) {
                 const newFilesToAdd = [];
                 for (const incomingFile of updates.files) {
@@ -767,7 +838,8 @@ export async function createDemoData() {
                 applicationDate: '2024-03-15',
                 description: 'Bu, lityum-iyon pillerin ömrünü uzatan yeni bir batarya teknolojisi için yapılmış bir demo patent başvurusudur.',
                 owners: [demoOwner],
-                transactions: [] // Başlangıçta boş bırakıyoruz
+                transactions: [], 
+                files: [] // Dosyalar için de başlangıçta boş dizi
             },
             {
                 type: 'trademark',
@@ -785,7 +857,8 @@ export async function createDemoData() {
                     content: 'data:image/jpeg;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII='
                 },
                 renewalDate: '2025-06-15',
-                transactions: [] // Başlangıçta boş bırakıyoruz
+                transactions: [], 
+                files: [] // Dosyalar için de başlangıçta boş dizi
             }
         ];
 
@@ -798,20 +871,30 @@ export async function createDemoData() {
 
             let parentTransaction;
 
-            // Patent kaydı için ana işlemler
             if (record.type === 'patent') {
-                const result = await ipRecordsService.addTransactionToRecord(addRecordResult.id, {
+                // Patent Başvurusu (PARENT İşlem)
+                const patentAppResult = await ipRecordsService.addTransactionToRecord(addRecordResult.id, {
                     designation: 'Patent Başvurusu Yapıldı',
                     transactionType: 'Başvuru', 
                     transactionHierarchy: 'parent', 
                     date: '2024-03-15',
                     notes: 'Patent başvurusu ilgili kuruma yapıldı.'
                 });
-                if (result.success) parentTransaction = result.data;
+                if (patentAppResult.success) parentTransaction = patentAppResult.data;
 
-                // Patent başvurusu altında bir itiraz süreci olabilir
+                // Patent Başvurusu ile İlişkili Ek Doküman (Files)
                 if (parentTransaction && parentTransaction.transactionId) {
-                    const oppositionResult = await ipRecordsService.addTransactionToRecord(addRecordResult.id, {
+                    await ipRecordsService.addFileToRecord(addRecordResult.id, {
+                        fileName: 'PatentBasvuruFormu.pdf',
+                        fileType: 'application/pdf',
+                        fileSize: 1.2 * 1024 * 1024, // 1.2 MB
+                        fileUrl: 'https://example.com/patent-form.pdf', // Örnek URL
+                        relatedTransactionId: parentTransaction.transactionId, // Hangi işlemle ilişkili
+                        documentDesignation: 'Başvuru Ek Dokümanı'
+                    });
+
+                    // Patent Başvurusu altında bir İtiraz Süreci (CHILD İşlem)
+                    const oppositionTransResult = await ipRecordsService.addTransactionToRecord(addRecordResult.id, {
                         designation: 'İtiraz Başvurusu',
                         transactionType: 'İtiraz',
                         transactionHierarchy: 'child',
@@ -819,12 +902,23 @@ export async function createDemoData() {
                         date: '2024-04-01',
                         notes: 'Üçüncü taraf itirazı kaydedildi.'
                     });
-                    if (oppositionResult.success) {
+                    if (oppositionTransResult.success) {
+                        // İtiraz Başvurusu ile İlişkili Doküman (Files)
+                        await ipRecordsService.addFileToRecord(addRecordResult.id, {
+                            fileName: 'ItirazDilekcesi.pdf',
+                            fileType: 'application/pdf',
+                            fileSize: 0.8 * 1024 * 1024, // 0.8 MB
+                            fileUrl: 'https://example.com/itiraz-dilekcesi.pdf', // Örnek URL
+                            relatedTransactionId: oppositionTransResult.data.transactionId, // Hangi işlemle ilişkili
+                            documentDesignation: 'Resmi Yazışma'
+                        });
+
+                        // İtiraza Cevap Sunuldu (CHILD İşlem, İtiraz işlemine bağlı)
                         await ipRecordsService.addTransactionToRecord(addRecordResult.id, {
                             designation: 'İtiraza Cevap Sunuldu',
                             transactionType: 'Cevap',
                             transactionHierarchy: 'child',
-                            parentId: oppositionResult.data.transactionId, // İtiraz işlemine bağlı
+                            parentId: oppositionTransResult.data.transactionId, 
                             date: '2024-05-01',
                             notes: 'İtiraza karşı cevap verildi.'
                         });
@@ -832,42 +926,58 @@ export async function createDemoData() {
                 }
 
             } else if (record.type === 'trademark') {
-                const result = await ipRecordsService.addTransactionToRecord(addRecordResult.id, {
+                // Marka Başvurusu (PARENT İşlem)
+                const trademarkAppResult = await ipRecordsService.addTransactionToRecord(addRecordResult.id, {
                     designation: 'Marka Başvurusu Yapıldı',
                     transactionType: 'Başvuru',
                     transactionHierarchy: 'parent',
                     date: '2023-11-20',
                     notes: 'Marka için ilk başvuru yapıldı.'
                 });
-                if (result.success) parentTransaction = result.data;
+                if (trademarkAppResult.success) parentTransaction = trademarkAppResult.data;
 
-                // Ek bir parent işlem: Yenileme
-                const renewalResult = await ipRecordsService.addTransactionToRecord(addRecordResult.id, {
-                    designation: 'Yenileme İşlemi Başlatıldı',
-                    transactionType: 'Yenileme',
-                    transactionHierarchy: 'parent', // Yenileme kendi başına bir parent işlem
-                    date: '2024-06-01',
-                    notes: 'Marka tescilinin yenileme süreci başlatıldı.'
-                });
-
-                // Marka başvurusu altında çocuk işlemler
+                // Marka Başvurusu ile İlişkili Görsel (Files)
                 if (parentTransaction && parentTransaction.transactionId) {
-                    await ipRecordsService.addTransactionToRecord(addRecordResult.id, {
-                        designation: 'Yayına İtiraz Geldi',
-                        transactionType: 'İtiraz', 
-                        transactionHierarchy: 'child', 
-                        parentId: parentTransaction.transactionId, 
-                        date: '2024-02-01',
-                        notes: 'Marka başvurusuna üçüncü bir taraf itiraz etti.'
+                    await ipRecordsService.addFileToRecord(addRecordResult.id, {
+                        fileName: 'logo_hizli_kargo.png',
+                        fileType: 'image/png',
+                        fileSize: 0.15 * 1024 * 1024, // 0.15 MB
+                        fileUrl: 'https://example.com/logo-kargo.png', // Örnek URL
+                        relatedTransactionId: parentTransaction.transactionId,
+                        documentDesignation: 'Teknik Çizim' // Marka görseli gibi
                     });
-                    await ipRecordsService.addTransactionToRecord(addRecordResult.id, {
-                        designation: 'İtiraza Cevap Sunuldu',
-                        transactionType: 'Cevap', 
-                        transactionHierarchy: 'child', 
-                        parentId: parentTransaction.transactionId, 
-                        date: '2024-03-05',
-                        notes: 'İtiraza karşı görüşümüzü sunduk.'
+
+                    // Yenileme İşlemi (AYRI BİR PARENT İşlem)
+                    const renewalTransResult = await ipRecordsService.addTransactionToRecord(addRecordResult.id, {
+                        designation: 'Yenileme İşlemi Başlatıldı',
+                        transactionType: 'Yenileme',
+                        transactionHierarchy: 'parent', 
+                        date: '2024-06-01',
+                        notes: 'Marka tescilinin yenileme süreci başlatıldı.'
                     });
+
+                    // Yenileme işlemi altında "Ret Kararı" (CHILD İşlem)
+                    if (renewalTransResult.success && renewalTransResult.data.transactionId) {
+                        const rejectionTransResult = await ipRecordsService.addTransactionToRecord(addRecordResult.id, {
+                            designation: 'Yenileme Ret Kararı',
+                            transactionType: 'Ret Kararı',
+                            transactionHierarchy: 'child',
+                            parentId: renewalTransResult.data.transactionId, // Yenileme işlemine bağlı
+                            date: '2024-06-15',
+                            notes: 'Yenileme başvurusu reddedildi.'
+                        });
+                        if (rejectionTransResult.success) {
+                            // Ret Kararı ile İlişkili Doküman (Files)
+                            await ipRecordsService.addFileToRecord(addRecordResult.id, {
+                                fileName: 'YenilemeRetKarari.pdf',
+                                fileType: 'application/pdf',
+                                fileSize: 0.5 * 1024 * 1024, // 0.5 MB
+                                fileUrl: 'https://example.com/renewal-rejection.pdf', // Örnek URL
+                                relatedTransactionId: rejectionTransResult.data.transactionId, // Hangi işlemle ilişkili
+                                documentDesignation: 'Ret Kararı' // Doküman tipi
+                            });
+                        }
+                    }
                 }
             }
         }
