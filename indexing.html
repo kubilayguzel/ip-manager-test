@@ -426,7 +426,6 @@
                     this.pendingBulkIndexJobs = []; 
                     this.bulkIndexingRecordsCache = new Map(); 
                     
-                    // Metotları constructor'da bağlamaya gerek yok, arrow function olarak tanımlanacaklar
                     this.init();
                 }
 
@@ -1289,7 +1288,7 @@
                             jobId: generateUUID(),
                             fileName: file.name,
                             fileObject: file, 
-                            extractedAppNumber: extractedAppNumber, 
+                            extractedAppNumber: extractedAppNumber, // Bu artık formatlanmış numara olacak
                             matchedRecordId: matchedRecord ? matchedRecord.id : null,
                             matchedRecordDisplay: matchedRecordDisplay,
                             childTransactionType: document.getElementById('bulkChildTransactionType').value, 
@@ -1308,8 +1307,16 @@
                     // Formatlama (tire/alt çizgi yerine slash) handleBulkFilesChange içinde yapılır.
                     // Bu regex, "TR" öneki olsun veya olmasın, yıl ve sayı formatını yakalamayı hedefler.
                     // Örnekler: TR2024/123, 2024-123, TR2024_123, 2024_123
+                    // Dosya adındaki .pdf uzantısını dikkate almadan önce sadece isim kısmını almak için regex'i biraz daha spesifik hale getirelim:
+                    const fileNameWithoutExtension = fileName.split('.').slice(0, -1).join('.'); // Uzantıyı kaldır
+
+                    // regex: (TR)? -> "TR" opsiyonel
+                    // \d{4} -> 4 haneli yıl
+                    // [_\-\/]? -> alt çizgi, tire veya slash'tan herhangi biri (opsiyonel)
+                    // \d+ -> bir veya daha fazla sayı (başvuru numarası)
                     const regex = /(TR)?\d{4}[_\-\/]?\d+/i; 
-                    const match = fileName.match(regex);
+                    const match = fileNameWithoutExtension.match(regex); // Uzantısız isimde ara
+
                     return match ? match[0] : ''; // Tam eşleşen stringi döndür (örn: "TR2024-123" veya "2024-123")
                 }
 
