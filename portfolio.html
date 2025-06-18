@@ -82,6 +82,7 @@
             color: #555;
         }
         
+        /* GÜNCELLEME: İşlem geçmişi (akordeon) için gerekli stiller eklendi */
         .transaction-node { display: flex; align-items: flex-start; padding: 8px 0; }
         .transaction-toggle-btn {
             flex-shrink: 0; width: 20px; height: 20px;
@@ -90,13 +91,13 @@
             font-family: monospace; font-weight: bold;
         }
         .child-transactions {
-            display: none;
-            padding-left: 28px;
+            display: none; /* Çocukları varsayılan olarak gizle */
+            padding-left: 28px; /* Hiyerarşi için girinti ver */
             border-left: 1px dashed #ccc;
             margin-left: 10px;
         }
         .child-transactions.show {
-            display: block;
+            display: block; /* .show sınıfı eklendiğinde çocukları göster */
         }
         
     </style>
@@ -363,15 +364,11 @@
                 let headerRowHtml = '<tr>';
                 let filterRowHtml = '<tr id="filter-row">';
                 headers.forEach(h => {
-                    const sortClass = h.key === this.currentSortColumn ? `sort-${this.currentSortDirection}` : '';
-                    
-                    // *** DÜZELTME: Template literal yerine standart string birleştirme kullanılıyor ***
+                    const sortClass = h.key === this.currentSortColumn ? 'sort-' + this.currentSortDirection : '';
                     headerRowHtml += '<th data-sort="' + (h.sortable ? h.key : '') + '" class="' + sortClass + '">' + h.label + '</th>';
-
                     if (h.key === 'actions' || h.key === 'trademarkImage') {
                         filterRowHtml += '<th></th>';
                     } else {
-                        // Bu satırda da template literal yerine standart birleştirme kullanıldı
                         filterRowHtml += '<th><input type="text" class="column-filter" data-column="' + h.key + '" placeholder="' + h.label + ' ara..." value="' + (this.columnFilters[h.key] || '') + '"></th>';
                     }
                 });
