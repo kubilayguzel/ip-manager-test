@@ -1,50 +1,92 @@
+<h3 class="section-title"><span>1.2</span> Toplu Belge Yükleme ve İndeksleme</h3>
+
+<style>
+    .bulk-table-container {
+        overflow-x: auto; /* Küçük ekranlarda yatay kaydırma sağlar */
+    }
+    .bulk-table {
+        table-layout: fixed; /* Sütun genişliklerini sabitler */
+        width: 100%;
+        border-collapse: collapse;
+    }
+    .bulk-table th, .bulk-table td {
+        padding: 0.75rem;
+        vertical-align: middle; /* İçeriği dikeyde ortalar */
+        text-align: left; /* Metni sola hizalar */
+        word-wrap: break-word;
+    }
+    .bulk-table th:nth-child(1), .bulk-table td:nth-child(1) { width: 5%; }  /* Checkbox */
+    .bulk-table th:nth-child(2), .bulk-table td:nth-child(2) { width: 20%; } /* PDF Dosyası */
+    .bulk-table th:nth-child(3), .bulk-table td:nth-child(3) { width: 10%; } /* Başvuru No */
+    .bulk-table th:nth-child(4), .bulk-table td:nth-child(4) { width: 20%; } /* Eşleşen Kayıt */
+    .bulk-table th:nth-child(5), .bulk-table td:nth-child(5) { width: 15%; } /* Ana İşlem */
+    .bulk-table th:nth-child(6), .bulk-table td:nth-child(6) { width: 12%; } /* Alt İşlem */
+    .bulk-table th:nth-child(7), .bulk-table td:nth-child(7) { width: 10%; } /* Tebliğ Tarihi */
+    .bulk-table th:nth-child(8), .bulk-table td:nth-child(8) { width: 8%; }  /* Durum */
+    .bulk-table th:nth-child(9), .bulk-table td:nth-child(9) { width: 10%; } /* İşlemler */
+
+    .bulk-table .form-input, .bulk-table .form-select {
+        padding: 5px 8px; /* Tablo içi form elemanlarını küçült */
+        font-size: 0.9em;
+    }
+    .bulk-table .btn {
+        padding: 5px 10px; /* Tablo içi butonları küçült */
+        font-size: 0.9em;
+    }
+</style>
+
 <div class="form-group">
-    <label class="form-label" for="bulkDeliveryDate">A- Tebliğ Tarihi (Tüm PDF'ler İçin Ortak) <span style="color: red;">*</span></label>
-    <input type="date" id="bulkDeliveryDate" class="form-input" name="bulkDeliveryDate">
+    <label class="form-label" for="bulkDeliveryDate">A- Ortak Tebliğ Tarihi <span style="color: red;">*</span></label>
+    <input type="date" id="bulkDeliveryDate" class="form-input" style="max-width: 300px;">
 </div>
 <div class="form-group">
-    <label class="form-label" for="bulkFiles">B- PDF Dosyalarını Yükleyin (Tüm PDF'ler) <span style="color: red;">*</span></label>
-    <div class="bulk-file-upload-wrapper">
+    <label class="form-label" for="bulkFiles">B- PDF Dosyalarını Yükleyin <span style="color: red;">*</span></label>
+    <div class="file-upload-wrapper">
         <input type="file" id="bulkFiles" multiple accept=".pdf" name="bulkFiles">
-        <div class="bulk-file-upload-button" id="bulkFilesButton">PDF Dosyalarını Seç</div>
+        <div class="file-upload-button" id="bulkFilesButton">PDF Dosyalarını Seç</div>
     </div>
-    <div class="bulk-file-info" id="bulkFilesInfo">Henüz PDF dosyası seçilmedi.</div>
+    <div class="file-upload-info" id="bulkFilesInfo">Henüz PDF dosyası seçilmedi.</div>
 </div>
 
-<div class="bulk-tabs-container">
-    <button type="button" class="bulk-tab-btn active" data-bulk-tab="pending-bulk-indexing-pane">İndeksleme Bekleyenler</button>
-    <button type="button" class="bulk-tab-btn" data-bulk-tab="indexed-bulk-indexing-pane">İndekslenenler</button>
+<div class="bulk-tabs-container" style="margin-top: 20px;">
+    <button type="button" class="bulk-tab-btn active" data-bulk-tab="pending-bulk-pane">Bekleyen İşlemler</button>
+    <button type="button" class="bulk-tab-btn" data-bulk-tab="processed-bulk-pane">İşlenmiş Olanlar</button>
 </div>
+
 <div class="bulk-tab-content-container">
-    <div id="pending-bulk-indexing-pane" class="bulk-tab-pane active">
-        <div class="bulk-indexing-table-container" id="bulkIndexingTableContainer">
-            <table class="bulk-indexing-table" id="bulkIndexingTable">
+    <div id="pending-bulk-pane" class="bulk-tab-pane active">
+        <div id="bulkTableNoJobs" class="text-muted p-4">İşlem listesi boş. Lütfen PDF dosyaları yükleyin.</div>
+        <div id="bulkTableContainer" class="bulk-table-container" style="display: none;">
+            <table class="table table-bordered bulk-table" id="bulkIndexingTable">
                 <thead>
                     <tr>
-                        <th><input type="checkbox" id="selectAllBulkJobs"></th> <th>PDF Dosya Adı</th>
+                        <th><input type="checkbox" id="selectAllBulkJobs" title="Tümünü Seç/Bırak"></th>
+                        <th>PDF Dosyası</th>
                         <th>Başvuru No</th>
-                        <th>İlgili Portföy Kaydı</th>
-                        <th>Parent İşlem Türü</th> <th>Alt İşlem Türü</th> <th>Tebliğ Tarihi</th> <th>Durum</th>
-                        <th>Aksiyonlar</th>
+                        <th>Eşleşen Kayıt</th>
+                        <th>Ana İşlem</th>
+                        <th>Alt İşlem</th>
+                        <th>Tebliğ Tarihi</th>
+                        <th>Durum</th>
+                        <th>İşlemler</th>
                     </tr>
                 </thead>
                 <tbody>
                     </tbody>
             </table>
-            <p id="bulkTableNoJobs" style="text-align:center; padding: 20px; display:none;">Yüklenecek PDF bulunamadı veya işlenecek dosya yok.</p>
         </div>
     </div>
-
-    <div id="indexed-bulk-indexing-pane" class="bulk-tab-pane">
-        <div class="bulk-indexing-table-container" id="indexedBulkTableContainerProcessed">
-            <table class="bulk-indexing-table" id="indexedBulkTable">
+    <div id="processed-bulk-pane" class="bulk-tab-pane">
+        <div id="indexedBulkTableNoJobs" class="text-muted p-4">Daha önce işlenmiş bir kayıt bulunmuyor.</div>
+        <div id="indexedBulkTableContainerProcessed" class="bulk-table-container" style="display: none;">
+            <table class="table table-bordered bulk-table" id="indexedBulkTable">
                 <thead>
                     <tr>
-                        <th>PDF Dosya Adı</th>
+                        <th>PDF Dosyası</th>
                         <th>Başvuru No</th>
-                        <th>İlgili Portföy Kaydı</th>
-                        <th>Parent İşlem Türü</th>
-                        <th>Alt İşlem Türü</th>
+                        <th>Eşleşen Kayıt</th>
+                        <th>Ana İşlem</th>
+                        <th>Alt İşlem</th>
                         <th>Tebliğ Tarihi</th>
                         <th>Durum</th>
                     </tr>
@@ -52,6 +94,6 @@
                 <tbody>
                     </tbody>
             </table>
-            <p id="indexedBulkTableNoJobs" style="text-align:center; padding: 20px; display:none;">İndekslenmiş PDF bulunamadı.</p>
         </div>
     </div>
+</div>
