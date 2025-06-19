@@ -304,7 +304,56 @@
             if (result.success) this.allRecords = result.data;
             else showNotification('Kayıtlar yüklenemedi: ' + result.error, 'error');
         }
+            activateTab = (tabName) => {
+        document.querySelectorAll('.tabs-container .tab-btn').forEach(b => b.classList.remove('active'));
+        const activeBtn = document.querySelector(`.tab-btn[data-tab="${tabName}"]`);
+        if (activeBtn) { // Null kontrolü eklendi
+            activeBtn.classList.add('active');
+        }
+        document.querySelectorAll('.tab-pane').forEach(pane => pane.classList.remove('active'));
+        const activePane = document.getElementById(tabName);
+        if (activePane) { // Null kontrolü eklendi
+            activePane.classList.add('active');
+        }
+        this.setRequiredFieldsForActiveTab(); 
+        this.checkFormCompleteness(); 
+    }
 
+    populateChildTransactionTypeSelect = () => {
+        const selectEl = document.getElementById('specificChildTransactionType');
+        if (!selectEl) return; // Null kontrolü eklendi
+        selectEl.innerHTML = '<option value="" disabled selected>Alt işlem türü seçin...</option>';
+        CHILD_TRANSACTION_TYPES.forEach(type => {
+            const option = document.createElement('option');
+            option.value = type;
+            option.textContent = type;
+            selectEl.appendChild(option);
+        });
+    }
+
+    populateManualTransactionTypeSelect = () => {
+        const selectEl = document.getElementById('specificManualTransactionType');
+        if (!selectEl) return; // Null kontrolü eklendi
+        selectEl.innerHTML = '<option value="" disabled selected>İşlem türü seçin...</option>';
+        MANUAL_PARENT_TRANSACTION_TYPES.forEach(type => {
+            const option = document.createElement('option');
+            option.value = type;
+            option.textContent = type;
+            selectEl.appendChild(option);
+        });
+    }
+
+    populateManualChildTransactionTypeSelect = () => {
+        const selectEl = document.getElementById('specificManualChildTransactionType');
+        if (!selectEl) return; // Null kontrolü eklendi
+        selectEl.innerHTML = '<option value="" disabled selected>Alt işlem türü seçin...</option>';
+        CHILD_TRANSACTION_TYPES.forEach(type => {
+            const option = document.createElement('option');
+            option.value = type;
+            option.textContent = type;
+            selectEl.appendChild(option);
+        });
+    }
         setupEventListeners = () => { 
             document.getElementById('recordSearchInputExisting').addEventListener('input', (e) => this.searchRecords(e.target.value, 'existing'));
             document.getElementById('recordSearchInputExisting').addEventListener('blur', () => {
