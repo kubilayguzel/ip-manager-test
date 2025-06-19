@@ -116,51 +116,6 @@
         .portfolio-table tr:hover {
             background-color: #f6f8fa;
         }
-        
-        /* Kolon Filtre Inputları İçin Stil */
-        .column-filter {
-            width: calc(100% - 10px); /* Padding ve kenarlık için biraz boşluk bırak */
-            padding: 6px 8px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            font-size: 0.85em;
-            box-sizing: border-box; /* Padding ve border genişliği etkilemesin */
-            margin-top: 5px; /* Başlık ile filtre arasında boşluk */
-        }
-        .portfolio-table th:has(> .column-filter) { /* Sadece filtre inputu olan th'lerin paddingini ayarla */
-            padding-top: 8px;
-            padding-bottom: 8px;
-        }
-        /* Sorting icon style */
-        .sortable-header {
-            cursor: pointer;
-            position: relative;
-            padding-right: 20px; /* Ok için yer aç */
-        }
-        .sortable-header::after {
-            content: '';
-            position: absolute;
-            right: 5px;
-            top: 50%;
-            transform: translateY(-50%);
-            border: 4px solid transparent;
-        }
-        .sortable-header.asc::after {
-            border-top-color: #333;
-        }
-        .sortable-header.desc::after {
-            border-bottom-color: #333;
-        }
-        .sortable-header.inactive::after {
-            content: '\25B2\25BC'; /* Üçgen yukarı ve aşağı */
-            font-size: 0.7em;
-            color: #ccc; /* Pasif renk */
-            line-height: 0.8;
-            top: 50%;
-            transform: translateY(-50%) scaleY(0.7); /* hafif küçült ve ortala */
-        }
-
-
 
         /* Marka Görseli Stilleri */
         .trademark-image-wrapper {
@@ -313,8 +268,6 @@
                     <thead>
                         <tr id="portfolioTableHeaderRow">
                             </tr>
-                        <tr id="portfolioTableFilterRow">
-                            </tr>
                     </thead>
                     <tbody id="portfolioTableBody">
                         </tbody>
@@ -349,8 +302,6 @@
                     this.allRecords = [];
                     this.allPersons = [];
                     this.activeTypeFilter = 'all'; // Yeni tab filtresi için
-                    this.columnFilters = {}; // Yeni: Sütun bazlı filtre değerlerini tutar
-                    this.sortBy = { column: null, direction: 'asc' }; // Sıralama için
                 }
 
                 async init() {
@@ -403,26 +354,6 @@
 
                     document.getElementById('searchBar').addEventListener('input', () => this.renderRecords());
 
-                    // Sütun filtreleri için event listener (delegation)
-                    // `<thead>` elementine event listener ekleyerek input değişikliklerini yakalayabiliriz
-                    document.querySelector('.portfolio-table thead').addEventListener('input', (e) => {
-                        if (e.target.classList.contains('column-filter')) {
-                            const columnKey = e.target.dataset.column;
-                            this.columnFilters[columnKey] = e.target.value.toLowerCase();
-                            this.renderRecords();
-                        }
-                    });
-
-                    // Sıralama (Sorting) için event listener (delegation)
-                    document.getElementById('portfolioTableHeaderRow').addEventListener('click', (e) => {
-                        const targetTh = e.target.closest('.sortable-header');
-                        if (targetTh) {
-                            const columnKey = targetTh.dataset.column;
-                            this.toggleSort(columnKey);
-                        }
-                    });
-
-
                     document.getElementById('portfolioTableBody').addEventListener('click', (e) => { 
                         if (e.target.classList.contains('action-btn')) {
                             e.preventDefault();
@@ -440,164 +371,73 @@
                     document.getElementById('closeRecordDetailModal').addEventListener('click', () => this.closeModal('recordDetailModal'));
                 }
 
-                toggleSort(columnKey) {
-                    if (this.sortBy.column === columnKey) {
-                        this.sortBy.direction = this.sortBy.direction === 'asc' ? 'desc' : 'asc';
-                    } else {
-                        this.sortBy.column = columnKey;
-                        this.sortBy.direction = 'asc';
-                    }
-                    this.renderRecords();
-                }
-
-
                 renderRecords() {
                     const tableHeaderRow = document.getElementById('portfolioTableHeaderRow');
-                    const tableFilterRow = document.getElementById('portfolioTableFilterRow'); 
                     const tableBody = document.getElementById('portfolioTableBody'); 
                     const noRecordsMessage = document.getElementById('noRecordsMessage');
                     
-                    tableHeaderRow.innerHTML = ''; 
-                    tableFilterRow.innerHTML = ''; 
-                    tableBody.innerHTML = ''; 
+                    tableHeaderRow.innerHTML = ''; // Başlıkları temizle
+                    tableBody.innerHTML = ''; // İçeriği temizle
 
                     const currentTypeFilter = this.activeTypeFilter; 
-                    const globalSearchTerm = document.getElementById('searchBar').value.toLowerCase();
+                    const searchTerm = document.getElementById('searchBar').value.toLowerCase();
 
-                    // Sütun tanımlarını ve aranabilirliklerini içeren dizi
-                    const columnDefinitions = [
-                        { key: 'type', label: 'Kayıt Tipi', sortable: true, searchable: true },
-                        { key: 'title', label: 'Başlık', sortable: true, searchable: true },
-                        { key: 'trademarkImage', label: 'Marka Görseli', sortable: false, searchable: false, onlyTrademark: true }, 
-                        { key: 'applicationNumber', label: 'Başvuru Numarası', sortable: true, searchable: true },
-                        { key: 'applicationDate', label: 'Başvuru Tarihi', sortable: true, searchable: true },
-                        { key: 'status', label: 'Durum', sortable: true, searchable: true },
-                        { key: 'owners', label: 'Hak Sahipleri', sortable: true, searchable: true },
-                        { key: 'actions', label: 'İşlemler', sortable: false, searchable: false }
+                    // Tablo başlıklarını dinamik olarak oluştur
+                    let headers = [
+                        'Kayıt Tipi', 'Başlık'
                     ];
+                    if (currentTypeFilter === 'trademark') { // Sadece marka tabı aktifse Marka Görseli sütununu ekle
+                        headers.push('Marka Görseli');
+                    }
+                    headers.push(
+                        'Başvuru Numarası', 'Başvuru Tarihi', 'Durum', 'Hak Sahipleri', 'İşlemler'
+                    );
 
-                    // Tablo başlıklarını ve filtre inputlarını dinamik olarak oluştur
-                    columnDefinitions.forEach(col => {
-                        // Eğer sütun sadece marka tabında gösterilecek ve aktif tab marka değilse, boş bir th ekle ve atla
-                        if (col.onlyTrademark && currentTypeFilter !== 'trademark') {
-                            tableHeaderRow.innerHTML += '<th></th>';
-                            tableFilterRow.innerHTML += '<th></th>';
-                            return; 
-                        }
-
-                        // Header Row
+                    headers.forEach(headerText => {
                         const th = document.createElement('th');
-                        let headerText = col.label;
-                        if (col.sortable) {
-                            th.classList.add('sortable-header');
-                            th.dataset.column = col.key;
-                            if (this.sortBy.column === col.key) {
-                                th.classList.add(this.sortBy.direction);
-                            } else {
-                                th.classList.add('inactive'); // Sıralanmayan sütunlar için pasif ikon
-                            }
-                        }
-                        th.textContent = headerText; // Text contenti en sona atayalım ki ::after ile çakışmasın
+                        th.textContent = headerText;
                         tableHeaderRow.appendChild(th);
-
-
-                        // Filter Row
-                        const thFilter = document.createElement('th');
-                        if (col.searchable) {
-                            const input = document.createElement('input');
-                            input.type = 'text';
-                            input.classList.add('column-filter');
-                            input.dataset.column = col.key;
-                            input.placeholder = `${col.label} ara...`;
-                            input.value = this.columnFilters[col.key] || ''; 
-                            thFilter.appendChild(input);
-                        }
-                        tableFilterRow.appendChild(thFilter);
                     });
 
 
-                    let displayedRecords = [...this.allRecords]; // Tüm kayıtların bir kopyası üzerinde çalış
-
-                    // 1. Tab Filtrelemesi
-                    displayedRecords = displayedRecords.filter(record => {
+                    const filteredRecords = this.allRecords.filter(record => {
                         let matchesType = false;
                         if (currentTypeFilter === 'all') {
                             matchesType = true;
                         } else if (currentTypeFilter === 'objections') {
+                            // Kayıtın transactions dizisinde "İtiraz" tipinde işlem var mı kontrol et
                             matchesType = record.transactions && record.transactions.some(t => t.type && t.type.includes('İtiraz'));
                         } else if (currentTypeFilter === 'litigation') {
+                            // Kayıtın transactions dizisinde "Dava" tipinde işlem var mı kontrol et
                             matchesType = record.transactions && record.transactions.some(t => t.type && t.type.includes('Dava'));
                         } else {
                             matchesType = record.type === currentTypeFilter;
                         }
-                        return matchesType;
+                        
+                        // Tüm alanlarda arama yap
+                        const searchContent = [
+                            record.title,
+                            record.applicationNumber,
+                            record.status,
+                            record.description,
+                            record.patentClass, 
+                            record.niceClass, 
+                            record.copyrightType, 
+                            record.designClass 
+                        ].filter(Boolean).join(' ').toLowerCase(); 
+
+                        // Hak sahipleri isimlerini de aramaya dahil et
+                        const ownerNames = record.owners ? record.owners.map(owner => {
+                            const person = this.allPersons.find(p => p.id === owner.id);
+                            return person ? person.name : '';
+                        }).filter(Boolean).join(' ').toLowerCase() : '';
+
+                        const matchesSearch = searchContent.includes(searchTerm) || ownerNames.includes(searchTerm);
+                        
+                        return matchesType && matchesSearch;
                     });
 
-                    // 2. Genel Arama Çubuğu Filtrelemesi
-                    if (globalSearchTerm) {
-                        displayedRecords = displayedRecords.filter(record => {
-                            const searchContent = [
-                                record.type,
-                                record.title,
-                                record.applicationNumber,
-                                record.status,
-                                record.description,
-                                record.patentClass, 
-                                record.niceClass, 
-                                record.copyrightType, 
-                                record.designClass,
-                                (record.owners ? record.owners.map(owner => this.allPersons.find(p => p.id === owner.id)?.name || '').filter(Boolean).join(' ') : '')
-                            ].filter(Boolean).join(' ').toLowerCase(); 
-                            return searchContent.includes(globalSearchTerm);
-                        });
-                    }
-
-                    // 3. Sütun Bazlı Filtreleme
-                    displayedRecords = displayedRecords.filter(record => {
-                        return columnDefinitions.every(col => {
-                            if (!col.searchable || !this.columnFilters[col.key]) {
-                                return true; // Aranabilir değilse veya filtre boşsa True
-                            }
-                            // Eğer sütun sadece belirli bir tabda görünüyorsa ve o tab aktif değilse bu filtreyi atla
-                            if (col.onlyTrademark && currentTypeFilter !== 'trademark') return true;
-
-                            let recordValue = '';
-                            if (col.key === 'owners') {
-                                recordValue = record.owners ? record.owners.map(owner => this.allPersons.find(p => p.id === owner.id)?.name || '').filter(Boolean).join(' ') : '';
-                            } else if (col.key === 'applicationDate') {
-                                recordValue = record[col.key] ? new Date(record[col.key]).toLocaleDateString('tr-TR') : '';
-                            } else {
-                                recordValue = record[col.key] ? String(record[col.key]) : '';
-                            }
-                            return recordValue.toLowerCase().includes(this.columnFilters[col.key]);
-                        });
-                    });
-
-                    // 4. Sıralama
-                    if (this.sortBy.column) {
-                        const sortColumn = this.sortBy.column;
-                        const sortDirection = this.sortBy.direction;
-                        displayedRecords.sort((a, b) => {
-                            let valA = a[sortColumn];
-                            let valB = b[sortColumn];
-
-                            if (sortColumn === 'owners') {
-                                valA = (a.owners ? a.owners.map(owner => this.allPersons.find(p => p.id === owner.id)?.name || '').filter(Boolean).join(' ') : '');
-                                valB = (b.owners ? b.owners.map(owner => this.allPersons.find(p => p.id === owner.id)?.name || '').filter(Boolean).join(' ') : '');
-                            } else if (sortColumn === 'applicationDate') {
-                                valA = new Date(a.applicationDate || '');
-                                valB = new Date(b.applicationDate || '');
-                            } else if (typeof valA === 'string' && typeof valB === 'string') {
-                                return sortDirection === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
-                            } else if (typeof valA === 'number' && typeof valB === 'number') {
-                                return sortDirection === 'asc' ? valA - valB : valB - valA;
-                            }
-                            return 0; // Eğer karşılaştırılamazsa sırasını değiştirme
-                        });
-                    }
-
-
-                    if (displayedRecords.length === 0) {
+                    if (filteredRecords.length === 0) {
                         noRecordsMessage.style.display = 'block';
                         tableBody.style.display = 'none'; 
                         return;
@@ -605,7 +445,7 @@
                     noRecordsMessage.style.display = 'none';
                     tableBody.style.display = 'table-row-group'; 
 
-                    displayedRecords.forEach(record => {
+                    filteredRecords.forEach(record => {
                         const row = document.createElement('tr'); 
                         
                         const ownerNames = record.owners ? record.owners.map(owner => {
@@ -613,26 +453,25 @@
                             return person ? person.name : 'Bilinmeyen Kişi';
                         }).join(', ') : 'Belirtilmemiş';
 
-                        let rowCellsHtml = `
-                            <td>${record.type.charAt(0).toUpperCase() + record.type.slice(1)}</td>
-                            <td>${record.title || 'Başlıksız Kayıt'}</td>
-                        `;
-                        
-                        if (currentTypeFilter === 'trademark') {
+                        // Marka görseli sütunu için içerik
+                        let trademarkImageCellHtml = ''; 
+                        if (currentTypeFilter === 'trademark') { // Sadece marka tabı aktifse Marka Görseli hücresi ekle
                             if (record.trademarkImage && record.trademarkImage.content) {
-                                rowCellsHtml += `
+                                trademarkImageCellHtml = `
                                 <td>
                                     <div class="trademark-image-wrapper">
                                         <img src="${record.trademarkImage.content}" alt="Marka Görseli" class="trademark-image-thumbnail">
                                     </div>
                                 </td>`;
                             } else {
-                                rowCellsHtml += `<td>-</td>`;
+                                trademarkImageCellHtml = `<td>-</td>`; // Görsel yoksa boş hücre
                             }
                         }
 
-                        rowCellsHtml += `
-                            <td>${record.applicationNumber || '-'}</td>
+                        row.innerHTML = `
+                            <td>${record.type.charAt(0).toUpperCase() + record.type.slice(1)}</td>
+                            <td>${record.title || 'Başlıksız Kayıt'}</td>
+                            ${trademarkImageCellHtml} <td>${record.applicationNumber || '-'}</td>
                             <td>${record.applicationDate || '-'}</td>
                             <td>${record.status || '-'}</td>
                             <td>${ownerNames || '-'}</td>
@@ -642,7 +481,6 @@
                                 <button class="action-btn delete-btn" data-id="${record.id}">Sil</button>
                             </td>
                         `;
-                        row.innerHTML = rowCellsHtml;
                         tableBody.appendChild(row);
                     });
                 }
