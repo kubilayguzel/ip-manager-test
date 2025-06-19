@@ -614,5 +614,4 @@ export async function createDemoData() {
 export { 
     auth, 
     db, 
-    authService, 
     };
