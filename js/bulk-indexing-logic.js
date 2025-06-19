@@ -1,6 +1,6 @@
 // js/bulk-indexing-logic.js
-import { authService, ipRecordsService, generateUUID, bulkIndexingService } from './firebase-config.js'; // firebase-config.js'e göre yol güncellendi
-import { showNotification, formatFileSize, readFileAsDataURL } from './utils.js'; // utils.js'e göre yol güncellendi
+import { authService, ipRecordsService, generateUUID, bulkIndexingService } from '../firebase-config.js'; // Düzeltildi
+import { showNotification, formatFileSize, readFileAsDataURL } from '../utils.js'; // Düzeltildi
 import { getFirestore, writeBatch, doc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 
 const CHILD_TRANSACTION_TYPES = [
@@ -495,7 +495,7 @@ export class BulkIndexingModule {
                 fileName: file.name,
                 fileSize: file.size, 
                 fileType: file.type, 
-                fileContent: fileContentBase64.content, 
+                fileContent: fileContentBase64, // .content kaldırıldı, direkt base64 string
                 extractedAppNumber: extractedAppNumber, 
                 matchedRecordId: matchedRecord ? matchedRecord.id : null,
                 matchedRecordDisplay: matchedRecordDisplay,
@@ -630,12 +630,6 @@ export class BulkIndexingModule {
             `;
             tableBody.appendChild(row);
         });
-
-        // Event listener'lar setupEventListeners içinde zaten tanımlanmış durumda,
-        // ancak render sonrasında DOM'a yeni eklenen elementler için tekrar atanmaları gerekebilir.
-        // Bu yüzden setEventListeners'ı burada çağırabiliriz veya event delegation kullanabiliriz.
-        // Şu anki yapıda event delegation kullanıldığı için bu satırlara gerek yok,
-        // ancak buradaki eklemelerin (querySelectorAll) doğru çalıştığından emin olmak için tuttum.
     }
 
     renderIndexedBulkTable = () => {
