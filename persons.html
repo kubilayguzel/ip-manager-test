@@ -117,7 +117,7 @@
     </div>
     
     <script type="module">
-        import { authService, personsService, auth } from './firebase-config.js';
+        import { authService, personService, auth } from './firebase-config.js';
         import { showNotification } from './utils.js';
         import { loadSharedLayout } from './js/layout-loader.js';
 
@@ -175,7 +175,7 @@
             async loadPersons() {
                 const loadingIndicator = document.getElementById('loadingIndicator');
                 if (loadingIndicator) loadingIndicator.style.display = 'block';
-                const result = await personsService.getPersons();
+                const result = await personService.getPersons();
                 if (loadingIndicator) loadingIndicator.style.display = 'none';
                 if (result.success) {
                     this.allPersons = result.data;
@@ -307,9 +307,9 @@
 
                 let result;
                 if (this.editingPersonId) {
-                    result = await personsService.updatePerson(this.editingPersonId, personData);
+                    result = await personService.updatePerson(this.editingPersonId, personData);
                 } else {
-                    result = await personsService.addPerson(personData);
+                    result = await personService.addPerson(personData);
                 }
 
                 if (result.success) {
@@ -323,7 +323,7 @@
 
             async deletePerson(personId) {
                 if (confirm('Bu kişiyi silmek istediğinizden emin misiniz?')) {
-                    const result = await personsService.deletePerson(personId);
+                    const result = await personService.deletePerson(personId);
                     if (result.success) {
                         showNotification('Kişi başarıyla silindi.', 'success');
                         await this.loadPersons();
