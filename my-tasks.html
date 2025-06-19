@@ -343,7 +343,7 @@
     </div>
 
     <script type="module">
-        import { authService, taskService, ipRecordsService, personsService, accrualService, auth, generateUUID } from './firebase-config.js';
+        import { authService, taskService, ipRecordsService, personService, accrualService, auth, generateUUID } from './firebase-config.js';
         import { showNotification, formatFileSize, readFileAsDataURL } from './utils.js';
         import { loadSharedLayout } from './js/layout-loader.js'; // layout-loader.js eklendi
 
@@ -465,7 +465,7 @@
                     const [tasksResult, ipRecordsResult, personsResult, usersResult, accrualsResult] = await Promise.all([
                         taskService.getTasksForUser(this.currentUser.uid),
                         ipRecordsService.getRecords(),
-                        personsService.getPersons(),
+                        personService.getPersons(),
                         taskService.getAllUsers(),
                         accrualService.getAccruals()
                     ]);
