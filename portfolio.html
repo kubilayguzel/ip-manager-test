@@ -204,16 +204,13 @@
             margin: auto;
             padding: 30px;
             border: 1px solid #888;
-            width: auto;
-            max-width: 1250px; 
+            width: auto; /* width: 90% yerine auto veya initial kullanarak flex'in kontrolünü sağlayın */
+            max-width: 1250px; /* Burası 900px'ten 1250px'e güncellendi */
             border-radius: 20px;
             animation-name: animatetop;
             animation-duration: 0.4s;
             max-height: 90vh;
             overflow-y: auto;
-            display: flex;
-            align-items: center;
-            justify-content: center;
         }
         @keyframes animatetop { from {top: -300px; opacity: 0} to {top: 0; opacity: 1} }
         .close-modal-btn { color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer; }
