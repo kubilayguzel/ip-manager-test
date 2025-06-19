@@ -611,10 +611,8 @@ export async function createDemoData() {
 
 
 // --- Exports ---
-// DÜZELTİLDİ: Eksik servisler eklendi
 export { 
     auth, 
     db, 
     authService, 
-    ipRecordsService, 
     };
