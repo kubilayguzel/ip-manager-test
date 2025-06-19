@@ -403,7 +403,9 @@
                             document.querySelectorAll('.tab-menu .tab-button').forEach(btn => btn.classList.remove('active'));
                             e.target.classList.add('active');
                             this.activeTypeFilter = e.target.dataset.type;
-                            this.initialRenderTableStructure(); // Tab değiştiğinde tablo yapısını yeniden oluştur (kolonlar değişebilir)
+                            // Tab değiştiğinde, kolon filtrelerini sıfırla (eğer isteniyorsa)
+                            // this.columnFilters = {};
+                            this.initialRenderTableStructure(); // Tablo yapısını ve başlıkları yeniden oluştur
                             this.applyFiltersAndSort(); // Yeni filtreleri uygula
                         });
                     });
@@ -418,7 +420,6 @@
                     });
 
                     // Sütun filtreleri için debounced event listener (delegation)
-                    // `<thead>` elementine event listener ekleyerek input değişikliklerini yakalayabiliriz
                     let columnFilterTimeout;
                     document.querySelector('.portfolio-table thead').addEventListener('input', (e) => {
                         if (e.target.classList.contains('column-filter')) {
@@ -501,24 +502,21 @@
                     columnDefinitions.forEach(col => {
                         // Marka görseli sütunu sadece marka tabında gösterilecekse, diğer tablarda gizle
                         // Kayıt Tipi sütunu, sadece "Tümü" tabında gösterilecekse, diğer tablarda gizle
-                        const hideColumn = (col.onlyTrademark && currentTypeFilter !== 'trademark') || 
-                                           (col.key === 'type' && currentTypeFilter !== 'all');
+                        const hideColumnInHeader = (col.onlyTrademark && currentTypeFilter !== 'trademark') || 
+                                                   (col.key === 'type' && currentTypeFilter !== 'all');
 
-                        if (hideColumn) {
-                            tableHeaderRow.innerHTML += '<th></th>'; // Yer tutucu başlık
-                            tableFilterRow.innerHTML += '<th></th>'; // Yer tutucu filtre
-                            return; 
-                        }
-
-                        // Header Row (Başlıklar)
                         const th = document.createElement('th');
                         if (col.sortable) {
                             th.classList.add('sortable-header');
                             th.dataset.column = col.key;
-                            // Sıralama ikonları ve yönü applyFiltersAndSort içinde güncellenecek
                         }
                         th.textContent = col.label; 
+                        
+                        // Başlık hücresini direkt ekle, görünürlüğü sonradan applyFiltersAndSort'ta yönet
                         tableHeaderRow.appendChild(th);
+                        if (hideColumnInHeader) {
+                            th.style.display = 'none';
+                        }
 
 
                         // Filter Row (Filtre Inputları)
@@ -529,10 +527,14 @@
                             input.classList.add('column-filter');
                             input.dataset.column = col.key;
                             input.placeholder = `${col.label} ara...`;
-                            input.value = this.columnFilters[col.key] || ''; // Kaydedilmiş filtre değeri
+                            input.value = this.columnFilters[col.key] || ''; 
                             thFilter.appendChild(input);
                         }
+                        // Filtre hücresini direkt ekle, görünürlüğü sonradan applyFiltersAndSort'ta yönet
                         tableFilterRow.appendChild(thFilter);
+                        if (hideColumnInHeader) {
+                            thFilter.style.display = 'none';
+                        }
                     });
                 }
                 
@@ -541,8 +543,7 @@
                     const tableBody = document.getElementById('portfolioTableBody');
                     tableBody.innerHTML = ''; // Önceki tüm satırları temizle
 
-                    // Sütunları doğru şekilde oluşturmak için tanımları kullan
-                    const columnDefinitions = [ 
+                    const columnDefinitions = [ // Sütunları doğru şekilde oluşturmak için tanımları kullan
                         { key: 'type', label: 'Kayıt Tipi', sortable: true, searchable: true },
                         { key: 'title', label: 'Başlık', sortable: true, searchable: true },
                         { key: 'trademarkImage', label: 'Marka Görseli', sortable: false, searchable: false, onlyTrademark: true }, 
@@ -565,42 +566,32 @@
                         let rowCellsHtml = '';
                         
                         columnDefinitions.forEach(col => {
-                            // Marka görseli ve Kayıt Tipi sütunları için dinamik td ekleme kontrolü
-                            const hideColumn = (col.onlyTrademark && this.activeTypeFilter !== 'trademark') || 
-                                               (col.key === 'type' && this.activeTypeFilter !== 'all');
-
-                            if (hideColumn) {
-                                rowCellsHtml += `<td></td>`; // Yer tutucu boş td
-                                return;
-                            }
-
+                            let cellHtmlContent = '';
                             // Sütun anahtarına göre değeri oluştur
-                            if (col.key === 'type') { rowCellsHtml += `<td>${record.type.charAt(0).toUpperCase() + record.type.slice(1)}</td>`; }
-                            else if (col.key === 'title') { rowCellsHtml += `<td>${record.title || 'Başlıksız Kayıt'}</td>`; }
+                            if (col.key === 'type') { cellHtmlContent = `${record.type.charAt(0).toUpperCase() + record.type.slice(1)}`; }
+                            else if (col.key === 'title') { cellHtmlContent = `${record.title || 'Başlıksız Kayıt'}`; }
                             else if (col.key === 'trademarkImage') {
                                 if (record.type === 'trademark' && record.trademarkImage && record.trademarkImage.content) {
-                                    rowCellsHtml += `
-                                    <td>
+                                    cellHtmlContent = `
                                         <div class="trademark-image-wrapper">
                                             <img src="${record.trademarkImage.content}" alt="Marka Görseli" class="trademark-image-thumbnail">
-                                        </div>
-                                    </td>`;
+                                        </div>`;
                                 } else {
-                                    rowCellsHtml += `<td>-</td>`; 
+                                    cellHtmlContent = `-`; 
                                 }
                             }
-                            else if (col.key === 'applicationNumber') { rowCellsHtml += `<td>${record.applicationNumber || '-'}</td>`; }
-                            else if (col.key === 'applicationDate') { rowCellsHtml += `<td>${record.applicationDate || '-'}</td>`; }
-                            else if (col.key === 'status') { rowCellsHtml += `<td>${record.status || '-'}</td>`; }
-                            else if (col.key === 'owners') { rowCellsHtml += `<td>${ownerNames || '-'}</td>`; }
+                            else if (col.key === 'applicationNumber') { cellHtmlContent = `${record.applicationNumber || '-'}`; }
+                            else if (col.key === 'applicationDate') { cellHtmlContent = `${record.applicationDate || '-'}`; }
+                            else if (col.key === 'status') { cellHtmlContent = `${record.status || '-'}`; }
+                            else if (col.key === 'owners') { cellHtmlContent = `${ownerNames || '-'}`; }
                             else if (col.key === 'actions') {
-                                rowCellsHtml += `
-                                <td>
+                                cellHtmlContent = `
                                     <button class="action-btn view-btn" data-id="${record.id}">Görüntüle</button>
                                     <button class="action-btn edit-btn" data-id="${record.id}">Düzenle</button>
                                     <button class="action-btn delete-btn" data-id="${record.id}">Sil</button>
-                                </td>`;
+                                `;
                             }
+                            rowCellsHtml += `<td>${cellHtmlContent}</td>`;
                         });
                         row.innerHTML = rowCellsHtml; // rowCellsHtml'i sadece bir kez ata
                         tableBody.appendChild(row);
@@ -618,7 +609,7 @@
 
                     // Sütun tanımlarını filtreleme için kullan (burada key, searchable yeterli)
                     const columnDefinitions = [
-                        { key: 'type', searchable: true, index: 0 }, // Kolon indexlerini ekle
+                        { key: 'type', searchable: true, index: 0, onlyAllTab: true }, // onlyAllTab eklendi
                         { key: 'title', searchable: true, index: 1 },
                         { key: 'trademarkImage', searchable: false, onlyTrademark: true, index: 2 }, 
                         { key: 'applicationNumber', searchable: true, index: 3 },
@@ -666,8 +657,7 @@
                                 return true; // Aranabilir değilse veya filtre boşsa True
                             }
                             // Eğer sütun sadece belirli bir tabda görünüyorsa ve o tab aktif değilse bu filtreyi atla
-                            // Bu satır sadece filteredRecords mantığı için geçerli, DOM'da td her zaman var.
-                            if (col.onlyTrademark && currentTypeFilter !== 'trademark') return true; 
+                            if ((col.onlyTrademark && currentTypeFilter !== 'trademark') || (col.onlyAllTab && currentTypeFilter !== 'all')) return true; 
 
                             let recordValue = '';
                             if (col.key === 'owners') {
@@ -735,19 +725,18 @@
                         const recordId = row.dataset.recordId;
                         const record = this.allRecords.find(r => r.id === recordId);
                         
-                        const typeColumnIndex = columnDefinitions.find(col => col.key === 'type').index;
-                        const trademarkImageColumnIndex = columnDefinitions.find(col => col.key === 'trademarkImage').index;
-
-                        // Kayıt Tipi kolonunun görünürlüğü
-                        const typeCell = row.children[typeColumnIndex];
-                        if (typeCell) {
-                            typeCell.style.display = (currentTypeFilter === 'all') ? '' : 'none';
-                        }
-                        // Marka Görseli kolonunun görünürlüğü
-                        const trademarkCell = row.children[trademarkImageColumnIndex];
-                        if (trademarkCell) {
-                            trademarkCell.style.display = (currentTypeFilter === 'trademark') ? '' : 'none';
-                        }
+                        // Her sütunun görünürlüğünü kontrol et ve uygula
+                        columnDefinitions.forEach(col => {
+                            const cellIndex = col.index;
+                            const cell = row.children[cellIndex];
+                            if (cell) { // Hücre varsa işle
+                                // Gizlenecek kolonları belirle
+                                const hideColumn = (col.onlyTrademark && currentTypeFilter !== 'trademark') || 
+                                                   (col.key === 'type' && currentTypeFilter !== 'all');
+                                
+                                cell.style.display = hideColumn ? 'none' : 'table-cell'; // table-cell olarak göster
+                            }
+                        });
 
                         // Eğer satır filtrelenmiş sonuçlarda yoksa gizle, varsa göster
                         row.style.display = filteredRows.includes(row) ? 'table-row' : 'none';
@@ -782,11 +771,6 @@
                 }
 
                 async showRecordDetailModal(recordId) {
-                
-                    if (!recordId || typeof recordId !== 'string') {
-                    console.warn("Geçersiz veya boş recordId ile modal açılmak istendi:", recordId);
-                    return;
-    }                    
                     const record = this.allRecords.find(r => r.id === recordId);
                     if (!record) {
                         showNotification('Kayıt bulunamadı.', 'error');
