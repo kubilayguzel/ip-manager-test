@@ -688,10 +688,6 @@
                     });
                     this.renderBulkIndexingTable(); 
                     this.checkFormCompleteness();
-                    // Firestore'a kaydetme işlemini sadece job.status değiştiğinde veya Kaydet butonuna basıldığında yapmalıyız
-                    // her checkbox tıklamasında yaparsak çok fazla yazma işlemi olur.
-                    // Bu çağrı kaldırıldı.
-                    // this.saveBulkJobsToFirestore(); 
                 }
 
                 // Yeni: Tek bir işin seçilme durumu değiştiğinde
@@ -708,8 +704,6 @@
                     
                     this.renderBulkIndexingTable(); 
                     this.checkFormCompleteness();
-                    // Bu çağrı da kaldırıldı, Kaydet butonuna basıldığında veya status değiştiğinde yapılacak
-                    // this.saveBulkJobsToFirestore(); 
                 }
 
                 populateChildTransactionTypeSelect = () => {
@@ -967,6 +961,7 @@
                     files.forEach(fileData => {
                         const fileItem = document.createElement('div');
                         fileItem.className = 'file-item';
+                        // Hata olan satır düzeltildi:
                         fileItem.innerHTML = `
                             <div class="d-flex justify-content-between w-100">
                                 <strong>${fileData.fileObject.name}</strong>
@@ -1255,8 +1250,6 @@
                             let failedJobs = 0;
 
                             for (const job of selectedBulkJobs) { 
-                                // Job'ın son doğrulamasını tekrar yap (her ihtimale karşı)
-                                // checkJobCompleteness'i kullanarak tüm alanları kontrol et
                                 if (!this.checkJobCompleteness(job)) { 
                                     job.status = 'error';
                                     job.errorMessage = job.errorMessage || 'Eksik veya hatalı bilgi.';
@@ -1302,11 +1295,12 @@
                                     }
                                     const newChildTransactionId = childTransactionAddResult.data.transactionId;
                                     
-                                    const fileContent = await readFileAsDataURL(job.fileObject); 
+                                    // job.fileObject Base64 olarak gelmeli Firestore'dan
+                                    const fileContent = job.fileContent; // fileContent burada direkt Base64 string olmalı
                                     const fileToUpload = {
                                         fileName: job.fileName,
-                                        fileType: job.fileObject.type,
-                                        fileSize: job.fileObject.size,
+                                        fileType: job.fileType, // job.fileType kullanıldı
+                                        fileSize: job.fileSize, // job.fileSize kullanıldı
                                         fileUrl: fileContent, 
                                         relatedTransactionId: newChildTransactionId, 
                                         documentDesignation: job.childTransactionType 
@@ -1408,7 +1402,7 @@
                     document.getElementById('bulkFilesInfo').textContent = 'Henüz PDF dosyası seçilmedi.';
                     document.getElementById('bulkIndexingTableContainer').style.display = 'none';
                     document.getElementById('bulkIndexingTable').querySelector('tbody').innerHTML = '';
-                    document.getElementById('bulkTableNoJobs').style.display = 'none';
+                    document.getElementById('bulkTableNoJobs').style.display = 'block'; // Mesajı göster
                     document.getElementById('indexedBulkTable').querySelector('tbody').innerHTML = ''; 
                     document.getElementById('indexedBulkTableNoJobs').style.display = 'block'; 
 
@@ -1476,17 +1470,10 @@
                     });
                     // Pending listesindeki mevcut dosyaları da kontrol setine ekle
                     this.pendingBulkIndexJobs.forEach(job => {
-                         // Eğer job.fileObject varsa
-                         if (job.fileObject && job.fileName && job.fileObject.size) {
-                            allExistingFileIdentifiers.add(`${job.fileName}_${job.fileObject.size}`);
-                         } else {
-                            // Eğer job.fileObject'ı Firestore'dan Base64 string olarak geliyorsa, onun da identifier'ını oluşturalım
-                            // job.fileObject (Base64 string) ve job.fileName ile eşleşme yapmak
-                            // Bu kısım Base64'ten File objesine dönüşüm gerektirebilir veya başka bir identifier kullanabiliriz.
-                            // Şimdilik sadece fileName ve boyutu kontrol edelim.
-                            // Daha güvenli bir kontrol için: her job'ın fileUrl (Base64) kısmını da hesaba katmalıyız.
-                            // Ancak bu, çok büyük Base64 stringleri için performans sorunu yaratabilir.
-                            // En iyisi, Firestore'da File objesini değil, sadece fileName ve fileSize'ı tutmak ve Firebase Storage'a geçmek.
+                         // Firestore'dan gelen job'larda fileObject tam File nesnesi olmayabilir.
+                         // job.fileContent ve job.fileName, job.fileSize gibi alanları kontrol etmek daha güvenli.
+                         if (job.fileName && job.fileSize) {
+                            allExistingFileIdentifiers.add(`${job.fileName}_${job.fileSize}`);
                          }
                     });
 
@@ -1519,7 +1506,7 @@
 
                             if (matchedRecord) {
                                 matchedRecordDisplay = `${matchedRecord.title} (${matchedRecord.applicationNumber})`;
-                                status = 'ready'; // Otomatik eşleşirse başlangıçta hazır olsun
+                                status = 'ready'; 
                             } else {
                                 matchedRecordDisplay = `Eşleşme Yok (Başvuru No: ${extractedAppNumber})`; 
                                 status = 'pending'; 
@@ -1530,14 +1517,14 @@
                         }
 
                         // File objesini Base64'e çevirip öyle kaydetmeliyiz.
-                        const fileContentBase64 = await readFileAsDataURL(file);
+                        const fileContentBase64 = await readFileAsDataURL(file); // OKU VE BASE64'E ÇEVİR
 
                         const newJob = {
                             jobId: generateUUID(),
                             fileName: file.name,
-                            fileSize: file.size, // Boyutu da kaydedelim
-                            fileType: file.type, // Tipi de kaydedelim
-                            fileContent: fileContentBase64.content, // PDF içeriği Base64
+                            fileSize: file.size, 
+                            fileType: file.type, 
+                            fileContent: fileContentBase64.content, // PDF içeriği Base64 olarak kaydediliyor
                             extractedAppNumber: extractedAppNumber, 
                             matchedRecordId: matchedRecord ? matchedRecord.id : null,
                             matchedRecordDisplay: matchedRecordDisplay,
@@ -1556,7 +1543,7 @@
                         // İşi Firestore'a kaydet
                         const addJobResult = await bulkIndexingService.addJob(newJob);
                         if (addJobResult.success) {
-                            this.pendingBulkIndexJobs.push(addJobResult.data); 
+                            this.pendingBulkIndexJobs.push(addJobResult.data); // Başarıyla kaydedilirse yerel listeye ekle
                             showNotification(`'${newJob.fileName}' işleme listesine eklendi.`, 'info', 3000);
                         } else {
                             showNotification(`'${newJob.fileName}' işleme listesine eklenirken hata: ${addJobResult.error}`, 'error', 6000);
@@ -1564,10 +1551,8 @@
                     }
                     this.renderBulkIndexingTable();
                     this.checkFormCompleteness();
-                    // this.saveBulkJobsToFirestore(); // Çağrı burada gerekmiyor, addJob zaten kaydediyor
                 }
 
-                // Yeni: Dosya adından başvuru numarasını çek
                 extractApplicationNumberFromFileName = (fileName) => { 
                     const fileNameWithoutExtension = fileName.split('.').slice(0, -1).join('.'); 
 
@@ -1577,7 +1562,6 @@
                     return match ? match[0] : ''; 
                 }
 
-                // Yeni: Toplu indeksleme tablosunu render et
                 renderBulkIndexingTable = () => { 
                     const tableBody = document.getElementById('bulkIndexingTable').querySelector('tbody');
                     const tableContainer = document.getElementById('bulkIndexingTableContainer');
@@ -1646,7 +1630,8 @@
 
                         row.innerHTML = `
                             <td><input type="checkbox" class="bulk-job-checkbox" data-job-id="${job.jobId}" ${job.isSelected ? 'checked' : ''} ${!isJobSelectable ? 'disabled' : ''}></td>
-                            <td><a href="${job.fileContent ? job.fileContent : '#'}" target="_blank" title="PDF Görüntüle">${job.fileName}</a></td> <td>${job.extractedAppNumber || '-'}</td>
+                            <td><a href="${job.fileContent ? job.fileContent : '#'}" target="_blank" title="PDF Görüntüle">${job.fileName}</a></td> 
+                            <td>${job.extractedAppNumber || '-'}</td>
                             <td class="matched-record-cell">
                                 <span class="matched-record-display-text">${job.matchedRecordDisplay}</span>
                                 ${job.status === 'pending' || job.status === 'error' || !job.matchedRecordId ? 
@@ -1655,11 +1640,11 @@
                                             data-job-id="${job.jobId}" 
                                             value="" 
                                             placeholder="Manuel kayıt ara..."
-                                            <span class="math-inline">\{\!isJobSelectable ? 'disabled' \: ''\}\>
-<div class\="search\-results\-container bulk\-search\-results\-container" data\-job\-id\="</span>{job.jobId}"></div>
+                                            ${!isJobSelectable ? 'disabled' : ''}>
+                                        <div class="search-results-container bulk-search-results-container" data-job-id="${job.jobId}"></div>
                                     </div>` : ''}
                             </td>
-                            <td>${job.matchedRecordId ? populateParentSelectHtml(job.jobId, job.matchedRecordId, job.selectedParentTransactionId) : '<select disabled><option value="">Önce Kayıt Seçin</option></select>'}</td> <td>${populateChildTypeSelectHtml(job.jobId, job.childTransactionType)}</td> <td><input type="date" class="form-input bulk-job-delivery-date" data-job-id="${job.jobId}" value="${job.tebligDate || ''}" ${!isJobSelectable ? 'disabled' : ''}></td> <td><span class="status-text ${job.status}">${job.status === 'pending' ? 'Beklemede' : job.status === 'ready' ? 'Hazır' : job.status === 'processing' ? 'İşleniyor' : 'Başarılı' : 'Hata'}</span>
+                            <td>${job.matchedRecordId ? populateParentSelectHtml(job.jobId, job.matchedRecordId, job.selectedParentTransactionId) : '<select disabled><option value="">Önce Kayıt Seçin</option></select>'}</td> <td>${populateChildTypeSelectHtml(job.jobId, job.childTransactionType)}</td> <td><input type="date" class="form-input bulk-job-delivery-date" data-job-id="${job.jobId}" value="${job.tebligDate || ''}" ${!isJobSelectable ? 'disabled' : ''}></td> <td><span class="status-text ${job.status}">${job.status === 'pending' ? 'Beklemede' : job.status === 'ready' ? 'Hazır' : job.status === 'processing' ? 'İşleniyor' : job.status === 'success' ? 'Başarılı' : 'Hata'}</span>
                                 ${job.errorMessage ? `<br><small style="color:red;">${job.errorMessage}</small>` : ''}
                             </td>
                             <td>
@@ -1719,7 +1704,6 @@
                     this.renderIndexedBulkTable(); // İndekslenenler tablosunu da render et
                 }
 
-                // Yeni: İndekslenenler tablosunu render et
                 renderIndexedBulkTable = () => {
                     const tableBody = document.getElementById('indexedBulkTable').querySelector('tbody');
                     const tableContainer = document.querySelector('.indexed-jobs-section'); // Ana kapsayıcı div'i al
@@ -1751,7 +1735,6 @@
                 }
 
 
-                // Job'ın tamamlanma durumunu kontrol eden yeni yardımcı fonksiyon
                 checkJobCompleteness = (job) => {
                     return job.matchedRecordId !== null && 
                            job.selectedParentTransactionId !== '' && 
@@ -1760,7 +1743,6 @@
                            job.status !== 'error'; // Hatalı değilse
                 }
 
-                // Yeni: Tablo içindeki arama (query ve jobId parametreleriyle)
                 searchRecordsForBulkJob = (e) => { 
                     const query = e.target.value;
                     const jobId = e.target.dataset.jobId;
@@ -1790,7 +1772,6 @@
                     container.style.display = 'block';
                 }
 
-                // Yeni: Tablo içinde kayıt seçimi
                 selectRecordForBulkJob = (recordId, jobId) => { 
                     const job = this.pendingBulkIndexJobs.find(j => j.jobId === jobId);
                     const selectedRecord = this.allRecords.find(r => r.id === recordId);
@@ -1806,7 +1787,6 @@
                     this.saveBulkJobsToFirestore(); // Firestore'a kaydet
                 }
 
-                // Yeni: Tablo içindeki parent seçimi
                 selectParentForBulkJob = (parentTransactionId, jobId) => {
                     const job = this.pendingBulkIndexJobs.find(j => j.jobId === jobId);
                     if (job) {
@@ -1827,7 +1807,6 @@
                     this.saveBulkJobsToFirestore(); // Firestore'a kaydet
                 }
 
-                // Yeni: Tablo içindeki işe özel alt işlem türünü güncelleme
                 updateJobSpecificChildType = (newType, jobId) => {
                     const job = this.pendingBulkIndexJobs.find(j => j.jobId === jobId);
                     if (job) {
@@ -1841,7 +1820,6 @@
                     }
                 }
 
-                // Yeni: Tablo içindeki işe özel tebliğ tarihini güncelleme
                 updateJobSpecificDeliveryDate = (newDate, jobId) => {
                     const job = this.pendingBulkIndexJobs.find(j => j.jobId === jobId);
                     if (job) {
@@ -1855,7 +1833,6 @@
                     }
                 }
 
-                // Yeni: Toplu indeksleme işini atla
                 skipBulkJob = (e) => { 
                     const jobId = e.target.dataset.jobId;
                     const jobIndex = this.pendingBulkIndexJobs.findIndex(j => j.jobId === jobId);
@@ -1866,11 +1843,9 @@
                         bulkIndexingService.deleteJob(skippedJob.jobId);
                         this.renderBulkIndexingTable();
                         this.checkFormCompleteness();
-                        // this.saveBulkJobsToFirestore(); // Firestore'a geçtiğimiz için localStorage'a kaydetmeye gerek kalmadı
                     }
                 }
                 
-                // Yeni: Hatalı toplu indeksleme işini tekrar dene
                 retryBulkJob = (e) => { 
                     const jobId = e.target.dataset.jobId;
                     const job = this.pendingBulkIndexJobs.find(j => j.jobId === jobId);
@@ -1883,11 +1858,9 @@
                         bulkIndexingService.updateJob(job.jobId, { status: job.status, errorMessage: null, isSelected: true });
                         this.renderBulkIndexingTable();
                         this.checkFormCompleteness();
-                        // this.saveBulkJobsToFirestore(); // Firestore'a geçtiğimiz için localStorage'a kaydetmeye gerek kalmadı
                     }
                 }
                 
-                // updateBulkJobsTebligDate artık ortak bir tebliğ tarihi alanı yok, sadece checkFormCompleteness'e etki eder
                 updateBulkJobsTebligDate = (e) => { 
                     const newDate = e.target.value;
                     this.pendingBulkIndexJobs.forEach(job => {
@@ -1898,7 +1871,7 @@
                     });
                     this.renderBulkIndexingTable();
                     this.checkFormCompleteness();
-                    this.saveBulkJobsToFirestore(); // Firestore'a kaydet
+                    this.saveBulkJobsToFirestore(); 
                 }
             }
             
