@@ -403,10 +403,20 @@
                         document.getElementById('renewalDateDesign').value = record.renewalDateDesign || '';
                     }
                     
-                    if (record.owners) {
-                        this.selectedOwners = record.owners;
+                    if (record.owners && Array.isArray(record.owners)) {
+                        // record.owners sadece id içerdiği için, allPersons'tan tam objeleri bulmalıyız
+                        this.selectedOwners = record.owners.map(ownerRef => {
+                            return this.allPersons.find(p => p.id === ownerRef.id);
+                        }).filter(Boolean); // null/undefined olanları filtrele
+                        
                         this.renderSelectedOwners();
+                        document.getElementById('ownerSearchInput').value = ''; // Yükleme sonrası arama inputunu temizle
+                    } else {
+                        this.selectedOwners = []; // Eğer owners yoksa boş dizi
+                        this.renderSelectedOwners(); // Alanı temizlemek için çağır
+                        document.getElementById('ownerSearchInput').value = '';
                     }
+
                 }, 100);
             }
 
