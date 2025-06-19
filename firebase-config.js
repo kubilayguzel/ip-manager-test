@@ -620,5 +620,4 @@ export {
     personService, 
     taskService, 
     accrualService, 
-    bulkIndexingService 
-};
+    };
