@@ -12,31 +12,6 @@
         .page-wrapper { flex-grow: 1; display: flex; flex-direction: column; height: 100vh; overflow-y: auto; background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); }
         .main-container { width: 100%; padding: 30px; margin: 0; }
         
-        /* Sidebar ve Top Header stilleri shared-styles.css aracılığıyla yüklenecek.
-           Buradaki tekrarlayan stilleri kaldırın. */
-        /* .sidebar { width: 260px; background: #1e3c72; color: white; display: flex; flex-direction: column; height: 100vh; position: sticky; top: 0; z-index: 1001; } */
-        /* .sidebar-header { padding: 20px; text-align: center; border-bottom: 1px solid rgba(255, 255, 255, 0.1); } */
-        /* .sidebar-logo { font-size: 1.8em; font-weight: bold; color: white; text-decoration: none; } */
-        /* .sidebar-nav { flex-grow: 1; overflow-y: auto; padding: 20px 0; } */
-        /* .nav-category-title { padding: 10px 20px; font-size: 0.8em; font-weight: bold; color: rgba(255, 255, 255, 0.5); text-transform: uppercase; } */
-        /* .sidebar-nav-item, .accordion-header { display: flex; align-items: center; gap: 15px; padding: 15px 20px; color: rgba(255, 255, 255, 0.8); text-decoration: none; transition: background 0.3s ease; cursor: pointer; } */
-        /* .sidebar-nav-item:hover, .accordion-header:hover { background: rgba(255, 255, 255, 0.1); } */
-        /* .sidebar-nav-item.active { background: #2a5298; color: white; font-weight: bold; border-left: 4px solid #4ecdc4; padding-left: 16px; } */
-        /* .nav-icon { font-size: 1.2em; width: 20px; text-align: center; } */
-        /* .accordion-header::after { content: '▶'; margin-left: auto; font-size: 0.8em; transition: transform 0.3s ease; } */
-        /* .accordion-header.active::after { transform: rotate(90deg); } */
-        /* .accordion-content { background: rgba(0, 0, 0, 0.2); max-height: 0; overflow: hidden; transition: max-height 0.3s ease-out; } */
-        /* .accordion-content a { display: block; padding: 12px 20px 12px 55px; color: rgba(255, 255, 255, 0.7); text-decoration: none; } */
-        /* .accordion-content a.active { color: white; font-weight: 500; } */
-        
-        /* .top-header { background: rgba(255, 255, 255, 0.95); padding: 15px 30px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05); display: flex; justify-content: flex-end; align-items: center; position: sticky; top: 0; z-index: 99; } */
-        /* .user-section { display: flex; align-items: center; gap: 15px; } */
-        /* .user-avatar { width: 40px; height: 40px; background: linear-gradient(45deg, #1e3c72, #2a5298); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; } */
-        /* .user-info { display: flex; flex-direction: column; } */
-        /* .user-name { font-weight: 600; } */
-        /* .user-role { font-size: 0.8em; color: #666; } */
-        /* .logout-btn { background: #ff6b6b; color: white; border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer; } */
-
         /* Portfolio specific styles */
         .page-header { background: rgba(255, 255, 255, 0.95); padding: 30px; border-radius: 20px; margin-bottom: 30px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1); }
         .page-title { font-size: 2em; color: #1e3c72; margin-bottom: 10px; }
@@ -83,84 +58,32 @@
             box-shadow: 0 5px 15px rgba(30, 60, 114, 0.2);
         }
 
-        .portfolio-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 25px;
-        }
-
-        .record-card {
+        /* Yeni Tablo Stil Tanımlamaları */
+        .portfolio-table-container {
             background: rgba(255, 255, 255, 0.95);
             border-radius: 20px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-        }
-        .record-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+            overflow: hidden; /* Kenarları yuvarlak tutar */
         }
 
-        .record-header {
-            padding: 20px;
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            border-bottom: 1px solid #e1e8ed;
+        .portfolio-table {
+            width: 100%;
+            border-collapse: collapse;
         }
 
-        .record-icon {
-            font-size: 2.2em;
-            width: 50px;
-            height: 50px;
-            border-radius: 15px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            background: linear-gradient(45deg, #1e3c72, #2a5298);
+        .portfolio-table th,
+        .portfolio-table td {
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid #f0f0f0;
         }
-        .record-icon.trademark { background: linear-gradient(45deg, #ff6b6b, #ff8e8e); }
-        .record-icon.patent { background: linear-gradient(45deg, #4ecdc4, #7ed9d6); }
-        .record-icon.design { background: linear-gradient(45deg, #45b7d1, #70c4e0); }
-        .record-icon.copyright { background: linear-gradient(45deg, #96ceb4, #b4e0d0); }
 
-        .record-title {
-            font-size: 1.3em;
+        .portfolio-table th {
+            background: #f8f9fa;
             font-weight: 600;
-            color: #1e3c72;
-            line-height: 1.3;
         }
-
-        .record-body {
-            padding: 20px;
-            flex-grow: 1;
-        }
-
-        .record-detail {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 10px;
-            font-size: 0.95em;
-        }
-
-        .detail-label {
-            color: #666;
-        }
-
-        .detail-value {
-            font-weight: 500;
-            color: #333;
-        }
-
-        .record-footer {
-            padding: 15px 20px;
-            border-top: 1px solid #e1e8ed;
-            display: flex;
-            justify-content: flex-end;
-            gap: 10px;
+        .portfolio-table tr:hover {
+            background-color: #f6f8fa;
         }
 
         .action-btn {
@@ -172,7 +95,9 @@
             cursor: pointer;
             font-size: 0.9em;
             transition: all 0.3s ease;
+            margin-right: 5px; /* Butonlar arasına boşluk */
         }
+        .action-btn:last-child { margin-right: 0; } /* Son butonda boşluk olmasın */
         .action-btn:hover { opacity: 0.9; }
         .action-btn.edit-btn { background-color: #ffc107; color: #212529; }
         .action-btn.edit-btn:hover { background-color: #e0a800; }
@@ -181,17 +106,15 @@
         .action-btn.view-btn { background-color: #17a2b8; }
         .action-btn.view-btn:hover { background-color: #138496; }
 
-        .no-records {
+        .no-records, .loading {
             text-align: center;
             padding: 50px;
             color: #666;
-            grid-column: 1 / -1; /* Tablo boşken tüm alanı kaplaması için */
+            /* Tablonun içinde yer alacaksa, kapsayıcının tam genişliğini kaplamalıdır. */
+            width: 100%;
+            display: block; /* İçerik olmasa bile görünmesi için */
         }
-        .loading {
-            text-align: center;
-            padding: 50px;
-            grid-column: 1 / -1;
-        }
+        .loading { display: none; } /* Başlangıçta gizli */
 
         /* Modal Styles (for record detail) */
         .modal {
@@ -248,9 +171,6 @@
 <body>
     <div id="layout-placeholder"></div>
     <div class="page-wrapper">
-        <header class="top-header">
-            </header>
-
         <main class="main-container">
             <section class="page-header">
                 <h1 class="page-title">Portföy Yönetimi</h1>
@@ -280,10 +200,25 @@
                 </button>
             </div>
     
-            <div id="portfolioGrid" class="portfolio-grid">
-                <div id="loadingIndicator" class="loading" style="display: none;">Yükleniyor...</div>
-                <div id="noRecordsMessage" class="no-records" style="display: none;">Henüz kayıt bulunmamaktadır.</div>
-                </div>
+            <div class="portfolio-table-container">
+                <table class="portfolio-table">
+                    <thead>
+                        <tr>
+                            <th>Kayıt Tipi</th>
+                            <th>Başlık</th>
+                            <th>Başvuru Numarası</th>
+                            <th>Başvuru Tarihi</th>
+                            <th>Durum</th>
+                            <th>Hak Sahipleri</th>
+                            <th>İşlemler</th>
+                        </tr>
+                    </thead>
+                    <tbody id="portfolioTableBody">
+                        </tbody>
+                </table>
+                <div id="loadingIndicator" class="loading">Yükleniyor...</div>
+                <div id="noRecordsMessage" class="no-records">Henüz kayıt bulunmamaktadır.</div>
+            </div>
         </main>
     </div>
 
@@ -299,7 +234,7 @@
     <script type="module">
         import { authService, ipRecordsService, personService, auth } from './firebase-config.js';
         import { showNotification, formatFileSize } from './utils.js';
-        import { loadSharedLayout } from './js/layout-loader.js'; // layout-loader.js eklendi
+        import { loadSharedLayout } from './js/layout-loader.js';
 
         document.addEventListener('DOMContentLoaded', async () => {
             // Ortak layout'u yükle ve bu sayfanın aktif linkini belirt
@@ -323,7 +258,12 @@
                 }
 
                 async loadAllData() {
-                    document.getElementById('loadingIndicator').style.display = 'block';
+                    // Hatanın çözülmesi için loadingIndicator'ın varlığını kontrol edin.
+                    const loadingIndicator = document.getElementById('loadingIndicator');
+                    if (loadingIndicator) {
+                        loadingIndicator.style.display = 'block';
+                    }
+                    
                     try {
                         const [recordsResult, personsResult] = await Promise.all([
                             ipRecordsService.getRecords(),
@@ -338,7 +278,9 @@
                     } catch (error) {
                         showNotification('Veriler yüklenirken bir hata oluştu: ' + error.message, 'error');
                     } finally {
-                        document.getElementById('loadingIndicator').style.display = 'none';
+                        if (loadingIndicator) {
+                            loadingIndicator.style.display = 'none';
+                        }
                     }
                 }
 
@@ -347,7 +289,7 @@
                     document.getElementById('ownerFilter').addEventListener('change', () => this.renderRecords());
                     document.getElementById('searchBar').addEventListener('input', () => this.renderRecords());
 
-                    document.getElementById('portfolioGrid').addEventListener('click', (e) => {
+                    document.getElementById('portfolioTableBody').addEventListener('click', (e) => { // grid yerine tableBody
                         if (e.target.classList.contains('action-btn')) {
                             e.preventDefault();
                             const recordId = e.target.dataset.id;
@@ -392,9 +334,9 @@
                 
 
                 renderRecords() {
-                    const grid = document.getElementById('portfolioGrid');
+                    const tableBody = document.getElementById('portfolioTableBody'); // Tablo body'sine referans
                     const noRecordsMessage = document.getElementById('noRecordsMessage');
-                    grid.innerHTML = '';
+                    tableBody.innerHTML = ''; // İçeriği temizle
 
                     const typeFilter = document.getElementById('typeFilter').value;
                     const ownerFilter = document.getElementById('ownerFilter').value;
@@ -413,43 +355,39 @@
 
                     if (filteredRecords.length === 0) {
                         noRecordsMessage.style.display = 'block';
+                        // Tabloya veri girmediğimizde "veri yok" mesajı görünür kalsın
+                        tableBody.style.display = 'none'; // Tabloyu gizle
                         return;
                     }
                     noRecordsMessage.style.display = 'none';
+                    tableBody.style.display = 'table-row-group'; // Tablo body'sini göster
 
                     filteredRecords.forEach(record => {
-                        const card = document.createElement('div');
-                        card.classList.add('record-card');
+                        const row = document.createElement('tr'); // Her kayıt için bir tablo satırı
                         
-                        const iconHtml = this.getRecordIcon(record.type);
-                        const recordTitle = record.title || 'Başlıksız Kayıt';
                         const ownerNames = record.owners ? record.owners.map(owner => {
                             const person = this.allPersons.find(p => p.id === owner.id);
                             return person ? person.name : 'Bilinmeyen Kişi';
                         }).join(', ') : 'Belirtilmemiş';
 
-                        card.innerHTML = `
-                            <div class="record-header">
-                                <div class="record-icon ${record.type}">${iconHtml}</div>
-                                <div class="record-title">${recordTitle}</div>
-                            </div>
-                            <div class="record-body">
-                                <div class="record-detail"><span class="detail-label">Başvuru No:</span><span class="detail-value">${record.applicationNumber || '-'}</span></div>
-                                <div class="record-detail"><span class="detail-label">Durum:</span><span class="detail-value">${record.status || '-'}</span></div>
-                                <div class="record-detail"><span class="detail-label">Başvuru Tarihi:</span><span class="detail-value">${record.applicationDate || '-'}</span></div>
-                                <div class="record-detail"><span class="detail-label">Hak Sahipleri:</span><span class="detail-value">${ownerNames || '-'}</span></div>
-                            </div>
-                            <div class="record-footer">
+                        row.innerHTML = `
+                            <td>${record.type.charAt(0).toUpperCase() + record.type.slice(1)}</td>
+                            <td>${record.title || 'Başlıksız Kayıt'}</td>
+                            <td>${record.applicationNumber || '-'}</td>
+                            <td>${record.applicationDate || '-'}</td>
+                            <td>${record.status || '-'}</td>
+                            <td>${ownerNames || '-'}</td>
+                            <td>
                                 <button class="action-btn view-btn" data-id="${record.id}">Görüntüle</button>
                                 <button class="action-btn edit-btn" data-id="${record.id}">Düzenle</button>
                                 <button class="action-btn delete-btn" data-id="${record.id}">Sil</button>
-                            </div>
+                            </td>
                         `;
-                        grid.appendChild(card);
+                        tableBody.appendChild(row);
                     });
                 }
 
-                getRecordIcon(type) {
+                getRecordIcon(type) { // Bu fonksiyon artık kullanılmıyor, kaldırılabilir veya gelecekteki kart görünümü için tutulabilir.
                     switch (type) {
                         case 'patent': return '📋';
                         case 'trademark': return '🏷️';
