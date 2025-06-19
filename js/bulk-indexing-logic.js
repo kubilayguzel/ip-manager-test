@@ -47,7 +47,6 @@ export class BulkIndexingModule {
         } else {
             showNotification('Bekleyen toplu indeksleme işleri yüklenemedi: ' + result.error, 'error');
         }
-        // render tablolar burada çağrılmıyor, init içinde bir kez çağrılıyor.
     }
 
     setupEventListeners = () => {
@@ -68,6 +67,7 @@ export class BulkIndexingModule {
         });
 
         // Event delegation for dynamically added elements in the table
+        // Tablodaki dinamik olarak eklenen elementler için event delegation
         document.getElementById('bulkIndexingTable').addEventListener('input', (e) => {
             const target = e.target;
             if (target.classList.contains('bulk-record-manual-search-input')) {
@@ -80,7 +80,10 @@ export class BulkIndexingModule {
             if (target.classList.contains('bulk-record-manual-search-input')) {
                 setTimeout(() => {
                     const jobId = target.dataset.jobId;
-                    document.querySelector(`.bulk-search-results-container[data-job-id="${jobId}"]`).style.display = 'none';
+                    const resultsContainer = document.querySelector(`.bulk-search-results-container[data-job-id="${jobId}"]`);
+                    if (resultsContainer) {
+                        resultsContainer.style.display = 'none';
+                    }
                 }, 200);
             }
         }, true); // Use capture phase for blur event
@@ -116,13 +119,30 @@ export class BulkIndexingModule {
                 this.handleBulkJobCheckboxChange(e);
             }
         });
+
+        // "Değişiklikleri Kaydet" butonu için event listener
+        const indexDocumentsBtn = document.getElementById('indexDocumentsBtn');
+        if (indexDocumentsBtn) {
+            indexDocumentsBtn.addEventListener('click', this.handleSubmit);
+        }
+        // "Temizle" butonu için event listener
+        const resetIndexingFormBtn = document.getElementById('resetIndexingFormBtn');
+        if (resetIndexingFormBtn) {
+            resetIndexingFormBtn.addEventListener('click', this.resetForm);
+        }
     }
 
     activateBulkTab = (bulkTabName) => {
         document.querySelectorAll('.bulk-tab-btn').forEach(b => b.classList.remove('active'));
-        document.querySelector(`.bulk-tab-btn[data-bulk-tab="${bulkTabName}"]`).classList.add('active');
+        const activeBtn = document.querySelector(`.bulk-tab-btn[data-bulk-tab="${bulkTabName}"]`);
+        if (activeBtn) {
+            activeBtn.classList.add('active');
+        }
         document.querySelectorAll('.bulk-tab-pane').forEach(pane => pane.classList.remove('active'));
-        document.getElementById(bulkTabName).classList.add('active');
+        const activePane = document.getElementById(bulkTabName);
+        if (activePane) {
+            activePane.classList.add('active');
+        }
 
         this.checkFormCompleteness(); 
     }
@@ -161,15 +181,13 @@ export class BulkIndexingModule {
         this.saveBulkJobsToFirestore();
     }
 
-    populateChildTransactionTypeSelect = () => {
-        // Bu fonksiyon artık ortak select'i doldurmuyor, tablo içindeki her select için çağrılacak.
-    }
+    // `populateChildTransactionTypeSelect` IndexingModule'da kalacak, burada gerek yok.
     
     checkFormCompleteness = () => {
         const bulkDeliveryDateEl = document.getElementById('bulkDeliveryDate');
         const bulkDeliveryDate = bulkDeliveryDateEl ? bulkDeliveryDateEl.value : ''; 
         const bulkFilesInput = document.getElementById('bulkFiles');
-        const filesExist = (bulkFilesInput && bulkFilesInput.files || []).length > 0;
+        const filesExist = (bulkFilesInput && bulkFilesInput.files && bulkFilesInput.files.length > 0); // null kontrolü eklendi
 
         const selectedJobs = this.pendingBulkIndexJobs.filter(job => job.isSelected);
 
@@ -185,6 +203,7 @@ export class BulkIndexingModule {
 
     handleSubmit = async () => { 
         const btn = document.getElementById('indexDocumentsBtn');
+        if (!btn) return; // Buton yoksa işlem yapma
         btn.disabled = true;
         showNotification('İşlem kaydediliyor...', 'info');
 
@@ -298,15 +317,20 @@ export class BulkIndexingModule {
         this.pendingBulkIndexJobs = jobsToKeepInPending; 
         
         this.resetForm(); 
-        await this.loadRecords(); 
-        this.saveBulkJobsToFirestore(); // Değişiklikleri Firebase'e kaydet
+        // this.loadRecords(); // allRecords IndexingModule tarafından yüklendiği için burada tekrar yüklemeye gerek yok.
+        this.saveBulkJobsToFirestore();
     }
 
     resetForm = () => { 
         // Bu form sadece toplu indeksleme ile ilgili alanları sıfırlayacak
-        document.getElementById('bulkDeliveryDate').value = '';
-        document.getElementById('bulkFilesInfo').textContent = 'Henüz PDF dosyası seçilmedi.';
-        document.getElementById('bulkFiles').value = ''; // Dosya inputunu da sıfırla
+        const bulkDeliveryDateInput = document.getElementById('bulkDeliveryDate');
+        if (bulkDeliveryDateInput) bulkDeliveryDateInput.value = '';
+
+        const bulkFilesInfo = document.getElementById('bulkFilesInfo');
+        if (bulkFilesInfo) bulkFilesInfo.textContent = 'Henüz PDF dosyası seçilmedi.';
+        
+        const bulkFilesInput = document.getElementById('bulkFiles');
+        if (bulkFilesInput) bulkFilesInput.value = ''; // Dosya inputunu da sıfırla
 
         this.pendingBulkIndexJobs = []; 
         this.indexedBulkJobs = []; 
@@ -337,7 +361,7 @@ export class BulkIndexingModule {
         }
     }
 
-    // Yeni eklenen metod: Toplu işleme alınan dosyaların Firestore'a kaydedilmesi
+    // Toplu işleme alınan dosyaların Firestore'a kaydedilmesi
     saveBulkJobsToFirestore = async () => {
         if (!this.currentUser) return;
         try {
@@ -345,9 +369,10 @@ export class BulkIndexingModule {
             const batch = writeBatch(db);
             this.pendingBulkIndexJobs.forEach(job => {
                 const jobRef = doc(bulkIndexingService.collectionRef, job.jobId);
-                batch.set(jobRef, { // setDoc kullanmak, doküman yoksa oluşturur, varsa tamamen üzerine yazar. Sadece belirli alanları güncellemek için updateDoc kullanmak daha iyidir.
-                    // Burada sadece ilgili alanları güncelleyelim.
-                    fileName: job.fileName, // Bunları da güncelleyebiliriz, ancak genellikle sadece durum vb. güncellenir.
+                // setDoc kullanmak yerine, sadece ilgili alanları güncellemek için updateDoc kullanmak daha güvenlidir.
+                // Ancak burada tüm nesneyi kaydettiğimiz ve jobId ile doküman ID'si aynı olduğu için setDoc ile merge:true kullanmak da geçerlidir.
+                batch.set(jobRef, { 
+                    fileName: job.fileName,
                     fileSize: job.fileSize,
                     fileType: job.fileType,
                     fileContent: job.fileContent,
@@ -361,10 +386,10 @@ export class BulkIndexingModule {
                     status: job.status,
                     errorMessage: job.errorMessage || null,
                     isSelected: job.isSelected,
-                    uploadedAt: job.uploadedAt, // İlk oluşturulduğu zaman korunur
+                    uploadedAt: job.uploadedAt,
                     userId: job.userId,
                     userEmail: job.userEmail
-                }, { merge: true }); // merge: true ile sadece belirtilen alanlar güncellenir, diğerleri korunur.
+                }, { merge: true }); 
             });
             await batch.commit();
         } catch (error) {
@@ -379,11 +404,12 @@ export class BulkIndexingModule {
         const files = Array.from(fileInput.files);
 
         if (files.length === 0) {
-            this.pendingBulkIndexJobs = []; // Dosya seçimi iptal edilirse listeyi temizle
-            document.getElementById('bulkFilesInfo').textContent = 'Henüz PDF dosyası seçilmedi.';
+            this.pendingBulkIndexJobs = []; 
+            const bulkFilesInfo = document.getElementById('bulkFilesInfo');
+            if (bulkFilesInfo) bulkFilesInfo.textContent = 'Henüz PDF dosyası seçilmedi.';
             this.renderBulkIndexingTable(); 
             this.checkFormCompleteness();
-            this.clearAllPendingBulkJobsInFirestore(); // Firestore'u da temizle
+            this.clearAllPendingBulkJobsInFirestore();
             return;
         }
         
@@ -405,7 +431,6 @@ export class BulkIndexingModule {
                 allExistingFileIdentifiers.add(`${file.fileName}_${file.fileSize}`);
             });
         });
-        // Mevcut beklemedeki işleri de kontrol et
         this.pendingBulkIndexJobs.forEach(job => {
             if (job.fileName && job.fileSize) {
                 allExistingFileIdentifiers.add(`${job.fileName}_${job.fileSize}`);
@@ -414,7 +439,7 @@ export class BulkIndexingModule {
 
         // Eski pending işleri temizle, sadece yeni yüklenenler için devam et
         this.pendingBulkIndexJobs = []; 
-        await this.clearAllPendingBulkJobsInFirestore(); // Firestore'daki tüm beklemedeki işleri temizle
+        await this.clearAllPendingBulkJobsInFirestore(); 
 
 
         for (const file of files) {
@@ -486,7 +511,8 @@ export class BulkIndexingModule {
                 showNotification(`'${newJob.fileName}' işleme listesine eklenirken hata: ${addJobResult.error}`, 'error', 6000);
             }
         }
-        document.getElementById('bulkFilesInfo').textContent = files.length > 0 ? `${files.length} PDF dosyası seçildi.` : 'Henüz PDF dosyası seçilmedi.';
+        const bulkFilesInfo = document.getElementById('bulkFilesInfo');
+        if (bulkFilesInfo) bulkFilesInfo.textContent = files.length > 0 ? `${files.length} PDF dosyası seçildi.` : 'Henüz PDF dosyası seçilmedi.';
         this.renderBulkIndexingTable();
         this.checkFormCompleteness();
         this.saveBulkJobsToFirestore();
@@ -648,6 +674,7 @@ export class BulkIndexingModule {
         const query = e.target.value;
         const jobId = e.target.dataset.jobId;
         const container = document.querySelector(`.bulk-search-results-container[data-job-id="${jobId}"]`);
+        if (!container) return; // Konteyner yoksa hata vermemek için kontrol
         container.innerHTML = '';
         if (query.length < 3) {
             container.innerHTML = '<p class="no-results-message p-2">Arama yapmak için en az 3 karakter girin.</p>';
@@ -755,7 +782,7 @@ export class BulkIndexingModule {
             job.errorMessage = ''; 
             job.isSelected = true; 
             showNotification(`İşlem tekrar denenmek üzere işaretlendi: ${job.fileName}`, 'info');
-            bulkIndexingService.updateJob(job.jobId, { status: job.status, errorMessage: null, isSelected: true });
+            // bulkIndexingService.updateJob(job.jobId, { status: job.status, errorMessage: null, isSelected: true }); // saveBulkJobsToFirestore çağrıldığı için bu satır gereksiz
             this.renderBulkIndexingTable();
             this.checkFormCompleteness();
             this.saveBulkJobsToFirestore(); // Değişiklikleri Firebase'e kaydet
