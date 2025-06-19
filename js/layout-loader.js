@@ -1,142 +1,206 @@
-// layout-loader.js
+import { authService } from '../firebase-config.js';
 
-// firebase-config.js'in yolu, layout-loader.js'in konumuna göre değişir.
-// Eğer layout-loader.js, projenin kök dizinindeki bir 'js' klasörünün içindeyse: '../firebase-config.js'
-// Eğer layout-loader.js, projenin kök dizinindeki 'js/layout' klasörünün içindeyse: '../../firebase-config.js'
-// Lütfen kendi dosya yapınıza göre doğru yolu seçin.
-import { authService } from '../firebase-config.js'; // Bu yolu kontrol edin ve düzeltin
+// Menü elemanlarını daha yapısal bir formatta tanımlıyoruz.
+// Bu, menüyü oluşturmayı ve aktif durumu yönetmeyi kolaylaştırır.
+const menuItems = [
+    {
+        id: 'dashboard',
+        text: 'Dashboard',
+        link: 'dashboard.html',
+        icon: 'fa-tachometer-alt'
+    },
+    {
+        id: 'portfolio',
+        text: 'Portföy',
+        link: 'portfolio.html',
+        icon: 'fa-briefcase'
+    },
+    {
+        id: 'data-entry',
+        text: 'Yeni Kayıt',
+        link: 'data-entry.html',
+        icon: 'fa-plus-circle'
+    },
+    {
+        id: 'indexing',
+        text: 'Belge İndeksleme',
+        link: 'indexing.html',
+        icon: 'fa-file-import'
+    },
+    {
+        id: 'tasks',
+        text: 'Görevler',
+        icon: 'fa-tasks',
+        subItems: [
+            { id: 'my-tasks', text: 'Görevlerim', link: 'my-tasks.html' },
+            { id: 'create-task', text: 'Yeni İş Oluştur', link: 'create-task.html' },
+            { id: 'task-management', text: 'İş Yönetimi', link: 'task-management.html' }
+        ]
+    },
+    {
+        id: 'accruals',
+        text: 'Tahakkuklar',
+        link: 'accruals.html',
+        icon: 'fa-file-invoice-dollar'
+    },
+    {
+        id: 'persons',
+        text: 'Kişiler',
+        link: 'persons.html',
+        icon: 'fa-users'
+    },
+    {
+        id: 'excel-upload',
+        text: 'Excel Yükle',
+        link: 'excel-upload.html',
+        icon: 'fa-file-excel',
+        adminOnly: true // Sadece admin ve superadmin görebilir
+    },
+    {
+        id: 'user-management',
+        text: 'Kullanıcı Yönetimi',
+        link: 'user-management.html',
+        icon: 'fa-user-cog',
+        superAdminOnly: true // Sadece superadmin görebilir
+    }
+];
 
-/**
- * Ortak layout parçalarını (sidebar, top-header) yükler ve DOM'a ekler.
- * Sayfaya özgü ek CSS veya HTML içermemelidir.
- * @param {object} options - Yükleme seçenekleri.
- * @param {string | null} options.activeMenuLink - Aktif olarak işaretlenecek menü linkinin href değeri (örn: "dashboard.html").
- * @param {string | null} options.topHeaderLeftContentId - top-header'ın sol tarafına eklenecek HTML elementinin ID'si (örn: "breadcrumbContainer").
- */
-export async function loadSharedLayout(options = {}) {
-    // Sidebar'ı yükle
-    // shared_layout_parts.html'in yolu da layout-loader.js'e göre değişir.
-    // Eğer shared_layout_parts.html de layout-loader.js ile aynı dizindeyse './shared_layout_parts.html'
-    // Eğer shared_layout_parts.html projenin kök dizinindeyse ve layout-loader.js bir alt klasördeyse: '../shared_layout_parts.html'
-    const sidebarResponse = await fetch('/ip-manager-test/shared_layout_parts.html'); // Bu yolu kontrol edin ve düzeltin
-    if (sidebarResponse.ok) {
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(await sidebarResponse.text(), 'text/html');
-        const sidebar = doc.querySelector('aside.sidebar');
-        const topHeaderTemplate = doc.querySelector('header.top-header'); // Şablon olarak alın
+async function renderMenu(container, currentPage, userRole) {
+    let menuHtml = '';
 
-        if (sidebar) {
-            document.body.prepend(sidebar); // Sidebar'ı body'nin başına ekla
-        }
-        if (topHeaderTemplate) {
-            const topHeaderContainer = document.createElement('header');
-            topHeaderContainer.className = 'top-header';
+    for (const item of menuItems) {
+        // Rol kontrolleri
+        if (item.adminOnly && userRole !== 'admin' && userRole !== 'superadmin') continue;
+        if (item.superAdminOnly && userRole !== 'superadmin') continue;
 
-            // Top header'ın sol tarafındaki içeriği ekle
-            if (options.topHeaderLeftContentId) {
-                const leftContent = document.getElementById(options.topHeaderLeftContentId);
-                if (leftContent) {
-                    topHeaderContainer.appendChild(leftContent);
-                }
-            }
+        const hasSubItems = item.subItems && item.subItems.length > 0;
+        
+        // Mevcut sayfanın bu menü veya alt menülerinden biri olup olmadığını kontrol et
+        const isParentActive = hasSubItems && item.subItems.some(sub => sub.link === currentPage);
+        const isDirectActive = !hasSubItems && item.link === currentPage;
+
+        if (hasSubItems) {
+            // Alt menüsü olan ana menü elemanı
+            const subItemsHtml = item.subItems
+                .map(subItem => {
+                    const isSubItemActive = subItem.link === currentPage;
+                    return `
+                        <li>
+                            <a href="${subItem.link}" class="${isSubItemActive ? 'active' : ''}">
+                                ${subItem.text}
+                            </a>
+                        </li>
+                    `;
+                })
+                .join('');
             
-            // Kullanıcı bölümünü ekle
-            const userSection = topHeaderTemplate.querySelector('.user-section');
-            if (userSection) {
-                 topHeaderContainer.appendChild(userSection.cloneNode(true)); // Klonlayarak ekle
-            }
-
-            const pageWrapper = document.querySelector('.page-wrapper');
-            if (pageWrapper) {
-                pageWrapper.prepend(topHeaderContainer); // page-wrapper'ın başına ekle
-            } else {
-                console.error("'.page-wrapper' elementi bulunamadı. Top header eklenemedi.");
-            }
-
-            // Kullanıcı bilgilerini güncelle
-            updateUserInfo();
-            setupLogoutButton();
+            // Eğer bir alt menü aktifse, ana menüyü "open" ve "active" olarak işaretle
+            menuHtml += `
+                <li class="menu-item has-submenu ${isParentActive ? 'open active' : ''}">
+                    <a href="#" class="menu-link">
+                        <i class="fas ${item.icon}"></i>
+                        <span class="menu-text">${item.text}</span>
+                        <i class="fas fa-chevron-right arrow"></i>
+                    </a>
+                    <ul class="submenu">
+                        ${subItemsHtml}
+                    </ul>
+                </li>
+            `;
         } else {
-            console.error("Top header şablonu 'shared_layout_parts.html' içinde bulunamadı.");
+            // Düz menü elemanı
+            menuHtml += `
+                <li class="menu-item ${isDirectActive ? 'active' : ''}">
+                    <a href="${item.link}" class="menu-link">
+                        <i class="fas ${item.icon}"></i>
+                        <span class="menu-text">${item.text}</span>
+                    </a>
+                </li>
+            `;
         }
-    } else {
-        console.error('Shared layout parçaları yüklenemedi: ', sidebarResponse.statusText);
     }
+    container.innerHTML = menuHtml;
 
-    // Sidebar akordiyonlarını ve aktif menüyü ayarla
-    setupSidebarAccordion();
-    if (options.activeMenuLink) {
-        setActiveMenu(options.activeMenuLink);
-    }
-}
-
-/**
- * Sidebar akordiyonlarını ayarlar.
- */
-function setupSidebarAccordion() {
-    const accordions = document.querySelectorAll('.accordion-header');
-    accordions.forEach(accordion => {
-        accordion.addEventListener('click', function(event) {
-            this.classList.toggle('active');
-            const content = this.nextElementSibling;
-            if (content.style.maxHeight) {
-                content.style.maxHeight = null;
+    // Dropdown menülerin tıklama olaylarını ayarla
+    document.querySelectorAll('.sidebar .has-submenu > a').forEach(menuLink => {
+        menuLink.addEventListener('click', function (e) {
+            e.preventDefault();
+            const parentLi = this.parentElement;
+            
+            // Eğer zaten açıksa kapat, değilse aç
+            if (parentLi.classList.contains('open')) {
+                parentLi.classList.remove('open');
             } else {
-                // Burada ek piksel ekleyerek yüksekliği artırıyoruz.
-                // 20px, genellikle iç padding ve marginleri telafi etmek için yeterli olacaktır.
-                content.style.maxHeight = (content.scrollHeight + 20) + "px"; 
+                // Diğer tüm açık menüleri kapat
+                document.querySelectorAll('.sidebar .has-submenu.open').forEach(openMenu => {
+                    openMenu.classList.remove('open');
+                });
+                parentLi.classList.add('open');
             }
         });
     });
 }
 
-/**
- * Mevcut sayfaya göre sidebar'daki aktif menüyü işaretler.
- * @param {string} currentPageUrl - Aktif olarak işaretlenecek sayfanın URL'si (örn: "dashboard.html").
- */
-function setActiveMenu(currentPageUrl) {
-    document.querySelectorAll('.sidebar-nav-item.active, .accordion-content a.active').forEach(el => el.classList.remove('active'));
-    
-    const activeLink = document.querySelector(`.sidebar-nav a[href="${currentPageUrl}"]`);
-    if (!activeLink) return;
 
-    activeLink.classList.add('active');
-    
-    const parentAccordionContent = activeLink.closest('.accordion-content');
-    if (parentAccordionContent) {
-        const parentAccordionHeader = parentAccordionContent.previousElementSibling;
-        if (parentAccordionHeader && parentAccordionHeader.classList.contains('accordion-header')) {
-            parentAccordionHeader.classList.add('active');
-            parentAccordionContent.style.maxHeight = parentAccordionContent.scrollHeight + "px";
+export async function loadSharedLayout(options = {}) {
+    const { activeMenuLink } = options;
+    const placeholder = document.getElementById('layout-placeholder');
+
+    if (!placeholder) {
+        console.error('Layout placeholder not found. Ensure you have <div id="layout-placeholder"></div> in your HTML.');
+        return;
+    }
+
+    try {
+        const response = await fetch('shared_layout_parts.html');
+        if (!response.ok) throw new Error('shared_layout_parts.html could not be loaded.');
+
+        const layoutHtml = await response.text();
+        placeholder.innerHTML = layoutHtml;
+
+        const user = authService.getCurrentUser();
+        if (!user) {
+            console.warn("User not logged in, redirecting to login page.");
+            window.location.href = 'index.html';
+            return;
         }
-    }
-}
 
-/**
- * Kullanıcı bilgilerini (avatar, ad, rol) günceller.
- */
-function updateUserInfo() {
-    const currentUser = authService.getCurrentUser();
-    if (currentUser) {
-        const userName = currentUser.displayName || currentUser.email.split('@')[0] || 'Kullanıcı';
-        const userRole = currentUser.role === 'admin' ? 'Yönetici' : currentUser.role === 'superadmin' ? 'Süper Yönetici' : 'Kullanıcı';
+        const userRole = user.role || 'user'; // Varsayılan rol
         
-        const userAvatarEl = document.getElementById('userAvatar');
-        const userNameEl = document.getElementById('userName');
-        const userRoleEl = document.getElementById('userRole');
+        // Kullanıcı adını ve rolünü header'a yazdır
+        const userNameEl = document.getElementById('user-name');
+        const userRoleEl = document.getElementById('user-role');
+        if (userNameEl) userNameEl.textContent = user.displayName || 'Kullanıcı';
+        if (userRoleEl) userRoleEl.textContent = user.role.charAt(0).toUpperCase() + user.role.slice(1);
 
-        if (userAvatarEl) userAvatarEl.textContent = userName.charAt(0).toUpperCase();
-        if (userNameEl) userNameEl.textContent = userName;
-        if (userRoleEl) userRoleEl.textContent = userRole;
-    }
-}
+        // Menüyü oluştur
+        const menuContainer = document.querySelector('.sidebar ul');
+        if(menuContainer) {
+            await renderMenu(menuContainer, activeMenuLink, userRole);
+        } else {
+            console.error('Menu container not found in layout.');
+        }
 
-/**
- * Çıkış butonuna event listener ekler.
- */
-function setupLogoutButton() {
-    const logoutBtn = document.getElementById('logoutBtn');
-    if (logoutBtn) {
-        logoutBtn.addEventListener('click', () => authService.signOut());
+        // Çıkış butonu
+        const logoutBtn = document.getElementById('logout-btn');
+        if (logoutBtn) {
+            logoutBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                authService.signOut();
+            });
+        }
+
+        // Mobil menü toggle
+        const menuToggle = document.getElementById('menu-toggle');
+        const sidebar = document.querySelector('.sidebar');
+        if (menuToggle && sidebar) {
+            menuToggle.addEventListener('click', () => {
+                sidebar.classList.toggle('collapsed');
+            });
+        }
+
+    } catch (error) {
+        console.error('Error loading shared layout:', error);
+        placeholder.innerHTML = '<p style="color:red; text-align:center;">Layout could not be loaded.</p>';
     }
 }
