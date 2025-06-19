@@ -856,7 +856,7 @@
                     if (bulkIndexingPlaceholder) {
                         try {
                             // bulk-indexing-fragment.html'den içeriği fetch et
-                            const response = await fetch('bulk-indexing-fragment.html');
+                            const response = await fetch('bulk-indexing-page.html');
                             if (response.ok) {
                                 bulkIndexingPlaceholder.innerHTML = await response.text();
                                 // bulk-indexing-logic.js modülünü yükle ve başlat
