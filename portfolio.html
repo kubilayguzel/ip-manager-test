@@ -24,10 +24,41 @@
             box-shadow: 0 5px 15px rgba(0,0,0,0.05);
             margin-bottom: 30px;
             display: flex;
+            flex-direction: column; /* Kontrolleri alt alta sıralamak için */
+            gap: 15px;
+        }
+        .filter-row {
+            display: flex;
             justify-content: space-between;
             align-items: center;
             flex-wrap: wrap;
             gap: 15px;
+        }
+
+        .tab-menu {
+            display: flex;
+            border-bottom: 2px solid #dee2e6;
+            margin-bottom: 15px;
+            flex-wrap: wrap; /* Küçük ekranlarda sarması için */
+        }
+        .tab-button {
+            padding: 10px 18px;
+            cursor: pointer;
+            border: none;
+            background: none;
+            font-size: 1em;
+            font-weight: 600;
+            color: #6c757d;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -2px; /* Border-bottom'ın çakışmasını engelle */
+            transition: all 0.3s ease;
+        }
+        .tab-button:hover {
+            color: #1e3c72;
+        }
+        .tab-button.active {
+            color: #1e3c72;
+            border-bottom-color: #1e3c72;
         }
 
         .filter-group { display: flex; gap: 10px; align-items: center; }
@@ -110,7 +141,6 @@
             text-align: center;
             padding: 50px;
             color: #666;
-            /* Tablonun içinde yer alacaksa, kapsayıcının tam genişliğini kaplamalıdır. */
             width: 100%;
             display: block; /* İçerik olmasa bile görünmesi için */
         }
@@ -178,26 +208,19 @@
             </section>
             
             <div class="portfolio-controls">
-                <div class="filter-group">
-                    <label class="filter-label" for="typeFilter">Kayıt Tipi:</label>
-                    <select id="typeFilter" class="filter-select">
-                        <option value="all">Tümü</option>
-                        <option value="patent">Patent</option>
-                        <option value="trademark">Marka</option>
-                        <option value="copyright">Telif Hakkı</option>
-                        <option value="design">Tasarım</option>
-                    </select>
+                <div class="tab-menu">
+                    <button type="button" class="tab-button active" data-type="all">Tümü</button>
+                    <button type="button" class="tab-button" data-type="patent">Patent</button>
+                    <button type="button" class="tab-button" data-type="trademark">Marka</button>
+                    <button type="button" class="tab-button" data-type="copyright">Telif Hakkı</button>
+                    <button type="button" class="tab-button" data-type="design">Tasarım</button>
                 </div>
-                <div class="filter-group">
-                    <label class="filter-label" for="ownerFilter">Hak Sahibi:</label>
-                    <select id="ownerFilter" class="filter-select">
-                        <option value="all">Tümü</option>
-                        </select>
+                <div class="filter-row">
+                    <input type="text" id="searchBar" class="search-input" placeholder="Başlık, numara, durum, hak sahibi ara...">
+                    <button class="btn-add-record" onclick="window.location.href='data-entry.html'">
+                        <span>&#x2795;</span> Yeni Kayıt Ekle
+                    </button>
                 </div>
-                <input type="text" id="searchBar" class="search-input" placeholder="Başlık, numara, durum ara...">
-                <button class="btn-add-record" onclick="window.location.href='data-entry.html'">
-                    <span>&#x2795;</span> Yeni Kayıt Ekle
-                </button>
             </div>
     
             <div class="portfolio-table-container">
@@ -245,6 +268,7 @@
                     this.currentUser = null;
                     this.allRecords = [];
                     this.allPersons = [];
+                    this.activeTypeFilter = 'all'; // Yeni tab filtresi için
                 }
 
                 async init() {
@@ -258,9 +282,8 @@
                 }
 
                 async loadAllData() {
-                    // Hatanın çözülmesi için loadingIndicator'ın varlığını kontrol edin.
                     const loadingIndicator = document.getElementById('loadingIndicator');
-                    if (loadingIndicator) {
+                    if (loadingIndicator) { // Null kontrolü eklendi
                         loadingIndicator.style.display = 'block';
                     }
                     
@@ -273,20 +296,32 @@
                         this.allRecords = recordsResult.success ? recordsResult.data : [];
                         this.allPersons = personsResult.success ? personsResult.data : [];
                         
-                        this.populateOwnerFilter();
+                        // populateOwnerFilter artık kaldırıldığı için burada çağrılmıyor
                         this.renderRecords(); // Initial render
                     } catch (error) {
                         showNotification('Veriler yüklenirken bir hata oluştu: ' + error.message, 'error');
                     } finally {
-                        if (loadingIndicator) {
+                        if (loadingIndicator) { // Null kontrolü eklendi
                             loadingIndicator.style.display = 'none';
                         }
                     }
                 }
 
                 setupEventListeners() {
-                    document.getElementById('typeFilter').addEventListener('change', () => this.renderRecords());
-                    document.getElementById('ownerFilter').addEventListener('change', () => this.renderRecords());
+                    // Tab butonları için event listener
+                    document.querySelectorAll('.tab-menu .tab-button').forEach(button => {
+                        button.addEventListener('click', (e) => {
+                            // Tüm tab butonlarından 'active' sınıfını kaldır
+                            document.querySelectorAll('.tab-menu .tab-button').forEach(btn => btn.classList.remove('active'));
+                            // Tıklanan butona 'active' sınıfını ekle
+                            e.target.classList.add('active');
+                            this.activeTypeFilter = e.target.dataset.type; // Yeni aktif filtreyi ayarla
+                            this.renderRecords(); // Kayıtları yeniden render et
+                        });
+                    });
+
+                    // OwnerFilter kaldırıldı.
+                    // document.getElementById('ownerFilter').addEventListener('change', () => this.renderRecords()); 
                     document.getElementById('searchBar').addEventListener('input', () => this.renderRecords());
 
                     document.getElementById('portfolioTableBody').addEventListener('click', (e) => { // grid yerine tableBody
@@ -306,56 +341,44 @@
                     document.getElementById('closeRecordDetailModal').addEventListener('click', () => this.closeModal('recordDetailModal'));
                 }
 
-                populateOwnerFilter() {
-                    const ownerFilterSelect = document.getElementById('ownerFilter');
-                    ownerFilterSelect.innerHTML = '<option value="all">Tümü</option>'; // Reset
-                    const ownersMap = new Map(); // Use Map to ensure unique owners based on ID
-                
-                    this.allRecords.forEach(record => {
-                        if (record.owners && Array.isArray(record.owners)) {
-                            record.owners.forEach(owner => {
-                                const person = this.allPersons.find(p => p.id === owner.id);
-                                if (person && !ownersMap.has(person.id)) {
-                                    ownersMap.set(person.id, person);
-                                }
-                            });
-                        }
-                    });
-                
-                    const sortedOwners = Array.from(ownersMap.values()).sort((a, b) => a.name.localeCompare(b.name));
-                
-                    sortedOwners.forEach(person => {
-                        const option = document.createElement('option');
-                        option.value = person.id;
-                        option.textContent = person.name;
-                        ownerFilterSelect.appendChild(option);
-                    });
-                }
-                
+                // populateOwnerFilter fonksiyonu kaldırıldı
 
                 renderRecords() {
                     const tableBody = document.getElementById('portfolioTableBody'); // Tablo body'sine referans
                     const noRecordsMessage = document.getElementById('noRecordsMessage');
                     tableBody.innerHTML = ''; // İçeriği temizle
 
-                    const typeFilter = document.getElementById('typeFilter').value;
-                    const ownerFilter = document.getElementById('ownerFilter').value;
+                    const currentTypeFilter = this.activeTypeFilter; // Tab'dan gelen filtre
                     const searchTerm = document.getElementById('searchBar').value.toLowerCase();
 
                     const filteredRecords = this.allRecords.filter(record => {
-                        const matchesType = typeFilter === 'all' || record.type === typeFilter;
-                        const matchesOwner = ownerFilter === 'all' || (record.owners && record.owners.some(owner => owner.id === ownerFilter));
-                        const matchesSearch = 
-                            record.title.toLowerCase().includes(searchTerm) ||
-                            (record.applicationNumber && record.applicationNumber.toLowerCase().includes(searchTerm)) ||
-                            (record.status && record.status.toLowerCase().includes(searchTerm));
+                        const matchesType = currentTypeFilter === 'all' || record.type === currentTypeFilter;
                         
-                        return matchesType && matchesOwner && matchesSearch;
+                        // Tüm alanlarda arama yap
+                        const searchContent = [
+                            record.title,
+                            record.applicationNumber,
+                            record.status,
+                            record.description,
+                            record.patentClass, // Patent için
+                            record.niceClass, // Marka için
+                            record.copyrightType, // Telif hakkı için
+                            record.designClass // Tasarım için
+                        ].filter(Boolean).join(' ').toLowerCase(); // Boş olmayanları birleştir
+
+                        // Hak sahipleri isimlerini de aramaya dahil et
+                        const ownerNames = record.owners ? record.owners.map(owner => {
+                            const person = this.allPersons.find(p => p.id === owner.id);
+                            return person ? person.name : '';
+                        }).filter(Boolean).join(' ').toLowerCase() : '';
+
+                        const matchesSearch = searchContent.includes(searchTerm) || ownerNames.includes(searchTerm);
+                        
+                        return matchesType && matchesSearch;
                     });
 
                     if (filteredRecords.length === 0) {
                         noRecordsMessage.style.display = 'block';
-                        // Tabloya veri girmediğimizde "veri yok" mesajı görünür kalsın
                         tableBody.style.display = 'none'; // Tabloyu gizle
                         return;
                     }
@@ -387,15 +410,17 @@
                     });
                 }
 
-                getRecordIcon(type) { // Bu fonksiyon artık kullanılmıyor, kaldırılabilir veya gelecekteki kart görünümü için tutulabilir.
-                    switch (type) {
-                        case 'patent': return '📋';
-                        case 'trademark': return '🏷️';
-                        case 'copyright': return '©️';
-                        case 'design': return '🎨';
-                        default: return '📄';
-                    }
-                }
+                // getRecordIcon fonksiyonu artık kullanılmadığı için kaldırılabilir veya tutulabilir.
+                // Tablo görünümünde ikonlar doğrudan kullanılmadığı için gereksiz.
+                // getRecordIcon(type) { 
+                //     switch (type) {
+                //         case 'patent': return '📋';
+                //         case 'trademark': return '🏷️';
+                //         case 'copyright': return '©️';
+                //         case 'design': return '🎨';
+                //         default: return '📄';
+                //     }
+                // }
 
                 async deleteRecord(recordId) {
                     if (confirm('Bu kaydı silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.')) {
