@@ -494,7 +494,53 @@
                 selectEl.appendChild(option);
             });
         }
+setRequiredFieldsForActiveTab = () => {
+    const recordSearchInputExisting = document.getElementById('recordSearchInputExisting');
+    const selectedRecordDisplayExisting = document.getElementById('selectedRecordDisplayExisting'); 
+    const recordSearchInputManual = document.getElementById('recordSearchInputManual');
+    const selectedRecordDisplayManual = document.getElementById('selectedRecordDisplayManual'); 
 
+    const specificChildTransactionType = document.getElementById('specificChildTransactionType');
+    const filesExisting = document.getElementById('filesExisting');
+    
+    const specificManualTransactionType = document.getElementById('specificManualTransactionType');
+    const specificManualChildTransactionType = document.getElementById('specificManualChildTransactionType'); 
+    const filesManual = document.getElementById('filesManual');
+
+    // Tüm inputlardan 'required' özelliğini kaldır
+    [
+        recordSearchInputExisting, selectedRecordDisplayExisting,
+        recordSearchInputManual, selectedRecordDisplayManual,
+        specificChildTransactionType, filesExisting, 
+        specificManualTransactionType, specificManualChildTransactionType, filesManual
+    ].forEach(el => {
+        if (el) {
+            el.removeAttribute('required');
+        }
+    });
+
+    // Aktif sekmeye göre 'required' ekle
+    if (this.activeTab === 'existing-transaction-pane') {
+        if (recordSearchInputExisting) recordSearchInputExisting.setAttribute('required', 'required');
+        if (specificChildTransactionType) specificChildTransactionType.setAttribute('required', 'required');
+        if (filesExisting) filesExisting.setAttribute('required', 'required');
+    } else if (this.activeTab === 'manual-indexing-pane') {
+        if (recordSearchInputManual) recordSearchInputManual.setAttribute('required', 'required');
+        // Manual sekmede Ana İşlem Tipi, Alt İşlem Tipi veya Dosya yüklemeden en az biri olmalı
+        const specificManualTransactionTypeEl = document.getElementById('specificManualTransactionType');
+        const specificManualChildTransactionTypeEl = document.getElementById('specificManualChildTransactionType');
+        const filesManualEl = document.getElementById('filesManual');
+
+        if (specificManualTransactionTypeEl || specificManualChildTransactionTypeEl || filesManualEl) {
+             // Bu sekmede en az birinin dolu olması koşulu checkFormCompleteness içinde kontrol ediliyor.
+             // Burada zorunlu alan olarak işaretlenmesi gerekenler, eğer varsa, işaretlenecek.
+             // Örneğin, eğer manuel işlem oluşturuluyorsa, bir ana işlem veya alt işlem seçilmesi beklenir.
+             // Buradaki required'ı kaldırdık, çünkü checkFormCompleteness'te daha esnek bir doğrulama var.
+             // Ancak, HTML'de bu inputların başlangıçta required olmaması gerektiğini unutmayın.
+        }
+    }
+    // Bulk indexing kısmı ayrı bir sayfaya taşındığı için burada 'required' işlemi yapmıyoruz
+}
 
         renderTransactionsForSelection = () => {
             const container = document.getElementById('transactions-list-for-selection');
