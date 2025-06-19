@@ -1,25 +1,49 @@
-<header class="header">
-    <div class="header-left">
-        <button id="menu-toggle" class="menu-toggle-btn">
-            <i class="fas fa-bars"></i>
-        </button>
-        <h1 class="header-title">IP Manager</h1>
-    </div>
-    <div class="header-right">
-        <div class="user-info">
-            <span id="user-name" class="user-name">Kullanıcı Adı</span>
-            <span id="user-role" class="user-role">Rol</span>
-        </div>
-        <a href="#" id="logout-btn" class="logout-link" title="Çıkış Yap">
-            <i class="fas fa-sign-out-alt"></i>
-        </a>
-    </div>
-</header>
-
 <aside class="sidebar">
     <div class="sidebar-header">
-        <h2 class="sidebar-title">Menü</h2>
+        <a href="dashboard.html" class="sidebar-logo">🔥 IP Manager</a>
     </div>
-    <ul class="menu-list">
-        </ul>
+    <nav class="sidebar-nav">
+        <div class="nav-category-title">Ana Menü</div>
+        <a href="dashboard.html" class="sidebar-nav-item"><span class="nav-icon">📊</span><span>Dashboard</span></a>
+        <a href="portfolio.html" class="sidebar-nav-item"><span class="nav-icon">📋</span><span>Portföy</span></a>
+        <div class="nav-category-title">Veri Girişi</div>
+        <a href="data-entry.html" class="sidebar-nav-item"><span class="nav-icon">➕</span><span>Yeni Kayıt</span></a>
+        <a href="excel-upload.html" class="sidebar-nav-item"><span class="nav-icon">📄</span><span>Excel ile Yükle</span></a>
+
+        <div class="nav-category-title">Yönetim</div>
+        <div class="accordion">
+            <div class="accordion-header"><span class="nav-icon">✅</span><span>Görevler</span></div>
+            <div class="accordion-content">
+                <a href="create-task.html" class="new-task-link">Yeni İş Oluştur</a>
+                <a href="task-management.html">İş Yönetimi</a>
+                <a href="my-tasks.html">İşlerim</a>
+                <a href="reminders.html">Hatırlatmalar</a>
+               <a href="scheduled-tasks.html">Zamanlanmış Görevler</a>
+            </div>
+        </div>
+        <div class="accordion">
+            <div class="accordion-header"><span class="nav-icon">👥</span><span>Kişi Yönetimi</span></div>
+            <div class="accordion-content">
+                <a href="persons.html">Kişiler Yönetimi</a>
+                <a href="user-management.html">Kullanıcı Yönetimi</a>
+            </div>
+        </div>
+       <div class="nav-category-title">Finans</div>
+        <a href="accruals.html" class="sidebar-nav-item"><span class="nav-icon">💰</span><span>Tahakkuklarım</span></a>
+        <div class="nav-category-title">Araçlar</div>
+        <a href="indexing.html" class="sidebar-nav-item"><span class="nav-icon">📁</span><span>Belge İndeksleme</span></a>
+        <a href="#" class="sidebar-nav-item" style="opacity: 0.5; cursor: not-allowed;"><span class="nav-icon">📈</span><span>Raporlar</span></a>
+        <a href="#" class="sidebar-nav-item" style="opacity: 0.5; cursor: not-allowed;"><span class="nav-icon">🔧</span><span>Ayarlar</span></a>
+    </nav>
 </aside>
+
+<header class="top-header">
+    <div class="user-section">
+        <div class="user-avatar" id="userAvatar">?</div>
+        <div class="user-info">
+            <div class="user-name" id="userName">Yükleniyor...</div>
+            <div class="user-role" id="userRole">Kullanıcı</div>
+        </div>
+        <button class="logout-btn" id="logoutBtn">Çıkış</button>
+    </div>
+</header>
