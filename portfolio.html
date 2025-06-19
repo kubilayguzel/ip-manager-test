@@ -127,13 +127,21 @@
             cursor: pointer;
         }
 
+        /* Hover efekti için önemli: tablo hücresine göre konumlandırma */
+        .portfolio-table td {
+            position: relative; /* İçindeki resmin absolute konumlanması için */
+        }
         .trademark-image-thumbnail:hover {
-            transform: scale(2.5); /* Üzerine gelince 2.5 kat büyüt */
+            transform: scale(3); /* Üzerine gelince 3 kat büyüt */
             position: absolute; /* Büyüdüğünde diğer elementlerin üzerine gelmesi için */
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(3); /* Hem büyüt hem ortala */
             z-index: 10; /* Diğer içeriklerin üstünde kalması için */
             box-shadow: 0px 0px 15px rgba(0,0,0,0.3); /* Gölge efekti */
             border: 2px solid #1e3c72;
         }
+
 
         .action-btn {
             background: #007bff;
@@ -243,15 +251,8 @@
             <div class="portfolio-table-container">
                 <table class="portfolio-table">
                     <thead>
-                        <tr>
-                            <th>Kayıt Tipi</th>
-                            <th>Başlık</th>
-                            <th>Marka Görseli</th> <th>Başvuru Numarası</th>
-                            <th>Başvuru Tarihi</th>
-                            <th>Durum</th>
-                            <th>Hak Sahipleri</th>
-                            <th>İşlemler</th>
-                        </tr>
+                        <tr id="portfolioTableHeaderRow">
+                            </tr>
                     </thead>
                     <tbody id="portfolioTableBody">
                         </tbody>
@@ -356,12 +357,33 @@
                 }
 
                 renderRecords() {
+                    const tableHeaderRow = document.getElementById('portfolioTableHeaderRow');
                     const tableBody = document.getElementById('portfolioTableBody'); 
                     const noRecordsMessage = document.getElementById('noRecordsMessage');
-                    tableBody.innerHTML = ''; 
+                    
+                    tableHeaderRow.innerHTML = ''; // Başlıkları temizle
+                    tableBody.innerHTML = ''; // İçeriği temizle
 
                     const currentTypeFilter = this.activeTypeFilter; 
                     const searchTerm = document.getElementById('searchBar').value.toLowerCase();
+
+                    // Tablo başlıklarını dinamik olarak oluştur
+                    let headers = [
+                        'Kayıt Tipi', 'Başlık'
+                    ];
+                    if (currentTypeFilter === 'trademark') {
+                        headers.push('Marka Görseli');
+                    }
+                    headers.push(
+                        'Başvuru Numarası', 'Başvuru Tarihi', 'Durum', 'Hak Sahipleri', 'İşlemler'
+                    );
+
+                    headers.forEach(headerText => {
+                        const th = document.createElement('th');
+                        th.textContent = headerText;
+                        tableHeaderRow.appendChild(th);
+                    });
+
 
                     const filteredRecords = this.allRecords.filter(record => {
                         let matchesType = false;
@@ -417,15 +439,19 @@
                         }).join(', ') : 'Belirtilmemiş';
 
                         // Marka görseli sütunu için içerik
-                        let trademarkImageHtml = '<td>-</td>'; // Varsayılan boş veya tire
-                        if (record.type === 'trademark' && record.trademarkImage && record.trademarkImage.content) {
-                            trademarkImageHtml = `<td><img src="${record.trademarkImage.content}" alt="Marka Görseli" class="trademark-image-thumbnail"></td>`;
+                        let trademarkImageCellHtml = ''; 
+                        if (currentTypeFilter === 'trademark') { // Sadece marka tabında görsel hücresi ekle
+                            if (record.trademarkImage && record.trademarkImage.content) {
+                                trademarkImageCellHtml = `<td><img src="${record.trademarkImage.content}" alt="Marka Görseli" class="trademark-image-thumbnail"></td>`;
+                            } else {
+                                trademarkImageCellHtml = `<td>-</td>`; // Görsel yoksa boş hücre
+                            }
                         }
 
                         row.innerHTML = `
                             <td>${record.type.charAt(0).toUpperCase() + record.type.slice(1)}</td>
                             <td>${record.title || 'Başlıksız Kayıt'}</td>
-                            ${trademarkImageHtml} <td>${record.applicationNumber || '-'}</td>
+                            ${trademarkImageCellHtml} <td>${record.applicationNumber || '-'}</td>
                             <td>${record.applicationDate || '-'}</td>
                             <td>${record.status || '-'}</td>
                             <td>${ownerNames || '-'}</td>
