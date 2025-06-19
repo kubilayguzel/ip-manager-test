@@ -405,7 +405,7 @@
 </div>
 
 <script type="module">
-        import { authService, taskService, ipRecordsService, personsService, accrualService, auth, generateUUID } from './firebase-config.js';
+        import { authService, taskService, ipRecordsService, personService, accrualService, auth, generateUUID } from './firebase-config.js';
 
         class TaskManagementModule {
             constructor() {
@@ -452,7 +452,7 @@
                     taskService.getAllUsers(), 
                     taskService.getAllTasks(),
                     ipRecordsService.getRecords(),
-                    personsService.getPersons(),
+                    personService.getPersons(),
                     accrualService.getAccruals()
                 ]);
 
