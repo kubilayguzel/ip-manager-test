@@ -230,9 +230,8 @@
                     <button type="button" class="tab-button active" data-type="all">Tümü</button>
                     <button type="button" class="tab-button" data-type="patent">Patent</button>
                     <button type="button" class="tab-button" data-type="trademark">Marka</button>
-                    <button type="button" class="tab-button" data-type="copyright">Telif Hakkı</button>
                     <button type="button" class="tab-button" data-type="design">Tasarım</button>
-                </div>
+                    <button type="button" class="tab-button" data-type="objections">İtirazlar</button> <button type="button" class="tab-button" data-type="litigation">Davalar</button> </div>
                 <div class="filter-row">
                     <input type="text" id="searchBar" class="search-input" placeholder="Başlık, numara, durum, hak sahibi ara...">
                     <button class="btn-add-record" onclick="window.location.href='data-entry.html'">
@@ -365,7 +364,18 @@
                     const searchTerm = document.getElementById('searchBar').value.toLowerCase();
 
                     const filteredRecords = this.allRecords.filter(record => {
-                        const matchesType = currentTypeFilter === 'all' || record.type === currentTypeFilter;
+                        let matchesType = false;
+                        if (currentTypeFilter === 'all') {
+                            matchesType = true;
+                        } else if (currentTypeFilter === 'objections') {
+                            // Kayıtın transactions dizisinde "İtiraz" tipinde işlem var mı kontrol et
+                            matchesType = record.transactions && record.transactions.some(t => t.type === 'İtiraz');
+                        } else if (currentTypeFilter === 'litigation') {
+                            // Kayıtın transactions dizisinde "Dava" tipinde işlem var mı kontrol et
+                            matchesType = record.transactions && record.transactions.some(t => t.type === 'Dava');
+                        } else {
+                            matchesType = record.type === currentTypeFilter;
+                        }
                         
                         // Tüm alanlarda arama yap
                         const searchContent = [
