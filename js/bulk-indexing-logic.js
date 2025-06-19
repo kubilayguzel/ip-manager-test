@@ -1,13 +1,13 @@
 // js/bulk-indexing-logic.js
-import { authService, ipRecordsService, generateUUID, bulkIndexingService } from '../firebase-config.js'; // Düzeltildi
-import { showNotification, formatFileSize, readFileAsDataURL } from '../utils.js'; // Düzeltildi
+import { authService, ipRecordsService, generateUUID, bulkIndexingService } from '../firebase-config.js';
+import { showNotification, formatFileSize, readFileAsDataURL } from '../utils.js';
 import { getFirestore, writeBatch, doc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 
 const CHILD_TRANSACTION_TYPES = [
     'Ret Kararı',
     'Kabul Kararı',
     'Eksiklik Bildirimi',
-    'Karara İtiraz', 
+    'Karara İtiraz',
     'Yayına İtiraz',
     'İtiraza Cevap',
     'Genel',
@@ -18,9 +18,9 @@ export class BulkIndexingModule {
     constructor(allRecords) {
         this.currentUser = authService.getCurrentUser();
         this.allRecords = allRecords; // Ana modülden gelen kayıtlar
-        this.pendingBulkIndexJobs = []; 
-        this.indexedBulkJobs = []; 
-        this.bulkIndexingRecordsCache = new Map(); 
+        this.pendingBulkIndexJobs = [];
+        this.indexedBulkJobs = [];
+        this.bulkIndexingRecordsCache = new Map();
 
         this.init();
     }
@@ -30,7 +30,7 @@ export class BulkIndexingModule {
             window.location.href = 'index.html'; // Kullanıcı yoksa ana sayfaya yönlendir
             return;
         }
-        await this.loadBulkJobsFromFirestore(); 
+        await this.loadBulkJobsFromFirestore();
         this.setupEventListeners();
         this.renderBulkIndexingTable(); // Başlangıçta tabloyu render et
         this.renderIndexedBulkTable(); // İndekslenmiş tabloyu render et
@@ -38,7 +38,7 @@ export class BulkIndexingModule {
     }
 
     loadBulkJobsFromFirestore = async () => {
-        if (!this.currentUser) return; 
+        if (!this.currentUser) return;
 
         const result = await bulkIndexingService.getPendingJobs(this.currentUser.uid);
         if (result.success) {
@@ -52,7 +52,7 @@ export class BulkIndexingModule {
     setupEventListeners = () => {
         const bulkFilesInput = document.getElementById('bulkFiles');
         if (bulkFilesInput) {
-            bulkFilesInput.addEventListener('change', this.handleBulkFilesChange); 
+            bulkFilesInput.addEventListener('change', this.handleBulkFilesChange);
         }
         const bulkFilesButton = document.getElementById('bulkFilesButton');
         if (bulkFilesButton) {
@@ -62,7 +62,7 @@ export class BulkIndexingModule {
         }
         const bulkDeliveryDateInput = document.getElementById('bulkDeliveryDate');
         if (bulkDeliveryDateInput) {
-            bulkDeliveryDateInput.addEventListener('change', this.updateBulkJobsTebligDate); 
+            bulkDeliveryDateInput.addEventListener('change', this.updateBulkJobsTebligDate);
         }
 
         const selectAllBulkJobsCheckbox = document.getElementById('selectAllBulkJobs');
@@ -97,7 +97,7 @@ export class BulkIndexingModule {
                         }
                     }, 200);
                 }
-            }, true); 
+            }, true);
 
             bulkIndexingTable.addEventListener('focus', (e) => {
                 const target = e.target;
@@ -108,7 +108,7 @@ export class BulkIndexingModule {
                         container.style.display = 'block';
                     }
                 }
-            }, true); 
+            }, true);
 
             bulkIndexingTable.addEventListener('click', (e) => {
                 const target = e.target;
@@ -122,8 +122,8 @@ export class BulkIndexingModule {
                     this.updateJobSpecificChildType(target.value, target.dataset.jobId);
                 } else if (target.classList.contains('bulk-job-delivery-date')) {
                     this.updateJobSpecificDeliveryDate(target.value, target.dataset.jobId);
-                } else if (target.classList.contains('bulk-skip-btn')) {
-                    this.skipBulkJob(e);
+                } else if (target.classList.contains('bulk-delete-btn')) { // DEĞİŞTİ
+                    this.deleteBulkJob(e); // DEĞİŞTİ
                 } else if (target.classList.contains('bulk-retry-btn')) {
                     this.retryBulkJob(e);
                 } else if (target.classList.contains('bulk-job-checkbox')) {
@@ -132,12 +132,10 @@ export class BulkIndexingModule {
             });
         }
 
-        // "Değişiklikleri Kaydet" butonu için event listener
         const indexDocumentsBtn = document.getElementById('indexDocumentsBtn');
         if (indexDocumentsBtn) {
             indexDocumentsBtn.addEventListener('click', this.handleSubmit);
         }
-        // "Temizle" butonu için event listener
         const resetIndexingFormBtn = document.getElementById('resetIndexingFormBtn');
         if (resetIndexingFormBtn) {
             resetIndexingFormBtn.addEventListener('click', this.resetForm);
@@ -156,23 +154,23 @@ export class BulkIndexingModule {
             activePane.classList.add('active');
         }
 
-        this.checkFormCompleteness(); 
+        this.checkFormCompleteness();
     }
 
     toggleSelectAllBulkJobs = (e) => {
         const isChecked = e.target.checked;
         document.querySelectorAll('.bulk-job-checkbox').forEach(checkbox => {
-            if (!checkbox.disabled) { 
+            if (!checkbox.disabled) {
                 checkbox.checked = isChecked;
                 const jobId = checkbox.dataset.jobId;
                 const job = this.pendingBulkIndexJobs.find(j => j.jobId === jobId);
                 if (job) {
-                    job.isSelected = isChecked; 
+                    job.isSelected = isChecked;
                     job.status = this.checkJobCompleteness(job) ? 'ready' : 'pending';
                 }
             }
         });
-        this.renderBulkIndexingTable(); 
+        this.renderBulkIndexingTable();
         this.checkFormCompleteness();
         this.saveBulkJobsToFirestore();
     }
@@ -187,74 +185,74 @@ export class BulkIndexingModule {
         }
         const allChecked = Array.from(document.querySelectorAll('.bulk-job-checkbox')).every(cb => cb.checked || cb.disabled);
         document.getElementById('selectAllBulkJobs').checked = allChecked;
-        
-        this.renderBulkIndexingTable(); 
+
+        this.renderBulkIndexingTable();
         this.checkFormCompleteness();
         this.saveBulkJobsToFirestore();
     }
-    
+
     checkFormCompleteness = () => {
         const bulkDeliveryDateEl = document.getElementById('bulkDeliveryDate');
-        const bulkDeliveryDate = bulkDeliveryDateEl ? bulkDeliveryDateEl.value : ''; 
+        const bulkDeliveryDate = bulkDeliveryDateEl ? bulkDeliveryDateEl.value : '';
         const bulkFilesInput = document.getElementById('bulkFiles');
         const filesExist = (bulkFilesInput && bulkFilesInput.files && bulkFilesInput.files.length > 0);
 
         const selectedJobs = this.pendingBulkIndexJobs.filter(job => job.isSelected);
 
-        const allSelectedJobsValid = selectedJobs.every(job => 
-            this.checkJobCompleteness(job) 
+        const allSelectedJobsValid = selectedJobs.every(job =>
+            this.checkJobCompleteness(job)
         );
-        
+
         const indexDocumentsBtn = document.getElementById('indexDocumentsBtn');
         if (indexDocumentsBtn) {
             indexDocumentsBtn.disabled = !(bulkDeliveryDate !== '' && filesExist && selectedJobs.length > 0 && allSelectedJobsValid);
         }
     }
 
-    handleSubmit = async () => { 
+    handleSubmit = async () => {
         const btn = document.getElementById('indexDocumentsBtn');
         if (!btn) return;
         btn.disabled = true;
         showNotification('İşlem kaydediliyor...', 'info');
 
-        const bulkDeliveryDateFromInput = document.getElementById('bulkDeliveryDate').value; 
-        
-        if (!bulkDeliveryDateFromInput) { 
+        const bulkDeliveryDateFromInput = document.getElementById('bulkDeliveryDate').value;
+
+        if (!bulkDeliveryDateFromInput) {
             showNotification('Lütfen toplu işlem için tebliğ tarihi seçin.', 'error');
             btn.disabled = false; return;
         }
 
-        const selectedBulkJobs = this.pendingBulkIndexJobs.filter(job => job.isSelected); 
+        const selectedBulkJobs = this.pendingBulkIndexJobs.filter(job => job.isSelected);
 
         if (selectedBulkJobs.length === 0) {
             showNotification('İşlenecek PDF seçilmedi veya eksik bilgi var.', 'error');
             btn.disabled = false; return;
         }
-        
+
         showNotification('Toplu indeksleme başlatılıyor...', 'info');
         let successfulJobs = 0;
         let failedJobs = 0;
 
-        for (const job of selectedBulkJobs) { 
-            if (!this.checkJobCompleteness(job)) { 
+        for (const job of selectedBulkJobs) {
+            if (!this.checkJobCompleteness(job)) {
                 job.status = 'error';
                 job.errorMessage = job.errorMessage || 'Eksik veya hatalı bilgi.';
                 failedJobs++;
-                this.renderBulkIndexingTable(); 
+                this.renderBulkIndexingTable();
                 showNotification(`'${job.fileName}' işlenemedi: Eksik bilgi.`, 'error', 8000);
                 continue;
             }
-            
+
             job.status = 'processing';
-            this.renderBulkIndexingTable(); 
+            this.renderBulkIndexingTable();
 
             try {
-                let recordToUpdate = this.allRecords.find(r => r.id === job.matchedRecordId); 
+                let recordToUpdate = this.allRecords.find(r => r.id === job.matchedRecordId);
                 if (!recordToUpdate) {
                     const recordResult = await ipRecordsService.getRecordById(job.matchedRecordId);
                     if (recordResult.success) {
                         recordToUpdate = recordResult.data;
-                        this.bulkIndexingRecordsCache.set(job.matchedRecordId, recordToUpdate); 
+                        this.bulkIndexingRecordsCache.set(job.matchedRecordId, recordToUpdate);
                     } else {
                         throw new Error(`Kayıt bulunamadı: ${job.matchedRecordId}`);
                     }
@@ -267,36 +265,36 @@ export class BulkIndexingModule {
                 }
 
                 const newChildTransactionData = {
-                    designation: job.childTransactionType, 
+                    designation: job.childTransactionType,
                     transactionType: job.childTransactionType,
-                    notes: `Toplu indeksleme ile eklenen PDF (${job.fileName}).`, 
+                    notes: `Toplu indeksleme ile eklenen PDF (${job.fileName}).`,
                     transactionHierarchy: 'child',
-                    parentId: parentTransactionForChild.transactionId, 
-                    deliveryDate: new Date(job.tebligDate).toISOString() 
+                    parentId: parentTransactionForChild.transactionId,
+                    deliveryDate: new Date(job.tebligDate).toISOString()
                 };
                 const childTransactionAddResult = await ipRecordsService.addTransactionToRecord(recordToUpdate.id, newChildTransactionData);
-                
+
                 if (!childTransactionAddResult.success) {
                     throw new Error(childTransactionAddResult.error || 'Alt işlem oluşturulurken hata oluştu.');
                 }
                 const newChildTransactionId = childTransactionAddResult.data.transactionId;
-                
-                const fileContent = job.fileContent; // Base64 içeriği doğrudan kullanılıyor
+
+                const fileContent = job.fileContent;
                 const fileToUpload = {
                     fileName: job.fileName,
-                    fileType: job.fileType, 
-                    fileSize: job.fileSize, 
-                    fileUrl: fileContent, 
-                    relatedTransactionId: newChildTransactionId, 
-                    documentDesignation: job.childTransactionType 
+                    fileType: job.fileType,
+                    fileSize: job.fileSize,
+                    fileUrl: fileContent,
+                    relatedTransactionId: newChildTransactionId,
+                    documentDesignation: job.childTransactionType
                 };
                 const fileAddResult = await ipRecordsService.addFileToRecord(recordToUpdate.id, fileToUpload);
-                
+
                 if (!fileAddResult.success) {
-                    console.error(`Dosya yüklenirken hata (${job.fileName}): ${fileAddResult.error}`); 
-                    throw new Error(fileAddResult.error || 'Dosya yüklenirken hata oluştu.'); 
+                    console.error(`Dosya yüklenirken hata (${job.fileName}): ${fileAddResult.error}`);
+                    throw new Error(fileAddResult.error || 'Dosya yüklenirken hata oluştu.');
                 }
-                
+
                 job.status = 'success';
                 successfulJobs++;
                 showNotification(`'${job.fileName}' başarıyla indekslendi.`, 'success');
@@ -306,47 +304,45 @@ export class BulkIndexingModule {
                 job.errorMessage = jobError.message;
                 failedJobs++;
                 console.error(`'${job.fileName}' işlenirken hata:`, jobError);
-                showNotification(`'${job.fileName}' işlenirken hata: ${jobError.message}`, 'error', 8000); 
+                showNotification(`'${job.fileName}' işlenirken hata: ${jobError.message}`, 'error', 8000);
             } finally {
                 await bulkIndexingService.updateJob(job.jobId, { status: job.status, errorMessage: job.errorMessage || null });
-                this.renderBulkIndexingTable(); 
+                this.renderBulkIndexingTable();
             }
-        } 
+        }
 
         showNotification(`Toplu indeksleme tamamlandı. Başarılı: ${successfulJobs}, Hata: ${failedJobs}`, 'info', 5000);
-        
+
         const jobsToKeepInPending = [];
         for (const job of this.pendingBulkIndexJobs) {
             if (job.status === 'success') {
                 this.indexedBulkJobs.push(job);
-                await bulkIndexingService.deleteJob(job.jobId); 
+                await bulkIndexingService.deleteJob(job.jobId);
             } else {
                 jobsToKeepInPending.push(job);
             }
         }
-        this.pendingBulkIndexJobs = jobsToKeepInPending; 
-        
-        this.resetForm(); 
-        // this.loadRecords(); // allRecords IndexingModule tarafından yüklendiği için burada tekrar yüklemeye gerek yok.
+        this.pendingBulkIndexJobs = jobsToKeepInPending;
+
+        this.resetForm();
         this.saveBulkJobsToFirestore();
     }
 
-    resetForm = () => { 
-        // Bu form sadece toplu indeksleme ile ilgili alanları sıfırlayacak
+    resetForm = () => {
         const bulkDeliveryDateInput = document.getElementById('bulkDeliveryDate');
         if (bulkDeliveryDateInput) bulkDeliveryDateInput.value = '';
 
         const bulkFilesInfo = document.getElementById('bulkFilesInfo');
         if (bulkFilesInfo) bulkFilesInfo.textContent = 'Henüz PDF dosyası seçilmedi.';
-        
-        const bulkFilesInput = document.getElementById('bulkFiles');
-        if (bulkFilesInput) bulkFilesInput.value = ''; // Dosya inputunu da sıfırla
 
-        this.pendingBulkIndexJobs = []; 
-        this.indexedBulkJobs = []; 
+        const bulkFilesInput = document.getElementById('bulkFiles');
+        if (bulkFilesInput) bulkFilesInput.value = '';
+
+        this.pendingBulkIndexJobs = [];
+        this.indexedBulkJobs = [];
         this.renderBulkIndexingTable();
         this.renderIndexedBulkTable();
-        this.clearAllPendingBulkJobsInFirestore();  // Firestore'daki beklemedeki işleri de temizle
+        this.clearAllPendingBulkJobsInFirestore();
         this.checkFormCompleteness();
     }
 
@@ -359,7 +355,7 @@ export class BulkIndexingModule {
             if (result.success) {
                 const batch = writeBatch(db);
                 result.data.forEach(job => {
-                    if (job.status !== 'success' && job.status !== 'processing') { 
+                    if (job.status !== 'success' && job.status !== 'processing') {
                         batch.delete(doc(bulkIndexingService.collectionRef, job.jobId));
                     }
                 });
@@ -371,7 +367,6 @@ export class BulkIndexingModule {
         }
     }
 
-    // Toplu işleme alınan dosyaların Firestore'a kaydedilmesi
     saveBulkJobsToFirestore = async () => {
         if (!this.currentUser) return;
         try {
@@ -379,7 +374,7 @@ export class BulkIndexingModule {
             const batch = writeBatch(db);
             this.pendingBulkIndexJobs.forEach(job => {
                 const jobRef = doc(bulkIndexingService.collectionRef, job.jobId);
-                batch.set(jobRef, { 
+                batch.set(jobRef, {
                     fileName: job.fileName,
                     fileSize: job.fileSize,
                     fileType: job.fileType,
@@ -397,7 +392,7 @@ export class BulkIndexingModule {
                     uploadedAt: job.uploadedAt,
                     userId: job.userId,
                     userEmail: job.userEmail
-                }, { merge: true }); 
+                }, { merge: true });
             });
             await batch.commit();
         } catch (error) {
@@ -407,20 +402,20 @@ export class BulkIndexingModule {
     }
 
 
-    handleBulkFilesChange = async (event) => { 
-        const fileInput = document.getElementById('bulkFiles'); // Elementi tekrar al
+    handleBulkFilesChange = async (event) => {
+        const fileInput = document.getElementById('bulkFiles');
         const files = Array.from(fileInput.files);
 
         if (files.length === 0) {
-            this.pendingBulkIndexJobs = []; 
+            this.pendingBulkIndexJobs = [];
             const bulkFilesInfo = document.getElementById('bulkFilesInfo');
             if (bulkFilesInfo) bulkFilesInfo.textContent = 'Henüz PDF dosyası seçilmedi.';
-            this.renderBulkIndexingTable(); 
+            this.renderBulkIndexingTable();
             this.checkFormCompleteness();
             this.clearAllPendingBulkJobsInFirestore();
             return;
         }
-        
+
         showNotification('PDF dosyaları işleniyor...', 'info', 3000);
 
         const commonTebligDateInput = document.getElementById('bulkDeliveryDate');
@@ -428,12 +423,12 @@ export class BulkIndexingModule {
 
         if (!commonTebligDate) {
             showNotification('Lütfen toplu işlem için ortak tebliğ tarihini girin.', 'error');
-            if (fileInput) fileInput.value = ''; // Inputu temizle
+            if (fileInput) fileInput.value = '';
             this.checkFormCompleteness();
             return;
         }
 
-        const allExistingFileIdentifiers = new Set(); 
+        const allExistingFileIdentifiers = new Set();
         this.allRecords.forEach(record => {
             (record.files || []).forEach(file => {
                 allExistingFileIdentifiers.add(`${file.fileName}_${file.fileSize}`);
@@ -445,9 +440,8 @@ export class BulkIndexingModule {
             }
         });
 
-        // Eski pending işleri temizle, sadece yeni yüklenenler için devam et
-        this.pendingBulkIndexJobs = []; 
-        await this.clearAllPendingBulkJobsInFirestore(); 
+        this.pendingBulkIndexJobs = [];
+        await this.clearAllPendingBulkJobsInFirestore();
 
 
         for (const file of files) {
@@ -456,64 +450,64 @@ export class BulkIndexingModule {
                 showNotification(`'${file.name}' (${formatFileSize(file.size)}) zaten indekslenmiş veya işleme listesinde mevcut ve atlandı.`, 'warning', 6000);
                 continue;
             }
-            allExistingFileIdentifiers.add(fileIdentifier); 
-            
+            allExistingFileIdentifiers.add(fileIdentifier);
+
 
             let extractedAppNumber = this.extractApplicationNumberFromFileName(file.name);
-            
+
             if (extractedAppNumber) {
-                extractedAppNumber = extractedAppNumber.replace(/[-_]/g, '/'); 
+                extractedAppNumber = extractedAppNumber.replace(/[-_]/g, '/');
             }
 
 
             let matchedRecord = null;
             let matchedRecordDisplay = 'Eşleşme Yok';
-            let status = 'pending'; 
+            let status = 'pending';
 
             if (extractedAppNumber) {
-                matchedRecord = this.allRecords.find(r => 
-                    r.applicationNumber && 
+                matchedRecord = this.allRecords.find(r =>
+                    r.applicationNumber &&
                     r.applicationNumber.toLowerCase().replace(/[-_]/g, '/') === extractedAppNumber.toLowerCase()
                 );
 
                 if (matchedRecord) {
                     matchedRecordDisplay = `${matchedRecord.title} (${matchedRecord.applicationNumber})`;
-                    status = 'ready'; 
+                    status = 'ready';
                 } else {
-                    matchedRecordDisplay = `Eşleşme Yok (Başvuru No: ${extractedAppNumber})`; 
-                    status = 'pending'; 
+                    matchedRecordDisplay = `Eşleşme Yok (Başvuru No: ${extractedAppNumber})`;
+                    status = 'pending';
                 }
             } else {
-                matchedRecordDisplay = 'Başvuru No Dosya Adında Yok'; 
-                status = 'pending'; 
+                matchedRecordDisplay = 'Başvuru No Dosya Adında Yok';
+                status = 'pending';
             }
 
-            const fileContentBase64 = await readFileAsDataURL(file); 
+            const fileContentBase64 = await readFileAsDataURL(file);
 
             const newJob = {
                 jobId: generateUUID(),
                 fileName: file.name,
-                fileSize: file.size, 
-                fileType: file.type, 
-                fileContent: fileContentBase64, // .content kaldırıldı, direkt base64 string
-                extractedAppNumber: extractedAppNumber, 
+                fileSize: file.size,
+                fileType: file.type,
+                fileContent: fileContentBase64,
+                extractedAppNumber: extractedAppNumber,
                 matchedRecordId: matchedRecord ? matchedRecord.id : null,
                 matchedRecordDisplay: matchedRecordDisplay,
-                selectedParentTransactionId: '', 
-                selectedParentTransactionDisplay: 'Parent Seçilmedi', 
-                childTransactionType: '', 
-                tebligDate: commonTebligDate, 
-                status: status, 
+                selectedParentTransactionId: '',
+                selectedParentTransactionDisplay: 'Parent Seçilmedi',
+                childTransactionType: '',
+                tebligDate: commonTebligDate,
+                status: status,
                 errorMessage: '',
-                isSelected: status === 'ready', 
-                uploadedAt: new Date().toISOString(), 
-                userId: this.currentUser.uid, 
-                userEmail: this.currentUser.email 
+                isSelected: status === 'ready',
+                uploadedAt: new Date().toISOString(),
+                userId: this.currentUser.uid,
+                userEmail: this.currentUser.email
             };
-            
+
             const addJobResult = await bulkIndexingService.addJob(newJob);
             if (addJobResult.success) {
-                this.pendingBulkIndexJobs.push(addJobResult.data); 
+                this.pendingBulkIndexJobs.push(addJobResult.data);
                 showNotification(`'${newJob.fileName}' işleme listesine eklendi.`, 'info', 3000);
             } else {
                 showNotification(`'${newJob.fileName}' işleme listesine eklenirken hata: ${addJobResult.error}`, 'error', 6000);
@@ -526,20 +520,20 @@ export class BulkIndexingModule {
         this.saveBulkJobsToFirestore();
     }
 
-    extractApplicationNumberFromFileName = (fileName) => { 
-        const fileNameWithoutExtension = fileName.split('.').slice(0, -1).join('.'); 
+    extractApplicationNumberFromFileName = (fileName) => {
+        const fileNameWithoutExtension = fileName.split('.').slice(0, -1).join('.');
 
-        const regex = /(TR)?\d{4}[_\-\/]?\d+/i; 
-        const match = fileNameWithoutExtension.match(regex); 
+        const regex = /(TR)?\d{4}[_\-\/]?\d+/i;
+        const match = fileNameWithoutExtension.match(regex);
 
-        return match ? match[0] : ''; 
+        return match ? match[0] : '';
     }
 
-    renderBulkIndexingTable = () => { 
+    renderBulkIndexingTable = () => {
         const tableBody = document.getElementById('bulkIndexingTable').querySelector('tbody');
-        const tableContainer = document.getElementById('bulkIndexingTableContainer');
+        const tableContainer = document.getElementById('bulkTableContainer');
         const noJobsMessage = document.getElementById('bulkTableNoJobs');
-        tableBody.innerHTML = ''; 
+        tableBody.innerHTML = '';
 
         if (this.pendingBulkIndexJobs.length === 0) {
             tableContainer.style.display = 'none';
@@ -554,7 +548,7 @@ export class BulkIndexingModule {
             const allSelectableJobs = this.pendingBulkIndexJobs.filter(job => job.status !== 'processing' && job.status !== 'success');
             const allSelected = allSelectableJobs.every(job => job.isSelected);
             selectAllBulkJobsCheckbox.checked = allSelected && allSelectableJobs.length > 0;
-            selectAllBulkJobsCheckbox.disabled = allSelectableJobs.length === 0; 
+            selectAllBulkJobsCheckbox.disabled = allSelectableJobs.length === 0;
         }
 
 
@@ -569,8 +563,8 @@ export class BulkIndexingModule {
                 const parentTransactions = (currentRecord.transactions || [])
                     .filter(tx => tx.transactionHierarchy === 'parent' || !tx.transactionHierarchy)
                     .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-                
-                let optionsHtml = '<option value="">Parent Seçin...</option>'; 
+
+                let optionsHtml = '<option value="">Parent Seçin...</option>';
                 if (parentTransactions.length === 0) {
                     optionsHtml = '<option value="">Ana İşlem Yok</option>';
                 } else {
@@ -599,33 +593,33 @@ export class BulkIndexingModule {
                 `;
             };
 
-            const isJobSelectable = job.status !== 'processing' && job.status !== 'success'; 
+            const isJobSelectable = job.status !== 'processing' && job.status !== 'success';
 
             row.innerHTML = `
                 <td><input type="checkbox" class="bulk-job-checkbox" data-job-id="${job.jobId}" ${job.isSelected ? 'checked' : ''} ${!isJobSelectable ? 'disabled' : ''}></td>
-                <td><a href="${job.fileContent || '#'}" target="_blank" title="PDF Görüntüle">${job.fileName}</a></td> 
+                <td><a href="${job.fileContent || '#'}" target="_blank" title="PDF Görüntüle">${job.fileName}</a></td>
                 <td>${job.extractedAppNumber || '-'}</td>
                 <td class="matched-record-cell">
                     <span class="matched-record-display-text">${job.matchedRecordDisplay}</span>
-                    ${job.status === 'pending' || job.status === 'error' || !job.matchedRecordId ? 
+                    ${job.status === 'pending' || job.status === 'error' || !job.matchedRecordId ?
                         `<div class="search-wrapper" style="margin-top: 5px;">
-                            <input type="text" class="form-input bulk-record-manual-search-input" 
-                                data-job-id="${job.jobId}" 
-                                value="${job.matchedRecordDisplay === 'Eşleşme Yok' || job.matchedRecordDisplay === 'Başvuru No Dosya Adında Yok' ? '' : job.matchedRecordDisplay}" 
+                            <input type="text" class="form-input bulk-record-manual-search-input"
+                                data-job-id="${job.jobId}"
+                                value="${job.matchedRecordDisplay === 'Eşleşme Yok' || job.matchedRecordDisplay === 'Başvuru No Dosya Adında Yok' ? '' : job.matchedRecordDisplay}"
                                 placeholder="Manuel kayıt ara..."
                                 ${!isJobSelectable ? 'disabled' : ''}>
                             <div class="search-results-container bulk-search-results-container" data-job-id="${job.jobId}"></div>
                         </div>` : ''}
                 </td>
-                <td>${job.matchedRecordId ? populateParentSelectHtml(job.jobId, job.matchedRecordId, job.selectedParentTransactionId) : '<select disabled class="form-select"><option value="">Önce Kayıt Seçin</option></select>'}</td> 
-                <td>${populateChildTypeSelectHtml(job.jobId, job.childTransactionType)}</td> 
-                <td><input type="date" class="form-input bulk-job-delivery-date" data-job-id="${job.jobId}" value="${job.tebligDate || ''}" ${!isJobSelectable ? 'disabled' : ''}></td> 
+                <td>${job.matchedRecordId ? populateParentSelectHtml(job.jobId, job.matchedRecordId, job.selectedParentTransactionId) : '<select disabled class="form-select"><option value="">Önce Kayıt Seçin</option></select>'}</td>
+                <td>${populateChildTypeSelectHtml(job.jobId, job.childTransactionType)}</td>
+                <td><input type="date" class="form-input bulk-job-delivery-date" data-job-id="${job.jobId}" value="${job.tebligDate || ''}" ${!isJobSelectable ? 'disabled' : ''}></td>
                 <td><span class="status-text ${job.status}">${job.status === 'pending' ? 'Beklemede' : job.status === 'ready' ? 'Hazır' : job.status === 'processing' ? 'İşleniyor' : job.status === 'success' ? 'Başarılı' : 'Hata'}</span>
                     ${job.errorMessage ? `<br><small style="color:red;">${job.errorMessage}</small>` : ''}
                 </td>
                 <td>
-                    ${job.status === 'error' ? `<button type="button" class="btn btn-sm btn-info bulk-retry-btn" data-job-id="${job.jobId}">Tekrar Dene</button>` : 
-                        (job.status === 'ready' || job.status === 'pending') && isJobSelectable ? `<button type="button" class="btn btn-sm btn-danger bulk-skip-btn" data-job-id="${job.jobId}">Atla</button>` : ''}
+                    ${job.status === 'error' ? `<button type="button" class="btn btn-sm btn-secondary bulk-retry-btn" data-job-id="${job.jobId}">Tekrar Dene</button>` : ''}
+                    ${(job.status === 'ready' || job.status === 'pending' || job.status === 'error') && isJobSelectable ? `<button type="button" class="btn btn-sm btn-danger bulk-delete-btn" data-job-id="${job.jobId}">Sil</button>` : ''}
                 </td>
             `;
             tableBody.appendChild(row);
@@ -634,9 +628,9 @@ export class BulkIndexingModule {
 
     renderIndexedBulkTable = () => {
         const tableBody = document.getElementById('indexedBulkTable').querySelector('tbody');
-        const tableContainer = document.getElementById('indexedBulkTableContainerProcessed'); 
+        const tableContainer = document.getElementById('indexedBulkTableContainerProcessed');
         const noJobsMessage = document.getElementById('indexedBulkTableNoJobs');
-        tableBody.innerHTML = ''; 
+        tableBody.innerHTML = '';
 
         if (this.indexedBulkJobs.length === 0) {
             tableContainer.style.display = 'none';
@@ -665,14 +659,14 @@ export class BulkIndexingModule {
 
 
     checkJobCompleteness = (job) => {
-        return job.matchedRecordId !== null && 
-               job.selectedParentTransactionId !== '' && 
-               job.childTransactionType !== '' && 
+        return job.matchedRecordId !== null &&
+               job.selectedParentTransactionId !== '' &&
+               job.childTransactionType !== '' &&
                job.tebligDate !== '' &&
-               job.status !== 'error'; 
+               job.status !== 'error';
     }
 
-    searchRecordsForBulkJob = (e) => { 
+    searchRecordsForBulkJob = (e) => {
         const query = e.target.value;
         const jobId = e.target.dataset.jobId;
         const container = document.querySelector(`.bulk-search-results-container[data-job-id="${jobId}"]`);
@@ -683,18 +677,18 @@ export class BulkIndexingModule {
             container.style.display = 'block';
             return;
         }
-        const filtered = this.allRecords.filter(r => 
+        const filtered = this.allRecords.filter(r =>
             (r.title && r.title.toLowerCase().includes(query.toLowerCase())) ||
             (r.applicationNumber && r.applicationNumber.toLowerCase().includes(query.toLowerCase()))
         );
-        
+
         if(filtered.length === 0) {
             container.innerHTML = '<p class="no-results-message p-2">Kayıt bulunamadı.</p>';
         } else {
             filtered.forEach(record => {
                 const item = document.createElement('div');
                 item.className = 'record-search-item';
-                item.dataset.id = record.id; 
+                item.dataset.id = record.id;
                 item.innerHTML = `<div class="record-info"><div>${record.title}</div><small>${record.applicationNumber}</small></div>`;
                 container.appendChild(item);
             });
@@ -702,19 +696,19 @@ export class BulkIndexingModule {
         container.style.display = 'block';
     }
 
-    selectRecordForBulkJob = (recordId, jobId) => { 
+    selectRecordForBulkJob = (recordId, jobId) => {
         const job = this.pendingBulkIndexJobs.find(j => j.jobId === jobId);
         const selectedRecord = this.allRecords.find(r => r.id === recordId);
         if (job && selectedRecord) {
             job.matchedRecordId = selectedRecord.id;
             job.matchedRecordDisplay = `${selectedRecord.title} (${selectedRecord.applicationNumber})`;
-            
-            job.status = this.checkJobCompleteness(job) ? 'ready' : 'pending'; 
-            
-            this.renderBulkIndexingTable(); 
+
+            job.status = this.checkJobCompleteness(job) ? 'ready' : 'pending';
+
+            this.renderBulkIndexingTable();
         }
         this.checkFormCompleteness();
-        this.saveBulkJobsToFirestore(); 
+        this.saveBulkJobsToFirestore();
     }
 
     selectParentForBulkJob = (parentTransactionId, jobId) => {
@@ -728,70 +722,70 @@ export class BulkIndexingModule {
             } else {
                 job.selectedParentTransactionDisplay = 'Parent Seçilmedi';
             }
-            
+
             job.status = this.checkJobCompleteness(job) ? 'ready' : 'pending';
-            
-            this.renderBulkIndexingTable(); 
+
+            this.renderBulkIndexingTable();
         }
         this.checkFormCompleteness();
-        this.saveBulkJobsToFirestore(); 
+        this.saveBulkJobsToFirestore();
     }
 
     updateJobSpecificChildType = (newType, jobId) => {
         const job = this.pendingBulkIndexJobs.find(j => j.jobId === jobId);
         if (job) {
             job.childTransactionType = newType;
-            
+
             job.status = this.checkJobCompleteness(job) ? 'ready' : 'pending';
-            
-            this.renderBulkIndexingTable(); 
+
+            this.renderBulkIndexingTable();
         }
         this.checkFormCompleteness();
-        this.saveBulkJobsToFirestore(); 
+        this.saveBulkJobsToFirestore();
     }
 
     updateJobSpecificDeliveryDate = (newDate, jobId) => {
         const job = this.pendingBulkIndexJobs.find(j => j.jobId === jobId);
         if (job) {
             job.tebligDate = newDate;
-            
+
             job.status = this.checkJobCompleteness(job) ? 'ready' : 'pending';
-            
-            this.renderBulkIndexingTable(); 
+
+            this.renderBulkIndexingTable();
         }
         this.checkFormCompleteness();
-        this.saveBulkJobsToFirestore(); 
+        this.saveBulkJobsToFirestore();
     }
 
-    skipBulkJob = (e) => { 
+    deleteBulkJob = (e) => { // DEĞİŞTİ
         const jobId = e.target.dataset.jobId;
         const jobIndex = this.pendingBulkIndexJobs.findIndex(j => j.jobId === jobId);
         if (jobIndex > -1) {
-            const skippedJob = this.pendingBulkIndexJobs.splice(jobIndex, 1)[0];
-            showNotification(`İşlem atlandı: ${skippedJob.fileName}`, 'info');
-            bulkIndexingService.deleteJob(skippedJob.jobId);
+            const deletedJob = this.pendingBulkIndexJobs.splice(jobIndex, 1)[0];
+            showNotification(`İşlem listeden silindi: ${deletedJob.fileName}`, 'warning'); // DEĞİŞTİ
+            bulkIndexingService.deleteJob(deletedJob.jobId);
             this.renderBulkIndexingTable();
             this.checkFormCompleteness();
-            this.saveBulkJobsToFirestore(); // Değişiklikleri Firebase'e kaydet
+            this.saveBulkJobsToFirestore();
         }
     }
-    
-    retryBulkJob = (e) => { 
+
+    retryBulkJob = (e) => {
         const jobId = e.target.dataset.jobId;
         const job = this.pendingBulkIndexJobs.find(j => j.jobId === jobId);
         if (job) {
-            job.status = 'pending'; 
-            job.errorMessage = ''; 
-            job.isSelected = true; 
+            job.status = 'pending';
+            job.errorMessage = '';
+            job.isSelected = true;
             showNotification(`İşlem tekrar denenmek üzere işaretlendi: ${job.fileName}`, 'info');
             bulkIndexingService.updateJob(job.jobId, { status: job.status, errorMessage: null, isSelected: true });
             this.renderBulkIndexingTable();
             this.checkFormCompleteness();
-            this.saveBulkJobsToFirestore(); // Değişiklikleri Firebase'e kaydet
+            this.saveBulkJobsToFirestore();
         }
     }
-    
-    updateBulkJobsTebligDate = (e) => { 
+
+    updateBulkJobsTebligDate = (e) => {
         const newDate = e.target.value;
         this.pendingBulkIndexJobs.forEach(job => {
             if (job.status === 'pending' || job.status === 'ready' || job.status === 'error') {
@@ -801,6 +795,6 @@ export class BulkIndexingModule {
         });
         this.renderBulkIndexingTable();
         this.checkFormCompleteness();
-        this.saveBulkJobsToFirestore(); 
+        this.saveBulkJobsToFirestore();
     }
 }
