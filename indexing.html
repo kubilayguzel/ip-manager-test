@@ -333,7 +333,7 @@
                     document.querySelectorAll('.tabs-container .tab-btn').forEach(btn => { 
                         btn.addEventListener('click', (e) => {
                             const targetTab = e.currentTarget.dataset.tab;
-                            if (targetTab === 'bulk-indexing-pane') {
+                            if (targetTab === 'bulk-indexing-pane') { 
                                 e.preventDefault(); 
                                 window.location.href = 'bulk-indexing-page.html'; 
                             } else {
@@ -461,7 +461,6 @@
                             
                             let isTransactionCreated = false;
                             let newParentTransactionId = null; 
-                            let transactionIdToAssociateFiles = null; 
                             let transactionDesignationForFiles = ''; 
 
                             if (specificManualTransactionType !== '' || specificManualChildTransactionType !== '') {
@@ -644,7 +643,7 @@
                     // Bulk indeksleme sekmesini etkinleştir, diğerlerini gizle
                     document.querySelectorAll('.tabs-container .tab-btn').forEach(btn => {
                         btn.classList.remove('active');
-                        if (btn.dataset.tab !== 'bulk-indexing-pane') { // Sadece bulk-indexing-pane tab'ı hariç diğerlerini gizle
+                        if (btn.dataset.tab !== 'bulk-indexing-pane') { 
                             btn.style.display = 'none';
                         }
                     });
@@ -662,16 +661,16 @@
                                 bulkIndexingPlaceholder.innerHTML = await response.text();
                                 // bulk-indexing-logic.js modülünü yükle ve başlat
                                 const { BulkIndexingModule } = await import('./js/bulk-indexing-logic.js');
-                                new BulkIndexingModule(indexingModule.allRecords); // Ana modüldeki records'u aktar
+                                new BulkIndexingModule(indexingModule.allRecords); 
                                 
                                 // Yüklendiğinde toplu indeksleme tabını aktif hale getir
                                 const bulkTabBtn = document.querySelector('.tabs-container .tab-btn[data-tab="bulk-indexing-pane"]');
                                 if (bulkTabBtn) {
                                     bulkTabBtn.classList.add('active');
-                                    bulkTabBtn.style.display = 'block'; // Gizlenen linki görünür yap
+                                    bulkTabBtn.style.display = 'block'; 
                                 }
-                                indexingModule.activeTab = 'bulk-indexing-pane'; // Ana modülün aktif tabını güncelle
-                                indexingModule.checkFormCompleteness(); // Formun güncel durumunu kontrol et
+                                indexingModule.activeTab = 'bulk-indexing-pane'; 
+                                indexingModule.checkFormCompleteness(); 
                             } else {
                                 bulkIndexingPlaceholder.innerHTML = '<p class="text-danger">Toplu indeksleme içeriği yüklenemedi.</p>';
                                 showNotification('Toplu indeksleme içeriği yüklenemedi.', 'error');
