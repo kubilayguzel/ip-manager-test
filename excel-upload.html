@@ -240,7 +240,7 @@
 
     <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
     <script type="module">
-        import { authService, ipRecordsService, personService, auth } from './firebase-config.js';
+        import { authService, ipRecordsService, personsService, auth } from './firebase-config.js';
         import { showNotification } from './utils.js'; // utils.js eklendi
 
         let excelUploadModule; // Global scope
@@ -282,7 +282,7 @@
             }
             
             async loadAllPersons() {
-                const result = await personService.getPersons();
+                const result = await personsService.getPersons();
                 if (result.success) {
                     this.allPersons = result.data;
                 } else {
@@ -497,7 +497,7 @@
                                 if (!person) {
                                     // Yeni kişi oluştur (varsayılan tip: individual)
                                     const newPersonData = { name: name, type: 'individual', email: null, phone: null, address: null };
-                                    const addPersonResult = await personService.addPerson(newPersonData);
+                                    const addPersonResult = await personsService.addPerson(newPersonData);
                                     if (addPersonResult.success) {
                                         person = addPersonResult.data;
                                         this.allPersons.push(person); // Yeni kişiyi listeye ekle
