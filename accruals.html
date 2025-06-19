@@ -414,7 +414,7 @@
     </div>
 
     <script type="module">
-        import { authService, accrualService, taskService, ipRecordsService, personsService, auth, generateUUID } from './firebase-config.js';
+        import { authService, accrualService, taskService, ipRecordsService, personService, auth, generateUUID } from './firebase-config.js';
         import { showNotification, formatFileSize, readFileAsDataURL } from './utils.js'; // utils.js eklendi
 
         document.addEventListener('DOMContentLoaded', () => {
@@ -526,7 +526,7 @@
                             accrualService.getAccruals(),
                             taskService.getAllTasks(),
                             ipRecordsService.getRecords(),
-                            personsService.getPersons()
+                            personService.getPersons()
                         ]);
 
                         this.allAccruals = accrualsResult.success ? accrualsResult.data : [];
