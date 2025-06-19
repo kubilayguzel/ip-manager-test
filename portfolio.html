@@ -782,6 +782,11 @@
                 }
 
                 async showRecordDetailModal(recordId) {
+                
+                    if (!recordId || typeof recordId !== 'string') {
+                    console.warn("Geçersiz veya boş recordId ile modal açılmak istendi:", recordId);
+                    return;
+    }                    
                     const record = this.allRecords.find(r => r.id === recordId);
                     if (!record) {
                         showNotification('Kayıt bulunamadı.', 'error');
