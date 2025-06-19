@@ -104,7 +104,7 @@
 
         .portfolio-table th,
         .portfolio-table td {
-            padding: 15px;
+            padding: 15px; /* Satır aralığını koru */
             text-align: left;
             border-bottom: 1px solid #f0f0f0;
         }
@@ -117,41 +117,42 @@
             background-color: #f6f8fa;
         }
 
-/* Marka Görseli Stilleri */
-.trademark-image-thumbnail {
-    /* Başlangıçta küçük bir transform uygulayarak GPU ivmelenmesini tetikle */
-    transform: scale(1) translateZ(0); 
-    width: 50px; /* Küçük thumbnail boyutu */
-    height: auto;
-    border-radius: 5px;
-    vertical-align: middle;
-    /* transition: transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94), box-shadow 0.4s ease-out, border 0.4s ease-out; */ /* Önceki transition'ı kaldır */
-    transition: transform 0.5s cubic-bezier(0.23, 1, 0.32, 1), box-shadow 0.5s ease-out, border 0.5s ease-out; /* Daha yavaş ve farklı cubic-bezier */
-    cursor: pointer;
-    will-change: transform; /* Tarayıcıya transform'un değişeceğini bildir */
-    transform-origin: center center; /* Büyümenin tam merkezden olmasını sağlar */
-    backface-visibility: hidden; /* Titremeyi azaltmaya yardımcı olabilir */
-    image-rendering: -webkit-optimize-contrast; /* Webkit tarayıcılarında keskinliği optimize edebilir */
-}
+        /* Marka Görseli Stilleri */
+        .trademark-image-wrapper {
+            position: relative; /* İçindeki resmin absolute konumlanması için */
+            display: inline-block; /* Kendi içeriği kadar yer kapla */
+            overflow: visible; /* İçeriğin dışarı taşmasına izin ver */
+            height: 50px; /* Thumbnail yüksekliğini belirle */
+            width: 50px; /* Thumbnail genişliğini belirle */
+        }
 
-/* Hover efekti için önemli: tablo hücresine göre konumlandırma */
-.portfolio-table td {
-    position: relative; /* İçindeki resmin absolute konumlanması için */
-    overflow: visible; /* İçeriğin hücre dışına taşmasına izin ver */
-}
+        .trademark-image-thumbnail {
+            width: 100%; /* Wrapper'a göre yüzde yüz genişlik */
+            height: 100%; /* Wrapper'a göre yüzde yüz yükseklik */
+            object-fit: contain; /* Resmi kutuya sığdırırken oranları koru */
+            border-radius: 5px;
+            vertical-align: middle;
+            transition: transform 0.5s cubic-bezier(0.23, 1, 0.32, 1), box-shadow 0.5s ease-out, border 0.5s ease-out;
+            cursor: pointer;
+            will-change: transform;
+            transform-origin: center center;
+            backface-visibility: hidden;
+            image-rendering: -webkit-optimize-contrast;
+            transform: translateZ(0) scale(1); /* Başlangıçta da 3D transform ve scale uygula */
+            filter: blur(0); /* Bazı tarayıcılarda titremeyi azaltabilir */
+        }
 
-.trademark-image-thumbnail:hover {
-    /* translate3d ile 3D ivmelendirmeyi zorla */
-    transform: translate3d(-50%, -50%, 0) scale(4); 
-    position: absolute; /* Büyüdüğünde diğer elementlerin üzerine gelmesi için */
-    top: 50%;
-    left: 50%;
-    z-index: 100; /* Diğer tüm içeriklerin üstünde kalması için daha yüksek z-index */
-    box-shadow: 0px 5px 25px rgba(0,0,0,0.5); /* Daha belirgin gölge */
-    border: 3px solid #1e3c72; /* Daha belirgin kenarlık */
-    background-color: white; /* Resim büyüdüğünde arka planı temizle */
-    padding: 2px; /* Kenarlık ve resim arasında hafif boşluk */
-}
+        .trademark-image-wrapper:hover .trademark-image-thumbnail {
+            transform: translate3d(-50%, -50%, 0) scale(4); /* Hem büyüt hem ortala */
+            position: absolute; /* Büyüdüğünde diğer elementlerin üzerine gelmesi için */
+            top: 50%;
+            left: 50%;
+            z-index: 100; /* Diğer tüm içeriklerin üstünde kalması için daha yüksek z-index */
+            box-shadow: 0px 5px 25px rgba(0,0,0,0.5); /* Daha belirgin gölge */
+            border: 3px solid #1e3c72; /* Daha belirgin kenarlık */
+            background-color: white; /* Resim büyüdüğünde arka planı temizle */
+            padding: 2px; /* Kenarlık ve resim arasında hafif boşluk */
+        }
 
 
         .action-btn {
@@ -250,7 +251,9 @@
                     <button type="button" class="tab-button" data-type="patent">Patent</button>
                     <button type="button" class="tab-button" data-type="trademark">Marka</button>
                     <button type="button" class="tab-button" data-type="design">Tasarım</button>
-                    <button type="button" class="tab-button" data-type="objections">İtirazlar</button> <button type="button" class="tab-button" data-type="litigation">Davalar</button> </div>
+                    <button type="button" class="tab-button" data-type="objections">İtirazlar</button>
+                    <button type="button" class="tab-button" data-type="litigation">Davalar</button>
+                </div>
                 <div class="filter-row">
                     <input type="text" id="searchBar" class="search-input" placeholder="Başlık, numara, durum, hak sahibi ara...">
                     <button class="btn-add-record" onclick="window.location.href='data-entry.html'">
@@ -382,7 +385,7 @@
                     let headers = [
                         'Kayıt Tipi', 'Başlık'
                     ];
-                    if (currentTypeFilter === 'trademark') {
+                    if (currentTypeFilter === 'trademark') { // Sadece marka tabı aktifse Marka Görseli sütununu ekle
                         headers.push('Marka Görseli');
                     }
                     headers.push(
@@ -402,10 +405,10 @@
                             matchesType = true;
                         } else if (currentTypeFilter === 'objections') {
                             // Kayıtın transactions dizisinde "İtiraz" tipinde işlem var mı kontrol et
-                            matchesType = record.transactions && record.transactions.some(t => t.type === 'İtiraz');
+                            matchesType = record.transactions && record.transactions.some(t => t.type && t.type.includes('İtiraz'));
                         } else if (currentTypeFilter === 'litigation') {
                             // Kayıtın transactions dizisinde "Dava" tipinde işlem var mı kontrol et
-                            matchesType = record.transactions && record.transactions.some(t => t.type === 'Dava');
+                            matchesType = record.transactions && record.transactions.some(t => t.type && t.type.includes('Dava'));
                         } else {
                             matchesType = record.type === currentTypeFilter;
                         }
@@ -451,9 +454,14 @@
 
                         // Marka görseli sütunu için içerik
                         let trademarkImageCellHtml = ''; 
-                        if (currentTypeFilter === 'trademark') { // Sadece marka tabında görsel hücresi ekle
+                        if (currentTypeFilter === 'trademark') { // Sadece marka tabı aktifse Marka Görseli hücresi ekle
                             if (record.trademarkImage && record.trademarkImage.content) {
-                                trademarkImageCellHtml = `<td><img src="${record.trademarkImage.content}" alt="Marka Görseli" class="trademark-image-thumbnail"></td>`;
+                                trademarkImageCellHtml = `
+                                <td>
+                                    <div class="trademark-image-wrapper">
+                                        <img src="${record.trademarkImage.content}" alt="Marka Görseli" class="trademark-image-thumbnail">
+                                    </div>
+                                </td>`;
                             } else {
                                 trademarkImageCellHtml = `<td>-</td>`; // Görsel yoksa boş hücre
                             }
