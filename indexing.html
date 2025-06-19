@@ -535,6 +535,7 @@
                     this.allRecords = []; 
                     this.selectedRecordExisting = null; 
                     this.selectedRecordManual = null; 
+                    this.selectedRecordBulk = null; // Toplu indeksleme için seçili master kayıt filtresi kaldırıldı
                     this.uploadedFiles = new Map(); 
                     this.selectedTransactionId = null; 
                     this.activeTab = 'existing-transaction-pane';
@@ -681,15 +682,13 @@
                             const job = this.pendingBulkIndexJobs.find(j => j.jobId === jobId);
                             if (job) {
                                 job.isSelected = isChecked; 
-                                // Checkbox durumu değişince job'ın tamamlanma durumunu da kontrol etmeliyiz
-                                // Çünkü seçilen bir job'ın completeness'ı Kaydet butonunu etkiler.
                                 job.status = this.checkJobCompleteness(job) ? 'ready' : 'pending';
                             }
                         }
                     });
-                    this.renderBulkIndexingTable(); // UI'ı güncelle
+                    this.renderBulkIndexingTable(); 
                     this.checkFormCompleteness();
-                    this.saveBulkJobsToLocalStorage(); // LocalStorage'a kaydet
+                    this.saveBulkJobsToFirestore(); // Firestore'a kaydet
                 }
 
                 // Yeni: Tek bir işin seçilme durumu değiştiğinde
@@ -699,16 +698,14 @@
                     const job = this.pendingBulkIndexJobs.find(j => j.jobId === jobId);
                     if (job) {
                         job.isSelected = isChecked;
-                        // Job'ın durumu güncellenmeli (seçilirse veya seçimi kaldırılırsa)
                         job.status = this.checkJobCompleteness(job) ? 'ready' : 'pending';
                     }
-                    // Eğer hepsi seçiliyse "Tümünü Seç"i de işaretle/kaldır
                     const allChecked = Array.from(document.querySelectorAll('.bulk-job-checkbox')).every(cb => cb.checked || cb.disabled);
                     document.getElementById('selectAllBulkJobs').checked = allChecked;
                     
-                    this.renderBulkIndexingTable(); // UI'ı güncelle
+                    this.renderBulkIndexingTable(); 
                     this.checkFormCompleteness();
-                    this.saveBulkJobsToLocalStorage(); // LocalStorage'a kaydet
+                    this.saveBulkJobsToFirestore(); // Firestore'a kaydet
                 }
 
                 populateChildTransactionTypeSelect = () => {
@@ -746,8 +743,6 @@
                 
                 populateBulkChildTransactionTypeSelect = () => {
                     // Bu fonksiyon artık ortak select'i doldurmuyor, tablo içindeki her select için çağrılacak.
-                    // Tablo dışındaki select kaldırıldığı için fonksiyon ismi değişti ve iç mantığı kaldırıldı.
-                    // Ancak şimdilik tanımı bırakıyoruz, bir sonraki adımda gerekmeyecek.
                 }
                 
                 activateTab = (tabName) => {
@@ -762,14 +757,10 @@
                 }
                 
                 setRequiredFieldsForActiveTab = () => {
-                    // Kayıt arama inputlarını ve ilgili alanları getir
                     const recordSearchInputExisting = document.getElementById('recordSearchInputExisting');
-                    const selectedRecordDisplayExisting = document.getElementById('selectedRecordDisplayExisting'); // Readonly
+                    const selectedRecordDisplayExisting = document.getElementById('selectedRecordDisplayExisting'); 
                     const recordSearchInputManual = document.getElementById('recordSearchInputManual');
-                    const selectedRecordDisplayManual = document.getElementById('selectedRecordDisplayManual'); // Readonly
-                    // Toplu indekslemede bu filtre alanları kaldırıldığı için buradan da kaldırıldı.
-                    // const recordSearchInputBulk = document.getElementById('recordSearchInputBulk'); 
-                    // const selectedRecordDisplayBulk = document.getElementById('selectedRecordDisplayBulk'); 
+                    const selectedRecordDisplayManual = document.getElementById('selectedRecordDisplayManual'); 
 
                     const specificChildTransactionType = document.getElementById('specificChildTransactionType');
                     const filesExisting = document.getElementById('filesExisting');
@@ -779,18 +770,15 @@
                     const filesManual = document.getElementById('filesManual');
 
                     const bulkDeliveryDate = document.getElementById('bulkDeliveryDate'); 
-                    // const bulkChildTransactionType = document.getElementById('bulkChildTransactionType'); // Kaldırıldı
                     const bulkFiles = document.getElementById('bulkFiles'); 
 
                     // Tüm inputlardan 'required' özelliğini kaldır
                     [
                         recordSearchInputExisting, selectedRecordDisplayExisting,
                         recordSearchInputManual, selectedRecordDisplayManual,
-                        // recordSearchInputBulk, selectedRecordDisplayBulk, // Kaldırıldı
                         specificChildTransactionType, filesExisting, 
                         specificManualTransactionType, specificManualChildTransactionType, filesManual,
-                        bulkDeliveryDate, // bulkChildTransactionType, // Kaldırıldı
-                        bulkFiles 
+                        bulkDeliveryDate, bulkFiles 
                     ].forEach(el => {
                         if (el) {
                             el.removeAttribute('required');
@@ -804,16 +792,14 @@
                         if (filesExisting) filesExisting.setAttribute('required', 'required');
                     } else if (this.activeTab === 'manual-indexing-pane') {
                         if (recordSearchInputManual) recordSearchInputManual.setAttribute('required', 'required');
-                        // Manuel tabda zorunluluklar checkFormCompleteness tarafından yönetiliyor.
                     } else if (this.activeTab === 'bulk-indexing-pane') { 
                         if (bulkDeliveryDate) bulkDeliveryDate.setAttribute('required', 'required');
-                        // if (bulkChildTransactionType) bulkChildTransactionType.setAttribute('required', 'required'); // Kaldırıldı
                         if (bulkFiles) bulkFiles.setAttribute('required', 'required');
+                        // Tablodaki her satırın zorunlulukları JS tarafından kontrol ediliyor.
                     }
                 }
 
 
-                // searchRecords fonksiyonu artık tab'a özel inputları yönetecek
                 searchRecords = (query, tabContext) => { 
                     const searchResultsContainerId = tabContext === 'existing' ? 'searchResultsContainerExisting' : 
                                                     tabContext === 'manual' ? 'searchResultsContainerManual' : 'searchResultsContainerBulk';
@@ -841,7 +827,7 @@
                         filtered.forEach(record => {
                             const item = document.createElement('div');
                             item.className = 'record-search-item';
-                            item.dataset.id = record.id; // Record ID'yi dataset'e ekle
+                            item.dataset.id = record.id; 
                             item.innerHTML = `<div class="record-info"><div>${record.title}</div><small>${record.applicationNumber}</small></div>`;
                             item.addEventListener('click', (e) => {
                                 e.preventDefault(); 
@@ -853,7 +839,6 @@
                     container.style.display = 'block';
                 }
 
-                // Yeni: Tab bazlı kayıt seçimi
                 selectRecordBasedOnTab = (recordId, tabContext) => {
                     const record = this.allRecords.find(r => r.id === recordId);
                     if (!record) return;
@@ -878,9 +863,8 @@
                         if(specificManualTransactionParentId) { 
                             this.populateParentTransactionSelectForManual(record.transactions);
                         }
-                    } else if (tabContext === 'bulk') { // Toplu indeksleme tabında master kayıt filtresi seçildiğinde
-                        // Bu alanlar artık HTML'den kaldırıldı, buraya artık kayıt seçimi gelmeyecek
-                        // this.selectedRecordBulk = record; // Sadece filtre amaçlı kullanılır, işlerin kendisini etkilemez
+                    } else if (tabContext === 'bulk') { // Bu bağlam artık kullanılmıyor, kaldırılan alanlar sebebiyle
+                        // this.selectedRecordBulk = record; 
                     }
                     this.checkFormCompleteness();
                 }
@@ -1413,10 +1397,11 @@
                     document.getElementById('manualChildTransactionDeliveryDate').value = '';
 
                     // Toplu indeksleme tabı sıfırlama
-                    // this.selectedRecordBulk = null; // Kaldırılan element
+                    this.selectedRecordBulk = null; 
                     this.pendingBulkIndexJobs = []; // Bekleyen işleri temizle (UI tarafında)
                     this.indexedBulkJobs = []; // İndekslenen işleri de temizle (UI tarafında)
                     document.getElementById('bulkDeliveryDate').value = '';
+                    // document.getElementById('bulkChildTransactionType').value = ''; // Ortak Alt İşlem Türü inputu kaldırıldığı için
                     document.getElementById('bulkFilesInfo').textContent = 'Henüz PDF dosyası seçilmedi.';
                     document.getElementById('bulkIndexingTableContainer').style.display = 'none';
                     document.getElementById('bulkIndexingTable').querySelector('tbody').innerHTML = '';
@@ -1424,7 +1409,6 @@
                     document.getElementById('indexedBulkTable').querySelector('tbody').innerHTML = ''; 
                     document.getElementById('indexedBulkTableNoJobs').style.display = 'block'; 
 
-                    // Firestore'daki beklemedeki tüm işleri de sil (tam sıfırlama için)
                     this.clearAllPendingBulkJobsInFirestore(); // Yeni: Firestore'dan silme
 
                     this.setRequiredFieldsForActiveTab();
@@ -1445,7 +1429,7 @@
                                 }
                             });
                             await batch.commit();
-                            showNotification('Bekleyen tüm toplu işler Firestore\'dan temizlendi.', 'info');
+                            // showNotification('Bekleyen tüm toplu işler Firestore\'dan temizlendi.', 'info'); // Çok fazla bildirim olmaması için kapatıldı
                         }
                     } catch (error) {
                         console.error("Firestore'daki beklemedeki işler silinirken hata:", error);
@@ -1487,6 +1471,7 @@
                             allExistingFileIdentifiers.add(`${file.fileName}_${file.fileSize}`);
                         });
                     });
+                    // Pending listesindeki mevcut dosyaları da kontrol setine ekle
                     this.pendingBulkIndexJobs.forEach(job => {
                          allExistingFileIdentifiers.add(`${job.fileName}_${job.fileObject.size}`);
                     });
@@ -1543,10 +1528,10 @@
                             tebligDate: commonTebligDate, 
                             status: status, 
                             errorMessage: '',
-                            isSelected: status === 'ready', // Otomatik eşleşirse varsayılan olarak seçili gelsin
-                            uploadedAt: new Date().toISOString(), // Oluşturulma tarihi
-                            userId: this.currentUser.uid, // Kullanıcı ID
-                            userEmail: this.currentUser.email // Kullanıcı Email
+                            isSelected: status === 'ready', 
+                            uploadedAt: new Date().toISOString(), 
+                            userId: this.currentUser.uid, 
+                            userEmail: this.currentUser.email 
                         };
                         
                         // İşi Firestore'a kaydet
@@ -1560,7 +1545,7 @@
                     }
                     this.renderBulkIndexingTable();
                     this.checkFormCompleteness();
-                    // this.saveBulkJobsToLocalStorage(); // Firestore'a geçtiğimiz için localStorage'a kaydetmeye gerek kalmadı
+                    this.saveBulkJobsToFirestore(); // Firestore'a kaydet
                 }
 
                 // Yeni: Dosya adından başvuru numarasını çek
@@ -1578,7 +1563,7 @@
                     const tableBody = document.getElementById('bulkIndexingTable').querySelector('tbody');
                     const tableContainer = document.getElementById('bulkIndexingTableContainer');
                     const noJobsMessage = document.getElementById('bulkTableNoJobs');
-                    tableBody.innerHTML = ''; // Bekleyenler tablosunu temizle
+                    tableBody.innerHTML = ''; 
 
                     if (this.pendingBulkIndexJobs.length === 0) {
                         tableContainer.style.display = 'none';
@@ -1588,7 +1573,6 @@
                         noJobsMessage.style.display = 'none';
                     }
 
-                    // Tümünü Seç checkbox'ının durumunu güncelle
                     const selectAllBulkJobsCheckbox = document.getElementById('selectAllBulkJobs');
                     if (selectAllBulkJobsCheckbox) {
                         const allSelectableJobs = this.pendingBulkIndexJobs.filter(job => job.status !== 'processing' && job.status !== 'success');
@@ -1602,7 +1586,6 @@
                         const row = tableBody.insertRow();
                         row.dataset.jobId = job.jobId;
 
-                        // Her bir iş için parent select box'ını doldurmak için fonksiyon
                         const populateParentSelectHtml = (jobId, currentRecordId, currentParentId) => {
                             const currentRecord = this.allRecords.find(r => r.id === currentRecordId);
                             if (!currentRecord || !currentRecord.transactions) return `<select disabled><option value="">Parent Seçin...</option></select>`;
@@ -1627,7 +1610,6 @@
                             `;
                         };
 
-                        // Her bir iş için alt işlem türü select box'ını doldurmak için fonksiyon
                         const populateChildTypeSelectHtml = (jobId, currentChildType) => {
                             let optionsHtml = '<option value="" disabled selected>Alt işlem türü seçin...</option>';
                             CHILD_TRANSACTION_TYPES.forEach(type => {
@@ -1641,22 +1623,22 @@
                             `;
                         };
 
-                        const isJobSelectable = job.status !== 'processing' && job.status !== 'success'; // İşlemde veya başarılı olmayanlar seçilebilir
+                        const isJobSelectable = job.status !== 'processing' && job.status !== 'success'; 
 
                         row.innerHTML = `
                             <td><input type="checkbox" class="bulk-job-checkbox" data-job-id="${job.jobId}" ${job.isSelected ? 'checked' : ''} ${!isJobSelectable ? 'disabled' : ''}></td>
-                            <td><a href="${job.fileObject ? URL.createObjectURL(job.fileObject) : '#'}" target="_blank" title="PDF Görüntüle">${job.fileName}</a></td> <td>${job.extractedAppNumber || '-'}</td>
+                            <td><a href="${job.fileObject ? URL.createObjectURL(job.fileObject) : '#'}" target="_blank" title="PDF Görüntüle">${job.fileName}</a></td> 
+                            <td>${job.extractedAppNumber || '-'}</td>
                             <td class="matched-record-cell">
                                 <span class="matched-record-display-text">${job.matchedRecordDisplay}</span>
                                 ${job.status === 'pending' || job.status === 'error' || !job.matchedRecordId ? 
-                                    // Eğer eşleşme yoksa veya hata varsa manuel arama inputu göster
                                     `<div class="search-wrapper" style="margin-top: 5px;">
                                         <input type="text" class="form-input bulk-record-manual-search-input" 
                                             data-job-id="${job.jobId}" 
                                             value="" 
                                             placeholder="Manuel kayıt ara..."
-                                            ${!isJobSelectable ? 'disabled' : ''}>
-                                        <div class="search-results-container bulk-search-results-container" data-job-id="${job.jobId}"></div>
+                                            <span class="math-inline">\{\!isJobSelectable ? 'disabled' \: ''\}\>
+<div class\="search\-results\-container bulk\-search\-results\-container" data\-job\-id\="</span>{job.jobId}"></div>
                                     </div>` : ''}
                             </td>
                             <td>${job.matchedRecordId ? populateParentSelectHtml(job.jobId, job.matchedRecordId, job.selectedParentTransactionId) : '<select disabled><option value="">Önce Kayıt Seçin</option></select>'}</td> <td>${populateChildTypeSelectHtml(job.jobId, job.childTransactionType)}</td> <td><input type="date" class="form-input bulk-job-delivery-date" data-job-id="${job.jobId}" value="${job.tebligDate || ''}" ${!isJobSelectable ? 'disabled' : ''}></td> <td><span class="status-text ${job.status}">${job.status === 'pending' ? 'Beklemede' : job.status === 'ready' ? 'Hazır' : job.status === 'processing' ? 'İşleniyor' : 'Başarılı' : 'Hata'}</span>
@@ -1719,6 +1701,9 @@
                     });
 
                     this.checkFormCompleteness();
+
+                    // İndekslenenler tablosunu da render et
+                    this.renderIndexedBulkTable();
                 }
 
                 // Yeni: İndekslenenler tablosunu render et
@@ -1805,6 +1790,7 @@
                         this.renderBulkIndexingTable(); 
                     }
                     this.checkFormCompleteness();
+                    this.saveBulkJobsToFirestore(); // Firestore'a kaydet
                 }
 
                 // Yeni: Tablo içindeki parent seçimi
@@ -1825,6 +1811,7 @@
                         this.renderBulkIndexingTable(); 
                     }
                     this.checkFormCompleteness();
+                    this.saveBulkJobsToFirestore(); // Firestore'a kaydet
                 }
 
                 // Yeni: Tablo içindeki işe özel alt işlem türünü güncelleme
@@ -1837,6 +1824,7 @@
                         
                         this.renderBulkIndexingTable(); 
                         this.checkFormCompleteness();
+                        this.saveBulkJobsToFirestore(); // Firestore'a kaydet
                     }
                 }
 
@@ -1850,6 +1838,7 @@
                         
                         this.renderBulkIndexingTable(); 
                         this.checkFormCompleteness();
+                        this.saveBulkJobsToFirestore(); // Firestore'a kaydet
                     }
                 }
 
@@ -1864,7 +1853,7 @@
                         bulkIndexingService.deleteJob(skippedJob.jobId);
                         this.renderBulkIndexingTable();
                         this.checkFormCompleteness();
-                        // this.saveBulkJobsToLocalStorage(); // Firestore'a geçtiğimiz için localStorage'a kaydetmeye gerek kalmadı
+                        // this.saveBulkJobsToFirestore(); // Firestore'a geçtiğimiz için localStorage'a kaydetmeye gerek kalmadı
                     }
                 }
                 
@@ -1881,7 +1870,7 @@
                         bulkIndexingService.updateJob(job.jobId, { status: job.status, errorMessage: null, isSelected: true });
                         this.renderBulkIndexingTable();
                         this.checkFormCompleteness();
-                        // this.saveBulkJobsToLocalStorage(); // Firestore'a geçtiğimiz için localStorage'a kaydetmeye gerek kalmadı
+                        // this.saveBulkJobsToFirestore(); // Firestore'a geçtiğimiz için localStorage'a kaydetmeye gerek kalmadı
                     }
                 }
                 
@@ -1896,7 +1885,7 @@
                     });
                     this.renderBulkIndexingTable();
                     this.checkFormCompleteness();
-                    // this.saveBulkJobsToLocalStorage(); // Firestore'a geçtiğimiz için localStorage'a kaydetmeye gerek kalmadı
+                    this.saveBulkJobsToFirestore(); // Firestore'a kaydet
                 }
             }
             
