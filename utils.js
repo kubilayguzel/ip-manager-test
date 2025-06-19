@@ -73,6 +73,7 @@ export const TASK_STATUSES = [
 
 
 // Excel dışa aktarma için (ExcelJS kütüphanesini kullanır)
+// Excel dışa aktarma için (ExcelJS kütüphanesini kullanır)
 export async function exportTableToExcel(tableId, filename = 'rapor') {
     const table = document.getElementById(tableId);
     if (!table) {
@@ -84,27 +85,34 @@ export async function exportTableToExcel(tableId, filename = 'rapor') {
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet('Veriler');
 
-    // HTML içeriğini kopyalayalım ve gereksiz butonları/filtreleri temizleyelim
-    // Ancak bu klon üzerinde işlem yapmak yerine, orijinal tablodan başlıkları ve verileri alalım.
-    // ExcelJS doğrudan DOM elementlerini işlemez, datayı alırız.
-
     const headerRowHtml = table.querySelector('thead tr#portfolioTableHeaderRow');
     let headersForExcel = [];
-    let imageColHtmlIndex = -1; // HTML'deki "Marka Görseli" sütununun indeksi
-    let actualImageColExcelIndex = -1; // Excel'deki "Marka Görseli" sütununun nihai indeksi
-
-    // Başlıkları topla ve Excel'e eklenecek sırayı belirle
+    let imageColHtmlIndex = -1; // HTML'deki "Marka Görseli" sütununun orijinal indeksi
+    
+    // Excel'e eklenecek nihai sütunların anahtarlarını ve başlıklarını belirle
+    // Bu, headersForExcel dizisinin ve veri işleme döngüsünün doğru eşleşmesini sağlar.
+    const columnsToExport = []; // Excel'e gidecek sütunların key'leri
     if (headerRowHtml) {
         Array.from(headerRowHtml.children).forEach((th, index) => {
             if (th.textContent.includes('İşlemler')) {
-                // İşlemler sütununu Excel'e dahil etmiyoruz
-                return; 
-            }
-            if (th.textContent.includes('Marka Görseli')) {
-                imageColHtmlIndex = index; // HTML'deki indeksini kaydet
-                actualImageColExcelIndex = headersForExcel.length + 1; // Excel'deki 1 tabanlı indeksi
+                // İşlemler sütununu dışarıda bırak
+                return;
             }
             headersForExcel.push(th.textContent.trim());
+            // Dinamik olarak oluşturulan TH'lerin sırasını takip ederek ilgili col.key'i bulalım
+            // Bu biraz varsayıma dayalı, daha sağlamı colDefinitions'ı burada da kullanmaktır.
+            // Şimdilik, basitten gidecek olursak:
+            if (th.textContent.includes('Kayıt Tipi')) columnsToExport.push('type');
+            else if (th.textContent.includes('Başlık')) columnsToExport.push('title');
+            else if (th.textContent.includes('Marka Görseli')) {
+                columnsToExport.push('trademarkImage');
+                imageColHtmlIndex = columnsToExport.length - 1; // imageColHtmlIndex artık columnsToExport'taki 0-tabanlı indeksi
+            }
+            else if (th.textContent.includes('Başvuru Numarası')) columnsToExport.push('applicationNumber');
+            else if (th.textContent.includes('Başvuru Tarihi')) columnsToExport.push('applicationDate');
+            else if (th.textContent.includes('Durum')) columnsToExport.push('status');
+            else if (th.textContent.includes('Hak Sahipleri')) columnsToExport.push('owners');
+            // ... diğer kolonları buraya ekleyin
         });
     }
     worksheet.addRow(headersForExcel); // Başlık satırını Excel'e ekle
@@ -132,38 +140,37 @@ export async function exportTableToExcel(tableId, filename = 'rapor') {
         }
 
         const rowData = [];
-        const cells = Array.from(rowHtml.children);
+        const cells = Array.from(rowHtml.children); // HTML'deki her bir satırın hücreleri
         
-        let currentExcelColOffset = 0; // İşlemler sütunu nedeniyle kaymayı düzeltmek için
+        let currentProcessedCellIndex = 0; // HTML cells dizisindeki şu anki işlem gören hücre indeksi
+        let currentExcelColInRowData = 0; // rowData dizisindeki şu anki elemanın Excel'deki sütun indeksi (0-tabanlı)
 
-        cells.forEach((cell, colIndex) => {
-            // İşlemler sütununu hariç tut
-            if (headerRowHtml && headerRowHtml.children[colIndex] && headerRowHtml.children[colIndex].textContent.includes('İşlemler')) {
-                currentExcelColOffset++; // Bir sütun atladık
-                return; 
+        columnsToExport.forEach(keyToExport => {
+            const cell = cells[currentProcessedCellIndex]; // İlgili HTML hücresi
+
+            if (!cell) { // Eğer HTML'de bu sütun yoksa (örn: "Marka Görseli" tabı dışında)
+                rowData.push(''); // Boş bir hücre ekle
+                return;
             }
 
-            if (colIndex === imageColHtmlIndex) { // Marka Görseli sütunu
+            if (keyToExport === 'trademarkImage') { // Marka Görseli sütunu
                 const imgElement = cell.querySelector('img.trademark-image-thumbnail');
                 if (imgElement && imgElement.src) {
-                    // Resim verisini al ve Promise dizisine ekle
                     imagePromises.push(new Promise((resolve) => {
                         const img = new Image();
                         img.onload = () => {
                             const canvas = document.createElement('canvas');
-                            // Excel'e eklenecek resim boyutu (thumbnail boyutuyla aynı tutabiliriz)
                             const imgWidth = 50; 
                             const imgHeight = 50;
                             canvas.width = imgWidth;
                             canvas.height = imgHeight;
                             const ctx = canvas.getContext('2d');
-                            ctx.drawImage(img, 0, 0, img.width, img.height, 0, 0, imgWidth, imgHeight); // Resmi ölçekleyerek çiz
-                            const base64Data = canvas.toDataURL('image/png').split(';base64,')[1]; // PNG formatına dönüştür
+                            ctx.drawImage(img, 0, 0, img.width, img.height, 0, 0, imgWidth, imgHeight); 
+                            const base64Data = canvas.toDataURL('image/png').split(';base64,')[1]; 
                             resolve({ 
                                 base64: base64Data, 
-                                excelCol: colIndex - currentExcelColOffset, // Excel'deki 0 tabanlı sütun indeksi
-                                excelRow: rowIndex, // Excel'deki 0 tabanlı satır indeksi (başlıklar hariç)
-                                originalSrc: imgElement.src // Hata ayıklama için orijinal kaynak
+                                excelCol: currentExcelColInRowData, // Excel'deki 0 tabanlı sütun indeksi (rowData'daki konumu)
+                                excelRow: rowIndex // Excel'deki 0 tabanlı satır indeksi (tbody içindeki sırası)
                             }); 
                         };
                         img.onerror = () => {
@@ -179,19 +186,13 @@ export async function exportTableToExcel(tableId, filename = 'rapor') {
             } else {
                 rowData.push(cell.textContent.trim());
             }
+            currentProcessedCellIndex++; // Bir sonraki HTML hücresine geç
+            currentExcelColInRowData++; // Bir sonraki Excel sütununa geç (rowData içinde)
         });
         worksheet.addRow(rowData);
     });
 
     // Resimleri Excel'e ekle
-    // Not: ExcelJS addImage koordinatları 0-indexed'dir.
-    // tl: { col, row }, br: { col, row } veya ext: { width, height }
-    // worksheet.addRow() sonrası, satır indexleri 1'den başlar (header satırı 1 olduğu için)
-    // imgData.excelRow -> HTML'deki 0-indexed satır (tbody içinde)
-    // worksheet'e eklendiğinde Excel'deki satır numarası (rowIndex + 2) olur (1 for headers, 1 for 0-indexed to 1-indexed)
-    // imgData.excelCol -> HTML'deki 0-indexed sütun (cells.forEach içinde hesaplanır)
-    // worksheet'e eklendiğinde Excel'deki sütun numarası (colIndex + 1) olur (0-indexed to 1-indexed)
-
     const loadedImages = await Promise.all(imagePromises);
     loadedImages.forEach(imgData => {
         if (imgData && imgData.base64) {
@@ -200,17 +201,18 @@ export async function exportTableToExcel(tableId, filename = 'rapor') {
                 extension: 'png',
             });
 
-            // Resimlerin yerleşeceği hücrenin tam konumunu hesapla
-            const rowNumber = imgData.excelRow + 2; // Excel satırı (1 tabanlı)
-            const colNumber = imgData.excelCol + 1; // Excel sütunu (1 tabanlı)
+            // ExcelJS addImage koordinatları 0-indexed'dir.
+            // resimlerin yerleşeceği satır = HTML'deki satır indeksi + 1 (Excel'deki başlık) + 1 (0-indexed'den 1-indexed'e)
+            // resimlerin yerleşeceği sütun = rowData'daki konumu + 1 (0-indexed'den 1-indexed'e)
+            const excelRowIndex = imgData.excelRow + 1; // Excel'deki 0-indexed satır (başlık dahil)
+            const excelColIndex = imgData.excelCol; // Excel'deki 0-indexed sütun (zaten doğru)
             
-            // Hücrenin boyutuna sığması için offset ayarlayabiliriz
             worksheet.addImage(imageId, {
-                tl: { col: colNumber - 1, row: rowNumber - 1 }, // Top-left corner (0-indexed for addImage)
+                tl: { col: excelColIndex, row: excelRowIndex }, // Top-left corner (0-indexed for addImage)
                 ext: { width: 50, height: 50 } // Resim boyutu
             });
             // Hücre yüksekliğini ayarlayalım ki resim sığsın
-            worksheet.getRow(rowNumber).height = 40; // Hücre yüksekliği piksel cinsinden, resimden biraz daha büyük
+            worksheet.getRow(excelRowIndex + 1).height = 40; // excelRowIndex 0-indexed olduğu için +1 (Excel'deki 1-tabanlı satır numarası)
         }
     });
 
@@ -222,8 +224,9 @@ export async function exportTableToExcel(tableId, filename = 'rapor') {
             maxLength = Math.max(maxLength, columnText.length);
         });
         // Minimum genişlik 10 karakter, resim sütunu için daha fazla boşluk
-        const colKey = headersForExcel[column.number - 1]; // Excel sütun numarasından başlık anahtarını bul
-        if (colKey && colKey.includes('Marka Görseli')) { // Eğer bu marka görseli sütunu ise
+        // col.number Excel'deki 1-tabanlı sütun numarasıdır
+        const currentHeaderLabel = headersForExcel[column.number - 1]; // Excel'deki başlığı al
+        if (currentHeaderLabel && currentHeaderLabel.includes('Marka Görseli')) { 
              column.width = 10; // Daha küçük sabit genişlik
         } else {
              column.width = Math.max(maxLength + 2, 10); 
@@ -236,8 +239,6 @@ export async function exportTableToExcel(tableId, filename = 'rapor') {
     
     showNotification(`Tablo başarıyla '${filename}.xlsx' olarak dışa aktarıldı!`, 'success');
 }
-
-
 // PDF dışa aktarma için (html2pdf.js kütüphanesini varsayar)
 export function exportTableToPdf(tableId, filename = 'rapor') {
     const table = document.getElementById(tableId);
