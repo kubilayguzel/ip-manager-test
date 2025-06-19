@@ -173,7 +173,7 @@
             }
     
             async loadInitialData() {
-                const personsResult = await personsService.getPersons();
+                const personsResult = await personService.getPersons();
                 if (personsResult.success) {
                     this.allPersons = personsResult.data;
                 } else {
