@@ -14,7 +14,7 @@
         /* === ANA SAYFA YAPISI === */
         .page-wrapper { flex-grow: 1; display: flex; flex-direction: column; height: 100vh; overflow-y: auto; background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); }
         .main-container { width: 100%; max-width: 1400px; margin: 30px auto; padding: 0 30px; }
-                
+        
         /* === DASHBOARD SAYFASINA ÖZEL STİLLER === */
         .welcome-section { background: rgba(255, 255, 255, 0.95); padding: 30px; border-radius: 20px; margin-bottom: 30px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1); }
         .welcome-title { font-size: 2em; color: #1e3c72; margin-bottom: 10px; }
@@ -146,9 +146,6 @@
 <body>
     <div id="layout-placeholder"></div>
     <div class="page-wrapper">
-        <header class="top-header">
-            </header>
-
         <main class="main-container">
             <section class="welcome-section">
                 <h1 class="welcome-title">Hoş Geldiniz! 👋</h1>
@@ -272,200 +269,203 @@
                         list.innerHTML = '<p>Henüz aktivite yok.</p>';
                         return;
                     }
+                    // BURADAKİ template literal düzeltildi
+                    const icons = {patent:'📋',trademark:'🏷️',copyright:'©',design:'🎨'}; 
                     recent.forEach(record => {
                         const item = document.createElement('div');
                         item.className = 'activity-item';
-                        item.innerHTML = `<div class="activity-icon ${record.type}">${{patent:'📋',trademark:'🏷️',copyright:'©',design:'🎨'}[record.type]}</div>
-                                    <div class="activity-content">
-                                        <div class="activity-title">${record.title}</div>
-                                        <div class="activity-time">${new Date(record.createdAt).toLocaleDateString('tr-TR')}</div>
-                                    </div>`;
-                    list.appendChild(item);
-                });
-            }
-            
-            renderApplicationTrendChart(records = []) {
-                const ctx = document.getElementById('trendChart').getContext('2d');
-                const monthlyData = {};
-                records.forEach(record => {
-                    if (record.applicationDate) {
-                        const month = new Date(record.applicationDate).toISOString().slice(0, 7);
-                        if(!monthlyData[month]) monthlyData[month] = 0;
-                        monthlyData[month]++;
-                    }
-                });
-
-                const sortedMonths = Object.keys(monthlyData).sort();
-                if(this.applicationTrendChart) this.applicationTrendChart.destroy();
-                this.applicationTrendChart = new Chart(ctx, {
-                    type: 'line',
-                    data: {
-                        labels: sortedMonths,
-                        datasets: [{
-                            label: 'Aylık Başvuru Sayısı',
-                            data: sortedMonths.map(month => monthlyData[month]),
-                            borderColor: '#1e3c72',
-                            backgroundColor: 'rgba(30, 60, 114, 0.1)',
-                            fill: true,
-                            tension: 0.4
-                        }]
-                    },
-                    options: { responsive: true, maintainAspectRatio: false }
-                });
-            }
-
-            processFinancialData(accruals = []) {
-                const today = new Date();
-                const eightWeeksAgo = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 56);
-
-                let totalIncomeAmount = 0;
-                let totalUnpaidAmount = 0;
-
-                const weeklyIncome = {};
-                const weeklyUnpaid = {};
-
-                const incomeByClient = {};
-                const unpaidByClient = {};
-
-                accruals.forEach(accrual => {
-                    const serviceInvoicePartyName = accrual.serviceInvoiceParty?.name || 'Bilinmeyen Taraf';
-                    const totalAmount = accrual.totalAmount || 0;
-                    
-                    if (accrual.status === 'paid') {
-                        const paymentDate = accrual.paymentDate ? new Date(accrual.paymentDate) : new Date(accrual.updatedAt);
-                        if (paymentDate >= eightWeeksAgo) {
-                            totalIncomeAmount += totalAmount;
-                            const weekKey = this.getWeekNumber(paymentDate);
-                            weeklyIncome[weekKey] = (weeklyIncome[weekKey] || 0) + totalAmount;
-
-                            incomeByClient[serviceInvoicePartyName] = (incomeByClient[serviceInvoicePartyName] || 0) + totalAmount;
-                        }
-                    } else if (accrual.status === 'unpaid') {
-                        const createdAt = new Date(accrual.createdAt);
-                        if (createdAt >= eightWeeksAgo) {
-                            totalUnpaidAmount += totalAmount;
-                            const weekKey = this.getWeekNumber(createdAt);
-                            weeklyUnpaid[weekKey] = (weeklyUnpaid[weekKey] || 0) + totalAmount;
-
-                            unpaidByClient[serviceInvoicePartyName] = (unpaidByClient[serviceInvoicePartyName] || 0) + totalAmount;
-                        }
-                    }
-                });
-
-                document.getElementById('totalIncome').textContent = new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' }).format(totalIncomeAmount);
-                document.getElementById('totalUnpaid').textContent = new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' }).format(totalUnpaidAmount);
-
-                this.renderFinancialTrendCharts(weeklyIncome, weeklyUnpaid, eightWeeksAgo);
-                this.renderTopClients(incomeByClient, 'topIncomeClients');
-                this.renderTopClients(unpaidByClient, 'topUnpaidClients');
-            }
-
-            getWeekNumber(d) {
-                d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-                d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
-                const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-                const weekNo = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
-                return `${d.getUTCFullYear()}-${String(weekNo).padStart(2, '0')}`;
-            }
-
-            renderFinancialTrendCharts(weeklyIncome, weeklyUnpaid, startDate) {
-                const incomeCtx = document.getElementById('incomeTrendChart').getContext('2d');
-                const unpaidCtx = document.getElementById('unpaidTrendChart').getContext('2d');
-
-                const labels = [];
-                let currentWeek = new Date(startDate);
-                for (let i = 0; i < 8; i++) {
-                    labels.push(this.getWeekNumber(currentWeek));
-                    currentWeek.setDate(currentWeek.getDate() + 7);
+                        item.innerHTML = `<div class="activity-icon ${record.type}">${icons[record.type]}</div>
+                                  <div class="activity-content">
+                                    <div class="activity-title">${record.title}</div>
+                                    <div class="activity-time">${new Date(record.createdAt).toLocaleDateString('tr-TR')}</div>
+                                  </div>`;
+                        list.appendChild(item); // item'ı listeye eklemeyi unutmayın!
+                    });
                 }
-                labels.sort();
+        
+                renderApplicationTrendChart(records = []) {
+                    const ctx = document.getElementById('trendChart').getContext('2d');
+                    const monthlyData = {};
+                    records.forEach(record => {
+                        if (record.applicationDate) {
+                            const month = new Date(record.applicationDate).toISOString().slice(0, 7);
+                            if(!monthlyData[month]) monthlyData[month] = 0;
+                            monthlyData[month]++;
+                        }
+                    });
 
-                const incomeData = labels.map(label => weeklyIncome[label] || 0);
-                const unpaidData = labels.map(label => weeklyUnpaid[label] || 0);
-
-                if (this.incomeTrendChart) this.incomeTrendChart.destroy();
-                if (this.unpaidTrendChart) this.unpaidTrendChart.destroy();
-
-                this.incomeTrendChart = new Chart(incomeCtx, {
-                    type: 'bar',
-                    data: {
-                        labels: labels,
-                        datasets: [{
-                            label: 'Haftalık Tahsilat',
-                            data: incomeData,
-                            backgroundColor: '#4ecdc4',
-                            borderColor: '#218838',
-                            borderWidth: 1
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        scales: {
-                            y: { beginAtZero: true }
+                    const sortedMonths = Object.keys(monthlyData).sort();
+                    if(this.applicationTrendChart) this.applicationTrendChart.destroy();
+                    this.applicationTrendChart = new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: sortedMonths,
+                            datasets: [{
+                                label: 'Aylık Başvuru Sayısı',
+                                data: sortedMonths.map(month => monthlyData[month]),
+                                borderColor: '#1e3c72',
+                                backgroundColor: 'rgba(30, 60, 114, 0.1)',
+                                fill: true,
+                                tension: 0.4
+                            }]
                         },
-                        plugins: {
-                            legend: { display: false }
-                        }
-                    }
-                });
+                        options: { responsive: true, maintainAspectRatio: false }
+                    });
+                }
 
-                this.unpaidTrendChart = new Chart(unpaidCtx, {
-                    type: 'bar',
-                    data: {
-                        labels: labels,
-                        datasets: [{
-                            label: 'Haftalık Ödenmeyen Alacak',
-                            data: unpaidData,
-                            backgroundColor: '#ff6b6b',
-                            borderColor: '#c82333',
-                            borderWidth: 1
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        scales: {
-                            y: { beginAtZero: true }
+                processFinancialData(accruals = []) {
+                    const today = new Date();
+                    const eightWeeksAgo = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 56);
+
+                    let totalIncomeAmount = 0;
+                    let totalUnpaidAmount = 0;
+
+                    const weeklyIncome = {};
+                    const weeklyUnpaid = {};
+
+                    const incomeByClient = {};
+                    const unpaidByClient = {};
+
+                    accruals.forEach(accrual => {
+                        const serviceInvoicePartyName = accrual.serviceInvoiceParty?.name || 'Bilinmeyen Taraf';
+                        const totalAmount = accrual.totalAmount || 0;
+                        
+                        if (accrual.status === 'paid') {
+                            const paymentDate = accrual.paymentDate ? new Date(accrual.paymentDate) : new Date(accrual.updatedAt);
+                            if (paymentDate >= eightWeeksAgo) {
+                                totalIncomeAmount += totalAmount;
+                                const weekKey = this.getWeekNumber(paymentDate);
+                                weeklyIncome[weekKey] = (weeklyIncome[weekKey] || 0) + totalAmount;
+
+                                incomeByClient[serviceInvoicePartyName] = (incomeByClient[serviceInvoicePartyName] || 0) + totalAmount;
+                            }
+                        } else if (accrual.status === 'unpaid') {
+                            const createdAt = new Date(accrual.createdAt);
+                            if (createdAt >= eightWeeksAgo) {
+                                totalUnpaidAmount += totalAmount;
+                                const weekKey = this.getWeekNumber(createdAt);
+                                weeklyUnpaid[weekKey] = (weeklyUnpaid[weekKey] || 0) + totalAmount;
+
+                                unpaidByClient[serviceInvoicePartyName] = (unpaidByClient[serviceInvoicePartyName] || 0) + totalAmount;
+                            }
+                        }
+                    });
+
+                    document.getElementById('totalIncome').textContent = new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' }).format(totalIncomeAmount);
+                    document.getElementById('totalUnpaid').textContent = new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' }).format(totalUnpaidAmount);
+
+                    this.renderFinancialTrendCharts(weeklyIncome, weeklyUnpaid, eightWeeksAgo);
+                    this.renderTopClients(incomeByClient, 'topIncomeClients');
+                    this.renderTopClients(unpaidByClient, 'topUnpaidClients');
+                }
+
+                getWeekNumber(d) {
+                    d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+                    d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
+                    const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+                    const weekNo = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+                    return `${d.getUTCFullYear()}-${String(weekNo).padStart(2, '0')}`;
+                }
+
+                renderFinancialTrendCharts(weeklyIncome, weeklyUnpaid, startDate) {
+                    const incomeCtx = document.getElementById('incomeTrendChart').getContext('2d');
+                    const unpaidCtx = document.getElementById('unpaidTrendChart').getContext('2d');
+
+                    const labels = [];
+                    let currentWeek = new Date(startDate);
+                    for (let i = 0; i < 8; i++) {
+                        labels.push(this.getWeekNumber(currentWeek));
+                        currentWeek.setDate(currentWeek.getDate() + 7);
+                    }
+                    labels.sort();
+
+                    const incomeData = labels.map(label => weeklyIncome[label] || 0);
+                    const unpaidData = labels.map(label => weeklyUnpaid[label] || 0);
+
+                    if (this.incomeTrendChart) this.incomeTrendChart.destroy();
+                    if (this.unpaidTrendChart) this.unpaidTrendChart.destroy();
+
+                    this.incomeTrendChart = new Chart(incomeCtx, {
+                        type: 'bar',
+                        data: {
+                            labels: labels,
+                            datasets: [{
+                                label: 'Haftalık Tahsilat',
+                                data: incomeData,
+                                backgroundColor: '#4ecdc4',
+                                borderColor: '#218838',
+                                borderWidth: 1
+                            }]
                         },
-                        plugins: {
-                            legend: { display: false }
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: {
+                                y: { beginAtZero: true }
+                            },
+                            plugins: {
+                                legend: { display: false }
+                            }
                         }
+                    });
+
+                    this.unpaidTrendChart = new Chart(unpaidCtx, {
+                        type: 'bar',
+                        data: {
+                            labels: labels,
+                            datasets: [{
+                                label: 'Haftalık Ödenmeyen Alacak',
+                                data: unpaidData,
+                                backgroundColor: '#ff6b6b',
+                                borderColor: '#c82333',
+                                borderWidth: 1
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: {
+                                y: { beginAtZero: true }
+                            },
+                            plugins: {
+                                legend: { display: false }
+                            }
+                        }
+                    });
+                }
+
+                renderTopClients(clientData, elementId) {
+                    const listElement = document.getElementById(elementId);
+                    listElement.innerHTML = '';
+
+                    const sortedClients = Object.entries(clientData)
+                        .sort(([, amountA], [, amountB]) => amountB - amountA)
+                        .slice(0, 5);
+
+                    if (sortedClients.length === 0) {
+                        listElement.innerHTML = '<li>Veri Yok</li>';
+                        return;
                     }
-                });
-            }
 
-            renderTopClients(clientData, elementId) {
-                const listElement = document.getElementById(elementId);
-                listElement.innerHTML = '';
-
-                const sortedClients = Object.entries(clientData)
-                    .sort(([, amountA], [, amountB]) => amountB - amountA)
-                    .slice(0, 5);
-
-                if (sortedClients.length === 0) {
-                    listElement.innerHTML = '<li>Veri Yok</li>';
-                    return;
+                    sortedClients.forEach(([clientName, amount]) => {
+                        const listItem = document.createElement('li');
+                        listItem.innerHTML = `<span class="client-name">${clientName}</span><span class="client-amount">${new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' }).format(amount)}</span>`;
+                        listElement.appendChild(listItem);
+                    });
                 }
-
-                sortedClients.forEach(([clientName, amount]) => {
-                    const listItem = document.createElement('li');
-                    listItem.innerHTML = `<span class="client-name">${clientName}</span><span class="client-amount">${new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' }).format(amount)}</span>`;
-                    listElement.appendChild(listItem);
-                });
             }
-        }
 
-        let dashboard;
-        auth.onAuthStateChanged((user) => {
-            if (user || authService.getCurrentUser()) {
-                if (!dashboard) {
-                    dashboard = new DashboardController();
-                    dashboard.init();
+            let dashboard;
+            auth.onAuthStateChanged((user) => {
+                if (user || authService.getCurrentUser()) {
+                    if (!dashboard) {
+                        dashboard = new DashboardController();
+                        dashboard.init();
+                    }
+                } else {
+                    window.location.href = 'index.html'; 
                 }
-            } else {
-                window.location.href = 'index.html'; 
-            }
+            });
         });
     </script>
 </body>
