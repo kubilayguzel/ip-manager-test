@@ -219,72 +219,6 @@ export const authService = {
     }
 };
 
-// --- Persons Service ---
-export const personsService = {
-    async addPerson(personData) {
-        const user = authService.getCurrentUser();
-        if(!user) return {success: false, error: "Kullanıcı girişi yapılmamış."};
-        const newPerson = { ...personData, id: generateUUID(), userId: user.uid, userEmail: user.email, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
-        
-        if (isFirebaseAvailable) {
-            try {
-                await setDoc(doc(db, 'persons', newPerson.id), newPerson);
-                return { success: true, data: newPerson };
-            } catch (error) {
-                return { success: false, error: error.message };
-            }
-        } else {
-            const persons = JSON.parse(localStorage.getItem('persons') || '[]');
-            persons.push(newPerson);
-            localStorage.setItem('persons', JSON.stringify(persons));
-            return { success: true, data: newPerson };
-        }
-    },
-    async getPersons() {
-        if (isFirebaseAvailable) {
-            try {
-                const q = query(collection(db, 'persons'), orderBy('name'));
-                const snapshot = await getDocs(q);
-                return { success: true, data: snapshot.docs.map(d => ({ id: d.id, ...d.data() })) };
-            } catch (error) {
-                return { success: false, error: error.message };
-            }
-        }
-        return { success: true, data: JSON.parse(localStorage.getItem('persons') || '[]') };
-    },
-    async updatePerson(personId, updates) {
-        updates.updatedAt = new Date().toISOString();
-        if (isFirebaseAvailable) {
-            try {
-                await updateDoc(doc(db, 'persons', personId), updates);
-                return { success: true };
-            } catch (error) {
-                return { success: false, error: error.message };
-            }
-        } else {
-            let persons = JSON.parse(localStorage.getItem('persons') || '[]');
-            const index = persons.findIndex(p => p.id === personId);
-            if (index > -1) persons[index] = { ...persons[index], ...updates };
-            localStorage.setItem('persons', JSON.stringify(persons));
-            return { success: true };
-        }
-    },
-    async deletePerson(personId) {
-        if (isFirebaseAvailable) {
-            try {
-                await deleteDoc(doc(db, 'persons', personId));
-                return { success: true };
-            } catch (error) {
-                return { success: false, error: error.message };
-            }
-        } else {
-            let persons = JSON.parse(localStorage.getItem('persons') || '[]').filter(p => p.id !== personId);
-            localStorage.setItem('persons', JSON.stringify(persons));
-            return { success: true };
-        }
-    }
-};
-
 // --- IP Records Service ---
 export const ipRecordsService = {
     async addRecord(record) {
@@ -345,8 +279,6 @@ export const ipRecordsService = {
             return { success: false, error: "Kayıt yerel depolamada bulunamadı." };
         }
         try {
-            // updateRecord zaten files'ı doğrudan güncelleyebilir, arrayUnion/arrayRemove gibi
-            // eklemeler/silmeler için addFileToRecord veya deleteFileFromRecord kullanmak daha mantıklı.
             await updateDoc(doc(db, 'ipRecords', recordId), updates);
             return { success: true };
         } catch (error) {
@@ -366,7 +298,6 @@ export const ipRecordsService = {
             return { success: false, error: error.message };
         }
     },
-    // addTransactionToRecord: Sadece işlem (olay) kaydı için
     async addTransactionToRecord(recordId, transactionData) {
         if (!isFirebaseAvailable) {
             let records = JSON.parse(localStorage.getItem('ipRecords') || '[]');
@@ -384,7 +315,8 @@ export const ipRecordsService = {
                     userEmail: user.email,
                     transactionType: transactionData.transactionType || 'Genel İşlem', 
                     transactionHierarchy: transactionData.transactionHierarchy || 'parent', 
-                    parentId: transactionData.parentId || null 
+                    parentId: transactionData.parentId || null,
+                    deliveryDate: transactionData.deliveryDate || null 
                 };
                 records[recordIndex].transactions.push(newTransaction);
                 localStorage.setItem('ipRecords', JSON.stringify(records));
@@ -403,7 +335,8 @@ export const ipRecordsService = {
                 userEmail: user.email,
                 transactionType: transactionData.transactionType || 'Genel İşlem', 
                 transactionHierarchy: transactionData.transactionHierarchy || 'parent', 
-                parentId: transactionData.parentId || null 
+                parentId: transactionData.parentId || null,
+                deliveryDate: transactionData.deliveryDate || null 
             };
             await updateDoc(recordRef, {
                 transactions: arrayUnion(newTransaction)
@@ -414,7 +347,6 @@ export const ipRecordsService = {
             return { success: false, error: error.message };
         }
     },
-    // Yeni fonksiyon: addFileToRecord - Doküman kaydı için
     async addFileToRecord(recordId, fileData) {
         if (!isFirebaseAvailable) {
             let records = JSON.parse(localStorage.getItem('ipRecords') || '[]');
@@ -426,11 +358,10 @@ export const ipRecordsService = {
                 const user = authService.getCurrentUser();
                 const newFile = {
                     ...fileData,
-                    fileId: generateUUID(), // Dosya için benzersiz ID
+                    fileId: generateUUID(), 
                     uploadedAt: new Date().toISOString(),
                     uploadedBy_uid: user.uid,
                     uploadedBy_email: user.email,
-                    // Eğer dosya bir işlemle ilişkiliyse
                     relatedTransactionId: fileData.relatedTransactionId || null 
                 };
                 records[recordIndex].files.push(newFile);
@@ -459,7 +390,6 @@ export const ipRecordsService = {
             return { success: false, error: error.message };
         }
     },
-    // Doküman silme fonksiyonu (isteğe bağlı)
     async deleteFileFromRecord(recordId, fileId) {
         if (!isFirebaseAvailable) {
             console.warn("Local storage file deletion not implemented.");
@@ -483,7 +413,6 @@ export const ipRecordsService = {
         }
     },
 
-    // Mevcut deleteTransaction fonksiyonu - Doküman silme mantığı içermez
     async deleteTransaction(recordId, transactionId) {
         if (!isFirebaseAvailable) {
             console.warn("Local storage transaction deletion not implemented.");
@@ -498,10 +427,6 @@ export const ipRecordsService = {
                 const updatedTransactions = transactions.filter(tx => tx.transactionId !== transactionId);
                 await updateDoc(recordRef, { transactions: updatedTransactions });
                 
-                // NOT: Eğer bir işlem silindiğinde o işlemle ilişkili dosyaların da silinmesini istiyorsanız,
-                // burada ek bir mantık eklemeniz gerekir. Örneğin:
-                // await ipRecordsService.deleteFilesRelatedToTransaction(recordId, transactionId);
-                
                 return { success: true };
             } else {
                 return { success: false, error: "Record not found." };
@@ -513,207 +438,88 @@ export const ipRecordsService = {
     },
 };
 
-// --- Task Service (For Workflow Management) ---
-export const taskService = {
-    async createTask(taskData) {
-        if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor. İş oluşturulamaz." };
-        try {
-            const user = authService.getCurrentUser();
-            const docRef = await addDoc(collection(db, 'tasks'), {
-                ...taskData,
-                createdBy_uid: user.uid,
-                createdBy_email: user.email,
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString(),
-                history: [{
-                    timestamp: new Date().toISOString(),
-                    userId: user.uid,
-                    userEmail: user.email,
-                    action: `İş oluşturuldu ve ${taskData.assignedTo_email} kişisine atandı.`
-                }]
-            });
-            return { success: true, id: docRef.id };
-        } catch (error) {
-            console.error("İş oluşturulurken hata:", error);
-            return { success: false, error: error.message || "İş oluşturulurken beklenmeyen bir hata oluştu." };
-        }
-    },
-    
-    async updateTask(taskId, updates) {
-        if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor. İş güncellenemez." };
-        try {
-            const taskRef = doc(db, "tasks", taskId);
-            const user = authService.getCurrentUser();
-            
-            let actionMessage = `İş güncellendi.`;
-            if (updates.status) {
-                actionMessage = `İş durumu "${updates.status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}" olarak güncellendi.`;
-            } else {
-                const changedFields = Object.keys(updates).filter(key => key !== 'updatedAt' && key !== 'history' && key !== 'files');
-                if (changedFields.length > 0) {
-                    actionMessage = `İş güncellendi. Değişen alanlar: ${changedFields.join(', ')}.`;
-                }
-            }
+// --- YENİ SERVİS: Bulk Indexing (Toplu İndeksleme) İşlerini Yönetmek İçin ---
+export const bulkIndexingService = {
+    // Firestore koleksiyon referansı
+    collectionRef: collection(db, 'pendingBulkIndexJobs'), 
 
-            const updateAction = {
-                timestamp: new Date().toISOString(),
-                userId: user.uid,
-                userEmail: user.email,
-                action: actionMessage
-            };
-            
-            const currentTaskDoc = await getDoc(taskRef);
-            const currentTaskData = currentTaskDoc.data();
+    // Yeni bir iş ekler
+    async addJob(jobData) {
+        if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor." };
+        const currentUser = authService.getCurrentUser();
+        if (!currentUser) return { success: false, error: "Kullanıcı girişi yapılmamış." };
 
-            let updatedFilesArray = currentTaskData.files || [];
-            // NOT: files alanı artık addFileToRecord ile yönetilmeli.
-            // Bu updateTask fonksiyonu genel güncellemeler için kalsın.
-            if (updates.files !== undefined) {
-                // Burada mevcut dosyalara updates.files içindeki dosyaları eklememelisiniz
-                // çünkü bu update sadece mevcut dosyaların güncellenmesini veya tamamen değiştirilmesini sağlar.
-                // Yeni dosya eklemek için addFileToRecord kullanılmalı.
-                // Bu kısmı sadece dosyaların tamamının güncellenmesi gerektiğinde kullanın.
-                updatedFilesArray = updates.files; 
-            }
-            
-            const finalUpdates = { ...updates };
-            delete finalUpdates.files; // files'ı doğrudan güncellemek yerine addFileToRecord kullanın
-
-            await updateDoc(taskRef, {
-                ...finalUpdates,
-                files: updatedFilesArray, // Eğer bu alanda bir güncelleme gelirse yaz.
-                updatedAt: new Date().toISOString(),
-                history: arrayUnion(updateAction)
-            });
-            return { success: true };
-        } catch (error) {
-            console.error("İş güncellenirken hata:", error);
-            return { success: false, error: error.message || "İş güncellenirken beklenmeyen bir hata oluştu." };
-        }
-    },
-
-    async getTasksForUser(userId) {
-        if (!isFirebaseAvailable) return { success: true, data: [] };
-        try {
-            const q = query(collection(db, 'tasks'), where('assignedTo_uid', '==', userId), orderBy('dueDate', 'asc'));
-            const querySnapshot = await getDocs(q);
-            const tasks = querySnapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-            return { success: true, data: tasks };
-        } catch (error) {
-            console.error("Kullanıcı için işler alınırken hata:", error);
-            return { success: false, error: error.message || "İşler yüklenirken beklenmeyen bir hata oluştu.", data: [] };
-        }
-    },
-
-    async getAllTasks() {
-        if (!isFirebaseAvailable) return { success: true, data: [] };
-        try {
-            const q = query(collection(db, 'tasks'), orderBy('createdAt', 'desc'));
-            const querySnapshot = await getDocs(q);
-            const tasks = querySnapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-            return { success: true, data: tasks };
-        } catch (error) {
-            console.error("Tüm işler alınırken hata:", error);
-            return { success: false, error: error.message || "İşler yüklenirken beklenmeyen bir hata oluştu.", data: [] };
-        }
-    },
-
-    async getTaskById(taskId) {
-        if (!isFirebaseAvailable) {
-            const allTasks = JSON.parse(localStorage.getItem('tasks') || '[]');
-            const task = allTasks.find(t => t.id === taskId);
-            return { success: !!task, data: task, error: task ? undefined : "İş yerel depolamada bulunamadı." };
-        }
-        try {
-            const taskDoc = await getDoc(doc(db, 'tasks', taskId));
-            if (taskDoc.exists()) {
-                return { success: true, data: { id: taskDoc.id, ...taskDoc.data() } };
-            } else {
-                return { success: false, error: "İş bulunamadı." };
-            }
-        } catch (error) {
-            console.error("İş ID ile alınırken hata:", error);
-            return { success: false, error: error.message || "İş yüklenirken beklenmeyen bir hata oluştu." };
-        }
-    },
-
-    async deleteTask(taskId) {
-        if (!isFirebaseAvailable) {
-            let tasks = JSON.parse(localStorage.getItem('tasks') || '[]');
-            const taskToDelete = tasks.find(t => t.id === taskId);
-            if (taskToDelete && taskToDelete.relatedIpRecordId && taskToDelete.transactionIdForDeletion) {
-                console.warn("Yerel modda ilgili IP kaydından işlem silme desteklenmiyor.");
-            }
-            tasks = tasks.filter(task => task.id !== taskId);
-            localStorage.setItem('tasks', JSON.stringify(tasks));
-            return { success: true };
-        }
-        try {
-            const taskDoc = await getDoc(doc(db, 'tasks', taskId));
-            if (taskDoc.exists()) {
-                const taskData = taskDoc.data();
-                if (taskData.relatedIpRecordId && taskData.transactionIdForDeletion) {
-                    // İşlemle ilişkili dosyaları da silmek isterseniz burada mantık ekleyin
-                    // Örneğin: await ipRecordsService.deleteFilesRelatedToTransaction(taskData.relatedIpRecordId, taskData.transactionIdForDeletion);
-                    await ipRecordsService.deleteTransaction(taskData.relatedIpRecordId, taskData.transactionIdForDeletion);
-                }
-            }
-            await deleteDoc(doc(db, 'tasks', taskId));
-            return { success: true };
-        } catch (error) {
-            console.error("İş silinirken hata:", error);
-            return { success: false, error: error.message || "İş silinirken beklenmeyen bir hata oluştu." };
-        }
-    },
-    
-    async reassignTasks(taskIds, newUserId, newUserEmail) {
-        if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor. İşler atanamaz." };
-        
-        const user = authService.getCurrentUser();
-        if (!user) return { success: false, error: "Kullanıcı girişi yapılmamış." };
-
-        const batch = writeBatch(db);
-
-        const actionMessage = `İş, ${user.email} tarafından ${newUserEmail} kullanıcısına atandı.`;
-        const updateAction = {
-            timestamp: new Date().toISOString(),
-            userId: user.uid,
-            userEmail: user.email,
-            action: actionMessage
+        const newJob = {
+            ...jobData,
+            createdAt: new Date().toISOString(),
+            userId: currentUser.uid,
+            userEmail: currentUser.email,
         };
+        try {
+            // Firestore doküman ID'sini manuel olarak generateUUID ile atayalım
+            // Bu, jobData'daki jobId'yi kullanırız
+            await setDoc(doc(this.collectionRef, jobData.jobId), newJob);
+            return { success: true, data: newJob };
+        } catch (error) {
+            console.error("Error adding bulk job:", error);
+            return { success: false, error: error.message };
+        }
+    },
 
-        taskIds.forEach(taskId => {
-            const taskRef = doc(db, "tasks", taskId);
-            batch.update(taskRef, {
-                assignedTo_uid: newUserId,
-                assignedTo_email: newUserEmail,
-                updatedAt: new Date().toISOString(),
-                history: arrayUnion(updateAction)
+    // Kullanıcının tüm beklemedeki işlerini çeker
+    async getPendingJobs(userId) {
+        if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor.", data: [] };
+        try {
+            const q = query(this.collectionRef, where('userId', '==', userId), orderBy('createdAt', 'asc'));
+            const snapshot = await getDocs(q);
+            return { success: true, data: snapshot.docs.map(d => ({ jobId: d.id, ...d.data() })) };
+        } catch (error) {
+            console.error("Error getting pending bulk jobs:", error);
+            return { success: false, error: error.message, data: [] };
+        }
+    },
+
+    // Bir işi günceller
+    async updateJob(jobId, updates) {
+        if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor." };
+        try {
+            await updateDoc(doc(this.collectionRef, jobId), updates);
+            return { success: true };
+        } catch (error) {
+            console.error("Error updating bulk job:", error);
+            return { success: false, error: error.message };
+        }
+    },
+
+    // Bir işi siler
+    async deleteJob(jobId) {
+        if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor." };
+        try {
+            await deleteDoc(doc(this.collectionRef, jobId));
+            return { success: true };
+        } catch (error) {
+            console.error("Error deleting bulk job:", error);
+            return { success: false, error: error.message };
+        }
+    },
+
+    // Tüm kayıtları (allRecords) içinde belirli bir dosyanın zaten olup olmadığını kontrol eder
+    // Bu metodun ipRecordsService'teki getRecords'tan gelen veriye ihtiyacı var.
+    async isFileAlreadyIndexed(fileName, fileSize, allRecords) {
+        if (!allRecords) {
+            console.warn("allRecords provide edilmedi, Firestore'daki dosya geçmişi kontrol edilemiyor.");
+            return false;
+        }
+        // allRecords, ipRecordsService.getRecords() ile çekilen tüm IP kayıtlarını içerir.
+        // Her kaydın içindeki files dizisini kontrol edeceğiz.
+        return allRecords.some(record => {
+            return (record.files || []).some(file => {
+                return file.fileName === fileName && file.fileSize === fileSize;
             });
         });
-
-        try {
-            await batch.commit();
-            return { success: true };
-        } catch (error) {
-            console.error("Toplu iş ataması sırasında hata:", error);
-            return { success: false, error: error.message || "Toplu iş ataması sırasında beklenmeyen bir hata oluştu." };
-        }
-    },
-
-    async getAllUsers() {
-        if (!isFirebaseAvailable) return { success: true, data: [] };
-        try {
-            const q = query(collection(db, 'users'), orderBy('displayName', 'asc'));
-            const querySnapshot = await getDocs(q);
-            const users = querySnapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-            return { success: true, data: users };
-        } catch (error) {
-            console.error("Tüm kullanıcılar alınırken hata:", error);
-            return { success: false, error: error.message || "Kullanıcılar yüklenirken beklenmeyen bir hata oluştu.", data: [] };
-        }
     }
 };
+
 
 // --- Accrual Service ---
 export const accrualService = {
@@ -764,8 +570,6 @@ export const accrualService = {
             const currentAccrualData = currentAccrualDoc.data();
 
             let updatedFiles = currentAccrualData.files || [];
-            // Not: Accrual service'de de files'ı addFileToRecord benzeri bir fonksiyonla yönetebilirsiniz.
-            // Şimdilik updateAccrual içindeki files yönetimi mevcut şekliyle bırakıldı.
             if (updates.files !== undefined) {
                 const newFilesToAdd = [];
                 for (const incomingFile of updates.files) {
@@ -795,7 +599,6 @@ export const accrualService = {
 };
 
 // --- Demo Data Function ---
-// GÜNCELLENMİŞ createDemoData FONKSİYONU
 export async function createDemoData() {
     console.log('🧪 Demo verisi oluşturuluyor...');
     const user = authService.getCurrentUser();
@@ -834,18 +637,18 @@ export async function createDemoData() {
                 type: 'patent',
                 title: 'Örnek Mobil Cihaz Batarya Teknolojisi',
                 status: 'application',
-                applicationNumber: 'PT/2024/001',
+                applicationNumber: 'TR2024/001', // Başvuru Numarası formatı
                 applicationDate: '2024-03-15',
                 description: 'Bu, lityum-iyon pillerin ömrünü uzatan yeni bir batarya teknolojisi için yapılmış bir demo patent başvurusudur.',
                 owners: [demoOwner],
                 transactions: [], 
-                files: [] // Dosyalar için de başlangıçta boş dizi
+                files: [] 
             },
             {
                 type: 'trademark',
                 title: 'Hızlı Kargo Lojistik',
                 status: 'registered',
-                applicationNumber: 'TM/2023/105',
+                applicationNumber: 'TR2023/105', // Başvuru Numarası formatı
                 applicationDate: '2023-11-20',
                 registrationDate: '2024-05-10',
                 description: 'Lojistik ve kargo hizmetleri için tescilli bir marka demosu.',
@@ -858,7 +661,7 @@ export async function createDemoData() {
                 },
                 renewalDate: '2025-06-15',
                 transactions: [], 
-                files: [] // Dosyalar için de başlangıçta boş dizi
+                files: [] 
             }
         ];
 
@@ -872,7 +675,6 @@ export async function createDemoData() {
             let parentTransaction;
 
             if (record.type === 'patent') {
-                // Patent Başvurusu (PARENT İşlem)
                 const patentAppResult = await ipRecordsService.addTransactionToRecord(addRecordResult.id, {
                     designation: 'Patent Başvurusu Yapıldı',
                     transactionType: 'Başvuru', 
@@ -882,51 +684,48 @@ export async function createDemoData() {
                 });
                 if (patentAppResult.success) parentTransaction = patentAppResult.data;
 
-                // Patent Başvurusu ile İlişkili Ek Doküman (Files)
                 if (parentTransaction && parentTransaction.transactionId) {
                     await ipRecordsService.addFileToRecord(addRecordResult.id, {
                         fileName: 'PatentBasvuruFormu.pdf',
                         fileType: 'application/pdf',
-                        fileSize: 1.2 * 1024 * 1024, // 1.2 MB
-                        fileUrl: 'https://example.com/patent-form.pdf', // Örnek URL
-                        relatedTransactionId: parentTransaction.transactionId, // Hangi işlemle ilişkili
+                        fileSize: 1.2 * 1024 * 1024, 
+                        fileUrl: 'https://example.com/patent-form.pdf', 
+                        relatedTransactionId: parentTransaction.transactionId, 
                         documentDesignation: 'Başvuru Ek Dokümanı'
                     });
 
-                    // Patent Başvurusu altında bir İtiraz Süreci (CHILD İşlem)
                     const oppositionTransResult = await ipRecordsService.addTransactionToRecord(addRecordResult.id, {
                         designation: 'İtiraz Başvurusu',
                         transactionType: 'İtiraz',
                         transactionHierarchy: 'child',
                         parentId: parentTransaction.transactionId,
                         date: '2024-04-01',
-                        notes: 'Üçüncü taraf itirazı kaydedildi.'
+                        notes: 'Üçüncü taraf itirazı kaydedildi.',
+                        deliveryDate: '2024-04-05T00:00:00.000Z' 
                     });
                     if (oppositionTransResult.success) {
-                        // İtiraz Başvurusu ile İlişkili Doküman (Files)
                         await ipRecordsService.addFileToRecord(addRecordResult.id, {
                             fileName: 'ItirazDilekcesi.pdf',
                             fileType: 'application/pdf',
-                            fileSize: 0.8 * 1024 * 1024, // 0.8 MB
-                            fileUrl: 'https://example.com/itiraz-dilekcesi.pdf', // Örnek URL
-                            relatedTransactionId: oppositionTransResult.data.transactionId, // Hangi işlemle ilişkili
+                            fileSize: 0.8 * 1024 * 1024, 
+                            fileUrl: 'https://example.com/itiraz-dilekcesi.pdf', 
+                            relatedTransactionId: oppositionTransResult.data.transactionId, 
                             documentDesignation: 'Resmi Yazışma'
                         });
 
-                        // İtiraza Cevap Sunuldu (CHILD İşlem, İtiraz işlemine bağlı)
                         await ipRecordsService.addTransactionToRecord(addRecordResult.id, {
                             designation: 'İtiraza Cevap Sunuldu',
                             transactionType: 'Cevap',
                             transactionHierarchy: 'child',
                             parentId: oppositionTransResult.data.transactionId, 
                             date: '2024-05-01',
-                            notes: 'İtiraza karşı cevap verildi.'
+                            notes: 'İtiraza karşı cevap verildi.',
+                            deliveryDate: '2024-05-03T00:00:00.000Z' 
                         });
                     }
                 }
 
             } else if (record.type === 'trademark') {
-                // Marka Başvurusu (PARENT İşlem)
                 const trademarkAppResult = await ipRecordsService.addTransactionToRecord(addRecordResult.id, {
                     designation: 'Marka Başvurusu Yapıldı',
                     transactionType: 'Başvuru',
@@ -936,18 +735,16 @@ export async function createDemoData() {
                 });
                 if (trademarkAppResult.success) parentTransaction = trademarkAppResult.data;
 
-                // Marka Başvurusu ile İlişkili Görsel (Files)
                 if (parentTransaction && parentTransaction.transactionId) {
                     await ipRecordsService.addFileToRecord(addRecordResult.id, {
                         fileName: 'logo_hizli_kargo.png',
                         fileType: 'image/png',
-                        fileSize: 0.15 * 1024 * 1024, // 0.15 MB
-                        fileUrl: 'https://example.com/logo-kargo.png', // Örnek URL
+                        fileSize: 0.15 * 1024 * 1024, 
+                        fileUrl: 'https://example.com/logo-kargo.png', 
                         relatedTransactionId: parentTransaction.transactionId,
-                        documentDesignation: 'Teknik Çizim' // Marka görseli gibi
+                        documentDesignation: 'Teknik Çizim' 
                     });
 
-                    // Yenileme İşlemi (AYRI BİR PARENT İşlem)
                     const renewalTransResult = await ipRecordsService.addTransactionToRecord(addRecordResult.id, {
                         designation: 'Yenileme İşlemi Başlatıldı',
                         transactionType: 'Yenileme',
@@ -956,25 +753,24 @@ export async function createDemoData() {
                         notes: 'Marka tescilinin yenileme süreci başlatıldı.'
                     });
 
-                    // Yenileme işlemi altında "Ret Kararı" (CHILD İşlem)
                     if (renewalTransResult.success && renewalTransResult.data.transactionId) {
                         const rejectionTransResult = await ipRecordsService.addTransactionToRecord(addRecordResult.id, {
                             designation: 'Yenileme Ret Kararı',
                             transactionType: 'Ret Kararı',
                             transactionHierarchy: 'child',
-                            parentId: renewalTransResult.data.transactionId, // Yenileme işlemine bağlı
+                            parentId: renewalTransResult.data.transactionId, 
                             date: '2024-06-15',
-                            notes: 'Yenileme başvurusu reddedildi.'
+                            notes: 'Yenileme başvurusu reddedildi.',
+                            deliveryDate: '2024-06-16T00:00:00.000Z' 
                         });
                         if (rejectionTransResult.success) {
-                            // Ret Kararı ile İlişkili Doküman (Files)
                             await ipRecordsService.addFileToRecord(addRecordResult.id, {
                                 fileName: 'YenilemeRetKarari.pdf',
                                 fileType: 'application/pdf',
-                                fileSize: 0.5 * 1024 * 1024, // 0.5 MB
-                                fileUrl: 'https://example.com/renewal-rejection.pdf', // Örnek URL
-                                relatedTransactionId: rejectionTransResult.data.transactionId, // Hangi işlemle ilişkili
-                                documentDesignation: 'Ret Kararı' // Doküman tipi
+                                fileSize: 0.5 * 1024 * 1024, 
+                                fileUrl: 'https://example.com/renewal-rejection.pdf', 
+                                relatedTransactionId: rejectionTransResult.data.transactionId, 
+                                documentDesignation: 'Ret Kararı' 
                             });
                         }
                     }
