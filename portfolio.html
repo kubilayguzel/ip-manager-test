@@ -117,6 +117,24 @@
             background-color: #f6f8fa;
         }
 
+        /* Marka Görseli Stilleri */
+        .trademark-image-thumbnail {
+            width: 50px; /* Küçük thumbnail boyutu */
+            height: auto;
+            border-radius: 5px;
+            vertical-align: middle;
+            transition: transform 0.2s ease-in-out;
+            cursor: pointer;
+        }
+
+        .trademark-image-thumbnail:hover {
+            transform: scale(2.5); /* Üzerine gelince 2.5 kat büyüt */
+            position: absolute; /* Büyüdüğünde diğer elementlerin üzerine gelmesi için */
+            z-index: 10; /* Diğer içeriklerin üstünde kalması için */
+            box-shadow: 0px 0px 15px rgba(0,0,0,0.3); /* Gölge efekti */
+            border: 2px solid #1e3c72;
+        }
+
         .action-btn {
             background: #007bff;
             color: white;
@@ -229,7 +247,7 @@
                         <tr>
                             <th>Kayıt Tipi</th>
                             <th>Başlık</th>
-                            <th>Başvuru Numarası</th>
+                            <th>Marka Görseli</th> <th>Başvuru Numarası</th>
                             <th>Başvuru Tarihi</th>
                             <th>Durum</th>
                             <th>Hak Sahipleri</th>
@@ -283,7 +301,7 @@
 
                 async loadAllData() {
                     const loadingIndicator = document.getElementById('loadingIndicator');
-                    if (loadingIndicator) { // Null kontrolü eklendi
+                    if (loadingIndicator) { 
                         loadingIndicator.style.display = 'block';
                     }
                     
@@ -296,12 +314,11 @@
                         this.allRecords = recordsResult.success ? recordsResult.data : [];
                         this.allPersons = personsResult.success ? personsResult.data : [];
                         
-                        // populateOwnerFilter artık kaldırıldığı için burada çağrılmıyor
                         this.renderRecords(); // Initial render
                     } catch (error) {
                         showNotification('Veriler yüklenirken bir hata oluştu: ' + error.message, 'error');
                     } finally {
-                        if (loadingIndicator) { // Null kontrolü eklendi
+                        if (loadingIndicator) { 
                             loadingIndicator.style.display = 'none';
                         }
                     }
@@ -320,11 +337,9 @@
                         });
                     });
 
-                    // OwnerFilter kaldırıldı.
-                    // document.getElementById('ownerFilter').addEventListener('change', () => this.renderRecords()); 
                     document.getElementById('searchBar').addEventListener('input', () => this.renderRecords());
 
-                    document.getElementById('portfolioTableBody').addEventListener('click', (e) => { // grid yerine tableBody
+                    document.getElementById('portfolioTableBody').addEventListener('click', (e) => { 
                         if (e.target.classList.contains('action-btn')) {
                             e.preventDefault();
                             const recordId = e.target.dataset.id;
@@ -341,14 +356,12 @@
                     document.getElementById('closeRecordDetailModal').addEventListener('click', () => this.closeModal('recordDetailModal'));
                 }
 
-                // populateOwnerFilter fonksiyonu kaldırıldı
-
                 renderRecords() {
-                    const tableBody = document.getElementById('portfolioTableBody'); // Tablo body'sine referans
+                    const tableBody = document.getElementById('portfolioTableBody'); 
                     const noRecordsMessage = document.getElementById('noRecordsMessage');
-                    tableBody.innerHTML = ''; // İçeriği temizle
+                    tableBody.innerHTML = ''; 
 
-                    const currentTypeFilter = this.activeTypeFilter; // Tab'dan gelen filtre
+                    const currentTypeFilter = this.activeTypeFilter; 
                     const searchTerm = document.getElementById('searchBar').value.toLowerCase();
 
                     const filteredRecords = this.allRecords.filter(record => {
@@ -360,11 +373,11 @@
                             record.applicationNumber,
                             record.status,
                             record.description,
-                            record.patentClass, // Patent için
-                            record.niceClass, // Marka için
-                            record.copyrightType, // Telif hakkı için
-                            record.designClass // Tasarım için
-                        ].filter(Boolean).join(' ').toLowerCase(); // Boş olmayanları birleştir
+                            record.patentClass, 
+                            record.niceClass, 
+                            record.copyrightType, 
+                            record.designClass 
+                        ].filter(Boolean).join(' ').toLowerCase(); 
 
                         // Hak sahipleri isimlerini de aramaya dahil et
                         const ownerNames = record.owners ? record.owners.map(owner => {
@@ -379,24 +392,30 @@
 
                     if (filteredRecords.length === 0) {
                         noRecordsMessage.style.display = 'block';
-                        tableBody.style.display = 'none'; // Tabloyu gizle
+                        tableBody.style.display = 'none'; 
                         return;
                     }
                     noRecordsMessage.style.display = 'none';
-                    tableBody.style.display = 'table-row-group'; // Tablo body'sini göster
+                    tableBody.style.display = 'table-row-group'; 
 
                     filteredRecords.forEach(record => {
-                        const row = document.createElement('tr'); // Her kayıt için bir tablo satırı
+                        const row = document.createElement('tr'); 
                         
                         const ownerNames = record.owners ? record.owners.map(owner => {
                             const person = this.allPersons.find(p => p.id === owner.id);
                             return person ? person.name : 'Bilinmeyen Kişi';
                         }).join(', ') : 'Belirtilmemiş';
 
+                        // Marka görseli sütunu için içerik
+                        let trademarkImageHtml = '<td>-</td>'; // Varsayılan boş veya tire
+                        if (record.type === 'trademark' && record.trademarkImage && record.trademarkImage.content) {
+                            trademarkImageHtml = `<td><img src="${record.trademarkImage.content}" alt="Marka Görseli" class="trademark-image-thumbnail"></td>`;
+                        }
+
                         row.innerHTML = `
                             <td>${record.type.charAt(0).toUpperCase() + record.type.slice(1)}</td>
                             <td>${record.title || 'Başlıksız Kayıt'}</td>
-                            <td>${record.applicationNumber || '-'}</td>
+                            ${trademarkImageHtml} <td>${record.applicationNumber || '-'}</td>
                             <td>${record.applicationDate || '-'}</td>
                             <td>${record.status || '-'}</td>
                             <td>${ownerNames || '-'}</td>
@@ -409,19 +428,7 @@
                         tableBody.appendChild(row);
                     });
                 }
-
-                // getRecordIcon fonksiyonu artık kullanılmadığı için kaldırılabilir veya tutulabilir.
-                // Tablo görünümünde ikonlar doğrudan kullanılmadığı için gereksiz.
-                // getRecordIcon(type) { 
-                //     switch (type) {
-                //         case 'patent': return '📋';
-                //         case 'trademark': return '🏷️';
-                //         case 'copyright': return '©️';
-                //         case 'design': return '🎨';
-                //         default: return '📄';
-                //     }
-                // }
-
+                
                 async deleteRecord(recordId) {
                     if (confirm('Bu kaydı silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.')) {
                         const result = await ipRecordsService.deleteRecord(recordId);
