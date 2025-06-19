@@ -6,6 +6,9 @@
     <title>IP Manager - Yeni Kayıt</title>
     <link rel="stylesheet" href="css/shared-styles.css">
     <style>
+        /* Bu sayfaya özel stiller */
+        /* Genel body, page-wrapper, main-container stilleri shared-styles.css'ten gelecektir. */
+        /* Sadece bu sayfaya özgü ve çakışmayan stilleri burada tutun */
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             color: #333;
@@ -17,7 +20,7 @@
             background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
         }
         .main-container { width: 100%; padding: 30px; margin: 0; }
-        body > .header { display: none; }
+        /* body > .header { display: none; } /* Bu zaten body dışındaydı, tutmaya gerek yok */
         .page-header { background: rgba(255, 255, 255, 0.95); padding: 30px; border-radius: 20px; margin-bottom: 30px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1); }
         .page-title { font-size: 2em; color: #1e3c72; margin-bottom: 10px; }
         .page-subtitle { color: #666; font-size: 1.1em; }
@@ -81,6 +84,9 @@
 <body>
     <div id="layout-placeholder"></div>
     <div class="page-wrapper">
+        <header class="top-header">
+            </header>
+
         <main class="main-container">
             <section class="page-header">
                 <h1 class="page-title" id="pageTitle">Yeni Kayıt Ekle</h1>
@@ -188,8 +194,6 @@
                 document.getElementById('cancelRecordBtn').addEventListener('click', () => window.history.back());
     
                 const ownerSearchInput = document.getElementById('ownerSearchInput');
-                
-                // "Ara" butonu kaldırıldığı için click dinleyicisi de kaldırıldı.
                 
                 if (ownerSearchInput) {
                     ownerSearchInput.addEventListener('input', (event) => {
@@ -468,6 +472,7 @@
     
         let dataEntryModule;
         document.addEventListener('DOMContentLoaded', async () => {
+            // Ortak layout'u yükle ve bu sayfanın aktif linkini belirt
             await loadSharedLayout({ activeMenuLink: 'data-entry.html' });
             dataEntryModule = new DataEntryModule();
             auth.onAuthStateChanged(async (user) => {
