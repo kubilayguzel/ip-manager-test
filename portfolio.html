@@ -118,29 +118,31 @@
         }
 
         /* Marka Görseli Stilleri */
-        .trademark-image-thumbnail {
-            width: 50px; /* Küçük thumbnail boyutu */
-            height: auto;
-            border-radius: 5px;
-            vertical-align: middle;
-            transition: transform 0.2s ease-in-out;
-            cursor: pointer;
-        }
+.trademark-image-thumbnail {
+    width: 50px; /* Küçük thumbnail boyutu */
+    height: auto;
+    border-radius: 5px;
+    vertical-align: middle;
+    /* transition: transform 0.2s ease-in-out; */ /* Mevcut transition satırını kaldır veya yorum satırı yap */
+    transition: transform 0.3s ease-out, box-shadow 0.3s ease-out, border 0.3s ease-out; /* Daha yumuşak geçiş */
+    cursor: pointer;
+    will-change: transform; /* Tarayıcıya transform'un değişeceğini bildir */
+}
 
-        /* Hover efekti için önemli: tablo hücresine göre konumlandırma */
-        .portfolio-table td {
-            position: relative; /* İçindeki resmin absolute konumlanması için */
-        }
-        .trademark-image-thumbnail:hover {
-            transform: scale(3); /* Üzerine gelince 3 kat büyüt */
-            position: absolute; /* Büyüdüğünde diğer elementlerin üzerine gelmesi için */
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%) scale(3); /* Hem büyüt hem ortala */
-            z-index: 10; /* Diğer içeriklerin üstünde kalması için */
-            box-shadow: 0px 0px 15px rgba(0,0,0,0.3); /* Gölge efekti */
-            border: 2px solid #1e3c72;
-        }
+       /* Hover efekti için önemli: tablo hücresine göre konumlandırma */
+.portfolio-table td {
+    position: relative; /* İçindeki resmin absolute konumlanması için */
+}
+.trademark-image-thumbnail:hover {
+    transform: translate(-50%, -50%) scale(3); /* Hem büyüt hem ortala */
+    position: absolute; /* Büyüdüğünde diğer elementlerin üzerine gelmesi için */
+    top: 50%;
+    left: 50%;
+    z-index: 10; /* Diğer içeriklerin üstünde kalması için */
+    box-shadow: 0px 0px 20px rgba(0,0,0,0.4); /* Daha belirgin gölge */
+    border: 3px solid #1e3c72; /* Daha belirgin kenarlık */
+    /* background-color: white; */ /* Arka planı beyaza çevirerek daha belirgin olmasını sağlayabiliriz, isteğe bağlı */
+}
 
 
         .action-btn {
