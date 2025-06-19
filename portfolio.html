@@ -440,17 +440,16 @@
                         }
                     });
 
-                    document.getElementById('portfolioTableBody').addEventListener('click', (e) => {
+                    document.getElementById('portfolioTableBody').addEventListener('click', (e) => { 
                         if (e.target.classList.contains('action-btn')) {
                             e.preventDefault();
                             const recordId = e.target.dataset.id;
-
-                            if (e.target.classList.contains('view-btn')) {
-                                this.showRecordDetailModal(recordId);
-                            } else if (e.target.classList.contains('edit-btn')) {
+                            if (e.target.classList.contains('edit-btn')) {
                                 window.location.href = `data-entry.html?id=${recordId}`;
                             } else if (e.target.classList.contains('delete-btn')) {
                                 this.deleteRecord(recordId);
+                            } else if (e.target.classList.contains('view-btn')) {
+                                this.showRecordDetailModal(recordId);
                             }
                         }
                     });
@@ -501,6 +500,7 @@
                     // Tablo başlıklarını ve filtre inputlarını dinamik olarak oluştur
                     columnDefinitions.forEach(col => {
                         // Marka görseli sütunu sadece marka tabında gösterilecekse, diğer tablarda gizle
+                        // Bu kontrolü TH oluştururken kullanıyoruz.
                         if (col.onlyTrademark && currentTypeFilter !== 'trademark') {
                             tableHeaderRow.innerHTML += '<th></th>'; // Yer tutucu başlık
                             tableFilterRow.innerHTML += '<th></th>'; // Yer tutucu filtre
@@ -538,8 +538,7 @@
                     const tableBody = document.getElementById('portfolioTableBody');
                     tableBody.innerHTML = ''; // Önceki tüm satırları temizle
 
-                    const currentTypeFilter_for_populate = this.activeTypeFilter; // populate anındaki filtre türü
-                    const columnDefinitions_for_populate = [ // Sütunları doğru şekilde oluşturmak için tekrar tanımla
+                    const columnDefinitions = [ // Sütunları doğru şekilde oluşturmak için tekrar tanımla
                         { key: 'type', label: 'Kayıt Tipi', sortable: true, searchable: true },
                         { key: 'title', label: 'Başlık', sortable: true, searchable: true },
                         { key: 'trademarkImage', label: 'Marka Görseli', sortable: false, searchable: false, onlyTrademark: true }, 
@@ -561,13 +560,9 @@
 
                         let rowCellsHtml = '';
                         
-                        columnDefinitions_for_populate.forEach(col => {
-                            if (col.onlyTrademark && currentTypeFilter_for_populate !== 'trademark') {
-                                // Marka görseli sütunu sadece marka tabında gösterilecekse, diğer tablarda boş td ekle
-                                rowCellsHtml += `<td></td>`; 
-                                return;
-                            }
-
+                        // populateTableBody'de her zaman tüm TD'leri oluşturacağız, 
+                        // görünürlük applyFiltersAndSort'ta ve CSS'te yönetilecek.
+                        columnDefinitions.forEach(col => {
                             // Sütun anahtarına göre değeri oluştur
                             if (col.key === 'type') { rowCellsHtml += `<td>${record.type.charAt(0).toUpperCase() + record.type.slice(1)}</td>`; }
                             else if (col.key === 'title') { rowCellsHtml += `<td>${record.title || 'Başlıksız Kayıt'}</td>`; }
@@ -612,17 +607,30 @@
 
                     // Sütun tanımlarını filtreleme için kullan (burada key, searchable yeterli)
                     const columnDefinitions = [
-                        { key: 'type', searchable: true },
-                        { key: 'title', searchable: true },
-                        { key: 'trademarkImage', searchable: false, onlyTrademark: true }, 
-                        { key: 'applicationNumber', searchable: true },
-                        { key: 'applicationDate', searchable: true },
-                        { key: 'status', searchable: true },
-                        { key: 'owners', searchable: true },
-                        { key: 'actions', searchable: false }
+                        { key: 'type', searchable: true, index: 0 }, // Kolon indexlerini ekle
+                        { key: 'title', searchable: true, index: 1 },
+                        { key: 'trademarkImage', searchable: false, onlyTrademark: true, index: 2 }, 
+                        { key: 'applicationNumber', searchable: true, index: 3 },
+                        { key: 'applicationDate', searchable: true, index: 4 },
+                        { key: 'status', searchable: true, index: 5 },
+                        { key: 'owners', searchable: true, index: 6 },
+                        { key: 'actions', searchable: false, index: 7 }
                     ];
 
-                    let filteredRows = allRows.filter(row => {
+                    // Marka Görseli sütununun görünürlük durumunu ayarla
+                    const trademarkImageColumnIndex = columnDefinitions.find(col => col.key === 'trademarkImage').index;
+                    document.querySelectorAll(`#portfolioTableHeaderRow th:nth-child(${trademarkImageColumnIndex + 1}), #portfolioTableFilterRow th:nth-child(${trademarkImageColumnIndex + 1})`).forEach(th => {
+                        th.style.display = (currentTypeFilter === 'trademark') ? '' : 'none';
+                    });
+                    allRows.forEach(row => {
+                        const trademarkCell = row.children[trademarkImageColumnIndex];
+                        if (trademarkCell) {
+                            trademarkCell.style.display = (currentTypeFilter === 'trademark') ? '' : 'none';
+                        }
+                    });
+
+
+                    let filteredRecords = allRows.filter(row => {
                         const recordId = row.dataset.recordId;
                         const record = this.allRecords.find(r => r.id === recordId); // allRecords'tan orijinal objeyi bul
 
@@ -660,7 +668,6 @@
                                 return true; // Aranabilir değilse veya filtre boşsa True
                             }
                             // Eğer sütun sadece belirli bir tabda görünüyorsa ve o tab aktif değilse bu filtreyi atla
-                            // Bu satır sadece filteredRecords mantığı için geçerli, DOM'da td her zaman var.
                             if (col.onlyTrademark && currentTypeFilter !== 'trademark') return true; 
 
                             let recordValue = '';
