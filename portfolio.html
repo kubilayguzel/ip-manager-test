@@ -305,6 +305,8 @@
                     <button class="btn-add-record" onclick="window.location.href='data-entry.html'">
                         <span>&#x2795;</span> Yeni Kayıt Ekle
                     </button>
+                    <button class="btn btn-secondary" id="exportExcelBtn">Excel Olarak Aktar</button>
+                    <button class="btn btn-secondary" id="exportPdfBtn">PDF Olarak Aktar</button>
                 </div>
             </div>
     
@@ -334,9 +336,13 @@
         </div>
     </div>
     
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
     <script type="module">
         import { authService, ipRecordsService, personService, auth } from './firebase-config.js';
-        import { showNotification, formatFileSize } from './utils.js';
+        import { showNotification, formatFileSize, exportTableToExcel, exportTableToPdf } from './utils.js';
         import { loadSharedLayout } from './js/layout-loader.js';
 
         document.addEventListener('DOMContentLoaded', async () => {
@@ -421,7 +427,6 @@
                                 const columnKey = e.target.dataset.column;
                                 this.columnFilters[columnKey] = e.target.value.toLowerCase();
                                 this.applyFiltersAndSort();
-                                // Odak kaybını engellemek için, inputun kendisi DOM'da kalacağı için tekrar odağı ayarlamaya gerek yok.
                             }, 300); // 300ms gecikme
                         }
                     });
@@ -450,6 +455,14 @@
                     });
 
                     document.getElementById('closeRecordDetailModal').addEventListener('click', () => this.closeModal('recordDetailModal'));
+
+                    // Dışa Aktarma Butonları Event Listener'ları
+                    document.getElementById('exportExcelBtn').addEventListener('click', () => {
+                        exportTableToExcel('portfolio-table', 'Portföy Raporu'); // 'portfolio-table' tablonuzun ID'si
+                    });
+                    document.getElementById('exportPdfBtn').addEventListener('click', () => {
+                        exportTableToPdf('portfolio-table', 'Portföy Raporu'); // 'portfolio-table' tablonuzun ID'si
+                    });
                 }
 
                 toggleSort(columnKey) {
@@ -582,7 +595,7 @@
                                 </td>`;
                             }
                         });
-                        row.innerHTML = rowCellsHtml;
+                        row.innerHTML = rowCellsHtml; // rowCellsHtml'i sadece bir kez ata
                         tableBody.appendChild(row);
                     });
                 }
@@ -646,7 +659,8 @@
                                 return true; // Aranabilir değilse veya filtre boşsa True
                             }
                             // Eğer sütun sadece belirli bir tabda görünüyorsa ve o tab aktif değilse bu filtreyi atla
-                            if (col.onlyTrademark && currentTypeFilter !== 'trademark') return true; // Bu satır sadece filteredRecords mantığı için geçerli, DOM'da td her zaman var.
+                            // Bu satır sadece filteredRecords mantığı için geçerli, DOM'da td her zaman var.
+                            if (col.onlyTrademark && currentTypeFilter !== 'trademark') return true; 
 
                             let recordValue = '';
                             if (col.key === 'owners') {
@@ -711,14 +725,10 @@
 
                     // Satırları göster/gizle ve sırala
                     allRows.forEach(row => {
-                        // Eğer row filtrelenmiş sonuçlarda yoksa gizle, varsa göster
                         row.style.display = filteredRows.includes(row) ? 'table-row' : 'none';
                     });
                     
-                    // Sıralanmış satırları doğru sırada tekrar DOM'a ekle
-                    // Bu kısım, satırları DOM'dan kaldırıp tekrar ekleyerek sıralamayı günceller.
-                    // Performans için önerilen bir yöntemdir, çünkü sadece görünür satırlar değil,
-                    // tüm satırlar doğru sırada olmalıdır.
+                    // Sıralanmış satırları doğru sırada tekrar DOM'a ekle (performans için önerilen yöntem)
                     const fragment = document.createDocumentFragment();
                     filteredRows.forEach(row => {
                         fragment.appendChild(row);
