@@ -440,16 +440,17 @@
                         }
                     });
 
-                    document.getElementById('portfolioTableBody').addEventListener('click', (e) => { 
+                    document.getElementById('portfolioTableBody').addEventListener('click', (e) => {
                         if (e.target.classList.contains('action-btn')) {
                             e.preventDefault();
                             const recordId = e.target.dataset.id;
-                            if (e.target.classList.contains('edit-btn')) {
+
+                            if (e.target.classList.contains('view-btn')) {
+                                this.showRecordDetailModal(recordId);
+                            } else if (e.target.classList.contains('edit-btn')) {
                                 window.location.href = `data-entry.html?id=${recordId}`;
                             } else if (e.target.classList.contains('delete-btn')) {
                                 this.deleteRecord(recordId);
-                            } else if (e.target.classList.contains('view-btn')) {
-                                this.showRecordDetailModal(recordId);
                             }
                         }
                     });
