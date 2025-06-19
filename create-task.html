@@ -218,7 +218,7 @@
     </div>
 
     <script type="module">
-        import { authService, taskService, ipRecordsService, personsService, accrualService, auth, generateUUID } from './firebase-config.js';
+        import { authService, taskService, ipRecordsService, personService, accrualService, auth, generateUUID } from './firebase-config.js';
 
         document.addEventListener('DOMContentLoaded', function() {
             const accordions = document.querySelectorAll('.accordion-header');
@@ -271,7 +271,7 @@
                 
                 try {
                     const [ipRecordsResult, personsResult, usersResult] = await Promise.all([
-                        ipRecordsService.getRecords(), personsService.getPersons(), taskService.getAllUsers()
+                        ipRecordsService.getRecords(), personService.getPersons(), taskService.getAllUsers()
                     ]);
                     this.allIpRecords = ipRecordsResult.data || [];
                     this.allPersons = personsResult.data || [];
@@ -612,7 +612,7 @@
                 };
 
                 try {
-                    const result = await personsService.addPerson(personData);
+                    const result = await personService.addPerson(personData);
                     if (result.success) {
                         alert('Yeni kişi başarıyla eklendi.');
                         this.allPersons.push({ ...result.data });
