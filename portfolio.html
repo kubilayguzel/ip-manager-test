@@ -117,31 +117,35 @@
             background-color: #f6f8fa;
         }
 
-        /* Marka Görseli Stilleri */
+/* Marka Görseli Stilleri */
 .trademark-image-thumbnail {
     width: 50px; /* Küçük thumbnail boyutu */
     height: auto;
     border-radius: 5px;
     vertical-align: middle;
-    /* transition: transform 0.2s ease-in-out; */ /* Mevcut transition satırını kaldır veya yorum satırı yap */
-    transition: transform 0.3s ease-out, box-shadow 0.3s ease-out, border 0.3s ease-out; /* Daha yumuşak geçiş */
+    /* transition: transform 0.3s ease-out, box-shadow 0.3s ease-out, border 0.3s ease-out; */ /* Önceki satırı kaldır veya yorum satırı yap */
+    transition: transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94), box-shadow 0.4s ease-out, border 0.4s ease-out; /* Daha belirgin ve akıcı geçiş */
     cursor: pointer;
     will-change: transform; /* Tarayıcıya transform'un değişeceğini bildir */
+    transform-origin: center center; /* Büyümenin tam merkezden olmasını sağlar */
 }
 
-       /* Hover efekti için önemli: tablo hücresine göre konumlandırma */
+/* Hover efekti için önemli: tablo hücresine göre konumlandırma */
 .portfolio-table td {
     position: relative; /* İçindeki resmin absolute konumlanması için */
+    overflow: visible; /* İçeriğin hücre dışına taşmasına izin ver */
 }
+
 .trademark-image-thumbnail:hover {
-    transform: translate(-50%, -50%) scale(3); /* Hem büyüt hem ortala */
+    transform: translate(-50%, -50%) scale(4); /* Üzerine gelince 4 kat büyüt */
     position: absolute; /* Büyüdüğünde diğer elementlerin üzerine gelmesi için */
     top: 50%;
     left: 50%;
-    z-index: 10; /* Diğer içeriklerin üstünde kalması için */
-    box-shadow: 0px 0px 20px rgba(0,0,0,0.4); /* Daha belirgin gölge */
+    z-index: 100; /* Diğer tüm içeriklerin üstünde kalması için daha yüksek z-index */
+    box-shadow: 0px 5px 25px rgba(0,0,0,0.5); /* Daha belirgin gölge */
     border: 3px solid #1e3c72; /* Daha belirgin kenarlık */
-    /* background-color: white; */ /* Arka planı beyaza çevirerek daha belirgin olmasını sağlayabiliriz, isteğe bağlı */
+    background-color: white; /* Resim büyüdüğünde arka planı temizle */
+    padding: 2px; /* Kenarlık ve resim arasında hafif boşluk */
 }
 
 
