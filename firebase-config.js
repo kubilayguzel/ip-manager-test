@@ -617,5 +617,4 @@ export {
     db, 
     authService, 
     ipRecordsService, 
-    personService, 
-};
+    };
