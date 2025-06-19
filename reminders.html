@@ -3,269 +3,568 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>IP Manager - Hatırlatmalar</title>
-    <link rel="stylesheet" href="css/shared-styles.css">
+    <title>IP Manager - Hatırlatıcılar</title>
     <style>
         /* Bu sayfaya özel stiller */
         /* Genel body, page-wrapper, main-container stilleri shared-styles.css'ten gelecektir. */
-        /* Eğer bu sayfaya özel body/page-wrapper/main-container stilleri gerekiyorsa,
-           shared-styles.css'teki tanımlardan sonra buraya eklenmelidir. */
-
+        /* Sadece bu sayfaya özgü ve çakışmayan stilleri burada tutun */
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333; display: flex; }
+        .page-wrapper {
+            flex-grow: 1; display: flex; flex-direction: column;
+            height: 100vh; overflow-y: auto;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        }
+        .main-container { width: 100%; padding: 30px; margin: 0; }
+        
+        /* Reminders specific styles */
         .page-header { background: rgba(255, 255, 255, 0.95); padding: 30px; border-radius: 20px; margin-bottom: 30px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1); }
         .page-title { font-size: 2em; color: #1e3c72; margin-bottom: 10px; }
         .page-subtitle { color: #666; font-size: 1.1em; }
 
-        /* Bildirimler Container */
-        .notifications-container { background: rgba(255, 255, 255, 0.95); border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); overflow: hidden; padding: 30px; }
-        .notification-item {
-            background-color: #f8f9fa;
-            border: 1px solid #e1e8ed;
-            border-radius: 10px;
-            padding: 15px 20px;
-            margin-bottom: 15px;
+        .reminders-container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            overflow: hidden;
+            padding: 30px;
+        }
+
+        .filter-section {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #e1e8ed;
+        }
+
+        .filter-group {
             display: flex;
             align-items: center;
-            gap: 15px;
+            gap: 10px;
+        }
+
+        .filter-label {
+            font-weight: 500;
+            color: #333;
+        }
+
+        .form-select, .form-input {
+            padding: 8px 12px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            font-size: 0.95em;
+        }
+        .form-input[type="date"] {
+            min-width: 150px;
+        }
+
+        .reminders-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 25px;
+        }
+
+        .reminder-card {
+            background: #f8f9fa;
+            border: 1px solid #e1e8ed;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+            display: flex;
+            flex-direction: column;
+            position: relative;
             transition: all 0.3s ease;
         }
-        .notification-item:hover {
-            background-color: #f0f4f8;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+        .reminder-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.1);
         }
-        .notification-item.unread {
-            background-color: #fff3cd; /* Okunmamış için sarımsı ton */
-            border-left: 4px solid #ffc107;
-            font-weight: 500;
-        }
-        .notification-icon {
-            font-size: 1.8em;
-            width: 40px;
-            height: 40px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 50%;
-            background-color: #e9ecef;
-            color: #6c757d;
-        }
-        .notification-item.unread .notification-icon {
-            background-color: #ffc107;
+
+        .reminder-status-badge {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            padding: 5px 10px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            font-weight: 600;
             color: white;
         }
-        .notification-content {
-            flex-grow: 1;
+        .status-active { background-color: #007bff; }
+        .status-completed { background-color: #28a745; }
+        .status-overdue { background-color: #dc3545; }
+        .status-upcoming { background-color: #ffc107; color: #333; }
+
+        .reminder-title {
+            font-size: 1.2em;
+            font-weight: 600;
+            color: #1e3c72;
+            margin-bottom: 10px;
+            padding-right: 80px; /* Badge için boşluk */
         }
-        .notification-message-text {
-            font-size: 1em;
-            color: #333;
-            margin-bottom: 5px;
-            word-break: break-word; /* Uzun mesajları kırmak için */
-        }
-        .notification-meta {
-            font-size: 0.85em;
-            color: #666;
-        }
-        .notification-actions {
+
+        .reminder-detail {
+            margin-bottom: 8px;
+            font-size: 0.95em;
+            color: #555;
             display: flex;
-            gap: 8px;
+            gap: 10px;
+            align-items: center;
         }
-        .action-btn-small {
-            padding: 6px 12px;
+        .detail-icon { font-size: 1.1em; color: #6c757d; }
+        .detail-label { font-weight: 500; }
+
+        .reminder-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px dashed #e1e8ed;
+        }
+
+        .action-btn {
+            background: #007bff;
+            color: white;
             border: none;
+            padding: 8px 12px;
             border-radius: 6px;
             cursor: pointer;
-            font-size: 0.85em;
-            transition: all 0.2s ease;
+            font-size: 0.9em;
+            transition: all 0.3s ease;
         }
-        .btn-mark-read { background-color: #28a745; color: white; }
-        .btn-mark-read:hover { background-color: #218838; }
-        .btn-delete { background-color: #dc3545; color: white; }
-        .btn-delete:hover { background-color: #c82333; }
+        .action-btn.complete-btn { background-color: #28a745; }
+        .action-btn.complete-btn:hover { background-color: #218838; }
+        .action-btn.edit-btn { background-color: #ffc107; color: #212529; }
+        .action-btn.edit-btn:hover { background-color: #e0a800; }
+        .action-btn.delete-btn { background-color: #dc3545; }
+        .action-btn.delete-btn:hover { background-color: #c82333; }
+        .action-btn:hover { opacity: 0.9; }
 
-        .no-notifications { text-align: center; padding: 60px 20px; color: #666; font-size: 1.1em; display: none; }
-        .loading { text-align: center; padding: 40px; color: #666; }
-        .loading-spinner { display: inline-block; width: 30px; height: 30px; border: 3px solid #f3f3f3; border-top: 3px solid #1e3c72; border-radius: 50%; animation: spin 1s linear infinite; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .loading { text-align: center; padding: 50px; grid-column: 1 / -1; }
+        .no-reminders { text-align: center; padding: 50px; color: #666; grid-column: 1 / -1; }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1002;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.6);
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.show { display: flex; }
+        .modal-content {
+            background-color: #fefefe;
+            margin: auto;
+            padding: 30px;
+            border: 1px solid #888;
+            width: 90%;
+            max-width: 600px;
+            border-radius: 20px;
+            animation-name: animatetop;
+            animation-duration: 0.4s;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        @keyframes animatetop { from {top: -300px; opacity: 0} to {top: 0; opacity: 1} }
+        .close-modal-btn { color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer; }
+        .modal-title { font-size: 1.5em; color: #1e3c72; margin-bottom: 20px;}
+        .form-group { margin-bottom: 15px; display: flex; flex-direction: column; }
+        .form-label { display: block; margin-bottom: 8px; color: #333; font-weight: 500; }
+        .form-input, .form-select, .form-textarea {
+            width: 100%; padding: 12px 15px; border: 2px solid #e1e8ed;
+            border-radius: 10px; font-size: 1em; transition: all 0.3s ease;
+            background: white;
+        }
+        .form-textarea { min-height: 100px; resize: vertical; }
+        .modal-footer {
+            margin-top: 25px; padding-top: 20px; border-top: 1px solid #eee;
+            display: flex; justify-content: flex-end; gap: 10px;
+        }
+        .btn-primary { background: #1e3c72; color: white; border: none; }
+        .btn-primary:hover { background: #2a5298; }
+        .btn-secondary { background: #6c757d; color: white; border: none; }
+        .btn-secondary:hover { background: #5a6268; }
     </style>
 </head>
 <body>
     <div id="layout-placeholder"></div>
     <div class="page-wrapper">
+        <header class="top-header">
+            </header>
+
         <main class="main-container">
             <section class="page-header">
-                <h1 class="page-title">Hatırlatmalar</h1>
-                <p class="page-subtitle">Size gönderilen önemli hatırlatmaları ve sistem bildirimlerini buradan takip edin.</p>
+                <h1 class="page-title">Hatırlatıcılar</h1>
+                <p class="page-subtitle">Önemli tarihler ve görevler için hatırlatıcılarınızı yönetin.</p>
             </section>
-
-            <div class="notifications-container">
-                <div class="loading" id="loadingIndicator">
-                    <div class="loading-spinner"></div><div>Bildirimler yükleniyor...</div>
-                </div>
-                <div id="notificationsList">
+    
+            <div class="reminders-container">
+                <div class="filter-section">
+                    <div class="filter-group">
+                        <label class="filter-label" for="statusFilter">Durum:</label>
+                        <select id="statusFilter" class="form-select">
+                            <option value="all">Tümü</option>
+                            <option value="active">Aktif</option>
+                            <option value="completed">Tamamlandı</option>
+                            <option value="overdue">Vadesi Geçmiş</option>
+                            <option value="upcoming">Yaklaşan</option>
+                        </select>
                     </div>
-                <div class="no-notifications" id="noNotificationsMessage">
-                    <div class="notification-icon">🔔</div>
-                    <h3>Şu anda hiçbir bildiriminiz bulunmuyor.</h3>
-                    <p>Yeni hatırlatmalar veya sistem mesajları buraya düşecektir.</p>
+                    <div class="filter-group">
+                        <label class="filter-label" for="dueDateFilter">Son Tarih:</label>
+                        <input type="date" id="dueDateFilter" class="form-input">
+                    </div>
+                    <button class="btn-add-person btn-search" id="addReminderBtn">
+                        <span>&#x2795;</span> Yeni Hatırlatıcı Ekle
+                    </button>
                 </div>
+                
+                <div id="remindersGrid" class="reminders-grid">
+                    <div id="loadingIndicator" class="loading" style="display: none;">Yükleniyor...</div>
+                    <div id="noRemindersMessage" class="no-reminders" style="display: none;">Henüz hatırlatıcı bulunmamaktadır.</div>
+                    </div>
             </div>
         </main>
     </div>
 
+    <div id="reminderModal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal-btn" id="closeReminderModal">&times;</span>
+            <h3 class="modal-title" id="reminderModalTitle">Yeni Hatırlatıcı Ekle</h3>
+            <form id="reminderForm">
+                <input type="hidden" id="reminderId">
+                <div class="form-group">
+                    <label for="reminderTitle" class="form-label">Başlık:</label>
+                    <input type="text" id="reminderTitle" class="form-input" required>
+                </div>
+                <div class="form-group">
+                    <label for="reminderDescription" class="form-label">Açıklama:</label>
+                    <textarea id="reminderDescription" class="form-textarea"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="reminderDueDate" class="form-label">Son Tarih:</label>
+                    <input type="date" id="reminderDueDate" class="form-input" required>
+                </div>
+                <div class="form-group">
+                    <label for="relatedIpRecordSearch" class="form-label">İlgili IP Kaydı (Opsiyonel):</label>
+                    <input type="text" id="relatedIpRecordSearch" class="form-input" placeholder="Başlık veya Başvuru Numarası Ara...">
+                    <div id="relatedIpRecordSearchResults" class="search-results-list"></div>
+                    <div id="selectedIpRecordDisplay" class="search-result-display" style="display:none;"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" id="cancelReminderBtn">İptal</button>
+                    <button type="submit" class="btn btn-primary" id="saveReminderBtn">Kaydet</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script type="module">
-        import { authService, db, auth } from './firebase-config.js';
-        import { collection, query, where, orderBy, getDocs, updateDoc, doc, deleteDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+        import { authService, reminderService, ipRecordsService, auth } from './firebase-config.js';
+        import { showNotification } from './utils.js';
         import { loadSharedLayout } from './js/layout-loader.js'; // layout-loader.js eklendi
-        import { showNotification } from './utils.js'; // showNotification utils.js'ten import edildi
 
-        document.addEventListener('DOMContentLoaded', async function() { // async eklendi
-            // Sidebar ve Top Header'ı yükle
-            await loadSharedLayout({ activeMenuLink: 'reminders.html' }); // Sayfa aktifliğini ayarla
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Ortak layout'u yükle ve bu sayfanın aktif linkini belirt
+            await loadSharedLayout({ activeMenuLink: 'reminders.html' });
 
-            // Hatırlatmalar Modülü'nü başlat
-            let remindersModule;
-            auth.onAuthStateChanged(async (user) => { // async eklendi
-                if (user || authService.getCurrentUser()) {
-                    if (!remindersModule) {
-                        remindersModule = new RemindersModule();
-                        await remindersModule.init(); // init metodunu bekle
-                    }
-                } else {
-                    window.location.href = 'index.html';
+            class RemindersModule {
+                constructor() {
+                    this.currentUser = null;
+                    this.allReminders = [];
+                    this.allIpRecords = [];
+                    this.selectedRelatedIpRecord = null;
                 }
-            });
-        });
 
-        class RemindersModule {
-            constructor() {
-                this.currentUser = null;
-                this.notifications = [];
-            }
-
-            async init() {
-                this.currentUser = authService.getCurrentUser();
-                if (!this.currentUser) {
-                    window.location.href = 'index.html';
-                    return;
+                init() {
+                    authService.auth.onAuthStateChanged(async (user) => {
+                        if (user || authService.getCurrentUser()) {
+                            this.currentUser = authService.getCurrentUser();
+                            await this.loadAllData();
+                            this.setupEventListeners();
+                        } else {
+                            window.location.href = 'index.html';
+                        }
+                    });
                 }
-                // updateUserInfo çağrısı artık loadSharedLayout içinde yapıldığı için burada tekrara gerek yok.
-                // this.updateUserInfo(); 
-                this.setupEventListeners();
-                await this.loadNotifications();
-            }
 
-            // updateUserInfo() { /* Bu fonksiyon artık layout-loader.js içinde */ }
-
-            setupEventListeners() {
-                // logoutBtn event listener'ı artık layout-loader.js içinde.
-                // document.getElementById('logoutBtn').addEventListener('click', () => authService.signOut());
-                
-                // Dinamik olarak oluşturulan butonlar için olay delegasyonu
-                document.getElementById('notificationsList').addEventListener('click', async (e) => {
-                    const target = e.target.closest('.action-btn-small');
-                    if (!target) return;
-
-                    const notificationId = target.dataset.id;
-                    if (target.classList.contains('btn-mark-read')) {
-                        await this.markAsRead(notificationId);
-                    } else if (target.classList.contains('btn-delete')) {
-                        await this.deleteNotification(notificationId);
-                    }
-                });
-            }
-
-            async loadNotifications() {
-                const loadingIndicator = document.getElementById('loadingIndicator');
-                const notificationsList = document.getElementById('notificationsList');
-                const noNotificationsMessage = document.getElementById('noNotificationsMessage');
-
-                loadingIndicator.style.display = 'block';
-                notificationsList.innerHTML = '';
-                noNotificationsMessage.style.display = 'none';
-
-                try {
-                    let q;
-                    if (this.currentUser.role === 'superadmin') {
-                        q = query(collection(db, 'notifications'), orderBy('createdAt', 'desc'));
-                    } else {
-                        // Eğer bildirimleri userId'ye göre atıyorsak (şimdiki Cloud Function'da 'all' atanıyor)
-                        // Bu kısım daha sonra geliştirilebilir. Şimdilik sadece 'all' olanları veya süper adminse hepsini gösterelim.
-                        q = query(collection(db, 'notifications'), where('userId', 'in', ['all', this.currentUser.uid]), orderBy('createdAt', 'desc'));
-                    }
-                    
-                    const querySnapshot = await getDocs(q);
-                    this.notifications = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                    this.renderNotifications();
-
-                } catch (error) {
-                    console.error('Bildirimler yüklenirken hata:', error);
-                    notificationsList.innerHTML = '<p style="text-align: center; color: #dc3545;">Bildirimler yüklenirken bir hata oluştu.</p>';
-                } finally {
-                    loadingIndicator.style.display = 'none';
-                }
-            }
-
-            renderNotifications() {
-                const notificationsList = document.getElementById('notificationsList');
-                const noNotificationsMessage = document.getElementById('noNotificationsMessage');
-                notificationsList.innerHTML = '';
-
-                if (this.notifications.length === 0) {
-                    noNotificationsMessage.style.display = 'block';
-                    return;
-                }
-                noNotificationsMessage.style.display = 'none';
-
-                this.notifications.forEach(notification => {
-                    const item = document.createElement('div');
-                    item.className = `notification-item ${!notification.isRead ? 'unread' : ''}`;
-                    
-                    // Bildirim tipi ikonları
-                    let icon = '🔔'; // Varsayılan
-                    if (notification.type === 'warning') icon = '⚠️';
-                    if (notification.type === 'error') icon = '❌';
-                    if (notification.type === 'info') icon = 'ℹ️';
-                    if (notification.type === 'success') icon = '✅';
-
-                    item.innerHTML = `
-                        <div class="notification-icon">${icon}</div>
-                        <div class="notification-content">
-                            <div class="notification-message-text">${notification.message}</div>
-                            <div class="notification-meta">${new Date(notification.createdAt).toLocaleString('tr-TR')}</div>
-                        </div>
-                        <div class="notification-actions">
-                            ${!notification.isRead ? `<button class="action-btn-small btn-mark-read" data-id="${notification.id}">Okundu Olarak İşaretle</button>` : ''}
-                            <button class="action-btn-small btn-delete" data-id="${notification.id}">Sil</button>
-                        </div>
-                    `;
-                    notificationsList.appendChild(item);
-                });
-            }
-
-            async markAsRead(notificationId) {
-                try {
-                    await updateDoc(doc(db, 'notifications', notificationId), { isRead: true });
-                    showNotification('Bildirim okundu olarak işaretlendi.', 'success'); // alert() yerine
-                    await this.loadNotifications(); // Listeyi yenile
-                } catch (error) {
-                    console.error('Bildirim okundu olarak işaretlenirken hata:', error);
-                    showNotification('Bildirim güncellenemedi: ' + error.message, 'error'); // alert() yerine
-                }
-            }
-
-            async deleteNotification(notificationId) {
-                if (confirm('Bu bildirimi silmek istediğinizden emin misiniz?')) {
+                async loadAllData() {
+                    document.getElementById('loadingIndicator').style.display = 'block';
                     try {
-                        await deleteDoc(doc(db, 'notifications', notificationId));
-                        showNotification('Bildirim silindi.', 'success'); // alert() yerine
-                        await this.loadNotifications(); // Listeyi yenile
+                        const [remindersResult, ipRecordsResult] = await Promise.all([
+                            reminderService.getReminders(),
+                            ipRecordsService.getRecords()
+                        ]);
+
+                        this.allReminders = remindersResult.success ? remindersResult.data : [];
+                        this.allIpRecords = ipRecordsResult.success ? ipRecordsResult.data : [];
+                        
+                        this.renderReminders();
                     } catch (error) {
-                        console.error('Bildirim silinirken hata:', error);
-                        showNotification('Bildirim silinemedi: ' + error.message, 'error'); // alert() yerine
+                        showNotification('Veriler yüklenirken bir hata oluştu: ' + error.message, 'error');
+                    } finally {
+                        document.getElementById('loadingIndicator').style.display = 'none';
                     }
                 }
+
+                setupEventListeners() {
+                    document.getElementById('statusFilter').addEventListener('change', () => this.renderReminders());
+                    document.getElementById('dueDateFilter').addEventListener('change', () => this.renderReminders());
+                    document.getElementById('addReminderBtn').addEventListener('click', () => this.showAddReminderModal());
+                    document.getElementById('closeReminderModal').addEventListener('click', () => this.closeReminderModal());
+                    document.getElementById('cancelReminderBtn').addEventListener('click', () => this.closeReminderModal());
+                    document.getElementById('reminderForm').addEventListener('submit', (e) => this.handleReminderFormSubmit(e));
+
+                    document.getElementById('relatedIpRecordSearch').addEventListener('input', (e) => this.searchIpRecords(e.target.value));
+
+                    document.getElementById('remindersGrid').addEventListener('click', (e) => {
+                        if (e.target.classList.contains('action-btn')) {
+                            e.preventDefault();
+                            const reminderId = e.target.dataset.id;
+                            if (e.target.classList.contains('edit-btn')) {
+                                this.showEditReminderModal(reminderId);
+                            } else if (e.target.classList.contains('complete-btn')) {
+                                this.markReminderComplete(reminderId);
+                            } else if (e.target.classList.contains('delete-btn')) {
+                                this.deleteReminder(reminderId);
+                            }
+                        }
+                    });
+                }
+
+                getReminderStatus(dueDate) {
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0); // Saat kısmını sıfırla
+
+                    const due = new Date(dueDate);
+                    due.setHours(0, 0, 0, 0); // Saat kısmını sıfırla
+
+                    if (due < today) {
+                        return 'overdue';
+                    } else if (due > today) {
+                        return 'upcoming';
+                    } else {
+                        return 'active'; // Bugün vadesi gelen
+                    }
+                }
+
+                renderReminders() {
+                    const grid = document.getElementById('remindersGrid');
+                    const noRemindersMessage = document.getElementById('noRemindersMessage');
+                    grid.innerHTML = '';
+
+                    const statusFilter = document.getElementById('statusFilter').value;
+                    const dueDateFilter = document.getElementById('dueDateFilter').value; // YYYY-MM-DD formatında
+
+                    const filteredReminders = this.allReminders.filter(reminder => {
+                        const currentStatus = reminder.status === 'completed' ? 'completed' : this.getReminderStatus(reminder.dueDate);
+                        
+                        const matchesStatus = statusFilter === 'all' || currentStatus === statusFilter;
+                        const matchesDueDate = !dueDateFilter || (reminder.dueDate && reminder.dueDate === dueDateFilter);
+
+                        return matchesStatus && matchesDueDate;
+                    });
+
+                    if (filteredReminders.length === 0) {
+                        noRemindersMessage.style.display = 'block';
+                        return;
+                    }
+                    noRemindersMessage.style.display = 'none';
+
+                    filteredReminders.forEach(reminder => {
+                        const card = document.createElement('div');
+                        card.classList.add('reminder-card');
+
+                        const currentStatus = reminder.status === 'completed' ? 'completed' : this.getReminderStatus(reminder.dueDate);
+                        const statusText = currentStatus === 'active' ? 'Bugün' : (currentStatus === 'overdue' ? 'Vadesi Geçmiş' : (currentStatus === 'upcoming' ? 'Yaklaşan' : 'Tamamlandı'));
+                        const statusClass = `status-${currentStatus}`;
+
+                        const relatedIpRecord = reminder.relatedIpRecordId ? this.allIpRecords.find(rec => rec.id === reminder.relatedIpRecordId) : null;
+                        const relatedIpRecordTitle = relatedIpRecord ? relatedIpRecord.title : 'Yok';
+
+                        const formattedDueDate = reminder.dueDate ? new Date(reminder.dueDate).toLocaleDateString('tr-TR', { year: 'numeric', month: 'long', day: 'numeric' }) : 'Belirtilmemiş';
+
+                        const actionsHtml = currentStatus !== 'completed' ? `
+                            <button class="action-btn complete-btn" data-id="${reminder.id}">Tamamla</button>
+                            <button class="action-btn edit-btn" data-id="${reminder.id}">Düzenle</button>
+                        ` : '';
+
+                        card.innerHTML = `
+                            <span class="reminder-status-badge ${statusClass}">${statusText}</span>
+                            <h4 class="reminder-title">${reminder.title}</h4>
+                            <div class="reminder-detail"><span class="detail-icon">📅</span><span class="detail-label">Son Tarih:</span> ${formattedDueDate}</div>
+                            <div class="reminder-detail"><span class="detail-icon">📄</span><span class="detail-label">Açıklama:</span> ${reminder.description || '-'}</div>
+                            <div class="reminder-detail"><span class="detail-icon">📁</span><span class="detail-label">İlgili IP Kaydı:</span> ${relatedIpRecordTitle}</div>
+                            <div class="reminder-actions">
+                                ${actionsHtml}
+                                <button class="action-btn delete-btn" data-id="${reminder.id}">Sil</button>
+                            </div>
+                        `;
+                        grid.appendChild(card);
+                    });
+                }
+
+                showAddReminderModal() {
+                    document.getElementById('reminderModalTitle').textContent = 'Yeni Hatırlatıcı Ekle';
+                    document.getElementById('reminderForm').reset();
+                    document.getElementById('reminderId').value = '';
+                    this.selectedRelatedIpRecord = null;
+                    document.getElementById('selectedIpRecordDisplay').style.display = 'none';
+                    document.getElementById('reminderModal').classList.add('show');
+                }
+
+                showEditReminderModal(reminderId) {
+                    const reminder = this.allReminders.find(r => r.id === reminderId);
+                    if (!reminder) {
+                        showNotification('Hatırlatıcı bulunamadı.', 'error');
+                        return;
+                    }
+                    document.getElementById('reminderModalTitle').textContent = 'Hatırlatıcıyı Düzenle';
+                    document.getElementById('reminderId').value = reminder.id;
+                    document.getElementById('reminderTitle').value = reminder.title;
+                    document.getElementById('reminderDescription').value = reminder.description || '';
+                    document.getElementById('reminderDueDate').value = reminder.dueDate || '';
+                    
+                    this.selectedRelatedIpRecord = reminder.relatedIpRecordId ? this.allIpRecords.find(rec => rec.id === reminder.relatedIpRecordId) : null;
+                    if (this.selectedRelatedIpRecord) {
+                        const display = document.getElementById('selectedIpRecordDisplay');
+                        display.innerHTML = `<p><b>Seçilen Kayıt:</b> ${this.selectedRelatedIpRecord.title}</p>`;
+                        display.style.display = 'block';
+                        document.getElementById('relatedIpRecordSearch').value = ''; // Arama kutusunu temizle
+                    } else {
+                        document.getElementById('selectedIpRecordDisplay').style.display = 'none';
+                        document.getElementById('relatedIpRecordSearch').value = '';
+                    }
+
+                    document.getElementById('reminderModal').classList.add('show');
+                }
+
+                closeReminderModal() {
+                    document.getElementById('reminderModal').classList.remove('show');
+                }
+
+                async handleReminderFormSubmit(event) {
+                    event.preventDefault();
+                    const reminderId = document.getElementById('reminderId').value;
+                    const reminderData = {
+                        title: document.getElementById('reminderTitle').value,
+                        description: document.getElementById('reminderDescription').value,
+                        dueDate: document.getElementById('reminderDueDate').value,
+                        relatedIpRecordId: this.selectedRelatedIpRecord ? this.selectedRelatedIpRecord.id : null,
+                        userId: this.currentUser.uid,
+                        userEmail: this.currentUser.email
+                    };
+
+                    if (!reminderData.title || !reminderData.dueDate) {
+                        showNotification('Başlık ve Son Tarih zorunludur.', 'error');
+                        return;
+                    }
+
+                    if (reminderId) {
+                        // Edit existing reminder
+                        const result = await reminderService.updateReminder(reminderId, reminderData);
+                        if (result.success) {
+                            showNotification('Hatırlatıcı başarıyla güncellendi!', 'success');
+                        } else {
+                            showNotification('Hatırlatıcı güncellenirken hata oluştu: ' + result.error, 'error');
+                        }
+                    } else {
+                        // Add new reminder
+                        reminderData.status = 'active'; // Yeni hatırlatıcı varsayılan olarak 'active'
+                        const result = await reminderService.addReminder(reminderData);
+                        if (result.success) {
+                            showNotification('Yeni hatırlatıcı başarıyla eklendi!', 'success');
+                        } else {
+                            showNotification('Hatırlatıcı eklenirken hata oluştu: ' + result.error, 'error');
+                        }
+                    }
+                    this.closeReminderModal();
+                    await this.loadAllData(); // Reload data to update grid
+                }
+
+                async markReminderComplete(reminderId) {
+                    if (confirm('Bu hatırlatıcıyı tamamlandı olarak işaretlemek istediğinizden emin misiniz?')) {
+                        const result = await reminderService.updateReminder(reminderId, { status: 'completed' });
+                        if (result.success) {
+                            showNotification('Hatırlatıcı tamamlandı olarak işaretlendi.', 'success');
+                            await this.loadAllData(); // Reload data
+                        } else {
+                            showNotification('Hatırlatıcı güncellenirken hata oluştu: ' + result.error, 'error');
+                        }
+                    }
+                }
+
+                async deleteReminder(reminderId) {
+                    if (confirm('Bu hatırlatıcıyı silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.')) {
+                        const result = await reminderService.deleteReminder(reminderId);
+                        if (result.success) {
+                            showNotification('Hatırlatıcı başarıyla silindi.', 'success');
+                            await this.loadAllData(); // Reload data
+                        } else {
+                            showNotification('Hatırlatıcı silinirken hata oluştu: ' + result.error, 'error');
+                        }
+                    }
+                }
+
+                searchIpRecords(query) {
+                    const searchResultsContainer = document.getElementById('relatedIpRecordSearchResults');
+                    searchResultsContainer.innerHTML = '';
+                    const selectedIpRecordDisplay = document.getElementById('selectedIpRecordDisplay');
+                    selectedIpRecordDisplay.style.display = 'none';
+                    this.selectedRelatedIpRecord = null; // Arama başladığında seçimi sıfırla
+
+                    if (query.length < 3) {
+                        searchResultsContainer.innerHTML = '<p style="padding: 10px; text-align: center; color: #666;">Aramak için en az 3 karakter girin.</p>';
+                        return;
+                    }
+
+                    const lowerQuery = query.toLowerCase();
+                    const filtered = this.allIpRecords.filter(record =>
+                        record.title.toLowerCase().includes(lowerQuery) ||
+                        (record.applicationNumber && record.applicationNumber.toLowerCase().includes(lowerQuery)) ||
+                        (record.registrationNumber && record.registrationNumber.toLowerCase().includes(lowerQuery))
+                    );
+
+                    if (filtered.length === 0) {
+                        searchResultsContainer.innerHTML = '<p style="padding: 10px; text-align: center; color: #666;">Kayıt bulunamadı.</p>';
+                        return;
+                    }
+
+                    filtered.forEach(record => {
+                        const item = document.createElement('div');
+                        item.classList.add('search-result-item');
+                        item.textContent = `${record.title} (${record.applicationNumber || record.registrationNumber || 'N/A'})`;
+                        item.addEventListener('click', () => {
+                            this.selectIpRecordForReminder(record);
+                            searchResultsContainer.style.display = 'none'; // Sonuçları gizle
+                        });
+                        searchResultsContainer.appendChild(item);
+                    });
+                    searchResultsContainer.style.display = 'block';
+                }
+
+                selectIpRecordForReminder(record) {
+                    this.selectedRelatedIpRecord = record;
+                    const display = document.getElementById('selectedIpRecordDisplay');
+                    display.innerHTML = `<p><b>Seçilen Kayıt:</b> ${record.title} (${record.applicationNumber || record.registrationNumber || 'N/A'})</p>`;
+                    display.style.display = 'block';
+                    document.getElementById('relatedIpRecordSearch').value = ''; // Arama kutusunu temizle
+                    document.getElementById('relatedIpRecordSearchResults').innerHTML = ''; // Arama sonuçlarını temizle
+                }
             }
-        }
+
+            const remindersModule = new RemindersModule();
+            remindersModule.init();
+        });
     </script>
 </body>
 </html>
