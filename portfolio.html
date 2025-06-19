@@ -586,9 +586,9 @@
                             else if (col.key === 'owners') { cellHtmlContent = `${ownerNames || '-'}`; }
                             else if (col.key === 'actions') {
                                 cellHtmlContent = `
-                                    <button class="action-btn view-btn" data-id="${record.id}">Görüntüle</button>
-                                    <button class="action-btn edit-btn" data-id="${record.id}">Düzenle</button>
-                                    <button class="action-btn delete-btn" data-id="${record.id}">Sil</button>
+                                    <<button type="button"class="action-btn view-btn" data-id="${record.id}">Görüntüle</button>
+                                    <<button type="button"class="action-btn edit-btn" data-id="${record.id}">Düzenle</button>
+                                    <<button type="button"class="action-btn delete-btn" data-id="${record.id}">Sil</button>
                                 `;
                             }
                             rowCellsHtml += `<td>${cellHtmlContent}</td>`;
