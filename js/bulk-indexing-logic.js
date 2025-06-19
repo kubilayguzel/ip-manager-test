@@ -1,6 +1,6 @@
 // js/bulk-indexing-logic.js
-import { authService, ipRecordsService, generateUUID, bulkIndexingService } from '../firebase-config.js';
-import { showNotification, formatFileSize, readFileAsDataURL } from '../utils.js';
+import { authService, ipRecordsService, generateUUID, bulkIndexingService } from './firebase-config.js'; // firebase-config.js'e göre yol güncellendi
+import { showNotification, formatFileSize, readFileAsDataURL } from './utils.js'; // utils.js'e göre yol güncellendi
 import { getFirestore, writeBatch, doc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 
 const CHILD_TRANSACTION_TYPES = [
@@ -50,9 +50,20 @@ export class BulkIndexingModule {
     }
 
     setupEventListeners = () => {
-        document.getElementById('bulkFiles').addEventListener('change', this.handleBulkFilesChange); 
-        document.getElementById('bulkFilesButton').addEventListener('click', () => document.getElementById('bulkFiles').click()); 
-        document.getElementById('bulkDeliveryDate').addEventListener('change', this.updateBulkJobsTebligDate); 
+        const bulkFilesInput = document.getElementById('bulkFiles');
+        if (bulkFilesInput) {
+            bulkFilesInput.addEventListener('change', this.handleBulkFilesChange); 
+        }
+        const bulkFilesButton = document.getElementById('bulkFilesButton');
+        if (bulkFilesButton) {
+            bulkFilesButton.addEventListener('click', () => {
+                if (bulkFilesInput) bulkFilesInput.click();
+            });
+        }
+        const bulkDeliveryDateInput = document.getElementById('bulkDeliveryDate');
+        if (bulkDeliveryDateInput) {
+            bulkDeliveryDateInput.addEventListener('change', this.updateBulkJobsTebligDate); 
+        }
 
         const selectAllBulkJobsCheckbox = document.getElementById('selectAllBulkJobs');
         if(selectAllBulkJobsCheckbox) {
@@ -66,59 +77,60 @@ export class BulkIndexingModule {
             });
         });
 
-        // Event delegation for dynamically added elements in the table
-        // Tablodaki dinamik olarak eklenen elementler için event delegation
-        document.getElementById('bulkIndexingTable').addEventListener('input', (e) => {
-            const target = e.target;
-            if (target.classList.contains('bulk-record-manual-search-input')) {
-                this.searchRecordsForBulkJob(e);
-            }
-        });
-
-        document.getElementById('bulkIndexingTable').addEventListener('blur', (e) => {
-            const target = e.target;
-            if (target.classList.contains('bulk-record-manual-search-input')) {
-                setTimeout(() => {
-                    const jobId = target.dataset.jobId;
-                    const resultsContainer = document.querySelector(`.bulk-search-results-container[data-job-id="${jobId}"]`);
-                    if (resultsContainer) {
-                        resultsContainer.style.display = 'none';
-                    }
-                }, 200);
-            }
-        }, true); // Use capture phase for blur event
-
-        document.getElementById('bulkIndexingTable').addEventListener('focus', (e) => {
-            const target = e.target;
-            if (target.classList.contains('bulk-record-manual-search-input')) {
-                const jobId = target.dataset.jobId;
-                const container = document.querySelector(`.bulk-search-results-container[data-job-id="${jobId}"]`);
-                if (container && container.innerHTML.trim() !== '<p class="no-results-message p-2">Arama yapmak için en az 3 karakter girin.</p>' && container.innerHTML.trim() !== '<p class="no-results-message p-2">Kayıt bulunamadı.</p>') {
-                    container.style.display = 'block';
+        const bulkIndexingTable = document.getElementById('bulkIndexingTable');
+        if (bulkIndexingTable) {
+            bulkIndexingTable.addEventListener('input', (e) => {
+                const target = e.target;
+                if (target.classList.contains('bulk-record-manual-search-input')) {
+                    this.searchRecordsForBulkJob(e);
                 }
-            }
-        }, true); // Use capture phase for focus event
+            });
 
-        document.getElementById('bulkIndexingTable').addEventListener('click', (e) => {
-            const target = e.target;
-            if (target.classList.contains('record-search-item')) {
-                const jobId = target.closest('.bulk-search-results-container').dataset.jobId;
-                const recordId = target.dataset.id;
-                this.selectRecordForBulkJob(recordId, jobId);
-            } else if (target.classList.contains('bulk-parent-select')) {
-                this.selectParentForBulkJob(target.value, target.dataset.jobId);
-            } else if (target.classList.contains('bulk-child-type-select')) {
-                this.updateJobSpecificChildType(target.value, target.dataset.jobId);
-            } else if (target.classList.contains('bulk-job-delivery-date')) {
-                this.updateJobSpecificDeliveryDate(target.value, target.dataset.jobId);
-            } else if (target.classList.contains('bulk-skip-btn')) {
-                this.skipBulkJob(e);
-            } else if (target.classList.contains('bulk-retry-btn')) {
-                this.retryBulkJob(e);
-            } else if (target.classList.contains('bulk-job-checkbox')) {
-                this.handleBulkJobCheckboxChange(e);
-            }
-        });
+            bulkIndexingTable.addEventListener('blur', (e) => {
+                const target = e.target;
+                if (target.classList.contains('bulk-record-manual-search-input')) {
+                    setTimeout(() => {
+                        const jobId = target.dataset.jobId;
+                        const resultsContainer = document.querySelector(`.bulk-search-results-container[data-job-id="${jobId}"]`);
+                        if (resultsContainer) {
+                            resultsContainer.style.display = 'none';
+                        }
+                    }, 200);
+                }
+            }, true); 
+
+            bulkIndexingTable.addEventListener('focus', (e) => {
+                const target = e.target;
+                if (target.classList.contains('bulk-record-manual-search-input')) {
+                    const jobId = target.dataset.jobId;
+                    const container = document.querySelector(`.bulk-search-results-container[data-job-id="${jobId}"]`);
+                    if (container && container.innerHTML.trim() !== '<p class="no-results-message p-2">Arama yapmak için en az 3 karakter girin.</p>' && container.innerHTML.trim() !== '<p class="no-results-message p-2">Kayıt bulunamadı.</p>') {
+                        container.style.display = 'block';
+                    }
+                }
+            }, true); 
+
+            bulkIndexingTable.addEventListener('click', (e) => {
+                const target = e.target;
+                if (target.classList.contains('record-search-item')) {
+                    const jobId = target.closest('.bulk-search-results-container').dataset.jobId;
+                    const recordId = target.dataset.id;
+                    this.selectRecordForBulkJob(recordId, jobId);
+                } else if (target.classList.contains('bulk-parent-select')) {
+                    this.selectParentForBulkJob(target.value, target.dataset.jobId);
+                } else if (target.classList.contains('bulk-child-type-select')) {
+                    this.updateJobSpecificChildType(target.value, target.dataset.jobId);
+                } else if (target.classList.contains('bulk-job-delivery-date')) {
+                    this.updateJobSpecificDeliveryDate(target.value, target.dataset.jobId);
+                } else if (target.classList.contains('bulk-skip-btn')) {
+                    this.skipBulkJob(e);
+                } else if (target.classList.contains('bulk-retry-btn')) {
+                    this.retryBulkJob(e);
+                } else if (target.classList.contains('bulk-job-checkbox')) {
+                    this.handleBulkJobCheckboxChange(e);
+                }
+            });
+        }
 
         // "Değişiklikleri Kaydet" butonu için event listener
         const indexDocumentsBtn = document.getElementById('indexDocumentsBtn');
@@ -180,14 +192,12 @@ export class BulkIndexingModule {
         this.checkFormCompleteness();
         this.saveBulkJobsToFirestore();
     }
-
-    // `populateChildTransactionTypeSelect` IndexingModule'da kalacak, burada gerek yok.
     
     checkFormCompleteness = () => {
         const bulkDeliveryDateEl = document.getElementById('bulkDeliveryDate');
         const bulkDeliveryDate = bulkDeliveryDateEl ? bulkDeliveryDateEl.value : ''; 
         const bulkFilesInput = document.getElementById('bulkFiles');
-        const filesExist = (bulkFilesInput && bulkFilesInput.files && bulkFilesInput.files.length > 0); // null kontrolü eklendi
+        const filesExist = (bulkFilesInput && bulkFilesInput.files && bulkFilesInput.files.length > 0);
 
         const selectedJobs = this.pendingBulkIndexJobs.filter(job => job.isSelected);
 
@@ -203,7 +213,7 @@ export class BulkIndexingModule {
 
     handleSubmit = async () => { 
         const btn = document.getElementById('indexDocumentsBtn');
-        if (!btn) return; // Buton yoksa işlem yapma
+        if (!btn) return;
         btn.disabled = true;
         showNotification('İşlem kaydediliyor...', 'info');
 
@@ -369,8 +379,6 @@ export class BulkIndexingModule {
             const batch = writeBatch(db);
             this.pendingBulkIndexJobs.forEach(job => {
                 const jobRef = doc(bulkIndexingService.collectionRef, job.jobId);
-                // setDoc kullanmak yerine, sadece ilgili alanları güncellemek için updateDoc kullanmak daha güvenlidir.
-                // Ancak burada tüm nesneyi kaydettiğimiz ve jobId ile doküman ID'si aynı olduğu için setDoc ile merge:true kullanmak da geçerlidir.
                 batch.set(jobRef, { 
                     fileName: job.fileName,
                     fileSize: job.fileSize,
@@ -400,7 +408,7 @@ export class BulkIndexingModule {
 
 
     handleBulkFilesChange = async (event) => { 
-        const fileInput = event.target;
+        const fileInput = document.getElementById('bulkFiles'); // Elementi tekrar al
         const files = Array.from(fileInput.files);
 
         if (files.length === 0) {
@@ -420,7 +428,7 @@ export class BulkIndexingModule {
 
         if (!commonTebligDate) {
             showNotification('Lütfen toplu işlem için ortak tebliğ tarihini girin.', 'error');
-            fileInput.value = ''; 
+            if (fileInput) fileInput.value = ''; // Inputu temizle
             this.checkFormCompleteness();
             return;
         }
@@ -674,7 +682,7 @@ export class BulkIndexingModule {
         const query = e.target.value;
         const jobId = e.target.dataset.jobId;
         const container = document.querySelector(`.bulk-search-results-container[data-job-id="${jobId}"]`);
-        if (!container) return; // Konteyner yoksa hata vermemek için kontrol
+        if (!container) return;
         container.innerHTML = '';
         if (query.length < 3) {
             container.innerHTML = '<p class="no-results-message p-2">Arama yapmak için en az 3 karakter girin.</p>';
@@ -782,7 +790,7 @@ export class BulkIndexingModule {
             job.errorMessage = ''; 
             job.isSelected = true; 
             showNotification(`İşlem tekrar denenmek üzere işaretlendi: ${job.fileName}`, 'info');
-            // bulkIndexingService.updateJob(job.jobId, { status: job.status, errorMessage: null, isSelected: true }); // saveBulkJobsToFirestore çağrıldığı için bu satır gereksiz
+            bulkIndexingService.updateJob(job.jobId, { status: job.status, errorMessage: null, isSelected: true });
             this.renderBulkIndexingTable();
             this.checkFormCompleteness();
             this.saveBulkJobsToFirestore(); // Değişiklikleri Firebase'e kaydet
