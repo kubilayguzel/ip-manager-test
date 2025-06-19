@@ -468,7 +468,7 @@ body {
     background: white;
     padding: 30px;
     border-radius: 20px;
-    max-width: 500px; /* Varsayılan modal genişliği */
+    max-width: 1250px; /* Varsayılan modal genişliğini genel olarak artırıldı */
     width: 100%;
     max-height: 90vh; /* Ekran yüksekliğinin %90'ı */
     overflow-y: auto;
@@ -477,8 +477,8 @@ body {
     transition: transform 0.3s ease-out;
 }
 
-.modal-content-lg { /* Daha büyük modallar için */
-    max-width: 900px;
+.modal-content-lg { /* Daha büyük modallar için, artık varsayılan ile aynı max-width'e sahip olabilir */
+    max-width: 1250px; /* Bu da genel max-width ile uyumlu olacak şekilde ayarlandı */
 }
 
 .modal.show .modal-content, .modal.show .modal-content-lg {
