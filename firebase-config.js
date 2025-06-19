@@ -618,6 +618,4 @@ export {
     authService, 
     ipRecordsService, 
     personService, 
-    taskService, 
-    accrualService, 
-    };
+};
