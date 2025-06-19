@@ -119,15 +119,19 @@
 
 /* Marka Görseli Stilleri */
 .trademark-image-thumbnail {
+    /* Başlangıçta küçük bir transform uygulayarak GPU ivmelenmesini tetikle */
+    transform: scale(1) translateZ(0); 
     width: 50px; /* Küçük thumbnail boyutu */
     height: auto;
     border-radius: 5px;
     vertical-align: middle;
-    /* transition: transform 0.3s ease-out, box-shadow 0.3s ease-out, border 0.3s ease-out; */ /* Önceki satırı kaldır veya yorum satırı yap */
-    transition: transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94), box-shadow 0.4s ease-out, border 0.4s ease-out; /* Daha belirgin ve akıcı geçiş */
+    /* transition: transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94), box-shadow 0.4s ease-out, border 0.4s ease-out; */ /* Önceki transition'ı kaldır */
+    transition: transform 0.5s cubic-bezier(0.23, 1, 0.32, 1), box-shadow 0.5s ease-out, border 0.5s ease-out; /* Daha yavaş ve farklı cubic-bezier */
     cursor: pointer;
     will-change: transform; /* Tarayıcıya transform'un değişeceğini bildir */
     transform-origin: center center; /* Büyümenin tam merkezden olmasını sağlar */
+    backface-visibility: hidden; /* Titremeyi azaltmaya yardımcı olabilir */
+    image-rendering: -webkit-optimize-contrast; /* Webkit tarayıcılarında keskinliği optimize edebilir */
 }
 
 /* Hover efekti için önemli: tablo hücresine göre konumlandırma */
@@ -137,7 +141,8 @@
 }
 
 .trademark-image-thumbnail:hover {
-    transform: translate(-50%, -50%) scale(4); /* Üzerine gelince 4 kat büyüt */
+    /* translate3d ile 3D ivmelendirmeyi zorla */
+    transform: translate3d(-50%, -50%, 0) scale(4); 
     position: absolute; /* Büyüdüğünde diğer elementlerin üzerine gelmesi için */
     top: 50%;
     left: 50%;
