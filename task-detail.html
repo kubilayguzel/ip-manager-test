@@ -292,7 +292,6 @@
     </style>
 </head>
 <body>
-    <div id="notification-container" style="position: fixed; top: 20px; right: 20px; z-index: 9999;"></div>
     <div id="layout-placeholder"></div>
     <div class="page-wrapper">
         <header class="top-header">
@@ -305,71 +304,80 @@
             </section>
             
             <div class="task-detail-container">
-                <form id="taskDetailForm">
-                    <h3 class="section-title">Genel Bilgiler</h3>
-                    <div class="form-grid">
-                        <div class="form-group"><label for="taskTitle" class="form-label">İş Başlığı:</label><input type="text" id="taskTitle" class="form-input" required></div>
-                        <div class="form-group"><label for="taskTypeDisplay" class="form-label">İş Tipi:</label><input type="text" id="taskTypeDisplay" class="form-input" readonly></div>
-                        <div class="form-group"><label for="taskPriority" class="form-label">Öncelik:</label><select id="taskPriority" class="form-select"><option value="low">Düşük</option><option value="medium">Orta</option><option value="high">Yüksek</option></select></div>
-                        <div class="form-group"><label for="taskStatus" class="form-label">Durum:</label><select id="taskStatus" class="form-select"></select></div>
-                        <div class="form-group"><label for="assignedTo" class="form-label">Atanan Kullanıcı:</label><select id="assignedTo" class="form-select"></select></div>
-                        <div class="form-group"><label for="taskDueDate" class="form-label">Operasyonel Son Tarih:</label><input type="date" id="taskDueDate" class="form-input"></div>
-                    </div>
+                <div class="tab-menu">
+                    <button class="tab-button active" data-tab="details">Detaylar</button>
+                    <button class="tab-button" data-tab="accruals">Tahakkuklar</button>
+                    <button class="tab-button" data-tab="documents">Belgeler</button>
+                    <button class="tab-button" data-tab="history">Geçmiş</button>
+                </div>
 
-                    <h3 class="section-title">İlgili Varlık ve Taraf</h3>
-                    <div class="form-group full-width">
-                        <label for="relatedIpRecordSearch" class="form-label">İlgili IP Kaydı:</label>
-                        <input type="text" id="relatedIpRecordSearch" class="form-input" placeholder="Başlık veya Başvuru Numarası Ara...">
-                        <div id="relatedIpRecordSearchResults" class="search-results-list"></div>
-                        <div id="selectedIpRecordDisplay" class="search-result-display" style="display:none;"></div>
-                    </div>
-                    <div class="form-group full-width">
-                        <label for="relatedPartySearch" class="form-label">İlgili Taraf (Opsiyonel):</label>
-                        <div style="display: flex; gap: 10px;">
-                            <input type="text" id="relatedPartySearch" class="form-input" placeholder="Kişi adı veya e-posta ara...">
-                            <button type="button" id="addNewRelatedPartyBtn" class="btn-add-item">Yeni Kişi</button>
+                <div id="tabContentDetails" class="tab-content active">
+                    <form id="taskDetailForm">
+                        <h3 class="section-title">Genel Bilgiler</h3>
+                        <div class="form-grid">
+                            <div class="form-group"><label for="taskTitle" class="form-label">İş Başlığı:</label><input type="text" id="taskTitle" class="form-input" required></div>
+                            <div class="form-group"><label for="taskTypeDisplay" class="form-label">İş Tipi:</label><input type="text" id="taskTypeDisplay" class="form-input" readonly></div>
+                            <div class="form-group"><label for="taskPriority" class="form-label">Öncelik:</label><select id="taskPriority" class="form-select"><option value="low">Düşük</option><option value="medium">Orta</option><option value="high">Yüksek</option></select></div>
+                            <div class="form-group"><label for="taskStatus" class="form-label">Durum:</label><select id="taskStatus" class="form-select"></select></div>
+                            <div class="form-group"><label for="assignedTo" class="form-label">Atanan Kullanıcı:</label><select id="assignedTo" class="form-select"></select></div>
+                            <div class="form-group"><label for="taskDueDate" class="form-label">Operasyonel Son Tarih:</label><input type="date" id="taskDueDate" class="form-input"></div>
                         </div>
-                        <div id="relatedPartySearchResults" class="search-results-list"></div>
-                        <div id="selectedRelatedPartyDisplay" class="search-result-display" style="display:none;"></div>
-                    </div>
 
-                    <div class="form-group full-width">
-                        <label for="taskDescription" class="form-label">Açıklama:</label>
-                        <textarea id="taskDescription" class="form-textarea"></textarea>
-                    </div>
-                    
-                    <div id="tabContentAccruals" class="form-section">
-                        <h3 class="section-title">Tahakkuklar</h3>
-                        <div id="accrualsList">
-                            <p style="text-align: center; color: #666; padding: 20px;">Bu işe ait tahakkuk bulunmamaktadır.</p>
+                        <h3 class="section-title">İlgili Varlık ve Taraf</h3>
+                        <div class="form-group full-width">
+                            <label for="relatedIpRecordSearch" class="form-label">İlgili IP Kaydı:</label>
+                            <input type="text" id="relatedIpRecordSearch" class="form-input" placeholder="Başlık veya Başvuru Numarası Ara...">
+                            <div id="relatedIpRecordSearchResults" class="search-results-list"></div>
+                            <div id="selectedIpRecordDisplay" class="search-result-display" style="display:none;"></div>
                         </div>
-                    </div>
+                        <div class="form-group full-width">
+                            <label for="relatedPartySearch" class="form-label">İlgili Taraf (Opsiyonel):</label>
+                            <div style="display: flex; gap: 10px;">
+                                <input type="text" id="relatedPartySearch" class="form-input" placeholder="Kişi adı veya e-posta ara...">
+                                <button type="button" id="addNewRelatedPartyBtn" class="btn-add-item">Yeni Kişi</button>
+                            </div>
+                            <div id="relatedPartySearchResults" class="search-results-list"></div>
+                            <div id="selectedRelatedPartyDisplay" class="search-result-display" style="display:none;"></div>
+                        </div>
 
-                    <div id="tabContentDocuments" class="form-section">
-                        <h3 class="section-title">Belgeler</h3>
-                        <div class="file-upload-area" id="fileUploadArea">
-                            <input type="file" id="fileInput" multiple hidden>
-                            <div class="upload-icon">⬆️</div>
-                            <div class="upload-text">Dosyaları Buraya Sürükleyin veya Tıklayın</div>
-                            <div class="upload-subtext">PDF, DOCX, JPG, PNG vb. dosyaları destekler.</div>
+                        <div class="form-group full-width">
+                            <label for="taskDescription" class="form-label">Açıklama:</label>
+                            <textarea id="taskDescription" class="form-textarea"></textarea>
                         </div>
-                        <div class="file-list-container" id="fileListContainer">
-                            <p style="text-align: center; color: #666; padding: 20px;">Bu işe ait belge bulunmamaktadır.</p>
+                        
+                        <div class="form-actions">
+                            <button type="button" class="btn btn-secondary" id="cancelEditBtn">İptal</button>
+                            <button type="submit" class="btn btn-primary" id="saveTaskChangesBtn">Değişiklikleri Kaydet</button>
                         </div>
-                    </div>
+                    </form>
+                </div>
 
-                    <div id="tabContentHistory" class="form-section">
-                        <h3 class="section-title">İşlem Geçmişi</h3>
-                        <div id="historyList" class="history-list">
-                            <p style="text-align: center; color: #666; padding: 20px;">İşlem geçmişi bulunmamaktadır.</p>
-                        </div>
+                <div id="tabContentAccruals" class="tab-content">
+                    <h3 class="section-title">Tahakkuklar <button class="btn-add-item" id="addAccrualBtn"><span>&#x2795;</span> Yeni Tahakkuk Ekle</button></h3>
+                    <div id="accrualsList">
+                        <p style="text-align: center; color: #666; padding: 20px;">Bu işe ait tahakkuk bulunmamaktadır.</p>
                     </div>
+                </div>
 
-                    <div class="form-actions">
-                        <button type="button" class="btn btn-secondary" id="cancelEditBtn">İptal</button>
-                        <button type="submit" class="btn btn-primary" id="saveTaskChangesBtn">Değişiklikleri Kaydet</button>
+                <div id="tabContentDocuments" class="tab-content">
+                    <h3 class="section-title">Belgeler</h3>
+                    <div class="file-upload-area" id="fileUploadArea">
+                        <input type="file" id="fileInput" multiple hidden>
+                        <div class="upload-icon">⬆️</div>
+                        <div class="upload-text">Dosyaları Buraya Sürükleyin veya Tıklayın</div>
+                        <div class="upload-subtext">PDF, DOCX, JPG, PNG vb. dosyaları destekler.</div>
                     </div>
-                </form>
+                    <div class="file-list-container" id="fileListContainer">
+                        <p style="text-align: center; color: #666; padding: 20px;">Bu işe ait belge bulunmamaktadır.</p>
+                    </div>
+                </div>
+
+                <div id="tabContentHistory" class="tab-content">
+                    <h3 class="section-title">İşlem Geçmişi</h3>
+                    <div id="historyList" class="history-list">
+                        <p style="text-align: center; color: #666; padding: 20px;">İşlem geçmişi bulunmamaktadır.</p>
+                    </div>
+                </div>
             </div>
         </main>
     </div>
@@ -423,13 +431,13 @@
                         <label for="tpInvoicePartySearch" class="form-label">Türk Patent Faturası Tarafı</label>
                         <input type="text" id="tpInvoicePartySearch" class="form-input" placeholder="Fatura tarafı arayın...">
                         <div id="tpInvoicePartySearchResults" class="search-results-list"></div>
-                        <div id="selectedTpInvoicePartyDisplay" style="display:none;"></div>
+                        <div id="selectedTpInvoicePartyDisplay" class="search-result-display" style="display:none;"></div>
                     </div>
                     <div class="form-group full-width">
                         <label for="serviceInvoicePartySearch" class="form-label">Hizmet Faturası Tarafı</label>
                         <input type="text" id="serviceInvoicePartySearch" class="form-input" placeholder="Fatura tarafı arayın...">
                         <div id="serviceInvoicePartySearchResults" class="search-results-list"></div>
-                        <div id="selectedServiceInvoicePartyDisplay" style="display:none;"></div>
+                        <div id="selectedServiceInvoicePartyDisplay" class="search-result-display" style="display:none;"></div>
                     </div>
                     <div class="form-group full-width">
                         <label for="paymentDate" class="form-label">Ödeme Tarihi (Opsiyonel)</label>
@@ -539,6 +547,7 @@
                     await this.loadTaskData();
                     this.populateStatusDropdown();
                     this.populateAssignedToDropdown();
+                    this.setupInitialTab(); // Sekmeli yapı olduğu için bu çağrıya ihtiyaç var
                 }
 
                 async loadAllData() {
@@ -649,6 +658,10 @@
                 }
 
                 setupEventListeners() {
+                    document.querySelectorAll('.tab-button').forEach(button => {
+                        button.addEventListener('click', (e) => this.switchTab(e.target.dataset.tab));
+                    });
+
                     document.getElementById('saveTaskChangesBtn').addEventListener('click', (e) => this.handleTaskUpdate(e));
                     document.getElementById('cancelEditBtn').addEventListener('click', () => window.location.href = 'task-management.html');
                     
@@ -657,8 +670,7 @@
                     document.getElementById('relatedPartySearch').addEventListener('input', (e) => this.searchPersons(e.target.value, 'relatedParty'));
                     document.getElementById('addNewRelatedPartyBtn').addEventListener('click', () => this.showAddPersonModal());
                     
-                    // "Yeni Tahakkuk Ekle" butonu kaldırıldığı için ilgili event listener kaldırıldı
-                    // document.getElementById('addAccrualBtn').addEventListener('click', () => this.showAccrualModal('add')); // Bu satır kaldırıldı
+                    document.getElementById('addAccrualBtn').addEventListener('click', () => this.showAccrualModal('add')); // "Yeni Tahakkuk Ekle" butonu hala varsa bu kalır
                     document.getElementById('closeAccrualModal').addEventListener('click', () => this.closeAccrualModal());
                     document.getElementById('cancelAccrualBtn').addEventListener('click', () => this.closeAccrualModal());
                     document.getElementById('accrualForm').addEventListener('submit', (e) => this.handleAccrualSubmit(e));
@@ -707,6 +719,14 @@
                             this.markAccrualPaid(accrualId);
                         }
                     });
+                }
+
+                switchTab(tabId) {
+                    document.querySelectorAll('.tab-button').forEach(button => button.classList.remove('active'));
+                    document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+                    
+                    document.querySelector(`.tab-button[data-tab="${tabId}"]`).classList.add('active');
+                    document.getElementById(`tabContent${tabId.charAt(0).toUpperCase() + tabId.slice(1)}`).classList.add('active');
                 }
 
                 async handleTaskUpdate(e) {
@@ -886,7 +906,7 @@
 
                 renderAccruals() {
                     const accrualsList = document.getElementById('accrualsList');
-                    accrualsList.innerHTML = ''; // İçeriği temizle
+                    accrualsList.innerHTML = '';
 
                     if (this.currentAccruals.length === 0) {
                         accrualsList.innerHTML = '<p style="text-align: center; color: #666; padding: 20px;">Bu işe ait tahakkuk bulunmamaktadır.</p>';
@@ -929,9 +949,8 @@
                             </div>
                         `;
                         // Edit, Delete, Complete butonları için event listener'lar delegation ile ekleniyor.
-                        // Bu butonların listener'ları accrualsList'e zaten eklenmiş durumda.
-                        // Buradaki addEventListener'lar yerine, accrualsList'e eklenen tek bir listener tüm tıklamaları yakalar.
-                        // Bu kısım renderAccruals fonksiyonunun dışına taşınmış durumda.
+                        // Daha önce setupEventListeners içinde accrualsList'e eklenen tek bir listener tüm tıklamaları yakalar.
+                        // Bu kısım renderAccruals fonksiyonunun dışında handle ediliyor.
                         accrualsList.appendChild(accrualItem);
                     });
                 }
@@ -1115,9 +1134,6 @@
                         if (accrualId) {
                             result = await accrualService.updateAccrual(accrualId, accrualData);
                         } else {
-                            // Bu kod path'i artık kullanılmayacak, addAccrualBtn kaldırıldı
-                            // Ancak modal hala Yeni Tahakkuk Ekle başlığı ile açılabileceği için
-                            // bu kısım korunuyor, ancak buraya doğrudan erişim olmayacak.
                             result = await accrualService.addAccrual(accrualData);
                         }
                         
@@ -1270,6 +1286,16 @@
                         `;
                         historyList.appendChild(historyItem);
                     });
+                }
+
+                setupInitialTab() {
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const tab = urlParams.get('tab');
+                    if (tab && ['details', 'accruals', 'documents', 'history'].includes(tab)) {
+                        this.switchTab(tab);
+                    } else {
+                        this.switchTab('details'); // Varsayılan olarak detayları göster
+                    }
                 }
             }
 
