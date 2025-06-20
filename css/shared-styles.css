@@ -382,6 +382,16 @@ body {
 .btn-reassign { background-color: #5a6268; /* Orta Gri */ }
 .btn-reassign:hover { background-color: #4a5258; }
 
+button.action-btn[data-action="edit"] {
+    background-color: #ffd700 !important;  /* Sarı arka plan */
+    color: black !important;               /* Siyah yazı */
+    border: 1px solid #e6c200;
+    transition: background-color 0.3s ease;
+}
+
+button.action-btn[data-action="edit"]:hover {
+    background-color: #ffe033;
+}
 
 /* Form Elementleri ve Hata Mesajları */
 .form-group {
