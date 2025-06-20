@@ -1078,7 +1078,7 @@
                     });
                 }
 
-                async handleAccrualSubmit(event) {
+                    async handleAccrualSubmit(event) {
                     event.preventDefault();
                     const accrualId = document.getElementById('accrualId').value;
                     const officialFee = parseFloat(document.getElementById('officialFee').value) || 0;
@@ -1128,15 +1128,17 @@
                         if (accrualId) {
                             result = await accrualService.updateAccrual(accrualId, accrualData);
                         } else {
-                            // This part is likely not hit as the modal is only for edit now.
-                            // If it were for add, we'd need a separate mechanism to ensure task/accrual linking.
-                            // For this request, we are only focusing on editing existing accruals via this modal.
+                            // Bu kısım normalde `create-task.html`'de kullanıldığı gibi yeni bir tahakkuk eklemek için olmalı.
+                            // `task-detail.html`'de sadece mevcut tahakkukları düzenlediğimiz varsayılıyor.
+                            // Eğer burada yeni tahakkuk ekleme özelliği isteniyorsa, `addAccrual` çağrısı burada olmalı.
+                            // Şu anki isteğiniz "düzenleme" ile ilgili olduğu için bu kısım es geçiliyor.
                         }
                         
                         if (result.success) {
                             showNotification('Tahakkuk başarıyla kaydedildi!', 'success');
-                            this.closeAccrualModal();
+                            this.closeAccrualModal(); // Modal'ı kapat
                             await this.loadAccrualsForTask(); // Tahakkuk listesini güncelle
+                            // Sayfa yönlendirme komutu buradaydı, kaldırıldı.
                         } else {
                             throw new Error(result.error);
                         }
