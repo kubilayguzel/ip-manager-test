@@ -32,7 +32,18 @@ export function showNotification(message, type = 'info', duration = 3000) {
         }, duration);
     }
 }
+// js/utils.js (Mevcut içeriğinizin sonuna ekleyin)
 
+// Formlardaki tüm hata mesajlarını ve hata stillerini temizleyen fonksiyon
+export function clearAllFieldErrors() {
+    document.querySelectorAll('.error-message').forEach(el => {
+        el.textContent = ''; // Hata mesajını temizle
+        el.style.display = 'none'; // Hata mesajını gizle
+    });
+    document.querySelectorAll('.form-input, .form-select, .form-textarea').forEach(el => {
+        el.classList.remove('error-field'); // Hata stilini kaldır
+    });
+}
 // Dosya boyutunu okunabilir formata çeviren fonksiyon
 export function formatFileSize(bytes) {
     if (bytes === 0) return '0 Bytes';
