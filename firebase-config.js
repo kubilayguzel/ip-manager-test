@@ -17,7 +17,7 @@ import {
     deleteDoc,
     query,
     orderBy,
-    where,
+    where, // 'where' sorgusu için eklendi
     getDoc,
     setDoc,
     arrayUnion,
@@ -77,7 +77,6 @@ export const documentDesignationTranslations = {
     'Araştırma Raporu': 'Araştırma Raporu',
     'İnceleme Raporu': 'İnceleme Raporu',
     'Diğer Belge': 'Diğer Belge',
-    'Genel Not': 'Genel Not',
     'Ödeme Dekontu': 'Ödeme Dekontu'
 };
 
@@ -543,6 +542,17 @@ export const accrualService = {
         if (!isFirebaseAvailable) return { success: true, data: [] };
         try {
             const q = query(collection(db, 'accruals'), orderBy('createdAt', 'desc'));
+            const querySnapshot = await getDocs(q);
+            return { success: true, data: querySnapshot.docs.map(d => ({id: d.id, ...d.data()})) };
+        } catch (error) {
+            return { success: false, error: error.message, data: [] };
+        }
+    },
+    // YENİ EKLENDİ: Belirli bir göreve ait tahakkukları getiren fonksiyon
+    async getAccrualsByTaskId(taskId) {
+        if (!isFirebaseAvailable) return { success: true, data: [] };
+        try {
+            const q = query(collection(db, 'accruals'), where('taskId', '==', taskId), orderBy('createdAt', 'desc'));
             const querySnapshot = await getDocs(q);
             return { success: true, data: querySnapshot.docs.map(d => ({id: d.id, ...d.data()})) };
         } catch (error) {
