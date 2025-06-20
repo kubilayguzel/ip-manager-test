@@ -771,6 +771,7 @@
                 }
 
                 async showRecordDetailModal(recordId) {
+                    if (!recordId) return; // recordId yoksa hiç devam etme
                     const record = this.allRecords.find(r => r.id === recordId);
                     if (!record) {
                         showNotification('Kayıt bulunamadı.', 'error');
