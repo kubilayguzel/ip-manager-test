@@ -138,8 +138,6 @@
         .action-btn.edit-btn:hover { background-color: #e0a800; }
         .action-btn.delete-btn { background-color: #dc3545; }
         .action-btn.delete-btn:hover { background-color: #c82333; }
-        .action-btn.accrual-btn { background-color: #6f42c1; } /* New: Accrual Button */
-        .action-btn.accrual-btn:hover { background-color: #5d35a5; }
 
         .loading { text-align: center; padding: 50px; }
         .no-records { text-align: center; padding: 50px; color: #666; }
@@ -331,7 +329,6 @@
                     this.allTasks = [];
                     this.allIpRecords = [];
                     this.allPersons = [];
-                    this.allUsers = []; // Tüm kullanıcıları tutacak
                 }
 
                 init() {
@@ -353,13 +350,11 @@
                             taskService.getAllTasks(),
                             ipRecordsService.getRecords(),
                             personService.getPersons(),
-                            taskService.getAllUsers()
                         ]);
 
                         this.allTasks = tasksResult.success ? tasksResult.data : [];
                         this.allIpRecords = ipRecordsResult.success ? ipRecordsResult.data : [];
                         this.allPersons = personsResult.success ? personsResult.data : [];
-                        this.allUsers = usersResult.success ? usersResult.data : [];
                         this.renderTasks();
                     } catch (error) {
                         showNotification('Veriler yüklenirken bir hata oluştu: ' + error.message, 'error');
@@ -378,8 +373,6 @@
                                 window.location.href = `task-detail.html?id=${taskId}`;
                             } else if (e.target.classList.contains('delete-btn')) {
                                 this.deleteTask(taskId);
-                            } else if (e.target.classList.contains('accrual-btn')) {
-                                window.location.href = `task-detail.html?id=${taskId}&tab=accruals`; // Tahakkuk sekmesine yönlendir
                             } else if (e.target.classList.contains('view-btn')) { // View button added for consistency
                                 this.showTaskDetailModal(taskId);
                             }
@@ -419,21 +412,18 @@
                         const taskTypeParts = task.taskType ? task.taskType.split('_') : [];
                         const mainType = taskTypeParts[0] || '';
                         const specificType = taskTypeParts.slice(1).join(' ').replace(/\b\w/g, l => l.toUpperCase());
-                        const assignedUser = this.allUsers.find(u => u.id === task.assignedTo_uid);
-                        const assignedToName = assignedUser ? (assignedUser.displayName || assignedUser.email) : 'Atanmamış';
 
                         row.innerHTML = `
                             <td>${task.title}</td>
                             <td>${task.relatedIpRecordTitle || 'N/A'}</td>
                             <td>${mainType.charAt(0).toUpperCase() + mainType.slice(1)} - ${specificType}</td>
                             <td><span class="priority-badge ${priorityClass}">${task.priority}</span></td>
-                            <td>${assignedToName}</td>
+                            <td>${task.assignedTo || 'Atanmamış'}</td>
                             <td>${task.dueDate ? new Date(task.dueDate).toLocaleDateString('tr-TR') : 'Belirtilmemiş'}</td>
                             <td><span class="status-badge ${statusClass}">${task.status}</span></td>
                             <td>
                                 <button class="action-btn view-btn" data-id="${task.id}">Görüntüle</button>
                                 <button class="action-btn edit-btn" data-id="${task.id}">Düzenle</button>
-                                <button class="action-btn accrual-btn" data-id="${task.id}">💰 Tahakkuk</button>
                                 <button class="action-btn delete-btn" data-id="${task.id}">Sil</button>
                             </td>
                         `;
@@ -465,7 +455,6 @@
                     
                     const ipRecord = this.allIpRecords.find(r => r.id === task.relatedIpRecordId);
                     const relatedParty = task.details?.relatedParty?.id ? this.allPersons.find(p => p.id === task.details.relatedParty.id) : null;
-                    const assignedUser = this.allUsers.find(u => u.id === task.assignedTo_uid);
 
                     document.getElementById('modalTaskTitle').textContent = `İş Detayı: ${task.title}`;
 
@@ -488,7 +477,7 @@
                     modalBody.innerHTML = `
                         <div class="modal-detail-grid">
                             ${renderField('İş Başlığı', task.title)}
-                            ${renderField('Atanan Kişi', assignedUser ? (assignedUser.displayName || assignedUser.email) : 'N/A')}
+                            ${renderField('Atanan Kişi', task.assignedTo || 'N/A')}
                             ${renderField('İş Türü', `${mainType.charAt(0).toUpperCase() + mainType.slice(1)} - ${specificType}`)}
                             ${renderField('Bitiş Tarihi', task.dueDate ? new Date(task.dueDate).toLocaleDateString('tr-TR') : '-')}
                             ${renderField('Öncelik', task.priority)}
