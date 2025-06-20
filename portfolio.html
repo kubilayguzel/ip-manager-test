@@ -771,6 +771,7 @@
                 }
 
                 async showRecordDetailModal(recordId) {
+                    console.log('Modal çağrıldı, ID:', recordId);
                     const record = this.allRecords.find(r => r.id === recordId);
                     if (!record) {
                         showNotification('Kayıt bulunamadı.', 'error');
