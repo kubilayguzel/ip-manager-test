@@ -80,6 +80,45 @@
         }
         .image-upload-area { border: 2px dashed #e1e8ed; border-radius: 10px; padding: 30px; text-align: center; cursor: pointer; }
         .image-preview { max-width: 200px; max-height: 200px; margin-top: 15px; border-radius: 10px; border: 2px solid #e1e8ed; }
+
+        /* Transaction alanı stilleri (data-entry'e özgü) */
+        #transactionsContainer .transaction-entry {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 15px;
+            border: 1px solid #e9ecef;
+            padding: 10px;
+            border-radius: 5px;
+            background-color: #f8f9fa;
+            align-items: flex-end; /* Butonların altta hizalanması için */
+        }
+        #transactionsContainer .transaction-entry > div {
+            flex: 1;
+            min-width: 150px; /* Küçük ekranlarda sarması için */
+        }
+        #transactionsContainer .transaction-entry input,
+        #transactionsContainer .transaction-entry select,
+        #transactionsContainer .transaction-entry textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ced4da;
+            border-radius: 5px;
+            box-sizing: border-box;
+        }
+        #transactionsContainer .remove-transaction-btn {
+            background-color: #dc3545;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.8em;
+            white-space: nowrap; /* Buton metninin sığması için */
+        }
+        #transactionsContainer .remove-transaction-btn:hover {
+            background-color: #c82333;
+        }
     </style>
 </head>
 <body>
@@ -174,9 +213,13 @@
     
                 await this.loadInitialData();
                 this.setupEventListeners();
-                
+                this.handleTypeChange(document.getElementById('type').value); // İlk yüklemede tipi ayarla
+
                 if (this.recordId) {
                     await this.loadRecordForEdit(this.recordId);
+                } else {
+                    // Yeni kayıt modunda varsayılan başvuru durumunu ayarla
+                    document.getElementById('status').value = 'beklemede';
                 }
             }
     
@@ -190,8 +233,8 @@
             }
     
             setupEventListeners() {
-                document.getElementById('type').addEventListener('change', this.handleTypeChange);
-                document.getElementById('recordForm').addEventListener('submit', this.handleFormSubmit);
+                document.getElementById('type').addEventListener('change', (e) => this.handleTypeChange(e.target.value)); // Olay dinleyicisi güncellendi
+                document.getElementById('recordForm').addEventListener('submit', this.handleFormSubmit.bind(this));
                 document.getElementById('cancelRecordBtn').addEventListener('click', () => window.history.back());
     
                 const ownerSearchInput = document.getElementById('ownerSearchInput');
@@ -205,7 +248,11 @@
                     });
                 }
 
-                document.getElementById('addPersonToOwnerBtn').addEventListener('click', () => window.location.href = 'persons.html');
+                document.getElementById('addPersonToOwnerBtn').addEventListener('click', () => {
+                    // Yeni kişi ekleme sayfasını yeni bir sekmede açmak daha iyi olabilir,
+                    // böylece kullanıcı mevcut formu kaybetmeden yeni kişi ekleyebilir.
+                    window.open('persons.html', '_blank'); 
+                });
                 
                 document.getElementById('mainOwnerSearchResults').addEventListener('mousedown', (event) => {
                     const target = event.target.closest('.search-result-item');
@@ -222,6 +269,9 @@
                         this.removeOwner(event.target.dataset.id);
                     }
                 });
+
+                // Dinamik alanlar için görsel yükleme listener'ları
+                this.setupImageUploadListeners();
             }
             
             performOwnerSearch = (searchTerm) => {
@@ -254,8 +304,8 @@
                 }
             }
 
-            handleTypeChange = (event) => {
-                const type = event.target ? event.target.value : event;
+            // handleTypeChange metodunu dışarıya alıp, event listener'da sadece değeri göndereceğiz.
+            handleTypeChange = (type) => { // Artık doğrudan 'type' stringini alıyor
                 this.renderTypeSpecificFields(type);
                 this.populateStatusOptions(type);
             }
@@ -264,7 +314,7 @@
                 const container = document.getElementById('type-specific-fields');
                 container.innerHTML = ''; 
                 if (!type) return;
-
+    
                 let fieldsHtml = '';
                 switch (type) {
                     case 'patent':
@@ -281,7 +331,7 @@
                         break;
                 }
                 container.innerHTML = fieldsHtml;
-
+    
                 if (type === 'trademark') {
                     this.setupImageUploadListeners();
                 }
@@ -300,7 +350,7 @@
                 const uploadArea = document.getElementById('trademarkImageUploadArea');
                 const fileInput = document.getElementById('trademarkImage');
                 const removeButton = document.getElementById('removeTrademarkImage');
-
+    
                 if (uploadArea) uploadArea.onclick = () => fileInput.click();
                 if (fileInput) fileInput.onchange = this.handleImageSelect;
                 if (removeButton) removeButton.onclick = this.removeImage;
@@ -328,7 +378,7 @@
                 preview.style.display = 'block';
                 removeButton.style.display = 'inline-block';
             }
-
+    
             removeImage = () => {
                 const preview = document.getElementById('trademarkImagePreview');
                 const removeButton = document.getElementById('removeTrademarkImage');
@@ -340,7 +390,7 @@
                 this.uploadedImage = null;
                 this.existingImageUrl = null;
             }
-    
+            
             addOwner(personId) {
                 if (this.selectedOwners.some(p => p.id === personId)) return;
                 const person = this.allPersons.find(p => p.id === personId);
@@ -380,8 +430,9 @@
     
             fillFormWithRecordData = (record) => {
                 document.getElementById('type').value = record.type;
-                this.handleTypeChange(record.type);
+                this.handleTypeChange(record.type); // ensure type-specific fields are rendered and status options populated
                 
+                // Use setTimeout to ensure dynamic fields are rendered before trying to set their values
                 setTimeout(() => {
                     document.getElementById('title').value = record.title || '';
                     document.getElementById('status').value = record.status || '';
@@ -390,6 +441,9 @@
                     document.getElementById('registrationDate').value = record.registrationDate || '';
                     document.getElementById('description').value = record.description || '';
 
+                    // Load recordStatus if it exists, otherwise default to 'aktif'
+                    document.getElementById('recordStatus').value = record.recordStatus || 'aktif'; 
+    
                     if (record.type === 'patent') {
                         document.getElementById('patentClass').value = record.patentClass || '';
                         document.getElementById('renewalDatePatent').value = record.renewalDatePatent || '';
@@ -408,41 +462,40 @@
                     }
                     
                     if (record.owners && Array.isArray(record.owners)) {
-                        // record.owners sadece id içerdiği için, allPersons'tan tam objeleri bulmalıyız
                         this.selectedOwners = record.owners.map(ownerRef => {
                             return this.allPersons.find(p => p.id === ownerRef.id);
-                        }).filter(Boolean); // null/undefined olanları filtrele
+                        }).filter(Boolean);
                         
                         this.renderSelectedOwners();
-                        document.getElementById('ownerSearchInput').value = ''; // Yükleme sonrası arama inputunu temizle
+                        document.getElementById('ownerSearchInput').value = '';
                     } else {
-                        this.selectedOwners = []; // Eğer owners yoksa boş dizi
-                        this.renderSelectedOwners(); // Alanı temizlemek için çağır
+                        this.selectedOwners = [];
+                        this.renderSelectedOwners();
                         document.getElementById('ownerSearchInput').value = '';
                     }
-
-                }, 100);
+                }, 100); // Küçük bir gecikme ekleyerek DOM'un güncellenmesini bekle
             }
-
+    
             handleFormSubmit = async (event) => {
                 event.preventDefault();
                 document.getElementById('saveRecordBtn').disabled = true;
-
+    
                 try {
                     const form = event.target;
                     const recordData = {
                         type: form.type.value,
                         title: form.title.value,
-                        status: form.status.value,
+                        status: form.status.value, // Başvuru Durumu
+                        recordStatus: form.recordStatus.value, // Kayıt Durumu
                         owners: this.selectedOwners.map(p => ({ id: p.id })),
                     };
-
+    
                     const addFieldIfValue = (key, value) => { if (value) recordData[key] = value; };
                     addFieldIfValue('applicationNumber', form.applicationNumber.value);
                     addFieldIfValue('applicationDate', form.applicationDate.value);
                     addFieldIfValue('registrationDate', form.registrationDate.value);
                     addFieldIfValue('description', form.description.value);
-
+    
                     if (recordData.type === 'patent') {
                         addFieldIfValue('patentClass', form.patentClass.value);
                         addFieldIfValue('renewalDatePatent', form.renewalDatePatent.value);
@@ -457,19 +510,29 @@
                         addFieldIfValue('designClass', form.designClass.value);
                         addFieldIfValue('renewalDateDesign', form.renewalDateDesign.value);
                     }
-
+    
                     let result;
                     if (this.recordId) {
+                        // KAYIT GÜNCELLEME İŞLEMİ
                         recordData.updatedAt = new Date().toISOString();
                         result = await ipRecordsService.updateRecord(this.recordId, recordData);
                     } else {
+                        // YENİ KAYIT EKLEME İŞLEMİ
                         recordData.createdAt = new Date().toISOString();
                         recordData.updatedAt = new Date().toISOString();
                         recordData.userEmail = this.currentUser.email;
                         recordData.userId = this.currentUser.uid;
+                        
+                        // Yeni kayıt için başlangıç transaction dizisi oluştur
+                        recordData.transactions = [{
+                            type: 'Başvuru',
+                            description: `Yeni ${recordData.type} kaydı oluşturuldu. Başvuru Numarası: ${recordData.applicationNumber || 'Belirtilmemiş'}`,
+                            timestamp: new Date().toISOString()
+                        }];
+
                         result = await ipRecordsService.addRecord(recordData);
                     }
-
+    
                     if (result.success) {
                         showNotification(this.recordId ? 'Kayıt güncellendi!' : 'Kayıt eklendi!', 'success');
                         window.location.href = 'portfolio.html';
@@ -486,7 +549,6 @@
     
         let dataEntryModule;
         document.addEventListener('DOMContentLoaded', async () => {
-            // Ortak layout'u yükle ve bu sayfanın aktif linkini belirt
             await loadSharedLayout({ activeMenuLink: 'data-entry.html' });
             dataEntryModule = new DataEntryModule();
             auth.onAuthStateChanged(async (user) => {
