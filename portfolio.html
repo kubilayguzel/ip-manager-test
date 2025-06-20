@@ -27,12 +27,19 @@
             flex-direction: column; /* Kontrolleri alt alta sıralamak için */
             gap: 15px;
         }
-        .filter-row, .action-row { /* .action-row ve mevcut .filter-row için */
+        /* filter-row şimdi tüm kontrol butonlarını içerecek */
+        .filter-row { 
             display: flex;
-            justify-content: space-between;
+            justify-content: flex-end; /* Butonları sağa yasla */
             align-items: center;
             flex-wrap: wrap;
-            gap: 15px;
+            gap: 15px; /* Butonlar ve arama çubuğu arasında boşluk */
+        }
+        /* Arama çubuğunu sola itmek için */
+        .search-input { 
+            margin-right: auto; /* Kendisinden sonra gelen elemanlarla arasındaki boşluğu maksimuma çıkar */
+            flex-grow: 1; 
+            min-width: 150px;
         }
 
         .tab-menu {
@@ -63,14 +70,13 @@
 
         .filter-group { display: flex; gap: 10px; align-items: center; }
         .filter-label { font-weight: 500; }
-        .filter-select, .search-input {
+        .filter-select {
             padding: 8px 12px;
             border-radius: 8px;
             border: 1px solid #ccc;
         }
-        .search-input { flex-grow: 1; min-width: 150px;}
 
-        .btn-add-record, .btn-primary, .btn-secondary { /* Yeni buton stilleri için genel ayarlar */
+        .btn-add-record, .btn-primary, .btn-secondary, .btn-status-toggle { /* Tüm genel buton stilleri için birleştirildi */
             background: linear-gradient(45deg, #1e3c72, #2a5298);
             color: white;
             border: none;
@@ -84,29 +90,16 @@
             align-items: center;
             gap: 5px;
         }
-        .btn-add-record:hover, .btn-primary:hover, .btn-secondary:hover {
+        .btn-add-record:hover, .btn-primary:hover, .btn-secondary:hover, .btn-status-toggle:hover {
             transform: translateY(-2px);
             box-shadow: 0 5px 15px rgba(30, 60, 114, 0.2);
         }
-        /* Yeni buton renkleri */
-        .btn-status-toggle { /* Durum değiştiren buton için genel stil */
-            background-color: #ff9800; /* Turuncu tonu */
-        }
+        /* Durum değiştirme butonu renkleri */
         .btn-status-toggle.activate { /* Aktif Et butonu rengi */
              background-color: #28a745; /* Yeşil tonu */
         }
         .btn-status-toggle.archive { /* Arşivle butonu rengi */
             background-color: #dc3545; /* Kırmızı tonu */
-        }
-        .btn-status-toggle:hover {
-            opacity: 0.9;
-            box-shadow: 0 5px 15px rgba(255, 152, 0, 0.2);
-        }
-        .btn-status-toggle.activate:hover {
-            box-shadow: 0 5px 15px rgba(40, 167, 69, 0.2);
-        }
-        .btn-status-toggle.archive:hover {
-            box-shadow: 0 5px 15px rgba(220, 53, 69, 0.2);
         }
         .btn-status-toggle:disabled {
             background-color: #cccccc;
@@ -143,7 +136,7 @@
             background-color: #f6f8fa;
         }
         
-        /* Pasif (arşivlenmiş) kayıtlar için stil */
+        /* Kayıt durumu "pasif" olan kayıtlar için stil */
         .portfolio-table tr.record-status-pasif {
             opacity: 0.6;
             font-style: italic;
@@ -152,6 +145,45 @@
         .portfolio-table tr.record-status-pasif:hover {
             opacity: 0.8;
             background-color: #e0e0e0;
+        }
+
+        /* Başvuru durumu etiketleri için stil */
+        .application-status-badge {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 0.8em;
+            font-weight: 600;
+            color: white;
+            text-transform: uppercase;
+        }
+        .application-status-badge.beklemede {
+            background-color: #ffc107; /* Turuncu */
+            color: #333;
+        }
+        .application-status-badge.onaylandı {
+            background-color: #28a745; /* Yeşil */
+        }
+        .application-status-badge.reddedildi {
+            background-color: #dc3545; /* Kırmızı */
+        }
+        /* Diğer başvuru durumları için de benzer renkler ekleyebilirsiniz */
+
+        /* Kayıt durumu etiketleri için stil */
+        .record-active-status-badge {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 0.8em;
+            font-weight: 600;
+            color: white;
+            text-transform: uppercase;
+        }
+        .record-active-status-badge.aktif {
+            background-color: #007bff; /* Mavi */
+        }
+        .record-active-status-badge.pasif {
+            background-color: #6c757d; /* Gri */
         }
         
         /* Kolon Filtre Inputları İçin Stil */
@@ -336,20 +368,21 @@
                 </div>
                 <div class="filter-row">
                     <input type="text" id="searchBar" class="search-input" placeholder="Başlık, numara, durum, hak sahibi ara...">
+                    
+                    <div class="filter-group">
+                        <input type="checkbox" id="selectAllCheckbox">
+                        <label for="selectAllCheckbox" class="filter-label">Tümünü Seç</label>
+                    </div>
+
+                    <button type="button" class="btn-status-toggle" id="toggleRecordStatusBtn" disabled>
+                        Seçilenlerin Kayıt Durumunu Değiştir
+                    </button>
+
                     <button class="btn-add-record" onclick="window.location.href='data-entry.html'">
                         <span>&#x2795;</span> Yeni Kayıt Ekle
                     </button>
                     <button class="btn btn-secondary" id="exportExcelBtn">Excel Olarak Aktar</button>
                     <button class="btn btn-secondary" id="exportPdfBtn">PDF Olarak Aktar</button>
-                </div>
-                <div class="action-row">
-                    <div class="filter-group">
-                        <input type="checkbox" id="selectAllCheckbox">
-                        <label for="selectAllCheckbox" class="filter-label">Tümünü Seç</label>
-                    </div>
-                    <button type="button" class="btn-status-toggle" id="toggleStatusBtn" disabled>
-                        Seçilenlerin Durumunu Değiştir
-                    </button>
                 </div>
             </div>
     
@@ -396,7 +429,7 @@
                     this.currentUser = null;
                     this.allRecords = []; 
                     this.allPersons = []; 
-                    this.activeTypeFilter = 'all'; // Varsayılan olarak 'all' tabı seçili
+                    this.activeTypeFilter = 'all'; 
                     this.columnFilters = {}; 
                     this.sortBy = { column: null, direction: 'asc' }; 
                     this.selectedRecords = new Set(); 
@@ -423,14 +456,18 @@
                             personService.getPersons()
                         ]);
 
-                        this.allRecords = recordsResult.success ? recordsResult.data : [];
+                        // Ensure 'recordStatus' exists and defaults to 'aktif' if not present
+                        this.allRecords = recordsResult.success ? recordsResult.data.map(record => ({
+                            ...record,
+                            recordStatus: record.recordStatus || 'aktif' // Varsayılan olarak aktif yap
+                        })) : [];
                         this.allPersons = personsResult.success ? personsResult.data : [];
                         
                         this.initialRenderTableStructure(); 
                         this.populateTableBody(); 
                         this.applyFiltersAndSort(); 
                         this.setupEventListeners(); 
-                        this.updateToggleButtonState(); // Butonun durumunu başlangıçta güncelle
+                        this.updateRecordStatusToggleButtonState(); // Kayıt durumu butonunun durumunu güncelle
                     } catch (error) {
                         showNotification('Veriler yüklenirken bir hata oluştu: ' + error.message, 'error');
                     } finally {
@@ -446,9 +483,9 @@
                             document.querySelectorAll('.tab-menu .tab-button').forEach(btn => btn.classList.remove('active'));
                             e.target.classList.add('active');
                             this.activeTypeFilter = e.target.dataset.type;
-                            this.selectedRecords.clear(); // Tab değiştiğinde seçimleri temizle
+                            this.selectedRecords.clear(); 
                             document.getElementById('selectAllCheckbox').checked = false; 
-                            this.updateToggleButtonState(); // Butonun durumunu güncelle
+                            this.updateRecordStatusToggleButtonState(); 
                             this.initialRenderTableStructure(); 
                             this.applyFiltersAndSort(); 
                         });
@@ -482,7 +519,6 @@
                         }
                     });
 
-                    // Her satırın seçim kutusu için event listener (delegation)
                     document.getElementById('portfolioTableBody').addEventListener('change', (e) => {
                         if (e.target.classList.contains('record-checkbox')) {
                             const recordId = e.target.dataset.id;
@@ -490,7 +526,6 @@
                         }
                     });
 
-                    // "Tümünü Seç" onay kutusu için event listener
                     document.getElementById('selectAllCheckbox').addEventListener('change', (e) => {
                         const isChecked = e.target.checked;
                         document.querySelectorAll('#portfolioTableBody .record-checkbox').forEach(checkbox => {
@@ -501,8 +536,7 @@
                         });
                     });
                     
-                    // Durum değiştirme butonu event listener'ı
-                    document.getElementById('toggleStatusBtn').addEventListener('click', () => {
+                    document.getElementById('toggleRecordStatusBtn').addEventListener('click', () => { // ID güncellendi
                         this.toggleSelectedRecordsStatus();
                     });
 
@@ -536,15 +570,15 @@
                     } else {
                         this.selectedRecords.delete(recordId);
                     }
-                    this.updateToggleButtonState();
+                    this.updateRecordStatusToggleButtonState();
                 }
 
-                updateToggleButtonState() {
-                    const toggleButton = document.getElementById('toggleStatusBtn');
+                updateRecordStatusToggleButtonState() {
+                    const toggleButton = document.getElementById('toggleRecordStatusBtn'); // ID güncellendi
                     if (this.selectedRecords.size === 0) {
                         toggleButton.disabled = true;
-                        toggleButton.textContent = 'Seçilenlerin Durumunu Değiştir';
-                        toggleButton.classList.remove('activate', 'archive'); // Sınıfları temizle
+                        toggleButton.textContent = 'Seçilenlerin Kayıt Durumunu Değiştir';
+                        toggleButton.classList.remove('activate', 'archive'); 
                         return;
                     }
 
@@ -554,26 +588,26 @@
                     this.selectedRecords.forEach(id => {
                         const record = this.allRecords.find(r => r.id === id);
                         if (record) {
-                            if (record.status === 'pasif') {
+                            if (record.recordStatus === 'pasif') { // recordStatus kontrol ediliyor
                                 allActive = false;
-                            } else if (record.status === 'aktif') {
+                            } else if (record.recordStatus === 'aktif') { // recordStatus kontrol ediliyor
                                 allPasif = false;
                             }
                         }
                     });
 
                     toggleButton.disabled = false;
-                    toggleButton.classList.remove('activate', 'archive'); // Eski sınıfları temizle
+                    toggleButton.classList.remove('activate', 'archive'); 
 
-                    if (allActive) { // Hepsi aktifse, arşivle
+                    if (allActive) { 
                         toggleButton.textContent = `Seçilen ${this.selectedRecords.size} Kaydı Arşivle`;
                         toggleButton.classList.add('archive');
-                    } else if (allPasif) { // Hepsi pasifse, aktif et
+                    } else if (allPasif) { 
                         toggleButton.textContent = `Seçilen ${this.selectedRecords.size} Kaydı Aktif Et`;
                         toggleButton.classList.add('activate');
-                    } else { // Karışık durumdaysa
+                    } else { 
                         toggleButton.textContent = `Seçilen ${this.selectedRecords.size} Kaydın Durumunu Değiştir`;
-                        toggleButton.classList.add('btn-status-toggle'); // Genel stil
+                        toggleButton.classList.add('btn-status-toggle'); 
                     }
                 }
 
@@ -585,35 +619,33 @@
 
                     const recordsToUpdate = Array.from(this.selectedRecords).map(id => 
                         this.allRecords.find(record => record.id === id)
-                    ).filter(Boolean); // Null/Undefined kayıtları filtrele
+                    ).filter(Boolean); 
 
                     if (recordsToUpdate.length === 0) {
                         showNotification('Seçili geçerli kayıt bulunamadı.', 'info');
                         return;
                     }
 
-                    let targetStatus;
-                    const firstRecordStatus = recordsToUpdate[0].status;
+                    let targetRecordStatus; // Hedef kayıt durumu
+                    const firstRecordActiveStatus = recordsToUpdate[0].recordStatus; // İlk kaydın aktiflik durumu
 
-                    // Tüm seçili kayıtların durumu aynı mı kontrol et
-                    const allSameStatus = recordsToUpdate.every(record => record.status === firstRecordStatus);
+                    const allSameRecordStatus = recordsToUpdate.every(record => record.recordStatus === firstRecordActiveStatus);
 
-                    if (allSameStatus) {
-                        targetStatus = (firstRecordStatus === 'aktif') ? 'pasif' : 'aktif';
+                    if (allSameRecordStatus) {
+                        targetRecordStatus = (firstRecordActiveStatus === 'aktif') ? 'pasif' : 'aktif';
                     } else {
-                        // Karışık durumdaysa veya farklı işlem isteniyorsa
-                        showNotification('Seçili kayıtların durumları farklı. Lütfen aynı durumda olan kayıtları seçin.', 'warning');
+                        showNotification('Seçili kayıtların aktiflik durumları farklı. Lütfen aynı durumda olan kayıtları seçin.', 'warning');
                         return;
                     }
                     
-                    const confirmationMessage = `Seçilen ${recordsToUpdate.length} adet kaydın durumunu "${targetStatus.toUpperCase()}" olarak değiştirmek istediğinizden emin misiniz?`;
+                    const confirmationMessage = `Seçilen ${recordsToUpdate.length} adet kaydın aktiflik durumunu "${targetRecordStatus.toUpperCase()}" olarak değiştirmek istediğinizden emin misiniz?`;
 
                     if (!confirm(confirmationMessage)) {
                         return;
                     }
 
                     const updatePromises = recordsToUpdate.map(record => {
-                        return ipRecordsService.updateRecord(record.id, { status: targetStatus });
+                        return ipRecordsService.updateRecord(record.id, { recordStatus: targetRecordStatus }); // recordStatus alanı güncelleniyor
                     });
 
                     try {
@@ -623,17 +655,10 @@
 
                         if (successfulUpdates > 0) {
                             showNotification(`${successfulUpdates} adet kayıt başarıyla güncellendi.`, 'success');
-                            // Güncellenen kayıtları allRecords içinde ve DOM'da güncelle
-                            this.selectedRecords.forEach(id => {
-                                const index = this.allRecords.findIndex(record => record.id === id);
-                                if (index !== -1) {
-                                    this.allRecords[index].status = targetStatus;
-                                }
-                            });
                             this.selectedRecords.clear(); 
                             document.getElementById('selectAllCheckbox').checked = false;
-                            this.updateToggleButtonState();
-                            this.applyFiltersAndSort(); // Tabloyu yeniden filtrele ve sırala
+                            this.updateRecordStatusToggleButtonState();
+                            await this.loadAllData(); // Tüm veriyi yeniden yükle ve tabloyu tazele
                         }
 
                         if (failedUpdates > 0) {
@@ -641,10 +666,9 @@
                             results.filter(res => !res.success).forEach(res => console.error('Durum güncelleme hatası:', res.error));
                         }
                     } catch (error) {
-                        showNotification('Durum güncelleme işleminde beklenmeyen bir hata oluştu: ' + error.message, 'error');
+                        showNotification('Kayıt durumu güncelleme işleminde beklenmeyen bir hata oluştu: ' + error.message, 'error');
                     }
                 }
-
 
                 toggleSort(columnKey) {
                     if (this.sortBy.column === columnKey) {
@@ -665,16 +689,18 @@
 
                     const currentTypeFilter = this.activeTypeFilter; 
 
+                    // Kolon tanımlarını ve arama/sıralama özelliklerini güncelledik
                     const columnDefinitions = [
-                        { key: 'selection', label: '<input type="checkbox" id="headerSelectAllCheckbox" />', sortable: false, searchable: false, isCheckbox: true },
-                        { key: 'type', label: 'Kayıt Tipi', sortable: true, searchable: true, onlyAllTab: true }, 
-                        { key: 'title', label: 'Başlık', sortable: true, searchable: true },
-                        { key: 'trademarkImage', label: 'Marka Görseli', sortable: false, searchable: false, onlyTrademark: true }, 
-                        { key: 'applicationNumber', label: 'Başvuru Numarası', sortable: true, searchable: true },
-                        { key: 'applicationDate', label: 'Başvuru Tarihi', sortable: true, searchable: true },
-                        { key: 'status', label: 'Durum', sortable: true, searchable: true },
-                        { key: 'owners', label: 'Hak Sahipleri', sortable: true, searchable: true },
-                        { key: 'actions', label: 'İşlemler', sortable: false, searchable: false }
+                        { key: 'selection', label: '<input type="checkbox" id="headerSelectAllCheckbox" />', sortable: false, searchable: false, isCheckbox: true, fixedWidth: '50px', index: 0 },
+                        { key: 'type', label: 'Kayıt Tipi', sortable: true, searchable: true, onlyAllTab: true, index: 1 }, 
+                        { key: 'title', label: 'Başlık', sortable: true, searchable: true, index: 2 },
+                        { key: 'trademarkImage', label: 'Marka Görseli', sortable: false, searchable: false, onlyTrademark: true, index: 3 }, 
+                        { key: 'applicationNumber', label: 'Başvuru Numarası', sortable: true, searchable: true, index: 4 },
+                        { key: 'applicationDate', label: 'Başvuru Tarihi', sortable: true, searchable: true, index: 5 },
+                        { key: 'status', label: 'Başvuru Durumu', sortable: true, searchable: true, index: 6 }, // Mevcut 'status' kolonunu Başvuru Durumu yaptık
+                        { key: 'recordStatus', label: 'Kayıt Durumu', sortable: true, searchable: true, index: 7 }, // Yeni 'recordStatus' kolonu
+                        { key: 'owners', label: 'Hak Sahipleri', sortable: true, searchable: true, index: 8 },
+                        { key: 'actions', label: 'İşlemler', sortable: false, searchable: false, fixedWidth: '220px', index: 9 }
                     ];
 
                     columnDefinitions.forEach(col => {
@@ -682,6 +708,9 @@
                         if (col.sortable) {
                             th.classList.add('sortable-header');
                             th.dataset.column = col.key;
+                        }
+                        if (col.fixedWidth) {
+                            th.style.width = col.fixedWidth;
                         }
 
                         if (col.isCheckbox) {
@@ -691,11 +720,9 @@
                         }
                         
                         tableHeaderRow.appendChild(th);
-                        // Kayıt Tipi sütunu sadece "Tümü" tabında görünür
                         if (col.key === 'type' && currentTypeFilter !== 'all') {
                             th.style.display = 'none';
                         }
-                        // Marka Görseli sütunu sadece "Marka" tabında görünür
                         if (col.onlyTrademark && currentTypeFilter !== 'trademark') {
                             th.style.display = 'none';
                         }
@@ -711,13 +738,16 @@
                             thFilter.appendChild(input);
                         }
                         tableFilterRow.appendChild(thFilter);
-                        // Kayıt Tipi filtre sütunu sadece "Tümü" tabında görünür
                         if (col.key === 'type' && currentTypeFilter !== 'all') {
                             thFilter.style.display = 'none';
                         }
-                        // Marka Görseli filtre sütunu sadece "Marka" tabında görünür
                         if (col.onlyTrademark && currentTypeFilter !== 'trademark') {
                             thFilter.style.display = 'none';
+                        }
+                        // Checkbox sütunu için filtreleme inputu ekleme (boş bırakıldı)
+                        if (col.isCheckbox) {
+                            thFilter.style.display = 'table-cell';
+                            thFilter.innerHTML = '';
                         }
                     });
                 }
@@ -726,6 +756,7 @@
                     const tableBody = document.getElementById('portfolioTableBody');
                     tableBody.innerHTML = ''; 
 
+                    // Kolon tanımlarını güncelledik (sıra önemli)
                     const columnDefinitions = [ 
                         { key: 'selection', label: '', isCheckbox: true },
                         { key: 'type', label: 'Kayıt Tipi' },
@@ -733,7 +764,8 @@
                         { key: 'trademarkImage', label: 'Marka Görseli', onlyTrademark: true }, 
                         { key: 'applicationNumber', label: 'Başvuru Numarası' },
                         { key: 'applicationDate', label: 'Başvuru Tarihi' },
-                        { key: 'status', label: 'Durum' },
+                        { key: 'status', label: 'Başvuru Durumu' }, // Mevcut 'status' kolonunu Başvuru Durumu yaptık
+                        { key: 'recordStatus', label: 'Kayıt Durumu' }, // Yeni 'recordStatus' kolonu
                         { key: 'owners', label: 'Hak Sahipleri' },
                         { key: 'actions', label: 'İşlemler' }
                     ];
@@ -741,7 +773,8 @@
                     this.allRecords.forEach(record => {
                         const row = document.createElement('tr');
                         row.dataset.recordId = record.id; 
-                        row.classList.add(`record-status-${record.status}`); // Duruma göre sınıf ekle (CSS için)
+                        // Sadece kaydın aktiflik durumuna göre stil ekleniyor
+                        row.classList.add(`record-status-${record.recordStatus}`); 
                         
                         const ownerNames = record.owners ? record.owners.map(owner => {
                             const person = this.allPersons.find(p => p.id === owner.id);
@@ -769,7 +802,15 @@
                             }
                             else if (col.key === 'applicationNumber') { cellHtmlContent = `${record.applicationNumber || '-'}`; }
                             else if (col.key === 'applicationDate') { cellHtmlContent = `${record.applicationDate || '-'}`; }
-                            else if (col.key === 'status') { cellHtmlContent = `${record.status || '-'}`; }
+                            else if (col.key === 'status') { 
+                                // Başvuru Durumu için stilize edilmiş badge gösterimi
+                                const statusText = record.status ? record.status.charAt(0).toUpperCase() + record.status.slice(1) : '-';
+                                cellHtmlContent = `<span class="application-status-badge ${record.status}">${statusText}</span>`;
+                            }
+                            else if (col.key === 'recordStatus') { // Yeni Kayıt Durumu kolonu
+                                const recordStatusText = record.recordStatus ? record.recordStatus.charAt(0).toUpperCase() + record.recordStatus.slice(1) : '-';
+                                cellHtmlContent = `<span class="record-active-status-badge ${record.recordStatus}">${recordStatusText}</span>`;
+                            }
                             else if (col.key === 'owners') { cellHtmlContent = `${ownerNames || '-'}`; }
                             else if (col.key === 'actions') {
                                 cellHtmlContent = `
@@ -793,16 +834,18 @@
                     const currentTypeFilter = this.activeTypeFilter; 
                     const globalSearchTerm = document.getElementById('searchBar').value.toLowerCase();
 
+                    // Kolon tanımlarını güncelledik (index'ler değişti)
                     const columnDefinitions = [
-                        { key: 'selection', searchable: false, index: 0, isCheckbox: true },
+                        { key: 'selection', searchable: false, index: 0 },
                         { key: 'type', searchable: true, index: 1, onlyAllTab: true }, 
                         { key: 'title', searchable: true, index: 2 },
                         { key: 'trademarkImage', searchable: false, onlyTrademark: true, index: 3 }, 
                         { key: 'applicationNumber', searchable: true, index: 4 },
                         { key: 'applicationDate', searchable: true, index: 5 },
-                        { key: 'status', searchable: true, index: 6 },
-                        { key: 'owners', searchable: true, index: 7 },
-                        { key: 'actions', searchable: false, index: 8 }
+                        { key: 'status', searchable: true, index: 6 }, 
+                        { key: 'recordStatus', searchable: true, index: 7 }, // Yeni 'recordStatus' kolonu
+                        { key: 'owners', searchable: true, index: 8 },
+                        { key: 'actions', searchable: false, index: 9 }
                     ];
 
                     let filteredRows = allRows.filter(row => {
@@ -824,7 +867,8 @@
                             record.type,
                             record.title,
                             record.applicationNumber,
-                            record.status,
+                            record.status, // Başvuru durumu
+                            record.recordStatus, // Kayıt durumu
                             record.description,
                             record.patentClass, 
                             record.niceClass, 
@@ -839,8 +883,8 @@
                                 return true; 
                             }
                             // Eğer sütun sadece belirli bir tabda görünüyorsa ve o tab aktif değilse bu filtreyi atla
-                            if ((col.onlyTrademark && currentTypeFilter !== 'trademark') || 
-                                (col.key === 'type' && currentTypeFilter !== 'all')) return true; 
+                            if ((col.key === 'type' && currentTypeFilter !== 'all') || 
+                                (col.onlyTrademark && currentTypeFilter !== 'trademark')) return true; 
 
                             let recordValue = '';
                             if (col.key === 'owners') {
@@ -874,7 +918,7 @@
                             } else if (sortColumn === 'applicationDate') {
                                 valA = new Date(recordA.applicationDate || '1970-01-01'); 
                                 valB = new Date(recordB.applicationDate || '1970-01-01');
-                            } else if (sortColumn === 'type' || sortColumn === 'title' || sortColumn === 'status' || sortColumn === 'applicationNumber') {
+                            } else if (sortColumn === 'type' || sortColumn === 'title' || sortColumn === 'status' || sortColumn === 'applicationNumber' || sortColumn === 'recordStatus') { // recordStatus da eklendi
                                 valA = String(recordA[sortColumn] || '');
                                 valB = String(recordB[sortColumn] || '');
                             } else {
@@ -911,7 +955,6 @@
                             const cellIndex = col.index;
                             const cell = row.children[cellIndex];
                             if (cell) { 
-                                // Kayıt Tipi sütunu sadece "Tümü" tabında görünür
                                 const hideColumn = (col.key === 'type' && currentTypeFilter !== 'all') || 
                                                    (col.onlyTrademark && currentTypeFilter !== 'trademark');
                                 
@@ -925,10 +968,10 @@
                         if (checkbox) {
                             checkbox.checked = this.selectedRecords.has(recordId);
                         }
-                        // Durum sınıfını güncelleyelim
+                        // Sadece recordStatus'a göre sınıf ekleniyor
                         row.classList.remove('record-status-aktif', 'record-status-pasif');
-                        if (record && record.status) {
-                            row.classList.add(`record-status-${record.status}`);
+                        if (record && record.recordStatus) {
+                            row.classList.add(`record-status-${record.recordStatus}`);
                         }
                     });
                     
@@ -949,7 +992,7 @@
                     const allVisibleCheckboxes = document.querySelectorAll('#portfolioTableBody tr[style="display: table-row;"] .record-checkbox');
                     const allChecked = allVisibleCheckboxes.length > 0 && Array.from(allVisibleCheckboxes).every(cb => cb.checked);
                     document.getElementById('selectAllCheckbox').checked = allChecked;
-                    this.updateToggleButtonState();
+                    this.updateRecordStatusToggleButtonState();
                 }
                 
                 async deleteRecord(recordId) {
@@ -958,7 +1001,7 @@
                         if (result.success) {
                             showNotification('Kayıt başarıyla silindi.', 'success');
                             this.selectedRecords.delete(recordId); 
-                            this.updateToggleButtonState(); 
+                            this.updateRecordStatusToggleButtonState(); 
                             await this.loadAllData(); 
                         } else {
                             showNotification('Kayıt silinirken hata oluştu: ' + result.error, 'error');
@@ -967,7 +1010,6 @@
                 }
 
                 async showRecordDetailModal(recordId) {
-                    console.log('Modal çağrıldı, ID:', recordId);
                     const record = this.allRecords.find(r => r.id === recordId);
                     if (!record) {
                         showNotification('Kayıt bulunamadı.', 'error');
@@ -1019,8 +1061,8 @@
                     modalBody.innerHTML = `
                         <div class="modal-detail-grid">
                             <div class="modal-detail-item"><div class="modal-detail-label">Kayıt Tipi</div><div class="modal-detail-value">${record.type.charAt(0).toUpperCase() + record.type.slice(1)}</div></div>
-                            <div class="modal-detail-item"><div class="modal-detail-label">Durum</div><div class="modal-detail-value">${record.status}</div></div>
-                            <div class="modal-detail-item full-width"><div class="modal-detail-label">Başlık</div><div class="modal-detail-value">${record.title}</div></div>
+                            <div class="modal-detail-item"><div class="modal-detail-label">Başvuru Durumu</div><div class="modal-detail-value">${record.status}</div></div>
+                            <div class="modal-detail-item"><div class="modal-detail-label">Kayıt Durumu</div><div class="modal-detail-value">${record.recordStatus}</div></div> <div class="modal-detail-item full-width"><div class="modal-detail-label">Başlık</div><div class="modal-detail-value">${record.title}</div></div>
                             <div class="modal-detail-item"><div class="modal-detail-label">Başvuru Numarası</div><div class="modal-detail-value">${record.applicationNumber || '-'}</div></div>
                             <div class="modal-detail-item"><div class="modal-detail-label">Başvuru Tarihi</div><div class="modal-detail-value">${record.applicationDate || '-'}</div></div>
                             <div class="modal-detail-item"><div class="modal-detail-label">Tescil Numarası</div><div class="modal-detail-value">${record.registrationNumber || '-'}</div></div>
