@@ -35,9 +35,9 @@
         .search-input { 
             margin-right: auto;
             flex-grow: 1; 
-            min-width: 180px; /* Arama çubuğu boyutu artırıldı */
-            padding: 10px 12px; /* Butonlarla uyumlu yükseklik */
-            box-sizing: border-box; /* Padding ve border'ın genişliği etkilememesi için */
+            min-width: 180px;
+            padding: 10px 12px;
+            box-sizing: border-box;
         }
 
         .tab-menu {
@@ -68,7 +68,7 @@
 
         .filter-group { 
             display: flex; 
-            gap: 8px; /* Checkbox ve label arasındaki boşluk */
+            gap: 8px;
             align-items: center; 
         }
         .filter-label { font-weight: 500; }
@@ -78,7 +78,6 @@
             border: 1px solid #ccc;
         }
 
-        /* Tüm butonlar için genel stil */
         .btn-add-record, .btn-primary, .btn-secondary, .btn-status-toggle { 
             background: linear-gradient(45deg, #1e3c72, #2a5298);
             color: white;
@@ -97,7 +96,6 @@
             transform: translateY(-2px);
             box-shadow: 0 5px 15px rgba(30, 60, 114, 0.2);
         }
-        /* Durum değiştirme butonu renkleri */
         .btn-status-toggle.activate {
              background-color: #28a745;
         }
@@ -111,17 +109,17 @@
             transform: none;
         }
 
-        /* Yeni Tablo Stil Tanımlamaları */
         .portfolio-table-container {
             background: rgba(255, 255, 255, 0.95);
             border-radius: 20px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-            overflow: hidden;
+            overflow-x: auto; /* Yatay kaydırma çubuğu ekle, gerektiğinde */
         }
 
         .portfolio-table {
             width: 100%;
             border-collapse: collapse;
+            table-layout: fixed; /* Kolon genişliklerini sabitler */
         }
 
         .portfolio-table th,
@@ -129,25 +127,15 @@
             padding: 15px;
             text-align: left;
             border-bottom: 1px solid #f0f0f0;
+            white-space: nowrap; /* İçeriğin tek satırda kalmasını sağlar */
+            overflow: hidden;
+            text-overflow: ellipsis; /* Taşmayı üç nokta ile göster */
         }
 
         .portfolio-table th {
             background: #f8f9fa;
             font-weight: 600;
-            white-space: nowrap; /* Başlıkların tek satırda kalmasını sağlar */
         }
-        .portfolio-table td {
-            white-space: nowrap; /* Hücre içeriklerinin de tek satırda kalmasını sağlar */
-            overflow: hidden;
-            text-overflow: ellipsis; /* Taşmayı üç nokta ile göster */
-            max-width: 150px; /* Bazı hücreler için maksimum genişlik */
-        }
-        .portfolio-table td:nth-child(3) { max-width: 250px; } /* Başlık kolonu için daha geniş */
-        .portfolio-table td:nth-child(6), .portfolio-table td:nth-child(7), .portfolio-table td:nth-child(8) {
-            max-width: 120px; /* Tarih ve durum kolonları için daraltma */
-        }
-
-
         .portfolio-table tr:hover {
             background-color: #f6f8fa;
         }
@@ -591,7 +579,7 @@
                     const toggleButton = document.getElementById('toggleRecordStatusBtn');
                     if (this.selectedRecords.size === 0) {
                         toggleButton.disabled = true;
-                        toggleButton.textContent = 'Aktif/Pasif'; // Kısa isim
+                        toggleButton.textContent = 'Aktif/Pasif';
                         toggleButton.classList.remove('activate', 'archive'); 
                         return;
                     }
@@ -614,14 +602,14 @@
                     toggleButton.classList.remove('activate', 'archive'); 
 
                     if (allActive) { 
-                        toggleButton.textContent = `Arşivle (${this.selectedRecords.size})`; // Arşivle ve adet
+                        toggleButton.textContent = `Arşivle (${this.selectedRecords.size})`;
                         toggleButton.classList.add('archive');
                     } else if (allPasif) { 
-                        toggleButton.textContent = `Aktif Et (${this.selectedRecords.size})`; // Aktif Et ve adet
+                        toggleButton.textContent = `Aktif Et (${this.selectedRecords.size})`;
                         toggleButton.classList.add('activate');
                     } else { 
-                        toggleButton.textContent = `Aktif/Pasif (${this.selectedRecords.size})`; // Karışık durum, adet
-                        toggleButton.classList.add('btn-status-toggle'); // Genel stil
+                        toggleButton.textContent = `Aktif/Pasif (${this.selectedRecords.size})`;
+                        toggleButton.classList.add('btn-status-toggle');
                     }
                 }
 
@@ -706,14 +694,14 @@
                     const columnDefinitions = [
                         { key: 'selection', label: '<input type="checkbox" id="headerSelectAllCheckbox" />', sortable: false, searchable: false, isCheckbox: true, fixedWidth: '40px', index: 0 },
                         { key: 'type', label: 'Kayıt Tipi', sortable: true, searchable: true, onlyAllTab: true, fixedWidth: '80px', index: 1 }, 
-                        { key: 'title', label: 'Başlık', sortable: true, searchable: true, index: 2 },
+                        { key: 'title', label: 'Başlık', sortable: true, searchable: true, fixedWidth: '150px', index: 2 }, /* Başlık daraltıldı */
                         { key: 'trademarkImage', label: 'Marka Görseli', sortable: false, searchable: false, onlyTrademark: true, fixedWidth: '80px', index: 3 }, 
                         { key: 'applicationNumber', label: 'Başvuru Numarası', sortable: true, searchable: true, fixedWidth: '120px', index: 4 },
                         { key: 'applicationDate', label: 'Başvuru Tarihi', sortable: true, searchable: true, fixedWidth: '100px', index: 5 },
                         { key: 'status', label: 'Başvuru Durumu', sortable: true, searchable: true, fixedWidth: '110px', index: 6 },
                         { key: 'recordStatus', label: 'Kayıt Durumu', sortable: true, searchable: true, fixedWidth: '110px', index: 7 },
-                        { key: 'owners', label: 'Hak Sahipleri', sortable: true, searchable: true, fixedWidth: '150px', index: 8 },
-                        { key: 'actions', label: 'İşlemler', sortable: false, searchable: false, fixedWidth: '220px', index: 9 }
+                        { key: 'owners', label: 'Hak Sahipleri', sortable: true, searchable: true, fixedWidth: '200px', index: 8 }, /* Hak Sahipleri genişletildi */
+                        { key: 'actions', label: 'İşlemler', sortable: false, searchable: false, fixedWidth: '250px', index: 9 } /* İşlemler genişletildi */
                     ];
 
                     columnDefinitions.forEach(col => {
@@ -823,9 +811,9 @@
                             else if (col.key === 'owners') { cellHtmlContent = `${ownerNames || '-'}`; }
                             else if (col.key === 'actions') {
                                 cellHtmlContent = `
-                                    <button type="button"class="action-btn view-btn" data-id="${record.id}">Görüntüle</button>
-                                    <button type="button"class="action-btn edit-btn" data-id="${record.id}">Düzenle</button>
-                                    <button type="button"class="action-btn delete-btn" data-id="${record.id}">Sil</button>
+                                    <button type="button" class="action-btn view-btn" data-id="${record.id}">Görüntüle</button>
+                                    <button type="button" class="action-btn edit-btn" data-id="${record.id}">Düzenle</button>
+                                    <button type="button" class="action-btn delete-btn" data-id="${record.id}">Sil</button>
                                 `;
                             }
                             rowCellsHtml += `<td>${cellHtmlContent}</td>`;
