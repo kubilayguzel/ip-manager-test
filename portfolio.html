@@ -789,16 +789,22 @@
                             } else if (col.key === 'type') { cellHtmlContent = `${record.type.charAt(0).toUpperCase() + record.type.slice(1)}`; }
                             else if (col.key === 'title') { cellHtmlContent = `${record.title || 'Başlıksız Kayıt'}`; }
                             else if (col.key === 'trademarkImage') {
-                                if (record.type === 'trademark' && record.trademarkImage && (typeof record.trademarkImage === 'string' || record.trademarkImage.content))
- {
-                                    cellHtmlContent = `
-                                        <div class="trademark-image-wrapper">
-                                            <img src="${record.trademarkImage.content}" alt="Marka Görseli" class="trademark-image-thumbnail">
-                                        </div>`;
-                                } else {
-                                    cellHtmlContent = `-`; 
-                                }
+                            let imageSrc = '-';
+                            if (record.type === 'trademark' && record.trademarkImage) {
+                                imageSrc = typeof record.trademarkImage === 'string'
+                                    ? record.trademarkImage
+                                    : record.trademarkImage.content;
                             }
+
+                            if (imageSrc && imageSrc.startsWith('data:image')) {
+                                cellHtmlContent = `
+                                    <div class="trademark-image-wrapper">
+                                        <img src="${imageSrc}" alt="Marka Görseli" class="trademark-image-thumbnail">
+                                    </div>`;
+                            } else {
+                                cellHtmlContent = `-`;
+                            }
+                                                   }
                             else if (col.key === 'applicationNumber') { cellHtmlContent = `${record.applicationNumber || '-'}`; }
                             else if (col.key === 'applicationDate') { cellHtmlContent = `${record.applicationDate || '-'}`; }
                             else if (col.key === 'status') { 
