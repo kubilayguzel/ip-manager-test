@@ -876,7 +876,7 @@
                     renderAccruals(accrualList) {
                     const container = document.getElementById('accrualsContainer');
                     container.innerHTML = '';
-                    if (!Array.isArray(accruals)) {
+                    if (!Array.isArray(accrualList)) {
                         console.warn("Tahakkuk verisi uygun formatta değil:", accruals);
                         return;
                     }
@@ -912,7 +912,6 @@
                         container.appendChild(accrualElement);
                     });
                 }
-
 
                 showAccrualModal(mode, accrualId = null) {
                     const modal = document.getElementById('accrualModal');
