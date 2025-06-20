@@ -375,7 +375,7 @@
         <div class="modal-content">
             <span class="close-modal-btn" id="closeAccrualModal">&times;</span>
             <h3 class="modal-title" id="accrualModalTitle">Yeni Tahakkuk Ekle</h3>
-            <form id="accrualForm"> {/* REMOVED onsubmit="return false;" */}
+            <form id="accrualForm"> {/* onsubmit="return false;" kaldırıldı */}
                 <input type="hidden" id="accrualId">
                 <div class="form-grid">
                     <div class="form-group full-width"> {/* Added full-width to align with shared styles for consistency */}
@@ -678,10 +678,12 @@
                     document.getElementById('closeAccrualModal').addEventListener('click', () => this.closeAccrualModal());
                     document.getElementById('cancelAccrualBtn').addEventListener('click', () => this.closeAccrualModal());
                     
-                    // ÖNERİLEN DEĞİŞİKLİK BURADA: submit olayını yakala ve varsayılan davranışı engelle
+                    // ÖNEMLİ DEĞİŞİKLİK: Sadece formun submit olayını dinle
+                    // document.getElementById('saveAccrualBtn').addEventListener('click', (e) => this.handleAccrualSubmit(e)); // BU SATIRI KALDIRILDI!
+                    
                     document.getElementById('accrualForm').addEventListener('submit', (e) => {
                         e.preventDefault(); // Formun varsayılan submit davranışını engelle
-                        this.handleAccrualSubmit(e); // Mevcut tahakkuk submit işleyicisini çağır
+                        this.handleAccrualSubmit(e); // handleAccrualSubmit'i çağır
                     });
 
                     ['officialFee', 'serviceFee', 'vatRate', 'applyVatToOfficialFee', 'officialFeeCurrency', 'serviceFeeCurrency'].forEach(id => {
@@ -1144,6 +1146,7 @@
                             result = await accrualService.updateAccrual(accrualId, accrualData);
                         } else {
                             // ÇÖZÜM: Yeni tahakkuk ekleme durumunda addAccrual çağrısı
+                            console.log("DEBUG: Yeni tahakkuk ekleniyor:", accrualData); // Yeni log
                             result = await accrualService.addAccrual(accrualData);
                         }
                         
