@@ -159,7 +159,7 @@
     }
         .search-results-list { max-height: 200px; overflow-y: auto; border: 1px solid #ccc; border-radius: 8px; margin-top: 5px; }
         .search-result-item { padding: 10px; cursor: pointer; border-bottom: 1px solid #eee; }
-        .search-result-item:hover { background-color: #f0f4f0; }
+        .search-result-item:hover { background-color: #f0f0f0; }
         .search-result-display { background: #e9f5ff; border: 1px solid #bde0fe; padding: 15px; border-radius: 8px; margin-top: 10px; display: flex; gap: 15px; align-items: center;}
         
         .history-list {
@@ -521,6 +521,7 @@
                 async init() {
                     this.currentUser = authService.getCurrentUser();
                     if (!this.currentUser) {
+                        console.log('DEBUG: Kullanıcı oturumu açık değil, index.html adresine yönlendiriliyor.');
                         window.location.href = 'index.html';
                         return;
                     }
@@ -530,11 +531,13 @@
 
                     if (!this.taskId) {
                         showNotification('İş ID\'si bulunamadı.', 'error');
+                        console.log('DEBUG: taskId bulunamadı, task-management.html adresine yönlendiriliyor.');
                         // Geri dön veya varsayılan bir sayfaya yönlendir
                         window.location.href = 'task-management.html';
                         return;
                     }
 
+                    console.log(`DEBUG: TaskDetailModule başlatılıyor. taskId: ${this.taskId}`);
                     await this.loadAllData();
                     this.setupEventListeners(); // Re-calling event listeners after loadAllData
                     await this.loadTaskData();
@@ -552,6 +555,7 @@
                         this.allIpRecords = ipRecordsResult.data || [];
                         this.allPersons = personsResult.data || [];
                         this.allUsers = usersResult.data || [];
+                        console.log('DEBUG: Tüm ana veriler yüklendi.');
                     } catch (error) {
                         console.error("Master veriler yüklenirken hata oluştu:", error);
                         showNotification("Gerekli veriler yüklenemedi, lütfen sayfayı yenileyin.", "error");
@@ -567,8 +571,10 @@
                         this.fillTaskForm();
                         this.renderDocuments(); // Belgeleri render et
                         this.renderHistory(); // Geçmişi render et
+                        console.log('DEBUG: Görev verileri yüklendi ve form dolduruldu.');
                     } else {
                         showNotification('İş verileri yüklenemedi: ' + taskResult.error, 'error');
+                        console.log('DEBUG: Görev verileri yüklenemedi, task-management.html adresine yönlendiriliyor.');
                         window.location.href = 'task-management.html';
                     }
                 }
@@ -577,8 +583,10 @@
                     const accrualsResult = await accrualService.getAccrualsByTaskId(this.taskId);
                     if (accrualsResult.success) {
                         this.currentAccruals = accrualsResult.data; // Assign fetched accruals to the class property
+                        console.log('DEBUG: Tahakkuklar yüklendi.');
                     } else {
                         showNotification('Tahakkuklar yüklenirken hata oluştu: ' + accrualsResult.error, 'error');
+                        console.error('DEBUG: Tahakkuklar yüklenirken hata:', accrualsResult.error);
                         this.currentAccruals = [];
                     }
                     this.renderAccruals(); // Tahakkukları render et
@@ -661,10 +669,6 @@
                     document.getElementById('relatedPartySearch').addEventListener('input', (e) => this.searchPersons(e.target.value, 'relatedParty'));
                     document.getElementById('addNewRelatedPartyBtn').addEventListener('click', () => this.showAddPersonModal());
 
-                    // Note: The original 'accrualModal' and its related form/logic were for adding new accruals in persons.html or general.
-                    // For editing existing accruals on task-detail, we will use a refined process within this module.
-                    // The old modal with ID 'accrualModal' will be repurposed or its ID might be problematic.
-                    // I will define new methods for 'showAccrualEditModal' and related form handling.
                     document.getElementById('closeAccrualModal').addEventListener('click', () => this.closeAccrualModal());
                     document.getElementById('cancelAccrualBtn').addEventListener('click', () => this.closeAccrualModal());
                     document.getElementById('saveAccrualBtn').addEventListener('click', (e) => this.handleAccrualSubmit(e)); // Tahakkuk kaydetme butonu
@@ -1078,7 +1082,7 @@
                     });
                 }
 
-                    async handleAccrualSubmit(event) {
+                async handleAccrualSubmit(event) {
                     event.preventDefault();
                     const accrualId = document.getElementById('accrualId').value;
                     const officialFee = parseFloat(document.getElementById('officialFee').value) || 0;
@@ -1299,6 +1303,7 @@
             // Bu kısım firebase-config.js dosyasında yapılmalı, ancak geçici olarak burada simüle edebiliriz.
             // Gerçek projede bunu firebase-config.js içine eklemelisin.
             if (!accrualService.deleteAccrual) {
+                console.warn("DEBUG: accrualService.deleteAccrual metodu firebase-config.js içinde tanımlı değil. Simüle ediliyor.");
                 accrualService.deleteAccrual = async (accrualId) => {
                     // Firebase'den silme işlemi için Firestore deleteDoc kullanılmalı
                     // import { deleteDoc, doc } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore.js";
@@ -1308,7 +1313,7 @@
                     // } catch (error) {
                     //     return { success: false, error: error.message };
                     // }
-                    console.warn(`accrualService.deleteAccrual henüz tanımlı değil. Tahakkuk ID: ${accrualId}`);
+                    console.warn(`DEBUG: accrualService.deleteAccrual henüz tanımlı değil. Tahakkuk ID: ${accrualId} silindi olarak simüle edildi.`);
                     return { success: true, message: "Simüle edilmiş silme." }; // Simülasyon
                 };
             }
