@@ -159,7 +159,7 @@ export async function exportTableToExcel(tableId, filename = 'rapor') {
     const worksheet = workbook.addWorksheet('Veriler');
 
     const headerRowHtml = table.querySelector('thead tr#portfolioTableHeaderRow');
-    const headerCellsHtml = Array.from(headerRowHtml.children);
+    const headerCellsHtml = Array.from(headerRowHtml.children); // Get children of the header row
 
     let headersForExcel = [];
     let imageColExcelIndex = -1; // 0-based index in the final Excel rowData array
@@ -193,7 +193,9 @@ export async function exportTableToExcel(tableId, filename = 'rapor') {
     const rowsHtml = table.querySelectorAll('tbody tr'); // Original table rows
     const imagePromises = [];
 
-    // actualExcelDataRowIndex kaldırıldı
+    // Excel'e gerçekten eklenen veri satırlarının sayacını tutar (gizli satırlar atlanacak)
+    let actualExcelDataRowIndex = 0; 
+
     rowsHtml.forEach((rowHtml) => {
         // Only process visible rows (filtered by display style)
         if (rowHtml.style.display === 'none') {
@@ -220,7 +222,6 @@ export async function exportTableToExcel(tableId, filename = 'rapor') {
             } else if (headerLabel === 'Marka Görseli') { // Image column
                 const imgElement = cell.querySelector('img.trademark-image-thumbnail');
                 if (imgElement && imgElement.src) {
-                    rowData[excelColIndex] = ''; // Placeholder for the image cell
                     // Promise'i burada oluşturup resolve içinde satır numarasını yakalayacağız
                     imagePromises.push(new Promise((resolve) => {
                         const img = new Image();
@@ -235,12 +236,7 @@ export async function exportTableToExcel(tableId, filename = 'rapor') {
                             resolve({ 
                                 base64: base64Data, 
                                 excelCol: excelColIndex, // 0-based Excel column index for addImage
-                                // `actualExcelDataRowIndex` yerine, `worksheet.addRow` sonrası `addedRow.number` kullanılacak
-                                // Bu promise resolve edildiğinde, ilgili satır çoktan eklenmiş olacak.
-                                // Dolayısıyla, resim ekleneceği zaman doğru satır numarasını bulmak için
-                                // Promise'i çözdüğümüz yerde değil, resimler eklenirken döngü içinde hesaplayacağız.
-                                // Ya da buraya rowHtml'nin kendisini ekleyip, sonraki adımda işleriz.
-                                rowHtmlElement: rowHtml // Resmin ait olduğu HTML satırını sakla
+                                excelRow: actualExcelDataRowIndex // 0-based Excel row index for addImage (after header)
                             }); 
                         };
                         img.onerror = () => {
@@ -249,6 +245,7 @@ export async function exportTableToExcel(tableId, filename = 'rapor') {
                         };
                         img.src = imgElement.src;
                     }));
+                    rowData[excelColIndex] = ''; // Placeholder for the image cell
                 } else {
                     rowData[excelColIndex] = cell.textContent.trim() || '-'; // Add text if no image
                 }
@@ -256,133 +253,52 @@ export async function exportTableToExcel(tableId, filename = 'rapor') {
                 rowData[excelColIndex] = cell.textContent.trim();
             }
         });
-
-        // Her görünür HTML satırı için bir Excel satırı ekle
-        const addedRow = worksheet.addRow(rowData); 
-        // Resim promise'lerini oluşturan her bir resolve() çağrısının
-        // artık bu addedRow.number'ı kullanması gerekiyor.
-        // Bu yüzden Promise resolve edilirken excelRow olarak addedRow.number'ı döndüreceğiz.
-        // Ancak promise'ler asenkron çalıştığı için bu doğrudan yapılamaz.
-        // Resolve ederken satır indexi yerine, HTML satırını döndürüp sonraki adımda bulabiliriz.
-
-        // Revize edilmiş Promise resolve:
-        imagePromises.forEach(p => {
-            // Promise'ler tamamlandığında, orijinal rowHtmlElement'i kullanarak
-            // onun Excel'deki addedRow.number'ına karşılık gelen satırını bulmamız gerekecek.
-            // Bu yüzden promise'lerin listesine rowIndex'i eklemek daha mantıklı.
-            // Bu kısmı tekrar düzenlememiz gerekecek.
-        });
-        // actualExcelDataRowIndex kaldırıldı, addedRow.number kullanılacak.
+        // ÖNEMLİ DÜZELTME BAŞLANGICI: worksheet.addRow dış döngü içinde SADECE BİR KEZ çağrılmalıydı
+        worksheet.addRow(rowData); 
+        actualExcelDataRowIndex++; 
+        // ÖNEMLİ DÜZELTME BİTİŞİ
     });
 
-    // Revize edilmiş Resim Promise'leri ve Excel'e ekleme Mantığı
-    // Resimlerin eklenmesi, tüm satırlar eklendikten sonra gerçekleşmelidir.
-    // Bu yüzden promise'leri ayrı bir listede toplayıp topluca işleyeceğiz.
-    // imagePromises dizisi, resolve olduğunda ilgili resim verisi ve
-    // ait olduğu HTML satırını (rowHtmlElement) döndürmeli.
-    // Sonra bu rowHtmlElement'in Excel'deki karşılık gelen satır numarasını buluruz.
-
-    const allRowsInOrder = Array.from(table.querySelectorAll('tbody tr')).filter(row => row.style.display !== 'none');
-
-    const finalImagePromises = []; // Her bir visible satır için resim promise'leri
-    allRowsInOrder.forEach((rowHtml, actualExcelRowIndex) => { // actualExcelRowIndex: 0-tabanlı Excel veri satırı indeksi
-        const cellsHtml = Array.from(rowHtml.children);
-        let imageFoundInRow = false; // Bu satırda resim var mı?
-
-        // Find the image cell in this specific row (similar to rowData loop)
-        headersForExcel.forEach((headerLabel, excelColIndex) => {
-            if (headerLabel === 'Marka Görseli') {
-                const cell = cellsHtml.find(c => c.querySelector('img.trademark-image-thumbnail')); // Find the image cell in HTML row
-                const imgElement = cell ? cell.querySelector('img.trademark-image-thumbnail') : null;
-
-                if (imgElement && imgElement.src) {
-                    imageFoundInRow = true;
-                    finalImagePromises.push(new Promise((resolve) => {
-                        const img = new Image();
-                        img.onload = () => {
-                            const canvas = document.createElement('canvas');
-                            const imgSize = 50; 
-                            canvas.width = imgSize;
-                            canvas.height = imgSize;
-                            const ctx = canvas.getContext('2d');
-                            ctx.drawImage(img, 0, 0, img.width, img.height, 0, 0, imgSize, imgSize); 
-                            const base64Data = canvas.toDataURL('image/png').split(';base64,')[1]; 
-                            resolve({ 
-                                base64: base64Data, 
-                                excelCol: excelColIndex, // Excel'deki 0-tabanlı sütun indeksi
-                                excelRow: actualExcelRowIndex // Excel'deki 0-tabanlı veri satırı indeksi
-                            }); 
-                        };
-                        img.onerror = () => {
-                            console.warn("Resim yüklenemedi veya erişilemedi:", imgElement.src);
-                            resolve(null); 
-                        };
-                        img.src = imgElement.src;
-                    }));
-                }
-            }
-        });
-    });
-
-    // Veri satırlarını ekleme (bu kısım daha önceydi, şimdi daha iyi organize ediliyor)
-    // Bu satırların eklenmesi ve resim promise'lerinin oluşturulması ayrılmalıydı.
-    // Şimdi populate Table Data ve Resim Promise'lerini ayırıyorum
-    // Ayrı bir döngü ile tüm satırları ekleyelim ve sonra resimleri konumlandıralım
-
-    const dataRowsForExcel = [];
-    rowsHtml.forEach((rowHtml) => {
-        if (rowHtml.style.display === 'none') {
-            return;
-        }
-        const rowData = new Array(headersForExcel.length).fill('');
-        const cellsHtml = Array.from(rowHtml.children);
-        
-        const cellMap = new Map();
-        headerCellsHtml.forEach((th, htmlColIndex) => {
-            const headerText = th.textContent.trim();
-            if (headerText !== 'İşlemler') {
-                cellMap.set(headerText, cellsHtml[htmlColIndex]);
-            }
-        });
-
-        headersForExcel.forEach((headerLabel, excelColIndex) => {
-            const cell = cellMap.get(headerLabel);
-            if (!cell) {
-                rowData[excelColIndex] = '';
-            } else if (headerLabel === 'Marka Görseli') {
-                // Burada sadece metin veya boşluk ekle, görseli sonra ekleyeceğiz
-                rowData[excelColIndex] = cell.textContent.trim() || ''; 
-            } else {
-                rowData[excelColIndex] = cell.textContent.trim();
-            }
-        });
-        dataRowsForExcel.push(rowData);
-    });
-
-    // Tüm veri satırlarını Excel'e ekle
-    dataRowsForExcel.forEach(rowData => {
-        worksheet.addRow(rowData);
-    });
-
-    // Resimleri Excel'e ekle (bu kısım zaten vardı, ama yukarıdaki yapıya göre güncellenmeli)
-    const loadedFinalImages = await Promise.all(finalImagePromises); // finalImagePromises'ı kullan
-    loadedFinalImages.forEach(imgData => {
+    // Add images to Excel
+    const loadedImages = await Promise.all(imagePromises);
+    loadedImages.forEach(imgData => {
         if (imgData && imgData.base64) {
             const imageId = workbook.addImage({
                 base64: imgData.base64,
                 extension: 'png',
             });
 
-            // excelRow: 0-tabanlı veri satırı indeksi (dataRowsForExcel içindeki sıra)
-            // addImage için row parametresi: (0-tabanlı veri satırı indeksi) + 1 (başlık satırı)
             worksheet.addImage(imageId, {
-                tl: { col: imgData.excelCol, row: imgData.excelRow + 1 }, 
-                ext: { width: 50, height: 50 } 
+                tl: { col: imgData.excelCol, row: imgData.excelRow + 1 }, // Adjust row for header row (0-indexed to 0-indexed worksheet row)
+                ext: { width: 50, height: 50 } // Image size
             });
-            // Hücre yüksekliğini ayarla
-            worksheet.getRow(imgData.excelRow + 2).height = 55; // (0-tabanlı veri satırı indeksi) + 2 (başlık + 1-tabanlıya çevirme)
+            // Set row height for the row containing the image
+            worksheet.getRow(imgData.excelRow + 2).height = 40; // Excel row number (1-based) for the current data row
         }
     });
+
+    // Auto-adjust column widths
+    worksheet.columns.forEach(column => {
+        let maxLength = 0;
+        column.eachCell({ includeEmpty: true }, (cell) => {
+            const columnText = cell.value ? cell.value.toString() : '';
+            maxLength = Math.max(maxLength, columnText.length);
+        });
+        const headerLabel = headersForExcel[column.number - 1]; // Get header label (0-based array index)
+        if (headerLabel && headerLabel.includes('Marka Görseli')) { 
+            column.width = 10; // Fixed width for image column
+        } else {
+            column.width = Math.max(maxLength + 2, 10); 
+        }
+    });
+    
+    // Save the file
+    const buffer = await workbook.xlsx.writeBuffer();
+    saveAs(new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), `${filename}.xlsx`);
+    
+    showNotification(`Tablo başarıyla '${filename}.xlsx' olarak dışa aktarıldı!`, 'success');
+}
+
 // PDF dışa aktarma için (html2pdf.js kütüphanesini varsayar)
 export function exportTableToPdf(tableId, filename = 'rapor') {
     const table = document.getElementById(tableId);
