@@ -361,7 +361,10 @@
                 this.selectedOwners.forEach(person => {
                     const tag = document.createElement('div');
                     tag.classList.add('owner-tag');
-                    tag.innerHTML = `<span><span class="math-inline">\{person\.name\}</span\><button type\="button" class\="remove\-owner" data\-id\="</span>{person.id}">&times;</button>`;
+                    tag.innerHTML = `
+                        <span>${person.name} (${person.personType === 'real' ? 'Gerçek' : 'Tüzel'})</span>
+                        <button type="button" class="remove-owner" data-id="${person.id}">&times;</button>
+                    `;
                     grid.appendChild(tag);
                 });
             }
