@@ -1029,11 +1029,15 @@
                         }).join(', ');
                     };
                     
-                    let imageHtml = '';
-                    if (record.type === 'trademark' && record.trademarkImage && (typeof record.trademarkImage === 'string' || record.trademarkImage.content))
-                    {
-                        imageHtml = `<h4 class="modal-detail-section-title">Marka Görseli</h4><img src="${record.trademarkImage.content}" alt="Marka Görseli" class="record-image-display">`;
-                    }
+                        let imageHtml = '';
+                        let imageSrc = typeof record.trademarkImage === 'string'
+                            ? record.trademarkImage
+                            : record.trademarkImage?.content;
+
+                        if (record.type === 'trademark' && imageSrc?.startsWith('data:image')) {
+                            imageHtml = `<h4 class="modal-detail-section-title">Marka Görseli</h4>
+                                        <img src="${imageSrc}" alt="Marka Görseli" class="record-image-display">`;
+                        }
 
                     let documentsHtml = '<ul class="document-list"><li>Henüz belge yok.</li></ul>';
                     if (record.documents && record.documents.length > 0) {
