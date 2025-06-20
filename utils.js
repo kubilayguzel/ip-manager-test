@@ -260,9 +260,11 @@ export async function exportTableToExcel(tableId, filename = 'rapor') {
 
             // tl: { col, row } are 0-indexed for addImage method
             worksheet.addImage(imageId, {
-                tl: { col: imgData.excelCol, row: imgData.excelRow + 1 }, // imgData.excelRow, 0-tabanlı veri satırı indeksi. Başlık satırı için +1
-                ext: { width: 50, height: 50 } // Resim boyutu
+                tl: { col: imgData.excelCol, row: imgData.excelRow + 1 }, // 0-based index + 1 = doğru Excel veri satırı
+                 ext: { width: 50, height: 50 }
             });
+            worksheet.getRow(imgData.excelRow + 2).height = 40; // ExcelJS getRow: 1-tabanlı
+
             // Hücre yüksekliğini ayarlayalım ki resim sığsın
             worksheet.getRow(imgData.excelRow + 2).height = 40; // Excel'deki 1-tabanlı satır numarası (imgData.excelRow (0-tabanlı) + 1 (başlık) + 1 (1-tabanlıya çevirme))
         }
