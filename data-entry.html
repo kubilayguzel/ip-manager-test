@@ -243,7 +243,7 @@
                     filtered.forEach(person => {
                         const item = document.createElement('div');
                         item.classList.add('search-result-item');
-                        item.textContent = `<span class="math-inline">\{person\.name\} \(</span>{person.personType === 'real' ? 'Gerçek' : 'Tüzel'})`;
+                        item.textContent = `${person.name} (${person.personType === 'real' ? 'Gerçek' : 'Tüzel'})`;
                         item.dataset.id = person.id;
                         resultsContainer.appendChild(item);
                     });
