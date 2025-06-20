@@ -376,7 +376,7 @@
                     document.getElementById('loadingIndicator').style.display = 'block';
                     try {
                         const [tasksResult, ipRecordsResult, personsResult] = await Promise.all([
-                            taskService.getTasksByAssignedUser(this.currentUser.uid), // Sadece atanmış görevleri getir
+                            taskService.getTasksForUser(this.currentUser.uid), // Sadece atanmış görevleri getir
                             ipRecordsService.getRecords(),
                             personService.getPersons()
                         ]);
