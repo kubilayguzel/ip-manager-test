@@ -259,17 +259,20 @@
             filter: blur(0);
         }
 
-        .trademark-image-wrapper:hover .trademark-image-thumbnail {
-            transform: translate3d(-50%, -50%, 0) scale(4);
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            z-index: 1000;
-            box-shadow: 0px 5px 25px rgba(0,0,0,0.5);
-            border: 3px solid #1e3c72;
-            background-color: white;
-            padding: 2px;
-        }
+            .trademark-image-wrapper:hover .trademark-image-thumbnail {
+                transform: scale(3); /* büyüklük oranı */
+                position: fixed; /* absolute değil, fixed */
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%) scale(3); /* ortalama ve büyütme birlikte */
+                z-index: 9999;
+                box-shadow: 0px 5px 25px rgba(0,0,0,0.5);
+                border: 3px solid #1e3c72;
+                background-color: white;
+                padding: 2px;
+                max-width: 80vw;
+                max-height: 80vh;
+            }
 
         .action-btn {
             background: #007bff;
