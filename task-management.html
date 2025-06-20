@@ -278,25 +278,6 @@
     
             <div class="tasks-container">
                 <div class="tasks-header">
-                    <div class="filter-group">
-                        <label class="filter-label" for="statusFilter">Duruma Göre Filtrele:</label>
-                        <select id="statusFilter" class="filter-select">
-                            <option value="all">Tümü</option>
-                            <option value="open">Açık</option>
-                            <option value="in-progress">Devam Ediyor</option>
-                            <option value="completed">Tamamlandı</option>
-                            <option value="pending">Beklemede</option>
-                            <option value="cancelled">İptal Edildi</option>
-                            <option value="on-hold">Askıda</option>
-                            <option value="awaiting-approval">Onay Bekliyor</option>
-                        </select>
-                    </div>
-                    <div class="filter-group">
-                        <label class="filter-label" for="assignedToFilter">Atanana Göre Filtrele:</label>
-                        <select id="assignedToFilter" class="filter-select">
-                            <option value="all">Tümü</option>
-                            </select>
-                    </div>
                     <input type="text" id="taskSearchInput" class="search-input" placeholder="Başlık, numara, tip ara...">
                     <button class="btn-add-task" onclick="window.location.href='create-task.html'">
                         <span>&#x2795;</span> Yeni İş Oluştur
@@ -390,10 +371,7 @@
                 }
 
                 setupEventListeners() {
-                    document.getElementById('statusFilter').addEventListener('change', () => this.renderTasks());
-                    document.getElementById('assignedToFilter').addEventListener('change', () => this.renderTasks());
                     document.getElementById('taskSearchInput').addEventListener('input', () => this.renderTasks());
-
                     document.getElementById('tasksTableBody').addEventListener('click', (e) => {
                         if (e.target.classList.contains('action-btn')) {
                             e.preventDefault();
@@ -413,36 +391,21 @@
                     document.getElementById('closeTaskDetailModal').addEventListener('click', () => this.closeModal('taskDetailModal'));
                 }
 
-                populateAssignedToFilter() {
-                    const assignedToFilterSelect = document.getElementById('assignedToFilter');
-                    assignedToFilterSelect.innerHTML = '<option value="all">Tümü</option>';
-                    this.allUsers.forEach(user => {
-                        const option = document.createElement('option');
-                        option.value = user.id;
-                        option.textContent = user.displayName || user.email;
-                        assignedToFilterSelect.appendChild(option);
-                    });
-                }
-
                 renderTasks() {
                     const tableBody = document.getElementById('tasksTableBody');
                     const noTasksMessage = document.getElementById('noTasksMessage');
                     tableBody.innerHTML = '';
 
-                    const statusFilter = document.getElementById('statusFilter').value;
-                    const assignedToFilter = document.getElementById('assignedToFilter').value;
                     const searchTerm = document.getElementById('taskSearchInput').value.toLowerCase();
-
                     const filteredTasks = this.allTasks.filter(task => {
-                        const matchesStatus = statusFilter === 'all' || task.status === statusFilter;
-                        const matchesAssignedTo = assignedToFilter === 'all' || task.assignedTo_uid === assignedToFilter;
                         const matchesSearch = 
                             task.title.toLowerCase().includes(searchTerm) ||
                             (task.relatedIpRecordTitle && task.relatedIpRecordTitle.toLowerCase().includes(searchTerm)) ||
                             (task.taskType && task.taskType.toLowerCase().includes(searchTerm)) ||
                             (task.status && task.status.toLowerCase().includes(searchTerm));
-                        
-                        return matchesStatus && matchesAssignedTo && matchesSearch;
+
+                        // return matchesStatus && matchesAssignedTo && matchesSearch; // Bu satırı güncelleyin
+                        return matchesSearch; // Yeni satır
                     });
 
                     if (filteredTasks.length === 0) {
