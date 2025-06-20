@@ -9,7 +9,12 @@
         /* Genel body, page-wrapper, main-container stilleri shared-styles.css'ten gelecektir. */
         /* Sadece bu sayfaya özgü ve çakışmayan stilleri burada tutun */
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333; display: flex; }
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            color: #333; 
+            display: flex; 
+            overflow-x: hidden; /* YATAY KAYDIRMA ÇUBUĞUNU GİZLE */
+        }
         
         /* === ANA SAYFA YAPISI === */
         .page-wrapper { flex-grow: 1; display: flex; flex-direction: column; height: 100vh; overflow-y: auto; background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); }
@@ -144,7 +149,7 @@
     </style>
 </head>
 <body>
-    <div id="layout-placeholder"></div>
+    <div id="notification-container" class="notification-container"></div> <div id="layout-placeholder"></div>
     <div class="page-wrapper">
         <main class="main-container">
             <section class="welcome-section">
@@ -203,7 +208,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script type="module">
         import { authService, ipRecordsService, accrualService, auth } from './firebase-config.js';
-        import { showNotification } from './utils.js';
+        import { showNotification } from './utils.js'; // showNotification utils.js'ten geliyor
         import { loadSharedLayout } from './js/layout-loader.js';
 
         document.addEventListener('DOMContentLoaded', async function() {
@@ -269,7 +274,6 @@
                         list.innerHTML = '<p>Henüz aktivite yok.</p>';
                         return;
                     }
-                    // BURADAKİ template literal düzeltildi
                     const icons = {patent:'📋',trademark:'🏷️',copyright:'©',design:'🎨'}; 
                     recent.forEach(record => {
                         const item = document.createElement('div');
@@ -279,7 +283,7 @@
                                     <div class="activity-title">${record.title}</div>
                                     <div class="activity-time">${new Date(record.createdAt).toLocaleDateString('tr-TR')}</div>
                                   </div>`;
-                        list.appendChild(item); // item'ı listeye eklemeyi unutmayın!
+                        list.appendChild(item);
                     });
                 }
         
