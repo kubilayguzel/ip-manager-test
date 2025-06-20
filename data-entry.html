@@ -13,10 +13,11 @@
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             color: #333;
             display: flex;
+            overflow: hidden; /* DİKEY VE YATAY KAYDIRMA ÇUBUKLARINI GİZLE */
         }
         .page-wrapper {
             flex-grow: 1; display: flex; flex-direction: column;
-            height: 100vh; overflow-y: auto;
+            height: 100vh; overflow-y: auto; /* page-wrapper içinde içerik taşarsa kaydırma çubuğu görünecek */
             background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
         }
         .main-container { width: 100%; padding: 30px; margin: 0; }
@@ -242,7 +243,7 @@
                     filtered.forEach(person => {
                         const item = document.createElement('div');
                         item.classList.add('search-result-item');
-                        item.textContent = `${person.name} (${person.personType === 'real' ? 'Gerçek' : 'Tüzel'})`;
+                        item.textContent = `<span class="math-inline">\{person\.name\} \(</span>{person.personType === 'real' ? 'Gerçek' : 'Tüzel'})`;
                         item.dataset.id = person.id;
                         resultsContainer.appendChild(item);
                     });
@@ -360,7 +361,7 @@
                 this.selectedOwners.forEach(person => {
                     const tag = document.createElement('div');
                     tag.classList.add('owner-tag');
-                    tag.innerHTML = `<span>${person.name}</span><button type="button" class="remove-owner" data-id="${person.id}">&times;</button>`;
+                    tag.innerHTML = `<span><span class="math-inline">\{person\.name\}</span\><button type\="button" class\="remove\-owner" data\-id\="</span>{person.id}">&times;</button>`;
                     grid.appendChild(tag);
                 });
             }
