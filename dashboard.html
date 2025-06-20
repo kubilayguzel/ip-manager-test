@@ -13,11 +13,11 @@
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
             color: #333; 
             display: flex; 
-            overflow-x: hidden; /* YATAY KAYDIRMA ÇUBUĞUNU GİZLE */
+            overflow: hidden; /* YATAY VE DİKEY KAYDIRMA ÇUBUKLARINI GİZLE */
         }
         
         /* === ANA SAYFA YAPISI === */
-        .page-wrapper { flex-grow: 1; display: flex; flex-direction: column; height: 100vh; overflow-y: auto; background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); }
+        .page-wrapper { flex-grow: 1; display: flex; flex-direction: column; height: 100vh; overflow-y: auto; /* İçerik taşarsa page-wrapper içinde kaydırma çubuğu görünecek */ background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); }
         .main-container { width: 100%; max-width: 1400px; margin: 30px auto; padding: 0 30px; }
         
         /* === DASHBOARD SAYFASINA ÖZEL STİLLER === */
