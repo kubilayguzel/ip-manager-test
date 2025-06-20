@@ -255,6 +255,7 @@ export async function exportTableToExcel(tableId, filename = 'rapor') {
     });
 
     // Add images to Excel
+    // Add images to Excel
     const loadedImages = await Promise.all(imagePromises);
     loadedImages.forEach(imgData => {
         if (imgData && imgData.base64) {
@@ -263,12 +264,22 @@ export async function exportTableToExcel(tableId, filename = 'rapor') {
                 extension: 'png',
             });
 
+            // Excel'deki 0-tabanlı satır ve sütun indeksleri
+            const excelTargetRowIndex = imgData.excelRow + 1; // 0-based data row index + 1 for header row
+            const excelTargetColIndex = imgData.excelCol; // 0-based col index
+
+            // Resmin yerleşeceği hücreyi al (ExcelJS'in hücre objesi)
+            const targetCell = worksheet.getCell(excelTargetRowIndex + 1, excelTargetColIndex + 1); // 1-based getCell
+
             worksheet.addImage(imageId, {
-                tl: { col: imgData.excelCol, row: imgData.excelRow + 1 }, // Adjust row for header row (0-indexed to 0-indexed worksheet row)
-                ext: { width: 50, height: 50 } // Image size
+                tl: { col: excelTargetColIndex, row: excelTargetRowIndex }, // Resmin sol üst köşesi (0-tabanlı)
+                ext: { width: 50, height: 50 } // Resmin kendi boyutu (50x50 piksel)
             });
-            // Set row height for the row containing the image
-            worksheet.getRow(imgData.excelRow + 2).height = 40; // Excel row number (1-based) for the current data row
+            
+            // Satır yüksekliğini artırıyoruz, böylece resimler rahat sığar.
+            worksheet.getRow(excelTargetRowIndex + 1).height = 40; // excelTargetRowIndex 0-tabanlı olduğu için +1 (Excel'deki 1-tabanlı satır)
+                                                                    // Eğer resimler bu yükseklikte hala üst üste biniyorsa,
+                                                                    // bu değeri 50 veya 60 gibi daha büyük bir değere çıkarın.
         }
     });
 
