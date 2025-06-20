@@ -200,8 +200,13 @@ export async function exportTableToExcel(tableId, filename = 'rapor') {
             return;
         }
 
-        const rowData = new Array(headersForExcel.length).fill(''); // Excel'e gidecek satır verisi için boş dizi oluştur
-        const cellsHtml = Array.from(rowHtml.children); // HTML'deki mevcut satırın hücreleri
+                const rowData = new Array(headersForExcel.length).fill('');
+                const cellsHtml = Array.from(rowHtml.children);
+
+                cellsHtml.forEach(...);
+                worksheet.addRow(rowData); // ✅ önce ekle
+                const currentRowNumber = worksheet.lastRow.number; // ✅ sonra oku
+
         
         cellsHtml.forEach((cell, htmlColIndex) => {
             const excelColIndex = htmlIndexToExcelIndexMap.get(htmlColIndex); // Bu HTML sütununun Excel'deki karşılık gelen 0-tabanlı indeksi
@@ -225,7 +230,6 @@ export async function exportTableToExcel(tableId, filename = 'rapor') {
                             ctx.drawImage(img, 0, 0, img.width, img.height, 0, 0, imgSize, imgSize); 
                             const base64Data = canvas.toDataURL('image/png').split(';base64,')[1]; 
                         
-                        const currentRowNumber = worksheet.lastRow.number; // ✅ Gerçek satır numarası (1 tabanlı)
                         resolve({
                             base64: base64Data,
                             excelCol: excelColIndex,
@@ -248,8 +252,7 @@ export async function exportTableToExcel(tableId, filename = 'rapor') {
                 rowData[excelColIndex] = cell.textContent.trim();
             }
         });
-        worksheet.addRow(rowData); // Satır verisini Excel'e ekle
-      });
+       });
 
     // Resimleri Excel'e ekle
     const loadedImages = await Promise.all(imagePromises);
