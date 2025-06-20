@@ -43,6 +43,19 @@ export function clearAllFieldErrors() {
         el.classList.remove('error-field'); // Hata stilini kaldır
     });
 }
+// Form alanında hata göstermek için kullanılan fonksiyon
+export function showFieldError(fieldId, errorMessage) {
+    const input = document.getElementById(fieldId);
+    if (!input) return;
+
+    const errorContainer = input.closest('.form-group')?.querySelector('.error-message');
+    if (errorContainer) {
+        errorContainer.textContent = errorMessage;
+        errorContainer.style.display = 'block';
+    }
+
+    input.classList.add('error-field');
+}
 
 // Dosya boyutunu okunabilir formata çeviren fonksiyon
 export function formatFileSize(bytes) {
