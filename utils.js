@@ -159,13 +159,13 @@ export async function exportTableToExcel(tableId, filename = 'rapor') {
     const worksheet = workbook.addWorksheet('Veriler');
 
     const headerRowHtml = table.querySelector('thead tr#portfolioTableHeaderRow');
-    const headerCellsHtml = Array.from(headerRowHtml.children); // Get children of the header row
+    const headerCellsHtml = Array.from(headerRowHtml.children);
 
     let headersForExcel = [];
     let imageColExcelIndex = -1; // 0-based index in the final Excel rowData array
     
     // Determine the columns to export and their final order in Excel
-    headerCellsHtml.forEach((th, index) => {
+    headerCellsHtml.forEach((th) => {
         const headerText = th.textContent.trim();
         if (headerText === 'İşlemler') {
             return; // Skip Actions column
@@ -193,9 +193,6 @@ export async function exportTableToExcel(tableId, filename = 'rapor') {
     const rowsHtml = table.querySelectorAll('tbody tr'); // Original table rows
     const imagePromises = [];
 
-    // Excel'e gerçekten eklenen veri satırlarının sayacını tutar (gizli satırlar atlanacak)
-    let actualExcelDataRowIndex = 0; 
-
     rowsHtml.forEach((rowHtml) => {
         // Only process visible rows (filtered by display style)
         if (rowHtml.style.display === 'none') {
@@ -222,7 +219,9 @@ export async function exportTableToExcel(tableId, filename = 'rapor') {
             } else if (headerLabel === 'Marka Görseli') { // Image column
                 const imgElement = cell.querySelector('img.trademark-image-thumbnail');
                 if (imgElement && imgElement.src) {
-                    // Promise'i burada oluşturup resolve içinde satır numarasını yakalayacağız
+                    // Placeholder for the image cell in rowData. The image will be added separately.
+                    rowData[excelColIndex] = ''; 
+                    // Promise'i burada oluşturup, resolve içinde Excel'deki satır numarasını dinamik olarak alacağız
                     imagePromises.push(new Promise((resolve) => {
                         const img = new Image();
                         img.onload = () => {
@@ -231,12 +230,13 @@ export async function exportTableToExcel(tableId, filename = 'rapor') {
                             canvas.width = imgSize;
                             canvas.height = imgSize;
                             const ctx = canvas.getContext('2d');
-                            ctx.drawImage(img, 0, 0, img.width, img.height, 0, 0, imgSize, imgSize); // Draw scaled image
+                            ctx.drawImage(img, 0, 0, img.width, img.height, 0, 0, imgSize, imgSize); 
                             const base64Data = canvas.toDataURL('image/png').split(';base64,')[1];
                             resolve({ 
                                 base64: base64Data, 
                                 excelCol: excelColIndex, // 0-based Excel column index for addImage
-                                excelRow: actualExcelDataRowIndex // 0-based Excel row index for addImage (after header)
+                                // rowHtmlElement'i döndürüp, sonraki adımda onun Excel'deki satır numarasını bulacağız.
+                                rowHtmlElement: rowHtml 
                             }); 
                         };
                         img.onerror = () => {
@@ -245,7 +245,6 @@ export async function exportTableToExcel(tableId, filename = 'rapor') {
                         };
                         img.src = imgElement.src;
                     }));
-                    rowData[excelColIndex] = ''; // Placeholder for the image cell
                 } else {
                     rowData[excelColIndex] = cell.textContent.trim() || '-'; // Add text if no image
                 }
@@ -253,10 +252,8 @@ export async function exportTableToExcel(tableId, filename = 'rapor') {
                 rowData[excelColIndex] = cell.textContent.trim();
             }
         });
-        // ÖNEMLİ DÜZELTME BAŞLANGICI: worksheet.addRow dış döngü içinde SADECE BİR KEZ çağrılmalıydı
-        worksheet.addRow(rowData); 
-        actualExcelDataRowIndex++; 
-        // ÖNEMLİ DÜZELTME BİTİŞİ
+        worksheet.addRow(rowData); // Her görünür HTML satırı için bir Excel satırı ekle
+        // actualExcelDataRowIndex kaldırıldı, addedRow.number kullanılacak
     });
 
     // Add images to Excel
@@ -268,12 +265,22 @@ export async function exportTableToExcel(tableId, filename = 'rapor') {
                 extension: 'png',
             });
 
+            // Resmin ait olduğu HTML satırının Excel'deki gerçek satır numarasını bul
+            // `rowHtmlElement`'in orijinal `rowsHtml` (visible olanlar) dizisindeki indeksini bulmalıyız.
+            const rowIndexInVisibleHtmlRows = Array.from(table.querySelectorAll('tbody tr')).filter(r => r.style.display !== 'none').indexOf(imgData.rowHtmlElement);
+            
+            // `ExcelJS.Row` objesinin `number` özelliği 1-tabanlıdır.
+            // İlk veri satırı (header sonrası) Excel'de 2. satır numarasında (index 1) yer alır.
+            // Yani, (0-tabanlı visible HTML row index) + 2 = Excel'deki 1-tabanlı row number
+            const excelRowNumber = rowIndexInVisibleHtmlRows + 2; 
+
             worksheet.addImage(imageId, {
-                tl: { col: imgData.excelCol, row: imgData.excelRow + 1 }, // Adjust row for header row (0-indexed to 0-indexed worksheet row)
-                ext: { width: 50, height: 50 } // Image size
+                tl: { col: imgData.excelCol, row: excelRowNumber - 1 }, // `row` 0-tabanlı index bekler, o yüzden -1
+                ext: { width: 50, height: 50 } // Resim boyutu
             });
-            // Set row height for the row containing the image
-            worksheet.getRow(imgData.excelRow + 2).height = 40; // Excel row number (1-based) for the current data row
+            
+            // Hücre yüksekliğini ayarla
+            worksheet.getRow(excelRowNumber).height = 55; // Excel'deki 1-tabanlı rowNumber'ı kullan
         }
     });
 
