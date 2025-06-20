@@ -92,56 +92,85 @@
             box-shadow: 0 6px 12px rgba(0, 123, 255, 0.3);
             background: linear-gradient(45deg, #388E3C, #4CAF50);
         }
-    .accrual-card {
-        background: #fff;
-        border: 1px solid #ddd;
-        border-radius: 10px;
-        padding: 20px;
-        margin-bottom: 15px;
-        box-shadow: 0 2px 6px rgba(0,0,0,0.05);
-    }
+        .record-card {
+            background: #fff;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+        }
 
-    .accrual-card-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 10px;
-    }
+        .record-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
 
-    .accrual-card-header h4 {
-        margin: 0;
-        font-size: 1.1em;
-        color: #1e3c72;
-    }
+        .record-title {
+            font-size: 1.1em;
+            color: #1e3c72;
+            font-weight: bold;
+        }
 
-    .accrual-card-body p {
-        margin: 5px 0;
-        font-size: 0.95em;
-    }
+        .status-badge {
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 0.8em;
+            font-weight: bold;
+        }
+        .status-paid { background-color: #d4edda; color: #28a745; } /* Green */
+        .status-unpaid { background-color: #f8d7da; color: #dc3545; } /* Red */
 
-    .accrual-card-actions {
-        margin-top: 10px;
-        text-align: right;
-    }
 
-    .accrual-card-actions .edit-accrual-btn {
-        background-color: #ffc107;
-        color: #000;
-    }
+        .record-body {
+            padding-top: 10px;
+            border-top: 1px solid #eee;
+        }
+        .record-detail {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+            font-size: 0.95em;
+        }
+        .detail-label {
+            font-weight: 500;
+            color: #555;
+        }
+        .detail-value {
+            color: #333;
+        }
 
-  .edit-accrual-btn {
-    background-color: #ffda44;
-    border: none;
-    padding: 8px 14px;
-    border-radius: 6px;
-    font-weight: bold;
-    cursor: pointer;
-    margin-top: 10px;
-  }
+        .record-footer {
+            margin-top: 15px;
+            padding-top: 10px;
+            border-top: 1px solid #eee;
+            text-align: right;
+        }
 
-  .edit-accrual-btn:hover {
-    background-color: #f0c800;
-  }
+        .action-btn {
+            background-color: #1e3c72;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.9em;
+            font-weight: 500;
+            margin-left: 5px;
+            transition: background-color 0.2s ease;
+        }
+        .action-btn:hover {
+            background-color: #2a5298;
+        }
+        .action-btn.delete-btn { background-color: #dc3545; }
+        .action-btn.delete-btn:hover { background-color: #c82333; }
+        .action-btn.complete-btn { background-color: #28a745; }
+        .action-btn.complete-btn:hover { background-color: #218838; }
+        .action-btn.edit-btn { background-color: #ffc107; color: #333;}
+        .action-btn.edit-btn:hover { background-color: #e0a800; }
+        
         .search-results-list { max-height: 200px; overflow-y: auto; border: 1px solid #ccc; border-radius: 8px; margin-top: 5px; }
         .search-result-item { padding: 10px; cursor: pointer; border-bottom: 1px solid #eee; }
         .search-result-item:hover { background-color: #f0f4f8; }
@@ -308,29 +337,11 @@
                         <label for="taskDescription" class="form-label">Açıklama:</label>
                         <textarea id="taskDescription" class="form-textarea"></textarea>
                     </div>
+                    
                     <div id="tabContentAccruals" class="form-section">
                         <h3 class="section-title">Tahakkuklar</h3>
                         <div id="accrualsList">
-                        <div id="accrualsContainer"></div>
-                        <div class="accrual-card">
-                            <div class="accrual-row">
-                            <span class="label">Açıklama:</span>
-                            <span class="value">Tasarım ücret ödemesi</span>
-                            </div>
-                            <div class="accrual-row">
-                            <span class="label">Tutar:</span>
-                            <span class="value">3.500 ₺</span>
-                            </div>
-                            <div class="accrual-row">
-                            <span class="label">Durum:</span>
-                            <span class="value">Ödendi</span>
-                            </div>
-                            <div class="accrual-row">
-                            <span class="label">Oluşturulma:</span>
-                            <span class="value">20.06.2025</span>
-                            </div>
-                            <button class="edit-accrual-btn">Düzenle</button>
-                        </div>
+                            <p style="text-align: center; color: #666; padding: 20px;">Bu işe ait tahakkuk bulunmamaktadır.</p>
                         </div>
                     </div>
 
@@ -412,13 +423,13 @@
                         <label for="tpInvoicePartySearch" class="form-label">Türk Patent Faturası Tarafı</label>
                         <input type="text" id="tpInvoicePartySearch" class="form-input" placeholder="Fatura tarafı arayın...">
                         <div id="tpInvoicePartySearchResults" class="search-results-list"></div>
-                        <div id="selectedTpInvoicePartyDisplay" class="search-result-display" style="display:none;"></div>
+                        <div id="selectedTpInvoicePartyDisplay" style="display:none;"></div>
                     </div>
                     <div class="form-group full-width">
                         <label for="serviceInvoicePartySearch" class="form-label">Hizmet Faturası Tarafı</label>
                         <input type="text" id="serviceInvoicePartySearch" class="form-input" placeholder="Fatura tarafı arayın...">
                         <div id="serviceInvoicePartySearchResults" class="search-results-list"></div>
-                        <div id="selectedServiceInvoicePartyDisplay" class="search-result-display" style="display:none;"></div>
+                        <div id="selectedServiceInvoicePartyDisplay" style="display:none;"></div>
                     </div>
                     <div class="form-group full-width">
                         <label for="paymentDate" class="form-label">Ödeme Tarihi (Opsiyonel)</label>
@@ -873,43 +884,55 @@
                     }
                 }
 
-                    renderAccruals(accrualList) {
-                    const container = document.getElementById('accrualsContainer');
-                    container.innerHTML = '';
-                    if (!Array.isArray(accrualList)) {
-                        console.warn("Tahakkuk verisi uygun formatta değil:", accrualList);
+                renderAccruals() {
+                    const accrualsList = document.getElementById('accrualsList');
+                    accrualsList.innerHTML = ''; // İçeriği temizle
+
+                    if (this.currentAccruals.length === 0) {
+                        accrualsList.innerHTML = '<p style="text-align: center; color: #666; padding: 20px;">Bu işe ait tahakkuk bulunmamaktadır.</p>';
                         return;
                     }
 
-                    if (!accrualList.length) {
-                        container.innerHTML = '<p>Henüz tahakkuk bulunmuyor.</p>';
-                        return;
-                    }
+                    const currencyFormatter = (amount, currency) => {
+                        try {
+                            return new Intl.NumberFormat('tr-TR', { style: 'currency', currency: currency || 'TRY' }).format(amount);
+                        } catch (e) {
+                            return new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' }).format(amount);
+                        }
+                    };
 
-                    accrualList.forEach(accrual => {
-                        const accrualElement = document.createElement('div');
-                        accrualElement.classList.add('accrual-card');
-                        accrualElement.innerHTML = `
-                            <div class="accrual-card-header">
-                                <h4>${accrual.title || 'Tahakkuk Başlığı'}</h4>
-                                <span>${new Date(accrual.createdAt).toLocaleDateString()}</span>
+                    this.currentAccruals.forEach(accrual => {
+                        const statusText = accrual.status === 'paid' ? 'Ödendi' : 'Ödenmedi';
+                        const statusClass = accrual.status === 'paid' ? 'status-paid' : 'status-unpaid';
+                        const isPaid = accrual.status === 'paid';
+
+                        const accrualItem = document.createElement('div');
+                        accrualItem.classList.add('record-card'); // Styling için record-card kullanabiliriz
+                        accrualItem.style.marginBottom = '15px'; // Ekstra boşluk
+                        accrualItem.innerHTML = `
+                            <div class="record-header" style="border-bottom: none; padding-bottom: 0;">
+                                <div class="record-title">Tahakkuk ID: <small>${accrual.id.substring(0, 8)}...</small></div>
+                                <span class="status-badge ${statusClass}">${statusText}</span>
                             </div>
-                            <div class="accrual-card-body">
-                                <p><strong>Tutar:</strong> ${accrual.amount || '-'} ${accrual.currency || '₺'}</p>
-                                <p><strong>Açıklama:</strong> ${accrual.description || '-'}</p>
-                                <p><strong>Durum:</strong> ${accrual.status || 'unpaid'}</p>
+                            <div class="record-body" style="padding-top: 10px;">
+                                <div class="record-detail"><span class="detail-label">Resmi Ücret:</span><span class="detail-value">${currencyFormatter(accrual.officialFee?.amount || 0, accrual.officialFee?.currency)}</span></div>
+                                <div class="record-detail"><span class="detail-label">Hizmet Bedeli:</span><span class="detail-value">${currencyFormatter(accrual.serviceFee?.amount || 0, accrual.serviceFee?.currency)}</span></div>
+                                <div class="record-detail"><span class="detail-label">Toplam Tutar (KDV Dahil):</span><span class="detail-value">${currencyFormatter(accrual.totalAmount || 0, accrual.totalAmountCurrency || 'TRY')}</span></div>
+                                <div class="record-detail"><span class="detail-label">Türk Patent Fatura Tarafı:</span><span class="detail-value">${accrual.tpInvoiceParty?.name || '-'}</span></div>
+                                <div class="record-detail"><span class="detail-label">Hizmet Faturası Tarafı:</span><span class="detail-value">${accrual.serviceInvoiceParty?.name || '-'}</span></div>
+                                <div class="record-detail"><span class="detail-label">Ödeme Tarihi:</span><span class="detail-value">${accrual.paymentDate ? new Date(accrual.paymentDate).toLocaleDateString('tr-TR') : '-'}</span></div>
                             </div>
-                            <div class="accrual-card-actions">
-                                <button class="action-btn edit-accrual-btn" data-id="${accrual.id}">Düzenle</button>
+                            <div class="record-footer">
+                                ${!isPaid ? `<button class="action-btn complete-btn" data-id="${accrual.id}">Ödendi İşaretle</button>` : ''}
+                                <button class="action-btn edit-btn" data-id="${accrual.id}">Düzenle</button>
+                                <button class="action-btn delete-btn" data-id="${accrual.id}">Sil</button>
                             </div>
                         `;
-
-                        // Sadece düzenle butonu bağlanıyor
-                        accrualElement.querySelector('.edit-accrual-btn')?.addEventListener('click', () => {
-                            openAccrualEditModal(accrual);
-                        });
-
-                        container.appendChild(accrualElement);
+                        // Edit, Delete, Complete butonları için event listener'lar delegation ile ekleniyor.
+                        // Bu butonların listener'ları accrualsList'e zaten eklenmiş durumda.
+                        // Buradaki addEventListener'lar yerine, accrualsList'e eklenen tek bir listener tüm tıklamaları yakalar.
+                        // Bu kısım renderAccruals fonksiyonunun dışına taşınmış durumda.
+                        accrualsList.appendChild(accrualItem);
                     });
                 }
 
@@ -1092,6 +1115,9 @@
                         if (accrualId) {
                             result = await accrualService.updateAccrual(accrualId, accrualData);
                         } else {
+                            // Bu kod path'i artık kullanılmayacak, addAccrualBtn kaldırıldı
+                            // Ancak modal hala Yeni Tahakkuk Ekle başlığı ile açılabileceği için
+                            // bu kısım korunuyor, ancak buraya doğrudan erişim olmayacak.
                             result = await accrualService.addAccrual(accrualData);
                         }
                         
@@ -1107,6 +1133,26 @@
                     }
                 }
                 
+                async deleteAccrual(accrualId) {
+                    if (confirm('Bu tahakkuku silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.')) {
+                        const result = await accrualService.deleteAccrual(accrualId);
+                        if (result.success) {
+                            showNotification('Tahakkuk başarıyla silindi.', 'success');
+                            await this.loadAccrualsForTask(); // Tahakkuk listesini güncelle
+                        } else {
+                            showNotification('Tahakkuk silinirken hata oluştu: ' + result.error, 'error');
+                        }
+                    }
+                }
+
+                async markAccrualPaid(accrualId) {
+                    // Tahakkuk modalını aç ve "ödendi" bilgilerini önceden doldur
+                    this.showAccrualModal('edit', accrualId);
+                    document.getElementById('paymentDate').valueAsDate = new Date(); // Tarihi bugüne ayarla
+                    document.getElementById('accrualModalTitle').textContent = 'Tahakkuku Ödendi İşaretle';
+                    document.getElementById('saveAccrualBtn').textContent = 'Ödendi Olarak Kaydet';
+                }
+
                 // Document (File) Handling
                 handleTaskDocumentsUpload(files) {
                     for (const file of files) {
