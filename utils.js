@@ -94,6 +94,51 @@ export const TASK_STATUSES = [
     { value: 'on-hold', text: 'Askıda' },
     { value: 'awaiting-approval', text: 'Onay Bekliyor' }
 ];
+// js/utils.js (Mevcut TASK_STATUSES sabiti altına ekleyin)
+
+// IP Kayıt durumları (data-entry.html'de kullanılır)
+export const STATUSES = {
+    patent: [
+        { value: 'application', text: 'Başvuru' },
+        { value: 'pending', text: 'Beklemede' },
+        { value: 'published', text: 'Yayınlandı' },
+        { value: 'approved', text: 'Onaylandı' },
+        { value: 'registered', text: 'Tescil Edildi' },
+        { value: 'rejected', text: 'Reddedildi' },
+        { value: 'expired', text: 'Süresi Doldu' },
+        { value: 'invalid_not_renewed', text: 'Yenilenmedi (Geçersiz)' }
+    ],
+    trademark: [
+        { value: 'application', text: 'Başvuru' },
+        { value: 'pending', text: 'Beklemede' },
+        { value: 'published', text: 'Yayınlandı' },
+        { value: 'opposition_received', text: 'İtiraz Alındı' },
+        { value: 'opposition_filed', text: 'İtiraz Edildi' },
+        { value: 'approved', text: 'Onaylandı' },
+        { value: 'registered', text: 'Tescil Edildi' },
+        { value: 'refused', text: 'Reddedildi' },
+        { value: 'partial_refusal', text: 'Kısmi Ret' },
+        { value: 'expired', text: 'Süresi Doldu' },
+        { value: 'invalid_void', text: 'İptal Edildi (Geçersiz)' },
+        { value: 'invalid_not_renewed', text: 'Yenilenmedi (Geçersiz)' }
+    ],
+    design: [
+        { value: 'application', text: 'Başvuru' },
+        { value: 'pending', text: 'Beklemede' },
+        { value: 'published', text: 'Yayınlandı' },
+        { value: 'approved', text: 'Onaylandı' },
+        { value: 'registered', text: 'Tescil Edildi' },
+        { value: 'rejected', text: 'Reddedildi' },
+        { value: 'expired', text: 'Süresi Doldu' },
+        { value: 'invalid_not_renewed', text: 'Yenilenmedi (Geçersiz)' }
+    ],
+    copyright: [
+        { value: 'registered', text: 'Tescil Edildi' },
+        { value: 'pending', text: 'Beklemede' },
+        { value: 'active', text: 'Aktif' },
+        { value: 'expired', text: 'Süresi Doldu' }
+    ]
+};
 
 // Excel dışa aktarma için (ExcelJS kütüphanesini kullanır)
 export async function exportTableToExcel(tableId, filename = 'rapor') {
