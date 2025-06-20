@@ -23,7 +23,6 @@
             border-radius: 20px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.1);
         }
-
         .section-title {
             font-size: 1.3em;
             color: #1e3c72;
@@ -92,85 +91,56 @@
             box-shadow: 0 6px 12px rgba(0, 123, 255, 0.3);
             background: linear-gradient(45deg, #388E3C, #4CAF50);
         }
-        .record-card {
-            background: #fff;
-            border: 1px solid #ddd;
-            border-radius: 10px;
-            padding: 20px;
-            margin-bottom: 15px;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.05);
-        }
+    .accrual-card {
+        background: #fff;
+        border: 1px solid #ddd;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 15px;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+    }
 
-        .record-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 10px;
-        }
+    .accrual-card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+    }
 
-        .record-title {
-            font-size: 1.1em;
-            color: #1e3c72;
-            font-weight: bold;
-        }
+    .accrual-card-header h4 {
+        margin: 0;
+        font-size: 1.1em;
+        color: #1e3c72;
+    }
 
-        .status-badge {
-            padding: 5px 10px;
-            border-radius: 5px;
-            font-size: 0.8em;
-            font-weight: bold;
-        }
-        .status-paid { background-color: #d4edda; color: #28a745; } /* Green */
-        .status-unpaid { background-color: #f8d7da; color: #dc3545; } /* Red */
+    .accrual-card-body p {
+        margin: 5px 0;
+        font-size: 0.95em;
+    }
 
+    .accrual-card-actions {
+        margin-top: 10px;
+        text-align: right;
+    }
 
-        .record-body {
-            padding-top: 10px;
-            border-top: 1px solid #eee;
-        }
-        .record-detail {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 5px;
-            font-size: 0.95em;
-        }
-        .detail-label {
-            font-weight: 500;
-            color: #555;
-        }
-        .detail-value {
-            color: #333;
-        }
+    .accrual-card-actions .edit-accrual-btn {
+        background-color: #ffc107;
+        color: #000;
+    }
 
-        .record-footer {
-            margin-top: 15px;
-            padding-top: 10px;
-            border-top: 1px solid #eee;
-            text-align: right;
-        }
+  .edit-accrual-btn {
+    background-color: #ffda44;
+    border: none;
+    padding: 8px 14px;
+    border-radius: 6px;
+    font-weight: bold;
+    cursor: pointer;
+    margin-top: 10px;
+  }
 
-        .action-btn {
-            background-color: #1e3c72;
-            color: white;
-            border: none;
-            padding: 8px 15px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 0.9em;
-            font-weight: 500;
-            margin-left: 5px;
-            transition: background-color 0.2s ease;
-        }
-        .action-btn:hover {
-            background-color: #2a5298;
-        }
-        .action-btn.delete-btn { background-color: #dc3545; }
-        .action-btn.delete-btn:hover { background-color: #c82333; }
-        .action-btn.complete-btn { background-color: #28a745; }
-        .action-btn.complete-btn:hover { background-color: #218838; }
-        .action-btn.edit-btn { background-color: #ffc107; color: #333;}
-        .action-btn.edit-btn:hover { background-color: #e0a800; }
-        
+  .edit-accrual-btn:hover {
+    background-color: #f0c800;
+  }
         .search-results-list { max-height: 200px; overflow-y: auto; border: 1px solid #ccc; border-radius: 8px; margin-top: 5px; }
         .search-result-item { padding: 10px; cursor: pointer; border-bottom: 1px solid #eee; }
         .search-result-item:hover { background-color: #f0f4f8; }
@@ -292,6 +262,7 @@
     </style>
 </head>
 <body>
+    <div id="notification-container" style="position: fixed; top: 20px; right: 20px; z-index: 9999;"></div>
     <div id="layout-placeholder"></div>
     <div class="page-wrapper">
         <header class="top-header">
@@ -304,80 +275,89 @@
             </section>
             
             <div class="task-detail-container">
-                <div class="tab-menu">
-                    <button class="tab-button active" data-tab="details">Detaylar</button>
-                    <button class="tab-button" data-tab="accruals">Tahakkuklar</button>
-                    <button class="tab-button" data-tab="documents">Belgeler</button>
-                    <button class="tab-button" data-tab="history">Geçmiş</button>
-                </div>
+                <form id="taskDetailForm">
+                    <h3 class="section-title">Genel Bilgiler</h3>
+                    <div class="form-grid">
+                        <div class="form-group"><label for="taskTitle" class="form-label">İş Başlığı:</label><input type="text" id="taskTitle" class="form-input" required></div>
+                        <div class="form-group"><label for="taskTypeDisplay" class="form-label">İş Tipi:</label><input type="text" id="taskTypeDisplay" class="form-input" readonly></div>
+                        <div class="form-group"><label for="taskPriority" class="form-label">Öncelik:</label><select id="taskPriority" class="form-select"><option value="low">Düşük</option><option value="medium">Orta</option><option value="high">Yüksek</option></select></div>
+                        <div class="form-group"><label for="taskStatus" class="form-label">Durum:</label><select id="taskStatus" class="form-select"></select></div>
+                        <div class="form-group"><label for="assignedTo" class="form-label">Atanan Kullanıcı:</label><select id="assignedTo" class="form-select"></select></div>
+                        <div class="form-group"><label for="taskDueDate" class="form-label">Operasyonel Son Tarih:</label><input type="date" id="taskDueDate" class="form-input"></div>
+                    </div>
 
-                <div id="tabContentDetails" class="tab-content active">
-                    <form id="taskDetailForm">
-                        <h3 class="section-title">Genel Bilgiler</h3>
-                        <div class="form-grid">
-                            <div class="form-group"><label for="taskTitle" class="form-label">İş Başlığı:</label><input type="text" id="taskTitle" class="form-input" required></div>
-                            <div class="form-group"><label for="taskTypeDisplay" class="form-label">İş Tipi:</label><input type="text" id="taskTypeDisplay" class="form-input" readonly></div>
-                            <div class="form-group"><label for="taskPriority" class="form-label">Öncelik:</label><select id="taskPriority" class="form-select"><option value="low">Düşük</option><option value="medium">Orta</option><option value="high">Yüksek</option></select></div>
-                            <div class="form-group"><label for="taskStatus" class="form-label">Durum:</label><select id="taskStatus" class="form-select"></select></div>
-                            <div class="form-group"><label for="assignedTo" class="form-label">Atanan Kullanıcı:</label><select id="assignedTo" class="form-select"></select></div>
-                            <div class="form-group"><label for="taskDueDate" class="form-label">Operasyonel Son Tarih:</label><input type="date" id="taskDueDate" class="form-input"></div>
+                    <h3 class="section-title">İlgili Varlık ve Taraf</h3>
+                    <div class="form-group full-width">
+                        <label for="relatedIpRecordSearch" class="form-label">İlgili IP Kaydı:</label>
+                        <input type="text" id="relatedIpRecordSearch" class="form-input" placeholder="Başlık veya Başvuru Numarası Ara...">
+                        <div id="relatedIpRecordSearchResults" class="search-results-list"></div>
+                        <div id="selectedIpRecordDisplay" class="search-result-display" style="display:none;"></div>
+                    </div>
+                    <div class="form-group full-width">
+                        <label for="relatedPartySearch" class="form-label">İlgili Taraf (Opsiyonel):</label>
+                        <div style="display: flex; gap: 10px;">
+                            <input type="text" id="relatedPartySearch" class="form-input" placeholder="Kişi adı veya e-posta ara...">
+                            <button type="button" id="addNewRelatedPartyBtn" class="btn-add-item">Yeni Kişi</button>
                         </div>
+                        <div id="relatedPartySearchResults" class="search-results-list"></div>
+                        <div id="selectedRelatedPartyDisplay" class="search-result-display" style="display:none;"></div>
+                    </div>
 
-                        <h3 class="section-title">İlgili Varlık ve Taraf</h3>
-                        <div class="form-group full-width">
-                            <label for="relatedIpRecordSearch" class="form-label">İlgili IP Kaydı:</label>
-                            <input type="text" id="relatedIpRecordSearch" class="form-input" placeholder="Başlık veya Başvuru Numarası Ara...">
-                            <div id="relatedIpRecordSearchResults" class="search-results-list"></div>
-                            <div id="selectedIpRecordDisplay" class="search-result-display" style="display:none;"></div>
-                        </div>
-                        <div class="form-group full-width">
-                            <label for="relatedPartySearch" class="form-label">İlgili Taraf (Opsiyonel):</label>
-                            <div style="display: flex; gap: 10px;">
-                                <input type="text" id="relatedPartySearch" class="form-input" placeholder="Kişi adı veya e-posta ara...">
-                                <button type="button" id="addNewRelatedPartyBtn" class="btn-add-item">Yeni Kişi</button>
+                    <div class="form-group full-width">
+                        <label for="taskDescription" class="form-label">Açıklama:</label>
+                        <textarea id="taskDescription" class="form-textarea"></textarea>
+                    </div>
+                    <div id="tabContentAccruals" class="form-section">
+                        <h3 class="section-title">Tahakkuklar</h3>
+                        <div id="accrualsList">
+                        <div id="accrualsContainer"></div>
+                        <div class="accrual-card">
+                            <div class="accrual-row">
+                            <span class="label">Açıklama:</span>
+                            <span class="value">Tasarım ücret ödemesi</span>
                             </div>
-                            <div id="relatedPartySearchResults" class="search-results-list"></div>
-                            <div id="selectedRelatedPartyDisplay" class="search-result-display" style="display:none;"></div>
+                            <div class="accrual-row">
+                            <span class="label">Tutar:</span>
+                            <span class="value">3.500 ₺</span>
+                            </div>
+                            <div class="accrual-row">
+                            <span class="label">Durum:</span>
+                            <span class="value">Ödendi</span>
+                            </div>
+                            <div class="accrual-row">
+                            <span class="label">Oluşturulma:</span>
+                            <span class="value">20.06.2025</span>
+                            </div>
+                            <button class="edit-accrual-btn">Düzenle</button>
                         </div>
-
-                        <div class="form-group full-width">
-                            <label for="taskDescription" class="form-label">Açıklama:</label>
-                            <textarea id="taskDescription" class="form-textarea"></textarea>
                         </div>
-                        
-                        <div class="form-actions">
-                            <button type="button" class="btn btn-secondary" id="cancelEditBtn">İptal</button>
-                            <button type="submit" class="btn btn-primary" id="saveTaskChangesBtn">Değişiklikleri Kaydet</button>
+                    </div>
+
+                    <div id="tabContentDocuments" class="form-section">
+                        <h3 class="section-title">Belgeler</h3>
+                        <div class="file-upload-area" id="fileUploadArea">
+                            <input type="file" id="fileInput" multiple hidden>
+                            <div class="upload-icon">⬆️</div>
+                            <div class="upload-text">Dosyaları Buraya Sürükleyin veya Tıklayın</div>
+                            <div class="upload-subtext">PDF, DOCX, JPG, PNG vb. dosyaları destekler.</div>
                         </div>
-                    </form>
-                </div>
+                        <div class="file-list-container" id="fileListContainer">
+                            <p style="text-align: center; color: #666; padding: 20px;">Bu işe ait belge bulunmamaktadır.</p>
+                        </div>
+                    </div>
 
-                <div id="tabContentAccruals" class="tab-content">
-                    <h3 class="section-title">Tahakkuklar <button class="btn-add-item" id="addAccrualBtn"><span>&#x2795;</span> Yeni Tahakkuk Ekle</button></h3>
-                    <div id="accrualsList">
-                        <p style="text-align: center; color: #666; padding: 20px;">Bu işe ait tahakkuk bulunmamaktadır.</p>
+                    <div id="tabContentHistory" class="form-section">
+                        <h3 class="section-title">İşlem Geçmişi</h3>
+                        <div id="historyList" class="history-list">
+                            <p style="text-align: center; color: #666; padding: 20px;">İşlem geçmişi bulunmamaktadır.</p>
+                        </div>
                     </div>
-                </div>
 
-                <div id="tabContentDocuments" class="tab-content">
-                    <h3 class="section-title">Belgeler</h3>
-                    <div class="file-upload-area" id="fileUploadArea">
-                        <input type="file" id="fileInput" multiple hidden>
-                        <div class="upload-icon">⬆️</div>
-                        <div class="upload-text">Dosyaları Buraya Sürükleyin veya Tıklayın</div>
-                        <div class="upload-subtext">PDF, DOCX, JPG, PNG vb. dosyaları destekler.</div>
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-secondary" id="cancelEditBtn">İptal</button>
+                        <button type="submit" class="btn btn-primary" id="saveTaskChangesBtn">Değişiklikleri Kaydet</button>
                     </div>
-                    <div class="file-list-container" id="fileListContainer">
-                        <p style="text-align: center; color: #666; padding: 20px;">Bu işe ait belge bulunmamaktadır.</p>
-                    </div>
-                </div>
-
-                <div id="tabContentHistory" class="tab-content">
-                    <h3 class="section-title">İşlem Geçmişi</h3>
-                    <div id="historyList" class="history-list">
-                        <p style="text-align: center; color: #666; padding: 20px;">İşlem geçmişi bulunmamaktadır.</p>
-                    </div>
-                </div>
+                </form>
             </div>
         </main>
     </div>
@@ -547,7 +527,6 @@
                     await this.loadTaskData();
                     this.populateStatusDropdown();
                     this.populateAssignedToDropdown();
-                    this.setupInitialTab(); // Sekmeli yapı olduğu için bu çağrıya ihtiyaç var
                 }
 
                 async loadAllData() {
@@ -658,10 +637,6 @@
                 }
 
                 setupEventListeners() {
-                    document.querySelectorAll('.tab-button').forEach(button => {
-                        button.addEventListener('click', (e) => this.switchTab(e.target.dataset.tab));
-                    });
-
                     document.getElementById('saveTaskChangesBtn').addEventListener('click', (e) => this.handleTaskUpdate(e));
                     document.getElementById('cancelEditBtn').addEventListener('click', () => window.location.href = 'task-management.html');
                     
@@ -670,7 +645,8 @@
                     document.getElementById('relatedPartySearch').addEventListener('input', (e) => this.searchPersons(e.target.value, 'relatedParty'));
                     document.getElementById('addNewRelatedPartyBtn').addEventListener('click', () => this.showAddPersonModal());
                     
-                    document.getElementById('addAccrualBtn').addEventListener('click', () => this.showAccrualModal('add')); // "Yeni Tahakkuk Ekle" butonu hala varsa bu kalır
+                    // "Yeni Tahakkuk Ekle" butonu kaldırıldığı için ilgili event listener kaldırıldı
+                    // document.getElementById('addAccrualBtn').addEventListener('click', () => this.showAccrualModal('add')); // Bu satır kaldırıldı
                     document.getElementById('closeAccrualModal').addEventListener('click', () => this.closeAccrualModal());
                     document.getElementById('cancelAccrualBtn').addEventListener('click', () => this.closeAccrualModal());
                     document.getElementById('accrualForm').addEventListener('submit', (e) => this.handleAccrualSubmit(e));
@@ -719,14 +695,6 @@
                             this.markAccrualPaid(accrualId);
                         }
                     });
-                }
-
-                switchTab(tabId) {
-                    document.querySelectorAll('.tab-button').forEach(button => button.classList.remove('active'));
-                    document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
-                    
-                    document.querySelector(`.tab-button[data-tab="${tabId}"]`).classList.add('active');
-                    document.getElementById(`tabContent${tabId.charAt(0).toUpperCase() + tabId.slice(1)}`).classList.add('active');
                 }
 
                 async handleTaskUpdate(e) {
@@ -904,54 +872,43 @@
                     }
                 }
 
-                renderAccruals() {
-                    const accrualsList = document.getElementById('accrualsList');
-                    accrualsList.innerHTML = '';
-
-                    if (this.currentAccruals.length === 0) {
-                        accrualsList.innerHTML = '<p style="text-align: center; color: #666; padding: 20px;">Bu işe ait tahakkuk bulunmamaktadır.</p>';
+                    renderAccruals(accrualList) {
+                    const container = document.getElementById('accrualsContainer');
+                    container.innerHTML = '';
+                    if (!Array.isArray(accrualList)) {
+                        console.warn("Tahakkuk verisi uygun formatta değil:", accrualList);
                         return;
                     }
 
-                    const currencyFormatter = (amount, currency) => {
-                        try {
-                            return new Intl.NumberFormat('tr-TR', { style: 'currency', currency: currency || 'TRY' }).format(amount);
-                        } catch (e) {
-                            return new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' }).format(amount);
-                        }
-                    };
+                    if (!accrualList.length) {
+                        container.innerHTML = '<p>Henüz tahakkuk bulunmuyor.</p>';
+                        return;
+                    }
 
-                    this.currentAccruals.forEach(accrual => {
-                        const statusText = accrual.status === 'paid' ? 'Ödendi' : 'Ödenmedi';
-                        const statusClass = accrual.status === 'paid' ? 'status-paid' : 'status-unpaid';
-                        const isPaid = accrual.status === 'paid';
-
-                        const accrualItem = document.createElement('div');
-                        accrualItem.classList.add('record-card'); // Styling için record-card kullanabiliriz
-                        accrualItem.style.marginBottom = '15px'; // Ekstra boşluk
-                        accrualItem.innerHTML = `
-                            <div class="record-header" style="border-bottom: none; padding-bottom: 0;">
-                                <div class="record-title">Tahakkuk ID: <small>${accrual.id.substring(0, 8)}...</small></div>
-                                <span class="status-badge ${statusClass}">${statusText}</span>
+                    accrualList.forEach(accrual => {
+                        const accrualElement = document.createElement('div');
+                        accrualElement.classList.add('accrual-card');
+                        accrualElement.innerHTML = `
+                            <div class="accrual-card-header">
+                                <h4>${accrual.title || 'Tahakkuk Başlığı'}</h4>
+                                <span>${new Date(accrual.createdAt).toLocaleDateString()}</span>
                             </div>
-                            <div class="record-body" style="padding-top: 10px;">
-                                <div class="record-detail"><span class="detail-label">Resmi Ücret:</span><span class="detail-value">${currencyFormatter(accrual.officialFee?.amount || 0, accrual.officialFee?.currency)}</span></div>
-                                <div class="record-detail"><span class="detail-label">Hizmet Bedeli:</span><span class="detail-value">${currencyFormatter(accrual.serviceFee?.amount || 0, accrual.serviceFee?.currency)}</span></div>
-                                <div class="record-detail"><span class="detail-label">Toplam Tutar (KDV Dahil):</span><span class="detail-value">${currencyFormatter(accrual.totalAmount || 0, accrual.totalAmountCurrency || 'TRY')}</span></div>
-                                <div class="record-detail"><span class="detail-label">Türk Patent Fatura Tarafı:</span><span class="detail-value">${accrual.tpInvoiceParty?.name || '-'}</span></div>
-                                <div class="record-detail"><span class="detail-label">Hizmet Faturası Tarafı:</span><span class="detail-value">${accrual.serviceInvoiceParty?.name || '-'}</span></div>
-                                <div class="record-detail"><span class="detail-label">Ödeme Tarihi:</span><span class="detail-value">${accrual.paymentDate ? new Date(accrual.paymentDate).toLocaleDateString('tr-TR') : '-'}</span></div>
+                            <div class="accrual-card-body">
+                                <p><strong>Tutar:</strong> ${accrual.amount || '-'} ${accrual.currency || '₺'}</p>
+                                <p><strong>Açıklama:</strong> ${accrual.description || '-'}</p>
+                                <p><strong>Durum:</strong> ${accrual.status || 'unpaid'}</p>
                             </div>
-                            <div class="record-footer">
-                                ${!isPaid ? `<button class="action-btn complete-btn" data-id="${accrual.id}">Ödendi İşaretle</button>` : ''}
-                                <button class="action-btn edit-btn" data-id="${accrual.id}">Düzenle</button>
-                                <button class="action-btn delete-btn" data-id="${accrual.id}">Sil</button>
+                            <div class="accrual-card-actions">
+                                <button class="action-btn edit-accrual-btn" data-id="${accrual.id}">Düzenle</button>
                             </div>
                         `;
-                        // Edit, Delete, Complete butonları için event listener'lar delegation ile ekleniyor.
-                        // Daha önce setupEventListeners içinde accrualsList'e eklenen tek bir listener tüm tıklamaları yakalar.
-                        // Bu kısım renderAccruals fonksiyonunun dışında handle ediliyor.
-                        accrualsList.appendChild(accrualItem);
+
+                        // Sadece düzenle butonu bağlanıyor
+                        accrualElement.querySelector('.edit-accrual-btn')?.addEventListener('click', () => {
+                            openAccrualEditModal(accrual);
+                        });
+
+                        container.appendChild(accrualElement);
                     });
                 }
 
@@ -1149,26 +1106,6 @@
                     }
                 }
                 
-                async deleteAccrual(accrualId) {
-                    if (confirm('Bu tahakkuku silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.')) {
-                        const result = await accrualService.deleteAccrual(accrualId);
-                        if (result.success) {
-                            showNotification('Tahakkuk başarıyla silindi.', 'success');
-                            await this.loadAccrualsForTask(); // Tahakkuk listesini güncelle
-                        } else {
-                            showNotification('Tahakkuk silinirken hata oluştu: ' + result.error, 'error');
-                        }
-                    }
-                }
-
-                async markAccrualPaid(accrualId) {
-                    // Tahakkuk modalını aç ve "ödendi" bilgilerini önceden doldur
-                    this.showAccrualModal('edit', accrualId);
-                    document.getElementById('paymentDate').valueAsDate = new Date(); // Tarihi bugüne ayarla
-                    document.getElementById('accrualModalTitle').textContent = 'Tahakkuku Ödendi İşaretle';
-                    document.getElementById('saveAccrualBtn').textContent = 'Ödendi Olarak Kaydet';
-                }
-
                 // Document (File) Handling
                 handleTaskDocumentsUpload(files) {
                     for (const file of files) {
@@ -1286,16 +1223,6 @@
                         `;
                         historyList.appendChild(historyItem);
                     });
-                }
-
-                setupInitialTab() {
-                    const urlParams = new URLSearchParams(window.location.search);
-                    const tab = urlParams.get('tab');
-                    if (tab && ['details', 'accruals', 'documents', 'history'].includes(tab)) {
-                        this.switchTab(tab);
-                    } else {
-                        this.switchTab('details'); // Varsayılan olarak detayları göster
-                    }
                 }
             }
 
