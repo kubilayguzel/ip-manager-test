@@ -536,7 +536,7 @@
                             description: `Yeni ${recordData.type} kaydı oluşturuldu. Başvuru Numarası: ${recordData.applicationNumber || 'Belirtilmemiş'}`,
                             timestamp: new Date().toISOString()
                         }];
-
+                        console.log("Kaydedilecek veri:", recordData);
                         result = await ipRecordsService.addRecord(recordData);
                     }
     
