@@ -93,28 +93,41 @@
             background: linear-gradient(45deg, #388E3C, #4CAF50);
         }
     .accrual-card {
-    background-color: #fefefe;
-    border: 1px solid #ddd;
-    border-radius: 10px;
-    padding: 20px;
-    margin-bottom: 15px;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
-  }
+        background: #fff;
+        border: 1px solid #ddd;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 15px;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+    }
 
-  .accrual-row {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 8px;
-  }
+    .accrual-card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+    }
 
-  .accrual-row .label {
-    font-weight: bold;
-    color: #444;
-  }
+    .accrual-card-header h4 {
+        margin: 0;
+        font-size: 1.1em;
+        color: #1e3c72;
+    }
 
-  .accrual-row .value {
-    color: #222;
-  }
+    .accrual-card-body p {
+        margin: 5px 0;
+        font-size: 0.95em;
+    }
+
+    .accrual-card-actions {
+        margin-top: 10px;
+        text-align: right;
+    }
+
+    .accrual-card-actions .edit-accrual-btn {
+        background-color: #ffc107;
+        color: #000;
+    }
 
   .edit-accrual-btn {
     background-color: #ffda44;
@@ -860,52 +873,42 @@
                     }
                 }
 
-                renderAccruals() {
-                    const accrualsList = document.getElementById('accrualsList');
-                    accrualsList.innerHTML = '';
+                    renderAccruals(accrualList) {
+                    const container = document.getElementById('accrualsContainer');
+                    container.innerHTML = '';
 
-                    if (this.currentAccruals.length === 0) {
-                        accrualsList.innerHTML = '<p style="text-align: center; color: #666; padding: 20px;">Bu işe ait tahakkuk bulunmamaktadır.</p>';
+                    if (!accrualList.length) {
+                        container.innerHTML = '<p>Henüz tahakkuk bulunmuyor.</p>';
                         return;
                     }
 
-                    const currencyFormatter = (amount, currency) => {
-                        try {
-                            return new Intl.NumberFormat('tr-TR', { style: 'currency', currency: currency || 'TRY' }).format(amount);
-                        } catch (e) {
-                            return new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' }).format(amount);
-                        }
-                    };
-
-                    this.currentAccruals.forEach(accrual => {
-                        const statusText = accrual.status === 'paid' ? 'Ödendi' : 'Ödenmedi';
-                        const statusClass = accrual.status === 'paid' ? 'status-paid' : 'status-unpaid';
-                        const isPaid = accrual.status === 'paid';
-
-                        const accrualItem = document.createElement('div');
-                        accrualItem.classList.add('record-card'); // Styling için record-card kullanabiliriz
-                        accrualItem.style.marginBottom = '15px'; // Ekstra boşluk
-                        accrualItem.innerHTML = `
-                            <div class="record-header" style="border-bottom: none; padding-bottom: 0;">
-                                <div class="record-title">Tahakkuk ID: <small>${accrual.id.substring(0, 8)}...</small></div>
-                                <span class="status-badge ${statusClass}">${statusText}</span>
+                    accrualList.forEach(accrual => {
+                        const accrualElement = document.createElement('div');
+                        accrualElement.classList.add('accrual-card');
+                        accrualElement.innerHTML = `
+                            <div class="accrual-card-header">
+                                <h4>${accrual.title || 'Tahakkuk Başlığı'}</h4>
+                                <span>${new Date(accrual.createdAt).toLocaleDateString()}</span>
                             </div>
-                            <div class="record-body" style="padding-top: 10px;">
-                                <div class="record-detail"><span class="detail-label">Resmi Ücret:</span><span class="detail-value">${currencyFormatter(accrual.officialFee?.amount || 0, accrual.officialFee?.currency)}</span></div>
-                                <div class="record-detail"><span class="detail-label">Hizmet Bedeli:</span><span class="detail-value">${currencyFormatter(accrual.serviceFee?.amount || 0, accrual.serviceFee?.currency)}</span></div>
-                                <div class="record-detail"><span class="detail-label">Toplam Tutar (KDV Dahil):</span><span class="detail-value">${currencyFormatter(accrual.totalAmount || 0, accrual.totalAmountCurrency || 'TRY')}</span></div>
-                                <div class="record-detail"><span class="detail-label">Türk Patent Fatura Tarafı:</span><span class="detail-value">${accrual.tpInvoiceParty?.name || '-'}</span></div>
-                                <div class="record-detail"><span class="detail-label">Hizmet Faturası Tarafı:</span><span class="detail-value">${accrual.serviceInvoiceParty?.name || '-'}</span></div>
-                                <div class="record-detail"><span class="detail-label">Ödeme Tarihi:</span><span class="detail-value">${accrual.paymentDate ? new Date(accrual.paymentDate).toLocaleDateString('tr-TR') : '-'}</span></div>
+                            <div class="accrual-card-body">
+                                <p><strong>Tutar:</strong> ${accrual.amount || '-'} ${accrual.currency || '₺'}</p>
+                                <p><strong>Açıklama:</strong> ${accrual.description || '-'}</p>
+                                <p><strong>Durum:</strong> ${accrual.status || 'unpaid'}</p>
                             </div>
-                            <div class="record-footer">
-                                <button class="action-btn edit-btn" data-id="${accrual.id}">Düzenle</button>
+                            <div class="accrual-card-actions">
+                                <button class="action-btn edit-accrual-btn" data-id="${accrual.id}">Düzenle</button>
                             </div>
                         `;
-                        accrualItem.querySelector('.edit-btn').addEventListener('click', () => this.showAccrualModal('edit', accrual.id));
-                        accrualsList.appendChild(accrualItem);
+
+                        // Sadece düzenle butonu bağlanıyor
+                        accrualElement.querySelector('.edit-accrual-btn')?.addEventListener('click', () => {
+                            openAccrualEditModal(accrual);
+                        });
+
+                        container.appendChild(accrualElement);
                     });
                 }
+
 
                 showAccrualModal(mode, accrualId = null) {
                     const modal = document.getElementById('accrualModal');
