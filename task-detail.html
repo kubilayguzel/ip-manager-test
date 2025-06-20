@@ -876,6 +876,10 @@
                     renderAccruals(accrualList) {
                     const container = document.getElementById('accrualsContainer');
                     container.innerHTML = '';
+                    if (!Array.isArray(accruals)) {
+                        console.warn("Tahakkuk verisi uygun formatta değil:", accruals);
+                        return;
+                    }
 
                     if (!accrualList.length) {
                         container.innerHTML = '<p>Henüz tahakkuk bulunmuyor.</p>';
