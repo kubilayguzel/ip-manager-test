@@ -113,7 +113,9 @@
             background: rgba(255, 255, 255, 0.95);
             border-radius: 20px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-            overflow-x: auto; /* Yatay kaydırma çubuğu ekle, gerektiğinde */
+            overflow: visible; /* değiştirildi */
+            position: relative; /* z-index için gerekli */
+            z-index: 1;
         }
 
         .portfolio-table {
