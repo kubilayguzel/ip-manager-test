@@ -360,8 +360,6 @@
                         this.allIpRecords = ipRecordsResult.success ? ipRecordsResult.data : [];
                         this.allPersons = personsResult.success ? personsResult.data : [];
                         this.allUsers = usersResult.success ? usersResult.data : [];
-                        
-                        this.populateAssignedToFilter();
                         this.renderTasks();
                     } catch (error) {
                         showNotification('Veriler yüklenirken bir hata oluştu: ' + error.message, 'error');
