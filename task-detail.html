@@ -85,34 +85,6 @@
         .search-result-item:hover { background-color: #f0f4f8; }
         .search-result-display { background: #e9f5ff; border: 1px solid #bde0fe; padding: 15px; border-radius: 8px; margin-top: 10px; display: flex; gap: 15px; align-items: center;}
         
-        .tab-menu {
-            display: flex;
-            margin-bottom: 20px;
-            border-bottom: 2px solid #e1e8ed;
-        }
-        .tab-button {
-            padding: 12px 20px;
-            cursor: pointer;
-            border: none;
-            background: transparent;
-            font-size: 1em;
-            font-weight: 600;
-            color: #666;
-            transition: all 0.3s ease;
-            border-bottom: 2px solid transparent;
-        }
-        .tab-button.active {
-            color: #1e3c72;
-            border-bottom-color: #1e3c72;
-        }
-        .tab-content {
-            display: none;
-            padding: 20px 0;
-        }
-        .tab-content.active {
-            display: block;
-        }
-
         .history-list {
             max-height: 300px;
             overflow-y: auto;
@@ -241,13 +213,6 @@
             </section>
             
             <div class="task-detail-container">
-                <div class="tab-menu">
-                    <button class="tab-button active" data-tab="details">Detaylar</button>
-                    <button class="tab-button" data-tab="accruals">Tahakkuklar</button>
-                    <button class="tab-button" data-tab="documents">Belgeler</button>
-                    <button class="tab-button" data-tab="history">Geçmiş</button>
-                </div>
-
                 <div id="tabContentDetails" class="tab-content active">
                     <form id="taskDetailForm">
                         <h3 class="section-title">Genel Bilgiler</h3>
@@ -259,7 +224,6 @@
                             <div class="form-group"><label for="assignedTo" class="form-label">Atanan Kullanıcı:</label><select id="assignedTo" class="form-select"></select></div>
                             <div class="form-group"><label for="taskDueDate" class="form-label">Operasyonel Son Tarih:</label><input type="date" id="taskDueDate" class="form-input"></div>
                         </div>
-
                         <h3 class="section-title">İlgili Varlık ve Taraf</h3>
                         <div class="form-group full-width">
                             <label for="relatedIpRecordSearch" class="form-label">İlgili IP Kaydı:</label>
@@ -286,34 +250,37 @@
                             <button type="button" class="btn btn-secondary" id="cancelEditBtn">İptal</button>
                             <button type="submit" class="btn btn-primary" id="saveTaskChangesBtn">Değişiklikleri Kaydet</button>
                         </div>
+                        <div id="tabContentAccruals"class="form-section">
+                            <h3 class="section-title">Tahakkuklar <button class="btn-add-item" id="addAccrualBtn"><span>&#x2795;</span> Yeni Tahakkuk Ekle</button></h3>
+                            <div id="accrualsList">
+                                <p style="text-align: center; color: #666; padding: 20px;">Bu işe ait tahakkuk bulunmamaktadır.</p>
+                            </div>
+                        </div>
+
+                        <div id="tabContentDocuments"class="form-section">
+                            <h3 class="section-title">Belgeler</h3>
+                            <div class="file-upload-area" id="fileUploadArea">
+                                <input type="file" id="fileInput" multiple hidden>
+                                <div class="upload-icon">⬆️</div>
+                                <div class="upload-text">Dosyaları Buraya Sürükleyin veya Tıklayın</div>
+                                <div class="upload-subtext">PDF, DOCX, JPG, PNG vb. dosyaları destekler.</div>
+                            </div>
+                            <div class="file-list-container" id="fileListContainer">
+                                <p style="text-align: center; color: #666; padding: 20px;">Bu işe ait belge bulunmamaktadır.</p>
+                            </div>
+                        </div>
+
+                        <div id="tabContentHistory"class="form-section">
+                            <h3 class="section-title">İşlem Geçmişi</h3>
+                            <div id="historyList" class="history-list">
+                                <p style="text-align: center; color: #666; padding: 20px;">İşlem geçmişi bulunmamaktadır.</p>
+                            </div>
+                        </div>
+                        <div class="form-actions">
+                            <button type="button" class="btn btn-secondary" id="cancelEditBtn">İptal</button>
+                            <button type="submit" class="btn btn-primary" id="saveTaskChangesBtn">Değişiklikleri Kaydet</button>
+                        </div>
                     </form>
-                </div>
-
-                <div id="tabContentAccruals" class="tab-content">
-                    <h3 class="section-title">Tahakkuklar <button class="btn-add-item" id="addAccrualBtn"><span>&#x2795;</span> Yeni Tahakkuk Ekle</button></h3>
-                    <div id="accrualsList">
-                        <p style="text-align: center; color: #666; padding: 20px;">Bu işe ait tahakkuk bulunmamaktadır.</p>
-                    </div>
-                </div>
-
-                <div id="tabContentDocuments" class="tab-content">
-                    <h3 class="section-title">Belgeler</h3>
-                    <div class="file-upload-area" id="fileUploadArea">
-                        <input type="file" id="fileInput" multiple hidden>
-                        <div class="upload-icon">⬆️</div>
-                        <div class="upload-text">Dosyaları Buraya Sürükleyin veya Tıklayın</div>
-                        <div class="upload-subtext">PDF, DOCX, JPG, PNG vb. dosyaları destekler.</div>
-                    </div>
-                    <div class="file-list-container" id="fileListContainer">
-                        <p style="text-align: center; color: #666; padding: 20px;">Bu işe ait belge bulunmamaktadır.</p>
-                    </div>
-                </div>
-
-                <div id="tabContentHistory" class="tab-content">
-                    <h3 class="section-title">İşlem Geçmişi</h3>
-                    <div id="historyList" class="history-list">
-                        <p style="text-align: center; color: #666; padding: 20px;">İşlem geçmişi bulunmamaktadır.</p>
-                    </div>
                 </div>
             </div>
         </main>
@@ -484,8 +451,7 @@
                     await this.loadTaskData();
                     this.populateStatusDropdown();
                     this.populateAssignedToDropdown();
-                    this.setupInitialTab();
-                }
+                    }
 
                 async loadAllData() {
                     try {
@@ -595,18 +561,11 @@
                 }
 
                 setupEventListeners() {
-                    document.querySelectorAll('.tab-button').forEach(button => {
-                        button.addEventListener('click', (e) => this.switchTab(e.target.dataset.tab));
-                    });
-
                     document.getElementById('saveTaskChangesBtn').addEventListener('click', (e) => this.handleTaskUpdate(e));
                     document.getElementById('cancelEditBtn').addEventListener('click', () => window.location.href = 'task-management.html');
-                    
                     document.getElementById('relatedIpRecordSearch').addEventListener('input', (e) => this.searchIpRecords(e.target.value));
-                    
                     document.getElementById('relatedPartySearch').addEventListener('input', (e) => this.searchPersons(e.target.value, 'relatedParty'));
                     document.getElementById('addNewRelatedPartyBtn').addEventListener('click', () => this.showAddPersonModal());
-                    
                     document.getElementById('addAccrualBtn').addEventListener('click', () => this.showAccrualModal('add'));
                     document.getElementById('closeAccrualModal').addEventListener('click', () => this.closeAccrualModal());
                     document.getElementById('cancelAccrualBtn').addEventListener('click', () => this.closeAccrualModal());
