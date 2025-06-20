@@ -315,6 +315,9 @@
             handleTypeChange = (type) => { // Artık doğrudan 'type' stringini alıyor
                 this.renderTypeSpecificFields(type);
                 this.populateStatusOptions(type);
+                 if (type === 'trademark') {
+                 this.setupImageUploadListeners(); // 🔧 Kritik: yeniden bağla
+                 }
             }
     
             renderTypeSpecificFields = (type) => {
@@ -542,7 +545,7 @@
     
                     if (result.success) {
                         showNotification(this.recordId ? 'Kayıt güncellendi!' : 'Kayıt eklendi!', 'success');
-                        //window.location.href = 'portfolio.html';
+                        window.location.href = 'portfolio.html';
                     } else {
                         throw new Error(result.error);
                     }
