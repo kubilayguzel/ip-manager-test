@@ -845,17 +845,10 @@
                                 <div class="record-detail"><span class="detail-label">Ödeme Tarihi:</span><span class="detail-value">${accrual.paymentDate ? new Date(accrual.paymentDate).toLocaleDateString('tr-TR') : '-'}</span></div>
                             </div>
                             <div class="record-footer">
-                                ${!isPaid ? `<button class="action-btn complete-btn" data-id="${accrual.id}">Ödendi İşaretle</button>` : ''}
                                 <button class="action-btn edit-btn" data-id="${accrual.id}">Düzenle</button>
-                                <button class="action-btn delete-btn" data-id="${accrual.id}">Sil</button>
                             </div>
                         `;
                         accrualItem.querySelector('.edit-btn').addEventListener('click', () => this.showAccrualModal('edit', accrual.id));
-                        accrualItem.querySelector('.delete-btn').addEventListener('click', () => this.deleteAccrual(accrual.id));
-                        if (!isPaid) {
-                            accrualItem.querySelector('.complete-btn').addEventListener('click', () => this.markAccrualPaid(accrual.id));
-                        }
-
                         accrualsList.appendChild(accrualItem);
                     });
                 }
@@ -1054,26 +1047,6 @@
                     }
                 }
                 
-                async deleteAccrual(accrualId) {
-                    if (confirm('Bu tahakkuku silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.')) {
-                        const result = await accrualService.deleteAccrual(accrualId);
-                        if (result.success) {
-                            showNotification('Tahakkuk başarıyla silindi.', 'success');
-                            await this.loadAccrualsForTask(); // Tahakkuk listesini güncelle
-                        } else {
-                            showNotification('Tahakkuk silinirken hata oluştu: ' + result.error, 'error');
-                        }
-                    }
-                }
-
-                async markAccrualPaid(accrualId) {
-                    // Tahakkuk modalını aç ve "ödendi" bilgilerini önceden doldur
-                    this.showAccrualModal('edit', accrualId);
-                    document.getElementById('paymentDate').valueAsDate = new Date(); // Tarihi bugüne ayarla
-                    document.getElementById('accrualModalTitle').textContent = 'Tahakkuku Ödendi İşaretle';
-                    document.getElementById('saveAccrualBtn').textContent = 'Ödendi Olarak Kaydet';
-                }
-
                 // Document (File) Handling
                 handleTaskDocumentsUpload(files) {
                     for (const file of files) {
