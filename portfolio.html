@@ -789,7 +789,8 @@
                             } else if (col.key === 'type') { cellHtmlContent = `${record.type.charAt(0).toUpperCase() + record.type.slice(1)}`; }
                             else if (col.key === 'title') { cellHtmlContent = `${record.title || 'Başlıksız Kayıt'}`; }
                             else if (col.key === 'trademarkImage') {
-                                if (record.type === 'trademark' && record.trademarkImage && record.trademarkImage.content) {
+                                if (record.type === 'trademark' && record.trademarkImage && (typeof record.trademarkImage === 'string' || record.trademarkImage.content))
+ {
                                     cellHtmlContent = `
                                         <div class="trademark-image-wrapper">
                                             <img src="${record.trademarkImage.content}" alt="Marka Görseli" class="trademark-image-thumbnail">
@@ -1023,7 +1024,8 @@
                     };
                     
                     let imageHtml = '';
-                    if (record.type === 'trademark' && record.trademarkImage && record.trademarkImage.content) {
+                    if (record.type === 'trademark' && record.trademarkImage && (typeof record.trademarkImage === 'string' || record.trademarkImage.content))
+                    {
                         imageHtml = `<h4 class="modal-detail-section-title">Marka Görseli</h4><img src="${record.trademarkImage.content}" alt="Marka Görseli" class="record-image-display">`;
                     }
 
