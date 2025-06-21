@@ -68,10 +68,10 @@ export async function loadSharedLayout(options = {}) {
         placeholder.innerHTML = await response.text();
 
         const user = authService.getCurrentUser();
-        if (!user) {
-            window.location.href = 'index.html'; // Kullanıcı yoksa giriş sayfasına yönlendir
-            return;
-        }
+            if (!user && window.top === window) {
+                window.location.href = 'index.html';
+                return;
+            }
 
         const userRole = user.role || 'user';
         
