@@ -370,7 +370,7 @@
                             e.preventDefault();
                             const taskId = e.target.dataset.id;
                             if (e.target.classList.contains('edit-btn')) {
-                                window.location.href = `task-detail.html?id=${taskId}`;
+                                window.location.href = `task-detail.html?id=${accrual.taskId}`;
                             } else if (e.target.classList.contains('delete-btn')) {
                                 this.deleteTask(taskId);
                             } else if (e.target.classList.contains('view-btn')) { // View button added for consistency
