@@ -529,18 +529,12 @@
                     const urlParams = new URLSearchParams(window.location.search);
                     this.taskId = urlParams.get('id');
 
-                    // Hata ayıklama için debugger ekliyorum ve yönlendirmeyi yavaşlatıyorum
-                    if (!this.taskId) {
-                        showNotification('İş ID\'si bulunamadı.', 'error');
-                        console.log('DEBUG: taskId bulunamadı, task-management.html adresine yönlendirme 2 saniye içinde yapılacak.');
-                        debugger; // Hata ayıklayıcıyı burada durdur
-                        setTimeout(() => {
-                            window.location.href = 'task-management.html';
-                        }, 2000); // 2 saniye beklet
-                        return;
+                    const taskId = new URLSearchParams(window.location.search).get('id');
+                    if (!taskId && window.top === window) {
+                        // Sadece sayfa doğrudan açılmışsa yönlendir
+                        showNotification("İş ID'si alınamadı.", "error");
+                        window.location.href = "task-management.html";
                     }
-
-                    console.log(`DEBUG: TaskDetailModule başlatılıyor. taskId: ${this.taskId}`);
                     await this.loadAllData();
                     this.setupEventListeners(); // Re-calling event listeners after loadAllData
                     await this.loadTaskData();
