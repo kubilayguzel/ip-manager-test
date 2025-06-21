@@ -295,14 +295,14 @@
     </div>
 
     <script type="module">
-        import { authService, auth, db } from './firebase-config.js';
+        import { authService, auth, db, collection, getDocs, doc, updateDoc, deleteDoc, setDoc } from './firebase-config.js';
         import { showNotification } from './utils.js';
         import { loadSharedLayout } from './js/layout-loader.js'; // layout-loader.js eklendi
 
         document.addEventListener('DOMContentLoaded', async () => {
             // Ortak layout'u yükle ve bu sayfanın aktif linkini belirt
             await loadSharedLayout({ activeMenuLink: 'user-management.html' });
-
+ 
             class UserManagementModule {
                 constructor() {
                     this.currentUser = null;
