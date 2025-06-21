@@ -268,6 +268,184 @@
             width: 18px;
             height: 18px;
         }
+        /* Modal kapatma butonu düzeltmeleri */
+        .close-modal-btn {
+            position: absolute !important;
+            top: 15px !important;
+            right: 20px !important;
+            color: #aaa !important;
+            font-size: 28px !important;
+            font-weight: bold !important;
+            cursor: pointer !important;
+            background: none !important;
+            border: none !important;
+            padding: 5px !important;
+            border-radius: 50% !important;
+            transition: all 0.3s ease !important;
+            z-index: 1 !important;
+            float: none !important;
+        }
+
+        .close-modal-btn:hover {
+            color: #000 !important;
+            background: #f0f0f0 !important;
+        }
+
+        /* Modal content düzeltmeleri */
+        .modal-content {
+            position: relative !important;
+        }
+
+        /* Modal title düzeltmeleri */
+        .modal-title {
+            margin-right: 40px !important;
+        }
+        /* Modal body ve footer stilleri */
+        .modal-body-content {
+            margin-bottom: 20px;
+        }
+
+        .modal-footer {
+            display: flex !important;
+            justify-content: flex-end !important;
+            gap: 10px !important;
+            margin-top: 20px !important;
+            padding-top: 15px !important;
+            border-top: 1px solid #e1e8ed !important;
+        }
+
+        .form-grid {
+            display: grid !important;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)) !important;
+            gap: 15px !important;
+        }
+
+        .input-with-currency {
+            display: flex !important;
+            gap: 10px !important;
+        }
+
+        .input-with-currency .form-input {
+            flex-grow: 1 !important;
+        }
+
+        .currency-select {
+            padding: 12px 8px !important;
+            border: 2px solid #e1e8ed !important;
+            border-radius: 10px !important;
+            background-color: #f8f9fa !important;
+            font-weight: bold !important;
+            min-width: 80px !important;
+        }
+
+        .total-amount-display {
+            font-size: 1.2em !important;
+            font-weight: bold !important;
+            color: #1e3c72 !important;
+            text-align: right !important;
+            padding: 12px 15px !important;
+            background-color: #f0f4f8 !important;
+            border-radius: 10px !important;
+            border: 2px solid #e1e8ed !important;
+        }
+
+        .checkbox-label {
+            display: flex !important;
+            align-items: center !important;
+            gap: 8px !important;
+            font-weight: 500 !important;
+        }
+
+        .checkbox-label input[type="checkbox"] {
+            width: 18px !important;
+            height: 18px !important;
+        }
+
+        .search-results-list {
+            max-height: 150px !important;
+            overflow-y: auto !important;
+            border: 1px solid #ddd !important;
+            border-radius: 8px !important;
+            margin-top: 5px !important;
+            background: white !important;
+            display: none !important;
+            z-index: 1000 !important;
+            position: relative !important;
+        }
+
+        .search-results-list.show {
+            display: block !important;
+        }
+
+        .search-result-item {
+            padding: 10px !important;
+            cursor: pointer !important;
+            border-bottom: 1px solid #eee !important;
+            transition: background-color 0.2s ease !important;
+        }
+
+        .search-result-item:hover {
+            background-color: #f8f9fa !important;
+        }
+
+        .search-result-item:last-child {
+            border-bottom: none !important;
+        }
+
+        .search-result-display {
+            background: #e9f5ff !important;
+            border: 1px solid #bde0fe !important;
+            padding: 10px 15px !important;
+            border-radius: 8px !important;
+            margin-top: 10px !important;
+            display: flex !important;
+            justify-content: space-between !important;
+            align-items: center !important;
+        }
+
+        .file-upload-area-modal {
+            border: 2px dashed #e1e8ed !important;
+            border-radius: 10px !important;
+            padding: 20px !important;
+            text-align: center !important;
+            background: #f8f9fa !important;
+            cursor: pointer !important;
+            transition: all 0.3s ease !important;
+        }
+
+        .file-upload-area-modal:hover {
+            border-color: #1e3c72 !important;
+            background: #f0f4f8 !important;
+        }
+
+        .file-list-modal {
+            margin-top: 10px !important;
+        }
+
+        .file-item-modal {
+            display: flex !important;
+            justify-content: space-between !important;
+            align-items: center !important;
+            padding: 8px 12px !important;
+            background: #f8f9fa !important;
+            border-radius: 6px !important;
+            margin-bottom: 5px !important;
+            font-size: 0.9em !important;
+        }
+
+        .remove-file-modal {
+            background: #ff6b6b !important;
+            color: white !important;
+            border: none !important;
+            border-radius: 50% !important;
+            width: 20px !important;
+            height: 20px !important;
+            font-size: 0.8em !important;
+            cursor: pointer !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+        }
     </style>
 </head>
 <body>
@@ -372,16 +550,17 @@
     </div>
 
     <div id="accrualModal" class="modal">
-        <div class="modal-content">
-            <span class="close-modal-btn" id="closeAccrualModal">&times;</span>
-            <h3 class="modal-title" id="accrualModalTitle">Yeni Tahakkuk Ekle</h3>
-            <form id="accrualForm">
-                <input type="hidden" id="accrualId">
+    <div class="modal-content">
+        <span class="close-modal-btn" id="closeAccrualModal">&times;</span>
+        <h3 class="modal-title" id="accrualModalTitle">Tahakkuku Düzenle</h3>
+        <form id="accrualForm">
+            <input type="hidden" id="accrualId">
+            <div class="modal-body-content">
+                <div class="form-group">
+                    <label for="accrualTaskTitleDisplay" class="form-label">İlgili İş</label>
+                    <input type="text" id="accrualTaskTitleDisplay" class="form-input" readonly>
+                </div>
                 <div class="form-grid">
-                    <div class="form-group full-width">
-                        <label for="accrualTaskTitleDisplay" class="form-label">İlgili İş</label>
-                        <input type="text" id="accrualTaskTitleDisplay" class="form-input" readonly>
-                    </div>
                     <div class="form-group">
                         <label for="officialFee" class="form-label">Resmi Ücret</label>
                         <div class="input-with-currency">
@@ -408,50 +587,51 @@
                     </div>
                     <div class="form-group">
                         <label for="vatRate" class="form-label">KDV Oranı (%)</label>
-                        <input type="number" id="vatRate" class="form-input" value="20">
+                        <input type="number" id="vatRate" class="form-input" value="20" step="0.01">
                     </div>
-                    <div class="form-group">
+                    <div class="form-group full-width">
                         <label class="checkbox-label">
                             <input type="checkbox" id="applyVatToOfficialFee" checked>
                             Resmi Ücrete KDV Uygula
                         </label>
                     </div>
                     <div class="form-group full-width">
-                        <label class="form-label">Toplam Tutar</label>
+                        <label class="form-label">Toplam Tutar (KDV Dahil)</label>
                         <div id="totalAmountDisplay" class="total-amount-display">0.00 TRY</div>
                     </div>
-                    <div class="form-group full-width">
+                    <div class="form-group">
                         <label for="tpInvoicePartySearch" class="form-label">Türk Patent Faturası Tarafı</label>
-                        <input type="text" id="tpInvoicePartySearch" class="form-input" placeholder="Fatura tarafı arayın...">
-                        <div id="tpInvoicePartySearchResults" class="search-results-list"></div>
+                        <input type="text" id="tpInvoicePartySearch" class="form-input" placeholder="Kişi adı veya e-posta ara...">
+                        <div id="tpInvoicePartyResults" class="search-results-list"></div>
                         <div id="selectedTpInvoicePartyDisplay" class="search-result-display" style="display:none;"></div>
                     </div>
-                    <div class="form-group full-width">
+                    <div class="form-group">
                         <label for="serviceInvoicePartySearch" class="form-label">Hizmet Faturası Tarafı</label>
-                        <input type="text" id="serviceInvoicePartySearch" class="form-input" placeholder="Fatura tarafı arayın...">
-                        <div id="serviceInvoicePartySearchResults" class="search-results-list"></div>
+                        <input type="text" id="serviceInvoicePartySearch" class="form-input" placeholder="Kişi adı veya e-posta ara...">
+                        <div id="serviceInvoicePartyResults" class="search-results-list"></div>
                         <div id="selectedServiceInvoicePartyDisplay" class="search-result-display" style="display:none;"></div>
                     </div>
-                    <div class="form-group full-width">
-                        <label for="paymentDate" class="form-label">Ödeme Tarihi (Opsiyonel)</label>
-                        <input type="date" id="paymentDate" class="form-input">
-                    </div>
-                    <div class="form-group full-width">
-                        <label for="paymentReceiptFile" class="form-label">Ödeme Dekontu (Opsiyonel)</label>
-                        <div class="file-upload-area" id="paymentReceiptFileUploadArea">
-                            <div>Dosyayı buraya sürükleyin veya tıklayın</div>
-                            <input type="file" id="paymentReceiptFile" multiple hidden accept=".pdf,.doc,.docx,.jpg,.jpeg,.png">
-                        </div>
-                        <div class="file-list-container" id="paymentReceiptFileList"></div>
-                    </div>
                 </div>
-                <div class="form-actions">
-                    <button type="button" class="btn btn-secondary" id="cancelAccrualBtn">İptal</button>
-                    <button type="submit" class="btn btn-primary" id="saveAccrualBtn">Kaydet</button>
+                <div class="form-group" style="display: none;">
+                    <label for="paymentDate" class="form-label">Ödeme Tarihi (Opsiyonel)</label>
+                    <input type="date" id="paymentDate" class="form-input">
                 </div>
-            </form>
-        </div>
+                <div class="form-group" style="display: none;">
+                    <label for="paymentReceiptFile" class="form-label">Ödeme Dekontu (Opsiyonel)</label>
+                    <div class="file-upload-area-modal" id="paymentReceiptFileUploadArea">
+                        <div>Dosyayı buraya sürükleyin veya tıklayın</div>
+                        <input type="file" id="paymentReceiptFile" multiple hidden accept=".pdf,.doc,.docx,.jpg,.jpeg,.png">
+                    </div>
+                    <div class="file-list-modal" id="paymentReceiptFileList"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" id="cancelAccrualBtn">İptal</button>
+                <button type="submit" class="btn btn-primary" id="saveAccrualBtn">Kaydet</button>
+            </div>
+        </form>
     </div>
+</div>
 
     <div class="modal" id="addPersonModal">
         <div class="modal-content">
