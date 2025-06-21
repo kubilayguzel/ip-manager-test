@@ -571,7 +571,6 @@
                         console.log('DEBUG: Görev verileri yüklendi ve form dolduruldu.');
                     } else {
                         showNotification('İş verileri yüklenemedi: ' + taskResult.error, 'error');
-                        console.log('DEBUG: Görev verileri yüklenemedi, task-management.html adresine yönlendirme 2 saniye içinde yapılacak.');
                         debugger;
                         if (window.top === window) {
                             setTimeout(() => {
@@ -661,8 +660,14 @@
 
                 setupEventListeners() {
                     document.getElementById('saveTaskChangesBtn').addEventListener('click', (e) => this.handleTaskUpdate(e));
-                    document.getElementById('cancelEditBtn').addEventListener('click', () => window.location.href = 'task-management.html');
-                    
+                    document.getElementById('cancelEditBtn').addEventListener('click', () => {
+                        if (window.top === window) {
+                            window.location.href = 'task-management.html';
+                        } else {
+                            // Modal kapatılacak
+                            document.getElementById('accrualEditModal').classList.remove('show');
+                        }
+                    });                    
                     document.getElementById('relatedIpRecordSearch').addEventListener('input', (e) => this.searchIpRecords(e.target.value));
                     document.getElementById('relatedIpRecordSearchResults').addEventListener('click', (e) => { // Delegate click for search results
                         const target = e.target.closest('.search-result-item');
