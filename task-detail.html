@@ -563,19 +563,21 @@
                     const taskResult = await taskService.getTaskById(this.taskId);
                     if (taskResult.success && taskResult.data) {
                         this.currentTask = taskResult.data;
-                        this.currentTaskDocuments = this.currentTask.documents || []; // Göreve özel belgeleri yükle
-                        await this.loadAccrualsForTask(); // Göreve ait tahakkukları yükle
+                        this.currentTaskDocuments = this.currentTask.documents || [];
+                        await this.loadAccrualsForTask();
                         this.fillTaskForm();
-                        this.renderDocuments(); // Belgeleri render et
-                        this.renderHistory(); // Geçmişi render et
+                        this.renderDocuments();
+                        this.renderHistory();
                         console.log('DEBUG: Görev verileri yüklendi ve form dolduruldu.');
                     } else {
                         showNotification('İş verileri yüklenemedi: ' + taskResult.error, 'error');
                         console.log('DEBUG: Görev verileri yüklenemedi, task-management.html adresine yönlendirme 2 saniye içinde yapılacak.');
-                        debugger; // Hata ayıklayıcıyı burada durdur
-                        setTimeout(() => {
-                            window.location.href = 'task-management.html';
-                        }, 2000); // 2 saniye beklet
+                        debugger;
+                        if (window.top === window) {
+                            setTimeout(() => {
+                                window.location.href = 'task-management.html';
+                            }, 2000);
+                        }
                     }
                 }
 
