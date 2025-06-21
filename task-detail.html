@@ -1222,6 +1222,31 @@
                     // Toplam tutarı hesapla
                     this.calculateTotalAmount();
                 }
+                // Toplam tutar hesaplama fonksiyonu
+                calculateTotalAmount() {
+                    const officialFee = parseFloat(document.getElementById('officialFee').value) || 0;
+                    const serviceFee = parseFloat(document.getElementById('serviceFee').value) || 0;
+                    const vatRate = parseFloat(document.getElementById('vatRate').value) || 0;
+                    const applyVatToOfficial = document.getElementById('applyVatToOfficialFee').checked;
+
+                    let total;
+                    if (applyVatToOfficial) {
+                        total = (officialFee + serviceFee) * (1 + vatRate / 100);
+                    } else {
+                        total = officialFee + (serviceFee * (1 + vatRate / 100));
+                    }
+
+                    // Toplam tutarı göster
+                    const display = document.getElementById('totalAmountDisplay');
+                    if (display) {
+                        display.textContent = new Intl.NumberFormat('tr-TR', { 
+                            style: 'currency', 
+                            currency: 'TRY' 
+                        }).format(total);
+                    }
+
+                    return total;
+                }
 
                 // Modal kapatma fonksiyonu
                 closeAccrualModal() {
