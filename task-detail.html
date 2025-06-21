@@ -787,7 +787,15 @@
                     if (accrualForm) {
                         accrualForm.addEventListener('submit', (e) => this.handleAccrualSubmit(e));
                     }
-
+                    // Tahakkuk form input listener'ları
+                    const accrualInputs = ['officialFee', 'serviceFee', 'vatRate', 'applyVatToOfficialFee'];
+                    accrualInputs.forEach(id => {
+                        const element = document.getElementById(id);
+                        if (element) {
+                            element.addEventListener('input', () => this.calculateTotalAmount());
+                            element.addEventListener('change', () => this.calculateTotalAmount());
+                        }
+                    });
                     // Person Modal listener'ları
                     const closePersonModal = document.getElementById('closeAddPersonModal');
                     if (closePersonModal) {
