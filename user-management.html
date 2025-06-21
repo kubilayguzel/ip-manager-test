@@ -299,8 +299,7 @@
         import { showNotification } from './utils.js';
         import { loadSharedLayout } from './js/layout-loader.js'; // layout-loader.js eklendi
         import { collection, getDocs, doc, updateDoc, deleteDoc, setDoc } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore.js";
-        const usersCol = collection(db, 'users');
-        
+        console.log("DB:", db);
         document.addEventListener('DOMContentLoaded', async () => {
             // Ortak layout'u yükle ve bu sayfanın aktif linkini belirt
             await loadSharedLayout({ activeMenuLink: 'user-management.html' });
