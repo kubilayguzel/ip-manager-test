@@ -379,11 +379,17 @@
                     filteredUsers.forEach(user => {
                         const row = document.createElement('tr');
                         const roleClass = `role-${user.role}`;
-                        
+
                         row.innerHTML = `
                             <td>${user.displayName || '-'}</td>
                             <td>${user.email}</td>
-                            <td><span class="role-badge ${roleClass}">${user.role}</span></td>
+                            <td>
+                                <select class="role-select" data-user-id="${user.id}">
+                                    <option value="user" ${user.role === 'user' ? 'selected' : ''}>Kullanıcı</option>
+                                    <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>Yönetici</option>
+                                    <option value="superadmin" ${user.role === 'superadmin' ? 'selected' : ''}>Süper Admin</option>
+                                </select>
+                            </td>
                             <td>${user.createdAt ? new Date(user.createdAt).toLocaleDateString('tr-TR') : '-'}</td>
                             <td>${user.lastLoginAt ? new Date(user.lastLoginAt).toLocaleDateString('tr-TR') : '-'}</td>
                             <td>
@@ -391,12 +397,23 @@
                                 <button class="action-btn delete-btn" data-id="${user.id}" ${user.id === this.currentUser.uid ? 'disabled' : ''}>Sil</button>
                             </td>
                         `;
+
                         tableBody.appendChild(row);
                     });
-                }
 
-                filterUsers(query) {
-                    this.renderUsers(query);
+                    // 🔄 Rol değişimi dinleyicileri
+                    document.querySelectorAll('.role-select').forEach(select => {
+                        select.addEventListener('change', async (e) => {
+                            const userId = e.target.dataset.userId;
+                            const newRole = e.target.value;
+                            try {
+                                await updateDoc(doc(db, 'users', userId), { role: newRole });
+                                showNotification('Kullanıcı rolü başarıyla güncellendi', 'success');
+                            } catch (error) {
+                                showNotification('Rol güncellenemedi: ' + error.message, 'error');
+                            }
+                        });
+                    });
                 }
 
                 showAddUserModal() {
