@@ -374,7 +374,7 @@
                     this.uploadedPaymentReceipts = []; 
                 }
 
-                init() {
+                async init() {
 
                     this.currentUser = authService.getCurrentUser(); // currentUser'ı doğrudan al
                     if (!this.currentUser) {
