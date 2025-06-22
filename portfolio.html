@@ -335,19 +335,44 @@
             box-sizing: border-box;
         }
         .transaction-history .accordion-header {
-            background: #eaf2f8; /* Daha açık bir arka plan */
-            color: #1e3c72;
-            padding: 12px 15px;
-            border-radius: 8px;
-            margin-bottom: 5px;
-            border: 1px solid #d0e7f7;
-            font-weight: 600;
+        display: flex; /* İçeriği esnek kutu olarak düzenle */
+        align-items: center; /* Öğeleri dikeyde ortala */
+        cursor: pointer;
+        padding: 12px 15px; /* Mevcut padding'i koru */
+        background: #eaf2f8; /* Daha açık bir arka plan */
+        color: #1e3c72;
+        border-radius: 8px;
+        margin-bottom: 5px;
+        border: 1px solid #d0e7f7;
+        font-weight: 600;
+        }
+        .transaction-history .accordion-header::after {
+        content: none !important; /* Ok işaretini kaldır */
+        }
+        .transaction-history .accordion-header::before {
+        content: ''; /* Varsayılan olarak boş içerik (eğer has-children yoksa) */
+        margin-right: 0; /* Varsayılan olarak boşluk yok */
+        font-size: 1.2em; /* İşaretin boyutu */
+        color: #1e3c72; /* İşaretin rengi */
+        transition: content 0.3s ease, transform 0.3s ease; /* İçerik ve dönüşüm için geçiş efekti */
+        flex-shrink: 0; /* Küçülmesini engelle */
+        width: 0; /* Varsayılan olarak genişlik yok */
+        text-align: center; /* Ortala */
+        }
+        .transaction-history .accordion-header.has-children::before {
+        content: '+'; /* Varsayılan olarak + işareti */
+        margin-right: 10px; /* İşaret ile metin arasına boşluk */
+        width: 1em; /* İşaret için sabit bir genişlik ver (metin kaymasını engeller) */
+        }
+        .transaction-history .accordion-header.has-children.active::before {
+        content: '−'; /* Aktif olduğunda - işareti */
         }
         .transaction-history .accordion-header:hover {
             background: #d8edf7;
         }
 
-        .transaction-history .accordion-header .transaction-type {
+        .transaction-history .accordion-header .transaction-type, .transaction-history .accordion-header .transaction-meta 
+        {
             flex-grow: 1; /* Başlığın genişlemesini sağlar */
         }
 
