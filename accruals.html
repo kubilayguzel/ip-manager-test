@@ -375,15 +375,17 @@
                 }
 
                 init() {
-                            this.currentUser = authService.getCurrentUser();
-                                if (!this.currentUser) {
-                                    console.error('DEBUG: currentUser bulunamadı, ancak layout-loader yönlendirmedi.');
-                                    window.location.href = 'index.html'; // Yine de yedek olarak yönlendirme yapabiliriz.
-                                return;
-                                }
-                            await this.loadPersons();
-                            this.setupEventListeners();
-                    };
+
+                    this.currentUser = authService.getCurrentUser(); // currentUser'ı doğrudan al
+                    if (!this.currentUser) {
+                        console.error('DEBUG: currentUser bulunamadı, ancak layout-loader yönlendirmedi.');
+                        window.location.href = 'index.html'; // Yine de yedek olarak yönlendirme yapabiliriz.
+                        return;
+                    }
+
+                    await this.loadPersons();
+                    this.setupEventListeners();
+                    }
                 }
 
                 // updateUserInfo() { /* Bu fonksiyon artık layout-loader.js içinde */ }
