@@ -905,10 +905,6 @@
                             if (target.classList.contains('edit-accrual-btn')) {
                                 console.log('DEBUG: Tahakkuk düzenleme modalı açılıyor');
                                 this.showAccrualModal('edit', accrualId);
-                            } else if (target.classList.contains('delete-accrual-btn')) {
-                                this.deleteAccrual(accrualId);
-                            } else if (target.classList.contains('mark-paid-accrual-btn')) {
-                                this.markAccrualPaid(accrualId);
                             }
                         });
                     }
@@ -1135,9 +1131,7 @@
                             </div>
                             <div class="accrual-card-actions">
                                 <button class="action-btn edit-accrual-btn" data-id="${accrual.id}">Düzenle</button>
-                                <button class="action-btn delete-accrual-btn" data-id="${accrual.id}">Sil</button>
-                                <button class="action-btn mark-paid-accrual-btn" data-id="${accrual.id}" ${accrual.status === 'paid' ? 'disabled' : ''}>Ödendi</button>
-                            </div>
+                               </div>
                         `;
                         container.appendChild(accrualElement);
                     });
@@ -1415,33 +1409,7 @@
                         console.error('Tahakkuk kaydetme hatası:', error); // Detaylı hata logu
                     }
                 }
-
-                async deleteAccrual(accrualId) {
-                    if (confirm('Bu tahakkuku silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.')) {
-                        const deleteResult = await accrualService.deleteAccrual(accrualId);
-                        if (deleteResult.success) {
-                            showNotification('Tahakkuk başarıyla silindi.', 'success');
-                            await this.loadAccrualsForTask(); // Reload data
-                        } else {
-                            showNotification('Tahakkuk silinirken hata oluştu: ' + deleteResult.error, 'error');
-                            console.error('Tahakkuk silme hatası:', deleteResult.error); // Detaylı hata logu
-                        }
-                    }
-                }
-
-                async markAccrualPaid(accrualId) {
-                    if (confirm('Bu tahakkuku ödendi olarak işaretlemek istediğinizden emin misiniz?')) {
-                        const result = await accrualService.updateAccrual(accrualId, { status: 'paid', paymentDate: new Date().toISOString() });
-                        if (result.success) {
-                            showNotification('Tahakkuk ödendi olarak işaretlendi.', 'success');
-                            await this.loadAccrualsForTask(); // Reload data
-                        } else {
-                            showNotification('Tahakkuk güncellenirken hata oluştu: ' + result.error, 'error');
-                            console.error('Tahakkuk ödendi olarak işaretleme hatası:', result.error); // Detaylı hata logu
-                        }
-                    }
-                }
-                
+             
                 // Document (File) Handling
                 handleTaskDocumentsUpload(files) {
                     for (const file of files) {
