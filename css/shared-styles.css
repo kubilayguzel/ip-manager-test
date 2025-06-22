@@ -1293,12 +1293,8 @@ button.action-btn[data-action="edit"]:hover {
 .modal-content-lg .form-container,
 .modal-content form .form-container {
     display: grid !important;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)) !important;
-    gap: 20px !important;
-    width: 100% !important;
-    margin-bottom: 20px;
-}
-
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)) !important;
+    
 /* Tahakkuk modallarındaki spesifik form düzenlemesi */
 #editAccrualModal .form-container,
 #markPaidModal .modal-body-content,
