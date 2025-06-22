@@ -608,6 +608,10 @@ button.action-btn[data-action="edit"]:hover {
     width: 100%;
 }
 
+.modal-detail-item.full-width {
+  grid-column: 1 / -1;
+}
+
 .detail-item, .modal-detail-item {
     margin-bottom: 10px;
 }
