@@ -376,6 +376,11 @@
 
                 init() {
                             this.currentUser = authService.getCurrentUser();
+                                if (!this.currentUser) {
+                                    console.error('DEBUG: currentUser bulunamadı, ancak layout-loader yönlendirmedi.');
+                                    window.location.href = 'index.html'; // Yine de yedek olarak yönlendirme yapabiliriz.
+                                return;
+                                }
                             await this.loadAllData();
                             this.setupEventListeners();
                     };
