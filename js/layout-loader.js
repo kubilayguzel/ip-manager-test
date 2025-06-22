@@ -66,10 +66,7 @@ export async function loadSharedLayout(options = {}) {
         const response = await fetch('shared_layout_parts.html');
         if (!response.ok) throw new Error('shared_layout_parts.html could not be loaded.');
         placeholder.innerHTML = await response.text();
-        console.log('DEBUG: shared_layout_parts.html içeriği yüklendi.'); // Yeni log
-
         const user = authService.getCurrentUser();
-        console.log('DEBUG: Mevcut kullanıcı:', user); // user objesini kontrol et
             if (!user && window.top === window) {
                 window.location.href = 'index.html';
                 return;
@@ -78,20 +75,14 @@ export async function loadSharedLayout(options = {}) {
         const userRole = user.role || 'user';
         
  const userNameEl = document.getElementById('userName');
-        console.log('DEBUG: userNameEl:', userNameEl); // Bu log sizden geldi.
         if (userNameEl) {
             userNameEl.textContent = user.displayName || user.email.split('@')[0];
         }
-        
-        // Burası sorunlu olan bölüm. Lütfen bu 3 satırı dikkatlice kontrol edin veya doğrudan yapıştırın.
         const userRoleEl = document.getElementById('userRole');
-        console.log('DEBUG: userRoleEl:', userRoleEl); // Bu log sizden geldi.
         if (userRoleEl) {
             userRoleEl.textContent = user.role.charAt(0).toUpperCase() + user.role.slice(1);
         }
-
         const userAvatarEl = document.getElementById('userAvatar');
-        console.log('DEBUG: userAvatarEl:', userAvatarEl); // Bu log sizden geldi.
         if (userAvatarEl) {
             userAvatarEl.textContent = (user.displayName || user.email.charAt(0)).charAt(0).toUpperCase();
         }
