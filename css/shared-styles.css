@@ -25,9 +25,10 @@ body {
 }
 
 .main-container {
-    max-width: 100% !important; /* Tam genişlikte olmasını sağlar ve diğer stilleri ezer */
-    margin: 0 !important;       /* Yatayda otomatik marjini kaldırır ve diğer stilleri ezer */
-    padding: 30px; /* İç padding'i korur veya ayarlar */
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 30px; /* Mevcut padding değerini koru */
+    padding-top: 80px; /* Bu satırı ekleyin veya güncelleyin */
 }
 
 /* Sol Menü (Sidebar) */
