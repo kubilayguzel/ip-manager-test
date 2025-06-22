@@ -9,19 +9,32 @@
         /* Bu sayfaya özel stiller */
         /* Genel body, page-wrapper, main-container stilleri shared-styles.css'ten gelecektir. */
         /* Sadece bu sayfaya özgü ve çakışmayan stilleri burada tutun */
+        
+        /* Aşağıdaki body ve page-wrapper kurallarını silin */
+        /*
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             color: #333;
             display: flex;
-            overflow: hidden; /* DİKEY VE YATAY KAYDIRMA ÇUBUKLARINI GİZLE */
+            overflow: hidden;
         }
         .page-wrapper {
             flex-grow: 1; display: flex; flex-direction: column;
-            height: 100vh; overflow-y: auto; /* page-wrapper içinde içerik taşarsa kaydırma çubuğu görünecek */
+            height: 100vh; overflow-y: auto;
             background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
         }
-        .main-container { width: 100%; padding: 30px; margin: 0; }
-        /* body > .header { display: none; } /* Bu zaten body dışındaydı, tutmaya gerek yok */
+        */
+
+        /* main-container kuralını aşağıdaki gibi güncelleyin */
+        .main-container {
+            width: 100%; /* Bu kalsın, shared-styles.css'teki width'i ezer */
+            /* padding: 30px; /* BU SATIRI SİLİN */
+            margin: 0; /* Bu kalsın, shared-styles.css'teki margin'i ezer */
+        }
+        
+        /* Diğer data-entry.html'ye özgü stiller burada kalacak */
+        /* ... (örneğin .page-header, .form-container, .form-grid vb. stiller) ... */
+
         .page-header { background: rgba(255, 255, 255, 0.95); padding: 30px; border-radius: 20px; margin-bottom: 30px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1); }
         .page-title { font-size: 2em; color: #1e3c72; margin-bottom: 10px; }
         .page-subtitle { color: #666; font-size: 1.1em; }
@@ -81,7 +94,6 @@
         .image-upload-area { border: 2px dashed #e1e8ed; border-radius: 10px; padding: 30px; text-align: center; cursor: pointer; }
         .image-preview { max-width: 200px; max-height: 200px; margin-top: 15px; border-radius: 10px; border: 2px solid #e1e8ed; }
 
-        /* Transaction alanı stilleri (data-entry'e özgü) */
         #transactionsContainer .transaction-entry {
             display: flex;
             flex-wrap: wrap;
@@ -91,11 +103,11 @@
             padding: 10px;
             border-radius: 5px;
             background-color: #f8f9fa;
-            align-items: flex-end; /* Butonların altta hizalanması için */
+            align-items: flex-end;
         }
         #transactionsContainer .transaction-entry > div {
             flex: 1;
-            min-width: 150px; /* Küçük ekranlarda sarması için */
+            min-width: 150px;
         }
         #transactionsContainer .transaction-entry input,
         #transactionsContainer .transaction-entry select,
@@ -114,7 +126,7 @@
             border-radius: 5px;
             cursor: pointer;
             font-size: 0.8em;
-            white-space: nowrap; /* Buton metninin sığması için */
+            white-space: nowrap;
         }
         #transactionsContainer .remove-transaction-btn:hover {
             background-color: #c82333;
