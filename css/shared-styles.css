@@ -1383,8 +1383,8 @@ button.action-btn[data-action="edit"]:hover {
     }
 }
 
-/* Debugging için - geçici olarak background renkler (test için) */
-/*
+ Debugging için - geçici olarak background renkler (test için) */
+
 .modal-content .form-container {
     background-color: rgba(255, 0, 0, 0.1) !important;
     border: 2px dashed red !important;
@@ -1394,4 +1394,3 @@ button.action-btn[data-action="edit"]:hover {
     background-color: rgba(0, 255, 0, 0.1) !important;
     border: 1px solid green !important;
 }
-*/
