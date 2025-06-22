@@ -605,6 +605,7 @@ button.action-btn[data-action="edit"]:hover {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(1200px, 1fr));
     gap: 15px 25px;
+    width: 100%;
 }
 
 .detail-item, .modal-detail-item {
