@@ -77,16 +77,25 @@ export async function loadSharedLayout(options = {}) {
 
         const userRole = user.role || 'user';
         
-        const userNameEl = document.getElementById('userName');
-        console.log('DEBUG: userNameEl:', userNameEl); // Elementin bulunup bulunmadığını kontrol et
-        if (userNameEl) userNameEl.textContent = user.displayName || user.email.split('@')[0];
-        console.log('DEBUG: userRoleEl:', userRoleEl); // Elementin bulunup bulunmadığını kontrol et
+ const userNameEl = document.getElementById('userName');
+        console.log('DEBUG: userNameEl:', userNameEl); // Bu log sizden geldi.
+        if (userNameEl) {
+            userNameEl.textContent = user.displayName || user.email.split('@')[0];
+        }
+        
+        // Burası sorunlu olan bölüm. Lütfen bu 3 satırı dikkatlice kontrol edin veya doğrudan yapıştırın.
         const userRoleEl = document.getElementById('userRole');
-        if (userRoleEl) userRoleEl.textContent = user.role.charAt(0).toUpperCase() + user.role.slice(1);
-        console.log('DEBUG: userRoleEl:', userRoleEl); // Elementin bulunup bulunmadığını kontrol et
+        console.log('DEBUG: userRoleEl:', userRoleEl); // Bu log sizden geldi.
+        if (userRoleEl) {
+            userRoleEl.textContent = user.role.charAt(0).toUpperCase() + user.role.slice(1);
+        }
+
         const userAvatarEl = document.getElementById('userAvatar');
-        if (userAvatarEl) userAvatarEl.textContent = (user.displayName || user.email.charAt(0)).charAt(0).toUpperCase();
-        console.log('DEBUG: userAvatarEl:', userAvatarEl); // Elementin bulunup bulunmadığını kontrol et
+        console.log('DEBUG: userAvatarEl:', userAvatarEl); // Bu log sizden geldi.
+        if (userAvatarEl) {
+            userAvatarEl.textContent = (user.displayName || user.email.charAt(0)).charAt(0).toUpperCase();
+        }
+
         const sidebarNav = document.querySelector('.sidebar-nav');
         if(sidebarNav) {
             renderMenu(sidebarNav, activeMenuLink, userRole);
@@ -97,15 +106,13 @@ export async function loadSharedLayout(options = {}) {
         const logoutBtn = document.getElementById('logoutBtn');
         if (logoutBtn) logoutBtn.addEventListener('click', (e) => { e.preventDefault(); authService.signOut(); });
 
-        // Akordiyon menü ve aktif menü belirleme mantığı
         setupMenuInteractions(activeMenuLink);
 
     } catch (error) {
         console.error('Error loading shared layout:', error);
-        // Hata durumunda kullanıcıya bilgi verebiliriz
         const errorDiv = document.createElement('div');
         errorDiv.style.cssText = 'padding: 20px; background-color: #f8d7da; color: #721c24; border-radius: 8px; margin: 20px;';
-        errorDiv.textContent = 'Uygulama arayüzü yüklenirken bir hata oluştu. Lütfen sayfayı yenileyin.';
+        errorDiv.textContent = 'Uygulama arayüzü yüklenirken bir hata oluştu. Lütfen sayfayı yenilemeyi deneyin.';
         document.body.prepend(errorDiv);
     }
 }
