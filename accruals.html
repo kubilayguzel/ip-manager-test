@@ -375,11 +375,10 @@
                 }
 
                 init() {
-                    authService.auth.onAuthStateChanged(async user => {
                             this.currentUser = authService.getCurrentUser();
                             await this.loadAllData();
                             this.setupEventListeners();
-                    });
+                    };
                 }
 
                 // updateUserInfo() { /* Bu fonksiyon artık layout-loader.js içinde */ }
