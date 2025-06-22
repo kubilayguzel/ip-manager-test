@@ -1283,3 +1283,115 @@ button.action-btn[data-action="edit"]:hover {
     justify-self: center;
     margin: 20px 0;
 }
+/* ========================================
+   MODAL FORM DÜZENLEMESİ EK KURALLAR
+   Bu CSS kodlarını shared-styles.css dosyasının sonuna ekleyin
+======================================== */
+
+/* Modal body içindeki form alanları için grid düzeni - GÜÇLENDİRİLMİŞ */
+.modal-content .form-container,
+.modal-content-lg .form-container,
+.modal-content form .form-container {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)) !important;
+    gap: 20px !important;
+    width: 100% !important;
+    margin-bottom: 20px;
+}
+
+/* Tahakkuk modallarındaki spesifik form düzenlemesi */
+#editAccrualModal .form-container,
+#markPaidModal .modal-body-content,
+#viewAccrualDetailModal .modal-detail-grid {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)) !important;
+    gap: 20px !important;
+    width: 100% !important;
+}
+
+/* Form grupları tam genişlik kullanma */
+.modal-content .form-group,
+.modal-content-lg .form-group {
+    width: 100% !important;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+/* Full-width sınıfı için tam genişlik */
+.modal-content .form-group.full-width,
+.modal-content-lg .form-group.full-width {
+    grid-column: 1 / -1 !important;
+}
+
+/* Input ve select'lerin tam genişlik kullanması */
+.modal-content .form-input,
+.modal-content .form-select,
+.modal-content .form-textarea,
+.modal-content-lg .form-input,
+.modal-content-lg .form-select,
+.modal-content-lg .form-textarea {
+    width: 100% !important;
+    box-sizing: border-box;
+}
+
+/* Özel input grupları için düzenleme */
+.modal-content .input-with-currency,
+.modal-content-lg .input-with-currency {
+    display: flex !important;
+    gap: 10px;
+    width: 100%;
+}
+
+.modal-content .input-with-currency .form-input,
+.modal-content-lg .input-with-currency .form-input {
+    flex-grow: 1;
+}
+
+/* Checkbox grupları için özel düzenleme */
+.modal-content .checkbox-label,
+.modal-content-lg .checkbox-label {
+    display: flex !important;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+}
+
+/* Search result alanları için tam genişlik */
+.modal-content .search-results-list,
+.modal-content .search-result-display,
+.modal-content-lg .search-results-list,
+.modal-content-lg .search-result-display {
+    width: 100% !important;
+    grid-column: 1 / -1;
+}
+
+/* Toplam tutar display için */
+.modal-content .total-amount-display,
+.modal-content-lg .total-amount-display {
+    width: 100% !important;
+    box-sizing: border-box;
+}
+
+/* Responsive düzenlemeler */
+@media (max-width: 768px) {
+    .modal-content .form-container,
+    .modal-content-lg .form-container,
+    #editAccrualModal .form-container {
+        grid-template-columns: 1fr !important;
+        gap: 15px !important;
+    }
+}
+
+/* Debugging için - geçici olarak background renkler (test için) */
+/*
+.modal-content .form-container {
+    background-color: rgba(255, 0, 0, 0.1) !important;
+    border: 2px dashed red !important;
+}
+
+.modal-content .form-group {
+    background-color: rgba(0, 255, 0, 0.1) !important;
+    border: 1px solid green !important;
+}
+*/
