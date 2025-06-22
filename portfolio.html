@@ -334,6 +334,40 @@
             overflow-y: auto;
             box-sizing: border-box;
         }
+        .transaction-history .accordion-header {
+            background: #eaf2f8; /* Daha açık bir arka plan */
+            color: #1e3c72;
+            padding: 12px 15px;
+            border-radius: 8px;
+            margin-bottom: 5px;
+            border: 1px solid #d0e7f7;
+            font-weight: 600;
+        }
+        .transaction-history .accordion-header:hover {
+            background: #d8edf7;
+        }
+
+        .transaction-history .accordion-header .transaction-type {
+            flex-grow: 1; /* Başlığın genişlemesini sağlar */
+        }
+
+        .transaction-history .accordion-content {
+            padding: 10px 15px 5px 15px;
+            background: #fdfefe;
+            border: 1px solid #e1e8ed;
+            border-top: none;
+            border-radius: 0 0 8px 8px;
+            margin-bottom: 10px;
+        }
+
+        .transaction-history .transaction-item {
+            border-bottom: 1px dashed #f0f0f0;
+            padding: 8px 0;
+        }
+
+        .transaction-history .transaction-item:last-child {
+            border-bottom: none;
+        }
         @keyframes animatetop { from {top: -300px; opacity: 0} to {top: 0; opacity: 1} }
         .close-modal-btn { color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer; }
         .modal-title { font-size: 1.5em; color: #1e3c72; margin-bottom: 20px;}
