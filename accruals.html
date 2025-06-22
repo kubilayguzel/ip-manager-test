@@ -376,14 +376,9 @@
 
                 init() {
                     authService.auth.onAuthStateChanged(async user => {
-                        if (user || authService.getCurrentUser()) {
                             this.currentUser = authService.getCurrentUser();
-                            // this.updateUserInfo(); // Bu artık layout-loader tarafından yapılıyor
                             await this.loadAllData();
                             this.setupEventListeners();
-                        } else {
-                            window.location.href = 'index.html';
-                        }
                     });
                 }
 
