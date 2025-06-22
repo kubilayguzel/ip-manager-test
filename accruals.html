@@ -318,34 +318,40 @@
     </div>
 
     <div class="modal" id="viewAccrualDetailModal">
-        <div class="modal-content">
-            <span class="close-modal-btn" id="closeViewAccrualDetailModal">&times;</span>
-            <h3 class="modal-title" id="viewAccrualTitle">Tahakkuk Detayı</h3>
-            <div class="modal-body-content">
-                <div class="modal-detail-grid">
-                    <div class="modal-detail-item"><div class="modal-detail-label">Tahakkuk ID</div><div class="modal-detail-value" id="viewAccrualId"></div></div>
-                    <div class="modal-detail-item"><div class="modal-detail-label">Durum</div><div class="modal-detail-value" id="viewAccrualStatus"></div></div>
-                    <div class="modal-detail-item"><div class="modal-detail-label">İlgili İş</div><div class="modal-detail-value" id="viewAccrualRelatedTask"></div></div>
-                    <div class="modal-detail-item"><div class="modal-detail-label">Resmi Ücret</div><div class="modal-detail-value" id="viewAccrualOfficialFee"></div></div>
-                    <div class="modal-detail-item"><div class="modal-detail-label">Hizmet Bedeli</div><div class="modal-detail-value" id="viewAccrualServiceFee"></div></div>
-                    <div class="modal-detail-item"><div class="modal-detail-label">KDV Oranı</div><div class="modal-detail-value" id="viewAccrualVatRate"></div></div>
-                    <div class="modal-detail-item"><div class="modal-detail-label">Resmi Ücrete KDV Uygula</div><div class="modal-detail-value" id="viewAccrualApplyVatToOfficial"></div></div>
-                    <div class="modal-detail-item"><div class="modal-detail-label">Toplam Tutar</div><div class="modal-detail-value" id="viewAccrualTotalAmount"></div></div>
-                    <div class="modal-detail-item full-width"><div class="modal-detail-label">Türk Patent Faturası Tarafı</div><div class="modal-detail-value" id="viewAccrualTpInvoiceParty"></div></div>
-                    <div class="modal-detail-item full-width"><div class="modal-detail-label">Hizmet Faturası Tarafı</div><div class="modal-detail-value" id="viewAccrualServiceInvoiceParty"></div></div>
-                    <div class="modal-detail-item full-width"><div class="modal-detail-label">Oluşturulma Tarihi</div><div class="modal-detail-value" id="viewAccrualCreatedAt"></div></div>
-                    <div class="modal-detail-item full-width"><div class="modal-detail-label">Ödeme Tarihi</div><div class="modal-detail-value" id="viewAccrualPaymentDate"></div></div>
-                    <h4 class="modal-detail-section-title">Belgeler</h4>
-                    <div class="modal-detail-item full-width" id="viewAccrualFiles">
-                        <ul class="document-list" id="viewAccrualDocumentList">
-                            <li style="text-align: center; color: #666; padding: 10px;">Henüz belge yok.</li>
-                        </ul>
-                    </div>
+    <div class="modal-content">
+        <span class="close-modal-btn" id="closeViewAccrualDetailModal">&times;</span>
+        <h3 class="modal-title" id="viewAccrualTitle">Tahakkuk Detayı</h3>
+        <div class="modal-body-content">
+            <div class="modal-detail-grid">
+                <div class="modal-detail-item"><div class="modal-detail-label">Tahakkuk ID</div><div class="modal-detail-value" id="viewAccrualId"></div></div>
+                <div class="modal-detail-item"><div class="modal-detail-label">Durum</div><div class="modal-detail-value" id="viewAccrualStatus"></div></div>
+                
+                <div class="modal-detail-item full-width"><div class="modal-detail-label">İlgili İş</div><div class="modal-detail-value" id="viewAccrualRelatedTask"></div></div>
+                
+                <div class="modal-detail-item"><div class="modal-detail-label">Resmi Ücret</div><div class="modal-detail-value" id="viewAccrualOfficialFee"></div></div>
+                <div class="modal-detail-item"><div class="modal-detail-label">Hizmet Bedeli</div><div class="modal-detail-value" id="viewAccrualServiceFee"></div></div>
+                
+                <div class="modal-detail-item"><div class="modal-detail-label">KDV Oranı</div><div class="modal-detail-value" id="viewAccrualVatRate"></div></div>
+                <div class="modal-detail-item"><div class="modal-detail-label">Resmi Ücrete KDV Uygula</div><div class="modal-detail-value" id="viewAccrualApplyVatToOfficial"></div></div>
+                
+                <div class="modal-detail-item"><div class="modal-detail-label">Toplam Tutar</div><div class="modal-detail-value" id="viewAccrualTotalAmount"></div></div>
+                
+                <div class="modal-detail-item full-width"><div class="modal-detail-label">Türk Patent Faturası Tarafı</div><div class="modal-detail-value" id="viewAccrualTpInvoiceParty"></div></div>
+                <div class="modal-detail-item full-width"><div class="modal-detail-label">Hizmet Faturası Tarafı</div><div class="modal-detail-value" id="viewAccrualServiceInvoiceParty"></div></div>
+                
+                <div class="modal-detail-item"><div class="modal-detail-label">Oluşturulma Tarihi</div><div class="modal-detail-value" id="viewAccrualCreatedAt"></div></div>
+                <div class="modal-detail-item"><div class="modal-detail-label">Ödeme Tarihi</div><div class="modal-detail-value" id="viewAccrualPaymentDate"></div></div>
+                
+                <h4 class="modal-detail-section-title">Belgeler</h4>
+                <div class="modal-detail-item full-width" id="viewAccrualFiles">
+                    <ul class="document-list" id="viewAccrualDocumentList">
+                        <li style="text-align: center; color: #666; padding: 10px;">Henüz belge yok.</li>
+                    </ul>
                 </div>
             </div>
         </div>
     </div>
-
+</div>
     <script type="module">
     import { authService, accrualService, taskService, ipRecordsService, personService, auth, generateUUID } from './firebase-config.js';
     import { showNotification, formatFileSize, readFileAsDataURL } from './utils.js';
