@@ -11,7 +11,7 @@ body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     color: #333;
     display: flex;
-    min-height: 100vh; /* Body'nin tüm ekranı kaplamasını sağlar */
+    min-height: 100vh; /* Tam yüksekliği kaplar */
 }
 
 /* Ana Sayfa Yapısı */
@@ -19,16 +19,16 @@ body {
     flex-grow: 1;
     display: flex;
     flex-direction: column;
-    height: 100vh;
-    overflow-y: auto;
+    /* height: 100vh; /* BU SATIRI KALDIRIN VEYA YORUM SATIRI YAPIN */
+    overflow-y: auto; /* Kendi içeriği için kaydırma çubuğu */
     background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
 }
 
 .main-container {
     max-width: 100% !important;
     margin: 0 !important;
-    padding: 30px; /* Mevcut padding değerini koru */
-    padding-top: 120px; /* Bu satırı ekleyin veya güncelleyin */
+    padding: 30px; /* Mevcut padding değerlerini (sol, sağ, alt) koru */
+    padding-top: 120px; /* Üst barın ve boşluğun toplam yüksekliği */
 }
 
 /* Sol Menü (Sidebar) */
@@ -167,7 +167,7 @@ body {
     padding: 15px 30px;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
     display: flex;
-    justify-content: space-between; /* Breadcrumb ve user-section'ı ayırmak için */
+    justify-content: space-between;
     align-items: center;
     position: fixed; /* Sayfayla kaymamasını sağlar */
     width: calc(100% - 280px); /* Sidebar genişliğini düş */
@@ -175,8 +175,6 @@ body {
     top: 0;
     z-index: 999; /* En üstte kalması için yüksek z-index */
     backdrop-filter: blur(10px);
-
-    /* Yeni eklenen satır: Minimum yükseklik belirle */
     min-height: 70px; /* Avatar (40px) + üst padding (15px) + alt padding (15px) */
 }
 
