@@ -66,8 +66,10 @@ export async function loadSharedLayout(options = {}) {
         const response = await fetch('shared_layout_parts.html');
         if (!response.ok) throw new Error('shared_layout_parts.html could not be loaded.');
         placeholder.innerHTML = await response.text();
+        console.log('DEBUG: shared_layout_parts.html içeriği yüklendi.'); // Yeni log
 
         const user = authService.getCurrentUser();
+        console.log('DEBUG: Mevcut kullanıcı:', user); // user objesini kontrol et
             if (!user && window.top === window) {
                 window.location.href = 'index.html';
                 return;
@@ -76,13 +78,15 @@ export async function loadSharedLayout(options = {}) {
         const userRole = user.role || 'user';
         
         const userNameEl = document.getElementById('userName');
+        console.log('DEBUG: userNameEl:', userNameEl); // Elementin bulunup bulunmadığını kontrol et
         if (userNameEl) userNameEl.textContent = user.displayName || user.email.split('@')[0];
+        console.log('DEBUG: userRoleEl:', userRoleEl); // Elementin bulunup bulunmadığını kontrol et
         const userRoleEl = document.getElementById('userRole');
         if (userRoleEl) userRoleEl.textContent = user.role.charAt(0).toUpperCase() + user.role.slice(1);
-
+        console.log('DEBUG: userRoleEl:', userRoleEl); // Elementin bulunup bulunmadığını kontrol et
         const userAvatarEl = document.getElementById('userAvatar');
         if (userAvatarEl) userAvatarEl.textContent = (user.displayName || user.email.charAt(0)).charAt(0).toUpperCase();
-
+        console.log('DEBUG: userAvatarEl:', userAvatarEl); // Elementin bulunup bulunmadığını kontrol et
         const sidebarNav = document.querySelector('.sidebar-nav');
         if(sidebarNav) {
             renderMenu(sidebarNav, activeMenuLink, userRole);
