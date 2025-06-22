@@ -1536,25 +1536,6 @@
                 }
             }
 
-            // `accrualService`'e `deleteAccrual` metodunu ekle
-            // Bu kısım firebase-config.js dosyasında yapılmalı, ancak geçici olarak burada simüle edebiliriz.
-            // Gerçek projede bunu firebase-config.js içine eklemelisin.
-            if (!accrualService.deleteAccrual) {
-                console.warn("DEBUG: accrualService.deleteAccrual metodu firebase-config.js içinde tanımlı değil. Simüle ediliyor.");
-                accrualService.deleteAccrual = async (accrualId) => {
-                    // Firebase'den silme işlemi için Firestore deleteDoc kullanılmalı
-                    // import { deleteDoc, doc } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore.js";
-                    // try {
-                    //     await deleteDoc(doc(db, 'accruals', accrualId));
-                    //     return { success: true };
-                    // } catch (error) {
-                    //     return { success: false, error: error.message };
-                    // }
-                    console.warn(`DEBUG: accrualService.deleteAccrual henüz tanımlı değil. Tahakkuk ID: ${accrualId} silindi olarak simüle edildi.`);
-                    return { success: true, message: "Simüle edilmiş silme." }; // Simülasyon
-                };
-            }
-
             const taskDetailModule = new TaskDetailModule();
             taskDetailModule.init();
             window.taskDetailModule = taskDetailModule; // Debug için global'e ekle
