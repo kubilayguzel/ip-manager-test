@@ -168,9 +168,11 @@ body {
     display: flex;
     justify-content: space-between; /* İçeriği iki yana yasla */
     align-items: center;
-    position: sticky;
+    position: fixed; /* sticky yerine fixed kullanıyoruz */
+    width: calc(100% - 280px); /* Sidebar genişliği kadar sağa kaydır */
+    left: 280px; /* Sidebar genişliği kadar boşluk bırak */
     top: 0;
-    z-index: 99; /* Sayfa içeriğinin üstünde */
+    z-index: 999; /* Diğer elementlerin kesinlikle üzerinde olması için daha yüksek bir z-index */
     backdrop-filter: blur(10px); /* Hafif bulanıklık efekti */
 }
 
