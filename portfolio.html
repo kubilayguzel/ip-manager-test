@@ -368,6 +368,35 @@
         .transaction-history .transaction-item:last-child {
             border-bottom: none;
         }
+        /* portfolio.html veya shared-styles.css */
+
+        /* Sadece çocukları olan akordeon başlıkları için özel işaret */
+        .transaction-history .accordion-header.has-children::after {
+            content: '+'; /* Başlangıçta + işareti */
+            font-size: 1.2em; /* İşaretin boyutunu ayarla */
+            transform: rotate(0deg); /* Normal duruş */
+            transition: transform 0.3s ease; /* Dönüşüm animasyonu */
+        }
+
+        /* Akordeon aktifken işaretin dönüşümü */
+        .transaction-history .accordion-header.has-children.active::after {
+            content: '−'; /* Açıkken - işareti */
+            transform: rotate(0deg); /* Bu durumda dönüşüme gerek yok, düz çizgi */
+        }
+
+        /* Eğer çocukları olmayan akordeonlarda da işaret varsa onu kaldırabiliriz */
+        .transaction-history .accordion-header:not(.has-children)::after {
+            content: ''; /* Çocukları olmayanlarda işareti kaldır */
+        }
+
+        /* Mevcut menü akordeonları için `▶` işaretini korumak için */
+        .sidebar-nav .accordion-header::after {
+            content: '▶'; /* Sidebar menüsündeki varsayılan oku koru */
+        }
+
+        .sidebar-nav .accordion-header.active::after {
+            transform: rotate(90deg); /* Sidebar menüsündeki oku döndür */
+        }
         @keyframes animatetop { from {top: -300px; opacity: 0} to {top: 0; opacity: 1} }
         .close-modal-btn { color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer; }
         .modal-title { font-size: 1.5em; color: #1e3c72; margin-bottom: 20px;}
