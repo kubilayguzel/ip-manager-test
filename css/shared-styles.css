@@ -27,8 +27,8 @@ body {
 .main-container {
     max-width: 100% !important;
     margin: 0 !important;
-    padding: 30px; /* Mevcut padding değerini koru */
-    padding-top: 80px; /* Bu satırı ekleyin veya güncelleyin */
+    padding: 30px; /* Mevcut padding değerlerini (sol, sağ, alt) koru */
+    padding-top: 100px; /* Bu değeri 80px'ten 100px'e çıkarın */
 }
 
 /* Sol Menü (Sidebar) */
