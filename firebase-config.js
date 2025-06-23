@@ -525,10 +525,7 @@ async function getNextAccrualId() {
 
         if (counterDoc.exists()) {
             currentId = counterDoc.data().lastId || 0;
-        } else {
-            await setDoc(counterRef, { lastId: 0 }); // doküman yoksa oluşturur
-        }
-
+        } 
         const nextId = currentId + 1;
         await updateDoc(counterRef, { lastId: nextId });
 
