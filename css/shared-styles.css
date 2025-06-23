@@ -1007,8 +1007,8 @@ button.action-btn[data-action="edit"]:hover {
         border-radius: 8px !important;
         padding: 15px !important;
         margin: 15px 0 0 0 !important;
-        max-height: 300px !important;
-        overflow-y: auto !important;
+        max-height: none !important;
+        overflow-y: visible !important;
         box-sizing: border-box !important;
     }
 
