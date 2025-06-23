@@ -313,7 +313,7 @@
     </div>
     
     <script type="module">
-        import { authService, taskService, ipRecordsService, personService, auth } from './firebase-config.js';
+        import { authService, taskService, ipRecordsService, accrualService, personService, auth } from './firebase-config.js';
         import { showNotification } from './utils.js';
         import { loadSharedLayout } from './js/layout-loader.js'; // layout-loader.js eklendi
 
@@ -353,6 +353,8 @@
                         this.allTasks = tasksResult.success ? tasksResult.data : [];
                         this.allIpRecords = ipRecordsResult.success ? ipRecordsResult.data : [];
                         this.allPersons = personsResult.success ? personsResult.data : [];
+                        const accrualsResult = await accrualService.getAccruals();
+                        this.allAccruals = accrualsResult.success ? accrualsResult.data : [];
                         this.renderTasks();
                     } catch (error) {
                         showNotification('Veriler yüklenirken bir hata oluştu: ' + error.message, 'error');
@@ -472,7 +474,30 @@
                     const specificType = taskTypeParts.slice(1).join(' ').replace(/\b\w/g, l => l.toUpperCase());
 
                     const renderField = (label, value) => value ? `<div class="modal-detail-item"><div class="modal-detail-label">${label}</div><div class="modal-detail-value">${value}</div></div>` : '';
+const relatedAccruals = this.allAccruals ? this.allAccruals.filter(acc => acc.taskId === taskId) : [];
 
+                    let accrualsHtml = '';
+                    if(relatedAccruals.length > 0) {
+                        accrualsHtml = relatedAccruals.map(acc => {
+                            const statusText = acc.status === 'paid' ? 'Ödendi' : 'Ödenmedi';
+                            const statusClass = acc.status === 'paid' ? 'status-paid' : 'status-unpaid';
+                            const totalAmountText = new Intl.NumberFormat('tr-TR', { 
+                                style: 'currency', 
+                                currency: acc.totalAmountCurrency || 'TRY' 
+                            }).format(acc.totalAmount || 0);
+                            
+                            return `<div class="related-accrual-item">
+                                <div class="accrual-info">
+                                    <strong>ID:</strong> ${acc.id.substring(0,8)}... | 
+                                    <strong>Durum:</strong> <span class="status-badge ${statusClass}">${statusText}</span> | 
+                                    <strong>Tutar:</strong> ${totalAmountText}
+                                    ${acc.paymentDate ? ` | <strong>Ödeme Tarihi:</strong> ${new Date(acc.paymentDate).toLocaleDateString('tr-TR')}` : ''}
+                                </div>
+                            </div>`;
+                        }).join('');
+                    } else {
+                        accrualsHtml = '<p style="color: #666; font-style: italic;">Bu işe ait tahakkuk bulunmuyor.</p>';
+                    }
                     let historyHtml = '<p>İşlem geçmişi bulunmuyor.</p>';
                     if(task.history && task.history.length > 0) {
                         historyHtml = [...task.history].sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp)).map(entry => 
@@ -496,6 +521,8 @@
                                 <div class="modal-detail-label">Açıklama</div>
                                 <div class="modal-detail-value long-text">${task.description || '-'}</div>
                             </div>
+                            <h4 class="modal-detail-section-title">İlişkili Tahakkuklar</h4>
+                            <div class="related-accruals-section">${accrualsHtml}</div>
                             <h4 class="modal-detail-section-title">İşlem Geçmişi</h4>
                             <div class="task-history">${historyHtml}</div>
                         </div>
