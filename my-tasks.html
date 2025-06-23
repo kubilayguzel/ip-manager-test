@@ -290,7 +290,7 @@
                     <table class="tasks-table">
                         <thead>
                             <tr>
-                                <th>İş Başlığı</th>
+                                <th>İş No.</th>
                                 <th>İlgili Kayıt</th>
                                 <th>Tip</th>
                                 <th>Öncelik</th>
@@ -412,7 +412,7 @@
                         const specificType = taskTypeParts.slice(1).join(' ').replace(/\b\w/g, l => l.toUpperCase());
 
                         row.innerHTML = `
-                            <td>${task.title}</td>
+                            <td>${task.id}</td>
                             <td>${task.relatedIpRecordTitle || 'N/A'}</td>
                             <td>${mainType.charAt(0).toUpperCase() + mainType.slice(1)} - ${specificType}</td>
                             <td><span class="priority-badge ${priorityClass}">${task.priority}</span></td>
@@ -495,7 +495,7 @@
 
                         modalBody.innerHTML = `
                             <div class="modal-detail-grid">
-                                ${renderField('İş Başlığı', task.title)}
+                                ${renderField('İş No.', task.id)}
                                 ${renderField('Atanan Kişi', task.assignedTo_email)}
                                 ${renderField('İş Türü', `${mainType.charAt(0).toUpperCase() + mainType.slice(1)} - ${specificType}`)}
                                 ${renderField('Bitiş Tarihi', task.dueDate ? new Date(task.dueDate).toLocaleDateString('tr-TR') : '-')}
