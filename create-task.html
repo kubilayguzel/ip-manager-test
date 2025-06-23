@@ -382,7 +382,8 @@
                     </div>
                 `;
                 this.setupDynamicFormListeners();
-                this.populateAssignedToDropdown();
+                setTimeout(() => {this.populateAssignedToDropdown();
+                }, 0);
             }
 
             setupDynamicFormListeners() {
