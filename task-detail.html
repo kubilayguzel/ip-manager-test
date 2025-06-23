@@ -1513,18 +1513,21 @@
                     
                     const history = this.currentTask.history || [];
                     if (history.length === 0) {
-                        historyList.innerHTML = '<p style="text-align: center; color: #666; padding: 20px;">İşlem geçmişi bulunmamaktadır.</p>';
+                        historyList.innerHTML = '<p>İşlem geçmişi bulunmamaktadır.</p>';
                         return;
                     }
 
-                    // Tarihe göre ters sırala (en yeni en üstte)
                     const sortedHistory = [...history].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
                     sortedHistory.forEach(item => {
                         const historyItem = document.createElement('div');
                         historyItem.classList.add('history-item');
+                        
+                        // Uzun metinler için özel class
+                        const actionClass = item.action.length > 100 ? 'history-item-action long-text' : 'history-item-action';
+                        
                         historyItem.innerHTML = `
-                            <div class="history-item-action">${item.action}</div>
+                            <div class="${actionClass}">${item.action}</div>
                             <div class="history-item-meta">${new Date(item.timestamp).toLocaleString('tr-TR')} by ${item.userEmail}</div>
                         `;
                         historyList.appendChild(historyItem);
