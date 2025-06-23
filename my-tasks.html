@@ -462,7 +462,7 @@
                     if(task.history && task.history.length > 0) {
                         historyHtml = [...task.history].sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp)).map(entry => 
                             `<div class="task-history-item">
-                                <div class="task-history-description">${cleanHistoryAction(entry.action)}</div>
+                                <div class="task-history-description">${this.cleanHistoryAction(entry.action)}</div>
                                 <div class="task-history-meta">${new Date(entry.timestamp).toLocaleString('tr-TR')} by ${entry.userEmail}</div>
                             </div>`
                         ).join('');
