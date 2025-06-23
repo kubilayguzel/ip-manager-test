@@ -523,7 +523,7 @@
                         <td><input type="checkbox" class="row-checkbox" data-id="${accrual.id}" ${isSelected ? 'checked' : ''}></td>
                         <td><small>${accrual.id.substring(0, 8)}...</small></td>
                         <td><span class="status-badge ${statusClass}">${statusText}</span></td>
-                        <td><a href="#" class="task-detail-link" data-task-id="${accrual.taskId}">${accrual.taskTitle || 'İş Detayı'}</a></td>
+                        <td><a href="#" class="task-detail-link" data-task-id="${accrual.taskId}">${accrual.taskId || 'İş Detayı'}</a></td>
                         <td>${currencyFormatter(officialFee.amount, officialFee.currency)}</td>
                         <td>${currencyFormatter(serviceFee.amount, serviceFee.currency)}</td>
                         <td>${currencyFormatter(accrual.totalAmount || 0, accrual.totalAmountCurrency || 'TRY')}</td>
@@ -742,7 +742,7 @@
                 this.currentEditAccrual = { ...accrual }; 
                 
                 document.getElementById('editAccrualId').value = accrual.id;
-                document.getElementById('editAccrualTaskTitleDisplay').value = accrual.taskTitle || 'N/A';
+                document.getElementById('editAccrualTaskTitleDisplay').value = accrual.taskId || 'N/A';
 
                 document.getElementById('editOfficialFee').value = accrual.officialFee?.amount || 0;
                 document.getElementById('editOfficialFeeCurrency').value = accrual.officialFee?.currency || 'TRY';
@@ -991,7 +991,7 @@
                 document.getElementById('viewAccrualTitle').textContent = `Tahakkuk Detayı: ${accrual.id.substring(0,8)}...`;
                 document.getElementById('viewAccrualId').textContent = accrual.id;
                 document.getElementById('viewAccrualStatus').innerHTML = `<span class="status-badge status-${accrual.status}">${accrual.status === 'paid' ? 'Ödendi' : 'Ödenmedi'}</span>`;
-                document.getElementById('viewAccrualRelatedTask').textContent = accrual.taskTitle || 'N/A';
+                document.getElementById('viewAccrualRelatedTask').textContent = accrual.taskId || 'N/A';
                 
                 const currencyFormatter = (amount, currency) => new Intl.NumberFormat('tr-TR', { style: 'currency', currency: currency || 'TRY' }).format(amount);
 
