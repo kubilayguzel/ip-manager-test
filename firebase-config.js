@@ -527,13 +527,13 @@ async function getNextAccrualId() {
         const currentId = counterDoc.data().lastId || 0;
         const nextId = currentId + 1;
         
-        await updateDoc(counterRef, { lastId: nextId });
+        await setDoc(doc(db, 'counters', 'accruals'), { lastId: 0 });
         return nextId.toString();
         
-    } catch (error) {
-        console.error('Counter güncellenirken hata:', error);
-        return nextId.toString();
-    }
+        } catch (error) {
+            console.error('Counter güncellenirken hata:', error);
+            return 'error';
+        }
 }
 // --- Accrual Service ---
 export const accrualService = {
