@@ -528,8 +528,10 @@
                         <td>${currencyFormatter(serviceFee.amount, serviceFee.currency)}</td>
                         <td>${currencyFormatter(accrual.totalAmount || 0, accrual.totalAmountCurrency || 'TRY')}</td>
                         <td>
-                            <button class="action-btn view-btn" data-id="${accrual.id}">👁️</button>
-                            <button class="action-btn edit-btn" data-id="${accrual.id}" ${editButtonDisabled}>✏️</button>
+                        <td>
+                            <button class="action-btn view-btn" data-id="${accrual.id}">Görüntüle</button>
+                            <button class="action-btn edit-btn" data-id="${accrual.id}" ${editButtonDisabled}>Düzenle</button>
+                        </td>
                             </td>
                     `;
                     tableBody.appendChild(row);
