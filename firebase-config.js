@@ -519,24 +519,32 @@ async function getNextAccrualId() {
 
     try {
         const counterRef = doc(db, 'counters', 'accruals');
+
+        // Dokümanı oku
         const counterDoc = await getDoc(counterRef);
 
         let currentId = 0;
 
         if (counterDoc.exists()) {
-            currentId = counterDoc.data().lastId || 0;
+            const data = counterDoc.data();
+            if (data && typeof data.lastId === 'number') {
+                currentId = data.lastId;
+            }
         } else {
-            // 👇 Doküman yoksa Firestore'a ilk defa oluştur
+            // Doküman hiç yoksa başlat
             await setDoc(counterRef, { lastId: 0 });
             currentId = 0;
         }
 
         const nextId = currentId + 1;
-        await updateDoc(counterRef, { lastId: nextId });
+
+        // Güncelleme işlemi
+        await setDoc(counterRef, { lastId: nextId }, { merge: true });
 
         return nextId.toString();
+
     } catch (error) {
-        console.error('Tahakkuk ID üretim hatası:', error);
+        console.error('🔥 Tahakkuk ID üretim hatası:', error);
         return 'error';
     }
 }
