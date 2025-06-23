@@ -191,7 +191,13 @@
                     this.allIpRecords = ipRecordsResult.data || [];
                     this.allPersons = personsResult.data || [];
                     this.allUsers = usersResult.data || [];
-                    this.populateAssignedToDropdown();
+
+                    console.log('Kullanıcılar yüklendi:', this.allUsers.length);
+                    
+                    // DOM hazır olana kadar bekle
+                    setTimeout(() => {
+                        this.populateAssignedToDropdown();
+                    }, 500);
                 } catch (error) {
                     console.error("Veri yüklenirken hata oluştu:", error);
                     alert("Gerekli veriler yüklenemedi, lütfen sayfayı yenileyin.");
@@ -200,27 +206,24 @@
                 this.setupEventListeners();
             }
             populateAssignedToDropdown() {
+                console.log('populateAssignedToDropdown çağrıldı, kullanıcı sayısı:', this.allUsers.length);
+                
                 const assignedToSelect = document.getElementById('assignedTo');
                 if (!assignedToSelect) {
-                    console.log('assignedTo select elementi henüz yüklenmedi, tekrar denenecek...');
-                    // DOM hazır olmadıysa kısa bir süre sonra tekrar dene
-                    setTimeout(() => this.populateAssignedToDropdown(), 100);
+                    console.error('assignedTo select elementi bulunamadı - HTML\'de eksik olabilir');
                     return;
                 }
                 
                 assignedToSelect.innerHTML = '<option value="">Seçiniz...</option>';
                 
-                if (this.allUsers && this.allUsers.length > 0) {
-                    this.allUsers.forEach(user => {
-                        const option = document.createElement('option');
-                        option.value = user.id;
-                        option.textContent = user.displayName || user.email;
-                        assignedToSelect.appendChild(option);
-                    });
-                    console.log(`${this.allUsers.length} kullanıcı dropdown'a eklendi`);
-                } else {
-                    console.warn('Kullanıcı listesi boş');
-                }
+                this.allUsers.forEach(user => {
+                    const option = document.createElement('option');
+                    option.value = user.id;
+                    option.textContent = user.displayName || user.email;
+                    assignedToSelect.appendChild(option);
+                });
+                
+                console.log('Dropdown başarıyla dolduruldu');
             }
             setupEventListeners() {
                 document.getElementById('mainIpType').addEventListener('change', (e) => this.handleMainTypeChange(e));
@@ -365,12 +368,12 @@
                                     <option value="low">Düşük</option>
                                 </select>
                             </div>
-                                <div class="form-group">
-                                    <label for="assignedTo" class="form-label">Atanacak Kullanıcı</label>
-                                    <select id="assignedTo" class="form-select">
-                                        <option value="">Seçiniz...</option>
-                                    </select>
-                                </div>
+                            <div class="form-group">
+                                <label for="assignedTo" class="form-label">Atanacak Kullanıcı</label>
+                                <select id="assignedTo" class="form-select">
+                                    <option value="">Seçiniz...</option>
+                                </select>
+                            </div>
                             <div class="form-group full-width">
                                 <label for="taskDueDate" class="form-label">Operasyonel Son Tarih</label>
                                 <input type="date" id="taskDueDate" class="form-input">
