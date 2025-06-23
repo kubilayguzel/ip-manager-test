@@ -353,7 +353,7 @@ export const taskService = {
         if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor." };
         const user = authService.getCurrentUser();
         try {
-            const id = generateUUID();
+            const id = await getNextTaskId();
             const newTask = {
                 ...taskData,
                 id,
@@ -545,6 +545,34 @@ async function getNextAccrualId() {
 
     } catch (error) {
         console.error('🔥 Tahakkuk ID üretim hatası:', error);
+        return 'error';
+    }
+}
+export async function getNextTaskId() {
+    if (!isFirebaseAvailable) return '1';
+
+    try {
+        const counterRef = doc(db, 'counters', 'tasks');
+        const counterDoc = await getDoc(counterRef);
+
+        let currentId = 0;
+
+        if (counterDoc.exists()) {
+            const data = counterDoc.data();
+            if (data && typeof data.lastId === 'number') {
+                currentId = data.lastId;
+            }
+        } else {
+            await setDoc(counterRef, { lastId: 0 });
+            currentId = 0;
+        }
+
+        const nextId = currentId + 1;
+        await setDoc(counterRef, { lastId: nextId }, { merge: true });
+
+        return nextId.toString();
+    } catch (error) {
+        console.error('🔥 Task ID üretim hatası:', error);
         return 'error';
     }
 }
