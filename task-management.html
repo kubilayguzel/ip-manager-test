@@ -440,7 +440,18 @@
                         }
                     }
                 }
-
+                cleanHistoryAction(action) {
+                        if (action.includes('İş güncellendi. Değişen alanlar:')) {
+                             return 'İş güncellendi';
+                         }
+                         if (action.includes('İş oluşturuldu')) return 'İş oluşturuldu';
+                         if (action.includes('İş silindi')) return 'İş silindi';
+                         if (action.includes('İş tamamlandı')) return 'İş tamamlandı';
+                         if (action.includes('İş yeniden atandı')) return 'İş yeniden atandı';
+                         if (action.includes('Durum değişti')) return 'Durum değiştirildi';
+                            
+                         return action.length > 50 ? action.substring(0, 50) + '...' : action;
+                     }
                 showTaskDetailModal(taskId) {
                     const task = this.allTasks.find(t => t.id === taskId);
                     if (!task) {
@@ -466,7 +477,7 @@
                     if(task.history && task.history.length > 0) {
                         historyHtml = [...task.history].sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp)).map(entry => 
                             `<div class="task-history-item">
-                                <div class="task-history-description">${entry.action}</div>
+                                <div class="task-history-description">${this.cleanHistoryAction.action}</div>
                                 <div class="task-history-meta">${new Date(entry.timestamp).toLocaleString('tr-TR')} by ${entry.userEmail}</div>
                             </div>`
                         ).join('');
