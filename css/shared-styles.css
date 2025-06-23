@@ -997,25 +997,61 @@ button.action-btn[data-action="edit"]:hover {
         width: 100%; /* Mobil cihazlarda tam genişlik */
     }
     /* Modal Grid sistemi düzeltmeleri */
+   /* Modal İşlem Geçmişi Düzeltmeleri */
     .task-history {
         grid-column: 1 / -1 !important;
         width: 100% !important;
         max-width: 100% !important;
-        background-color: #f8f9fa;
-        border: 1px solid #e9ecef;
-        border-radius: 8px;
-        padding: 15px;
-        margin: 15px 0 0 0;
-        max-height: 300px;
-        overflow-y: auto;
+        background-color: #f8f9fa !important;
+        border: 1px solid #e9ecef !important;
+        border-radius: 8px !important;
+        padding: 15px !important;
+        margin: 15px 0 0 0 !important;
+        max-height: 300px !important;
+        overflow-y: auto !important;
+        box-sizing: border-box !important;
     }
 
     .task-history-item {
-        background: white;
-        padding: 12px;
-        margin-bottom: 10px;
-        border-radius: 6px;
-        border-left: 4px solid #007bff;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        background: white !important;
+        padding: 12px !important;
+        margin-bottom: 10px !important;
+        border-radius: 6px !important;
+        border-left: 4px solid #007bff !important;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+    }
+
+    .task-history-description {
+        font-weight: 500 !important;
+        margin-bottom: 4px !important;
+        color: #333 !important;
+        word-break: break-word !important;
+        font-size: 0.9em !important;
+    }
+
+    .task-history-meta {
+        font-size: 0.85em !important;
+        color: #666 !important;
+    }
+
+    /* Scrollbar stilleri */
+    .task-history::-webkit-scrollbar {
+        width: 6px !important;
+    }
+
+    .task-history::-webkit-scrollbar-track {
+        background: #f1f1f1 !important;
+        border-radius: 3px !important;
+    }
+
+    .task-history::-webkit-scrollbar-thumb {
+        background: #c1c1c1 !important;
+        border-radius: 3px !important;
+    }
+
+    .task-history::-webkit-scrollbar-thumb:hover {
+        background: #a8a8a8 !important;
     }
    }
