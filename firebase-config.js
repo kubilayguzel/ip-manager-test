@@ -525,7 +525,12 @@ async function getNextAccrualId() {
 
         if (counterDoc.exists()) {
             currentId = counterDoc.data().lastId || 0;
-        } 
+        } else {
+            // 👇 Doküman yoksa Firestore'a ilk defa oluştur
+            await setDoc(counterRef, { lastId: 0 });
+            currentId = 0;
+        }
+
         const nextId = currentId + 1;
         await updateDoc(counterRef, { lastId: nextId });
 
@@ -535,6 +540,7 @@ async function getNextAccrualId() {
         return 'error';
     }
 }
+
 // --- Accrual Service ---
 export const accrualService = {
     async addAccrual(accrualData) {
