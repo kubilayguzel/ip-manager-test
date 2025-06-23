@@ -1538,7 +1538,7 @@
                         const actionClass = item.action.length > 100 ? 'history-item-action long-text' : 'history-item-action';
                         
                         historyItem.innerHTML = `
-                            <div class="${actionClass}">${cleanHistoryAction(item.action)}</div>
+                            <div class="${actionClass}">${this.cleanHistoryAction(item.action)}</div>
                             <div class="history-item-meta">${new Date(item.timestamp).toLocaleString('tr-TR')} by ${item.userEmail}</div>
                         `;
                         historyList.appendChild(historyItem);
