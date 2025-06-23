@@ -1006,4 +1006,7 @@ button.action-btn[data-action="edit"]:hover {
         max-width: unset; /* Maksimum genişliği kaldır */
         width: 100%; /* Mobil cihazlarda tam genişlik */
     }
+    .modal-detail-item.full-width {
+        grid-column: 1 / -1;
+    }
 }
