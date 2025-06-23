@@ -194,10 +194,8 @@
 
                     console.log('Kullanıcılar yüklendi:', this.allUsers.length);
                     
-                    // DOM hazır olana kadar bekle
-                    setTimeout(() => {
-                        this.populateAssignedToDropdown();
-                    }, 500);
+                    // populateAssignedToDropdown çağrısını buradan kaldırıyoruz
+                    // çünkü 'assignedTo' elementi dinamik olarak oluşturulacak.
                 } catch (error) {
                     console.error("Veri yüklenirken hata oluştu:", error);
                     alert("Gerekli veriler yüklenemedi, lütfen sayfayı yenileyin.");
@@ -205,6 +203,7 @@
                 }
                 this.setupEventListeners();
             }
+
             populateAssignedToDropdown() {
                 console.log('populateAssignedToDropdown çağrıldı, kullanıcı sayısı:', this.allUsers.length);
                 
@@ -225,12 +224,12 @@
                 
                 console.log('Dropdown başarıyla dolduruldu');
             }
+            
             setupEventListeners() {
                 document.getElementById('mainIpType').addEventListener('change', (e) => this.handleMainTypeChange(e));
                 document.getElementById('specificTaskType').addEventListener('change', (e) => this.handleSpecificTypeChange(e));
                 document.getElementById('createTaskForm').addEventListener('submit', (e) => this.handleFormSubmit(e));
                 document.getElementById('cancelBtn').addEventListener('click', () => { window.location.href = 'task-management.html'; });
-                // document.getElementById('logoutBtn').addEventListener('click', () => authService.signOut()); // Bu artık layout-loader.js içinde
                 document.getElementById('closeAddPersonModal').addEventListener('click', () => this.hideAddPersonModal());
                 document.getElementById('cancelPersonBtn').addEventListener('click', () => this.hideAddPersonModal());
                 document.getElementById('savePersonBtn').addEventListener('click', () => this.saveNewPerson());
@@ -382,8 +381,8 @@
                     </div>
                 `;
                 this.setupDynamicFormListeners();
-                setTimeout(() => {this.populateAssignedToDropdown();
-                }, 0);
+                // 'assignedTo' elementi render edildikten sonra doldurma fonksiyonunu çağırıyoruz
+                this.populateAssignedToDropdown();
             }
 
             setupDynamicFormListeners() {
@@ -599,8 +598,8 @@
                     title: specificTaskType,
                     description: `'${this.selectedIpRecord.title}' adlı varlık için ${specificTaskType} işlemi.`,
                     priority: document.getElementById('taskPriority').value,
-                    assignedTo_uid: assignedToUser.id,
-                    assignedTo_email: assignedToUser.email,
+                    assignedTo_uid: assignedToUser ? assignedToUser.id : null, // assignedToUser null ise hata vermemesi için kontrol eklendi
+                    assignedTo_email: assignedToUser ? assignedToUser.email : null, // assignedToUser null ise hata vermemesi için kontrol eklendi
                     dueDate: document.getElementById('taskDueDate').value || null,
                     status: 'open',
                     relatedIpRecordId: this.selectedIpRecord.id,
