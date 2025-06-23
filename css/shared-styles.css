@@ -997,21 +997,10 @@ button.action-btn[data-action="edit"]:hover {
         width: 100%; /* Mobil cihazlarda tam genişlik */
     }
     /* Modal Grid sistemi düzeltmeleri */
-    .modal-detail-item.full-width,
-    .modal-detail-section-title,
-    .task-history,
-    .modal-detail-item.full-width.task-history {
-        /* Kritik: Grid'in tüm sütunlarını kapla */
-        grid-column: 1 / -1 !important;
-        width: 100% !important;
-        max-width: 100% !important;
-    }
-
     .task-history {
         grid-column: 1 / -1 !important;
         width: 100% !important;
         max-width: 100% !important;
-        box-sizing: border-box !important;
         background-color: #f8f9fa;
         border: 1px solid #e9ecef;
         border-radius: 8px;
@@ -1019,6 +1008,14 @@ button.action-btn[data-action="edit"]:hover {
         margin: 15px 0 0 0;
         max-height: 300px;
         overflow-y: auto;
-        overflow-x: hidden;
+    }
+
+    .task-history-item {
+        background: white;
+        padding: 12px;
+        margin-bottom: 10px;
+        border-radius: 6px;
+        border-left: 4px solid #007bff;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
     }
    }
