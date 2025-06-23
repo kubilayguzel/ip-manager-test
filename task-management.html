@@ -409,7 +409,6 @@
                     document.getElementById('cancelAssignmentBtn').addEventListener('click', () => this.closeModal('assignTaskModal'));
                     document.getElementById('saveNewAssignmentBtn').addEventListener('click', () => this.saveNewAssignment());
                 }
-                }
                 // Atama modalını açar ve kullanıcıları doldurur
                 openAssignTaskModal(taskId) {
                     this.selectedTaskForAssignment = this.allTasks.find(t => t.id === taskId);
