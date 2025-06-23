@@ -319,7 +319,7 @@
     </div>
     
     <script type="module">
-        import { authService, taskService, ipRecordsService, personService, auth } from './firebase-config.js';
+        import { authService, taskService, ipRecordsService, accrualService, personService, auth } from './firebase-config.js';
         import { showNotification } from './utils.js';
         import { loadSharedLayout } from './js/layout-loader.js'; // layout-loader.js eklendi
 
@@ -377,6 +377,8 @@
                         this.allTasks = tasksResult.success ? tasksResult.data : [];
                         this.allIpRecords = ipRecordsResult.success ? ipRecordsResult.data : [];
                         this.allPersons = personsResult.success ? personsResult.data : [];
+                        const accrualsResult = await accrualsService.getAllAccruals();
+                        this.allAccruals = accrualsResult.success ? accrualsResult.accruals : [];
                         
                         this.renderTasks(); // Tüm görevleri başlangıçta render et
                     } catch (error) {
