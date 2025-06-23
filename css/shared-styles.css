@@ -612,15 +612,6 @@ button.action-btn[data-action="edit"]:hover {
     gap: 15px 25px;
     width: 100%;
 }
-#tabContentHistory {
-  width: 100%;
-  max-width: 100%;
-  display: block;
-}
-
-#historyList {
-  width: 100%;
-}
 
 .detail-item, .modal-detail-item {
     margin-bottom: 10px;
@@ -654,6 +645,16 @@ button.action-btn[data-action="edit"]:hover {
     margin-bottom: 15px;
     padding-bottom: 5px;
     border-bottom: 1px dashed #e1e8ed;
+}
+
+/* İşlem Geçmişi Stil Genişletmesi */
+.task-history-item {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  margin-bottom: 10px;
+  background-color: #f9f9f9;
 }
 
 /* Doküman Listeleri (Modallar ve Detaylar İçin) */
