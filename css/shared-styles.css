@@ -793,7 +793,7 @@ button.action-btn[data-action="edit"]:hover {
     }
 
     .form-actions {
-        flex-direction: column;
+        display: flex; justify-content: flex-end; gap: 15px; margin-top: 30px; 
     }
 
     .btn, .action-btn {
