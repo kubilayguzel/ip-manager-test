@@ -199,7 +199,27 @@
                 }
                 this.setupEventListeners();
             }
-
+            populateAssignedToDropdown() {
+                const assignedToSelect = document.getElementById('assignedTo');
+                if (!assignedToSelect) {
+                    console.error('assignedTo select elementi bulunamadı');
+                    return;
+                }
+                
+                assignedToSelect.innerHTML = '<option value="">Seçiniz...</option>';
+                
+                if (this.allUsers && this.allUsers.length > 0) {
+                    this.allUsers.forEach(user => {
+                        const option = document.createElement('option');
+                        option.value = user.id;
+                        option.textContent = user.displayName || user.email;
+                        assignedToSelect.appendChild(option);
+                    });
+                    console.log(`${this.allUsers.length} kullanıcı dropdown'a eklendi`);
+                } else {
+                    console.warn('Kullanıcı listesi boş');
+                }
+            }
             setupEventListeners() {
                 document.getElementById('mainIpType').addEventListener('change', (e) => this.handleMainTypeChange(e));
                 document.getElementById('specificTaskType').addEventListener('change', (e) => this.handleSpecificTypeChange(e));
