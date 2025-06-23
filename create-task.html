@@ -202,7 +202,9 @@
             populateAssignedToDropdown() {
                 const assignedToSelect = document.getElementById('assignedTo');
                 if (!assignedToSelect) {
-                    console.error('assignedTo select elementi bulunamadı');
+                    console.log('assignedTo select elementi henüz yüklenmedi, tekrar denenecek...');
+                    // DOM hazır olmadıysa kısa bir süre sonra tekrar dene
+                    setTimeout(() => this.populateAssignedToDropdown(), 100);
                     return;
                 }
                 
