@@ -519,26 +519,20 @@ async function getNextAccrualId() {
     
     try {
         const counterRef = doc(db, 'counters', 'accruals');
+        
+        // MANUEL SIFIRLAMA: İlk çalıştırmada bu kısmı aktif edin
+        await setDoc(counterRef, { lastId: 0 }); // Bu satırı bir kez çalıştırın
+        
         const counterDoc = await getDoc(counterRef);
+        const currentId = counterDoc.data().lastId || 0;
+        const nextId = currentId + 1;
         
-        let nextId;
-        
-        if (!counterDoc.exists()) {
-            // İlk kez oluşturuluyorsa
-            nextId = 1;
-            await setDoc(counterRef, { lastId: nextId });
-        } else {
-            // Mevcut counter'dan al ve artır
-            const currentId = counterDoc.data().lastId || 0;
-            nextId = currentId + 1;
-            await updateDoc(counterRef, { lastId: nextId });
-        }
-        
+        await updateDoc(counterRef, { lastId: nextId });
         return nextId.toString();
         
     } catch (error) {
         console.error('Counter güncellenirken hata:', error);
-        return Date.now().toString();
+        return nextId.toString();
     }
 }
 // --- Accrual Service ---
