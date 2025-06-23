@@ -377,9 +377,9 @@
                         this.allTasks = tasksResult.success ? tasksResult.data : [];
                         this.allIpRecords = ipRecordsResult.success ? ipRecordsResult.data : [];
                         this.allPersons = personsResult.success ? personsResult.data : [];
-                        const accrualsResult = await accrualService.accruals
-                        this.allAccruals = accrualsResult.success ? accrualsResult.accruals : [];
-                        
+                        const accrualsResult = await accrualService.getAccruals();
+                        this.allAccruals = accrualsResult.success ? accrualsResult.data : [];
+                        console.log('Yüklenen tahakkuklar:', this.allAccruals); // Debug için
                         this.renderTasks(); // Tüm görevleri başlangıçta render et
                     } catch (error) {
                         showNotification('Veriler yüklenirken bir hata oluştu: ' + error.message, 'error');
