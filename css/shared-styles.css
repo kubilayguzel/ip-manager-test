@@ -1003,18 +1003,22 @@ button.action-btn[data-action="edit"]:hover {
         grid-column: 1 / -1 !important;
         width: 100%;
     }
-    .task-history {
+    .modal-detail-item.full-width.task-history {
         grid-column: 1 / -1 !important;
-        width: 100%;
-    }
-    .task-history-item {
-        width: 100%;
+        width: 100% !important;
+        padding: 0;
+        margin: 0;
         display: block;
-        box-sizing: border-box;
-        padding: 10px;
-        border: 1px solid #ccc;
-        border-radius: 8px;
+    }
+
+    .task-history-item {
+        width: 100% !important;
+        display: block;
+        padding: 12px 16px;
         margin-bottom: 10px;
-        background-color: #f9f9f9;
+        background-color: #fff;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        box-sizing: border-box;
     }
    }
