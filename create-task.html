@@ -191,6 +191,7 @@
                     this.allIpRecords = ipRecordsResult.data || [];
                     this.allPersons = personsResult.data || [];
                     this.allUsers = usersResult.data || [];
+                    this.populateAssignedToDropdown();
                 } catch (error) {
                     console.error("Veri yüklenirken hata oluştu:", error);
                     alert("Gerekli veriler yüklenemedi, lütfen sayfayı yenileyin.");
