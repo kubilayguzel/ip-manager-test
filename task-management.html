@@ -175,10 +175,33 @@
             overflow-y: auto;
         }
         /* İşi Başkasına Ata modalı için özel stil */
-        #assignTaskModal .modal-content {
-            max-width: 600px; /* Daha önceki 400px'ten 600px'e yükseltildi */
+        #assignTaskModal .modal-content .form-actions {
+            display: flex;
+            justify-content: flex-end; /* Butonları sağa hizalar */
+            gap: 15px; /* Butonlar arasında boşluk bırakır */
+            margin-top: 30px; /* Üstten boşluk bırakır */
+            padding-top: 15px; /* İsteğe bağlı: Üstten iç boşluk */
+            border-top: 1px solid #e1e8ed; /* İsteğe bağlı: Üste çizgi */
+            /* !important kullanmak genellikle kaçınılması gereken bir yöntemdir, ancak bu durumda
+            medya sorgusundaki 100% genişliğini geçersiz kılmak için gerekli olabilir.
+            Daha iyi bir yaklaşım, mobil medya sorgusunun içinde bu kuralı belirlemektir.
+            Ancak, hızlı çözüm için şimdilik bu şekilde devam edelim. */
+            flex-direction: row; /* Mobil modda bile yan yana kalmalarını sağlar */
+            flex-wrap: nowrap; /* Yeni satıra geçmelerini engeller */
         }
 
+        /* İşi Başkasına Ata modalındaki butonların 100% genişlik almasını engellemek için */
+        #assignTaskModal .modal-content .form-actions .btn {
+            width: auto; /* Butonların otomatik genişlik almasını sağlar */
+            margin-bottom: 0; /* Alt boşluğu kaldırır */
+            flex-shrink: 0; /* Butonların küçülmesini engeller */
+        }
+
+        /* Ek olarak, eğer butonların minimum genişliği sorun yaratıyorsa */
+        #assignTaskModal .modal-content .form-actions .btn-primary,
+        #assignTaskModal .modal-content .form-actions .btn-secondary {
+            min-width: unset; /* Minimum genişliği kaldır, içeriğe göre ayarlansın */
+        }
 
         @keyframes animatetop {
             from {top: -300px; opacity: 0}
