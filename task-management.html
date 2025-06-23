@@ -416,7 +416,8 @@
                         const specificType = taskTypeParts.slice(1).join(' ').replace(/\b\w/g, l => l.toUpperCase());
 
                         // Atanan kişiyi bulma
-                        const assignedToDisplayName = task.assignedTo_email || 'Atanmamış'; // Veya task.assignedTo_uid ile this.allUsers'tan displayName bulabilirsiniz
+                        const assignedUser = this.allUsers.find(user => user.id === task.assignedTo_uid);
+                        const assignedToDisplayName = assignedUser ? (assignedUser.displayName || assignedUser.email) : 'Atanmamış';
 
                         row.innerHTML = `
                             <td>${task.id}</td>
