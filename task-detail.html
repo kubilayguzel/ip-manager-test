@@ -1506,7 +1506,18 @@
                         showNotification('Belgeler güncellenirken hata oluştu: ' + error.message, 'error');
                     }
                 }
-
+                cleanHistoryAction(action) {
+                    if (action.includes('İş güncellendi. Değişen alanlar:')) {
+                        return 'İş güncellendi';
+                    }
+                    if (action.includes('İş oluşturuldu')) return 'İş oluşturuldu';
+                    if (action.includes('İş silindi')) return 'İş silindi';
+                    if (action.includes('İş tamamlandı')) return 'İş tamamlandı';
+                    if (action.includes('İş yeniden atandı')) return 'İş yeniden atandı';
+                    if (action.includes('Durum değişti')) return 'Durum değiştirildi';
+                    
+                    return action.length > 50 ? action.substring(0, 50) + '...' : action;
+                }
                 renderHistory() {
                     const historyList = document.getElementById('historyList');
                     historyList.innerHTML = '';
@@ -1527,7 +1538,7 @@
                         const actionClass = item.action.length > 100 ? 'history-item-action long-text' : 'history-item-action';
                         
                         historyItem.innerHTML = `
-                            <div class="${actionClass}">${item.action}</div>
+                            <div class="${actionClass}">${cleanHistoryAction(item.action)}</div>
                             <div class="history-item-meta">${new Date(item.timestamp).toLocaleString('tr-TR')} by ${item.userEmail}</div>
                         `;
                         historyList.appendChild(historyItem);
