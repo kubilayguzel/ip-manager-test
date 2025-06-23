@@ -1054,4 +1054,43 @@ button.action-btn[data-action="edit"]:hover {
     .task-history::-webkit-scrollbar-thumb:hover {
         background: #a8a8a8 !important;
     }
+    
+    /* İlişkili tahakkuklar için stil */
+    .related-accruals-section {
+        width: 100% !important;
+        grid-column: 1 / -1 !important;
+    }
+
+    .related-accrual-item {
+        background: #f8f9fa !important;
+        padding: 12px !important;
+        border-radius: 6px !important;
+        margin-bottom: 8px !important;
+        border-left: 4px solid #28a745 !important;
+    }
+
+    .related-accrual-item:last-child {
+        margin-bottom: 0 !important;
+    }
+
+    .accrual-info {
+        font-size: 0.9em !important;
+        line-height: 1.4 !important;
+    }
+
+    .status-badge.status-paid {
+        background-color: #d4edda !important;
+        color: #155724 !important;
+        padding: 2px 8px !important;
+        border-radius: 4px !important;
+        font-size: 0.8em !important;
+    }
+
+    .status-badge.status-unpaid {
+        background-color: #f8d7da !important;
+        color: #721c24 !important;
+        padding: 2px 8px !important;
+        border-radius: 4px !important;
+        font-size: 0.8em !important;
+    }
    }
