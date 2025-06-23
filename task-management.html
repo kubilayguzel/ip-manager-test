@@ -174,6 +174,11 @@
             max-height: 90vh; /* Allow scrolling within modal if content is long */
             overflow-y: auto;
         }
+        /* İşi Başkasına Ata modalı için özel stil */
+        #assignTaskModal .modal-content {
+            max-width: 600px; /* Daha önceki 400px'ten 600px'e yükseltildi */
+        }
+
 
         @keyframes animatetop {
             from {top: -300px; opacity: 0}
@@ -265,6 +270,15 @@
 </head>
 <body>
     <div id="layout-placeholder"></div>
+    <div id="notification-container" style="
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 10000; /* Diğer her şeyin üstünde olmasını sağlar */
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        align-items: flex-end;"></div>
     <div class="page-wrapper">
         <main class="main-container">
             <section class="page-header">
@@ -311,6 +325,10 @@
                 </div>
         </div>
     </div>
+    
+    <!-- İŞİ BAŞKASINA ATA MODALI (Düzeltildi) -->
+    <div id="assignTaskModal" class="modal">
+        <div class="modal-content">
             <span class="close-modal-btn" id="closeAssignTaskModal">&times;</span>
             <h3 class="modal-title">İşi Başkasına Ata</h3>
             <div class="modal-body-content">
@@ -403,6 +421,7 @@
                     });
 
                     document.getElementById('closeTaskDetailModal').addEventListener('click', () => this.closeModal('taskDetailModal'));
+                    // İşi Başkasına Ata modalı butonları için event listener'lar
                     document.getElementById('closeAssignTaskModal').addEventListener('click', () => this.closeModal('assignTaskModal'));
                     document.getElementById('cancelAssignmentBtn').addEventListener('click', () => this.closeModal('assignTaskModal'));
                     document.getElementById('saveNewAssignmentBtn').addEventListener('click', () => this.saveNewAssignment());
@@ -532,7 +551,8 @@
                             <td>${task.relatedIpRecordTitle || 'N/A'}</td>
                             <td>${mainType.charAt(0).toUpperCase() + mainType.slice(1)} - ${specificType}</td>
                             <td><span class="priority-badge ${priorityClass}">${task.priority}</span></td>
-                            <td>${assignedToDisplayName}</td> <td>${task.dueDate ? new Date(task.dueDate).toLocaleDateString('tr-TR') : 'Belirtilmemiş'}</td>
+                            <td>${assignedToDisplayName}</td>
+                            <td>${task.dueDate ? new Date(task.dueDate).toLocaleDateString('tr-TR') : 'Belirtilmemiş'}</td>
                             <td><span class="status-badge ${statusClass}">${task.status}</span></td>
                             <td>
                                 <button class="action-btn view-btn" data-id="${task.id}">Görüntüle</button>
@@ -627,7 +647,8 @@
                     modalBody.innerHTML = `
                         <div class="modal-detail-grid">
                             ${renderField('İş Başlığı', task.title)}
-                            ${renderField('Atanan Kişi', assignedToDisplay)} ${renderField('İş Türü', `${mainType.charAt(0).toUpperCase() + mainType.slice(1)} - ${specificType}`)}
+                            ${renderField('Atanan Kişi', assignedToDisplay)}
+                            ${renderField('İş Türü', `${mainType.charAt(0).toUpperCase() + mainType.slice(1)} - ${specificType}`)}
                             ${renderField('Bitiş Tarihi', task.dueDate ? new Date(task.dueDate).toLocaleDateString('tr-TR') : '-')}
                             ${renderField('Öncelik', task.priority)}
                             ${renderField('İlgili Portföy Kaydı', ipRecord ? ipRecord.title : 'Bulunamadı')}
