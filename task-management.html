@@ -311,6 +311,25 @@
                 </div>
         </div>
     </div>
+    <div id="assignTaskModal" class="modal">
+        <div class="modal-content" style="max-width: 400px;">
+            <span class="close-modal-btn" id="closeAssignTaskModal">&times;</span>
+            <h3 class="modal-title">İşi Başkasına Ata</h3>
+            <div class="modal-body-content">
+                <p>İşi atamak istediğiniz yeni kullanıcıyı seçin:</p>
+                <div class="form-group" style="margin-top: 20px;">
+                    <label for="newAssignedTo" class="form-label">Yeni Atanacak Kullanıcı</label>
+                    <select id="newAssignedTo" class="form-select">
+                        <option value="">Seçiniz...</option>
+                    </select>
+                </div>
+                <div class="form-actions" style="justify-content: center; margin-top: 30px;">
+                    <button type="button" class="btn btn-primary" id="saveNewAssignmentBtn">Atamayı Kaydet</button>
+                    <button type="button" class="btn btn-secondary" id="cancelAssignmentBtn">İptal</button>
+                </div>
+            </div>
+        </div>
+    </div>
     
     <script type="module">
         import { authService, taskService, ipRecordsService, accrualService, personService, auth } from './firebase-config.js';
@@ -328,6 +347,7 @@
                     this.allIpRecords = [];
                     this.allPersons = [];
                     this.allUsers = []; // allUsers'ı da buraya ekliyoruz
+                    this.selectedTaskForAssignment = null;
                 }
 
                 init() {
@@ -378,13 +398,100 @@
                                 this.deleteTask(taskId);
                             } else if (e.target.classList.contains('view-btn')) { // View button added for consistency
                                 this.showTaskDetailModal(taskId);
+                            } else if (e.target.classList.contains('assign-btn')) { // Yeni eklenen kısım
+                                this.openAssignTaskModal(taskId);
                             }
                         }
                     });
 
                     document.getElementById('closeTaskDetailModal').addEventListener('click', () => this.closeModal('taskDetailModal'));
                 }
+                // Atama modalını açar ve kullanıcıları doldurur
+                openAssignTaskModal(taskId) {
+                    this.selectedTaskForAssignment = this.allTasks.find(t => t.id === taskId);
+                    if (!this.selectedTaskForAssignment) {
+                        showNotification('Atanacak iş bulunamadı.', 'error');
+                        return;
+                    }
 
+                    const newAssignedToSelect = document.getElementById('newAssignedTo');
+                    newAssignedToSelect.innerHTML = '<option value="">Seçiniz...</option>';
+                    this.allUsers.forEach(user => {
+                        const option = document.createElement('option');
+                        option.value = user.id;
+                        option.textContent = user.displayName || user.email;
+                        // Mevcut atanan kişiyi seçili yap
+                        if (user.id === this.selectedTaskForAssignment.assignedTo_uid) {
+                            option.selected = true;
+                        }
+                        newAssignedToSelect.appendChild(option);
+                    });
+
+                    document.getElementById('assignTaskModal').classList.add('show');
+                }
+
+                // Yeni atamayı kaydeder
+                async saveNewAssignment() {
+                    const newAssignedToUid = document.getElementById('newAssignedTo').value;
+                    if (!newAssignedToUid) {
+                        showNotification('Lütfen yeni atanacak kullanıcıyı seçin.', 'warning');
+                        return;
+                    }
+
+                    const newAssignedUser = this.allUsers.find(user => user.id === newAssignedToUid);
+                    if (!newAssignedUser) {
+                        showNotification('Seçilen kullanıcı bulunamadı.', 'error');
+                        return;
+                    }
+
+                    if (!this.selectedTaskForAssignment) {
+                        showNotification('Atama yapılacak iş seçilmedi.', 'error');
+                        return;
+                    }
+
+                    const currentAssignedToEmail = this.selectedTaskForAssignment.assignedTo_email;
+                    const currentAssignedToUid = this.selectedTaskForAssignment.assignedTo_uid;
+
+                    // Sadece atanan kişi değişiyorsa güncelleme yap
+                    if (currentAssignedToUid === newAssignedToUid) {
+                        showNotification('Atanan kullanıcı zaten aynı.', 'info');
+                        this.closeModal('assignTaskModal');
+                        return;
+                    }
+
+                    try {
+                        const updateData = {
+                            assignedTo_uid: newAssignedToUid,
+                            assignedTo_email: newAssignedUser.email,
+                            // Eğer displayName'i de task objesine kaydetmek isterseniz:
+                            // assignedTo_displayName: newAssignedUser.displayName || newAssignedUser.email
+                        };
+
+                        const historyEntry = {
+                            action: `İş yeniden atandı: ${currentAssignedToEmail || 'Atanmamış'} -> ${newAssignedUser.email}`,
+                            timestamp: new Date().toISOString(),
+                            userEmail: this.currentUser.email // Mevcut kullanıcının e-postasını logla
+                        };
+
+                        // Görev geçmişini güncelleme
+                        let updatedHistory = this.selectedTaskForAssignment.history ? [...this.selectedTaskForAssignment.history] : [];
+                        updatedHistory.push(historyEntry);
+                        updateData.history = updatedHistory;
+
+                        const result = await taskService.updateTask(this.selectedTaskForAssignment.id, updateData);
+
+                        if (result.success) {
+                            showNotification('İş başarıyla yeniden atandı!', 'success');
+                            this.closeModal('assignTaskModal');
+                            await this.loadAllData(); // Tabloyu yenile
+                        } else {
+                            showNotification('İş atanırken hata oluştu: ' + result.error, 'error');
+                        }
+                    } catch (error) {
+                        console.error("Atama kaydedilirken hata oluştu:", error);
+                        showNotification('Atama kaydedilirken beklenmeyen bir hata oluştu.', 'error');
+                    }
+                }
                 renderTasks() {
                     const tableBody = document.getElementById('tasksTableBody');
                     const noTasksMessage = document.getElementById('noTasksMessage');
@@ -430,6 +537,7 @@
                                 <button class="action-btn view-btn" data-id="${task.id}">Görüntüle</button>
                                 <button class="action-btn edit-btn" data-id="${task.id}">Düzenle</button>
                                 <button class="action-btn delete-btn" data-id="${task.id}">Sil</button>
+                                ${task.status !== 'completed' && task.status !== 'cancelled' ? `<button class="action-btn assign-btn" data-id="${task.id}">Ata</button>` : ''}
                             </td>
                         `;
                         tableBody.appendChild(row);
@@ -447,6 +555,7 @@
                         }
                     }
                 }
+                
                 cleanHistoryAction(action) {
                         if (action.includes('İş güncellendi. Değişen alanlar:')) {
                              return 'İş güncellendi';
