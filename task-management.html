@@ -327,6 +327,7 @@
                     this.allTasks = [];
                     this.allIpRecords = [];
                     this.allPersons = [];
+                    this.allUsers = []; // allUsers'ı da buraya ekliyoruz
                 }
 
                 init() {
@@ -348,11 +349,13 @@
                             taskService.getAllTasks(),
                             ipRecordsService.getRecords(),
                             personService.getPersons(),
+                            taskService.getAllUsers() // Kullanıcıları da yüklüyoruz
                         ]);
 
                         this.allTasks = tasksResult.success ? tasksResult.data : [];
                         this.allIpRecords = ipRecordsResult.success ? ipRecordsResult.data : [];
                         this.allPersons = personsResult.success ? personsResult.data : [];
+                        this.allUsers = usersResult.success ? usersResult.data : []; // Yüklenen kullanıcıları kaydediyoruz
                         const accrualsResult = await accrualService.getAccruals();
                         this.allAccruals = accrualsResult.success ? accrualsResult.data : [];
                         this.renderTasks();
@@ -395,8 +398,7 @@
                             (task.taskType && task.taskType.toLowerCase().includes(searchTerm)) ||
                             (task.status && task.status.toLowerCase().includes(searchTerm));
 
-                        // return matchesStatus && matchesAssignedTo && matchesSearch; // Bu satırı güncelleyin
-                        return matchesSearch; // Yeni satır
+                        return matchesSearch;
                     });
 
                     if (filteredTasks.length === 0) {
@@ -413,13 +415,15 @@
                         const mainType = taskTypeParts[0] || '';
                         const specificType = taskTypeParts.slice(1).join(' ').replace(/\b\w/g, l => l.toUpperCase());
 
+                        // Atanan kişiyi bulma
+                        const assignedToDisplayName = task.assignedTo_email || 'Atanmamış'; // Veya task.assignedTo_uid ile this.allUsers'tan displayName bulabilirsiniz
+
                         row.innerHTML = `
                             <td>${task.id}</td>
                             <td>${task.relatedIpRecordTitle || 'N/A'}</td>
                             <td>${mainType.charAt(0).toUpperCase() + mainType.slice(1)} - ${specificType}</td>
                             <td><span class="priority-badge ${priorityClass}">${task.priority}</span></td>
-                            <td>${task.assignedTo || 'Atanmamış'}</td>
-                            <td>${task.dueDate ? new Date(task.dueDate).toLocaleDateString('tr-TR') : 'Belirtilmemiş'}</td>
+                            <td>${assignedToDisplayName}</td> <td>${task.dueDate ? new Date(task.dueDate).toLocaleDateString('tr-TR') : 'Belirtilmemiş'}</td>
                             <td><span class="status-badge ${statusClass}">${task.status}</span></td>
                             <td>
                                 <button class="action-btn view-btn" data-id="${task.id}">Görüntüle</button>
@@ -466,6 +470,8 @@
                     
                     const ipRecord = this.allIpRecords.find(r => r.id === task.relatedIpRecordId);
                     const relatedParty = task.details?.relatedParty?.id ? this.allPersons.find(p => p.id === task.details.relatedParty.id) : null;
+                    const assignedUser = this.allUsers.find(u => u.id === task.assignedTo_uid); // Atanan kullanıcıyı bul
+                    const assignedToDisplay = assignedUser ? (assignedUser.displayName || assignedUser.email) : 'Atanmamış'; // Görüntülenecek adı belirle
 
                     document.getElementById('modalTaskTitle').textContent = `İş Detayı: ${task.title}`;
 
@@ -474,7 +480,7 @@
                     const specificType = taskTypeParts.slice(1).join(' ').replace(/\b\w/g, l => l.toUpperCase());
 
                     const renderField = (label, value) => value ? `<div class="modal-detail-item"><div class="modal-detail-label">${label}</div><div class="modal-detail-value">${value}</div></div>` : '';
-const relatedAccruals = this.allAccruals ? this.allAccruals.filter(acc => acc.taskId === taskId) : [];
+                    const relatedAccruals = this.allAccruals ? this.allAccruals.filter(acc => acc.taskId === taskId) : [];
 
                     let accrualsHtml = '';
                     if(relatedAccruals.length > 0) {
@@ -502,8 +508,7 @@ const relatedAccruals = this.allAccruals ? this.allAccruals.filter(acc => acc.ta
                     if(task.history && task.history.length > 0) {
                         historyHtml = [...task.history].sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp)).map(entry => 
                             `<div class="task-history-item">
-                                <div class="task-history-description">${this.cleanHistoryAction.action}</div>
-                                <div class="task-history-meta">${new Date(entry.timestamp).toLocaleString('tr-TR')} by ${entry.userEmail}</div>
+                                <div class="task-history-description">${this.cleanHistoryAction(entry.action)}</div> <div class="task-history-meta">${new Date(entry.timestamp).toLocaleString('tr-TR')} by ${entry.userEmail}</div>
                             </div>`
                         ).join('');
                     }
@@ -511,8 +516,7 @@ const relatedAccruals = this.allAccruals ? this.allAccruals.filter(acc => acc.ta
                     modalBody.innerHTML = `
                         <div class="modal-detail-grid">
                             ${renderField('İş Başlığı', task.title)}
-                            ${renderField('Atanan Kişi', task.assignedTo || 'N/A')}
-                            ${renderField('İş Türü', `${mainType.charAt(0).toUpperCase() + mainType.slice(1)} - ${specificType}`)}
+                            ${renderField('Atanan Kişi', assignedToDisplay)} ${renderField('İş Türü', `${mainType.charAt(0).toUpperCase() + mainType.slice(1)} - ${specificType}`)}
                             ${renderField('Bitiş Tarihi', task.dueDate ? new Date(task.dueDate).toLocaleDateString('tr-TR') : '-')}
                             ${renderField('Öncelik', task.priority)}
                             ${renderField('İlgili Portföy Kaydı', ipRecord ? ipRecord.title : 'Bulunamadı')}
