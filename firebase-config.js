@@ -516,24 +516,27 @@ export const bulkIndexingService = {
 // Tahakkuk ID counter fonksiyonu
 async function getNextAccrualId() {
     if (!isFirebaseAvailable) return '1';
-    
+
     try {
         const counterRef = doc(db, 'counters', 'accruals');
-        
-        // MANUEL SIFIRLAMA: İlk çalıştırmada bu kısmı aktif edin
-        await setDoc(counterRef, { lastId: 0 }); // Bu satırı bir kez çalıştırın
-        
         const counterDoc = await getDoc(counterRef);
-        const currentId = counterDoc.data().lastId || 0;
-        const nextId = currentId + 1;
-        
-        await setDoc(doc(db, 'counters', 'accruals'), { lastId: 0 });
-        return nextId.toString();
-        
-        } catch (error) {
-            console.error('Counter güncellenirken hata:', error);
-            return 'error';
+
+        let currentId = 0;
+
+        if (counterDoc.exists()) {
+            currentId = counterDoc.data().lastId || 0;
+        } else {
+            await setDoc(counterRef, { lastId: 0 }); // doküman yoksa oluşturur
         }
+
+        const nextId = currentId + 1;
+        await updateDoc(counterRef, { lastId: nextId });
+
+        return nextId.toString();
+    } catch (error) {
+        console.error('Tahakkuk ID üretim hatası:', error);
+        return 'error';
+    }
 }
 // --- Accrual Service ---
 export const accrualService = {
