@@ -674,9 +674,7 @@
                 const specificType = taskTypeParts.slice(1).join(' ').replace(/\b\w/g, l => l.toUpperCase());
 
                 const renderField = (label, value) => value ? `<div class="modal-detail-item"><div class="modal-detail-label">${label}</div><div class="modal-detail-value">${value}</div></div>` : '';
-                
-                const relatedAccruals = this.allAccruals.filter(acc => acc.taskId === taskId);
-                
+                                              
                 let accrualsHtml = '';
                 if(relatedAccruals.length > 0) {
                     accrualsHtml = relatedAccruals.map(acc => {
