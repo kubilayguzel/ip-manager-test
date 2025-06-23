@@ -699,7 +699,31 @@
                 } else {
                     accrualsHtml = '<p>Bu işe ait tahakkuk bulunmuyor.</p>';
                 }
+                // İlişkili tahakkukları bul (accruals.html'de zaten this.allAccruals mevcut)
+                const relatedAccruals = this.allAccruals.filter(acc => acc.taskId === taskId);
 
+                let accrualsHtml = '';
+                if(relatedAccruals.length > 0) {
+                    accrualsHtml = relatedAccruals.map(acc => {
+                        const statusText = acc.status === 'paid' ? 'Ödendi' : 'Ödenmedi';
+                        const statusClass = acc.status === 'paid' ? 'status-paid' : 'status-unpaid';
+                        const totalAmountText = new Intl.NumberFormat('tr-TR', { 
+                            style: 'currency', 
+                            currency: acc.totalAmountCurrency || 'TRY' 
+                        }).format(acc.totalAmount || 0);
+                        
+                        return `<div class="related-accrual-item">
+                            <div class="accrual-info">
+                                <strong>ID:</strong> ${acc.id.substring(0,8)}... | 
+                                <strong>Durum:</strong> <span class="status-badge ${statusClass}">${statusText}</span> | 
+                                <strong>Tutar:</strong> ${totalAmountText}
+                                ${acc.paymentDate ? ` | <strong>Ödeme Tarihi:</strong> ${new Date(acc.paymentDate).toLocaleDateString('tr-TR')}` : ''}
+                            </div>
+                        </div>`;
+                    }).join('');
+                } else {
+                    accrualsHtml = '<p style="color: #666; font-style: italic;">Bu işe ait tahakkuk bulunmuyor.</p>';
+                }
                 let historyHtml = '<p>İşlem geçmişi bulunmuyor.</p>';
                 if(task.history && task.history.length > 0) {
                     historyHtml = [...task.history].sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp)).map(entry => 
@@ -723,6 +747,8 @@
                             <div class="modal-detail-label">Açıklama</div>
                             <div class="modal-detail-value long-text">${task.description || '-'}</div>
                         </div>
+                        <h4 class="modal-detail-section-title">İlişkili Tahakkuklar</h4>
+                        <div class="related-accruals-section">${accrualsHtml}</div>
                         <h4 class="modal-detail-section-title">İşlem Geçmişi</h4>
                         <div class="task-history">${historyHtml}</div>
                     </div>
