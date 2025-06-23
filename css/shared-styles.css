@@ -1003,7 +1003,10 @@ button.action-btn[data-action="edit"]:hover {
         grid-column: 1 / -1 !important;
         width: 100%;
     }
-
+    .task-history {
+        grid-column: 1 / -1 !important;
+        width: 100%;
+    }
     .task-history-item {
         width: 100%;
         display: block;
@@ -1014,4 +1017,4 @@ button.action-btn[data-action="edit"]:hover {
         margin-bottom: 10px;
         background-color: #f9f9f9;
     }
-    }
+   }
