@@ -613,7 +613,10 @@
                         }
 
                         // Veriyi başarıyla aldık
-                        this.currentTask = taskResult.data;
+                        this.currentTask = {...taskResult.data,
+                            history: taskResult.data.history || []
+                        };
+
                         this.currentTaskDocuments = this.currentTask.documents || [];
                         
                         console.log('DEBUG: Task verisi alındı:', this.currentTask.title);
