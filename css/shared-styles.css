@@ -647,16 +647,6 @@ button.action-btn[data-action="edit"]:hover {
     border-bottom: 1px dashed #e1e8ed;
 }
 
-/* İşlem Geçmişi Stil Genişletmesi */
-.task-history-item {
-  width: 100%;
-  padding: 10px;
-  border: 1px solid #ccc;
-  border-radius: 8px;
-  margin-bottom: 10px;
-  background-color: #f9f9f9;
-}
-
 /* Doküman Listeleri (Modallar ve Detaylar İçin) */
 .document-list {
     list-style: none;
@@ -1008,5 +998,20 @@ button.action-btn[data-action="edit"]:hover {
     }
     .modal-detail-item.full-width {
         grid-column: 1 / -1;
+     }
+    .task-history {
+        grid-column: 1 / -1 !important;
+        width: 100%;
     }
-}
+
+    .task-history-item {
+        width: 100%;
+        display: block;
+        box-sizing: border-box;
+        padding: 10px;
+        border: 1px solid #ccc;
+        border-radius: 8px;
+        margin-bottom: 10px;
+        background-color: #f9f9f9;
+    }
+    }
