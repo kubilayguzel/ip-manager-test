@@ -513,7 +513,31 @@ export const bulkIndexingService = {
     },
 };
 
-
+// Tahakkuk ID counter fonksiyonu
+async function getNextAccrualId() {
+    if (!isFirebaseAvailable) return '1';
+    
+    try {
+        const counterRef = doc(db, 'counters', 'accruals');
+        const counterDoc = await getDoc(counterRef);
+        
+        if (!counterDoc.exists()) {
+            // İlk tahakkuk için counter oluştur
+            await setDoc(counterRef, { lastId: 1 });
+            return '1';
+        } else {
+            // Mevcut counter'ı artır
+            const currentId = counterDoc.data().lastId || 0;
+            const nextId = currentId + 1;
+            await updateDoc(counterRef, { lastId: nextId });
+            return nextId.toString();
+        }
+    } catch (error) {
+        console.error('Counter güncellenirken hata:', error);
+        // Hata durumunda timestamp kullan
+        return Date.now().toString();
+    }
+}
 // --- Accrual Service ---
 export const accrualService = {
     async addAccrual(accrualData) {
@@ -522,9 +546,12 @@ export const accrualService = {
         if (!user) return { success: false, error: "Kullanıcı girişi yapılmamış." };
         
         try {
+            // Sıralı ID al
+            const accrualId = await getNextAccrualId();
+            
             const newAccrual = {
                 ...accrualData,
-                id: generateUUID(),
+                id: accrualId, // UUID yerine sıralı sayı
                 status: 'unpaid',
                 createdAt: new Date().toISOString(),
                 createdBy_uid: user.uid,
@@ -532,7 +559,7 @@ export const accrualService = {
                 files: (accrualData.files || []).map(f => ({ ...f, id: f.id || generateUUID() })),
                 paymentDate: null
             };
-            await setDoc(doc(db, 'accruals', newAccrual.id), newAccrual);
+            await setDoc(doc(db, 'accruals', accrualId), newAccrual); // ID olarak sıralı sayı kullan
             return { success: true, data: newAccrual };
         } catch (error) {
             return { success: false, error: error.message };
