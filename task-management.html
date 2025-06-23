@@ -265,6 +265,15 @@
 </head>
 <body>
     <div id="layout-placeholder"></div>
+    <div id="notification-container" style="
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 10000; /* Diğer her şeyin üstünde olmasını sağlar */
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        align-items: flex-end;"></div>
     <div class="page-wrapper">
         <main class="main-container">
             <section class="page-header">
@@ -311,8 +320,9 @@
                 </div>
         </div>
     </div>
-    <div id="assignTaskModal" class="modal">
-        <div class="modal-content" style="max-width: 400px;">
+            <div id="assignTaskModal" class="modal">
+                <div class="modal-content"> </div>
+            </div>
             <span class="close-modal-btn" id="closeAssignTaskModal">&times;</span>
             <h3 class="modal-title">İşi Başkasına Ata</h3>
             <div class="modal-body-content">
