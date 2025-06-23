@@ -377,7 +377,7 @@
                         this.allTasks = tasksResult.success ? tasksResult.data : [];
                         this.allIpRecords = ipRecordsResult.success ? ipRecordsResult.data : [];
                         this.allPersons = personsResult.success ? personsResult.data : [];
-                        const accrualsResult = await accrualsService.getAllAccruals();
+                        const accrualsResult = await accrualService.getAllAccruals();
                         this.allAccruals = accrualsResult.success ? accrualsResult.accruals : [];
                         
                         this.renderTasks(); // Tüm görevleri başlangıçta render et
