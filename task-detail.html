@@ -173,8 +173,6 @@
             padding: 10px 0;
             border-bottom: 1px dashed #eee;
             font-size: 0.95em;
-            margin-top: 4px;
-            margin-bottom: 4px;
         }
         .history-item:last-child {
             border-bottom: none;
@@ -1523,33 +1521,29 @@
                 renderHistory() {
                     const historyList = document.getElementById('historyList');
                     historyList.innerHTML = '';
-
+                    
                     const history = this.currentTask.history || [];
                     if (history.length === 0) {
-                        historyList.innerHTML = '<p style="text-align: center; color: #666; padding: 8px;">İşlem geçmişi bulunmamaktadır.</p>';
+                        historyList.innerHTML = '<p>İşlem geçmişi bulunmamaktadır.</p>';
                         return;
                     }
 
                     const sortedHistory = [...history].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
                     sortedHistory.forEach(item => {
-                        const actionText = item.action || 'İş oluşturuldu';
-                        const actionClass = actionText.length > 100 ? 'history-item-action long-text' : 'history-item-action';
-
                         const historyItem = document.createElement('div');
                         historyItem.classList.add('history-item');
-
+                        
+                        // Uzun metinler için özel class
+                        const actionClass = item.action.length > 100 ? 'history-item-action long-text' : 'history-item-action';
+                        
                         historyItem.innerHTML = `
-                            <div class="${actionClass}">${this.cleanHistoryAction(actionText)}</div>
-                            <div class="history-item-meta">
-                                ${item.timestamp ? new Date(item.timestamp).toLocaleString('tr-TR') : ''} 
-                                ${item.userEmail ? `by ${item.userEmail}` : ''}
-                            </div>
+                            <div class="${actionClass}">${this.cleanHistoryAction(item.action)}</div>
+                            <div class="history-item-meta">${new Date(item.timestamp).toLocaleString('tr-TR')} by ${item.userEmail}</div>
                         `;
                         historyList.appendChild(historyItem);
                     });
                 }
-
             }
 
             const taskDetailModule = new TaskDetailModule();
