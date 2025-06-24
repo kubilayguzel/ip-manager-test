@@ -275,30 +275,25 @@ export const ipRecordsService = {
         }
     },
     async addTransactionToRecord(recordId, transactionData) {
-            if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor. İşlem eklenemez." };
-            try {
-                const recordRef = doc(db, 'ipRecords', recordId);
-                const transactionsCollectionRef = collection(recordRef, 'transactions');
-                
-                // Transaction verisine otomatik alanları ekleyelim
-                const transactionToAdd = {
-                    ...transactionData,
-                    transactionId: generateUUID(), // Her transaction için benzersiz ID
-                    timestamp: new Date().toISOString(), // Oluşturulma zamanı ISO string olarak
-                    userId: auth.currentUser ? auth.currentUser.uid : 'anonymous',
-                    userEmail: auth.currentUser ? auth.currentUser.email : 'anonymous@example.com'
-                };
+    if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor." };
+    try {
+        const recordRef = doc(db, 'ipRecords', recordId);
+        const transactionsCollectionRef = collection(recordRef, 'transactions');
 
-                const docRef = await addDoc(transactionsCollectionRef, transactionToAdd);
-                
-                // Ekleme başarılı olursa, oluşturulan belgenin ID'sini geri döndürebiliriz
-                // Bu ID, child transaction'lar için parentId olarak kullanılabilir.
-                return { success: true, id: docRef.id, data: transactionToAdd };
-            } catch (error) {
-                console.error("IP kaydına işlem eklenirken hata:", error);
-                return { success: false, error: error.message };
-            }
-        },
+        const transactionToAdd = {
+            ...transactionData,
+            timestamp: new Date().toISOString(),
+            userId: auth.currentUser ? auth.currentUser.uid : 'anonymous',
+            userEmail: auth.currentUser ? auth.currentUser.email : 'anonymous@example.com'
+        };
+
+        const docRef = await addDoc(transactionsCollectionRef, transactionToAdd);
+        return { success: true, id: docRef.id, data: transactionToAdd };
+    } catch (error) {
+        console.error("Transaction alt koleksiyona eklenirken hata:", error);
+        return { success: false, error: error.message };
+    }
+},
     async addFileToRecord(recordId, fileData) {
         if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor." };
         try {
