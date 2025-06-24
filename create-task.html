@@ -766,6 +766,13 @@
                     }
                     const existingTransactions = recordTransactionsResult.data;
 
+                    // 👉 HATALI EŞLEŞME LOG'UNU BURAYA EKLE
+                        console.log("DEBUG: Portföydeki Tüm İşlemler (existingTransactions):", existingTransactions);
+                        existingTransactions.forEach(t => {
+                            console.log("  -> t.type:", t.type);
+                        });
+                        console.log("DEBUG: expectedParentTypeIds:", selectedTransactionType.expectedParentTypeIds);
+
                     console.log("DEBUG: handleFormSubmit - selected child transaction is top-level selectable.");
                     console.log("DEBUG: Seçilen IP Kaydı ID (this.selectedIpRecord.id):", this.selectedIpRecord.id);
                     console.log("DEBUG: Portföydeki Tüm İşlemler (existingTransactions):", existingTransactions);
@@ -781,7 +788,7 @@
                     );
 
                     console.log("DEBUG: Bulunan Uygun Parentlar (suitableParents):", suitableParents);
-                    
+
                     const childTransactionData = {
                         type: selectedTransactionType.id,
                         description: `${selectedTransactionType.name} alt işlemi.`,
