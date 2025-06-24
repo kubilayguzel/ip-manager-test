@@ -227,6 +227,25 @@ export const ipRecordsService = {
             return { success: false, error: error.message };
         }
     },
+
+    async getRecordTransactions(recordId) {
+        if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor. İşlem geçmişi alınamaz." };
+        try {
+            const recordRef = doc(db, 'ipRecords', recordId);
+            const transactionsCollectionRef = collection(recordRef, 'transactions');
+            // Transaction'ları zaman damgasına göre azalan sırada (en yeni en üstte) sıralayalım
+            const q = query(transactionsCollectionRef, orderBy('timestamp', 'desc'));
+            const querySnapshot = await getDocs(q);
+            
+            const transactions = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            return { success: true, data: transactions };
+        } catch (error) {
+            console.error("IP kaydı işlem geçmişi yüklenirken hata:", error);
+            return { success: false, error: error.message };
+        }
+    },
+
+
     async getRecordById(recordId) {
         if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor." };
         try {
@@ -256,23 +275,30 @@ export const ipRecordsService = {
         }
     },
     async addTransactionToRecord(recordId, transactionData) {
-        if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor." };
-        try {
-            const recordRef = doc(db, 'ipRecords', recordId);
-            const user = authService.getCurrentUser();
-            const newTransaction = {
-                ...transactionData,
-                transactionId: generateUUID(),
-                timestamp: new Date().toISOString(),
-                userId: user.uid,
-                userEmail: user.email
-            };
-            await updateDoc(recordRef, { transactions: arrayUnion(newTransaction) });
-            return { success: true, data: newTransaction };
-        } catch (error) {
-            return { success: false, error: error.message };
-        }
-    },
+            if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor. İşlem eklenemez." };
+            try {
+                const recordRef = doc(db, 'ipRecords', recordId);
+                const transactionsCollectionRef = collection(recordRef, 'transactions');
+                
+                // Transaction verisine otomatik alanları ekleyelim
+                const transactionToAdd = {
+                    ...transactionData,
+                    transactionId: generateUUID(), // Her transaction için benzersiz ID
+                    timestamp: new Date().toISOString(), // Oluşturulma zamanı ISO string olarak
+                    userId: auth.currentUser ? auth.currentUser.uid : 'anonymous',
+                    userEmail: auth.currentUser ? auth.currentUser.email : 'anonymous@example.com'
+                };
+
+                const docRef = await addDoc(transactionsCollectionRef, transactionToAdd);
+                
+                // Ekleme başarılı olursa, oluşturulan belgenin ID'sini geri döndürebiliriz
+                // Bu ID, child transaction'lar için parentId olarak kullanılabilir.
+                return { success: true, id: docRef.id, data: transactionToAdd };
+            } catch (error) {
+                console.error("IP kaydına işlem eklenirken hata:", error);
+                return { success: false, error: error.message };
+            }
+        },
     async addFileToRecord(recordId, fileData) {
         if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor." };
         try {
