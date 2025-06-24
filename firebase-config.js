@@ -776,4 +776,4 @@ export async function createDemoData() {
 
 
 // --- Exports ---
-export {auth, db, transactionTypeService};
+export {auth, db};
