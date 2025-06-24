@@ -495,19 +495,19 @@
                 }, 100); // Küçük bir gecikme ekleyerek DOM'un güncellenmesini bekle
             }
     
-            handleFormSubmit = async (event) => {
-                event.preventDefault();
-                document.getElementById('saveRecordBtn').disabled = true;
-    
-                try {
-                    const form = event.target;
-                    const recordData = {
-                        type: form.type.value,
-                        title: form.title.value,
-                        status: form.status.value, // Başvuru Durumu
-                        recordStatus: form.recordStatus.value, // Kayıt Durumu
-                        owners: this.selectedOwners.map(p => ({ id: p.id })),
-                    };
+                async handleFormSubmit(event) {
+                    event.preventDefault();
+                    document.getElementById('saveRecordBtn').disabled = true;
+
+                    try {
+                        const form = event.target;
+                        const recordData = {
+                            type: form.type.value,
+                            title: form.title.value,
+                            status: form.status.value,
+                            recordStatus: form.recordStatus.value,
+                            owners: this.selectedOwners.map(p => ({ id: p.id })),
+                        };
     
                     const addFieldIfValue = (key, value) => { if (value) recordData[key] = value; };
                     addFieldIfValue('applicationNumber', form.applicationNumber.value);
@@ -531,39 +531,47 @@
                     }
     
                     let result;
-                    if (this.recordId) {
-                        // KAYIT GÜNCELLEME İŞLEMİ
-                        recordData.updatedAt = new Date().toISOString();
-                        result = await ipRecordsService.updateRecord(this.recordId, recordData);
-                    } else {
-                        // YENİ KAYIT EKLEME İŞLEMİ
-                        recordData.createdAt = new Date().toISOString();
-                        recordData.updatedAt = new Date().toISOString();
-                        recordData.userEmail = this.currentUser.email;
-                        recordData.userId = this.currentUser.uid;
-                        
-                        // Yeni kayıt için başlangıç transaction dizisi oluştur
-                        recordData.transactions = [{
-                            type: 'Başvuru',
-                            description: `Yeni ${recordData.type} kaydı oluşturuldu. Başvuru Numarası: ${recordData.applicationNumber || 'Belirtilmemiş'}`,
-                            timestamp: new Date().toISOString()
-                        }];
-                        console.log("Kaydedilecek veri:", recordData);
-                        result = await ipRecordsService.addRecord(recordData);
+                        if (this.recordId) {
+                            // KAYIT GÜNCELLEME İŞLEMİ
+                            recordData.updatedAt = new Date().toISOString();
+                            result = await ipRecordsService.updateRecord(this.recordId, recordData);
+                        } else {
+                            // YENİ KAYIT EKLEME İŞLEMİ
+                            recordData.createdAt = new Date().toISOString();
+                            recordData.updatedAt = new Date().toISOString();
+                            recordData.userEmail = this.currentUser.email;
+                            recordData.userId = this.currentUser.uid;
+                            
+                            // transactions dizisini doğrudan recordData'ya eklemeyi KALDIRIN
+                            // recordData.transactions = [{ type: 'Başvuru', description: `...`, timestamp: new Date().toISOString() }];
+
+                            result = await ipRecordsService.addRecord(recordData);
+
+                            if (result.success) {
+                                // Kayıt başarıyla eklendikten sonra, Başvuru işlemini alt koleksiyona ekleyin
+                                const newRecordId = result.id;
+                                const initialTransactionData = {
+                                    type: 'Başvuru',
+                                    description: `Yeni ${recordData.type} kaydı oluşturuldu. Başvuru Numarası: ${recordData.applicationNumber || 'Belirtilmemiş'}`,
+                                    timestamp: new Date().toISOString(),
+                                    transactionHierarchy: "parent" // Başvuru işlemini 'parent' olarak işaretleyin
+                                };
+                                await ipRecordsService.addTransactionToRecord(newRecordId, initialTransactionData);
+                            }
+                        }
+
+                        if (result.success) {
+                            showNotification(this.recordId ? 'Kayıt güncellendi!' : 'Kayıt eklendi!', 'success');
+                            //window.location.href = 'portfolio.html'; // Yönlendirme gerekirse
+                        } else {
+                            throw new Error(result.error);
+                        }
+                    } catch (error) {
+                        showNotification('İşlem sırasında bir hata oluştu: ' + error.message, 'error');
+                    } finally {
+                        document.getElementById('saveRecordBtn').disabled = false;
                     }
-    
-                    if (result.success) {
-                        showNotification(this.recordId ? 'Kayıt güncellendi!' : 'Kayıt eklendi!', 'success');
-                        //window.location.href = 'portfolio.html';
-                    } else {
-                        throw new Error(result.error);
-                    }
-                } catch (error) {
-                    showNotification('İşlem sırasında bir hata oluştu: ' + error.message, 'error');
-                } finally {
-                    document.getElementById('saveRecordBtn').disabled = false;
                 }
-            }
         }
     
         let dataEntryModule;
