@@ -1133,33 +1133,32 @@
                         if (transactionsResult.success && transactionsResult.data.length > 0) {
                             const transactions = transactionsResult.data;
 
-                            // İşlemleri parentId'ye göre gruplandır
-                            const groupedTransactions = new Map();
+                            // Önce tüm transaction'ları id'lerine göre bir haritada toplayalım
+                            const transactionMap = new Map(transactions.map(tx => [tx.id, { ...tx, children: [] }]));
+
+                            // Sonra parent-child ilişkilerini kuralım
+                            const topLevelTransactions = [];
+
                             transactions.forEach(tx => {
                                 // Eğer bir parentId'si varsa ve bu bir çocuk işlemiyse
-                                if (tx.transactionHierarchy === 'child' && tx.parentId) {
-                                    if (!groupedTransactions.has(tx.parentId)) {
-                                        groupedTransactions.set(tx.parentId, []);
-                                    }
-                                    groupedTransactions.get(tx.parentId).push(tx);
+                                if (tx.transactionHierarchy === 'child' && tx.parentId && transactionMap.has(tx.parentId)) {
+                                    // Parent'ın çocuk listesine ekle
+                                    transactionMap.get(tx.parentId).children.push(transactionMap.get(tx.id));
                                 } else {
-                                    // Parent veya parentId'si olmayanları (top-level işlemler) doğrudan kendi transactionId'leri ile ekle
-                                    groupedTransactions.set(tx.transactionId, (groupedTransactions.get(tx.transactionId) || []).concat(tx));
+                                    // Parent veya çocuk olmayanları (top-level) listeye ekle
+                                    topLevelTransactions.push(transactionMap.get(tx.id));
                                 }
                             });
 
-                            // Sadece parent olan veya çocuk ilişkisi olmayan top-level işlemleri al
-                            const parentTransactions = transactions.filter(tx => 
-                                tx.transactionHierarchy !== 'child' || !tx.parentId
-                            ).sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)); // Tarihe göre azalan sıralama (en yeni en üstte)
+                            // Top-level işlemleri zamana göre sırala (en eski en üstte)
+                            topLevelTransactions.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
 
-                            if (parentTransactions.length > 0) {
-                                parentTransactions.forEach(parentTx => {
-                                    const childTransactions = (groupedTransactions.get(parentTx.transactionId) || [])
-                                        .filter(tx => tx.id !== parentTx.id) // Parent'ın kendisini çocuk olarak eklememek için (ID kontrolü daha güvenilir)
-                                        .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)); // Çocukları da tarihe göre sırala
+                            if (topLevelTransactions.length > 0) {
+                                topLevelTransactions.forEach(parentTx => {
+                                    // Parent'ın çocuklarını da zamana göre sırala
+                                    parentTx.children.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
-                                    const hasChildrenClass = childTransactions.length > 0 ? 'has-children' : ''; 
+                                    const hasChildrenClass = parentTx.children.length > 0 ? 'has-children' : ''; 
 
                                     transactionsHtml += `
                                         <div class="accordion">
@@ -1175,7 +1174,7 @@
                                                     <div class="transaction-meta">Yapan: ${parentTx.userEmail || 'N/A'}</div>
                                                     ${parentTx.transactionHierarchy ? `<div class="transaction-meta">Hiyerarşi: ${parentTx.transactionHierarchy}</div>` : ''}
                                                 </div>
-                                                ${childTransactions.map(childTx => `
+                                                ${parentTx.children.map(childTx => `
                                                     <div class="transaction-item" style="margin-left: 20px; border-left: 2px solid #ccc; padding-left: 10px;">
                                                         <div class="transaction-type">Alt İşlem: ${childTx.type || childTx.designation || 'Bilinmiyor'}</div>
                                                         <div class="transaction-meta">Açıklama: ${childTx.description || '-'}</div>
