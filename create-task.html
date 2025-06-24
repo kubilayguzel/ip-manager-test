@@ -171,6 +171,7 @@
                 this.selectedTpInvoiceParty = null;
                 this.selectedServiceInvoiceParty = null;
                 this.selectedServiceInvoiceParty = null;
+                this.pendingChildTransactionData = null;
             }
 
             async init() {
@@ -229,7 +230,9 @@
                 document.getElementById('closeAddPersonModal').addEventListener('click', () => this.hideAddPersonModal());
                 document.getElementById('cancelPersonBtn').addEventListener('click', () => this.hideAddPersonModal());
                 document.getElementById('savePersonBtn').addEventListener('click', () => this.saveNewPerson());
-            }
+                document.getElementById('closeSelectParentModal').addEventListener('click', () => this.hideParentSelectionModal());
+                document.getElementById('cancelParentSelectionBtn').addEventListener('click', () => this.hideParentSelectionModal());
+                }
 
             async handleMainTypeChange(e) {
                 const mainType = e.target.value;
@@ -551,6 +554,58 @@
 
             hideAddPersonModal() { document.getElementById('addPersonModal').classList.remove('show'); }
             
+            showParentSelectionModal(parentTransactions, childTransactionData) {
+            const modal = document.getElementById('selectParentModal');
+            const parentListContainer = document.getElementById('parentListContainer');
+            parentListContainer.innerHTML = ''; // Önceki listeyi temizle
+
+            this.pendingChildTransactionData = childTransactionData; // Bekleyen veriyi sakla
+
+            if (parentTransactions.length === 0) {
+                parentListContainer.innerHTML = '<p>Uygun ana işlem bulunamadı.</p>';
+                document.getElementById('cancelParentSelectionBtn').textContent = 'Kapat'; // İptal butonu Kapat olsun
+            } else {
+                parentTransactions.forEach(parent => {
+                    const parentItem = document.createElement('div');
+                    parentItem.className = 'parent-selection-item';
+                    parentItem.style = 'border: 1px solid #ddd; padding: 10px; margin-bottom: 8px; border-radius: 8px; cursor: pointer; transition: background-color 0.2s;';
+                    parentItem.innerHTML = `
+                        <b>İşlem Tipi:</b> ${parent.type ? (this.allTransactionTypes.find(t => t.id === parent.type)?.name || parent.type) : 'Bilinmiyor'}<br>
+                        <b>Açıklama:</b> ${parent.description}<br>
+                        <b>Tarih:</b> ${new Date(parent.timestamp).toLocaleDateString('tr-TR')}
+                    `;
+                    parentItem.addEventListener('click', () => this.handleParentSelection(parent.id));
+                    parentListContainer.appendChild(parentItem);
+                });
+                document.getElementById('cancelParentSelectionBtn').textContent = 'İptal';
+            }
+            modal.style.display = 'block';
+        }
+
+            hideParentSelectionModal() {
+                document.getElementById('selectParentModal').style.display = 'none';
+                this.pendingChildTransactionData = null; // Bekleyen veriyi temizle
+          }
+
+            async handleParentSelection(selectedParentId) {
+                if (!this.pendingChildTransactionData) return;
+
+                const childTransactionData = {
+                    ...this.pendingChildTransactionData,
+                    parentId: selectedParentId,
+                    transactionHierarchy: "child"
+                };
+
+                const addResult = await ipRecordsService.addTransactionToRecord(this.selectedIpRecord.id, childTransactionData);
+                if (addResult.success) {
+                    alert('İş ve ilgili alt işlem başarıyla oluşturuldu!');
+                    this.hideParentSelectionModal();
+                    window.location.href = 'task-management.html';
+                } else {
+                    alert('Alt işlem kaydedilirken hata oluştu: ' + addResult.error);
+                    this.hideParentSelectionModal();
+                }
+            }
             async saveNewPerson() {
                 const name = document.getElementById('personName').value.trim();
                 const type = document.getElementById('personType').value;
@@ -697,5 +752,21 @@
         await loadSharedLayout({ activeMenuLink: 'create-task.html' });
     });
 </script>
+ <div class="modal" id="selectParentModal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">İlgili Ana İşlemi Seçin</h3>
+                <button class="close-btn" id="closeSelectParentModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p>Seçtiğiniz işlem için portföyde birden fazla uygun ana işlem bulundu. Lütfen işlemi bağlamak istediğiniz ana işlemi seçin:</p>
+                <div id="parentListContainer">
+                    </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" id="cancelParentSelectionBtn">İptal</button>
+            </div>
+        </div>
+    </div>
 </body>
 </html>
