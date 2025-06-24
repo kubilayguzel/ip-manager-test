@@ -335,62 +335,86 @@
             box-sizing: border-box;
         }
         .transaction-history .accordion-header {
-        display: flex; /* İçeriği esnek kutu olarak düzenle */
-        align-items: center; /* Öğeleri dikeyde ortala */
-        cursor: pointer;
-        padding: 12px 15px; /* Mevcut padding'i koru */
-        background: #eaf2f8; /* Daha açık bir arka plan */
-        color: #1e3c72;
-        border-radius: 8px;
-        margin-bottom: 5px;
-        border: 1px solid #d0e7f7;
-        font-weight: 600;
+            display: flex; /* İçeriği esnek kutu olarak düzenle */
+            align-items: center; /* Öğeleri dikeyde ortala */
+            /* cursor: pointer; /* Varsayılan olarak kaldırın, sadece has-children için JS ile eklenecek */
+            padding: 12px 15px; /* Mevcut padding'i koru */
+            background: #eaf2f8; /* Daha açık bir arka plan */
+            color: #1e3c72;
+            border-radius: 8px;
+            margin-bottom: 5px;
+            border: 1px solid #d0e7f7;
+            font-weight: 600;
+            gap: 10px; /* İç öğeler arasında boşluk */
+            cursor: default; /* Varsayılan imleç */
+        }
+        .transaction-history .accordion-header.has-children {
+            cursor: pointer; /* Alt öğeleri varsa tıklanabilir olsun */
         }
         .transaction-history .accordion-header::after {
-        content: none !important; /* Ok işaretini kaldır */
+            content: none !important; /* Ok işaretini kaldır */
         }
         .transaction-history .accordion-header::before {
-        content: ''; /* Varsayılan olarak boş içerik (eğer has-children yoksa) */
-        margin-right: 0; /* Varsayılan olarak boşluk yok */
-        font-size: 1.2em; /* İşaretin boyutu */
-        color: #1e3c72; /* İşaretin rengi */
-        transition: content 0.3s ease, transform 0.3s ease; /* İçerik ve dönüşüm için geçiş efekti */
-        flex-shrink: 0; /* Küçülmesini engelle */
-        width: 0; /* Varsayılan olarak genişlik yok */
-        text-align: center; /* Ortala */
+            content: ''; /* Varsayılan olarak boş içerik (eğer has-children yoksa) */
+            margin-right: 0; /* Varsayılan olarak boşluk yok */
+            font-size: 1.2em; /* İşaretin boyutu */
+            color: #1e3c72; /* İşaretin rengi */
+            transition: content 0.3s ease, transform 0.3s ease; /* İçerik ve dönüşüm için geçiş efekti */
+            flex-shrink: 0; /* Küçülmesini engelle */
+            width: 0; /* Varsayılan olarak genişlik yok */
+            text-align: center; /* Ortala */
+            transform: rotate(0deg); /* Başlangıçta dönüş yok */
         }
         .transaction-history .accordion-header.has-children::before {
-        content: '+'; /* Varsayılan olarak + işareti */
-        display: inline-block;
-        margin-right: 10px; /* İşaret ile metin arasına boşluk */
-        width: 1em; /* İşaret için sabit bir genişlik ver (metin kaymasını engeller) */
+            content: '+'; /* Varsayılan olarak + işareti */
+            display: inline-block;
+            margin-right: 10px; /* İşaret ile metin arasına boşluk */
+            width: 1em; /* İşaret için sabit bir genişlik ver (metin kaymasını engeller) */
         }
         .transaction-history .accordion-header.has-children.active::before {
-        content: '−'; /* Aktif olduğunda - işareti */
+            content: '−'; /* Aktif olduğunda - işareti */
         }
         .transaction-history .accordion-header:hover {
             background: #d8edf7;
         }
-
-        .transaction-history .accordion-header .transaction-type, .transaction-history .accordion-header .transaction-meta 
-        {
+        .transaction-history .accordion-header .transaction-type {
             flex-grow: 1; /* Başlığın genişlemesini sağlar */
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap; /* Gerekirse satır sonu */
+            gap: 8px; /* Tarih ve yapan bilgisiyle arasında boşluk */
         }
-
+        .transaction-history .accordion-header .transaction-meta {
+            display: none; /* Mavi şeritte sadece inline olarak gözükeceği için bu kaldırılıyor */
+        }
+        .transaction-history .accordion-header .transaction-meta-inline {
+            font-size: 0.85em; /* Daha küçük font */
+            color: #4a6fa3; /* Farklı bir renk */
+            font-weight: normal;
+        }
+        .transaction-history .accordion-header .user-info {
+            font-style: italic;
+        }
         .transaction-history .accordion-content {
-            padding: 10px 15px 5px 15px;
+            max-height: 0; /* Varsayılan olarak kapalı */
+            overflow: hidden;
+            transition: max-height 0.3s ease-out, padding 0.3s ease-out, border 0.3s ease-out, margin 0.3s ease-out;
+            padding: 0 15px; /* Başlangıçta padding sıfır */
+            border: none; /* Başlangıçta kenarlık yok */
+            margin-bottom: 0; /* Başlangıçta alt boşluk yok */
             background: #fdfefe;
+            border-radius: 0 0 8px 8px;
+        }.transaction-history .accordion-header.active + .accordion-content {
+            max-height: 500px; /* Veya içeriğe göre daha büyük bir değer */
+            padding: 10px 15px 5px 15px; /* Açıldığında padding */
             border: 1px solid #e1e8ed;
             border-top: none;
-            border-radius: 0 0 8px 8px;
-            margin-bottom: 10px;
+            margin-bottom: 10px; /* Açıldığında alt boşluk */
         }
-
         .transaction-history .transaction-item {
             border-bottom: 1px dashed #f0f0f0;
             padding: 8px 0;
         }
-
         .transaction-history .transaction-item:last-child {
             border-bottom: none;
         }
@@ -420,7 +444,8 @@
     </style>
 </head>
 <body>
-    <div id="notification-container" class="notification-container"></div> <div id="layout-placeholder"></div>
+    <div id="notification-container" class="notification-container"></div>
+    <div id="layout-placeholder"></div>
     <div class="page-wrapper">
         <main class="main-container">
             <section class="page-header">
@@ -488,72 +513,69 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
     <script type="module">
-    import { authService, ipRecordsService, personService, auth, transactionTypeService } from './firebase-config.js'; // transactionTypeService'i ekledik
-    import { showNotification, formatFileSize, exportTableToExcel, exportTableToPdf } from './utils.js'; // showNotification'ı import ettiğinizden emin olun
-    import { loadSharedLayout } from './js/layout-loader.js';
+        import { authService, ipRecordsService, personService, transactionTypeService } from './firebase-config.js';
+        import { showNotification, formatFileSize, exportTableToExcel, exportTableToPdf } from './utils.js';
+        import { loadSharedLayout } from './js/layout-loader.js';
 
-    // İşlem tiplerini ve kişileri saklayacak global değişkenler
-    let transactionTypesMap = new Map();
-    let allPersons = []; 
+        // İşlem tiplerini ve kişileri saklayacak global değişkenler
+        let transactionTypesMap = new Map();
+        let allPersons = []; 
 
-    document.addEventListener('DOMContentLoaded', async () => {
-        await loadSharedLayout({ activeMenuLink: 'portfolio.html' });
+        // Sayfa yüklendiğinde işlem tiplerini ve kişileri yükle
+        document.addEventListener('DOMContentLoaded', async () => {
+            await loadSharedLayout({ activeMenuLink: 'portfolio.html' });
+            // Modül örneği oluşmadan önce global verileri yükleyelim
+            await loadTransactionTypes();
+            await loadPersons();
 
-        // Modül örneği oluşmadan önce global verileri yükleyelim
-        await loadTransactionTypes(); // Yeni fonksiyon
-        await loadPersons(); // Yeni fonksiyon
-
-        class PortfolioModule {
-            constructor() {
-                this.currentUser = null;
-                this.allRecords = []; 
-                // this.allPersons kaldırıldı, global allPersons kullanılacak
-                this.activeTypeFilter = 'all'; 
-                this.columnFilters = {}; 
-                this.sortBy = { column: null, direction: 'asc' }; 
-                this.selectedRecords = new Set(); 
-            }
-
-            async init() {
-                this.currentUser = authService.getCurrentUser(); //
-                if (!this.currentUser) {
-                    window.location.href = 'index.html';
-                    return;
+            class PortfolioModule {
+                constructor() {
+                    this.currentUser = null;
+                    this.allRecords = []; 
+                    // this.allPersons kaldırıldı, global allPersons kullanılacak
+                    this.activeTypeFilter = 'all'; 
+                    this.columnFilters = {}; 
+                    this.sortBy = { column: null, direction: 'asc' }; 
+                    this.selectedRecords = new Set(); 
                 }
-                // allPersons ve transactionTypesMap artık init içinde yüklenmiyor
-                // çünkü DOMContentLoaded içinde global olarak yüklenecekler.
-                await this.loadAllData();
-            }
 
-            async loadAllData() {
-                const loadingIndicator = document.getElementById('loadingIndicator');
-                if (loadingIndicator) { 
-                    loadingIndicator.style.display = 'block';
+                async init() {
+                    this.currentUser = authService.getCurrentUser();
+                    if (!this.currentUser) {
+                        window.location.href = 'index.html';
+                        return;
+                    }
+                    await this.loadAllData();
                 }
-                
-                try {
-                    // Sadece kayıtları çekiyoruz, kişiler ve transaction tipleri zaten yüklendi.
-                    const recordsResult = await ipRecordsService.getRecords(); //
 
-                    this.allRecords = recordsResult.success ? recordsResult.data.map(record => ({
-                        ...record,
-                        recordStatus: record.recordStatus || 'aktif'
-                    })) : [];
-                    // this.allPersons = personsResult.success ? personsResult.data : []; // Burası kaldırıldı.
-                    
-                    this.initialRenderTableStructure(); 
-                    this.populateTableBody(); 
-                    this.applyFiltersAndSort(); 
-                    this.setupEventListeners(); 
-                    this.updateRecordStatusToggleButtonState(); 
-                } catch (error) {
-                    showNotification('Veriler yüklenirken bir hata oluştu: ' + error.message, 'error'); //
-                } finally {
+                async loadAllData() {
+                    const loadingIndicator = document.getElementById('loadingIndicator');
                     if (loadingIndicator) { 
-                        loadingIndicator.style.display = 'none';
+                        loadingIndicator.style.display = 'block';
+                    }
+                    
+                    try {
+                        // Sadece kayıtları çekiyoruz, kişiler ve transaction tipleri zaten yüklendi.
+                        const recordsResult = await ipRecordsService.getRecords();
+
+                        this.allRecords = recordsResult.success ? recordsResult.data.map(record => ({
+                            ...record,
+                            recordStatus: record.recordStatus || 'aktif'
+                        })) : [];
+                        
+                        this.initialRenderTableStructure(); 
+                        this.populateTableBody(); 
+                        this.applyFiltersAndSort(); 
+                        this.setupEventListeners(); 
+                        this.updateRecordStatusToggleButtonState(); 
+                    } catch (error) {
+                        showNotification('Veriler yüklenirken bir hata oluştu: ' + error.message, 'error');
+                    } finally {
+                        if (loadingIndicator) { 
+                            loadingIndicator.style.display = 'none';
+                        }
                     }
                 }
-            }
 
                 setupEventListeners() {
                     document.querySelectorAll('.tab-menu .tab-button').forEach(button => {
@@ -627,6 +649,7 @@
                             } else if (e.target.classList.contains('delete-btn')) {
                                 this.deleteRecord(recordId);
                             } else if (e.target.classList.contains('view-btn')) {
+                                // showRecordDetailModal'ı sınıfın bir metodu olarak çağırıyoruz
                                 this.showRecordDetailModal(recordId);
                             }
                         }
@@ -635,10 +658,10 @@
                     document.getElementById('closeRecordDetailModal').addEventListener('click', () => this.closeModal('recordDetailModal'));
 
                     document.getElementById('exportExcelBtn').addEventListener('click', () => {
-                        exportTableToExcel('portfolio-table', 'Portföy Raporu'); 
+                        exportTableToExcel('portfolio-table', 'Portföy Raporu');
                     });
                     document.getElementById('exportPdfBtn').addEventListener('click', () => {
-                        exportTableToPdf('portfolio-table', 'Portföy Raporu'); 
+                        exportTableToPdf('portfolio-table', 'Portföy Raporu');
                     });
                 }
 
@@ -770,14 +793,14 @@
                     const columnDefinitions = [
                         { key: 'selection', label: '<input type="checkbox" id="headerSelectAllCheckbox" />', sortable: false, searchable: false, isCheckbox: true, fixedWidth: '40px', index: 0 },
                         { key: 'type', label: 'Kayıt Tipi', sortable: true, searchable: true, onlyAllTab: true, fixedWidth: '80px', index: 1 }, 
-                        { key: 'title', label: 'Başlık', sortable: true, searchable: true, fixedWidth: '150px', index: 2 }, /* Başlık daraltıldı */
+                        { key: 'title', label: 'Başlık', sortable: true, searchable: true, fixedWidth: '150px', index: 2 }, 
                         { key: 'trademarkImage', label: 'Marka Görseli', sortable: false, searchable: false, onlyTrademark: true, fixedWidth: '80px', index: 3 }, 
                         { key: 'applicationNumber', label: 'Başvuru Numarası', sortable: true, searchable: true, fixedWidth: '120px', index: 4 },
                         { key: 'applicationDate', label: 'Başvuru Tarihi', sortable: true, searchable: true, fixedWidth: '100px', index: 5 },
                         { key: 'status', label: 'Başvuru Durumu', sortable: true, searchable: true, fixedWidth: '110px', index: 6 },
                         { key: 'recordStatus', label: 'Kayıt Durumu', sortable: true, searchable: true, fixedWidth: '110px', index: 7 },
-                        { key: 'owners', label: 'Hak Sahipleri', sortable: true, searchable: true, fixedWidth: '200px', index: 8 }, /* Hak Sahipleri genişletildi */
-                        { key: 'actions', label: 'İşlemler', sortable: false, searchable: false, fixedWidth: '250px', index: 9 } /* İşlemler genişletildi */
+                        { key: 'owners', label: 'Hak Sahipleri', sortable: true, searchable: true, fixedWidth: '200px', index: 8 }, 
+                        { key: 'actions', label: 'İşlemler', sortable: false, searchable: false, fixedWidth: '250px', index: 9 } 
                     ];
 
                     columnDefinitions.forEach(col => {
@@ -851,7 +874,7 @@
                         row.classList.add(`record-status-${record.recordStatus}`); 
                         
                         const ownerNames = record.owners ? record.owners.map(owner => {
-                            const person = this.allPersons.find(p => p.id === owner.id);
+                            const person = allPersons.find(p => p.id === owner.id); // 'this.allPersons' yerine 'allPersons'
                             return person ? person.name : 'Bilinmeyen Kişi';
                         }).filter(Boolean).join(', ') : 'Belirtilmemiş';
 
@@ -936,6 +959,9 @@
                         // 1. Tab Filtrelemesi
                         let matchesType = (currentTypeFilter === 'all' || record.type === currentTypeFilter);
                         if (currentTypeFilter === 'objections') {
+                            // Fetch transactions specifically for this filter, if not already loaded
+                            // This might be inefficient if done for every row.
+                            // Better: Load all transactions for all records once, if performance is an issue.
                             matchesType = record.transactions && record.transactions.some(t => t.type && t.type.includes('İtiraz'));
                         } else if (currentTypeFilter === 'litigation') {
                             matchesType = record.transactions && record.transactions.some(t => t.type && t.type.includes('Dava'));
@@ -953,7 +979,7 @@
                             record.niceClass, 
                             record.copyrightType, 
                             record.designClass,
-                            (record.owners ? record.owners.map(owner => this.allPersons.find(p => p.id === owner.id)?.name || '').filter(Boolean).join(' ') : '')
+                            (record.owners ? record.owners.map(owner => allPersons.find(p => p.id === owner.id)?.name || '').filter(Boolean).join(' ') : '') // 'this.allPersons' yerine 'allPersons'
                         ].filter(Boolean).join(' ').toLowerCase().includes(globalSearchTerm);
 
                         // 3. Sütun Bazlı Filtreleme
@@ -966,7 +992,7 @@
 
                             let recordValue = '';
                             if (col.key === 'owners') {
-                                recordValue = record.owners ? record.owners.map(owner => this.allPersons.find(p => p.id === owner.id)?.name || '').filter(Boolean).join(' ') : '';
+                                recordValue = record.owners ? record.owners.map(owner => allPersons.find(p => p.id === owner.id)?.name || '').filter(Boolean).join(' ') : ''; // 'this.allPersons' yerine 'allPersons'
                             } else if (col.key === 'applicationDate') {
                                 recordValue = record.applicationDate ? new Date(record.applicationDate).toLocaleDateString('tr-TR') : '';
                             } else {
@@ -991,8 +1017,8 @@
                             let valA, valB;
 
                             if (sortColumn === 'owners') {
-                                valA = (recordA.owners ? recordA.owners.map(owner => this.allPersons.find(p => p.id === owner.id)?.name || '').filter(Boolean).join(' ') : '');
-                                valB = (recordB.owners ? recordB.owners.map(owner => this.allPersons.find(p => p.id === owner.id)?.name || '').filter(Boolean).join(' ') : '');
+                                valA = (recordA.owners ? recordA.owners.map(owner => allPersons.find(p => p.id === owner.id)?.name || '').filter(Boolean).join(' ') : ''); // 'this.allPersons' yerine 'allPersons'
+                                valB = (recordB.owners ? recordB.owners.map(owner => allPersons.find(p => p.id === owner.id)?.name || '').filter(Boolean).join(' ') : ''); // 'this.allPersons' yerine 'allPersons'
                             } else if (sortColumn === 'applicationDate') {
                                 valA = new Date(recordA.applicationDate || '1970-01-01'); 
                                 valB = new Date(recordB.applicationDate || '1970-01-01');
@@ -1084,176 +1110,183 @@
                         }
                     }
                 }
-
+                
+                // Buradaki showRecordDetailModal fonksiyonunu güncelliyoruz
                 async showRecordDetailModal(recordId) {
-                    const record = this.allRecords.find(r => r.id === recordId);
-                    if (!record) {
-                        showNotification('Kayıt bulunamadı.', 'error');
-                        return;
-                    }
-
                     const modal = document.getElementById('recordDetailModal');
                     const modalBody = document.getElementById('modalBody');
                     
-                    document.getElementById('modalRecordTitle').textContent = `Kayıt Detayı: ${record.title || 'N/A'}`;
+                    // Yükleme mesajı göster
+                    modalBody.innerHTML = '<p>Yükleniyor...</p>'; 
 
-                    // getOwnerNames fonksiyonunu global allPersons'ı kullanacak şekilde güncelledik
-                    const getOwnerNames = (owners) => {
-                        if (!owners || owners.length === 0) return '-';
-                        return owners.map(owner => {
-                            const person = allPersons.find(p => p.id === owner.id); // 'this.allPersons' yerine 'allPersons' kullanıldı
-                            return person ? person.name : 'Bilinmeyen Kişi';
-                        }).join(', ');
-                    };
-                    
-                    let imageHtml = '';
-                    let imageSrc = typeof record.trademarkImage === 'string'
-                        ? record.trademarkImage
-                        : record.trademarkImage?.content;
+                    try {
+                        const recordResult = await ipRecordsService.getRecordById(recordId);
+                        if (!recordResult.success || !recordResult.data) {
+                            showNotification('Kayıt bulunamadı veya yüklenirken hata oluştu.', 'error');
+                            modalBody.innerHTML = '<p>Kayıt bulunamadı veya yüklenirken hata oluştu.</p>';
+                            return;
+                        }
+                        const record = recordResult.data;
 
-                    if (record.type === 'trademark' && imageSrc?.startsWith('data:image')) {
-                        imageHtml = `<h4 class="modal-detail-section-title">Marka Görseli</h4>
-                                    <img src="${imageSrc}" alt="Marka Görseli" class="record-image-display">`;
-                    }
+                        document.getElementById('modalRecordTitle').textContent = `Kayıt Detayı: ${record.title || 'N/A'}`;
 
-                    let documentsHtml = '<ul class="document-list"><li>Henüz belge yok.</li></ul>';
-                    if (record.documents && record.documents.length > 0) {
-                        documentsHtml = '<ul class="document-list">';
-                        record.documents.forEach(doc => {
-                            documentsHtml += `<li><a href="${doc.content}" download="${doc.name}"><span class="doc-icon">📄</span>${doc.name} (${formatFileSize(doc.size)}) - ${doc.documentDesignation || 'Belge'}</a></li>`;
-                        });
-                        documentsHtml += '</ul>';
-                    }
+                        // getOwnerNames fonksiyonunu global allPersons'ı kullanacak şekilde güncelledik
+                        const getOwnerNames = (owners) => {
+                            if (!owners || owners.length === 0) return '-';
+                            return owners.map(owner => {
+                                const person = allPersons.find(p => p.id === owner.id); // 'this.allPersons' yerine 'allPersons'
+                                return person ? person.name : 'Bilinmeyen Kişi';
+                            }).join(', ');
+                        };
+                        
+                        let imageHtml = '';
+                        let imageSrc = typeof record.trademarkImage === 'string'
+                            ? record.trademarkImage
+                            : record.trademarkImage?.content;
 
-                    let transactionsHtml = '<div class="transaction-history">';
-                    const transactionsResult = await ipRecordsService.getRecordTransactions(record.id); //
+                        if (record.type === 'trademark' && imageSrc?.startsWith('data:image')) {
+                            imageHtml = `<h4 class="modal-detail-section-title">Marka Görseli</h4>
+                                        <img src="${imageSrc}" alt="Marka Görseli" class="record-image-display">`;
+                        }
 
-                    if (transactionsResult.success && transactionsResult.data.length > 0) {
-                        const transactions = transactionsResult.data;
-
-                        const transactionMap = new Map(transactions.map(tx => [tx.id, { ...tx, children: [] }]));
-
-                        const topLevelTransactions = [];
-
-                        transactions.forEach(tx => {
-                            if (tx.transactionHierarchy === 'child' && tx.parentId && transactionMap.has(tx.parentId)) {
-                                transactionMap.get(tx.parentId).children.push(transactionMap.get(tx.id));
-                            } else {
-                                topLevelTransactions.push(transactionMap.get(tx.id));
-                            }
-                        });
-
-                        // Top-level işlemleri zamana göre sırala (en eski en üstte)
-                        topLevelTransactions.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-
-                        if (topLevelTransactions.length > 0) {
-                            topLevelTransactions.forEach(parentTx => {
-                                parentTx.children.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)); // Çocukları en yeni en üstte sırala
-
-                                const hasChildrenClass = parentTx.children.length > 0 ? 'has-children' : '';
-                                
-                                // İşlem tipi için Türkçe isim al
-                                const transactionTypeName = transactionTypesMap.get(parentTx.type) || parentTx.type || parentTx.designation || 'Bilinmiyor';
-
-                                transactionsHtml += `
-                                    <div class="accordion">
-                                        <div class="accordion-header ${hasChildrenClass}">
-                                            <span class="transaction-type">
-                                                ${transactionTypeName} 
-                                                <span class="transaction-meta-inline">${new Date(parentTx.timestamp).toLocaleString('tr-TR')}</span>
-                                                <span class="transaction-meta-inline user-info">(${getPersonFullName(parentTx.userId)})</span>
-                                            </span>
-                                        </div>
-                                        <div class="accordion-content">
-                                            ${parentTx.children.map(childTx => `
-                                                <div class="transaction-item" style="margin-left: 20px; border-left: 2px solid #ccc; padding-left: 10px;">
-                                                    <div class="transaction-type">Alt İşlem: ${transactionTypesMap.get(childTx.type) || childTx.type || childTx.designation || 'Bilinmiyor'}</div>
-                                                    <div class="transaction-meta">Açıklama: ${childTx.description || '-'}</div>
-                                                    <div class="transaction-meta">Tarih: ${childTx.timestamp ? new Date(childTx.timestamp).toLocaleString('tr-TR') : '-'}</div>
-                                                    <div class="transaction-meta">Yapan: ${getPersonFullName(childTx.userId)}</div>
-                                                </div>
-                                            `).join('')}
-                                        </div>
-                                    </div>
-                                `;
+                        let documentsHtml = '<ul class="document-list"><li>Henüz belge yok.</li></ul>';
+                        if (record.documents && record.documents.length > 0) {
+                            documentsHtml = '<ul class="document-list">';
+                            record.documents.forEach(doc => {
+                                documentsHtml += `<li><a href="${doc.content}" download="${doc.name}"><span class="doc-icon">📄</span>${doc.name} (${formatFileSize(doc.size)}) - ${doc.documentDesignation || 'Belge'}</a></li>`;
                             });
-                        } else {
-                            transactionsHtml += '<p>Bu kayıt için işlem geçmişi bulunmamaktadır.</p>';
+                            documentsHtml += '</ul>';
                         }
-                    } else {
-                        transactionsHtml += '<p>İşlem geçmişi yüklenemedi veya bulunamadı.</p>';
-                    }
-                    transactionsHtml += '</div>';
 
-                    modalBody.innerHTML = `
-                        <div class="modal-detail-grid">
-                            <div class="modal-detail-item"><div class="modal-detail-label">Kayıt Tipi</div><div class="modal-detail-value">${record.type.charAt(0).toUpperCase() + record.type.slice(1)}</div></div>
-                            <div class="modal-detail-item"><div class="modal-detail-label">Başvuru Durumu</div><div class="modal-detail-value">${record.status}</div></div>
-                            <div class="modal-detail-item"><div class="modal-detail-label">Kayıt Durumu</div><div class="modal-detail-value">${record.recordStatus}</div></div>
-                            <div class="modal-detail-item full-width"><div class="modal-detail-label">Başlık</div><div class="modal-detail-value">${record.title}</div></div>
-                            <div class="modal-detail-item"><div class="modal-detail-label">Başvuru Numarası</div><div class="modal-detail-value">${record.applicationNumber || '-'}</div></div>
-                            <div class="modal-detail-item"><div class="modal-detail-label">Başvuru Tarihi</div><div class="modal-detail-value">${record.applicationDate || '-'}</div></div>
-                            <div class="modal-detail-item"><div class="modal-detail-label">Tescil Numarası</div><div class="modal-detail-value">${record.registrationNumber || '-'}</div></div>
-                            <div class="modal-detail-item"><div class="modal-detail-label">Tescil Tarihi</div><div class="modal-detail-value">${record.registrationDate || '-'}</div></div>
-                            <div class="modal-detail-item full-width"><div class="modal-detail-label">Hak Sahipleri</div><div class="modal-detail-value">${getOwnerNames(record.owners)}</div></div>
-                            
-                            ${record.patentClass ? `<div class="modal-detail-item"><div class="modal-detail-label">Patent Sınıfı</div><div class="modal-detail-value">${record.patentClass}</div></div>` : ''}
-                            ${record.renewalDatePatent ? `<div class="modal-detail-item"><div class="modal-detail-label">Patent Yenileme Tarihi</div><div class="modal-detail-value">${record.renewalDatePatent}</div></div>` : ''}
+                        // **İŞLEM GEÇMİŞİNİ ALT KOLEKSİYONDAN ÇEK**
+                        let transactionsHtml = '<div class="transaction-history">';
+                        const transactionsResult = await ipRecordsService.getRecordTransactions(record.id);
 
-                            ${record.niceClass ? `<div class="modal-detail-item"><div class="modal-detail-label">Nice Sınıfı</div><div class="modal-detail-value">${record.niceClass}</div></div>` : ''}
-                            ${record.renewalDateTrademark ? `<div class="modal-detail-item"><div class="modal-detail-label">Marka Yenileme Tarihi</div><div class="modal-detail-value">${record.renewalDateTrademark}</div></div>` : ''}
+                        if (transactionsResult.success && transactionsResult.data.length > 0) {
+                            const transactions = transactionsResult.data;
 
-                            ${record.copyrightType ? `<div class="modal-detail-item"><div class="modal-detail-label">Telif Hakkı Tipi</div><div class="modal-detail-value">${record.copyrightType}</div></div>` : ''}
-                            
-                            ${record.designClass ? `<div class="modal-detail-item"><div class="modal-detail-label">Tasarım Sınıfı</div><div class="modal-detail-value">${record.designClass}</div></div>` : ''}
-                            ${record.renewalDateDesign ? `<div class="modal-detail-item"><div class="modal-detail-label">Tasarım Yenileme Tarihi</div><div class="modal-detail-value">${record.renewalDateDesign}</div></div>` : ''}
+                            const transactionMap = new Map(transactions.map(tx => [tx.id, { ...tx, children: [] }]));
 
-                            <div class="modal-detail-item full-width"><div class="modal-detail-label">Açıklama</div><div class="modal-detail-value long-text">${record.description || '-'}</div></div>
-                        </div>
-                        ${imageHtml}
-                        <h4 class="modal-detail-section-title">Ekli Belgeler</h4>
-                        <div class="modal-detail-item full-width">${documentsHtml}</div>
-                        <h4 class="modal-detail-section-title">İşlem Geçmişi</h4>
-                        <div class="modal-detail-item full-width">${transactionsHtml}</div>
-                    `;
-                    
-                    // Accordion functionality'yi sadece has-children class'ı varsa etkinleştireceğiz
-                    const accordions = modalBody.querySelectorAll('.accordion-header.has-children'); // Sadece çocukları olan accordion'ları seç
-                    accordions.forEach(accordion => {
-                        // Önceki olay dinleyicilerini kaldırmak gerekebilir eğer birden fazla kez atanıyorsa
-                        // accordion.removeEventListener('click', existingHandler); // Eğer varsa
-                        accordion.addEventListener('click', function() {
-                            this.classList.toggle('active');
-                            const content = this.nextElementSibling;
-                            if (content.style.maxHeight) {
-                                content.style.maxHeight = null;
+                            const topLevelTransactions = [];
+
+                            transactions.forEach(tx => {
+                                if (tx.transactionHierarchy === 'child' && tx.parentId && transactionMap.has(tx.parentId)) {
+                                    transactionMap.get(tx.parentId).children.push(transactionMap.get(tx.id));
+                                } else {
+                                    topLevelTransactions.push(transactionMap.get(tx.id));
+                                }
+                            });
+
+                            // Top-level işlemleri zamana göre sırala (en eski en üstte)
+                            topLevelTransactions.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+
+                            if (topLevelTransactions.length > 0) {
+                                topLevelTransactions.forEach(parentTx => {
+                                    parentTx.children.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)); // Çocukları en yeni en üstte sırala
+
+                                    const hasChildrenClass = parentTx.children.length > 0 ? 'has-children' : '';
+                                    
+                                    // İşlem tipi için Türkçe isim al
+                                    const transactionTypeName = transactionTypesMap.get(parentTx.type) || parentTx.type || parentTx.designation || 'Bilinmiyor';
+
+                                    transactionsHtml += `
+                                        <div class="accordion">
+                                            <div class="accordion-header ${hasChildrenClass}">
+                                                <span class="transaction-type">
+                                                    ${transactionTypeName} 
+                                                    <span class="transaction-meta-inline">${new Date(parentTx.timestamp).toLocaleString('tr-TR')}</span>
+                                                    <span class="transaction-meta-inline user-info">(${getPersonFullName(parentTx.userId)})</span>
+                                                </span>
+                                            </div>
+                                            <div class="accordion-content">
+                                                ${parentTx.children.map(childTx => `
+                                                    <div class="transaction-item" style="margin-left: 20px; border-left: 2px solid #ccc; padding-left: 10px;">
+                                                        <div class="transaction-type">Alt İşlem: ${transactionTypesMap.get(childTx.type) || childTx.type || childTx.designation || 'Bilinmiyor'}</div>
+                                                        <div class="transaction-meta">Açıklama: ${childTx.description || '-'}</div>
+                                                        <div class="transaction-meta">Tarih: ${childTx.timestamp ? new Date(childTx.timestamp).toLocaleString('tr-TR') : '-'}</div>
+                                                        <div class="transaction-meta">Yapan: ${getPersonFullName(childTx.userId)}</div>
+                                                    </div>
+                                                `).join('')}
+                                            </div>
+                                        </div>
+                                    `;
+                                });
                             } else {
-                                content.style.maxHeight = content.scrollHeight + "px";
+                                transactionsHtml += '<p>Bu kayıt için işlem geçmişi bulunmamaktadır.</p>';
+                            }
+                        } else {
+                            transactionsHtml += '<p>İşlem geçmişi yüklenemedi veya bulunamadı.</p>';
+                        }
+                        transactionsHtml += '</div>';
+
+                        // Modal içeriğini oluştur
+                        modalBody.innerHTML = `
+                            <div class="modal-detail-grid">
+                                <div class="modal-detail-item"><div class="modal-detail-label">Kayıt Tipi</div><div class="modal-detail-value">${record.type.charAt(0).toUpperCase() + record.type.slice(1)}</div></div>
+                                <div class="modal-detail-item"><div class="modal-detail-label">Başvuru Durumu</div><div class="modal-detail-value">${record.status}</div></div>
+                                <div class="modal-detail-item"><div class="modal-detail-label">Kayıt Durumu</div><div class="modal-detail-value">${record.recordStatus}</div></div>
+                                <div class="modal-detail-item full-width"><div class="modal-detail-label">Başlık</div><div class="modal-detail-value">${record.title}</div></div>
+                                <div class="modal-detail-item"><div class="modal-detail-label">Başvuru Numarası</div><div class="modal-detail-value">${record.applicationNumber || '-'}</div></div>
+                                <div class="modal-detail-item"><div class="modal-detail-label">Başvuru Tarihi</div><div class="modal-detail-value">${record.applicationDate || '-'}</div></div>
+                                <div class="modal-detail-item"><div class="modal-detail-label">Tescil Numarası</div><div class="modal-detail-value">${record.registrationNumber || '-'}</div></div>
+                                <div class="modal-detail-item"><div class="modal-detail-label">Tescil Tarihi</div><div class="modal-detail-value">${record.registrationDate || '-'}</div></div>
+                                <div class="modal-detail-item full-width"><div class="modal-detail-label">Hak Sahipleri</div><div class="modal-detail-value">${getOwnerNames(record.owners)}</div></div>
+                                
+                                ${record.patentClass ? `<div class="modal-detail-item"><div class="modal-detail-label">Patent Sınıfı</div><div class="modal-detail-value">${record.patentClass}</div></div>` : ''}
+                                ${record.renewalDatePatent ? `<div class="modal-detail-item"><div class="modal-detail-label">Patent Yenileme Tarihi</div><div class="modal-detail-value">${record.renewalDatePatent}</div></div>` : ''}
+
+                                ${record.niceClass ? `<div class="modal-detail-item"><div class="modal-detail-label">Nice Sınıfı</div><div class="modal-detail-value">${record.niceClass}</div></div>` : ''}
+                                ${record.renewalDateTrademark ? `<div class="modal-detail-item"><div class="modal-detail-label">Marka Yenileme Tarihi</div><div class="modal-detail-value">${record.renewalDateTrademark}</div></div>` : ''}
+
+                                ${record.copyrightType ? `<div class="modal-detail-item"><div class="modal-detail-label">Telif Hakkı Tipi</div><div class="modal-detail-value">${record.copyrightType}</div></div>` : ''}
+                                
+                                ${record.designClass ? `<div class="modal-detail-item"><div class="modal-detail-label">Tasarım Sınıfı</div><div class="modal-detail-value">${record.designClass}</div></div>` : ''}
+                                ${record.renewalDateDesign ? `<div class="modal-detail-item"><div class="modal-detail-label">Tasarım Yenileme Tarihi</div><div class="modal-detail-value">${record.renewalDateDesign}</div></div>` : ''}
+
+                                <div class="modal-detail-item full-width"><div class="modal-detail-label">Açıklama</div><div class="modal-detail-value long-text">${record.description || '-'}</div></div>
+                            </div>
+                            ${imageHtml}
+                            <h4 class="modal-detail-section-title">Ekli Belgeler</h4>
+                            <div class="modal-detail-item full-width">${documentsHtml}</div>
+                            <h4 class="modal-detail-section-title">İşlem Geçmişi</h4>
+                            <div class="modal-detail-item full-width">${transactionsHtml}</div>
+                        `;
+                        
+                        // Accordion functionality (sadece has-children class'ı varsa etkinleştir)
+                        const accordions = modalBody.querySelectorAll('.accordion-header.has-children');
+                        accordions.forEach(accordion => {
+                            accordion.addEventListener('click', function() {
+                                this.classList.toggle('active');
+                                const content = this.nextElementSibling;
+                                if (content.style.maxHeight) {
+                                    content.style.maxHeight = null;
+                                } else {
+                                    content.style.maxHeight = content.scrollHeight + "px";
+                                }
+                            });
+                        });
+                        //Accordion özelliği olmayanlar için accordion-content div'ini gizle
+                        modalBody.querySelectorAll('.accordion-header:not(.has-children)').forEach(header => {
+                            const content = header.nextElementSibling;
+                            if (content) {
+                                content.style.maxHeight = '0';
+                                content.style.overflow = 'hidden';
+                                content.style.paddingTop = '0';
+                                content.style.paddingBottom = '0';
+                                content.style.border = 'none';
+                                content.style.marginBottom = '0';
                             }
                         });
-                    });
-                    //Accordion özelliği olmayanlar için accordion-content div'ini gizle
-                    modalBody.querySelectorAll('.accordion-header:not(.has-children)').forEach(header => {
-                        const content = header.nextElementSibling;
-                        if (content) {
-                            content.style.maxHeight = '0';
-                            content.style.overflow = 'hidden';
-                            content.style.paddingTop = '0';
-                            content.style.paddingBottom = '0';
-                            content.style.border = 'none'; // Kenarlığı da kaldır
-                            content.style.marginBottom = '0'; // Alt boşluğu da kaldır
-                        }
-                    });
 
-                    modal.classList.add('show');
-                }
-                    catch (error) {
+                        modal.classList.add('show');
+                    } catch (error) {
                         showNotification('Kayıt detayları yüklenirken beklenmedik bir hata oluştu: ' + error.message, 'error');
                         console.error('Kayıt detay modalı hatası:', error);
                         modalBody.innerHTML = '<p>Detaylar yüklenirken bir hata oluştu.</p>';
                     }
-                
-                    closeModal(modalId) {
+                }
+
+                closeModal(modalId) {
                     document.getElementById(modalId).classList.remove('show');
                 }
             }
@@ -1261,42 +1294,36 @@
             const portfolioModule = new PortfolioModule();
             portfolioModule.init(); 
         });
-        
+
         // YENİ FONKSİYON: İşlem tiplerini Firestore'dan yükler ve haritaya kaydeder
-            async function loadTransactionTypes() {
-                const result = await transactionTypeService.getTransactionTypes(); //
-                if (result.success) {
-                    result.data.forEach(type => {
-                        transactionTypesMap.set(type.id, type.name); // Firestore'dan gelen 'id' ve 'name' alanlarını kullan
-                    });
-                } else {
-                    console.error("İşlem tipleri yüklenirken hata:", result.error);
-                    showNotification("İşlem tipleri yüklenirken hata oluştu.", "error"); //
-                }
+        async function loadTransactionTypes() {
+            const result = await transactionTypeService.getTransactionTypes();
+            if (result.success) {
+                result.data.forEach(type => {
+                    transactionTypesMap.set(type.id, type.name); // Firestore'dan gelen 'id' ve 'name' alanlarını kullan
+                });
+            } else {
+                console.error("İşlem tipleri yüklenirken hata:", result.error);
+                showNotification("İşlem tipleri yüklenirken hata oluştu.", "error");
             }
+        }
 
         // YENİ FONKSİYON: Kişileri Firestore'dan yükler
-            async function loadPersons() {
-                const result = await personService.getPersons(); //
-                if (result.success) {
-                    allPersons = result.data;
-                } else {
-                    console.error("Kişiler yüklenirken hata:", result.error);
-                    showNotification("Kişiler yüklenirken hata oluştu.", "error"); //
-                }
+        async function loadPersons() {
+            const result = await personService.getPersons();
+            if (result.success) {
+                allPersons = result.data;
+            } else {
+                console.error("Kişiler yüklenirken hata:", result.error);
+                showNotification("Kişiler yüklenirken hata oluştu.", "error");
             }
+        }
 
-            // Kişinin tam adını bulan yardımcı fonksiyon
-            function getPersonFullName(userId) {
-                const person = allPersons.find(p => p.id === userId);
-                return person ? `${person.firstName || ''} ${person.lastName || ''}`.trim() : 'Bilinmeyen Kullanıcı';
-            }
-
-            // getOwnerNames fonksiyonunuzu, global allPersons'ı kullanacak şekilde güncelleyin
-            // (eğer hali hazırda showRecordDetailModal içinde değilse)
-            // eğer getOwnerNames ayrı bir metodsa:
-            // PortfolioModule class'ı dışına taşıyıp yukarıdaki getPersonFullName gibi kullanılabilir hale getirebilirsiniz.
-            // Ancak mevcut durumda modal içinde tanımlı, o yüzden orada düzenleyeceğiz.
+        // Kişinin tam adını bulan yardımcı fonksiyon (global olarak tanımlandı)
+        function getPersonFullName(userId) {
+            const person = allPersons.find(p => p.id === userId);
+            return person ? `${person.firstName || ''} ${person.lastName || ''}`.trim() : 'Bilinmeyen Kullanıcı';
+        }
     </script>
 </body>
 </html>
