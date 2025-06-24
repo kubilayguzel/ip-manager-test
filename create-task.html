@@ -767,7 +767,7 @@
                         }
                     }
 
-                } else if (selectedTransactionType.hierarchy === 'child' && selectedTransactionType.isTopLevelSelectable) {
+                else if (selectedTransactionType.hierarchy === 'child' && selectedTransactionType.isTopLevelSelectable) {
                     // Eğer seçilen işlem tipi isTopLevelSelectable bir child ise
                     const recordTransactionsResult = await ipRecordsService.getRecordTransactions(this.selectedIpRecord.id);
                     if (!recordTransactionsResult.success) {
