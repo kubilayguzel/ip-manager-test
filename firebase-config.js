@@ -275,6 +275,8 @@ export const ipRecordsService = {
         }
     },
     async addTransactionToRecord(recordId, transactionData) {
+    console.log("🔥 addTransactionToRecord çağrıldı", recordId, transactionData);
+
     if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor." };
     try {
         const recordRef = doc(db, 'ipRecords', recordId);
