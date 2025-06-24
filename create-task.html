@@ -234,7 +234,7 @@
                 document.getElementById('cancelParentSelectionBtn').addEventListener('click', () => this.hideParentSelectionModal());
                 }
 
-                async handleMainTypeChange(e) {
+            async handleMainTypeChange(e) {
                 const mainType = e.target.value; // Seçilen ana IP türü (patent, trademark, design)
                 const specificTypeSelect = document.getElementById('specificTaskType');
                 const conditionalFieldsContainer = document.getElementById('conditionalFieldsContainer');
@@ -245,28 +245,32 @@
                 if (mainType) {
                     specificTypeSelect.innerHTML = '<option value="">Seçiniz...</option>';
                     
-                    // Seçilen mainType'a ait parent ve isTopLevelSelectable child'ları filtrele
-                    const filteredTransactionTypes = this.allTransactionTypes.filter(type =>
-                        (type.hierarchy === 'parent' && type.ipType === mainType) || // Parent ve ilgili IP tipi
-                        (type.hierarchy === 'child' && type.isTopLevelSelectable && type.applicableToMainType.includes(mainType)) // isTopLevelSelectable child ve ilgili IP tipi
-                    );
+                    // Filtreleme Mantığı:
+                    // 1. type.hierarchy: 'parent' VE type.ipType === mainType olanlar
+                    // 2. VEYA type.hierarchy: 'child' VE type.isTopLevelSelectable === true VE
+                    //    (type.applicableToMainType.includes(mainType) VEYA type.applicableToMainType.includes('all')) olanlar
+                    const filteredTransactionTypes = this.allTransactionTypes.filter(type => {
+                        const isParentAndMatchesIpType = (type.hierarchy === 'parent' && type.ipType === mainType);
+                        const isTopLevelChildAndMatchesIpType = (
+                            type.hierarchy === 'child' &&
+                            type.isTopLevelSelectable &&
+                            (type.applicableToMainType.includes(mainType) || type.applicableToMainType.includes('all'))
+                        );
+                        return isParentAndMatchesIpType || isTopLevelChildAndMatchesIpType;
+                    });
 
-                    // Sıralama (order'ı tekrar aktif ediyoruz, daha düzenli görünmesi için)
+                    // Sıralama (order'ı tekrar aktif ettim)
                     filteredTransactionTypes.sort((a, b) => (a.order || 999) - (b.order || 999));
-
 
                     filteredTransactionTypes.forEach(type => {
                         specificTypeSelect.innerHTML += `<option value="${type.id}">${type.alias || type.name}</option>`;
                     });
                     specificTypeSelect.disabled = false;
-
-                    // handleSpecificTypeChange içinde renderBaseForm'u çağırırken alt işlem select'ini tekrar render edecek şekilde bırakmalıyız.
-                    // handleMainTypeChange'de child select'ini doğrudan render etmiyoruz artık.
                 } else {
                     specificTypeSelect.disabled = true;
                 }
             }
-
+        }
             // renderChildTransactionTypeSelect metodu artık kullanılmayacak veya kaldırılacak.
             // çünkü alt işlemler artık handleSpecificTypeChange içindeki ayrı bir select box'ta değil,
             // ana "Spesifik İş Tipi" select box'ında parent'larla birlikte listeleniyor.
