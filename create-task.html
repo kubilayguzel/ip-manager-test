@@ -235,42 +235,38 @@
                 }
 
             async handleMainTypeChange(e) {
-                const mainType = e.target.value; // Seçilen ana IP türü (patent, trademark, design)
-                const specificTypeSelect = document.getElementById('specificTaskType');
-                const conditionalFieldsContainer = document.getElementById('conditionalFieldsContainer');
-                conditionalFieldsContainer.innerHTML = ''; // Önceki tüm dinamik alanları temizle
-                document.getElementById('saveTaskBtn').disabled = true;
+            const mainType = e.target.value;
+            const specificTypeSelect = document.getElementById('specificTaskType');
+            const conditionalFieldsContainer = document.getElementById('conditionalFieldsContainer');
+            conditionalFieldsContainer.innerHTML = '';
+            document.getElementById('saveTaskBtn').disabled = true;
 
-                specificTypeSelect.innerHTML = '<option value="">Önce İşin Ana Türünü Seçin</option>';
-                if (mainType) {
-                    specificTypeSelect.innerHTML = '<option value="">Seçiniz...</option>';
-                    
-                    // Filtreleme Mantığı:
-                    // 1. type.hierarchy: 'parent' VE type.ipType === mainType olanlar
-                    // 2. VEYA type.hierarchy: 'child' VE type.isTopLevelSelectable === true VE
-                    //    (type.applicableToMainType.includes(mainType) VEYA type.applicableToMainType.includes('all')) olanlar
-                    const filteredTransactionTypes = this.allTransactionTypes.filter(type => {
-                        const isParentAndMatchesIpType = (type.hierarchy === 'parent' && type.ipType === mainType);
-                        const isTopLevelChildAndMatchesIpType = (
-                            type.hierarchy === 'child' &&
-                            type.isTopLevelSelectable &&
-                            (type.applicableToMainType.includes(mainType) || type.applicableToMainType.includes('all'))
-                        );
-                        return isParentAndMatchesIpType || isTopLevelChildAndMatchesIpType;
-                    });
+            specificTypeSelect.innerHTML = '<option value="">Önce İşin Ana Türünü Seçin</option>';
+            if (mainType) {
+                specificTypeSelect.innerHTML = '<option value="">Seçiniz...</option>';
+                
+                const filteredTransactionTypes = this.allTransactionTypes.filter(type => {
+                    const isParentAndMatchesIpType = (type.hierarchy === 'parent' && type.ipType === mainType);
+                    const isTopLevelChildAndMatchesIpType = (
+                        type.hierarchy === 'child' &&
+                        type.isTopLevelSelectable &&
+                        (type.applicableToMainType.includes(mainType) || type.applicableToMainType.includes('all'))
+                    );
+                    return isParentAndMatchesIpType || isTopLevelChildAndMatchesIpType;
+                });
 
-                    // Sıralama (order'ı tekrar aktif ettim)
-                    filteredTransactionTypes.sort((a, b) => (a.order || 999) - (b.order || 999));
+                filteredTransactionTypes.sort((a, b) => (a.order || 999) - (b.order || 999));
 
-                    filteredTransactionTypes.forEach(type => {
-                        specificTypeSelect.innerHTML += `<option value="${type.id}">${type.alias || type.name}</option>`;
-                    });
-                    specificTypeSelect.disabled = false;
-                } else {
-                    specificTypeSelect.disabled = true;
-                }
+
+                filteredTransactionTypes.forEach(type => {
+                    specificTypeSelect.innerHTML += `<option value="${type.id}">${type.alias || type.name}</option>`;
+                });
+                specificTypeSelect.disabled = false;
+            } else {
+                specificTypeSelect.disabled = true;
             }
-        }
+        
+          }
             // renderChildTransactionTypeSelect metodu artık kullanılmayacak veya kaldırılacak.
             // çünkü alt işlemler artık handleSpecificTypeChange içindeki ayrı bir select box'ta değil,
             // ana "Spesifik İş Tipi" select box'ında parent'larla birlikte listeleniyor.
@@ -278,24 +274,23 @@
             // handleSpecificTypeChange metodu şimdi sadece base formu render edecek.
 
             // handleSpecificTypeChange metodunu güncelliyoruz (Alt işlem tipi select box'ını artık kendisi render etmiyor)
-            async handleSpecificTypeChange(e) {
-                const taskTypeId = e.target.value;
-                const selectedTaskType = this.allTransactionTypes.find(type => type.id === taskTypeId);
+            
+           async handleSpecificTypeChange(e) {
+            const taskTypeId = e.target.value;
+            const selectedTaskType = this.allTransactionTypes.find(type => type.id === taskTypeId);
 
-                const container = document.getElementById('conditionalFieldsContainer');
-                container.innerHTML = ''; // Önceki form alanlarını temizle
-                this.resetSelections();
-                document.getElementById('saveTaskBtn').disabled = true;
+            const container = document.getElementById('conditionalFieldsContainer');
+            container.innerHTML = '';
+            this.resetSelections();
+            document.getElementById('saveTaskBtn').disabled = true;
 
-                if (!selectedTaskType) return;
+            if (!selectedTaskType) return;
 
-                this.renderBaseForm(container, selectedTaskType.name); // Sadece base formu render et
-                
-                // Eğer bir önceki modifikasyondan kalan ve artık kullanılmayan bir alt işlem select box'ı varsa, buradan temizlenmeli.
-                // Ama conditionalFieldsContainer.innerHTML = ''; zaten bunu halletmeli.
-
-                this.checkFormCompleteness();
-            }
+            this.renderBaseForm(container, selectedTaskType.name);
+            
+            this.checkFormCompleteness();
+        }
+        // --- SON: handleSpecificTypeChange metodu ---
 
             renderBaseForm(container, taskTypeName) { // taskTypeName parametresi eklendi
                 const transactionLikeTasks = ['Devir', 'Lisans', 'Birleşme', 'Veraset ile İntikal', 'Rehin/Teminat'];
