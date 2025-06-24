@@ -751,7 +751,7 @@
                     // Eğer seçilen işlem tipi bir parent ise, doğrudan parent olarak kaydet
                     const transactionData = {
                         type: selectedTransactionType.id,
-                        description: `Yeni ${selectedTransactionType.name} işlemi.`,
+                        description: `${selectedTransactionType.name} işlemi.`,
                         parentId: null,
                         transactionHierarchy: "parent"
                     };
@@ -776,7 +776,7 @@
 
                     const childTransactionData = {
                         type: selectedTransactionType.id,
-                        description: `Yeni ${selectedTransactionType.name} alt işlemi.`,
+                        description: `${selectedTransactionType.name} alt işlemi.`,
                         // parentId ve transactionHierarchy burada belirlenecek
                     };
 
