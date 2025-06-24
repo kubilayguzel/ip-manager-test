@@ -746,17 +746,27 @@
                 }
 
                 // IP kaydına transaction ekleme mantığı
-                if (selectedTransactionType.hierarchy === 'parent') {
-                    // Eğer seçilen işlem tipi bir parent ise, doğrudan parent olarak kaydet
-                    const transactionData = {
-                        type: selectedTransactionType.id,
-                        description: `${selectedTransactionType.name} işlemi.`,
-                        parentId: null,
-                        transactionHierarchy: "parent"
-                    };
-                    await ipRecordsService.addTransactionToRecord(this.selectedIpRecord.id, transactionData);
-                    alert('İş ve ilgili tahakkuk başarıyla oluşturuldu!');
-                    window.location.href = 'task-management.html';
+                    if (selectedTransactionType.hierarchy === 'parent') {
+                        const transactionData = {
+                            type: selectedTransactionType.id,
+                            description: `${selectedTransactionType.name} işlemi.`,
+                            parentId: null,
+                            transactionHierarchy: "parent"
+                        };
+                        console.log("📤 Firestore'a transaction ekleniyor:", transactionData);
+
+                        const addResult = await ipRecordsService.addTransactionToRecord(this.selectedIpRecord.id, transactionData);
+
+                        if (addResult.success) {
+                            console.log("✅ Transaction Firestore'a kaydedildi:", addResult.data);
+                            alert('İş ve ilgili tahakkuk başarıyla oluşturuldu!');
+                            window.location.href = 'task-management.html';
+                        } else {
+                            console.error("❌ Transaction kaydı başarısız:", addResult.error);
+                            alert('İş oluşturuldu ama işlem Firestore\'a kaydedilemedi.');
+                        }
+                    }
+
                 } else if (selectedTransactionType.hierarchy === 'child' && selectedTransactionType.isTopLevelSelectable) {
                     // Eğer seçilen işlem tipi isTopLevelSelectable bir child ise
                     const recordTransactionsResult = await ipRecordsService.getRecordTransactions(this.selectedIpRecord.id);
