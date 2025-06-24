@@ -802,4 +802,4 @@ export async function createDemoData() {
 
 
 // --- Exports ---
-export {auth, db};
+//export {auth, db};
