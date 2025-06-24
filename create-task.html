@@ -234,46 +234,63 @@
                 document.getElementById('cancelParentSelectionBtn').addEventListener('click', () => this.hideParentSelectionModal());
                 }
 
-            async handleMainTypeChange(e) {
-                const mainType = e.target.value;
+                async handleMainTypeChange(e) {
+                const mainType = e.target.value; // Seçilen ana IP türü (patent, trademark, design)
                 const specificTypeSelect = document.getElementById('specificTaskType');
-                document.getElementById('conditionalFieldsContainer').innerHTML = '';
+                const conditionalFieldsContainer = document.getElementById('conditionalFieldsContainer');
+                conditionalFieldsContainer.innerHTML = ''; // Önceki tüm dinamik alanları temizle
                 document.getElementById('saveTaskBtn').disabled = true;
 
                 specificTypeSelect.innerHTML = '<option value="">Önce İşin Ana Türünü Seçin</option>';
                 if (mainType) {
                     specificTypeSelect.innerHTML = '<option value="">Seçiniz...</option>';
                     
-                    // Firestore'dan ilgili parent işlem tiplerini çek
-                    // this.allTransactionTypes önceden yüklendiği için tekrar API çağrısı yapmaya gerek yok
-                    const filteredParentTypes = this.allTransactionTypes.filter(type =>
-                        type.hierarchy === 'parent' &&
-                        (type.applicableToMainType.includes(mainType) || type.applicableToMainType.includes('all'))
+                    // Seçilen mainType'a ait parent ve isTopLevelSelectable child'ları filtrele
+                    const filteredTransactionTypes = this.allTransactionTypes.filter(type =>
+                        (type.hierarchy === 'parent' && type.ipType === mainType) || // Parent ve ilgili IP tipi
+                        (type.hierarchy === 'child' && type.isTopLevelSelectable && type.applicableToMainType.includes(mainType)) // isTopLevelSelectable child ve ilgili IP tipi
                     );
 
-                    filteredParentTypes.forEach(type => {
-                        specificTypeSelect.innerHTML += `<option value="${type.id}">${type.name}</option>`; // ID'yi değer, adı metin olarak kullan
+                    // Sıralama (order'ı tekrar aktif ediyoruz, daha düzenli görünmesi için)
+                    filteredTransactionTypes.sort((a, b) => (a.order || 999) - (b.order || 999));
+
+
+                    filteredTransactionTypes.forEach(type => {
+                        specificTypeSelect.innerHTML += `<option value="${type.id}">${type.alias || type.name}</option>`;
                     });
                     specificTypeSelect.disabled = false;
+
+                    // handleSpecificTypeChange içinde renderBaseForm'u çağırırken alt işlem select'ini tekrar render edecek şekilde bırakmalıyız.
+                    // handleMainTypeChange'de child select'ini doğrudan render etmiyoruz artık.
                 } else {
                     specificTypeSelect.disabled = true;
                 }
             }
 
-            handleSpecificTypeChange(e) {
-                // specificTaskType artık işlem tipinin ID'si olacak
-                const taskTypeId = e.target.value; 
+            // renderChildTransactionTypeSelect metodu artık kullanılmayacak veya kaldırılacak.
+            // çünkü alt işlemler artık handleSpecificTypeChange içindeki ayrı bir select box'ta değil,
+            // ana "Spesifik İş Tipi" select box'ında parent'larla birlikte listeleniyor.
+            // Bu yüzden önceki renderChildTransactionTypeSelect çağrılarını temizleyeceğiz.
+            // handleSpecificTypeChange metodu şimdi sadece base formu render edecek.
+
+            // handleSpecificTypeChange metodunu güncelliyoruz (Alt işlem tipi select box'ını artık kendisi render etmiyor)
+            async handleSpecificTypeChange(e) {
+                const taskTypeId = e.target.value;
                 const selectedTaskType = this.allTransactionTypes.find(type => type.id === taskTypeId);
 
                 const container = document.getElementById('conditionalFieldsContainer');
-                container.innerHTML = '';
+                container.innerHTML = ''; // Önceki form alanlarını temizle
                 this.resetSelections();
                 document.getElementById('saveTaskBtn').disabled = true;
 
                 if (!selectedTaskType) return;
+
+                this.renderBaseForm(container, selectedTaskType.name); // Sadece base formu render et
                 
-                // selectedTaskType.name'i renderBaseForm'a gönderiyoruz
-                this.renderBaseForm(container, selectedTaskType.name); 
+                // Eğer bir önceki modifikasyondan kalan ve artık kullanılmayan bir alt işlem select box'ı varsa, buradan temizlenmeli.
+                // Ama conditionalFieldsContainer.innerHTML = ''; zaten bunu halletmeli.
+
+                this.checkFormCompleteness();
             }
 
             renderBaseForm(container, taskTypeName) { // taskTypeName parametresi eklendi
@@ -649,7 +666,7 @@
                 document.getElementById('saveTaskBtn').disabled = !isComplete;
             }
 
-            async handleFormSubmit(e) {
+                async handleFormSubmit(e) {
                 e.preventDefault();
                 if (!this.selectedIpRecord) {
                     alert('Lütfen işleme konu bir varlık seçin.');
@@ -657,15 +674,19 @@
                 }
 
                 const specificTaskTypeId = document.getElementById('specificTaskType').value;
-                const selectedTransactionType = this.allTransactionTypes.find(type => type.id === specificTaskTypeId); // Tam objeyi al
-                
+                const selectedTransactionType = this.allTransactionTypes.find(type => type.id === specificTaskTypeId);
+
+                if (!selectedTransactionType) {
+                    alert('Geçerli bir işlem tipi seçmediniz.');
+                    return;
+                }
+
                 const assignedToUser = this.allUsers.find(u => u.id === document.getElementById('assignedTo').value);
                 
                 let taskData = {
-                    // taskType artık doğrudan veritabanındaki ID olacak
-                    taskType: selectedTransactionType ? selectedTransactionType.id : null,
-                    title: selectedTransactionType ? selectedTransactionType.name : 'Belirtilmemiş İşlem',
-                    description: `'${this.selectedIpRecord.title}' adlı varlık için ${selectedTransactionType ? selectedTransactionType.name : 'belirtilmemiş'} işlemi.`,
+                    taskType: selectedTransactionType.id,
+                    title: selectedTransactionType.alias || selectedTransactionType.name,
+                    description: `'${this.selectedIpRecord.title}' adlı varlık için ${selectedTransactionType.alias || selectedTransactionType.name} işlemi.`,
                     priority: document.getElementById('taskPriority').value,
                     assignedTo_uid: assignedToUser ? assignedToUser.id : null, 
                     assignedTo_email: assignedToUser ? assignedToUser.email : null, 
@@ -726,18 +747,62 @@
                 }
 
                 // IP kaydına transaction ekleme mantığı
-                const transactionData = {
-                    type: selectedTransactionType ? selectedTransactionType.id : 'unknown_transaction', // Veritabanı ID'si kullanılmalı
-                    description: `Yeni ${selectedTransactionType ? selectedTransactionType.name : 'belirtilmemiş'} işlemi.`,
-                    parentId: null, // Bu işlem bir parent olacağı için null
-                    transactionHierarchy: "parent" // Yeni eklenen bir parent işlem olduğunu belirtiyoruz
-                };
-                await ipRecordsService.addTransactionToRecord(this.selectedIpRecord.id, transactionData);
-                
-                alert('İş ve ilgili tahakkuk başarıyla oluşturuldu!');
-                window.location.href = 'task-management.html';
+                if (selectedTransactionType.hierarchy === 'parent') {
+                    // Eğer seçilen işlem tipi bir parent ise, doğrudan parent olarak kaydet
+                    const transactionData = {
+                        type: selectedTransactionType.id,
+                        description: `Yeni ${selectedTransactionType.name} işlemi.`,
+                        parentId: null,
+                        transactionHierarchy: "parent"
+                    };
+                    await ipRecordsService.addTransactionToRecord(this.selectedIpRecord.id, transactionData);
+                    alert('İş ve ilgili tahakkuk başarıyla oluşturuldu!');
+                    window.location.href = 'task-management.html';
+                } else if (selectedTransactionType.hierarchy === 'child' && selectedTransactionType.isTopLevelSelectable) {
+                    // Eğer seçilen işlem tipi isTopLevelSelectable bir child ise
+                    const recordTransactionsResult = await ipRecordsService.getRecordTransactions(this.selectedIpRecord.id);
+                    if (!recordTransactionsResult.success) {
+                        alert('Portföy geçmişi yüklenirken hata oluştu: ' + recordTransactionsResult.error);
+                        return;
+                    }
+                    const existingTransactions = recordTransactionsResult.data;
+
+                    // expectedParentTypeIds'e uyan parent transaction'ları bul
+                    const suitableParents = existingTransactions.filter(t =>
+                        t.transactionHierarchy === 'parent' &&
+                        selectedTransactionType.expectedParentTypeIds && // expectedParentTypeIds mevcut mu?
+                        selectedTransactionType.expectedParentTypeIds.includes(t.type) // Parent'ın tipi, child'ın beklediği tipler arasında mı?
+                    );
+
+                    const childTransactionData = {
+                        type: selectedTransactionType.id,
+                        description: `Yeni ${selectedTransactionType.name} alt işlemi.`,
+                        // parentId ve transactionHierarchy burada belirlenecek
+                    };
+
+                    if (suitableParents.length === 0) {
+                        // Hiç uygun parent bulunamazsa
+                        alert(`Bu alt işlem (${selectedTransactionType.name}) için portföyde uygun bir ana işlem bulunamadı. Lütfen önce ilgili ana işlemi oluşturun.`);
+                        // Kullanıcıya işin kaydedilmediğini belirtmek için formu temizleyebiliriz veya başka bir işlem yapabiliriz
+                        // Şimdilik işlemi tamamlamasına izin verme
+                        return;
+                    } else if (suitableParents.length === 1) {
+                        // Tek bir uygun parent bulunursa, otomatik olarak altına bağla
+                        childTransactionData.parentId = suitableParents[0].id;
+                        childTransactionData.transactionHierarchy = "child";
+                        await ipRecordsService.addTransactionToRecord(this.selectedIpRecord.id, childTransactionData);
+                        alert('İş ve ilgili alt işlem başarıyla oluşturuldu!');
+                        window.location.href = 'task-management.html';
+                    } else {
+                        // Birden fazla uygun parent bulunursa, kullanıcıya seçtir
+                        this.showParentSelectionModal(suitableParents, childTransactionData);
+                    }
+                } else {
+                    // Geçersiz bir durum, olmaması gereken bir seçim
+                    alert('Geçersiz işlem tipi seçimi. Lütfen geçerli bir ana veya alt işlem tipi seçin.');
+                }
             }
-}
+    }
         const module = new CreateTaskModule();
         auth.onAuthStateChanged(user => {
             if(user || authService.getCurrentUser()) {
