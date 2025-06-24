@@ -156,7 +156,7 @@
     </div>
 
     <script type="module">
-        import { authService, taskService, ipRecordsService, personService, accrualService, auth, generateUUID } from './firebase-config.js';
+        import { authService, taskService, ipRecordsService, personService, accrualService, auth, transactionTypeService, generateUUID } from './firebase-config.js';
         import { loadSharedLayout } from './js/layout-loader.js'; // loadSharedLayout import edildi
 
         class CreateTaskModule {
@@ -170,35 +170,28 @@
                 this.selectedRelatedParty = null;
                 this.selectedTpInvoiceParty = null;
                 this.selectedServiceInvoiceParty = null;
-                this.taskTypeMappings = {
-                    'trademark': [
-                        'Başvuru', 'Yenileme', 'Karara İtiraz',  'Yayına İtiraz', 'İtiraza Karşı Görüş', 
-                        'Yayıma İtirazin Yeniden Incelenmesi', 'Kullanım Delili Sunma','İtiraza Ek Belge','Devir','Tescil Belgesi Sureti', 'Sicil Sureti',
-                        'Menşe Memleket Belgesi','Vazgeçme','Eşya Sınırlandırma','Lisans', 'Birleşme', 'Veraset ile İntikal', 'Rehin/Teminat','Bölünme','Yayına İtirazı Geri Çekme',
-                        'Karara İtirazı Geri Çekme', 'Eksiklik Giderme','Tanınmışlık Tespiti','3.Kişi Görüşü','Muvaffakat Sunumu',
-                        'Madrid Başvurusu Ücret Ödeme'
-                    ],
-                    'patent': ['Başvuru', 'Yenileme', 'Yıllık Ücret Ödemesi', 'Lisans', 'Devir', 'Rehin'],
-                    'design': ['Başvuru', 'Yenileme', 'Devir', 'Lisans', 'Rehin']
-                };
+                this.selectedServiceInvoiceParty = null;
             }
 
             async init() {
                 this.currentUser = authService.getCurrentUser();
                 if (!this.currentUser) { window.location.href = 'index.html'; return; }
-                               
+                                
                 try {
-                    const [ipRecordsResult, personsResult, usersResult] = await Promise.all([
-                        ipRecordsService.getRecords(), personService.getPersons(), taskService.getAllUsers()
+                    const [ipRecordsResult, personsResult, usersResult, transactionTypesResult] = await Promise.all([ // transactionTypesResult eklendi
+                        ipRecordsService.getRecords(), 
+                        personService.getPersons(), 
+                        taskService.getAllUsers(),
+                        transactionTypeService.getTransactionTypes() // Yeni: İşlem tiplerini çek
                     ]);
                     this.allIpRecords = ipRecordsResult.data || [];
                     this.allPersons = personsResult.data || [];
                     this.allUsers = usersResult.data || [];
+                    this.allTransactionTypes = transactionTypesResult.data || []; // Yeni: İşlem tiplerini kaydet
 
                     console.log('Kullanıcılar yüklendi:', this.allUsers.length);
+                    console.log('Tüm işlem tipleri yüklendi:', this.allTransactionTypes.length); // Yeni log
                     
-                    // populateAssignedToDropdown çağrısını buradan kaldırıyoruz
-                    // çünkü 'assignedTo' elementi dinamik olarak oluşturulacak.
                 } catch (error) {
                     console.error("Veri yüklenirken hata oluştu:", error);
                     alert("Gerekli veriler yüklenemedi, lütfen sayfayı yenileyin.");
@@ -238,7 +231,7 @@
                 document.getElementById('savePersonBtn').addEventListener('click', () => this.saveNewPerson());
             }
 
-            handleMainTypeChange(e) {
+            async handleMainTypeChange(e) {
                 const mainType = e.target.value;
                 const specificTypeSelect = document.getElementById('specificTaskType');
                 document.getElementById('conditionalFieldsContainer').innerHTML = '';
@@ -247,8 +240,16 @@
                 specificTypeSelect.innerHTML = '<option value="">Önce İşin Ana Türünü Seçin</option>';
                 if (mainType) {
                     specificTypeSelect.innerHTML = '<option value="">Seçiniz...</option>';
-                    this.taskTypeMappings[mainType].forEach(type => {
-                        specificTypeSelect.innerHTML += `<option value="${type}">${type}</option>`;
+                    
+                    // Firestore'dan ilgili parent işlem tiplerini çek
+                    // this.allTransactionTypes önceden yüklendiği için tekrar API çağrısı yapmaya gerek yok
+                    const filteredParentTypes = this.allTransactionTypes.filter(type =>
+                        type.hierarchy === 'parent' &&
+                        (type.applicableToMainType.includes(mainType) || type.applicableToMainType.includes('all'))
+                    );
+
+                    filteredParentTypes.forEach(type => {
+                        specificTypeSelect.innerHTML += `<option value="${type.id}">${type.name}</option>`; // ID'yi değer, adı metin olarak kullan
                     });
                     specificTypeSelect.disabled = false;
                 } else {
@@ -257,25 +258,29 @@
             }
 
             handleSpecificTypeChange(e) {
-                const taskType = e.target.value;
+                // specificTaskType artık işlem tipinin ID'si olacak
+                const taskTypeId = e.target.value; 
+                const selectedTaskType = this.allTransactionTypes.find(type => type.id === taskTypeId);
+
                 const container = document.getElementById('conditionalFieldsContainer');
                 container.innerHTML = '';
                 this.resetSelections();
                 document.getElementById('saveTaskBtn').disabled = true;
 
-                if (!taskType) return;
+                if (!selectedTaskType) return;
                 
-                this.renderBaseForm(container, taskType);
+                // selectedTaskType.name'i renderBaseForm'a gönderiyoruz
+                this.renderBaseForm(container, selectedTaskType.name); 
             }
 
-            renderBaseForm(container, taskType) {
-                 const transactionLikeTasks = ['Devir', 'Lisans', 'Birleşme', 'Rehin', 'Veraset ile İntikal', 'Rehin/Teminat'];
-                 const needsRelatedParty = transactionLikeTasks.includes(taskType);
-                 const partyLabels = { 
+            renderBaseForm(container, taskTypeName) { // taskTypeName parametresi eklendi
+                const transactionLikeTasks = ['Devir', 'Lisans', 'Birleşme', 'Veraset ile İntikal', 'Rehin/Teminat'];
+                const needsRelatedParty = transactionLikeTasks.includes(taskTypeName); // taskTypeName kullanıldı
+                const partyLabels = { 
                     'Devir': 'Devralan Taraf', 'Lisans': 'Lisans Alan Taraf', 'Rehin': 'Rehin Alan Taraf', 
                     'Birleşme': 'Birleşilen Taraf', 'Veraset ile İntikal': 'Mirasçı', 'Rehin/Teminat': 'Rehin Alan Taraf' 
-                 };
-                 const partyLabel = partyLabels[taskType] || 'İlgili Taraf';
+                };
+                const partyLabel = partyLabels[taskTypeName] || 'İlgili Taraf';
 
                 container.innerHTML = `
                     <div class="form-section">
@@ -334,11 +339,11 @@
                                 <label for="vatRate" class="form-label">KDV Oranı (%)</label>
                                 <input type="number" id="vatRate" class="form-input" value="20">
                             </div>
-                             <div class="form-group">
+                            <div class="form-group">
                                 <label for="totalAmountDisplay" class="form-label">Toplam Tutar</label>
                                 <div id="totalAmountDisplay" class="total-amount-display">0.00 TRY</div>
                             </div>
-                             <div class="form-group full-width">
+                            <div class="form-group full-width">
                                 <label class="checkbox-label">
                                     <input type="checkbox" id="applyVatToOfficialFee" checked>
                                     Resmi Ücrete KDV Uygula
@@ -573,13 +578,16 @@
             }
             
             checkFormCompleteness() {
-                const taskType = document.getElementById('specificTaskType').value;
-                const transactionLikeTasks = ['Devir', 'Lisans', 'Birleşme', 'Rehin', 'Veraset ile İntikal', 'Rehin/Teminat'];
+                const specificTaskTypeId = document.getElementById('specificTaskType').value; // ID'yi alıyoruz
+                const selectedTaskType = this.allTransactionTypes.find(type => type.id === specificTaskTypeId); // Objeyi buluyoruz
+
+                const transactionLikeTasks = ['Devir', 'Lisans', 'Birleşme', 'Veraset ile İntikal', 'Rehin/Teminat']; // Burada isimlerle kontrol devam ediyor
                 let isComplete = false;
                 
-                if (transactionLikeTasks.includes(taskType)) {
+                // Kontrolü isim üzerinden yapmaya devam ediyoruz, çünkü renderBaseForm da isme bakıyor.
+                if (selectedTaskType && transactionLikeTasks.includes(selectedTaskType.name)) {
                     isComplete = this.selectedIpRecord && this.selectedRelatedParty;
-                } else {
+                } else if (selectedTaskType) { // Sadece tip seçiliyse ve ilgili varlık seçilmişse
                     isComplete = !!this.selectedIpRecord;
                 }
                 
@@ -593,16 +601,19 @@
                     return;
                 }
 
-                const specificTaskType = document.getElementById('specificTaskType').value;
+                const specificTaskTypeId = document.getElementById('specificTaskType').value;
+                const selectedTransactionType = this.allTransactionTypes.find(type => type.id === specificTaskTypeId); // Tam objeyi al
+                
                 const assignedToUser = this.allUsers.find(u => u.id === document.getElementById('assignedTo').value);
                 
                 let taskData = {
-                    taskType: `${document.getElementById('mainIpType').value}_${specificTaskType.toLowerCase().replace(/ /g, '_')}`,
-                    title: specificTaskType,
-                    description: `'${this.selectedIpRecord.title}' adlı varlık için ${specificTaskType} işlemi.`,
+                    // taskType artık doğrudan veritabanındaki ID olacak
+                    taskType: selectedTransactionType ? selectedTransactionType.id : null,
+                    title: selectedTransactionType ? selectedTransactionType.name : 'Belirtilmemiş İşlem',
+                    description: `'${this.selectedIpRecord.title}' adlı varlık için ${selectedTransactionType ? selectedTransactionType.name : 'belirtilmemiş'} işlemi.`,
                     priority: document.getElementById('taskPriority').value,
-                    assignedTo_uid: assignedToUser ? assignedToUser.id : null, // assignedToUser null ise hata vermemesi için kontrol eklendi
-                    assignedTo_email: assignedToUser ? assignedToUser.email : null, // assignedToUser null ise hata vermemesi için kontrol eklendi
+                    assignedTo_uid: assignedToUser ? assignedToUser.id : null, 
+                    assignedTo_email: assignedToUser ? assignedToUser.email : null, 
                     dueDate: document.getElementById('taskDueDate').value || null,
                     status: 'open',
                     relatedIpRecordId: this.selectedIpRecord.id,
@@ -659,18 +670,19 @@
                     }
                 }
 
+                // IP kaydına transaction ekleme mantığı
                 const transactionData = {
-                    type: specificTaskType,
-                    description: specificTaskType,
-                    parentId: null 
+                    type: selectedTransactionType ? selectedTransactionType.id : 'unknown_transaction', // Veritabanı ID'si kullanılmalı
+                    description: `Yeni ${selectedTransactionType ? selectedTransactionType.name : 'belirtilmemiş'} işlemi.`,
+                    parentId: null, // Bu işlem bir parent olacağı için null
+                    transactionHierarchy: "parent" // Yeni eklenen bir parent işlem olduğunu belirtiyoruz
                 };
                 await ipRecordsService.addTransactionToRecord(this.selectedIpRecord.id, transactionData);
                 
                 alert('İş ve ilgili tahakkuk başarıyla oluşturuldu!');
                 window.location.href = 'task-management.html';
             }
-        }
-
+}
         const module = new CreateTaskModule();
         auth.onAuthStateChanged(user => {
             if(user || authService.getCurrentUser()) {
