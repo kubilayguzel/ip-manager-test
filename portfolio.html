@@ -461,6 +461,7 @@
                     <button type="button" class="tab-button" data-type="design">Tasarım</button>
                     <button type="button" class="tab-button" data-type="objections">İtirazlar</button>
                     <button type="button" class="tab-button" data-type="litigation">Davalar</button>
+                    <button type="button" class="tab-button" data-type="thirdParty">3. Taraf Dosyaları</button>
                 </div>
                 <div class="filter-row">
                     <input type="text" id="searchBar" class="search-input" placeholder="Başlık, numara, durum, hak sahibi ara...">
@@ -560,7 +561,8 @@
 
                         this.allRecords = recordsResult.success ? recordsResult.data.map(record => ({
                             ...record,
-                            recordStatus: record.recordStatus || 'aktif'
+                            recordStatus: record.recordStatus || 'aktif',
+                            recordType: record.recordType || 'Portföy' // Default value for existing records
                         })) : [];
                         
                         this.initialRenderTableStructure(); 
@@ -792,15 +794,16 @@
 
                     const columnDefinitions = [
                         { key: 'selection', label: '<input type="checkbox" id="headerSelectAllCheckbox" />', sortable: false, searchable: false, isCheckbox: true, fixedWidth: '40px', index: 0 },
-                        { key: 'type', label: 'Kayıt Tipi', sortable: true, searchable: true, onlyAllTab: true, fixedWidth: '80px', index: 1 }, 
-                        { key: 'title', label: 'Başlık', sortable: true, searchable: true, fixedWidth: '150px', index: 2 }, 
-                        { key: 'trademarkImage', label: 'Marka Görseli', sortable: false, searchable: false, onlyTrademark: true, fixedWidth: '80px', index: 3 }, 
-                        { key: 'applicationNumber', label: 'Başvuru Numarası', sortable: true, searchable: true, fixedWidth: '120px', index: 4 },
-                        { key: 'applicationDate', label: 'Başvuru Tarihi', sortable: true, searchable: true, fixedWidth: '100px', index: 5 },
-                        { key: 'status', label: 'Başvuru Durumu', sortable: true, searchable: true, fixedWidth: '110px', index: 6 },
-                        { key: 'recordStatus', label: 'Kayıt Durumu', sortable: true, searchable: true, fixedWidth: '110px', index: 7 },
-                        { key: 'owners', label: 'Hak Sahipleri', sortable: true, searchable: true, fixedWidth: '200px', index: 8 }, 
-                        { key: 'actions', label: 'İşlemler', sortable: false, searchable: false, fixedWidth: '250px', index: 9 } 
+                        { key: 'recordType', label: 'Kayıt Tipi', sortable: true, searchable: true, fixedWidth: '80px', index: 1 }, // Yeni Kayıt Tipi Kolonu
+                        { key: 'type', label: 'Kayıt Türü', sortable: true, searchable: true, fixedWidth: '80px', index: 2 }, // Bu kolonun adı 'Kayıt Türü' olarak değişti
+                        { key: 'title', label: 'Başlık', sortable: true, searchable: true, fixedWidth: '150px', index: 3 }, 
+                        { key: 'trademarkImage', label: 'Marka Görseli', sortable: false, searchable: false, onlyTrademark: true, fixedWidth: '80px', index: 4 }, 
+                        { key: 'applicationNumber', label: 'Başvuru Numarası', sortable: true, searchable: true, fixedWidth: '120px', index: 5 },
+                        { key: 'applicationDate', label: 'Başvuru Tarihi', sortable: true, searchable: true, fixedWidth: '100px', index: 6 },
+                        { key: 'status', label: 'Başvuru Durumu', sortable: true, searchable: true, fixedWidth: '110px', index: 7 },
+                        { key: 'recordStatus', label: 'Kayıt Durumu', sortable: true, searchable: true, fixedWidth: '110px', index: 8 },
+                        { key: 'owners', label: 'Hak Sahipleri', sortable: true, searchable: true, fixedWidth: '200px', index: 9 }, 
+                        { key: 'actions', label: 'İşlemler', sortable: false, searchable: false, fixedWidth: '250px', index: 10 } 
                     ];
 
                     columnDefinitions.forEach(col => {
@@ -820,12 +823,14 @@
                         }
                         
                         tableHeaderRow.appendChild(th);
-                        if (col.key === 'type' && currentTypeFilter !== 'all') {
+                        
+                        // 'Kayıt Tipi' kolonu her zaman gözükecek
+                        if (col.key === 'type' && currentTypeFilter === 'thirdParty') {
+                             th.style.display = 'none'; // '3. Taraf' sekmesinde 'Kayıt Türü' gizlensin
+                        } else if (col.onlyTrademark && currentTypeFilter !== 'trademark') {
                             th.style.display = 'none';
                         }
-                        if (col.onlyTrademark && currentTypeFilter !== 'trademark') {
-                            th.style.display = 'none';
-                        }
+
 
                         const thFilter = document.createElement('th');
                         if (col.searchable) {
@@ -838,10 +843,10 @@
                             thFilter.appendChild(input);
                         }
                         tableFilterRow.appendChild(thFilter);
-                        if (col.key === 'type' && currentTypeFilter !== 'all') {
+
+                        if (col.key === 'type' && currentTypeFilter === 'thirdParty') {
                             thFilter.style.display = 'none';
-                        }
-                        if (col.onlyTrademark && currentTypeFilter !== 'trademark') {
+                        } else if (col.onlyTrademark && currentTypeFilter !== 'trademark') {
                             thFilter.style.display = 'none';
                         }
                         if (col.isCheckbox) {
@@ -857,7 +862,8 @@
 
                     const columnDefinitions = [ 
                         { key: 'selection', label: '', isCheckbox: true },
-                        { key: 'type', label: 'Kayıt Tipi' },
+                        { key: 'recordType', label: 'Kayıt Tipi' }, // Yeni
+                        { key: 'type', label: 'Kayıt Türü' },
                         { key: 'title', label: 'Başlık' },
                         { key: 'trademarkImage', label: 'Marka Görseli', onlyTrademark: true }, 
                         { key: 'applicationNumber', label: 'Başvuru Numarası' },
@@ -885,7 +891,8 @@
                             if (col.key === 'selection') {
                                 const isChecked = this.selectedRecords.has(record.id) ? 'checked' : '';
                                 cellHtmlContent = `<input type="checkbox" class="record-checkbox" data-id="${record.id}" ${isChecked}>`;
-                            } else if (col.key === 'type') { cellHtmlContent = `${record.type.charAt(0).toUpperCase() + record.type.slice(1)}`; }
+                            } else if (col.key === 'recordType') { cellHtmlContent = `${record.recordType || '-'}`; } // Yeni Kayıt Tipi
+                            else if (col.key === 'type') { cellHtmlContent = `${record.type.charAt(0).toUpperCase() + record.type.slice(1)}`; }
                             else if (col.key === 'title') { cellHtmlContent = `${record.title || 'Başlıksız Kayıt'}`; }
                             else if (col.key === 'trademarkImage') {
                             let imageSrc = '-';
@@ -939,15 +946,16 @@
 
                     const columnDefinitions = [
                         { key: 'selection', searchable: false, index: 0 },
-                        { key: 'type', searchable: true, index: 1, onlyAllTab: true }, 
-                        { key: 'title', searchable: true, index: 2 },
-                        { key: 'trademarkImage', searchable: false, onlyTrademark: true, index: 3 }, 
-                        { key: 'applicationNumber', searchable: true, index: 4 },
-                        { key: 'applicationDate', searchable: true, index: 5 },
-                        { key: 'status', searchable: true, index: 6 }, 
-                        { key: 'recordStatus', searchable: true, index: 7 },
-                        { key: 'owners', searchable: true, index: 8 },
-                        { key: 'actions', searchable: false, index: 9 }
+                        { key: 'recordType', searchable: true, index: 1 }, // Yeni
+                        { key: 'type', searchable: true, index: 2 }, 
+                        { key: 'title', searchable: true, index: 3 },
+                        { key: 'trademarkImage', searchable: false, onlyTrademark: true, index: 4 }, 
+                        { key: 'applicationNumber', searchable: true, index: 5 },
+                        { key: 'applicationDate', searchable: true, index: 6 },
+                        { key: 'status', searchable: true, index: 7 }, 
+                        { key: 'recordStatus', searchable: true, index: 8 },
+                        { key: 'owners', searchable: true, index: 9 },
+                        { key: 'actions', searchable: false, index: 10 }
                     ];
 
                     let filteredRows = allRows.filter(row => {
@@ -956,20 +964,24 @@
 
                         if (!record) return false; 
 
-                        // 1. Tab Filtrelemesi
-                        let matchesType = (currentTypeFilter === 'all' || record.type === currentTypeFilter);
-                        if (currentTypeFilter === 'objections') {
-                            // Fetch transactions specifically for this filter, if not already loaded
-                            // This might be inefficient if done for every row.
-                            // Better: Load all transactions for all records once, if performance is an issue.
-                            matchesType = record.transactions && record.transactions.some(t => t.type && t.type.includes('İtiraz'));
+                        // 1. Tab Filtrelemesi (recordType ve type'a göre)
+                        let matchesTabFilter = false;
+                        if (currentTypeFilter === 'all') {
+                            matchesTabFilter = record.recordType === 'Portföy';
+                        } else if (currentTypeFilter === 'thirdParty') {
+                            matchesTabFilter = record.recordType === '3. Taraf';
+                        } else if (currentTypeFilter === 'objections') {
+                            matchesTabFilter = record.recordType === 'Portföy' && record.transactions && record.transactions.some(t => t.type && t.type.includes('İtiraz'));
                         } else if (currentTypeFilter === 'litigation') {
-                            matchesType = record.transactions && record.transactions.some(t => t.type && t.type.includes('Dava'));
+                            matchesTabFilter = record.recordType === 'Portföy' && record.transactions && record.transactions.some(t => t.type && t.type.includes('Dava'));
+                        } else { // patent, trademark, copyright, design
+                            matchesTabFilter = record.recordType === 'Portföy' && record.type === currentTypeFilter;
                         }
                         
                         // 2. Genel Arama Çubuğu Filtrelemesi
                         const globalSearchMatch = [
                             record.type,
+                            record.recordType, // Yeni eklendi
                             record.title,
                             record.applicationNumber,
                             record.status,
@@ -987,8 +999,8 @@
                             if (!col.searchable || !this.columnFilters[col.key]) {
                                 return true; 
                             }
-                            if ((col.key === 'type' && currentTypeFilter !== 'all') || 
-                                (col.onlyTrademark && currentTypeFilter !== 'trademark')) return true; 
+                             if (col.key === 'type' && currentTypeFilter === 'thirdParty') return true; // '3. Taraf' sekmesinde 'Kayıt Türü' filtresi uygulanmasın
+                            if (col.onlyTrademark && currentTypeFilter !== 'trademark') return true; 
 
                             let recordValue = '';
                             if (col.key === 'owners') {
@@ -1001,7 +1013,7 @@
                             return recordValue.toLowerCase().includes(this.columnFilters[col.key]);
                         });
                         
-                        return matchesType && globalSearchMatch && columnFilterMatch;
+                        return matchesTabFilter && globalSearchMatch && columnFilterMatch;
                     });
 
                     // 4. Sıralama
@@ -1018,11 +1030,11 @@
 
                             if (sortColumn === 'owners') {
                                 valA = (recordA.owners ? recordA.owners.map(owner => allPersons.find(p => p.id === owner.id)?.name || '').filter(Boolean).join(' ') : ''); // 'this.allPersons' yerine 'allPersons'
-                                valB = (recordB.owners ? recordB.owners.map(owner => allPersons.find(p => p.id === owner.id)?.name || '').filter(Boolean).join(' ') : ''); // 'this.allPersons' yerine 'allPersons'
+                                valB = (recordB.owners ? recordB.map(owner => allPersons.find(p => p.id === owner.id)?.name || '').filter(Boolean).join(' ') : ''); // 'this.allPersons' yerine 'allPersons'
                             } else if (sortColumn === 'applicationDate') {
                                 valA = new Date(recordA.applicationDate || '1970-01-01'); 
                                 valB = new Date(recordB.applicationDate || '1970-01-01');
-                            } else if (sortColumn === 'type' || sortColumn === 'title' || sortColumn === 'status' || sortColumn === 'applicationNumber' || sortColumn === 'recordStatus') {
+                            } else if (sortColumn === 'type' || sortColumn === 'title' || sortColumn === 'status' || sortColumn === 'applicationNumber' || sortColumn === 'recordStatus' || sortColumn === 'recordType') { // recordType eklendi
                                 valA = String(recordA[sortColumn] || '');
                                 valB = String(recordB[sortColumn] || '');
                             } else {
@@ -1058,7 +1070,7 @@
                             const cellIndex = col.index;
                             const cell = row.children[cellIndex];
                             if (cell) { 
-                                const hideColumn = (col.key === 'type' && currentTypeFilter !== 'all') || 
+                                const hideColumn = (col.key === 'type' && currentTypeFilter === 'thirdParty') || // '3. Taraf' sekmesinde 'Kayıt Türü' kolonu gizlensin
                                                    (col.onlyTrademark && currentTypeFilter !== 'trademark');
                                 
                                 cell.style.display = hideColumn ? 'none' : 'table-cell'; 
@@ -1222,7 +1234,8 @@
                         // Modal içeriğini oluştur
                         modalBody.innerHTML = `
                             <div class="modal-detail-grid">
-                                <div class="modal-detail-item"><div class="modal-detail-label">Kayıt Tipi</div><div class="modal-detail-value">${record.type.charAt(0).toUpperCase() + record.type.slice(1)}</div></div>
+                                <div class="modal-detail-item"><div class="modal-detail-label">Kayıt Tipi</div><div class="modal-detail-value">${record.recordType || '-'}</div></div>
+                                <div class="modal-detail-item"><div class="modal-detail-label">Kayıt Türü</div><div class="modal-detail-value">${record.type.charAt(0).toUpperCase() + record.type.slice(1)}</div></div>
                                 <div class="modal-detail-item"><div class="modal-detail-label">Başvuru Durumu</div><div class="modal-detail-value">${record.status}</div></div>
                                 <div class="modal-detail-item"><div class="modal-detail-label">Kayıt Durumu</div><div class="modal-detail-value">${record.recordStatus}</div></div>
                                 <div class="modal-detail-item full-width"><div class="modal-detail-label">Başlık</div><div class="modal-detail-value">${record.title}</div></div>
