@@ -310,7 +310,7 @@ export const ipRecordsService = {
                     timestamp: new Date().toISOString(),
                     userId: currentUser ? currentUser.uid : 'anonymous', // Firebase UID
                     userEmail: currentUser ? currentUser.email : 'anonymous@example.com',
-                    userName: userName // YENİ EKLENDİ: İşlemi yapan kullanıcının görünen adını/email'ini kaydet
+                    userName: userNameToSave
                 };
 
                 const docRef = await addDoc(transactionsCollectionRef, transactionToAdd);
