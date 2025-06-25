@@ -526,15 +526,14 @@
                     if (tabContext === 'existing') {
                         this.selectedRecordExisting = record;
                         console.log('Seçilen Mevcut Kayıt:', this.selectedRecordExisting);
-                        // Düzeltme: getRecordTransactions yerine getTransactionsForRecord kullanılıyor
-                        const transactionsResult = await ipRecordsService.getTransactionsForRecord(record.id); //
+                        const transactionsResult = await ipRecordsService.getTransactionsForRecord(record.id); 
                         
-                        // YENİ LOGLAR EKLENDİ
                         console.log('ipRecordsService.getTransactionsForRecord çağrı sonucu:', transactionsResult);
                         
                         if (transactionsResult.success) {
-                            console.log('İşlemler başarıyla çekildi. Data:', transactionsResult.data);
-                            this.renderTransactionsForSelection(transactionsResult.data); //
+                            // DÜZELTME: transactionsResult.data yerine transactionsResult.transactions kullanıldı
+                            console.log('İşlemler başarıyla çekildi. Data:', transactionsResult.transactions); 
+                            this.renderTransactionsForSelection(transactionsResult.transactions); 
                         } else {
                             console.error('Kayıt işlemleri yüklenirken hata oluştu:', transactionsResult.error);
                             showNotification('Kayıt işlemleri yüklenemedi: ' + transactionsResult.error, 'error');
