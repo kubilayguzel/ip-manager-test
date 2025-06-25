@@ -1,5 +1,5 @@
 // add_missing_transaction_types.js içeriği
-import { transactionTypeService } from './firebase-config.js'; // firebase-config.js dosyanızın yolu bu dosyaya göre doğru olmalı
+import { transactionTypeService } from '../firebase-config.js'; // firebase-config.js dosyanızın yolu bu dosyaya göre doğru olmalı
 
 async function addMissingChildTransactionTypes() {
     const missingChildTypes = [
