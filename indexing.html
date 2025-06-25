@@ -528,9 +528,15 @@
                         console.log('Seçilen Mevcut Kayıt:', this.selectedRecordExisting);
                         // Düzeltme: getRecordTransactions yerine getTransactionsForRecord kullanılıyor
                         const transactionsResult = await ipRecordsService.getTransactionsForRecord(record.id); //
+                        
+                        // YENİ LOGLAR EKLENDİ
+                        console.log('ipRecordsService.getTransactionsForRecord çağrı sonucu:', transactionsResult);
+                        
                         if (transactionsResult.success) {
+                            console.log('İşlemler başarıyla çekildi. Data:', transactionsResult.data);
                             this.renderTransactionsForSelection(transactionsResult.data); //
                         } else {
+                            console.error('Kayıt işlemleri yüklenirken hata oluştu:', transactionsResult.error);
                             showNotification('Kayıt işlemleri yüklenemedi: ' + transactionsResult.error, 'error');
                             this.renderTransactionsForSelection([]); 
                         }
@@ -807,6 +813,7 @@
                             } catch (fileError) {
                                 console.error(`Dosya işlenirken hata (${fileData.fileObject.name}):`, fileError);
                                 showNotification(`Dosya işlenirken hata (${fileData.fileObject.name}): ${fileError.message}`, 'error');
+                                // Hata durumunda kalan dosyaların işlenmeye devam etmesi için burada return etmiyoruz.
                             }
                         }
                     }
