@@ -61,14 +61,14 @@
             margin-top: 15px;
             padding-top: 15px;
             border-top: 1px dashed #e1e8ed;
-            display: none;
+            display: none; 
         }
         
         .file-upload-wrapper {
             position: relative;
             overflow: hidden;
             display: inline-block;
-            width: 100%;
+            width: 100%; 
             cursor: pointer;
         }
 
@@ -90,7 +90,7 @@
             border-radius: 10px;
             font-size: 1em;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f0f4f8;
+            background-color: #f0f4f8; 
             color: #333;
             text-align: left;
             cursor: pointer;
@@ -293,6 +293,9 @@
                         if (transactionTypesResult.success) {
                             this.allTransactionTypes = transactionTypesResult.data;
                             console.log('Tüm İşlem Tipleri yüklendi:', this.allTransactionTypes); // LOG
+                            // YENİ LOG: Tüm child hiyerarşisine sahip işlem tiplerini göster
+                            const childHierarchyTypes = this.allTransactionTypes.filter(type => type.hierarchy === 'child');
+                            console.log('Tüm İşlem Tipleri (Çocuk Hiyerarşisi):', childHierarchyTypes);
                         }
                         else showNotification('İşlem tipleri yüklenemedi: ' + transactionTypesResult.error, 'error');
 
