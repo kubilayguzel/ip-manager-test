@@ -242,9 +242,9 @@
         </div>
         
         <script type="module">
+
             import { authService, ipRecordsService, auth, generateUUID, transactionTypeService } from './firebase-config.js';
             import { getFirestore, writeBatch, doc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
-
             import { showNotification, formatFileSize, readFileAsDataURL } from './utils.js';
             import { loadSharedLayout } from './js/layout-loader.js';
             // documentDesignationTranslations artık firebase-config.js'ten geliyor
@@ -860,5 +860,6 @@
                 const indexingModule = new IndexingModule();
             });
         </script>
+        <script type="module" src="./js/add_missing_transaction_types.js"></script>
 </body>
 </html>
