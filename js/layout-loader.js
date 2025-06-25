@@ -1,3 +1,4 @@
+// js/layout-loader.js
 import { authService } from '../firebase-config.js';
 
 // Menü yapısını daha yönetilebilir bir veri formatında tanımlıyoruz
@@ -8,17 +9,36 @@ const menuItems = [
     { id: 'data-entry', text: 'Yeni Kayıt', link: 'data-entry.html', icon: 'fas fa-plus-circle', category: 'Veri Girişi' },
     { id: 'excel-upload', text: 'Excel ile Yükle', link: 'excel-upload.html', icon: 'fas fa-file-excel', category: 'Veri Girişi', adminOnly: true },
 
+    { id: 'reminders', text: 'Hatırlatmalar', link: 'reminders.html', icon: 'fas fa-bell', category: 'Yönetim' }, // Hatırlatmalar ayrı sekme olarak eklendi
     {
-        id: 'tasks-accordion',
-        text: 'Görevler',
-        icon: 'fas fa-tasks', // Görevler ikonu
+        id: 'task-management-accordion', // 'tasks-accordion' -> 'task-management-accordion' olarak güncellendi ve adı değiştirildi
+        text: 'İş Yönetimi', // 'Görevler' -> 'İş Yönetimi' olarak değiştirildi
+        icon: 'fas fa-briefcase', // İş Yönetimi için uygun bir ikon seçildi
         category: 'Yönetim',
         subItems: [
-            { id: 'create-task', text: 'Yeni İş Oluştur', link: 'create-task.html', specialClass: 'new-task-link' },
             { id: 'task-management', text: 'İş Yönetimi', link: 'task-management.html' },
             { id: 'my-tasks', text: 'İşlerim', link: 'my-tasks.html' },
-            { id: 'reminders', text: 'Hatırlatmalar', link: 'reminders.html' },
-            { id: 'scheduled-tasks', text: 'Zamanlanmış Görevler', link: 'scheduled-tasks.html' }
+            { id: 'create-task', text: 'Yeni İş Oluştur', link: 'create-task.html', specialClass: 'new-task-link' }
+            // 'Hatırlatmalar' ve 'Zamanlanmış Görevler' buradan kaldırıldı
+        ]
+    },
+    {
+        id: 'new-tasks-accordion', // Yeni Görevler akordiyonu
+        text: 'Görevler',
+        icon: 'fas fa-list-check', // Görevler için uygun bir ikon seçildi
+        category: 'Yönetim',
+        subItems: [
+            { id: 'scheduled-tasks', text: 'Zamanlanmış Görevler', link: 'scheduled-tasks.html' }, // Buraya taşındı
+            { id: 'triggered-tasks', text: 'Tetiklenen Görevler', link: '#' } // Yeni eklenen sekme
+        ]
+    },
+    {
+        id: 'client-notifications-accordion', // Yeni Müvekkil Bildirimleri akordiyonu
+        text: 'Müvekkil Bildirimleri',
+        icon: 'fas fa-envelope', // Müvekkil Bildirimleri için uygun bir ikon seçildi
+        category: 'Yönetim',
+        subItems: [
+            // Müvekkil Bildirimleri altına eklenecek sekmeler buraya gelecek
         ]
     },
     {
