@@ -5,46 +5,51 @@ import { authService } from '../firebase-config.js';
 const menuItems = [
     { id: 'dashboard', text: 'Dashboard', link: 'dashboard.html', icon: 'fas fa-tachometer-alt', category: 'Ana Menü' },
     
-    // Yeni Portföy Yönetimi Akordiyonu
+    // Yeni Portföy Yönetimi Akordiyonu eklendi
     {
         id: 'portfolio-management-accordion',
         text: 'Portföy Yönetimi',
-        icon: 'fas fa-folder', // Uygun bir ikon seçildi
+        icon: 'fas fa-folder', // Portföy Yönetimi için uygun bir ikon
         category: 'Portföy Yönetimi', // Yeni kategori
         subItems: [
-            { id: 'portfolio', text: 'Portföy', link: 'portfolio.html' },
-            { id: 'data-entry', text: 'Yeni Kayıt', link: 'data-entry.html' },
-            { id: 'excel-upload', text: 'Excel ile Yükle', link: 'excel-upload.html', adminOnly: true }
+            { id: 'portfolio', text: 'Portföy', link: 'portfolio.html' }, // Buraya taşındı
+            { id: 'data-entry', text: 'Yeni Kayıt', link: 'data-entry.html' }, // Buraya taşındı
+            { id: 'excel-upload', text: 'Excel ile Yükle', link: 'excel-upload.html', adminOnly: true } // Buraya taşındı
         ]
     },
 
-    { id: 'reminders', text: 'Hatırlatmalar', link: 'reminders.html', icon: 'fas fa-bell', category: 'Yönetim' }, // Hatırlatmalar Kişi Yönetimi'nden önce ve ayrı sekme olarak eklendi
+    // Hatırlatmalar sekmesi Kişi Yönetimi'nden önce ve ayrı sekme olarak taşındı
+    { id: 'reminders', text: 'Hatırlatmalar', link: 'reminders.html', icon: 'fas fa-bell', category: 'Yönetim' },
+    
+    // Mevcut 'tasks-accordion' değiştirildi ve adı 'İş Yönetimi' oldu
     {
-        id: 'task-management-accordion', 
-        text: 'İş Yönetimi',
-        icon: 'fas fa-briefcase',
+        id: 'task-management-accordion', // ID güncellendi
+        text: 'İş Yönetimi', // Adı güncellendi
+        icon: 'fas fa-briefcase', // İkon güncellendi
         category: 'Yönetim',
         subItems: [
-            { id: 'task-management', text: 'İş Yönetimi', link: 'task-management.html' },
-            { id: 'my-tasks', text: 'İşlerim', link: 'my-tasks.html' },
-            { id: 'create-task', text: 'Yeni İş Oluştur', link: 'create-task.html', specialClass: 'new-task-link' }
+            { id: 'task-management', text: 'İş Yönetimi', link: 'task-management.html' }, // Konumu korundu
+            { id: 'my-tasks', text: 'İşlerim', link: 'my-tasks.html' }, // Konumu korundu
+            { id: 'create-task', text: 'Yeni İş Oluştur', link: 'create-task.html', specialClass: 'new-task-link' } // Konumu korundu
+            // 'Hatırlatmalar' ve 'Zamanlanmış Görevler' buradan kaldırıldı
         ]
     },
+    // Yeni 'Görevler' akordiyonu eklendi
     {
-        id: 'new-tasks-accordion', // Görevler akordiyonu
+        id: 'new-tasks-accordion',
         text: 'Görevler',
-        icon: 'fas fa-list-check',
+        icon: 'fas fa-list-check', // İstediğiniz yeni ikon uygulandı
         category: 'Yönetim',
         subItems: [
-            { id: 'scheduled-tasks', text: 'Zamanlanmış Görevler', link: 'scheduled-tasks.html' },
-            { id: 'triggered-tasks', text: 'Tetiklenen Görevler', link: '#' },
-            { id: 'client-notifications', text: 'Müvekkil Bildirimleri', link: '#' } // Müvekkil Bildirimleri buraya direct link olarak eklendi
+            { id: 'scheduled-tasks', text: 'Zamanlanmış Görevler', link: 'scheduled-tasks.html' }, // Buraya taşındı
+            { id: 'triggered-tasks', text: 'Tetiklenen Görevler', link: '#' }, // Yeni eklenen sekme
+            { id: 'client-notifications', text: 'Müvekkil Bildirimleri', link: '#' } // Müvekkil Bildirimleri buraya direkt link olarak eklendi
         ]
     },
     {
         id: 'person-management-accordion',
         text: 'Kişi Yönetimi',
-        icon: 'fas fa-users',
+        icon: 'fas fa-users', // Kişi Yönetimi ikonu
         category: 'Yönetim',
         subItems: [
             { id: 'persons', text: 'Kişiler Yönetimi', link: 'persons.html' },
