@@ -209,6 +209,7 @@
                 this.selectedOwners = [];
                 this.allPersons = [];
                 this.currentUser = null;
+                this.allTransactionTypes = [];
             }
     
             async init() {
@@ -246,6 +247,12 @@
                 } else {
                     showNotification('Kişiler yüklenemedi: ' + personsResult.error, 'error');
                 }
+                const transactionTypesResult = await transactionTypeService.getTransactionTypes();
+                    if (transactionTypesResult.success) {
+                        this.allTransactionTypes = transactionTypesResult.data; // Yüklenen işlem tiplerini sakla
+                    } else {
+                        showNotification('İşlem tipleri yüklenemedi: ' + transactionTypesResult.error, 'error');
+                    }
             }
     
             setupEventListeners() {
@@ -546,18 +553,35 @@
                             // recordData.transactions = [{ type: 'Başvuru', description: `...`, timestamp: new Date().toISOString() }];
 
                             result = await ipRecordsService.addRecord(recordData);
+                        }
+                        if (result.success) {
+                            const newRecordId = result.id;
 
-                            if (result.success) {
-                                // Kayıt başarıyla eklendikten sonra, Başvuru işlemini alt koleksiyona ekleyin
-                                const newRecordId = result.id;
-                                const initialTransactionData = {
-                                    type: 'Başvuru',
-                                    description: `Yeni ${recordData.type} kaydı oluşturuldu. Başvuru Numarası: ${recordData.applicationNumber || 'Belirtilmemiş'}`,
-                                    timestamp: new Date().toISOString(),
-                                    transactionHierarchy: "parent" // Başvuru işlemini 'parent' olarak işaretleyin
-                                };
-                                await ipRecordsService.addTransactionToRecord(newRecordId, initialTransactionData);
+                            // Yeni eklenen IP kaydının tipine (örn: trademark, patent, design) uygun olan
+                            // 'Başvuru' işlem tipinin ID'sini allTransactionTypes listesinden buluyoruz.
+                            // hierarchy 'parent' olmalı ve applicableToMainType'ı IP kaydının tipini içermeli.
+                            const applicationTransactionType = this.allTransactionTypes.find(type =>
+                                type.hierarchy === 'parent' &&
+                                type.alias === 'Başvuru' && // 'alias' alanı "Başvuru" olanı arıyoruz
+                                type.applicableToMainType.includes(recordData.type) // Kayıt tipiyle uyumlu olmalı
+                            );
+
+                            if (!applicationTransactionType) {
+                                // Eğer uygun bir Başvuru tipi bulunamazsa, kullanıcıya hata bildirimi gösterin.
+                                showNotification(`Hata: '${recordData.type}' kayıt tipi için uygun Başvuru işlemi tipi bulunamadı. Lütfen transactionTypes.json dosyasını kontrol edin.`, 'error');
+                                throw new Error(`Kayıt tipi '${recordData.type}' için uygun Başvuru işlemi tipi bulunamadı.`);
                             }
+
+                            // Firestore'a kaydedilecek başlangıç işlemi verisi
+                            const initialTransactionData = {
+                                type: applicationTransactionType.id, // Buraya "trademark_application" gibi ID'yi yazıyoruz
+                                description: `Yeni ${recordData.type} kaydı oluşturuldu. Başvuru Numarası: ${recordData.applicationNumber || 'Belirtilmemiş'}`,
+                                timestamp: new Date().toISOString(),
+                                transactionHierarchy: "parent"
+                            };
+
+                            // IP kaydına bu işlemi ekle
+                            await ipRecordsService.addTransactionToRecord(newRecordId, initialTransactionData);
                         }
 
                         if (result.success) {
