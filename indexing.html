@@ -412,7 +412,7 @@
                         if (specificChildTransactionType) specificChildTransactionType.setAttribute('required', 'required');
                         if (filesExisting) filesExisting.setAttribute('required', 'required');
                     } else if (this.activeTab === 'manual-indexing-pane') {
-                        if (recordSearchInputManual) recordSearchInputManual.setAttribute('required', 'required');
+                        if (recordSearchInputManual) recordRecordSearchInputManual.setAttribute('required', 'required');
                     }
                     // Bulk indexing pane için burada özel bir zorunluluk yok, kendi modülü yönetecek.
                 }
@@ -714,14 +714,27 @@
                             deliveryDate: deliveryDate ? new Date(deliveryDate).toISOString() : null
                         };
                         const childResult = await ipRecordsService.addTransactionToRecord(currentSelectedRecord.id, newChildData);
+                        console.log('DEBUG: Result of addTransactionToRecord call (existing-transaction-pane):', childResult); // YENİ LOG
+
                         if(!childResult.success) {
                             showNotification(childResult.error || 'Alt işlem oluşturulurken hata oluştu.', 'error');
                             btn.disabled = false; 
                             return; // İşlem başarısız olursa buradan çık
                         }
                         
-                        transactionIdToAssociateFiles = childResult.data.id; 
-                        console.log('DEBUG: existing-transaction-pane: transactionIdToAssociateFiles (yeni çocuk ID):', transactionIdToAssociateFiles); // YENİ LOG
+                        // Sağlamlaştırma: ID'yi doğru yerden al
+                        if (childResult.id) { // firebase-config.js'teki addTransactionToRecord direk 'id' dönüyor
+                            transactionIdToAssociateFiles = childResult.id; 
+                        } else if (childResult.data && childResult.data.id) { // Fallback, eğer 'data' içinde 'id' varsa
+                            transactionIdToAssociateFiles = childResult.data.id;
+                        } else {
+                            console.error('HATA: Alt işlem ID\'si alınamadı, ancak işlem başarılı olarak bildirildi. childResult:', childResult);
+                            showNotification('Alt işlem oluşturuldu ancak ID alınamadı. Lütfen yöneticinize başvurun.', 'error');
+                            btn.disabled = false;
+                            return;
+                        }
+
+                        console.log('DEBUG: existing-transaction-pane: transactionIdToAssociateFiles (yeni çocuk ID):', transactionIdToAssociateFiles); 
                         transactionDesignationForFiles = childTransactionType.documentDesignationDefault || 'Diğer Belge'; 
 
                     } else if (this.activeTab === 'manual-indexing-pane') {
@@ -751,14 +764,26 @@
                                 timestamp: new Date().toISOString()
                             };
                             const parentResult = await ipRecordsService.addTransactionToRecord(currentSelectedRecord.id, parentTransactionData);
+                            console.log('DEBUG: Result of addTransactionToRecord call (manual-indexing-pane - parent):', parentResult); // YENİ LOG
                             if (!parentResult.success) {
                                 showNotification(parentResult.error || 'Manuel ana işlem oluşturulurken hata oluştu.', 'error');
                                 btn.disabled = false; 
                                 return; // İşlem başarısız olursa buradan çık
                             }
-                            newParentTransactionId = parentResult.data.id; 
+                            
+                            // Sağlamlaştırma: ID'yi doğru yerden al
+                            if (parentResult.id) {
+                                newParentTransactionId = parentResult.id; 
+                            } else if (parentResult.data && parentResult.data.id) {
+                                newParentTransactionId = parentResult.data.id;
+                            } else {
+                                console.error('HATA: Ana işlem ID\'si alınamadı, ancak işlem başarılı olarak bildirildi. parentResult:', parentResult);
+                                showNotification('Ana işlem oluşturuldu ancak ID alınamadı. Lütfen yöneticinize başvurun.', 'error');
+                                btn.disabled = false;
+                                return;
+                            }
                             transactionIdToAssociateFiles = newParentTransactionId; 
-                            console.log('DEBUG: manual-indexing-pane (ana işlem ID):', transactionIdToAssociateFiles); // YENİ LOG
+                            console.log('DEBUG: manual-indexing-pane (ana işlem ID):', transactionIdToAssociateFiles); 
                             transactionDesignationForFiles = selectedParentTransaction.documentDesignationDefault || 'Diğer Belge';
                         }
 
@@ -778,12 +803,23 @@
                                     timestamp: new Date().toISOString()
                                 };
                                 const autoParentResult = await ipRecordsService.addTransactionToRecord(currentSelectedRecord.id, autoParentData);
+                                console.log('DEBUG: Result of addTransactionToRecord call (manual-indexing-pane - auto-parent):', autoParentResult); // YENİ LOG
                                 if (!autoParentResult.success) {
                                     showNotification(autoParentResult.error || 'Otomatik ana işlem oluşturulurken hata oluştu.', 'error');
                                     btn.disabled = false; 
                                     return; // İşlem başarısız olursa buradan çık
                                 }
-                                newParentTransactionId = autoParentResult.data.id; 
+                                // Sağlamlaştırma: ID'yi doğru yerden al
+                                if (autoParentResult.id) {
+                                    newParentTransactionId = autoParentResult.id; 
+                                } else if (autoParentResult.data && autoParentResult.data.id) {
+                                    newParentTransactionId = autoParentResult.data.id;
+                                } else {
+                                    console.error('HATA: Otomatik ana işlem ID\'si alınamadı, ancak işlem başarılı olarak bildirildi. autoParentResult:', autoParentResult);
+                                    showNotification('Otomatik ana işlem oluşturuldu ancak ID alınamadı. Lütfen yöneticinize başvurun.', 'error');
+                                    btn.disabled = false;
+                                    return;
+                                }
                             }
 
                             const childTransactionData = {
@@ -795,24 +831,38 @@
                                 timestamp: new Date().toISOString()
                             };
                             const childResult = await ipRecordsService.addTransactionToRecord(currentSelectedRecord.id, childTransactionData);
+                            console.log('DEBUG: Result of addTransactionToRecord call (manual-indexing-pane - child):', childResult); // YENİ LOG
                             if (!childResult.success) {
                                 showNotification(childResult.error || 'Manuel alt işlem oluşturulurken hata oluştu.', 'error');
                                 btn.disabled = false; 
                                 return; // İşlem başarısız olursa buradan çık
                             }
-                            transactionIdToAssociateFiles = childResult.data.id; 
-                            console.log('DEBUG: manual-indexing-pane (alt işlem ID):', transactionIdToAssociateFiles); // YENİ LOG
+                            // Sağlamlaştırma: ID'yi doğru yerden al
+                            if (childResult.id) {
+                                transactionIdToAssociateFiles = childResult.id; 
+                            } else if (childResult.data && childResult.data.id) {
+                                transactionIdToAssociateFiles = childResult.data.id;
+                            } else {
+                                console.error('HATA: Manuel alt işlem ID\'si alınamadı, ancak işlem başarılı olarak bildirildi. childResult:', childResult);
+                                showNotification('Manuel alt işlem oluşturuldu ancak ID alınamadı. Lütfen yöneticinize başvurun.', 'error');
+                                btn.disabled = false;
+                                return;
+                            }
+                            console.log('DEBUG: manual-indexing-pane (alt işlem ID):', transactionIdToAssociateFiles); 
                             transactionDesignationForFiles = selectedChildTransaction.documentDesignationDefault || 'Diğer Belge';
                         }
 
-                        // Hiçbir işlem tipi seçilmediyse (sadece dosya yükleniyorsa), relatedTransactionId null olsun
-                        if (!parentTypeId && !childTypeId && (this.uploadedFiles.get(this.activeTab) || []).length > 0) {
-                            transactionIdToAssociateFiles = null; // Explicitly set to null
-                            console.log('DEBUG: manual-indexing-pane (sadece dosya yükleme): transactionIdToAssociateFiles null olarak ayarlandı'); // YENİ LOG
-                        } else if (!parentTypeId && !childTypeId && (this.uploadedFiles.get(this.activeTab) || []).length === 0) {
-                             // Eğer işlem tipi de yok dosya da yoksa, submit butonu zaten disabled olmalıydı, bu duruma düşülmemeli
-                            showNotification('Manuel indeksleme için en az bir işlem türü veya dosya girilmelidir.', 'error');
-                            btn.disabled = false; return;
+                        // Eğer hiçbir işlem tipi seçilmediyse (sadece dosya yükleniyorsa), relatedTransactionId null olsun
+                        if (!parentTypeId && !childTypeId) {
+                            const filesExist = (this.uploadedFiles.get(this.activeTab) || []).length > 0;
+                            if (filesExist) {
+                                transactionIdToAssociateFiles = null; // Açıkça null olarak ayarla
+                                console.log('DEBUG: manual-indexing-pane (sadece dosya yükleme): transactionIdToAssociateFiles null olarak ayarlandı'); // YENİ LOG
+                            } else {
+                                // Dosya da yoksa ve işlem tipi de yoksa, submit butonu zaten disabled olmalıydı, bu duruma düşülmemeli
+                                showNotification('Manuel indeksleme için en az bir işlem türü veya dosya girilmelidir.', 'error');
+                                btn.disabled = false; return;
+                            }
                         }
 
                     } 
@@ -829,26 +879,26 @@
                                     fileType: fileData.fileObject.type,
                                     fileSize: fileData.fileObject.size,
                                     fileUrl: fileContent, 
-                                    relatedTransactionId: transactionIdToAssociateFiles, // Burası null veya bir ID olmalı
+                                    relatedTransactionId: transactionIdToAssociateFiles, // Burası artık undefined olmamalı
                                     documentDesignation: transactionDesignationForFiles 
                                 };
                                 const fileAddResult = await ipRecordsService.addFileToRecord(currentSelectedRecord.id, fileToUpload); 
                                 if (!fileAddResult.success) {
                                     console.error(`Dosya yüklenirken hata (${fileData.fileObject.name}): ${fileAddResult.error}`);
                                     showNotification(`Dosya yüklenirken hata (${fileData.fileObject.name}): ${fileAddResult.error}`, 'error');
-                                    // Hata durumunda kalan dosyaların işlenmeye devam etmesi için burada return etmiyoruz.
                                 }
                             } catch (fileError) {
                                 console.error(`Dosya işlenirken hata (${fileData.fileObject.name}):`, fileError);
                                 showNotification(`Dosya işlenirken hata (${fileData.fileObject.name}): ${fileError.message}`, 'error');
                             }
                         }
-                    } else {
-                        // Dosya yoksa ve işlem oluştuysa yine de başarılı sayabiliriz.
-                        showNotification('İşlem başarıyla kaydedildi (belge yüklenmedi).', 'success');
+                        showNotification('Tüm işlemler ve belgeler başarıyla kaydedildi!', 'success'); // Sadece dosyalar yüklendiyse bu bildirim gösterilir.
+                    } else if (transactionIdToAssociateFiles !== null) { // Dosya yoksa ama bir işlem oluştuysa (manuel indekslemede dosyasız işlem oluşturma)
+                         showNotification('İşlem başarıyla kaydedildi (belge yüklenmedi).', 'success');
+                    } else { // Hiçbir şey yapılmadıysa (dosya da yok, işlem de oluşturulmadı)
+                         showNotification('Hiçbir işlem yapılmadı.', 'info');
                     }
-                    
-                    showNotification('Tüm işlemler ve belgeler başarıyla kaydedildi!', 'success');
+                   
                     this.resetForm();
                     await this.loadRecordsAndTransactionTypes(); 
                 }
