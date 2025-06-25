@@ -342,16 +342,24 @@
                     });
                 }
 
-                populateManualTransactionTypeSelect = () => {
+                populateManualTransactionTypeSelect = (recordIpType = null) => { // recordIpType parametresi eklendi
                     const selectEl = document.getElementById('specificManualTransactionType');
                     if (!selectEl) return;
                     selectEl.innerHTML = '<option value="" disabled selected>İşlem türü seçin...</option>';
                     
-                    // Sadece 'parent' hiyerarşisine sahip olanları getir
-                    const parentTypes = this.allTransactionTypes.filter(type => 
+                    let parentTypes = this.allTransactionTypes.filter(type => 
                         type.hierarchy === 'parent' 
-                    ).sort((a,b) => (a.order || 999) - (b.order || 999));
-                    console.log('DEBUG: Manuel Ana İşlem Tipleri (parentTypes):', parentTypes); // YENİ LOG
+                    );
+
+                    if (recordIpType) { // Eğer kayıt IP tipi belirtilmişse filtrele
+                        parentTypes = parentTypes.filter(type => 
+                            type.ipType === recordIpType || // Kendi ipType'ı ile eşleşmeli
+                            (type.applicableToMainType && type.applicableToMainType.includes(recordIpType)) // Veya applicableToMainType içinde olmalı
+                        );
+                    }
+
+                    parentTypes.sort((a,b) => (a.order || 999) - (b.order || 999));
+                    console.log(`DEBUG: Manuel Ana İşlem Tipleri (parentTypes - IP Type: ${recordIpType || 'Tümü'}):`, parentTypes); // YENİ LOG
 
                     parentTypes.forEach(type => {
                         const option = document.createElement('option');
@@ -567,6 +575,8 @@
                     } else if (tabContext === 'manual') {
                         this.selectedRecordManual = record;
                         console.log('Seçilen Manuel Kayıt:', this.selectedRecordManual);
+                        // Manuel işlemde kayıt seçildikten sonra Ana İşlem tiplerini filtrele
+                        this.populateManualTransactionTypeSelect(record.type); // Kaydın IP tipine göre filtrele
                     }
                     this.checkFormCompleteness();
                 }
@@ -606,7 +616,7 @@
                         item.dataset.id = tx.id; 
                         const transactionType = this.allTransactionTypes.find(t => t.id === tx.type);
                         console.log(`İşlem ID: ${tx.id}, İşlem Tipi ID (tx.type): ${tx.type}, Bulunan transactionType objesi:`, transactionType); 
-                        const transactionDisplayName = transactionType ? (transactionType.alias || transactionType.name) : (tx.designation || tx.type || 'Tanımsız İşlem'); 
+                        const transactionDisplayName = transactionType ? (transactionType.alias || type.name) : (tx.designation || tx.type || 'Tanımsız İşlem'); 
 
                         item.textContent = `${transactionDisplayName} - ${new Date(tx.timestamp).toLocaleDateString('tr-TR')}`;
                         item.addEventListener('click', (e) => {
