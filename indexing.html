@@ -61,14 +61,14 @@
             margin-top: 15px;
             padding-top: 15px;
             border-top: 1px dashed #e1e8ed;
-            display: none;
+            display: none; 
         }
         
         .file-upload-wrapper {
             position: relative;
             overflow: hidden;
             display: inline-block;
-            width: 100%;
+            width: 100%; 
             cursor: pointer;
         }
 
@@ -90,7 +90,7 @@
             border-radius: 10px;
             font-size: 1em;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f0f4f8;
+            background-color: #f0f4f8; 
             color: #333;
             text-align: left;
             cursor: pointer;
@@ -284,10 +284,16 @@
                             transactionTypeService.getTransactionTypes() // İşlem tiplerini çek
                         ]);
 
-                        if (recordsResult.success) this.allRecords = recordsResult.data;
+                        if (recordsResult.success) {
+                            this.allRecords = recordsResult.data;
+                            console.log('Tüm Kayıtlar yüklendi:', this.allRecords); // LOG EKLENDİ
+                        }
                         else showNotification('Kayıtlar yüklenemedi: ' + recordsResult.error, 'error');
 
-                        if (transactionTypesResult.success) this.allTransactionTypes = transactionTypesResult.data;
+                        if (transactionTypesResult.success) {
+                            this.allTransactionTypes = transactionTypesResult.data;
+                            console.log('Tüm İşlem Tipleri yüklendi:', this.allTransactionTypes); // LOG EKLENDİ
+                        }
                         else showNotification('İşlem tipleri yüklenemedi: ' + transactionTypesResult.error, 'error');
 
                     } catch (error) {
@@ -316,6 +322,7 @@
                 }
 
                 populateChildTransactionTypeSelect = (allowedChildTypeIds = []) => {
+                    console.log('populateChildTransactionTypeSelect çağrıldı. İzin verilen Alt İşlem Türü ID\'leri:', allowedChildTypeIds); // LOG EKLENDİ
                     const selectEl = document.getElementById('specificChildTransactionType');
                     if (!selectEl) return;
                     selectEl.innerHTML = '<option value="" disabled selected>Alt işlem türü seçin...</option>';
@@ -324,6 +331,8 @@
                         type.hierarchy === 'child' &&
                         allowedChildTypeIds.includes(type.id)
                     ).sort((a,b) => (a.order || 999) - (b.order || 999)); // Sıralama ekledik
+
+                    console.log('Filtrelenmiş Alt İşlem Türleri:', filteredChildTypes); // LOG EKLENDİ
 
                     filteredChildTypes.forEach(type => {
                         const option = document.createElement('option');
@@ -516,9 +525,11 @@
 
                     if (tabContext === 'existing') {
                         this.selectedRecordExisting = record;
+                        console.log('Seçilen Mevcut Kayıt:', this.selectedRecordExisting); // LOG EKLENDİ
                         this.renderTransactionsForSelection(); 
                     } else if (tabContext === 'manual') {
                         this.selectedRecordManual = record;
+                        console.log('Seçilen Manuel Kayıt:', this.selectedRecordManual); // LOG EKLENDİ
                         // Manual tab'da transaction parent seçimini burada yapmıyoruz, form içinde dinamik olarak yapılacak.
                         // Eğer manuel işlemin bir parent'a bağlı olması istenirse, burada bir populateParentTransactionSelectForManual metodu çağrılabilir.
                     }
@@ -538,6 +549,7 @@
                     }
 
                     const transactions = this.selectedRecordExisting ? (this.selectedRecordExisting.transactions || []) : []; 
+                    console.log('Seçilen kaydın işlemleri (transactions):', transactions); // LOG EKLENDİ
 
                     if (transactions.length === 0) {
                         container.innerHTML = '<p class="text-muted p-2">Dosya eklenecek mevcut işlem yok. "Manuel İşlem Oluştur" sekmesini kullanabilirsiniz.</p>';
@@ -548,6 +560,8 @@
                     const parentTransactions = transactions
                         .filter(tx => tx.transactionHierarchy === 'parent' || !tx.transactionHierarchy) 
                         .sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp)); 
+
+                    console.log('Filtrelenmiş Ana İşlemler (parentTransactions):', parentTransactions); // LOG EKLENDİ
 
                     if (parentTransactions.length === 0) {
                         container.innerHTML = '<p class="text-muted p-2">Dosya eklenecek mevcut ana işlem bulunamadı. "Manuel İşlem Oluştur" sekmesini kullanabilirsiniz.</p>';
@@ -560,11 +574,13 @@
                         item.dataset.id = tx.transactionId;
                         // İşlemin açıklamasını veya tipini göster, varsa tarihini de ekle
                         const transactionType = this.allTransactionTypes.find(t => t.id === tx.type);
+                        console.log(`İşlem ID: ${tx.transactionId}, İşlem Tipi ID (tx.type): ${tx.type}, Bulunan transactionType objesi:`, transactionType); // LOG EKLENDİ
                         const transactionDisplayName = transactionType ? (transactionType.alias || transactionType.name) : (tx.designation || tx.transactionType || 'Tanımsız İşlem');
 
                         item.textContent = `${transactionDisplayName} - ${new Date(tx.timestamp).toLocaleDateString('tr-TR')}`;
                         item.addEventListener('click', (e) => {
                             this.selectedTransactionId = e.currentTarget.dataset.id;
+                            console.log('Seçilen işlem ID:', this.selectedTransactionId); // LOG EKLENDİ
                             // Tüm seçili sınıfları kaldır ve sadece tıklanana ekle
                             document.querySelectorAll('#transactions-list-for-selection .transaction-list-item').forEach(el => el.classList.remove('selected'));
                             e.currentTarget.classList.add('selected');
@@ -577,9 +593,11 @@
                                 
                                 // Seçilen parent işlemin allowedChildTypes'ını kullanarak alt işlem dropdown'ını doldur
                                 const selectedParentTransaction = this.allTransactionTypes.find(t => t.id === tx.type); // tx.type Firestore'dan gelen id olmalı
+                                console.log('Seçilen Ana İşlem İçin transactionType objesi (alt tipler için):', selectedParentTransaction); // LOG EKLENDİ
                                 if (selectedParentTransaction && selectedParentTransaction.allowedChildTypes) {
                                     this.populateChildTransactionTypeSelect(selectedParentTransaction.allowedChildTypes);
                                 } else {
+                                    console.log('Seçilen ana işlem için allowedChildTypes bulunamadı veya boş.'); // LOG EKLENDİ
                                     this.populateChildTransactionTypeSelect([]); // Eğer allowedChildTypes yoksa boşalt
                                 }
                             }
