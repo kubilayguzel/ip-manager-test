@@ -286,13 +286,13 @@
 
                         if (recordsResult.success) {
                             this.allRecords = recordsResult.data;
-                            console.log('Tüm Kayıtlar yüklendi:', this.allRecords); // LOG EKLENDİ
+                            console.log('Tüm Kayıtlar yüklendi:', this.allRecords); // LOG
                         }
                         else showNotification('Kayıtlar yüklenemedi: ' + recordsResult.error, 'error');
 
                         if (transactionTypesResult.success) {
                             this.allTransactionTypes = transactionTypesResult.data;
-                            console.log('Tüm İşlem Tipleri yüklendi:', this.allTransactionTypes); // LOG EKLENDİ
+                            console.log('Tüm İşlem Tipleri yüklendi:', this.allTransactionTypes); // LOG
                         }
                         else showNotification('İşlem tipleri yüklenemedi: ' + transactionTypesResult.error, 'error');
 
@@ -322,7 +322,7 @@
                 }
 
                 populateChildTransactionTypeSelect = (allowedChildTypeIds = []) => {
-                    console.log('populateChildTransactionTypeSelect çağrıldı. İzin verilen Alt İşlem Türü ID\'leri:', allowedChildTypeIds); // LOG EKLENDİ
+                    console.log('populateChildTransactionTypeSelect çağrıldı. İzin verilen Alt İşlem Türü ID\'leri:', allowedChildTypeIds); // LOG
                     const selectEl = document.getElementById('specificChildTransactionType');
                     if (!selectEl) return;
                     selectEl.innerHTML = '<option value="" disabled selected>Alt işlem türü seçin...</option>';
@@ -332,7 +332,7 @@
                         allowedChildTypeIds.includes(type.id)
                     ).sort((a,b) => (a.order || 999) - (b.order || 999)); // Sıralama ekledik
 
-                    console.log('Filtrelenmiş Alt İşlem Türleri:', filteredChildTypes); // LOG EKLENDİ
+                    console.log('Filtrelenmiş Alt İşlem Türleri:', filteredChildTypes); // LOG
 
                     filteredChildTypes.forEach(type => {
                         const option = document.createElement('option');
@@ -511,7 +511,7 @@
                     container.style.display = 'block';
                 }
 
-                selectRecordBasedOnTab = (recordId, tabContext) => {
+                selectRecordBasedOnTab = async (recordId, tabContext) => { 
                     const record = this.allRecords.find(r => r.id === recordId);
                     if (!record) return;
 
@@ -525,18 +525,23 @@
 
                     if (tabContext === 'existing') {
                         this.selectedRecordExisting = record;
-                        console.log('Seçilen Mevcut Kayıt:', this.selectedRecordExisting); // LOG EKLENDİ
-                        this.renderTransactionsForSelection(); 
+                        console.log('Seçilen Mevcut Kayıt:', this.selectedRecordExisting);
+                        // Düzeltme: getRecordTransactions yerine getTransactionsForRecord kullanılıyor
+                        const transactionsResult = await ipRecordsService.getTransactionsForRecord(record.id); //
+                        if (transactionsResult.success) {
+                            this.renderTransactionsForSelection(transactionsResult.data); //
+                        } else {
+                            showNotification('Kayıt işlemleri yüklenemedi: ' + transactionsResult.error, 'error');
+                            this.renderTransactionsForSelection([]); 
+                        }
                     } else if (tabContext === 'manual') {
                         this.selectedRecordManual = record;
-                        console.log('Seçilen Manuel Kayıt:', this.selectedRecordManual); // LOG EKLENDİ
-                        // Manual tab'da transaction parent seçimini burada yapmıyoruz, form içinde dinamik olarak yapılacak.
-                        // Eğer manuel işlemin bir parent'a bağlı olması istenirse, burada bir populateParentTransactionSelectForManual metodu çağrılabilir.
+                        console.log('Seçilen Manuel Kayıt:', this.selectedRecordManual);
                     }
                     this.checkFormCompleteness();
                 }
 
-                renderTransactionsForSelection = async () => {
+                renderTransactionsForSelection = (transactions) => {
                     const container = document.getElementById('transactions-list-for-selection');
                     container.innerHTML = '';
                     this.selectedTransactionId = null; 
@@ -548,20 +553,18 @@
                         document.getElementById('existingChildTransactionDeliveryDate').value = ''; 
                     }
 
-                    const transactions = this.selectedRecordExisting ? (this.selectedRecordExisting.transactions || []) : []; 
-                    console.log('Seçilen kaydın işlemleri (transactions):', transactions); // LOG EKLENDİ
+                    console.log('Seçilen kaydın işlemleri (transactions):', transactions); 
 
-                    if (transactions.length === 0) {
+                    if (!transactions || transactions.length === 0) {
                         container.innerHTML = '<p class="text-muted p-2">Dosya eklenecek mevcut işlem yok. "Manuel İşlem Oluştur" sekmesini kullanabilirsiniz.</p>';
                         return;
                     }
                     
-                    // Sadece 'parent' seviyesindeki veya 'transactionHierarchy' alanı olmayan işlemleri filtrele
                     const parentTransactions = transactions
                         .filter(tx => tx.transactionHierarchy === 'parent' || !tx.transactionHierarchy) 
                         .sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp)); 
 
-                    console.log('Filtrelenmiş Ana İşlemler (parentTransactions):', parentTransactions); // LOG EKLENDİ
+                    console.log('Filtrelenmiş Ana İşlemler (parentTransactions):', parentTransactions); 
 
                     if (parentTransactions.length === 0) {
                         container.innerHTML = '<p class="text-muted p-2">Dosya eklenecek mevcut ana işlem bulunamadı. "Manuel İşlem Oluştur" sekmesini kullanabilirsiniz.</p>';
@@ -571,34 +574,30 @@
                     parentTransactions.forEach(tx => {
                         const item = document.createElement('div');
                         item.className = 'transaction-list-item';
-                        item.dataset.id = tx.transactionId;
-                        // İşlemin açıklamasını veya tipini göster, varsa tarihini de ekle
+                        item.dataset.id = tx.id; 
                         const transactionType = this.allTransactionTypes.find(t => t.id === tx.type);
-                        console.log(`İşlem ID: ${tx.transactionId}, İşlem Tipi ID (tx.type): ${tx.type}, Bulunan transactionType objesi:`, transactionType); // LOG EKLENDİ
-                        const transactionDisplayName = transactionType ? (transactionType.alias || transactionType.name) : (tx.designation || tx.transactionType || 'Tanımsız İşlem');
+                        console.log(`İşlem ID: ${tx.id}, İşlem Tipi ID (tx.type): ${tx.type}, Bulunan transactionType objesi:`, transactionType); 
+                        const transactionDisplayName = transactionType ? (transactionType.alias || transactionType.name) : (tx.designation || tx.type || 'Tanımsız İşlem'); 
 
                         item.textContent = `${transactionDisplayName} - ${new Date(tx.timestamp).toLocaleDateString('tr-TR')}`;
                         item.addEventListener('click', (e) => {
                             this.selectedTransactionId = e.currentTarget.dataset.id;
-                            console.log('Seçilen işlem ID:', this.selectedTransactionId); // LOG EKLENDİ
-                            // Tüm seçili sınıfları kaldır ve sadece tıklanana ekle
+                            console.log('Seçilen işlem ID:', this.selectedTransactionId); 
                             document.querySelectorAll('#transactions-list-for-selection .transaction-list-item').forEach(el => el.classList.remove('selected'));
                             e.currentTarget.classList.add('selected');
                             
-                            // Alt işlem inputlarını göster ve ilgili alt tipleri yükle
                             if (childTransactionInputsEl) {
                                 childTransactionInputsEl.style.display = 'block'; 
                                 document.getElementById('specificChildTransactionType').value = ''; 
                                 document.getElementById('existingChildTransactionDeliveryDate').value = ''; 
                                 
-                                // Seçilen parent işlemin allowedChildTypes'ını kullanarak alt işlem dropdown'ını doldur
-                                const selectedParentTransaction = this.allTransactionTypes.find(t => t.id === tx.type); // tx.type Firestore'dan gelen id olmalı
-                                console.log('Seçilen Ana İşlem İçin transactionType objesi (alt tipler için):', selectedParentTransaction); // LOG EKLENDİ
-                                if (selectedParentTransaction && selectedParentTransaction.allowedChildTypes) {
-                                    this.populateChildTransactionTypeSelect(selectedParentTransaction.allowedChildTypes);
+                                const selectedParentTransactionDefinition = this.allTransactionTypes.find(t => t.id === tx.type); 
+                                console.log('Seçilen Ana İşlem İçin transactionType objesi (alt tipler için):', selectedParentTransactionDefinition); 
+                                if (selectedParentTransactionDefinition && selectedParentTransactionDefinition.allowedChildTypes) {
+                                    this.populateChildTransactionTypeSelect(selectedParentTransactionDefinition.allowedChildTypes);
                                 } else {
-                                    console.log('Seçilen ana işlem için allowedChildTypes bulunamadı veya boş.'); // LOG EKLENDİ
-                                    this.populateChildTransactionTypeSelect([]); // Eğer allowedChildTypes yoksa boşalt
+                                    console.log('Seçilen ana işlem için allowedChildTypes bulunamadı veya boş.'); 
+                                    this.populateChildTransactionTypeSelect([]); 
                                 }
                             }
                             this.checkFormCompleteness();
@@ -611,14 +610,13 @@
                     const fileInput = event.target;
                     const files = Array.from(fileInput.files);
                     
-                    // Önceki yüklenen dosyaları temizle ve yenilerini ekle
                     this.uploadedFiles.set(tabKey, []); 
                     
                     files.forEach(file => {
                         this.uploadedFiles.get(tabKey).push({ 
-                            id: `temp_${Date.now()}_${generateUUID()}`, // Geçici ID oluştur
+                            id: `temp_${Date.now()}_${generateUUID()}`, 
                             fileObject: file,
-                            documentDesignation: '' // Varsayılan boş tanım
+                            documentDesignation: '' 
                         });
                     });
                     this.renderUploadedFilesList(tabKey);
@@ -628,22 +626,19 @@
                 renderUploadedFilesList = (tabKey) => {
                     const containerId = tabKey === 'existing-transaction-pane' ? 'fileListExisting' : 'fileListManual';
                     const container = document.getElementById(containerId);
-                    container.innerHTML = ''; // Listeyi temizle
+                    container.innerHTML = ''; 
                     const files = this.uploadedFiles.get(tabKey) || [];
                     if (files.length === 0) return;
 
                     files.forEach(fileData => {
                         const fileItem = document.createElement('div');
                         fileItem.className = 'file-item';
-                        // Dosya adı ve silme butonu
                         fileItem.innerHTML = `
                             <div class="d-flex justify-content-between w-100">
                                 <strong>${fileData.fileObject.name}</strong>
                                 <button type="button" class="remove-file remove-uploaded-file" data-file-id="${fileData.id}" data-tab-key="${tabKey}">&times;</button>
                             </div>
                         `;
-                        // Belge tipi seçimi (sadece gelecekteki kullanım için, şu an sadece tek tip tanım var)
-                        // Bu kısım ihtiyaca göre `file-item-controls` ve `file-item-select` kullanılarak geliştirilebilir.
                         container.appendChild(fileItem);
                     });
                 }
@@ -667,11 +662,10 @@
                             const specificManualTransactionType = document.getElementById('specificManualTransactionType').value;
                             const specificManualChildTransactionType = document.getElementById('specificManualChildTransactionType').value; 
                             
-                            // Manuel indeksleme için ya bir ana işlem, ya bir alt işlem ya da sadece dosya olmalı.
                             canSubmit = (specificManualTransactionType !== '' || specificManualChildTransactionType !== '' || filesExist);
                         }
                     } else if (this.activeTab === 'bulk-indexing-pane') { 
-                        canSubmit = false; // Bulk indexing pane'in kendi submit butonu vardır.
+                        canSubmit = false; 
                     }
                     document.getElementById('indexDocumentsBtn').disabled = !canSubmit;
                 }
@@ -683,7 +677,7 @@
 
                     let currentSelectedRecord = null; 
                     let transactionIdToAssociateFiles = null;
-                    let transactionDesignationForFiles = 'Genel Belge'; // Varsayılan belge tanımı
+                    let transactionDesignationForFiles = 'Genel Belge'; 
 
                     if (this.activeTab === 'existing-transaction-pane') {
                         currentSelectedRecord = this.selectedRecordExisting;
@@ -704,10 +698,9 @@
                         }
                         const deliveryDate = document.getElementById('existingChildTransactionDeliveryDate').value;
                         
-                        // Yeni alt işlem oluştur
                         const newChildData = {
                             designation: childTransactionType.alias || childTransactionType.name,
-                            transactionType: childTransactionType.id, // İşlem tipi olarak alt işlem türünün ID'si
+                            type: childTransactionType.id, 
                             transactionHierarchy: 'child',
                             parentId: this.selectedTransactionId,
                             deliveryDate: deliveryDate ? new Date(deliveryDate).toISOString() : null
@@ -715,8 +708,8 @@
                         const childResult = await ipRecordsService.addTransactionToRecord(currentSelectedRecord.id, newChildData);
                         if(!childResult.success) throw new Error(childResult.error || 'Alt işlem oluşturulurken hata oluştu.');
                         
-                        transactionIdToAssociateFiles = childResult.data.transactionId;
-                        transactionDesignationForFiles = childTransactionType.documentDesignationDefault || 'Diğer Belge'; // Belge tanımı olarak alt işlem türünün varsayılanını kullan
+                        transactionIdToAssociateFiles = childResult.data.id; 
+                        transactionDesignationForFiles = childTransactionType.documentDesignationDefault || 'Diğer Belge'; 
 
                     } else if (this.activeTab === 'manual-indexing-pane') {
                         currentSelectedRecord = this.selectedRecordManual;
@@ -741,14 +734,14 @@
                             }
                             const parentTransactionData = {
                                 designation: selectedParentTransaction.alias || selectedParentTransaction.name,
-                                transactionType: selectedParentTransaction.id,
+                                type: selectedParentTransaction.id,
                                 transactionHierarchy: 'parent',
                                 timestamp: new Date().toISOString()
                             };
                             const parentResult = await ipRecordsService.addTransactionToRecord(currentSelectedRecord.id, parentTransactionData);
                             if (!parentResult.success) throw new Error(parentResult.error || 'Manuel ana işlem oluşturulurken hata oluştu.');
-                            newParentTransactionId = parentResult.data.transactionId;
-                            transactionIdToAssociateFiles = newParentTransactionId; // Eğer alt işlem yoksa, dosyalar ana işleme bağlı olacak
+                            newParentTransactionId = parentResult.data.id; 
+                            transactionIdToAssociateFiles = newParentTransactionId; 
                             transactionDesignationForFiles = selectedParentTransaction.documentDesignationDefault || 'Diğer Belge';
                         }
 
@@ -759,22 +752,21 @@
                                 btn.disabled = false; return;
                             }
 
-                            // Eğer manuel alt işlem seçilmişse ama manuel ana işlem seçilmemişse, otomatik bir ana işlem oluştur
                             if (!newParentTransactionId) {
                                 const autoParentData = {
                                     designation: `${selectedChildTransaction.alias || selectedChildTransaction.name} (Otomatik Oluşturulan Ana İşlem)`,
-                                    transactionType: 'general_transaction', // Genel bir işlem tipi
+                                    type: 'general_transaction', 
                                     transactionHierarchy: 'parent',
                                     timestamp: new Date().toISOString()
                                 };
                                 const autoParentResult = await ipRecordsService.addTransactionToRecord(currentSelectedRecord.id, autoParentData);
                                 if (!autoParentResult.success) throw new Error(autoParentResult.error || 'Otomatik ana işlem oluşturulurken hata oluştu.');
-                                newParentTransactionId = autoParentResult.data.transactionId;
+                                newParentTransactionId = autoParentResult.data.id; 
                             }
 
                             const childTransactionData = {
                                 designation: selectedChildTransaction.alias || selectedChildTransaction.name,
-                                transactionType: selectedChildTransaction.id,
+                                type: selectedChildTransaction.id,
                                 transactionHierarchy: 'child',
                                 parentId: newParentTransactionId,
                                 deliveryDate: deliveryDate ? new Date(deliveryDate).toISOString() : null,
@@ -782,7 +774,7 @@
                             };
                             const childResult = await ipRecordsService.addTransactionToRecord(currentSelectedRecord.id, childTransactionData);
                             if (!childResult.success) throw new Error(childResult.error || 'Manuel alt işlem oluşturulurken hata oluştu.');
-                            transactionIdToAssociateFiles = childResult.data.transactionId; // Dosyaları alt işleme bağla
+                            transactionIdToAssociateFiles = childResult.data.id; 
                             transactionDesignationForFiles = selectedChildTransaction.documentDesignationDefault || 'Diğer Belge';
                         }
 
@@ -791,7 +783,7 @@
                             btn.disabled = false; return;
                         }
 
-                    } // bulk-indexing-pane için burada bir işlem yapılmaz, o sayfanın kendi submit mantığı vardır.
+                    } 
                     
                     const filesToProcess = this.uploadedFiles.get(this.activeTab) || []; 
                     if (filesToProcess.length > 0) {
@@ -805,7 +797,7 @@
                                     fileSize: fileData.fileObject.size,
                                     fileUrl: fileContent, 
                                     relatedTransactionId: transactionIdToAssociateFiles, 
-                                    documentDesignation: transactionDesignationForFiles // Kullanıcının seçtiği veya otomatik belirlenen tanım
+                                    documentDesignation: transactionDesignationForFiles 
                                 };
                                 const fileAddResult = await ipRecordsService.addFileToRecord(currentSelectedRecord.id, fileToUpload); 
                                 if (!fileAddResult.success) {
@@ -825,30 +817,24 @@
                 }
 
                 resetForm = () => { 
-                    document.getElementById('indexingForm').reset(); // Formu sıfırla
+                    document.getElementById('indexingForm').reset(); 
                     
-                    // Dosya listelerini ve infolarını temizle
                     document.getElementById('fileListExisting').innerHTML = '';
                     document.getElementById('fileListManual').innerHTML = '';
                     document.getElementById('filesExistingInfo').textContent = 'Henüz dosya seçilmedi.';
                     document.getElementById('filesManualInfo').textContent = 'Henüz dosya seçilmedi.';
                     
-                    // Seçilen kayıt gösterimlerini temizle
                     document.getElementById('selectedRecordDisplayExisting').value = '';
                     document.getElementById('selectedRecordDisplayManual').value = '';
                     
-                    // Existing tab'daki işlem listesini temizle
                     document.getElementById('transactions-list-for-selection').innerHTML = '<p class="text-muted p-2">Lütfen bir kayıt seçin.</p>';
                     
-                    // Child transaction inputlarını gizle
                     const childTransactionInputsEl = document.getElementById('childTransactionInputs');
                     if(childTransactionInputsEl) childTransactionInputsEl.style.display = 'none';
 
-                    // Modül içindeki seçimleri ve yüklenen dosyaları sıfırla
                     this.resetSelections();
-                    this.uploadedFiles.clear(); // Tüm tabların yüklenen dosyalarını temizler
+                    this.uploadedFiles.clear(); 
 
-                    // Başlangıç tabına geri dön
                     this.activateTab('existing-transaction-pane');
                     this.checkFormCompleteness();
                 }
@@ -857,14 +843,12 @@
                     this.selectedRecordExisting = null;
                     this.selectedRecordManual = null;
                     this.selectedTransactionId = null;
-                    // Bulk indexing ile ilgili seçimler zaten o modülün içinde yönetiliyor.
                 }
             }
             
             document.addEventListener('DOMContentLoaded', async () => {
                 await loadSharedLayout({ activeMenuLink: 'indexing.html' });
                 const indexingModule = new IndexingModule();
-                // IndexingModule'ün init metodu Firebase auth kontrolünü yapacağı için burada tekrar user kontrolüne gerek yok.
             });
         </script>
 </body>
