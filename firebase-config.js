@@ -287,46 +287,56 @@ export const ipRecordsService = {
         }
     },
     async addTransactionToRecord(recordId, transactionData) {
-                if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor." };
-                try {
-                    const recordRef = doc(db, 'ipRecords', recordId);
-                    const transactionsCollectionRef = collection(recordRef, 'transactions');
+        if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor." };
+        try {
+            const recordRef = doc(db, 'ipRecords', recordId);
+            const transactionsCollectionRef = collection(recordRef, 'transactions');
 
-                    const currentUser = auth.currentUser; // Mevcut kullanıcıyı al
-                    let userName = 'Bilinmeyen Kullanıcı'; // Varsayılan değer
+            const currentUser = auth.currentUser; // Mevcut kullanıcıyı al
+            let userName = 'Bilinmeyen Kullanıcı'; // Varsayılan değer
 
-                    if (currentUser) {
-                        // Kullanıcının görünen adını al, yoksa emailini kullan
-                        userName = currentUser.displayName || currentUser.email; 
-                        // Daha gelişmiş bir senaryo için: eğer persons koleksiyonundaki bir belgede
-                        // kullanıcının UID'si tutuluyorsa (örneğin 'firebaseUid' alanı)
-                        // o zaman buradan kişinin adını çekebiliriz. Şimdilik displayName/email yeterli.
-                    }
+            if (currentUser) {
+                // Kullanıcının görünen adını al, yoksa emailini kullan
+                userName = currentUser.displayName || currentUser.email; 
+                // Daha gelişmiş bir senaryo için: eğer persons koleksiyonundaki bir belgede
+                // kullanıcının UID'si tutuluyorsa (örneğin 'firebaseUid' alanı)
+                // o zaman buradan kişinin adını çekebiliriz. Şimdilik displayName/email yeterli.
+            }
 
-                    const transactionToAdd = {
-                        ...transactionData,
-                        timestamp: new Date().toISOString(),
-                        userId: currentUser ? currentUser.uid : 'anonymous', // Firebase UID
-                        userEmail: currentUser ? currentUser.email : 'anonymous@example.com',
-                        userName: userName // YENİ EKLENDİ: İşlemi yapan kullanıcının görünen adını/email'ini kaydet
-                    };
+            const transactionToAdd = {
+                ...transactionData,
+                timestamp: new Date().toISOString(),
+                userId: currentUser ? currentUser.uid : 'anonymous', // Firebase UID
+                userEmail: currentUser ? currentUser.email : 'anonymous@example.com',
+                userName: userName // YENİ EKLENDİ: İşlemi yapan kullanıcının görünen adını/email'ini kaydet
+            };
 
-                    const docRef = await addDoc(transactionsCollectionRef, transactionToAdd);
-                    return { success: true, id: docRef.id, data: transactionToAdd };
-                } catch (error) {
-                    console.error("Transaction alt koleksiyona eklenirken hata:", error);
-                    return { success: false, error: error.message };
-                }
+            const docRef = await addDoc(transactionsCollectionRef, transactionToAdd);
+            return { success: true, id: docRef.id, data: transactionToAdd };
+        } catch (error) {
+            console.error("Transaction alt koleksiyona eklenirken hata:", error);
+            return { success: false, error: error.message };
+        }
     },
     async addFileToRecord(recordId, fileData) {
         if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor." };
         try {
             const recordRef = doc(db, 'ipRecords', recordId);
-            const user = authService.getCurrentUser();
-            const newFile = { ...fileData, id: generateUUID(), uploadedAt: new Date().toISOString(), userEmail: user.email };
+            const user = authService.getCurrentUser(); // Kullanıcı objesini al
+            console.log('addFileToRecord: Current User Object:', user); // DEBUG LOG
+            const userEmail = user ? user.email : 'anonymous@example.com'; // user.email için güvenli erişim ve fallback
+            console.log('addFileToRecord: User Email to be used:', userEmail); // DEBUG LOG
+            const newFile = {
+                ...fileData,
+                id: generateUUID(),
+                uploadedAt: new Date().toISOString(),
+                userEmail: userEmail // user.email yerine userEmail değişkeni kullanıldı
+            };
+            console.log('addFileToRecord: newFile object being added:', newFile); // DEBUG LOG
             await updateDoc(recordRef, { files: arrayUnion(newFile) });
             return { success: true, data: newFile };
         } catch (error) {
+            console.error("Error in addFileToRecord:", error); // Enhanced error log
             return { success: false, error: error.message };
         }
     },
@@ -411,7 +421,8 @@ export const taskService = {
             const q = query(collection(db, "tasks"), orderBy("createdAt", "desc"));
             const querySnapshot = await getDocs(q);
             return { success: true, data: querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) };
-        } catch (error) {
+        }
+        catch (error) {
             return { success: false, error: error.message };
         }
     },
@@ -579,7 +590,6 @@ export const transactionTypeService = {
             await updateDoc(doc(this.collectionRef, typeId), { ...updates, updatedAt: new Date().toISOString() });
             return { success: true };
         } catch (error) {
-            console.error("İşlem tipi güncellenirken hata:", error);
             return { success: false, error: error.message };
         }
     },
@@ -590,16 +600,10 @@ export const transactionTypeService = {
             await deleteDoc(doc(this.collectionRef, typeId));
             return { success: true };
         } catch (error) {
-            console.error("İşlem tipi silinirken hata:", error);
             return { success: false, error: error.message };
         }
     }
 };
-
-// imports kısmına `documentId` eklemeyi unutmayın:
-// import { ... , where, getDoc, setDoc, arrayUnion, writeBatch, documentId } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
-// Mevcut export listesini bulun ve transactionTypeService'i ekleyin
-// export { auth, db, ... , transactionTypeService };
 
 // --- Bulk Indexing Service ---
 export const bulkIndexingService = {
