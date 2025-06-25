@@ -245,7 +245,19 @@ export const ipRecordsService = {
         }
     },
 
-
+    async getTransactionsForRecord(recordId) {
+        if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor." };
+        try {
+            const transactionsRef = collection(db, 'ipRecords', recordId, 'transactions');
+            const q = query(transactionsRef, orderBy('timestamp', 'asc')); // İşlemleri zamana göre sırala
+            const querySnapshot = await getDocs(q);
+            const transactions = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            return { success: true, transactions: transactions };
+        } catch (error) {
+            console.error("Kayda ait transaction'lar getirilirken hata:", error);
+            return { success: false, error: error.message };
+        }
+    },
     async getRecordById(recordId) {
         if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor." };
         try {
@@ -275,27 +287,39 @@ export const ipRecordsService = {
         }
     },
     async addTransactionToRecord(recordId, transactionData) {
-    console.log("🔥 addTransactionToRecord çağrıldı", recordId, transactionData);
+            console.log("🔥 addTransactionToRecord çağrıldı", recordId, transactionData);
 
-    if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor." };
-    try {
-        const recordRef = doc(db, 'ipRecords', recordId);
-        const transactionsCollectionRef = collection(recordRef, 'transactions');
+            if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor." };
+            try {
+                const recordRef = doc(db, 'ipRecords', recordId);
+                const transactionsCollectionRef = collection(recordRef, 'transactions');
 
-        const transactionToAdd = {
-            ...transactionData,
-            timestamp: new Date().toISOString(),
-            userId: auth.currentUser ? auth.currentUser.uid : 'anonymous',
-            userEmail: auth.currentUser ? auth.currentUser.email : 'anonymous@example.com'
-        };
+                const currentUser = auth.currentUser; // Mevcut kullanıcıyı al
+                let userName = 'Bilinmeyen Kullanıcı'; // Varsayılan değer
 
-        const docRef = await addDoc(transactionsCollectionRef, transactionToAdd);
-        return { success: true, id: docRef.id, data: transactionToAdd };
-    } catch (error) {
-        console.error("Transaction alt koleksiyona eklenirken hata:", error);
-        return { success: false, error: error.message };
-    }
-},
+                if (currentUser) {
+                    // Kullanıcının görünen adını al, yoksa emailini kullan
+                    userName = currentUser.displayName || currentUser.email; 
+                    // Daha gelişmiş bir senaryo için: eğer persons koleksiyonundaki bir belgede
+                    // kullanıcının UID'si tutuluyorsa (örneğin 'firebaseUid' alanı)
+                    // o zaman buradan kişinin adını çekebiliriz. Şimdilik displayName/email yeterli.
+                }
+
+                const transactionToAdd = {
+                    ...transactionData,
+                    timestamp: new Date().toISOString(),
+                    userId: currentUser ? currentUser.uid : 'anonymous', // Firebase UID
+                    userEmail: currentUser ? currentUser.email : 'anonymous@example.com',
+                    userName: userName // YENİ EKLENDİ: İşlemi yapan kullanıcının görünen adını/email'ini kaydet
+                };
+
+                const docRef = await addDoc(transactionsCollectionRef, transactionToAdd);
+                return { success: true, id: docRef.id, data: transactionToAdd };
+            } catch (error) {
+                console.error("Transaction alt koleksiyona eklenirken hata:", error);
+                return { success: false, error: error.message };
+            }
+    },
     async addFileToRecord(recordId, fileData) {
         if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor." };
         try {
