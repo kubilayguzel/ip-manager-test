@@ -1111,7 +1111,6 @@
                     }
                 }
                 
-                // Buradaki showRecordDetailModal fonksiyonunu güncelliyoruz
                 async showRecordDetailModal(recordId) {
                     const modal = document.getElementById('recordDetailModal');
                     const modalBody = document.getElementById('modalBody');
@@ -1190,26 +1189,26 @@
                                     const transactionTypeName = transactionTypesMap.get(parentTx.type) || parentTx.type || parentTx.designation || 'Bilinmiyor';
 
                                     transactionsHtml += `
-                                        <div class="accordion">
-                                            <div class="accordion-header ${hasChildrenClass}">
-                                                <span class="transaction-type">
-                                                    ${transactionTypeName} 
-                                                    <span class="transaction-meta-inline">${new Date(parentTx.timestamp).toLocaleString('tr-TR')}</span>
-                                                    <span class="transaction-meta-inline user-info">(${getPersonFullName(parentTx.userId)})</span>
-                                                </span>
-                                            </div>
-                                            <div class="accordion-content">
-                                                ${parentTx.children.map(childTx => `
-                                                    <div class="transaction-item" style="margin-left: 20px; border-left: 2px solid #ccc; padding-left: 10px;">
-                                                        <div class="transaction-type">Alt İşlem: ${transactionTypesMap.get(childTx.type) || childTx.type || childTx.designation || 'Bilinmiyor'}</div>
-                                                        <div class="transaction-meta">Açıklama: ${childTx.description || '-'}</div>
-                                                        <div class="transaction-meta">Tarih: ${childTx.timestamp ? new Date(childTx.timestamp).toLocaleString('tr-TR') : '-'}</div>
-                                                        <div class="transaction-meta">Yapan: ${getPersonFullName(childTx.userId)}</div>
-                                                    </div>
-                                                `).join('')}
-                                            </div>
-                                        </div>
-                                    `;
+                                                        <div class="accordion">
+                                                            <div class="accordion-header ${hasChildrenClass}">
+                                                                <span class="transaction-type">
+                                                                    ${transactionTypeName} 
+                                                                    <span class="transaction-meta-inline">${new Date(parentTx.timestamp).toLocaleString('tr-TR')}</span>
+                                                                    <span class="transaction-meta-inline user-info">(${parentTx.userName || parentTx.userEmail || 'Bilinmeyen Kullanıcı'})</span>
+                                                                </span>
+                                                            </div>
+                                                            <div class="accordion-content">
+                                                                ${parentTx.children.map(childTx => `
+                                                                    <div class="transaction-item" style="margin-left: 20px; border-left: 2px solid #ccc; padding-left: 10px;">
+                                                                        <div class="transaction-type">Alt İşlem: ${transactionTypesMap.get(childTx.type) || childTx.type || childTx.designation || 'Bilinmiyor'}</div>
+                                                                        <div class="transaction-meta">Açıklama: ${childTx.description || '-'}</div>
+                                                                        <div class="transaction-meta">Tarih: ${childTx.timestamp ? new Date(childTx.timestamp).toLocaleString('tr-TR') : '-'}</div>
+                                                                        <div class="transaction-meta">Yapan: ${childTx.userName || childTx.userEmail || 'Bilinmeyen Kullanıcı'}</div>
+                                                                    </div>
+                                                                `).join('')}
+                                                            </div>
+                                                        </div>
+                                                    `;
                                 });
                             } else {
                                 transactionsHtml += '<p>Bu kayıt için işlem geçmişi bulunmamaktadır.</p>';
