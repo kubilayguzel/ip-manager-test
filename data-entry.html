@@ -145,9 +145,16 @@
             <div class="form-container">
                 <form id="recordForm">
                     <div class="form-group full-width">
-                        <label for="type" class="form-label">Kayıt Tipi:</label>
+                        <label for="recordType" class="form-label">Kayıt Tipi:</label>
+                        <select id="recordType" name="recordType" class="form-select">
+                            <option value="Portföy">Portföy</option>
+                            <option value="3. Taraf">3. Taraf</option>
+                        </select>
+                    </div>
+                    <div class="form-group full-width">
+                        <label for="type" class="form-label">Kayıt Türü:</label>
                         <select id="type" name="type" class="form-select">
-                            <option value="">Kayıt Tipi Seçin</option>
+                            <option value="">Kayıt Türü Seçin</option>
                             <option value="patent">Patent</option>
                             <option value="trademark">Marka</option>
                             <option value="copyright">Telif Hakkı</option>
@@ -235,8 +242,9 @@
                 if (this.recordId) {
                     await this.loadRecordForEdit(this.recordId);
                 } else {
-                    // Yeni kayıt modunda varsayılan başvuru durumunu ayarla
+                    // Yeni kayıt modunda varsayılan başvuru durumunu ve kayıt tipini ayarla
                     document.getElementById('status').value = 'beklemede';
+                    document.getElementById('recordType').value = 'Portföy'; // Default record type
                 }
             }
     
@@ -469,6 +477,7 @@
 
                     // Load recordStatus if it exists, otherwise default to 'aktif'
                     document.getElementById('recordStatus').value = record.recordStatus || 'aktif'; 
+                    document.getElementById('recordType').value = record.recordType || 'Portföy'; // Default to Portföy if not set
     
                     if (record.type === 'patent') {
                         document.getElementById('patentClass').value = record.patentClass || '';
@@ -505,7 +514,7 @@
                 async handleFormSubmit(event) {
                     event.preventDefault();
                     document.getElementById('saveRecordBtn').disabled = true;
-
+    
                     try {
                         const form = event.target;
                         const recordData = {
@@ -513,104 +522,105 @@
                             title: form.title.value,
                             status: form.status.value,
                             recordStatus: form.recordStatus.value,
+                            recordType: form.recordType.value, // Add this line
                             owners: this.selectedOwners.map(p => ({ id: p.id })),
                         };
-    
-                    const addFieldIfValue = (key, value) => { if (value) recordData[key] = value; };
-                    addFieldIfValue('applicationNumber', form.applicationNumber.value);
-                    addFieldIfValue('applicationDate', form.applicationDate.value);
-                    addFieldIfValue('registrationDate', form.registrationDate.value);
-                    addFieldIfValue('description', form.description.value);
-    
-                    if (recordData.type === 'patent') {
-                        addFieldIfValue('patentClass', form.patentClass.value);
-                        addFieldIfValue('renewalDatePatent', form.renewalDatePatent.value);
-                    } else if (recordData.type === 'trademark') {
-                        addFieldIfValue('niceClass', form.niceClass.value);
-                        addFieldIfValue('renewalDateTrademark', form.renewalDateTrademark.value);
-                        if(this.uploadedImage){ recordData.trademarkImage = await readFileAsDataURL(this.uploadedImage); }
-                        else if (this.existingImageUrl) { recordData.trademarkImage = { content: this.existingImageUrl, name: 'existing_image' }; }
-                    } else if (recordData.type === 'copyright') {
-                        addFieldIfValue('copyrightType', form.copyrightType.value);
-                    } else if (recordData.type === 'design') {
-                        addFieldIfValue('designClass', form.designClass.value);
-                        addFieldIfValue('renewalDateDesign', form.renewalDateDesign.value);
-                    }
-    
-                    let result;
-                        if (this.recordId) {
-                            // KAYIT GÜNCELLEME İŞLEMİ
-                            recordData.updatedAt = new Date().toISOString();
-                            result = await ipRecordsService.updateRecord(this.recordId, recordData);
-                        } else {
-                            // YENİ KAYIT EKLEME İŞLEMİ
-                            recordData.createdAt = new Date().toISOString();
-                            recordData.updatedAt = new Date().toISOString();
-                            recordData.userEmail = this.currentUser.email;
-                            recordData.userId = this.currentUser.uid;
-                            
-                            // transactions dizisini doğrudan recordData'ya eklemeyi KALDIRIN
-                            // recordData.transactions = [{ type: 'Başvuru', description: `...`, timestamp: new Date().toISOString() }];
-
-                            result = await ipRecordsService.addRecord(recordData);
+        
+                        const addFieldIfValue = (key, value) => { if (value) recordData[key] = value; };
+                        addFieldIfValue('applicationNumber', form.applicationNumber.value);
+                        addFieldIfValue('applicationDate', form.applicationDate.value);
+                        addFieldIfValue('registrationDate', form.registrationDate.value);
+                        addFieldIfValue('description', form.description.value);
+        
+                        if (recordData.type === 'patent') {
+                            addFieldIfValue('patentClass', form.patentClass.value);
+                            addFieldIfValue('renewalDatePatent', form.renewalDatePatent.value);
+                        } else if (recordData.type === 'trademark') {
+                            addFieldIfValue('niceClass', form.niceClass.value);
+                            addFieldIfValue('renewalDateTrademark', form.renewalDateTrademark.value);
+                            if(this.uploadedImage){ recordData.trademarkImage = await readFileAsDataURL(this.uploadedImage); }
+                            else if (this.existingImageUrl) { recordData.trademarkImage = { content: this.existingImageUrl, name: 'existing_image' }; }
+                        } else if (recordData.type === 'copyright') {
+                            addFieldIfValue('copyrightType', form.copyrightType.value);
+                        } else if (recordData.type === 'design') {
+                            addFieldIfValue('designClass', form.designClass.value);
+                            addFieldIfValue('renewalDateDesign', form.renewalDateDesign.value);
                         }
-                        if (result.success) {
-                            const newRecordId = result.id;
-
-                            // Yeni eklenen IP kaydının tipine (örn: trademark, patent, design) uygun olan
-                            // 'Başvuru' işlem tipinin ID'sini allTransactionTypes listesinden buluyoruz.
-                            // hierarchy 'parent' olmalı ve applicableToMainType'ı IP kaydının tipini içermeli.
-                            const applicationTransactionType = this.allTransactionTypes.find(type =>
-                                type.hierarchy === 'parent' &&
-                                type.alias === 'Başvuru' && // 'alias' alanı "Başvuru" olanı arıyoruz
-                                type.applicableToMainType.includes(recordData.type) // Kayıt tipiyle uyumlu olmalı
-                            );
-
-                            if (!applicationTransactionType) {
-                                // Eğer uygun bir Başvuru tipi bulunamazsa, kullanıcıya hata bildirimi gösterin.
-                                showNotification(`Hata: '${recordData.type}' kayıt tipi için uygun Başvuru işlemi tipi bulunamadı. Lütfen transactionTypes.json dosyasını kontrol edin.`, 'error');
-                                throw new Error(`Kayıt tipi '${recordData.type}' için uygun Başvuru işlemi tipi bulunamadı.`);
+        
+                        let result;
+                            if (this.recordId) {
+                                // KAYIT GÜNCELLEME İŞLEMİ
+                                recordData.updatedAt = new Date().toISOString();
+                                result = await ipRecordsService.updateRecord(this.recordId, recordData);
+                            } else {
+                                // YENİ KAYIT EKLEME İŞLEMİ
+                                recordData.createdAt = new Date().toISOString();
+                                recordData.updatedAt = new Date().toISOString();
+                                recordData.userEmail = this.currentUser.email;
+                                recordData.userId = this.currentUser.uid;
+                                
+                                // transactions dizisini doğrudan recordData'ya eklemeyi KALDIRIN
+                                // recordData.transactions = [{ type: 'Başvuru', description: `...`, timestamp: new Date().toISOString() }];
+    
+                                result = await ipRecordsService.addRecord(recordData);
                             }
-
-                            // Firestore'a kaydedilecek başlangıç işlemi verisi
-                            const initialTransactionData = {
-                                type: applicationTransactionType.id, // Buraya "trademark_application" gibi ID'yi yazıyoruz
-                                description: `Yeni ${recordData.type} kaydı oluşturuldu. Başvuru Numarası: ${recordData.applicationNumber || 'Belirtilmemiş'}`,
-                                timestamp: new Date().toISOString(),
-                                transactionHierarchy: "parent"
-                            };
-
-                            // IP kaydına bu işlemi ekle
-                            await ipRecordsService.addTransactionToRecord(newRecordId, initialTransactionData);
-                        }
-
-                        if (result.success) {
-                            showNotification(this.recordId ? 'Kayıt güncellendi!' : 'Kayıt eklendi!', 'success');
-                            //window.location.href = 'portfolio.html'; // Yönlendirme gerekirse
-                        } else {
-                            throw new Error(result.error);
-                        }
-                    } catch (error) {
-                        showNotification('İşlem sırasında bir hata oluştu: ' + error.message, 'error');
-                    } finally {
-                        document.getElementById('saveRecordBtn').disabled = false;
-                    }
-                }
-        }
+                            if (result.success) {
+                                const newRecordId = result.id;
     
-        let dataEntryModule;
-        document.addEventListener('DOMContentLoaded', async () => {
-            await loadSharedLayout({ activeMenuLink: 'data-entry.html' });
-            dataEntryModule = new DataEntryModule();
-            auth.onAuthStateChanged(async (user) => {
-                if (user || authService.getCurrentUser()) {
-                    await dataEntryModule.init();
-                    window.dataEntryModule = dataEntryModule;
-                } else {
-                    window.location.href = 'index.html';
-                }
+                                // Yeni eklenen IP kaydının tipine (örn: trademark, patent, design) uygun olan
+                                // 'Başvuru' işlem tipinin ID'sini allTransactionTypes listesinden buluyoruz.
+                                // hierarchy 'parent' olmalı ve applicableToMainType'ı IP kaydının tipini içermeli.
+                                const applicationTransactionType = this.allTransactionTypes.find(type =>
+                                    type.hierarchy === 'parent' &&
+                                    type.alias === 'Başvuru' && // 'alias' alanı "Başvuru" olanı arıyoruz
+                                    type.applicableToMainType.includes(recordData.type) // Kayıt tipiyle uyumlu olmalı
+                                );
+    
+                                if (!applicationTransactionType) {
+                                    // Eğer uygun bir Başvuru tipi bulunamazsa, kullanıcıya hata bildirimi gösterin.
+                                    showNotification(`Hata: '${recordData.type}' kayıt tipi için uygun Başvuru işlemi tipi bulunamadı. Lütfen transactionTypes.json dosyasını kontrol edin.`, 'error');
+                                    throw new Error(`Kayıt tipi '${recordData.type}' için uygun Başvuru işlemi tipi bulunamadı.`);
+                                }
+    
+                                // Firestore'a kaydedilecek başlangıç işlemi verisi
+                                const initialTransactionData = {
+                                    type: applicationTransactionType.id, // Buraya "trademark_application" gibi ID'yi yazıyoruz
+                                    description: `Yeni ${recordData.type} kaydı oluşturuldu. Başvuru Numarası: ${recordData.applicationNumber || 'Belirtilmemiş'}`,
+                                    timestamp: new Date().toISOString(),
+                                    transactionHierarchy: "parent"
+                                };
+    
+                                // IP kaydına bu işlemi ekle
+                                await ipRecordsService.addTransactionToRecord(newRecordId, initialTransactionData);
+                            }
+    
+                            if (result.success) {
+                                showNotification(this.recordId ? 'Kayıt güncellendi!' : 'Kayıt eklendi!', 'success');
+                                //window.location.href = 'portfolio.html'; // Yönlendirme gerekirse
+                            } else {
+                                throw new Error(result.error);
+                            }
+                        } catch (error) {
+                            showNotification('İşlem sırasında bir hata oluştu: ' + error.message, 'error');
+                        } finally {
+                            document.getElementById('saveRecordBtn').disabled = false;
+                        }
+                    }
+            }
+        
+            let dataEntryModule;
+            document.addEventListener('DOMContentLoaded', async () => {
+                await loadSharedLayout({ activeMenuLink: 'data-entry.html' });
+                dataEntryModule = new DataEntryModule();
+                auth.onAuthStateChanged(async (user) => {
+                    if (user || authService.getCurrentUser()) {
+                        await dataEntryModule.init();
+                        window.dataEntryModule = dataEntryModule;
+                    } else {
+                        window.location.href = 'index.html';
+                    }
+                });
             });
-        });
-    </script>
-</body>
-</html>
+        </script>
+    </body>
+    </html>
