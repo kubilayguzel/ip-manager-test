@@ -138,6 +138,9 @@
         .action-btn.edit-btn:hover { background-color: #e0a800; }
         .action-btn.delete-btn { background-color: #dc3545; }
         .action-btn.delete-btn:hover { background-color: #c82333; }
+        .action-btn.add-accrual-btn { background-color: #008080; } /* Yeni buton rengi */
+        .action-btn.add-accrual-btn:hover { background-color: #006666; }
+
 
         .loading { text-align: center; padding: 50px; }
         .no-records { text-align: center; padding: 50px; color: #666; }
@@ -349,7 +352,6 @@
         </div>
     </div>
     
-    <!-- İŞİ BAŞKASINA ATA MODALI (Düzeltildi) -->
     <div id="assignTaskModal" class="modal">
         <div class="modal-content">
             <span class="close-modal-btn" id="closeAssignTaskModal">&times;</span>
@@ -367,6 +369,77 @@
                     <button type="button" class="btn btn-secondary" id="cancelAssignmentBtn">İptal</button>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <div class="modal" id="createTaskAccrualModal">
+        <div class="modal-content">
+            <span class="close-modal-btn" id="closeCreateTaskAccrualModal">&times;</span>
+            <h3 class="modal-title">Ek Tahakkuk Oluştur</h3>
+            <form id="createTaskAccrualForm" onsubmit="return false;">
+                <div class="modal-body-content">
+                    <div class="form-group">
+                        <label for="createTaskAccrualTaskTitleDisplay" class="form-label">İlgili İş</label>
+                        <input type="text" id="createTaskAccrualTaskTitleDisplay" class="form-input" readonly>
+                    </div>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="createTaskOfficialFee" class="form-label">Resmi Ücret</label>
+                            <div class="input-with-currency">
+                                <input type="number" id="createTaskOfficialFee" class="form-input" placeholder="0.00" step="0.01">
+                                <select id="createTaskOfficialFeeCurrency" class="currency-select">
+                                    <option value="TRY">TL</option>
+                                    <option value="EUR">EUR</option>
+                                    <option value="USD">USD</option>
+                                    <option value="CHF">CHF</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="createTaskServiceFee" class="form-label">Hizmet Bedeli</label>
+                            <div class="input-with-currency">
+                                <input type="number" id="createTaskServiceFee" class="form-input" placeholder="0.00" step="0.01">
+                                <select id="createTaskServiceFeeCurrency" class="currency-select">
+                                    <option value="TRY">TL</option>
+                                    <option value="EUR">EUR</option>
+                                    <option value="USD">USD</option>
+                                    <option value="CHF">CHF</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="createTaskVatRate" class="form-label">KDV Oranı (%)</label>
+                        <input type="number" id="createTaskVatRate" class="form-input" value="20">
+                    </div>
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="createTaskApplyVatToOfficialFee" checked>
+                            Resmi Ücrete KDV Uygula
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Toplam Tutar</label>
+                        <div id="createTaskTotalAmountDisplay" class="total-amount-display">0.00 TRY</div>
+                    </div>
+                    <div class="form-group">
+                        <label for="createTaskTpInvoicePartySearch" class="form-label">Türk Patent Faturası Tarafı</label>
+                        <input type="text" id="createTaskTpInvoicePartySearch" class="form-input" placeholder="Fatura tarafı arayın...">
+                        <div id="createTaskTpInvoicePartyResults" class="search-results-list"></div>
+                        <div id="createTaskSelectedTpInvoicePartyDisplay" class="search-result-display" style="display:none;"></div>
+                    </div>
+                    <div class="form-group">
+                        <label for="createTaskServiceInvoicePartySearch" class="form-label">Hizmet Faturası Tarafı</label>
+                        <input type="text" id="createTaskServiceInvoicePartySearch" class="form-input" placeholder="Fatura tarafı arayın...">
+                        <div id="createTaskServiceInvoicePartyResults" class="search-results-list"></div>
+                        <div id="createTaskSelectedServiceInvoicePartyDisplay" class="search-result-display" style="display:none;"></div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" id="cancelCreateTaskAccrualBtn">İptal</button>
+                    <button type="button" class="btn btn-primary" id="saveNewAccrualBtn">Tahakkuku Oluştur</button>
+                </div>
+            </form>
         </div>
     </div>
     
@@ -387,6 +460,9 @@
                     this.allPersons = [];
                     this.allUsers = []; // allUsers'ı da buraya ekliyoruz
                     this.selectedTaskForAssignment = null;
+                    this.currentTaskForAccrual = null; // Yeni: Üzerinde tahakkuk oluşturulacak görev
+                    this.createTaskSelectedTpInvoiceParty = null; // Yeni: Yeni tahakkuk modalı için TP Fatura Tarafı
+                    this.createTaskSelectedServiceInvoiceParty = null; // Yeni: Yeni tahakkuk modalı için Hizmet Fatura Tarafı
                 }
 
                 init() {
@@ -437,8 +513,10 @@
                                 this.deleteTask(taskId);
                             } else if (e.target.classList.contains('view-btn')) { // View button added for consistency
                                 this.showTaskDetailModal(taskId);
-                            } else if (e.target.classList.contains('assign-btn')) { // Yeni eklenen kısım
+                            } else if (e.target.classList.contains('assign-btn')) { // İşi Ata butonu
                                 this.openAssignTaskModal(taskId);
+                            } else if (e.target.classList.contains('add-accrual-btn')) { // Yeni Ek Tahakkuk Oluştur butonu
+                                this.showCreateTaskAccrualModal(taskId);
                             }
                         }
                     });
@@ -448,6 +526,18 @@
                     document.getElementById('closeAssignTaskModal').addEventListener('click', () => this.closeModal('assignTaskModal'));
                     document.getElementById('cancelAssignmentBtn').addEventListener('click', () => this.closeModal('assignTaskModal'));
                     document.getElementById('saveNewAssignmentBtn').addEventListener('click', () => this.saveNewAssignment());
+
+                    // Yeni Ek Tahakkuk Oluştur modalı event listener'ları
+                    document.getElementById('closeCreateTaskAccrualModal').addEventListener('click', () => this.closeModal('createTaskAccrualModal'));
+                    document.getElementById('cancelCreateTaskAccrualBtn').addEventListener('click', () => this.closeModal('createTaskAccrualModal'));
+                    document.getElementById('saveNewAccrualBtn').addEventListener('click', () => this.handleSaveNewAccrual());
+
+                    ['createTaskOfficialFee', 'createTaskServiceFee', 'createTaskVatRate', 'createTaskApplyVatToOfficialFee'].forEach(id => {
+                        const el = document.getElementById(id);
+                        if (el) el.addEventListener('input', () => this.calculateCreateTaskTotalAmount());
+                    });
+                    document.getElementById('createTaskTpInvoicePartySearch').addEventListener('input', e => this.searchPersonsForCreateTaskAccrual(e.target.value, 'createTaskTpInvoiceParty'));
+                    document.getElementById('createTaskServiceInvoicePartySearch').addEventListener('input', e => this.searchPersonsForCreateTaskAccrual(e.target.value, 'createTaskServiceInvoiceParty'));
                 }
                 // Atama modalını açar ve kullanıcıları doldurur
                 openAssignTaskModal(taskId) {
@@ -582,7 +672,7 @@
                                 <button class="action-btn edit-btn" data-id="${task.id}">Düzenle</button>
                                 <button class="action-btn delete-btn" data-id="${task.id}">Sil</button>
                                 ${task.status !== 'completed' && task.status !== 'cancelled' ? `<button class="action-btn assign-btn" data-id="${task.id}">Ata</button>` : ''}
-                            </td>
+                                <button class="action-btn add-accrual-btn" data-id="${task.id}">Ek Tahakkuk Oluştur</button> </td>
                         `;
                         tableBody.appendChild(row);
                     });
@@ -639,8 +729,20 @@
                     let accrualsHtml = '';
                     if(relatedAccruals.length > 0) {
                         accrualsHtml = relatedAccruals.map(acc => {
-                            const statusText = acc.status === 'paid' ? 'Ödendi' : 'Ödenmedi';
-                            const statusClass = acc.status === 'paid' ? 'status-paid' : 'status-unpaid';
+                            let statusText, statusClass;
+                            if (acc.status === 'paid') {
+                                statusText = 'Ödendi';
+                                statusClass = 'status-paid';
+                            } else if (acc.status === 'unpaid') {
+                                statusText = 'Ödenmedi';
+                                statusClass = 'status-unpaid';
+                            } else if (acc.status === 'partially_paid') {
+                                statusText = 'Kısmen Ödendi';
+                                statusClass = 'status-partially-paid';
+                            } else {
+                                statusText = 'Bilinmiyor';
+                                statusClass = '';
+                            }
                             const totalAmountText = new Intl.NumberFormat('tr-TR', { 
                                 style: 'currency', 
                                 currency: acc.totalAmountCurrency || 'TRY' 
