@@ -33,24 +33,47 @@
 document.addEventListener("DOMContentLoaded", () => {
   const currentPage = window.location.pathname.split('/').pop();
 
-  // Sidebar'daki tüm linkleri gez
+  // Aktif linki bul ve işaretle
+  let activeLink = null;
   document.querySelectorAll('.sidebar-nav-item, .accordion-content a').forEach(link => {
     const href = link.getAttribute('href');
     if (href && href === currentPage) {
       link.classList.add('active');
-
-      // Eğer bu link bir accordion içindeyse, onu da aç
-      const accordionContent = link.closest('.accordion-content');
-      if (accordionContent) {
-        accordionContent.style.display = 'block';
-        const header = accordionContent.previousElementSibling;
-        if (header) header.classList.add('open');
-      }
+      activeLink = link;
     } else {
       link.classList.remove('active');
     }
   });
+
+  if (activeLink) {
+    // Ait olduğu accordion'ı aç
+    const accordionContent = activeLink.closest('.accordion-content');
+    if (accordionContent) {
+      accordionContent.style.display = 'block';
+
+      // Accordion başlığını açılmış olarak işaretle
+      const accordionHeader = accordionContent.previousElementSibling;
+      if (accordionHeader) accordionHeader.classList.add('open');
+
+      // Diğer accordion'ları kapat
+      document.querySelectorAll('.accordion-content').forEach(content => {
+        if (content !== accordionContent) {
+          content.style.display = 'none';
+          const otherHeader = content.previousElementSibling;
+          if (otherHeader) otherHeader.classList.remove('open');
+        }
+      });
+    } else {
+      // Link accordion dışında ise tüm accordion'ları kapat
+      document.querySelectorAll('.accordion-content').forEach(content => {
+        content.style.display = 'none';
+        const otherHeader = content.previousElementSibling;
+        if (otherHeader) otherHeader.classList.remove('open');
+      });
+    }
+  }
 });
 </script>
+
 
 </header>
