@@ -293,10 +293,12 @@
 
     <script type="module">
         import { authService, auth, db} from './firebase-config.js';
-        import { createUserWithEmailAndPassword } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+        import { createUserWithEmailAndPassword, updateProfile } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
         import { collection, getDocs, doc, updateDoc, deleteDoc, setDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
         import { showNotification } from './utils.js';
         import { loadSharedLayout } from './js/layout-loader.js'; // layout-loader.js eklendi
+        import { updateProfile } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+
 
         document.addEventListener('DOMContentLoaded', async () => {
             // Ortak layout'u yükle ve bu sayfanın aktif linkini belirt
@@ -446,46 +448,69 @@
                 async handleUserFormSubmit(event) {
                     event.preventDefault();
                     
-                    // Form elementlerini daha güvenli şekilde al
-                    const userId = document.getElementById('userId').value;
+                    console.log("🔥 Form submit başladı");
+                    
+                    // Tüm form elementlerini kontrol et
+                    const formElement = document.getElementById('userForm');
+                    if (!formElement) {
+                        console.error("❌ Form elementi bulunamadı!");
+                        showNotification('Form bulunamadı!', 'error');
+                        return;
+                    }
+                    
+                    // Form verilerini FormData ile al
+                    const formData = new FormData(formElement);
+                    console.log("📝 FormData içeriği:");
+                    for (let [key, value] of formData.entries()) {
+                        console.log(`${key}: ${value}`);
+                    }
+                    
+                    // Manuel olarak da elementleri kontrol et
+                    const userId = document.getElementById('userId')?.value || '';
                     const userNameEl = document.getElementById('userName');
                     const userEmailEl = document.getElementById('userEmail');
                     const userPasswordEl = document.getElementById('userPassword');
-                    const userRoleEl = document.getElementById('userRole'); // Basitleştirildi
+                    const userRoleEl = document.getElementById('userRole');
                     
-                    console.log("🧪 Debug - Elements:", {
-                        userNameEl,
-                        userEmailEl, 
-                        userRoleEl
+                    console.log("🧪 Elements check:", {
+                        userId,
+                        userNameEl: userNameEl ? "✅ Found" : "❌ Missing",
+                        userEmailEl: userEmailEl ? "✅ Found" : "❌ Missing", 
+                        userPasswordEl: userPasswordEl ? "✅ Found" : "❌ Missing",
+                        userRoleEl: userRoleEl ? "✅ Found" : "❌ Missing"
                     });
                     
-                    // Değerleri güvenli şekilde al
-                    const userName = userNameEl ? userNameEl.value.trim() : '';
-                    const userEmail = userEmailEl ? userEmailEl.value.trim() : '';
-                    const userPassword = userPasswordEl ? userPasswordEl.value : '';
-                    const userRole = userRoleEl ? userRoleEl.value : '';
+                    // Değerleri al
+                    const userName = userNameEl?.value?.trim() || '';
+                    const userEmail = userEmailEl?.value?.trim() || '';
+                    const userPassword = userPasswordEl?.value || '';
+                    const userRole = userRoleEl?.value || '';
                     
-                    console.log("🧪 Debug - Values:", {
-                        userName,
-                        userEmail,
-                        userRole,
-                        userId
+                    console.log("📊 Form values:", {
+                        userName: `"${userName}"`,
+                        userEmail: `"${userEmail}"`,
+                        userRole: `"${userRole}"`,
+                        userPassword: userPassword ? "***" : "empty",
+                        isEdit: !!userId
                     });
                     
                     // Validasyonlar
                     if (!userName) {
+                        console.error("❌ Ad-soyad boş!");
                         showNotification('Lütfen ad-soyad girin.', 'error');
-                        userNameEl?.focus(); // Input'a odaklan
+                        userNameEl?.focus();
                         return;
                     }
                     
                     if (!userEmail) {
+                        console.error("❌ E-posta boş!");
                         showNotification('Lütfen geçerli bir e-posta girin.', 'error');
                         userEmailEl?.focus();
                         return;
                     }
                     
                     if (!userRole) {
+                        console.error("❌ Rol seçilmemiş!");
                         showNotification('Lütfen bir rol seçin.', 'error');
                         userRoleEl?.focus();
                         return;
@@ -493,40 +518,91 @@
                     
                     // Yeni kullanıcı için şifre kontrolü
                     if (!userId && (!userPassword || userPassword.length < 6)) {
+                        console.error("❌ Şifre geçersiz!");
                         showNotification('Yeni kullanıcı için en az 6 karakterli bir şifre girin.', 'error');
                         userPasswordEl?.focus();
                         return;
                     }
                     
+                    console.log("✅ Tüm validasyonlar geçti, işlem başlıyor...");
+                    
                     try {
                         if (userId) {
+                            console.log("🔄 Mevcut kullanıcı güncelleniyor...");
                             // Mevcut kullanıcıyı güncelle
                             const userRef = doc(db, 'users', userId);
                             await updateDoc(userRef, {
                                 displayName: userName,
-                                role: userRole
+                                role: userRole,
+                                updatedAt: new Date().toISOString()
                             });
+                            console.log("✅ Kullanıcı güncellendi");
                             showNotification('Kullanıcı başarıyla güncellendi!', 'success');
                         } else {
-                            // Yeni kullanıcı oluştur
+                            console.log("➕ Yeni kullanıcı oluşturuluyor...");
+                            
+                            // 1. Firebase Auth'da kullanıcıyı oluştur
+                            console.log("🔥 Firebase Auth kullanıcısı oluşturuluyor...");
                             const userCredential = await createUserWithEmailAndPassword(auth, userEmail, userPassword);
-                            await setDoc(doc(db, 'users', userCredential.user.uid), {
+                            const firebaseUser = userCredential.user;
+                            console.log("✅ Firebase Auth kullanıcısı oluşturuldu:", firebaseUser.uid);
+                            
+                            // 2. Firebase Auth profil güncelle
+                            console.log("📝 Firebase Auth profili güncelleniyor...");
+                            await updateProfile(firebaseUser, { 
+                                displayName: userName 
+                            });
+                            console.log("✅ Firebase Auth profili güncellendi");
+                            
+                            // 3. Firestore'a kullanıcı belgesini kaydet
+                            console.log("💾 Firestore'a kullanıcı belgesi kaydediliyor...");
+                            const userDocData = {
                                 displayName: userName,
                                 email: userEmail,
                                 role: userRole,
                                 createdAt: new Date().toISOString(),
-                                lastLoginAt: new Date().toISOString()
-                            });
+                                lastLoginAt: null,
+                                updatedAt: new Date().toISOString()
+                            };
+                            
+                            await setDoc(doc(db, 'users', firebaseUser.uid), userDocData);
+                            console.log("✅ Firestore'a kullanıcı belgesi kaydedildi");
+                            
                             showNotification('Yeni kullanıcı başarıyla eklendi!', 'success');
                         }
                         
                         // İşlem başarılı olduktan sonra
+                        console.log("🎯 İşlem tamamlandı, modal kapatılıyor ve liste yenileniyor...");
                         this.closeUserModal();
                         await this.loadUsers(); // Kullanıcı listesini yenile
                         
                     } catch (error) {
-                        console.error('Kullanıcı işlemi hatası:', error);
-                        showNotification('İşlem sırasında hata oluştu: ' + error.message, 'error');
+                        console.error('❌ Kullanıcı işlemi hatası:', error);
+                        let errorMessage = 'İşlem sırasında hata oluştu: ';
+                        
+                        // Firebase Auth hata mesajlarını Türkçe'ye çevir
+                        if (error.code) {
+                            switch (error.code) {
+                                case 'auth/email-already-in-use':
+                                    errorMessage = 'Bu e-posta adresi zaten kullanımda.';
+                                    break;
+                                case 'auth/invalid-email':
+                                    errorMessage = 'Geçersiz e-posta adresi formatı.';
+                                    break;
+                                case 'auth/weak-password':
+                                    errorMessage = 'Şifre çok zayıf. En az 6 karakter olmalı.';
+                                    break;
+                                case 'auth/network-request-failed':
+                                    errorMessage = 'Ağ bağlantısı hatası. İnternet bağlantınızı kontrol edin.';
+                                    break;
+                                default:
+                                    errorMessage += error.message;
+                            }
+                        } else {
+                            errorMessage += error.message;
+                        }
+                        
+                        showNotification(errorMessage, 'error');
                     }
                 }
                 async deleteUser(userId) {
