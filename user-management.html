@@ -469,11 +469,6 @@
                         return;
                     }
 
-                    if (!userEmail || !userRole) {
-                        showNotification('E-posta ve Rol zorunludur.', 'error');
-                        return;
-                    }
-
                     if (userId) {
                         // Update existing user
                         const userRef = doc(db, 'users', userId);
