@@ -64,8 +64,11 @@ const menuItems = [
 ];
 
 export async function loadSharedLayout(options = {}) {
-    const { activeMenuLink } = options;
-    const placeholder = document.getElementById('layout-placeholder');
+        // Parametre gelmezse, bulunduğumuz sayfanın dosya adını kullan
+        const currentPage =
+        options.activeMenuLink ||
+        window.location.pathname.split('/').pop().split('?')[0];
+        const placeholder = document.getElementById('layout-placeholder');
 
     if (!placeholder) {
         console.error('Layout placeholder not found. Ensure you have <div id="layout-placeholder"></div> in your HTML.');
@@ -114,7 +117,7 @@ export async function loadSharedLayout(options = {}) {
 
         const sidebarNav = document.querySelector('.sidebar-nav');
         if(sidebarNav) {
-            renderMenu(sidebarNav, activeMenuLink, userRole);
+            renderMenu(sidebarNav, currentPage, userRole);
         } else {
             console.error('Sidebar navigation container (.sidebar-nav) not found in layout.');
         }
@@ -122,7 +125,7 @@ export async function loadSharedLayout(options = {}) {
         const logoutBtn = document.getElementById('logoutBtn');
         if (logoutBtn) logoutBtn.addEventListener('click', (e) => { e.preventDefault(); authService.signOut(); });
 
-        setupMenuInteractions(activeMenuLink);
+        setupMenuInteractions(currentPage);
 
     } catch (error) {
         console.error('Error loading shared layout:', error);
