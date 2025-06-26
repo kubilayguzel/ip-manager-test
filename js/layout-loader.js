@@ -53,7 +53,7 @@ const menuItems = [
         category: 'Yönetim',
         subItems: [
             { id: 'persons', text: 'Kişiler Yönetimi', link: 'persons.html' },
-            { id: 'user-management', text: 'Kullanıcı Yönetimi', superAdminOnly: true }
+            { id: 'user-management', text: 'Kullanıcı Yönetimi', link: 'user-management.html', superAdminOnly: true }
         ]
     },
     { id: 'accruals', text: 'Tahakkuklarım', link: 'accruals.html', icon: 'fas fa-file-invoice-dollar', category: 'Finans' },
@@ -64,11 +64,8 @@ const menuItems = [
 ];
 
 export async function loadSharedLayout(options = {}) {
-        // Parametre gelmezse, bulunduğumuz sayfanın dosya adını kullan
-        const currentPage =
-        options.activeMenuLink ||
-        window.location.pathname.split('/').pop().split('?')[0];
-        const placeholder = document.getElementById('layout-placeholder');
+    const { activeMenuLink } = options;
+    const placeholder = document.getElementById('layout-placeholder');
 
     if (!placeholder) {
         console.error('Layout placeholder not found. Ensure you have <div id="layout-placeholder"></div> in your HTML.');
@@ -102,7 +99,7 @@ export async function loadSharedLayout(options = {}) {
 
         const userRole = user.role || 'user';
         
-        const userNameEl = document.getElementById('userName');
+ const userNameEl = document.getElementById('userName');
         if (userNameEl) {
             userNameEl.textContent = user.displayName || user.email.split('@')[0];
         }
@@ -117,7 +114,7 @@ export async function loadSharedLayout(options = {}) {
 
         const sidebarNav = document.querySelector('.sidebar-nav');
         if(sidebarNav) {
-            renderMenu(sidebarNav, currentPage, userRole);
+            renderMenu(sidebarNav, activeMenuLink, userRole);
         } else {
             console.error('Sidebar navigation container (.sidebar-nav) not found in layout.');
         }
@@ -195,7 +192,6 @@ function renderMenu(container, currentPage, userRole) {
 }
 
 function setupMenuInteractions(currentPage) {
-    // 1. Accordion başlıklarına tıklama olay dinleyicilerini ekle
     const accordions = document.querySelectorAll('.accordion-header');
     accordions.forEach(accordion => {
         accordion.addEventListener('click', function(event) {
@@ -209,19 +205,7 @@ function setupMenuInteractions(currentPage) {
         });
     });
 
-    // 2. Önce tüm mevcut aktif sınıfları kaldır ve akordiyonları kapat
-    document.querySelectorAll('.sidebar-nav-item, .accordion-content a, .accordion-header').forEach(el => {
-        el.classList.remove('active');
-        // Akordiyon içeriğini de kapat (sadece aktif olanları değil, tümünü)
-        if (el.classList.contains('accordion-header')) {
-            const content = el.nextElementSibling;
-            if (content && content.classList.contains('accordion-content')) {
-                content.style.maxHeight = null;
-            }
-        }
-    });
-
-    // 3. Sayfa yüklendiğinde doğru aktif menüyü ayarla ve ilgili akordiyonu aç
+    // Sayfa yüklendiğinde aktif menüyü ayarla ve akordiyonları aç
     document.querySelectorAll('.sidebar-nav-item, .accordion-content a').forEach(link => {
         if (link.getAttribute('href') === currentPage) {
             link.classList.add('active');
