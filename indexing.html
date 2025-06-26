@@ -239,7 +239,7 @@
         </div>
         
         <script type="module">
-            import { authService, ipRecordsService, auth, generateUUID, transactionTypeService } from './firebase-config.js';
+            import { authService, ipRecordsService, auth, generateUUID, transactionTypeService, taskService } from './firebase-config.js'; // taskService eklendi
             import { getFirestore, writeBatch, doc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 
             import { showNotification, formatFileSize, readFileAsDataURL } from './utils.js';
@@ -716,7 +716,7 @@
                     let currentSelectedRecord = null; 
                     let transactionIdToAssociateFiles = null; // Başlangıçta null olarak başlatıldı
                     let transactionDesignationForFiles = 'Genel Belge'; 
-                    const filesExist = (this.uploadedFiles.get(this.activeTab) || []).length > 0;
+                    const filesToProcess = this.uploadedFiles.get(this.activeTab) || []; 
 
 
                     if (this.activeTab === 'existing-transaction-pane') {
@@ -755,7 +755,42 @@
 
                         console.log('DEBUG: existing-transaction-pane: transactionIdToAssociateFiles (yeni çocuk ID):', transactionIdToAssociateFiles); 
                         transactionDesignationForFiles = childTransactionType.documentDesignationDefault || 'Diğer Belge'; 
-                        
+
+                        // GÖREV TETİKLEME MANTIĞI BURADA BAŞLIYOR
+                        const triggeredTaskType = this.mapTransactionToTask(childTransactionType.alias || childTransactionType.name, currentSelectedRecord.recordType); // subTransactionId kaldırıldı
+                        console.log('DEBUG: Tetiklenen görev tipi:', triggeredTaskType);
+
+                        if (triggeredTaskType) {
+                            let defaultAssignedToUid = 'YOUR_ADMIN_UID'; // Varsayılan atanan kişi UID'si, bunu gerçek bir UID ile değiştirin
+                            let defaultAssignedToEmail = 'your_admin_email@example.com'; // Varsayılan atanan kişi e-postası, bunu gerçek bir e-posta ile değiştirin
+
+                            // transactionTypes.json içindeki taskType ID'lerini kullanarak görev tanımını bul
+                            const targetTaskDefinition = this.allTransactionTypes.find(t => t.id === triggeredTaskType);
+                            
+                            const newTaskData = {
+                                taskType: triggeredTaskType,
+                                title: `[OTOMATİK GÖREV] ${targetTaskDefinition ? (targetTaskDefinition.alias || targetTaskDefinition.name) : 'Bilinmeyen İşlem'} - ${currentSelectedRecord.title} (${currentSelectedRecord.applicationNumber})`,
+                                description: `${currentSelectedRecord.title} (${currentSelectedRecord.applicationNumber}) kaydının ${childTransactionType.alias || childTransactionType.name} işlemi sonrasında otomatik oluşturulan görev.`,
+                                priority: 'medium', // Varsayılan öncelik
+                                assignedTo_uid: defaultAssignedToUid,
+                                assignedTo_email: defaultAssignedToEmail,
+                                dueDate: null, // Varsayılan son tarih, null veya belirli bir tarih olabilir
+                                status: 'awaiting_client_approval', // Yeni durum: Müvekkil Onayı Bekliyor
+                                relatedIpRecordId: currentSelectedRecord.id,
+                                relatedIpRecordTitle: currentSelectedRecord.title,
+                                details: {
+                                    // Eğer ana işlemde bir ilgili taraf varsa, onu göreve de taşı
+                                    relatedParty: currentSelectedRecord.details?.relatedParty || null
+                                }
+                            };
+                            
+                            const taskCreationResult = await taskService.createTask(newTaskData);
+                            if (taskCreationResult.success) {
+                                showNotification(`Yeni görev otomatik olarak oluşturuldu: "${newTaskData.title}".`, 'success', 5000);
+                            } else {
+                                showNotification(`Otomatik görev oluşturulurken hata oluştu: ${taskCreationResult.error}`, 'error', 8000);
+                            }
+                        }
 
                     } else if (this.activeTab === 'manual-indexing-pane') {
                         currentSelectedRecord = this.selectedRecordManual;
@@ -830,18 +865,49 @@
                             }
                             console.log('DEBUG: manual-indexing-pane (alt işlem ID):', transactionIdToAssociateFiles); 
                             transactionDesignationForFiles = selectedChildTransaction.documentDesignationDefault || 'Diğer Belge';
+
+                            // GÖREV TETİKLEME MANTIĞI BURADA BAŞLIYOR (manuel alt işlem için)
+                            const triggeredTaskType = this.mapTransactionToTask(selectedChildTransaction.alias || selectedChildTransaction.name, currentSelectedRecord.recordType); // subTransactionId kaldırıldı
+                            console.log('DEBUG: Tetiklenen görev tipi (Manuel Alt İşlem):', triggeredTaskType);
+
+                            if (triggeredTaskType) {
+                                let defaultAssignedToUid = 'YOUR_ADMIN_UID'; // Varsayılan atanan kişi UID'si
+                                let defaultAssignedToEmail = 'your_admin_email@example.com'; // Varsayılan atanan kişi e-postası
+
+                                const targetTaskDefinition = this.allTransactionTypes.find(t => t.id === triggeredTaskType);
+                                
+                                const newTaskData = {
+                                    taskType: triggeredTaskType,
+                                    title: `[OTOMATİK GÖREV] ${targetTaskDefinition ? (targetTaskDefinition.alias || targetTaskDefinition.name) : 'Bilinmeyen İşlem'} - ${currentSelectedRecord.title} (${currentSelectedRecord.applicationNumber})`,
+                                    description: `${currentSelectedRecord.title} (${currentSelectedRecord.applicationNumber}) kaydının ${selectedChildTransaction.alias || selectedChildTransaction.name} işlemi sonrasında otomatik oluşturulan görev.`,
+                                    priority: 'medium',
+                                    assignedTo_uid: defaultAssignedToUid,
+                                    assignedTo_email: defaultAssignedToEmail,
+                                    dueDate: null,
+                                    status: 'awaiting_client_approval',
+                                    relatedIpRecordId: currentSelectedRecord.id,
+                                    relatedIpRecordTitle: currentSelectedRecord.title,
+                                    details: {
+                                        relatedParty: currentSelectedRecord.details?.relatedParty || null // Mevcut kaydın ilgili tarafını taşı
+                                    }
+                                };
+                                
+                                const taskCreationResult = await taskService.createTask(newTaskData);
+                                if (taskCreationResult.success) {
+                                    showNotification(`Yeni görev otomatik olarak oluşturuldu: "${newTaskData.title}".`, 'success', 5000);
+                                } else {
+                                    showNotification(`Otomatik görev oluşturulurken hata oluştu: ${taskCreationResult.error}`, 'error', 8000);
+                                }
+                            }
                         }
                         // Eğer alt işlem seçilmediyse transactionIdToAssociateFiles zaten ana işlem ID'si olarak kalır, bu doğru davranış.
 
                     } 
                     
-                    const filesToProcess = this.uploadedFiles.get(this.activeTab) || []; 
-                    console.log('DEBUG: Dosya yükleme döngüsü öncesi son transactionIdToAssociateFiles değeri:', transactionIdToAssociateFiles); 
                     if (filesToProcess.length > 0) {
                         for (const fileData of filesToProcess) {
                             try {
                                 const fileContent = await readFileAsDataURL(fileData.fileObject); 
-                                console.log('DEBUG: Dosya döngüsü içinde, fileToUpload öncesi transactionIdToAssociateFiles:', transactionIdToAssociateFiles); 
                                 const fileToUpload = {
                                     fileName: fileData.fileObject.name,
                                     fileType: fileData.fileObject.type,
@@ -898,6 +964,52 @@
                     this.selectedRecordExisting = null;
                     this.selectedRecordManual = null;
                     this.selectedTransactionId = null;
+                }
+
+                // YENİ FONKSİYON: Alt işlem türü ile tetiklenecek görev türünü eşleştirir
+                mapTransactionToTask = (subTransactionAlias, recordType) => { // subTransactionId kaldırıldı
+                    const isThirdParty = recordType === '3. Taraf';
+
+                    switch (subTransactionAlias) {
+                        case 'Eksiklik Bildirimi': return 'eksiklik_bildirimi';
+                        case 'Ret Kararı': return 'trademark_decision_objection';
+                        case 'Kısmi Yayın Kararı': return 'trademark_decision_objection';
+                        case 'Tescil Ücreti Bildirimi': return 'tescil_ucreti_bildirimi';
+                        case 'İşlemden Kaldırma Kararı': return 'trademark_decision_objection';
+                        case 'İtiraz Bildirimi': return 'itiraza_karsi_gorus_child';
+                        case 'Kullanım Delili Sunma': return 'kullanim_ispati_delili_sunma'; 
+
+                        case 'İtiraz Kabul':
+                            if (isThirdParty) return null; 
+                            return 'trademark_reconsideration_of_publication_objection'; 
+                        case 'İtiraz Kısmen Kabul': return 'trademark_reconsideration_of_publication_objection';
+
+                        case 'İtiraz Ret':
+                            if (isThirdParty) return 'trademark_reconsideration_of_publication_objection';
+                            return null;
+                            
+                        // Kullanıcının belirttiği tam alias metinlerini ve recordType kontrolünü kullanıyoruz
+                        case 'Başvuru Sahibi - İtiraz Kabul': 
+                             if (isThirdParty) return 'litigation_yidk_annulment'; 
+                             return null; 
+                        case 'Başvuru Sahibi - İtiraz Kısmen Kabul': return 'litigation_yidk_annulment'; 
+
+                        case 'Başvuru Sahibi - İtiraz Ret':
+                            if (isThirdParty) return null; 
+                            return 'litigation_yidk_annulment'; 
+
+                        case 'İtiraz Sahibi - İtiraz Kabul':
+                            if (isThirdParty) return null; 
+                            return 'litigation_yidk_annulment'; 
+
+                        case 'İtiraz Sahibi - İtiraz Kısmen Kabul': return 'litigation_yidk_annulment'; 
+
+                        case 'İtiraz Sahibi - İtiraz Ret':
+                            if (isThirdParty) return 'litigation_yidk_annulment'; 
+                            return null; 
+
+                        default: return null; 
+                    }
                 }
             }
             
