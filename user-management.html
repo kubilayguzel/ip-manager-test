@@ -447,6 +447,9 @@
                     event.preventDefault();
                     const userId = document.getElementById('userId').value;
                     const userNameEl = document.getElementById('userName');
+                    console.log("🧪 userNameEl:", userNameEl);
+                    console.log("🧪 userName value:", userNameEl?.value);
+
                     const userName = (userNameEl && typeof userNameEl.value === 'string') ? userNameEl.value.trim() : '';
 
                     if (!userName) {
