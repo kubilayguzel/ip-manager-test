@@ -192,10 +192,24 @@ function renderMenu(container, currentPage, userRole) {
 }
 
 function setupMenuInteractions(currentPage) {
-    // Tüm aktif sınıfları kaldır ve akordiyonları kapat
+    // 1. Accordion başlıklarına tıklama olay dinleyicilerini ekle
+    const accordions = document.querySelectorAll('.accordion-header');
+    accordions.forEach(accordion => {
+        accordion.addEventListener('click', function(event) {
+            this.classList.toggle('active');
+            const content = this.nextElementSibling;
+            if (content.style.maxHeight) {
+                content.style.maxHeight = null;
+            } else {
+                content.style.maxHeight = content.scrollHeight + "px";
+            }
+        });
+    });
+
+    // 2. Önce tüm mevcut aktif sınıfları kaldır ve akordiyonları kapat
     document.querySelectorAll('.sidebar-nav-item, .accordion-content a, .accordion-header').forEach(el => {
         el.classList.remove('active');
-        // Akordiyon içeriğini de kapat
+        // Akordiyon içeriğini de kapat (sadece aktif olanları değil, tümünü)
         if (el.classList.contains('accordion-header')) {
             const content = el.nextElementSibling;
             if (content && content.classList.contains('accordion-content')) {
@@ -204,7 +218,7 @@ function setupMenuInteractions(currentPage) {
         }
     });
 
-    // Sayfa yüklendiğinde doğru aktif menüyü ayarla ve akordiyonları aç
+    // 3. Sayfa yüklendiğinde doğru aktif menüyü ayarla ve ilgili akordiyonu aç
     document.querySelectorAll('.sidebar-nav-item, .accordion-content a').forEach(link => {
         if (link.getAttribute('href') === currentPage) {
             link.classList.add('active');
