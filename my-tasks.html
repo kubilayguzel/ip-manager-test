@@ -364,7 +364,7 @@
                 </div>
                 <div id="loadingIndicator" class="loading">Yükleniyor...</div>
                 <div id="noTasksMessage" class="no-records">Henüz size atanmış bir göreviniz bulunmamaktadır.</div>
-            </div>
+            </divstrong>
         </main>
     </div>
 
@@ -494,9 +494,12 @@
                                 return;
                             }
 
-                            if (e.target.dataset.action === 'view') {
-                                window.location.href = `task-detail.html?id=${taskId}`; 
-                            } else if (e.target.dataset.action === 'edit') {
+                            // data-action'ı kontrol ederek hangi butona tıklandığını belirle
+                            const action = e.target.dataset.action;
+
+                            if (action === 'view') {
+                                this.showTaskDetailModal(taskId); // showTaskDetailModal'ı çağır
+                            } else if (action === 'edit') {
                                 window.location.href = `task-detail.html?id=${taskId}`; 
                             } else if (e.target.classList.contains('add-accrual-btn')) { 
                                 this.showCreateMyTaskAccrualModal(taskId);
@@ -507,7 +510,7 @@
                     document.getElementById('closeTaskDetailModal').addEventListener('click', () => this.closeModal('taskDetailModal'));
 
                     // Yeni Ek Tahakkuk Oluştur modalı event listener'ları
-                    document.getElementById('closeCreateMyTaskAccrualModal').addEventListener('click', () => this.closeModal('createMyTaskAccrualModal'));
+                    document.getElementById('closeMyTaskAccrualModal').addEventListener('click', () => this.closeModal('createMyTaskAccrualModal'));
                     document.getElementById('cancelCreateMyTaskAccrualBtn').addEventListener('click', () => this.closeModal('createMyTaskAccrualModal'));
                     document.getElementById('saveNewMyTaskAccrualBtn').addEventListener('click', () => this.handleSaveNewAccrual());
 
