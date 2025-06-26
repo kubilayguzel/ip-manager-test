@@ -28,4 +28,29 @@
         </div>
         <button class="logout-btn" id="logoutBtn">Çıkış</button>
     </div>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const currentPage = window.location.pathname.split('/').pop();
+
+  // Sidebar'daki tüm linkleri gez
+  document.querySelectorAll('.sidebar-nav-item, .accordion-content a').forEach(link => {
+    const href = link.getAttribute('href');
+    if (href && href === currentPage) {
+      link.classList.add('active');
+
+      // Eğer bu link bir accordion içindeyse, onu da aç
+      const accordionContent = link.closest('.accordion-content');
+      if (accordionContent) {
+        accordionContent.style.display = 'block';
+        const header = accordionContent.previousElementSibling;
+        if (header) header.classList.add('open');
+      }
+    } else {
+      link.classList.remove('active');
+    }
+  });
+});
+</script>
+
 </header>
