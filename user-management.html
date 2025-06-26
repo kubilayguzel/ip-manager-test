@@ -446,7 +446,8 @@
                 async handleUserFormSubmit(event) {
                     event.preventDefault();
                     const userId = document.getElementById('userId').value;
-                    const userName = document.getElementById('userName').value;
+                    const userNameEl = document.getElementById('userName');
+                    const userName = userNameEl ? userNameEl.value : '';
                     const userEmail = document.getElementById('userEmail').value;
                     const userPassword = document.getElementById('userPassword').value;
                     const userRoleEl = document.querySelector('#userForm select#userRole');
