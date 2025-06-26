@@ -257,40 +257,40 @@
         </main>
     </div>
 
-    <div id="userModal" class="modal">
-        <div class="modal-content">
-            <span class="close-modal-btn" id="closeUserModal">&times;</span>
-            <h3 class="modal-title" id="userModalTitle">Yeni Kullanıcı Ekle</h3>
-            <form id="userForm">
-                <input type="hidden" id="userId">
-                <div class="form-group">
-                    <label for="userName" class="form-label">Ad Soyad:</label>
-                    <input type="text" id="userName" class="form-input">
-                </div>
-                <div class="form-group">
-                    <label for="userEmail" class="form-label">E-posta:</label>
-                    <input type="email" id="userEmail" class="form-input" required>
-                </div>
-                <div class="form-group" id="passwordGroup">
-                    <label for="userPassword" class="form-label">Şifre:</label>
-                    <input type="password" id="userPassword" class="form-input">
-                </div>
-                <div class="form-group">
-                    <label for="userRole" class="form-label">Rol:</label>
-                    <select id="userRole" class="form-select" required>
-                        <option value="">Seçiniz...</option> <option value="user">Kullanıcı</option>
-                        <option value="admin">Admin</option>
-                        <option value="superadmin">Super Admin</option>
-                    </select>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" id="cancelUserBtn">İptal</button>
-                    <button type="submit" class="btn btn-primary" id="saveUserBtn">Kaydet</button>
-                </div>
-            </form>
-        </div>
+ <div id="userModal" class="modal">
+    <div class="modal-content">
+        <span class="close-modal-btn" id="closeUserModal">&times;</span>
+        <h3 class="modal-title" id="userModalTitle">Yeni Kullanıcı Ekle</h3>
+        <form id="userForm">
+            <input type="hidden" id="userId" name="userId">
+            <div class="form-group">
+                <label for="formUserName" class="form-label">Ad Soyad:</label>
+                <input type="text" id="formUserName" name="formUserName" class="form-input" autocomplete="name">
+            </div>
+            <div class="form-group">
+                <label for="formUserEmail" class="form-label">E-posta:</label>
+                <input type="email" id="formUserEmail" name="formUserEmail" class="form-input" required autocomplete="email">
+            </div>
+            <div class="form-group" id="passwordGroup">
+                <label for="formUserPassword" class="form-label">Şifre:</label>
+                <input type="password" id="formUserPassword" name="formUserPassword" class="form-input" autocomplete="new-password">
+            </div>
+            <div class="form-group">
+                <label for="formUserRole" class="form-label">Rol:</label>
+                <select id="formUserRole" name="formUserRole" class="form-select" required>
+                    <option value="">Seçiniz...</option>
+                    <option value="user">Kullanıcı</option>
+                    <option value="admin">Admin</option>
+                    <option value="superadmin">Super Admin</option>
+                </select>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" id="cancelUserBtn">İptal</button>
+                <button type="submit" class="btn btn-primary" id="saveUserBtn">Kaydet</button>
+            </div>
+        </form>
     </div>
-
+</div>
     <script type="module">
         import { authService, auth, db} from './firebase-config.js';
         import { createUserWithEmailAndPassword } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
@@ -420,8 +420,8 @@
                     document.getElementById('userModalTitle').textContent = 'Yeni Kullanıcı Ekle';
                     document.getElementById('userForm').reset();
                     document.getElementById('userId').value = '';
-                    document.getElementById('passwordGroup').style.display = 'flex'; // Şifre alanı eklemede görünür
-                    document.getElementById('userEmail').removeAttribute('readonly'); // E-posta düzenlenemez olmalı
+                    document.getElementById('passwordGroup').style.display = 'flex';
+                    document.getElementById('formUserEmail').removeAttribute('readonly');
                     document.getElementById('userModal').classList.add('show');
                 }
 
@@ -433,11 +433,11 @@
                     }
                     document.getElementById('userModalTitle').textContent = 'Kullanıcıyı Düzenle';
                     document.getElementById('userId').value = user.id;
-                    document.getElementById('userName').value = user.displayName || '';
-                    document.getElementById('userEmail').value = user.email;
-                    document.getElementById('userEmail').setAttribute('readonly', true); // E-postayı düzenlenemez yap
-                    document.getElementById('passwordGroup').style.display = 'none'; // Şifre alanı düzenlemede gizli
-                    document.getElementById('userRole').value = user.role;
+                    document.getElementById('formUserName').value = user.displayName || '';
+                    document.getElementById('formUserEmail').value = user.email;
+                    document.getElementById('formUserEmail').setAttribute('readonly', true);
+                    document.getElementById('passwordGroup').style.display = 'none';
+                    document.getElementById('formUserRole').value = user.role;
                     document.getElementById('userModal').classList.add('show');
                 }
 
@@ -445,239 +445,132 @@
                     document.getElementById('userModal').classList.remove('show');
                 }
 
- async handleUserFormSubmit(event) {
-    event.preventDefault();
-    
-    console.log("🔥 Form submit başladı");
-    
-    // İlk olarak form elementinin kendisini kontrol et
-    const formElement = document.getElementById('userForm');
-    console.log("📝 Form element:", formElement);
-    
-    if (!formElement) {
-        showNotification('Form elementi bulunamadı!', 'error');
-        return;
-    }
-    
-    // Form elementlerini al
-    const userId = document.getElementById('userId')?.value || '';
-    const userNameEl = document.getElementById('userName');
-    const userEmailEl = document.getElementById('userEmail');
-    const userPasswordEl = document.getElementById('userPassword');
-    const userRoleEl = document.getElementById('userRole');
-    
-    // Elementlerin mevcut olup olmadığını kontrol et
-    console.log("🧪 Elements check:", {
-        userId,
-        userNameEl: userNameEl ? "✅ Found" : "❌ Missing",
-        userEmailEl: userEmailEl ? "✅ Found" : "❌ Missing", 
-        userPasswordEl: userPasswordEl ? "✅ Found" : "❌ Missing",
-        userRoleEl: userRoleEl ? "✅ Found" : "❌ Missing"
-    });
-    
-    // Her bir elementin değerini ayrı ayrı logla
-    console.log("🔍 Individual element values:");
-    console.log("userName element:", userNameEl);
-    console.log("userName.value:", userNameEl ? userNameEl.value : "Element not found");
-    console.log("userEmail element:", userEmailEl);
-    console.log("userEmail.value:", userEmailEl ? userEmailEl.value : "Element not found");
-    console.log("userRole element:", userRoleEl);
-    console.log("userRole.value:", userRoleEl ? userRoleEl.value : "Element not found");
-    
-    // Modal'ın görünür olduğunu kontrol et
-    const modal = document.getElementById('userModal');
-    const isModalVisible = modal && modal.classList.contains('show');
-    console.log("👁️ Modal visibility:", isModalVisible);
-    
-    // FormData ile de değerleri kontrol et
-    const formData = new FormData(formElement);
-    console.log("📋 FormData entries:");
-    for (let [key, value] of formData.entries()) {
-        console.log(`  ${key}: "${value}"`);
-    }
-    
-    // Şimdi değerleri al - ama bu sefer daha güvenli
-    let userName = '';
-    let userEmail = '';
-    let userPassword = '';
-    let userRole = '';
-    
-    if (userNameEl && userNameEl.value !== undefined) {
-        userName = userNameEl.value.trim();
-        console.log("✅ userName extracted:", `"${userName}"`);
-    } else {
-        console.log("❌ userName element problemi");
-    }
-    
-    if (userEmailEl && userEmailEl.value !== undefined) {
-        userEmail = userEmailEl.value.trim();
-        console.log("✅ userEmail extracted:", `"${userEmail}"`);
-    } else {
-        console.log("❌ userEmail element problemi");
-    }
-    
-    if (userPasswordEl && userPasswordEl.value !== undefined) {
-        userPassword = userPasswordEl.value;
-        console.log("✅ userPassword extracted:", userPassword ? "***" : "empty");
-    } else {
-        console.log("❌ userPassword element problemi");
-    }
-    
-    if (userRoleEl && userRoleEl.value !== undefined) {
-        userRole = userRoleEl.value;
-        console.log("✅ userRole extracted:", `"${userRole}"`);
-    } else {
-        console.log("❌ userRole element problemi");
-    }
-    
-    console.log("📊 Final extracted values:", {
-        userName: `"${userName}"`,
-        userEmail: `"${userEmail}"`,
-        userRole: `"${userRole}"`,
-        userPassword: userPassword ? "***" : "empty",
-        isEdit: !!userId
-    });
-    
-    // Eğer değerler hala boşsa, farklı bir yöntem dene
-    if (!userName && userNameEl) {
-        console.log("🔄 Trying alternative methods for userName...");
-        userName = userNameEl.getAttribute('value') || '';
-        console.log("getAttribute result:", `"${userName}"`);
-        
-        if (!userName) {
-            // Son çare: querySelector ile tekrar bul
-            const altUserNameEl = document.querySelector('#userForm #userName');
-            if (altUserNameEl) {
-                userName = altUserNameEl.value.trim();
-                console.log("querySelector result:", `"${userName}"`);
-            }
-        }
-    }
-    
-    if (!userRole && userRoleEl) {
-        console.log("🔄 Trying alternative methods for userRole...");
-        userRole = userRoleEl.getAttribute('value') || '';
-        console.log("getAttribute result:", `"${userRole}"`);
-        
-        if (!userRole) {
-            // selectedIndex kontrol et
-            console.log("selectedIndex:", userRoleEl.selectedIndex);
-            console.log("selected option:", userRoleEl.options[userRoleEl.selectedIndex]);
-            if (userRoleEl.selectedIndex > 0) {
-                userRole = userRoleEl.options[userRoleEl.selectedIndex].value;
-                console.log("selectedIndex result:", `"${userRole}"`);
-            }
-        }
-    }
-    
-    // Son kontrol
-    console.log("🎯 After all attempts:", {
-        userName: `"${userName}"`,
-        userRole: `"${userRole}"`
-    });
-    
-    // Validasyonlar
-    if (!userName) {
-        console.error("❌ Ad-soyad hala boş!");
-        showNotification('Lütfen ad-soyad girin.', 'error');
-        userNameEl?.focus();
-        // Debug için element'i görsel olarak vurgula
-        if (userNameEl) {
-            userNameEl.style.border = '2px solid red';
-            setTimeout(() => { userNameEl.style.border = ''; }, 3000);
-        }
-        return;
-    }
-    
-    if (!userEmail) {
-        console.error("❌ E-posta boş!");
-        showNotification('Lütfen geçerli bir e-posta girin.', 'error');
-        userEmailEl?.focus();
-        return;
-    }
-    
-    if (!userRole) {
-        console.error("❌ Rol seçilmemiş!");
-        showNotification('Lütfen bir rol seçin.', 'error');
-        userRoleEl?.focus();
-        // Debug için element'i görsel olarak vurgula
-        if (userRoleEl) {
-            userRoleEl.style.border = '2px solid red';
-            setTimeout(() => { userRoleEl.style.border = ''; }, 3000);
-        }
-        return;
-    }
-    
-    // Yeni kullanıcı için şifre kontrolü
-    if (!userId && (!userPassword || userPassword.length < 6)) {
-        console.error("❌ Şifre geçersiz!");
-        showNotification('Yeni kullanıcı için en az 6 karakterli bir şifre girin.', 'error');
-        userPasswordEl?.focus();
-        return;
-    }
-    
-    console.log("✅ Tüm validasyonlar geçti, işlem başlıyor...");
-    
-    try {
-        if (userId) {
-            console.log("🔄 Mevcut kullanıcı güncelleniyor...");
-            const userRef = doc(db, 'users', userId);
-            await updateDoc(userRef, {
-                displayName: userName,
-                role: userRole,
-                updatedAt: new Date().toISOString()
-            });
-            console.log("✅ Kullanıcı güncellendi");
-            showNotification('Kullanıcı başarıyla güncellendi!', 'success');
-        } else {
-            console.log("➕ Yeni kullanıcı oluşturuluyor...");
-            
-            const userCredential = await createUserWithEmailAndPassword(auth, userEmail, userPassword);
-            const firebaseUser = userCredential.user;
-            console.log("✅ Firebase Auth kullanıcısı oluşturuldu:", firebaseUser.uid);
-            
-            const setRoleResult = await authService.setUserRole(firebaseUser.uid, userEmail, userName, userRole);
-            
-            if (!setRoleResult.success) {
-                throw new Error('Kullanıcı rolü atanamadı: ' + setRoleResult.error);
-            }
-            
-            console.log("✅ Kullanıcı rolü ve profili ayarlandı");
-            showNotification('Yeni kullanıcı başarıyla eklendi!', 'success');
-        }
-        
-        console.log("🎯 İşlem tamamlandı, modal kapatılıyor ve liste yenileniyor...");
-        this.closeUserModal();
-        await this.loadUsers();
-        
-    } catch (error) {
-        console.error('❌ Kullanıcı işlemi hatası:', error);
-        let errorMessage = 'İşlem sırasında hata oluştu: ';
-        
-        if (error.code) {
-            switch (error.code) {
-                case 'auth/email-already-in-use':
-                    errorMessage = 'Bu e-posta adresi zaten kullanımda.';
-                    break;
-                case 'auth/invalid-email':
-                    errorMessage = 'Geçersiz e-posta adresi formatı.';
-                    break;
-                case 'auth/weak-password':
-                    errorMessage = 'Şifre çok zayıf. En az 6 karakter olmalı.';
-                    break;
-                case 'auth/network-request-failed':
-                    errorMessage = 'Ağ bağlantısı hatası. İnternet bağlantınızı kontrol edin.';
-                    break;
-                default:
-                    errorMessage += error.message;
-            }
-        } else {
-            errorMessage += error.message;
-        }
-        
-        showNotification(errorMessage, 'error');
-    }
-}
+                async handleUserFormSubmit(event) {
+                    event.preventDefault();
+                    
+                    console.log("🔥 Form submit başladı");
+                    
+                    // Doğru ID'lerle elementleri al
+                    const userId = document.getElementById('userId')?.value || '';
+                    const userNameEl = document.getElementById('formUserName');
+                    const userEmailEl = document.getElementById('formUserEmail');
+                    const userPasswordEl = document.getElementById('formUserPassword');
+                    const userRoleEl = document.getElementById('formUserRole');
+                    
+                    console.log("🧪 Elements check:", {
+                        userId,
+                        userNameEl: userNameEl ? "✅ Found" : "❌ Missing",
+                        userEmailEl: userEmailEl ? "✅ Found" : "❌ Missing", 
+                        userPasswordEl: userPasswordEl ? "✅ Found" : "❌ Missing",
+                        userRoleEl: userRoleEl ? "✅ Found" : "❌ Missing"
+                    });
+                    
+                    // Değerleri al
+                    const userName = userNameEl?.value?.trim() || '';
+                    const userEmail = userEmailEl?.value?.trim() || '';
+                    const userPassword = userPasswordEl?.value || '';
+                    const userRole = userRoleEl?.value || '';
+                    
+                    console.log("📊 Form values:", {
+                        userName: `"${userName}"`,
+                        userEmail: `"${userEmail}"`,
+                        userRole: `"${userRole}"`,
+                        userPassword: userPassword ? "***" : "empty",
+                        isEdit: !!userId
+                    });
+                    
+                    // Validasyonlar
+                    if (!userName) {
+                        console.error("❌ Ad-soyad boş!");
+                        showNotification('Lütfen ad-soyad girin.', 'error');
+                        userNameEl?.focus();
+                        return;
+                    }
+                    
+                    if (!userEmail) {
+                        console.error("❌ E-posta boş!");
+                        showNotification('Lütfen geçerli bir e-posta girin.', 'error');
+                        userEmailEl?.focus();
+                        return;
+                    }
+                    
+                    if (!userRole) {
+                        console.error("❌ Rol seçilmemiş!");
+                        showNotification('Lütfen bir rol seçin.', 'error');
+                        userRoleEl?.focus();
+                        return;
+                    }
+                    
+                    // Yeni kullanıcı için şifre kontrolü
+                    if (!userId && (!userPassword || userPassword.length < 6)) {
+                        console.error("❌ Şifre geçersiz!");
+                        showNotification('Yeni kullanıcı için en az 6 karakterli bir şifre girin.', 'error');
+                        userPasswordEl?.focus();
+                        return;
+                    }
+                    
+                    console.log("✅ Tüm validasyonlar geçti, işlem başlıyor...");
+                    
+                    try {
+                        if (userId) {
+                            console.log("🔄 Mevcut kullanıcı güncelleniyor...");
+                            const userRef = doc(db, 'users', userId);
+                            await updateDoc(userRef, {
+                                displayName: userName,
+                                role: userRole,
+                                updatedAt: new Date().toISOString()
+                            });
+                            console.log("✅ Kullanıcı güncellendi");
+                            showNotification('Kullanıcı başarıyla güncellendi!', 'success');
+                        } else {
+                            console.log("➕ Yeni kullanıcı oluşturuluyor...");
+                            
+                            const userCredential = await createUserWithEmailAndPassword(auth, userEmail, userPassword);
+                            const firebaseUser = userCredential.user;
+                            console.log("✅ Firebase Auth kullanıcısı oluşturuldu:", firebaseUser.uid);
+                            
+                            const setRoleResult = await authService.setUserRole(firebaseUser.uid, userEmail, userName, userRole);
+                            
+                            if (!setRoleResult.success) {
+                                throw new Error('Kullanıcı rolü atanamadı: ' + setRoleResult.error);
+                            }
+                            
+                            console.log("✅ Kullanıcı rolü ve profili ayarlandı");
+                            showNotification('Yeni kullanıcı başarıyla eklendi!', 'success');
+                        }
+                        
+                        console.log("🎯 İşlem tamamlandı, modal kapatılıyor ve liste yenileniyor...");
+                        this.closeUserModal();
+                        await this.loadUsers();
+                        
+                    } catch (error) {
+                        console.error('❌ Kullanıcı işlemi hatası:', error);
+                        let errorMessage = 'İşlem sırasında hata oluştu: ';
+                        
+                        if (error.code) {
+                            switch (error.code) {
+                                case 'auth/email-already-in-use':
+                                    errorMessage = 'Bu e-posta adresi zaten kullanımda.';
+                                    break;
+                                case 'auth/invalid-email':
+                                    errorMessage = 'Geçersiz e-posta adresi formatı.';
+                                    break;
+                                case 'auth/weak-password':
+                                    errorMessage = 'Şifre çok zayıf. En az 6 karakter olmalı.';
+                                    break;
+                                case 'auth/network-request-failed':
+                                    errorMessage = 'Ağ bağlantısı hatası. İnternet bağlantınızı kontrol edin.';
+                                    break;
+                                default:
+                                    errorMessage += error.message;
+                            }
+                        } else {
+                            errorMessage += error.message;
+                        }
+                        
+                        showNotification(errorMessage, 'error');
+                    }
+                }
                 async deleteUser(userId) {
                     if (userId === this.currentUser.uid) {
                         showNotification('Kendi hesabınızı silemezsiniz.', 'error');
