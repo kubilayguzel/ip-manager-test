@@ -53,7 +53,7 @@ const menuItems = [
         category: 'Yönetim',
         subItems: [
             { id: 'persons', text: 'Kişiler Yönetimi', link: 'persons.html' },
-            { id: 'user-management', text: 'Kullanıcı Yönetimi', link: 'user-management.html', superAdminOnly: true }
+            { id: 'user-management', text: 'Kullanıcı Yönetimi', superAdminOnly: true }
         ]
     },
     { id: 'accruals', text: 'Tahakkuklarım', link: 'accruals.html', icon: 'fas fa-file-invoice-dollar', category: 'Finans' },
@@ -99,7 +99,7 @@ export async function loadSharedLayout(options = {}) {
 
         const userRole = user.role || 'user';
         
- const userNameEl = document.getElementById('userName');
+        const userNameEl = document.getElementById('userName');
         if (userNameEl) {
             userNameEl.textContent = user.displayName || user.email.split('@')[0];
         }
@@ -114,7 +114,7 @@ export async function loadSharedLayout(options = {}) {
 
         const sidebarNav = document.querySelector('.sidebar-nav');
         if(sidebarNav) {
-            renderMenu(sidebarNav, activeMenuLink, userRole);
+            renderMenu(sidebarNav, userRole); // activeMenuLink parametresi renderMenu'den kaldırıldı
         } else {
             console.error('Sidebar navigation container (.sidebar-nav) not found in layout.');
         }
@@ -133,7 +133,7 @@ export async function loadSharedLayout(options = {}) {
     }
 }
 
-function renderMenu(container, currentPage, userRole) {
+function renderMenu(container, userRole) { // currentPage parametresi kaldırıldı
     let currentCategory = '';
     container.innerHTML = ''; // Mevcut içeriği temizle
 
@@ -153,13 +153,12 @@ function renderMenu(container, currentPage, userRole) {
         }
 
         const hasSubItems = item.subItems && item.subItems.length > 0;
-        const isDirectActive = item.link === currentPage;
-        const isParentActive = hasSubItems && item.subItems.some(sub => sub.link === currentPage);
         
         let linkClass = 'sidebar-nav-item';
-        if (isDirectActive || isParentActive) {
-            linkClass += ' active';
-        }
+        // isDirectActive, isParentActive ve active sınıfı ekleme mantığı renderMenu'den kaldırıldı
+        // if (isDirectActive || isParentActive) {
+        //     linkClass += ' active';
+        // }
         if (item.specialClass) { // create-task için özel sınıf
             linkClass += ` ${item.specialClass}`;
         }
@@ -167,14 +166,12 @@ function renderMenu(container, currentPage, userRole) {
         if (hasSubItems) {
             const accordionHtml = `
                 <div class="accordion">
-                    <div class="accordion-header ${isParentActive ? 'active' : ''}">
-                        <span class="nav-icon"><i class="${item.icon}"></i></span>
+                    <div class="accordion-header"> <span class="nav-icon"><i class="${item.icon}"></i></span>
                         <span>${item.text}</span>
                     </div>
                     <div class="accordion-content">
                         ${item.subItems.map(subItem => `
-                            <a href="${subItem.link}" class="${subItem.link === currentPage ? 'active' : ''} ${subItem.specialClass || ''}">${subItem.text}</a>
-                        `).join('')}
+                            <a href="${subItem.link}" class="${subItem.specialClass || ''}">${subItem.text}</a> `).join('')}
                     </div>
                 </div>
             `;
@@ -192,6 +189,8 @@ function renderMenu(container, currentPage, userRole) {
 }
 
 function setupMenuInteractions(currentPage) {
+    // 1. Accordion başlıklarına tıklama olay dinleyicilerini ekle
+    // Bu kısım, accordionların tıklama ile açılıp kapanmasını sağlar.
     const accordions = document.querySelectorAll('.accordion-header');
     accordions.forEach(accordion => {
         accordion.addEventListener('click', function(event) {
@@ -205,7 +204,21 @@ function setupMenuInteractions(currentPage) {
         });
     });
 
-    // Sayfa yüklendiğinde aktif menüyü ayarla ve akordiyonları aç
+    // 2. Önce tüm mevcut aktif sınıfları kaldır ve akordiyonları kapat
+    // Bu adım, her sayfa yüklendiğinde menünün temiz bir durumda olmasını sağlar.
+    document.querySelectorAll('.sidebar-nav-item, .accordion-content a, .accordion-header').forEach(el => {
+        el.classList.remove('active');
+        // Akordiyon içeriğini de kapat
+        if (el.classList.contains('accordion-header')) {
+            const content = el.nextElementSibling;
+            if (content && content.classList.contains('accordion-content')) {
+                content.style.maxHeight = null;
+            }
+        }
+    });
+
+    // 3. Sayfa yüklendiğinde doğru aktif menüyü ayarla ve ilgili akordiyonu aç
+    // Bu adım, mevcut sayfayı ve ilgili ana akordiyonu aktif olarak işaretler.
     document.querySelectorAll('.sidebar-nav-item, .accordion-content a').forEach(link => {
         if (link.getAttribute('href') === currentPage) {
             link.classList.add('active');
