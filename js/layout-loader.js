@@ -122,7 +122,9 @@ export async function loadSharedLayout(options = {}) {
         const logoutBtn = document.getElementById('logoutBtn');
         if (logoutBtn) logoutBtn.addEventListener('click', (e) => { e.preventDefault(); authService.signOut(); });
 
-        setupMenuInteractions(activeMenuLink);
+        const currentPath = window.location.pathname.split('/').pop();
+        setupMenuInteractions(currentPath);
+
 
     } catch (error) {
         console.error('Error loading shared layout:', error);
