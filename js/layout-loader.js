@@ -53,7 +53,7 @@ const menuItems = [
         category: 'Yönetim',
         subItems: [
             { id: 'persons', text: 'Kişiler Yönetimi', link: 'persons.html' },
-            { id: 'user-management', text: 'Kullanıcı Yönetimi', link: 'user-management.html', superAdminOnly: true }
+            { id: 'user-management', text: 'Kullanıcı Yönetimi', superAdminOnly: true }
         ]
     },
     { id: 'accruals', text: 'Tahakkuklarım', link: 'accruals.html', icon: 'fas fa-file-invoice-dollar', category: 'Finans' },
@@ -99,7 +99,7 @@ export async function loadSharedLayout(options = {}) {
 
         const userRole = user.role || 'user';
         
- const userNameEl = document.getElementById('userName');
+        const userNameEl = document.getElementById('userName');
         if (userNameEl) {
             userNameEl.textContent = user.displayName || user.email.split('@')[0];
         }
@@ -192,20 +192,19 @@ function renderMenu(container, currentPage, userRole) {
 }
 
 function setupMenuInteractions(currentPage) {
-    const accordions = document.querySelectorAll('.accordion-header');
-    accordions.forEach(accordion => {
-        accordion.addEventListener('click', function(event) {
-            this.classList.toggle('active');
-            const content = this.nextElementSibling;
-            if (content.style.maxHeight) {
+    // Tüm aktif sınıfları kaldır ve akordiyonları kapat
+    document.querySelectorAll('.sidebar-nav-item, .accordion-content a, .accordion-header').forEach(el => {
+        el.classList.remove('active');
+        // Akordiyon içeriğini de kapat
+        if (el.classList.contains('accordion-header')) {
+            const content = el.nextElementSibling;
+            if (content && content.classList.contains('accordion-content')) {
                 content.style.maxHeight = null;
-            } else {
-                content.style.maxHeight = content.scrollHeight + "px";
             }
-        });
+        }
     });
 
-    // Sayfa yüklendiğinde aktif menüyü ayarla ve akordiyonları aç
+    // Sayfa yüklendiğinde doğru aktif menüyü ayarla ve akordiyonları aç
     document.querySelectorAll('.sidebar-nav-item, .accordion-content a').forEach(link => {
         if (link.getAttribute('href') === currentPage) {
             link.classList.add('active');
