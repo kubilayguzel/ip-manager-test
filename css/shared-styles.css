@@ -156,10 +156,17 @@ body {
     font-weight: 500;
     color: #fff;
 }
+
+/* Yalnızca "Yeni İş Oluştur" bağlantısı aynı zamanda aktifse özel arka planı uygulayın */
+.accordion-content a.new-task-link.active {
+    background-color: rgba(78, 205, 196, 0.25);
+    font-weight: 500;
+    color: #fff;
+}
+
 .accordion-content a.new-task-link:hover {
     background-color: rgba(78, 205, 196, 0.4);
 }
-
 
 /* Üst Bar (Top Header) */
 .top-header {
