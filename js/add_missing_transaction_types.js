@@ -43,3 +43,6 @@ async function addMissingChildTransactionTypes() {
 
 // Fonksiyonu başlat
 addMissingChildTransactionTypes();
+
+
+        <script type="module" src="./js/add_missing_transaction_types.js"></script>
