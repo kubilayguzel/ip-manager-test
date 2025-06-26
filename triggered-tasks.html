@@ -88,10 +88,10 @@
         .status-on-hold { background-color: #17a2b8; }
         .status-awaiting-approval { background-color: #6f42c1; }
         /* Yeni tetiklenen görev durumları */
-        .status-awaiting-client-approval { background-color: #6f42c1; } /* Mevcut tanım */
-        .status-client-approval-opened { background-color: #28a745; } /* Yeşil */
-        .status-client-approval-closed { background-color: #6c757d; } /* Gri */
-        .status-client-no-response-closed { background-color: #fd7e14; } /* Turuncu */
+        .status-awaiting_client_approval { background-color: #6f42c1; color: white; } /* Müvekkil Onayı Bekliyor - Mor */
+        .status-client_approval_opened { background-color: #28a745; color: white; } /* Müvekkil Onayı - Açıldı - Yeşil */
+        .status-client_approval_closed { background-color: #6c757d; color: white; } /* Müvekkil Onayı - Kapatıldı - Gri */
+        .status-client_no_response_closed { background-color: #fd7e14; color: white; } /* Müvekkil Cevaplamadı - Kapatıldı - Turuncu */
 
         .priority-badge {
             padding: 4px 8px;
@@ -597,7 +597,7 @@
 
                     filteredTasks.forEach(task => {
                         const row = document.createElement('tr');
-                        const statusClass = `status-${task.status.replace(/ /g, '-').toLowerCase()}`;
+                        const statusClass = `status-${task.status.replace(/ /g, '_').toLowerCase()}`; // client_approval_opened için client_approval_opened CSS class'ı
                         const priorityClass = `priority-${task.priority.toLowerCase()}`;
                         const taskTypeParts = task.taskType ? task.taskType.split('_') : [];
                         const mainType = taskTypeParts[0] || '';
