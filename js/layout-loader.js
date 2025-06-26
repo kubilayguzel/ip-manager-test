@@ -53,7 +53,7 @@ const menuItems = [
         category: 'Yönetim',
         subItems: [
             { id: 'persons', text: 'Kişiler Yönetimi', link: 'persons.html' },
-            { id: 'user-management', text: 'Kullanıcı Yönetimi', superAdminOnly: true }
+            { id: 'user-management', text: 'Kullanıcı Yönetimi', link: 'user-management.html', superAdminOnly: true }
         ]
     },
     { id: 'accruals', text: 'Tahakkuklarım', link: 'accruals.html', icon: 'fas fa-file-invoice-dollar', category: 'Finans' },
