@@ -225,27 +225,15 @@ function setupMenuInteractions(currentPage) {
     document.querySelectorAll('.sidebar-nav-item, .accordion-content a').forEach(link => {
         if (link.getAttribute('href') === currentPage) {
             link.classList.add('active');
-            // Eğer bu link bir akordeon altındaysa, akordeonun başlığını da "open" hale getir
-            const accordionItem = link.closest('.sidebar-accordion');
-            if (accordionItem) {
-                accordionItem.classList.add('open');
-
-                // Eğer akordeon başlığı varsa, tıklanmış gibi davran
-                const accordionHeader = accordionItem.querySelector('.sidebar-accordion-header');
-                if (accordionHeader) {
-                    accordionHeader.setAttribute('aria-expanded', 'true');
+            // Eğer link bir akordiyon içeriğindeyse, akordiyonu aç
+            const parentAccordionContent = link.closest('.accordion-content');
+            if (parentAccordionContent) {
+                const parentAccordionHeader = parentAccordionContent.previousElementSibling;
+                if (parentAccordionHeader && parentAccordionHeader.classList.contains('accordion-header')) {
+                    parentAccordionHeader.classList.add('active');
+                    parentAccordionContent.style.maxHeight = parentAccordionContent.scrollHeight + "px";
                 }
-
-                // Diğer akordeonları kapat (isteğe bağlı)
-                document.querySelectorAll('.sidebar-accordion').forEach(other => {
-                    if (other !== accordionItem) {
-                        other.classList.remove('open');
-                        const header = other.querySelector('.sidebar-accordion-header');
-                        if (header) header.setAttribute('aria-expanded', 'false');
-                    }
-                });
             }
-
         }
     });
 }
