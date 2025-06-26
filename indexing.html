@@ -246,6 +246,10 @@
             import { loadSharedLayout } from './js/layout-loader.js';
             // documentDesignationTranslations artık firebase-config.js'ten geliyor
 
+            // Selcan'ın bilgilerini buraya tanımlıyoruz
+            const SELCAN_UID = 'selcan_uid_placeholder'; // Selcan'ın gerçek UID'si ile değiştirin
+            const SELCAN_EMAIL = 'selcan@example.com'; // Selcan'ın gerçek e-posta adresi ile değiştirin
+
             class IndexingModule {
                 constructor() {
                     this.currentUser = null;
@@ -761,15 +765,17 @@
                         console.log('DEBUG: Tetiklenen görev tipi:', triggeredTaskType);
 
                         if (triggeredTaskType) {
-                            let defaultAssignedToUid = 'YOUR_ADMIN_UID'; // Varsayılan atanan kişi UID'si, bunu gerçek bir UID ile değiştirin
-                            let defaultAssignedToEmail = 'your_admin_email@example.com'; // Varsayılan atanan kişi e-postası, bunu gerçek bir e-posta ile değiştirin
+                            // Selcan'ın bilgilerini kullan
+                            let defaultAssignedToUid = SELCAN_UID; 
+                            let defaultAssignedToEmail = SELCAN_EMAIL;
 
                             // transactionTypes.json içindeki taskType ID'lerini kullanarak görev tanımını bul
                             const targetTaskDefinition = this.allTransactionTypes.find(t => t.id === triggeredTaskType);
                             
                             const newTaskData = {
                                 taskType: triggeredTaskType,
-                                title: `[OTOMATİK GÖREV] ${targetTaskDefinition ? (targetTaskDefinition.alias || targetTaskDefinition.name) : 'Bilinmeyen İşlem'} - ${currentSelectedRecord.title} (${currentSelectedRecord.applicationNumber})`,
+                                // Görev başlığı için 'taskDisplayName' özelliğini önceliklendir, yoksa 'alias' veya 'name' kullan
+                                title: `[OTOMATİK GÖREV] ${targetTaskDefinition ? (targetTaskDefinition.taskDisplayName || targetTaskDefinition.alias || targetTaskDefinition.name) : 'Bilinmeyen İşlem'} - ${currentSelectedRecord.title} (${currentSelectedRecord.applicationNumber})`,
                                 description: `${currentSelectedRecord.title} (${currentSelectedRecord.applicationNumber}) kaydının ${childTransactionType.alias || childTransactionType.name} işlemi sonrasında otomatik oluşturulan görev.`,
                                 priority: 'medium', // Varsayılan öncelik
                                 assignedTo_uid: defaultAssignedToUid,
@@ -871,14 +877,16 @@
                             console.log('DEBUG: Tetiklenen görev tipi (Manuel Alt İşlem):', triggeredTaskType);
 
                             if (triggeredTaskType) {
-                                let defaultAssignedToUid = 'YOUR_ADMIN_UID'; // Varsayılan atanan kişi UID'si
-                                let defaultAssignedToEmail = 'your_admin_email@example.com'; // Varsayılan atanan kişi e-postası
-
+                                // Selcan'ın bilgilerini kullan
+                                let defaultAssignedToUid = SELCAN_UID; 
+                                let defaultAssignedToEmail = SELCAN_EMAIL;
+                                
                                 const targetTaskDefinition = this.allTransactionTypes.find(t => t.id === triggeredTaskType);
                                 
                                 const newTaskData = {
                                     taskType: triggeredTaskType,
-                                    title: `[OTOMATİK GÖREV] ${targetTaskDefinition ? (targetTaskDefinition.alias || targetTaskDefinition.name) : 'Bilinmeyen İşlem'} - ${currentSelectedRecord.title} (${currentSelectedRecord.applicationNumber})`,
+                                    // Görev başlığı için 'taskDisplayName' özelliğini önceliklendir, yoksa 'alias' veya 'name' kullan
+                                    title: `[OTOMATİK GÖREV] ${targetTaskDefinition ? (targetTaskDefinition.taskDisplayName || targetTaskDefinition.alias || targetTaskDefinition.name) : 'Bilinmeyen İşlem'} - ${currentSelectedRecord.title} (${currentSelectedRecord.applicationNumber})`,
                                     description: `${currentSelectedRecord.title} (${currentSelectedRecord.applicationNumber}) kaydının ${selectedChildTransaction.alias || selectedChildTransaction.name} işlemi sonrasında otomatik oluşturulan görev.`,
                                     priority: 'medium',
                                     assignedTo_uid: defaultAssignedToUid,
