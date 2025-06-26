@@ -99,7 +99,7 @@ export const TASK_STATUSES = [
     { value: 'pending', text: 'Beklemede' },
     { value: 'cancelled', text: 'İptal Edildi' },
     { value: 'on-hold', text: 'Askıda' },
-    { value: 'awaiting-approval', text: 'Onay Bekliyor' }
+    { value: 'awaiting_client_approval', text: 'Müvekkil Onayı Bekliyor' } // Yeni durum eklendi
 ];
 
 // IP Kayıt durumları (data-entry.html'de kullanılır)
