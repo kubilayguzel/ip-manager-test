@@ -557,11 +557,14 @@
                     const isPaid = accrual.status === 'paid';
                     const editButtonDisabled = isPaid ? 'disabled' : ''; // Sadece tamamen ödendi ise düzenle pasif olacak
 
+                    // İlgili İş adı ve ID'si için yeni gösterim
+                    const relatedTaskDisplay = accrual.taskTitle ? `${accrual.taskTitle} (${accrual.taskId})` : (accrual.taskId || 'İş Detayı');
+
                     row.innerHTML = `
                         <td><input type="checkbox" class="row-checkbox" data-id="${accrual.id}" ${isSelected ? 'checked' : ''}></td>
                         <td><small>${accrual.id.substring(0, 8)}...</small></td>
                         <td><span class="status-badge ${statusClass}">${statusText}</span></td>
-                        <td><a href="#" class="task-detail-link" data-task-id="${accrual.taskId}">${accrual.taskTitle || accrual.taskId || 'İş Detayı'}</a></td>
+                        <td><a href="#" class="task-detail-link" data-task-id="${accrual.taskId}">${relatedTaskDisplay}</a></td>
                         <td>${currencyFormatter(officialFee.amount, officialFee.currency)}</td>
                         <td>${currencyFormatter(serviceFee.amount, serviceFee.currency)}</td>
                         <td>${currencyFormatter(accrual.totalAmount || 0, accrual.totalAmountCurrency || 'TRY')}</td>
@@ -626,7 +629,14 @@
                 if (newStatus === 'paid') {
                     const paymentDate = document.getElementById('paymentDate').value;
                     const remainingAmountInput = parseFloat(document.getElementById('remainingAmount').value); // Kalan Tutar input'u
-                    const accrualTotalAmount = this.selectedAccruals.size === 1 ? (this.allAccruals.find(acc => acc.id === Array.from(this.selectedAccruals)[0])?.totalAmount || 0) : 0;
+                    let accrualTotalAmount = 0;
+                    let selectedAccrual = null;
+
+                    if (this.selectedAccruals.size === 1) {
+                        selectedAccrual = this.allAccruals.find(acc => acc.id === Array.from(this.selectedAccruals)[0]);
+                        accrualTotalAmount = selectedAccrual?.totalAmount || 0;
+                    }
+                    
 
                     if (!paymentDate) {
                         showNotification('Lütfen ödeme tarihini girin.', 'error');
@@ -634,35 +644,43 @@
                     }
 
                     let confirmMessage;
-                    if (this.selectedAccruals.size === 1 && remainingAmountInput >= 0 && remainingAmountInput < accrualTotalAmount) {
-                        confirmMessage = `Seçilen tahakkuku "Kısmen Ödendi" olarak işaretlemek istediğinizden emin misiniz? Kalan Tutar: ${new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' }).format(remainingAmountInput)}`;
-                    } else if (this.selectedAccruals.size === 1 && remainingAmountInput == 0) { // kalan tutar 0 ise tamamen ödendi
-                         confirmMessage = `Seçilen tahakkuku "Ödendi" olarak işaretlemek istediğinizden emin misiniz?`;
-                    }
-                     else if (this.selectedAccruals.size === 1 && remainingAmountInput >= accrualTotalAmount) {
-                         showNotification("Kalan Tutar, Toplam Tutar'dan büyük veya eşit olamaz (Tam Ödeme için 0 girin).", 'error');
-                         return;
-                     }
-                    else {
+                    let targetStatusForSingleAccrual = 'paid'; // Varsayılan olarak ödendi
+                    let finalRemainingAmount = 0; // Varsayılan olarak kalan tutar 0
+
+                    if (this.selectedAccruals.size === 1) {
+                        if (remainingAmountInput > 0 && remainingAmountInput < accrualTotalAmount) {
+                            confirmMessage = `Seçilen tahakkuku "Kısmen Ödendi" olarak işaretlemek istediğinizden emin misiniz? Kalan Tutar: ${new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' }).format(remainingAmountInput)}`;
+                            targetStatusForSingleAccrual = 'partially_paid';
+                            finalRemainingAmount = remainingAmountInput;
+                        } else if (remainingAmountInput === 0) {
+                            confirmMessage = `Seçilen tahakkuku "Ödendi" olarak işaretlemek istediğinizden emin misiniz?`;
+                            targetStatusForSingleAccrual = 'paid';
+                            finalRemainingAmount = 0;
+                        } else if (remainingAmountInput >= accrualTotalAmount && accrualTotalAmount > 0) {
+                             showNotification("Kalan Tutar, Toplam Tutar'dan büyük veya eşit olamaz (Tam Ödeme için 0 girin).", 'error');
+                             return;
+                         } else { // kalan tutar negatif veya geçerli bir sayı değil
+                             confirmMessage = `Seçilen tahakkuku "Ödendi" olarak işaretlemek istediğinizden emin misiniz?`;
+                             targetStatusForSingleAccrual = 'paid';
+                             finalRemainingAmount = 0;
+                         }
+                    } else { // Çoklu seçim
                         confirmMessage = `${this.selectedAccruals.size} adet tahakkuku "Ödendi" olarak işaretlemek istediğinizden emin misiniz?`;
+                        targetStatusForSingleAccrual = 'paid'; // Çoklu seçimde her zaman tamamen ödendi
+                        finalRemainingAmount = 0;
                     }
                     
-
                     if (confirm(confirmMessage)) {
                         const promises = Array.from(this.selectedAccruals).map(async (id) => {
-                            let updates = { status: newStatus, paymentDate: paymentDate };
+                            let updates = { paymentDate: paymentDate };
                             let currentAccrual = this.allAccruals.find(acc => acc.id === id);
 
-                            // Tekli seçim ve kalan tutar girilmişse durumu 'partially_paid' yap
-                            if (this.selectedAccruals.size === 1 && remainingAmountInput >= 0 && remainingAmountInput < accrualTotalAmount) {
-                                updates.status = 'partially_paid';
-                                updates.remainingAmount = remainingAmountInput;
-                            } else if (this.selectedAccruals.size === 1 && remainingAmountInput == 0) {
+                            if (this.selectedAccruals.size === 1) { // Tekli seçimdeki özel durumları uygula
+                                updates.status = targetStatusForSingleAccrual;
+                                updates.remainingAmount = finalRemainingAmount;
+                            } else { // Çoklu seçimde varsayılan olarak tamamen ödendi
                                 updates.status = 'paid';
-                                updates.remainingAmount = 0; // Kalan tutar sıfırlanır
-                            } else { // Toplu seçim veya tekli seçimde kalan tutar girilmemişse tamamen ödendi
-                                updates.status = 'paid';
-                                updates.remainingAmount = 0; // Kalan tutar sıfırlanır
+                                updates.remainingAmount = 0;
                             }
 
 
@@ -1031,7 +1049,7 @@
                         document.getElementById('displayAccrualTotalAmount').textContent = new Intl.NumberFormat('tr-TR', { style: 'currency', currency: selectedAccrual.totalAmountCurrency || 'TRY' }).format(selectedAccrual.totalAmount || 0);
                         document.getElementById('singleAccrualTotalAmountDisplay').style.display = 'block';
                         document.getElementById('remainingAmountGroup').style.display = 'block';
-                        // Kalan tutarı mevcut kalan tutarla ön doldur veya sıfırla
+                        // Kalan tutarı mevcut kalan tutarla ön doldur veya toplam tutarla (eğer henüz ödeme yapılmamışsa)
                         document.getElementById('remainingAmount').value = selectedAccrual.remainingAmount !== undefined ? selectedAccrual.remainingAmount : selectedAccrual.totalAmount || 0;
                     }
                 } else {
