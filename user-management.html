@@ -293,6 +293,7 @@
 
     <script type="module">
         import { authService, auth, db} from './firebase-config.js';
+        import { createUserWithEmailAndPassword } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
         import { collection, getDocs, doc, updateDoc, deleteDoc, setDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
         import { showNotification } from './utils.js';
         import { loadSharedLayout } from './js/layout-loader.js'; // layout-loader.js eklendi
@@ -478,7 +479,7 @@
                         }
 
                         try {
-                            const userCredential = await auth.createUserWithEmailAndPassword(userEmail, userPassword);
+                            const userCredential = await createUserWithEmailAndPassword(auth, userEmail, userPassword);
                             await setDoc(doc(db, 'users', userCredential.user.uid), {
                                 displayName: userName,
                                 email: userEmail,
