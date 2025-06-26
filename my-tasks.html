@@ -379,7 +379,7 @@
     
     <div class="modal" id="createMyTaskAccrualModal">
         <div class="modal-content">
-            <span class="close-modal-btn" id="closeCreateMyTaskAccrualModal">&times;</span>
+            <span class="close-modal-btn" id="closeMyTaskAccrualModal">&times;</span>
             <h3 class="modal-title">Ek Tahakkuk Oluştur</h3>
             <form id="createMyTaskAccrualForm" onsubmit="return false;">
                 <div class="modal-body-content">
@@ -486,12 +486,19 @@
                     document.getElementById('myTasksTableBody').addEventListener('click', (e) => {
                         if (e.target.classList.contains('action-btn')) {
                             e.preventDefault();
-                            const taskId = e.target.dataset.id;
+                            // ID'yi almak için hem data-id hem de data-task-id'yi kontrol et
+                            const taskId = e.target.dataset.id || e.target.dataset.taskId; 
+                            
+                            if (!taskId) { // Eğer taskId hala yoksa hata bildir
+                                showNotification('Görev ID\'si alınamadı. Lütfen sayfayı yenileyin veya yöneticiye başvurun.', 'error');
+                                return;
+                            }
+
                             if (e.target.dataset.action === 'view') {
-                                this.showTaskDetailModal(taskId);
+                                window.location.href = `task-detail.html?id=${taskId}`; 
                             } else if (e.target.dataset.action === 'edit') {
-                                window.location.href = `task-detail.html?id=${taskId}`;
-                            } else if (e.target.classList.contains('add-accrual-btn')) { // Yeni Ek Tahakkuk Oluştur butonu
+                                window.location.href = `task-detail.html?id=${taskId}`; 
+                            } else if (e.target.classList.contains('add-accrual-btn')) { 
                                 this.showCreateMyTaskAccrualModal(taskId);
                             }
                         }
@@ -527,6 +534,8 @@
                         const accrualsResult = await accrualService.getAccruals();
                         this.allAccruals = accrualsResult.success ? accrualsResult.data : [];
                         console.log('Yüklenen tahakkuklar:', this.allAccruals); // Debug için
+                        console.log('DEBUG: tasksResult.data after fetching (MyTasksModule):', tasksResult.data); // NEW DEBUG LOG
+                        console.log('DEBUG: this.allTasks after assignment (MyTasksModule):', this.allTasks); // NEW DEBUG LOG
                         this.renderTasks(); // Tüm görevleri başlangıçta render et
                     } catch (error) {
                         showNotification('Veriler yüklenirken bir hata oluştu: ' + error.message, 'error');
@@ -566,8 +575,8 @@
                             <td>${task.dueDate ? new Date(task.dueDate).toLocaleDateString('tr-TR') : 'Belirtilmemiş'}</td>
                             <td><span class="status-badge ${statusClass}">${task.status}</span></td>
                             <td>
-                                <button class="action-btn" data-task-id="${task.id}" data-action="view">Görüntüle</button>
-                                <button class="action-btn" data-task-id="${task.id}" data-action="edit">Düzenle</button>
+                                <button class="action-btn" data-id="${task.id}" data-action="view">Görüntüle</button>
+                                <button class="action-btn" data-id="${task.id}" data-action="edit">Düzenle</button>
                                 <button class="action-btn add-accrual-btn" data-id="${task.id}">Ek Tahakkuk Oluştur</button> </td>
                         `;
                         tableBody.appendChild(row);
