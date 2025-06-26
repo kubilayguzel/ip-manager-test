@@ -128,7 +128,7 @@
                     <div class="form-section">
                         <h3 class="section-title">1. İş Tipi Seçimi</h3>
                         <div class="form-grid">
-                            <div class="form-group"><label for="mainIpType" class="form-label">İşin Ana Türü</label><select id="mainIpType" class="form-select"><option value="">Seçiniz...</option><option value="patent">Patent</option><option value="trademark">Marka</option><option value="design">Tasarım</option></select></div>
+                            <div class="form-group"><label for="mainIpType" class="form-label">İşin Ana Türü</label><select id="mainIpType" class="form-select"><option value="">Seçiniz...</option><option value="patent">Patent</option><option value="trademark">Marka</option><option value="design">Tasarım</option><option value="litigation">Dava</option></select></div>
                             <div class="form-group"><label for="specificTaskType" class="form-label">Spesifik İş Tipi</label><select id="specificTaskType" class="form-select" disabled><option value="">Önce İşin Ana Türünü Seçin</option></select></div>
                         </div>
                     </div>
@@ -286,20 +286,43 @@
 
             if (!selectedTaskType) return;
 
-            this.renderBaseForm(container, selectedTaskType.name);
+            this.renderBaseForm(container, selectedTaskType.name, selectedTaskType.id); // Add selectedTaskType.id
             
             this.checkFormCompleteness();
         }
         // --- SON: handleSpecificTypeChange metodu ---
 
-            renderBaseForm(container, taskTypeName) { // taskTypeName parametresi eklendi
-                const transactionLikeTasks = ['Devir', 'Lisans', 'Birleşme', 'Veraset ile İntikal', 'Rehin/Teminat'];
+            renderBaseForm(container, taskTypeName, taskTypeId) { // taskTypeName parametresi eklendi, taskTypeId eklendi
+                const transactionLikeTasks = ['Devir', 'Lisans', 'Birleşme', 'Veraset ile İntikal', 'Rehin/Teminat', 'YİDK Kararının İptali']; // 'YİDK Kararının İptali' eklendi
                 const needsRelatedParty = transactionLikeTasks.includes(taskTypeName); // taskTypeName kullanıldı
                 const partyLabels = { 
                     'Devir': 'Devralan Taraf', 'Lisans': 'Lisans Alan Taraf', 'Rehin': 'Rehin Alan Taraf', 
-                    'Birleşme': 'Birleşilen Taraf', 'Veraset ile İntikal': 'Mirasçı', 'Rehin/Teminat': 'Rehin Alan Taraf' 
+                    'Birleşme': 'Birleşilen Taraf', 'Veraset ile İntikal': 'Mirasçı', 'Rehin/Teminat': 'Rehin Alan Taraf',
+                    'YİDK Kararının İptali': 'Davacı/Davalı' // Yeni eklendi
                 };
                 const partyLabel = partyLabels[taskTypeName] || 'İlgili Taraf';
+
+                let specificFieldsHtml = '';
+                if (taskTypeId === 'litigation_yidk_annulment') { // Yeni: YİDK Kararının İptali'ne özel alanlar
+                    specificFieldsHtml = `
+                        <div class="form-group full-width">
+                            <label for="subjectOfLawsuit" class="form-label">Dava Konusu</label>
+                            <textarea id="subjectOfLawsuit" name="subjectOfLawsuit" class="form-textarea"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="courtName" class="form-label">Mahkeme Adı</label>
+                            <input type="text" id="courtName" name="courtName" class="form-input">
+                        </div>
+                        <div class="form-group">
+                            <label for="courtFileNumber" class="form-label">Dava Dosya Numarası</label>
+                            <input type="text" id="courtFileNumber" name="courtFileNumber" class="form-input">
+                        </div>
+                        <div class="form-group date-picker-group">
+                            <label for="lawsuitDate" class="form-label">Dava Tarihi</label>
+                            <input type="date" id="lawsuitDate" name="lawsuitDate" class="form-input">
+                        </div>
+                    `;
+                }
 
                 container.innerHTML = `
                     <div class="form-section">
@@ -327,7 +350,7 @@
                     </div>
                     ` : ''}
 
-                    <div class="form-section">
+                    ${specificFieldsHtml} <div class="form-section">
                         <h3 class="section-title">Tahakkuk Bilgileri</h3>
                         <div class="form-grid">
                             <div class="form-group">
@@ -471,6 +494,19 @@
                 const filtered = this.allIpRecords.filter(r => {
                     const rTypeLower = r.type ? r.type.toLowerCase() : '';
                     const mainIpTypeLower = mainIpType ? mainIpType.toLowerCase() : '';
+                    
+                    // Eğer ana tür 'litigation' ise, ilgili IP kaydına bakma
+                    if (mainIpTypeLower === 'litigation') {
+                        // Burada litigation için özel bir ip record eşleşmesi olmayabilir,
+                        // bu yüzden sadece genel arama terimine odaklanabiliriz.
+                        // Veya eğer litigation tasks doğrudan IP kayıtlarına bağlı değilse,
+                        // bu filtreyi tamamen kaldırabiliriz. Kullanım senaryosuna göre ayarla.
+                        const rTitleLower = r.title ? r.title.toLowerCase() : '';
+                        const rAppNumberLower = r.applicationNumber ? r.applicationNumber.toLowerCase() : '';
+                        return rTitleLower.includes(searchLower) || rAppNumberLower.includes(searchLower);
+                    }
+
+                    // Diğer IP türleri için mevcut mantığı koru
                     if (rTypeLower !== mainIpTypeLower) return false;
 
                     const rTitleLower = r.title ? r.title.toLowerCase() : '';
