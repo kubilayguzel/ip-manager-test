@@ -445,25 +445,29 @@
 
                 async handleUserFormSubmit(event) {
                     event.preventDefault();
+
+                    // 🔐 Form içindeki alanlara güvenli erişim
                     const userId = document.getElementById('userId').value;
-                    const userNameEl = document.getElementById('userName');
-                    console.log("🧪 userNameEl:", userNameEl);
-                    console.log("🧪 userName value:", userNameEl?.value);
+                    const userNameEl = document.querySelector('#userForm input#userName');
+                    const userEmailEl = document.querySelector('#userForm input#userEmail');
+                    const userPasswordEl = document.querySelector('#userForm input#userPassword');
+                    const userRoleEl = document.querySelector('#userForm select#userRole');
 
-                    const userName = (userNameEl && typeof userNameEl.value === 'string') ? userNameEl.value.trim() : '';
+                    const userName = userNameEl ? userNameEl.value.trim() : '';
+                    const userEmail = userEmailEl ? userEmailEl.value.trim() : '';
+                    const userPassword = userPasswordEl ? userPasswordEl.value : '';
+                    const userRole = userRoleEl ? userRoleEl.value : '';
 
+                    // 🔍 Konsol çıktısı
+                    console.log("🧪 Kontrol:", { userName, userEmail, userRole });
+
+                    // 🛑 Alan kontrolleri
                     if (!userName) {
                         showNotification('Lütfen ad-soyad girin.', 'error');
                         return;
                     }
 
-                    const userEmail = document.getElementById('userEmail').value;
-                    const userPassword = document.getElementById('userPassword').value;
-                    const userRoleEl = document.querySelector('#userForm select#userRole');
-                    const userRole = userRoleEl ? userRoleEl.value : undefined;
-                    console.log("🧪 Kontrol:", { userEmail, userRole });
-
-                    if (!userEmail.trim()) {
+                    if (!userEmail) {
                         showNotification('Lütfen geçerli bir e-posta girin.', 'error');
                         return;
                     }
@@ -473,13 +477,9 @@
                         return;
                     }
 
-                    if (!userName.trim()) {
-                        showNotification('Lütfen ad-soyad girin.', 'error');
-                        return;
-                    }
-
+                    // 🔄 Güncelleme mi yoksa yeni kullanıcı mı?
                     if (userId) {
-                        // Update existing user
+                        // Kullanıcı güncelleme
                         const userRef = doc(db, 'users', userId);
                         try {
                             await updateDoc(userRef, {
@@ -491,27 +491,25 @@
                             showNotification('Kullanıcı güncellenirken hata oluştu: ' + error.message, 'error');
                         }
                     } else {
-                        // Add new user (requires Firebase Admin SDK for backend, or re-authentication flow for frontend)
-                        // This is a simplified client-side implementation. In a real app, user creation would be handled by a Firebase Cloud Function for security.
-                        if (!userPassword || userPassword.length < 6) {
-                            showNotification('Yeni kullanıcı için en az 6 karakterli bir şifre girin.', 'error');
-                            return;
-                        }
-
+                        // Yeni kullanıcı oluşturma
                         try {
                             const userCredential = await createUserWithEmailAndPassword(auth, userEmail, userPassword);
-                            await setDoc(doc(db, 'users', userCredential.user.uid), {
+                            const newUser = userCredential.user;
+
+                            await setDoc(doc(db, 'users', newUser.uid), {
                                 displayName: userName,
                                 email: userEmail,
                                 role: userRole,
-                                createdAt: new Date().toISOString(),
-                                lastLoginAt: new Date().toISOString()
+                                createdAt: new Date().toISOString()
                             });
-                            showNotification('Yeni kullanıcı başarıyla eklendi!', 'success');
+
+                            showNotification('Yeni kullanıcı başarıyla oluşturuldu!', 'success');
+                            document.getElementById('userForm').reset(); // Form temizle
                         } catch (error) {
                             showNotification('Kullanıcı eklenirken hata oluştu: ' + error.message, 'error');
                         }
                     }
+
                     this.closeUserModal();
                     await this.loadUsers(); // Reload users to update table
                 }
