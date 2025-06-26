@@ -552,7 +552,6 @@ export const transactionTypeService = {
             const docSnap = await getDoc(docRef);
             return docSnap.exists() ? { success: true, data: { id: docSnap.id, ...docSnap.data() } } : { success: false, error: "İşlem tipi bulunamadı." };
         } catch (error) {
-            console.error("İşlem tipi ID'ye göre alınırken hata:", error);
             return { success: false, error: error.message };
         }
     },
@@ -645,7 +644,8 @@ export const bulkIndexingService = {
         try {
             await deleteDoc(doc(this.collectionRef, jobId));
             return { success: true };
-        } catch (error) {
+        }
+        catch (error) {
             return { success: false, error: error.message };
         }
     },
@@ -826,3 +826,4 @@ export async function createDemoData() {
 
 // --- Exports ---
 export {auth, db};
+}
