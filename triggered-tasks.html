@@ -540,8 +540,15 @@
                 async loadAllData() {
                     document.getElementById('loadingIndicator').style.display = 'block';
                     try {
-                        const [tasksResult, ipRecordsResult, personsResult] = await Promise.all([
-                            taskService.getTasksForUser(this.currentUser.uid), // Sadece atanmış görevleri getir
+                        let tasksResult;
+                        // Kullanıcı superadmin ise tüm görevleri getir, değilse sadece kendisine atananları getir
+                        if (authService.isSuperAdmin()) {
+                            tasksResult = await taskService.getAllTasks();
+                        } else {
+                            tasksResult = await taskService.getTasksForUser(this.currentUser.uid);
+                        }
+
+                        const [ipRecordsResult, personsResult] = await Promise.all([
                             ipRecordsService.getRecords(),
                             personService.getPersons()
                         ]);
