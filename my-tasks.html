@@ -304,7 +304,7 @@
                     </table>
                 </div>
                 <div id="loadingIndicator" class="loading">Yükleniyor...</div>
-                <div id="noTasksMessage" class="no-records">Henüz atanmış bir göreviniz bulunmamaktadır.</div>
+                <div id="noTasksMessage" class="no-records">Henüz size atanmış bir göreviniz bulunmamaktadır.</div>
             </div>
         </main>
     </div>
@@ -318,6 +318,77 @@
         </div>
     </div>
     
+    <div class="modal" id="createMyTaskAccrualModal">
+        <div class="modal-content">
+            <span class="close-modal-btn" id="closeCreateMyTaskAccrualModal">&times;</span>
+            <h3 class="modal-title">Ek Tahakkuk Oluştur</h3>
+            <form id="createMyTaskAccrualForm" onsubmit="return false;">
+                <div class="modal-body-content">
+                    <div class="form-group">
+                        <label for="createMyTaskAccrualTaskTitleDisplay" class="form-label">İlgili İş</label>
+                        <input type="text" id="createMyTaskAccrualTaskTitleDisplay" class="form-input" readonly>
+                    </div>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="createMyTaskOfficialFee" class="form-label">Resmi Ücret</label>
+                            <div class="input-with-currency">
+                                <input type="number" id="createMyTaskOfficialFee" class="form-input" placeholder="0.00" step="0.01">
+                                <select id="createMyTaskOfficialFeeCurrency" class="currency-select">
+                                    <option value="TRY">TL</option>
+                                    <option value="EUR">EUR</option>
+                                    <option value="USD">USD</option>
+                                    <option value="CHF">CHF</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="createMyTaskServiceFee" class="form-label">Hizmet Bedeli</label>
+                            <div class="input-with-currency">
+                                <input type="number" id="createMyTaskServiceFee" class="form-input" placeholder="0.00" step="0.01">
+                                <select id="createMyTaskServiceFeeCurrency" class="currency-select">
+                                    <option value="TRY">TL</option>
+                                    <option value="EUR">EUR</option>
+                                    <option value="USD">USD</option>
+                                    <option value="CHF">CHF</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="createMyTaskVatRate" class="form-label">KDV Oranı (%)</label>
+                        <input type="number" id="createMyTaskVatRate" class="form-input" value="20">
+                    </div>
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="createMyTaskApplyVatToOfficialFee" checked>
+                            Resmi Ücrete KDV Uygula
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Toplam Tutar</label>
+                        <div id="createMyTaskTotalAmountDisplay" class="total-amount-display">0.00 TRY</div>
+                    </div>
+                    <div class="form-group">
+                        <label for="createMyTaskTpInvoicePartySearch" class="form-label">Türk Patent Faturası Tarafı</label>
+                        <input type="text" id="createMyTaskTpInvoicePartySearch" class="form-input" placeholder="Fatura tarafı arayın...">
+                        <div id="createMyTaskTpInvoicePartyResults" class="search-results-list"></div>
+                        <div id="createMyTaskSelectedTpInvoicePartyDisplay" class="search-result-display" style="display:none;"></div>
+                    </div>
+                    <div class="form-group">
+                        <label for="createMyTaskServiceInvoicePartySearch" class="form-label">Hizmet Faturası Tarafı</label>
+                        <input type="text" id="createMyTaskServiceInvoicePartySearch" class="form-input" placeholder="Fatura tarafı arayın...">
+                        <div id="createMyTaskServiceInvoicePartyResults" class="search-results-list"></div>
+                        <div id="createMyTaskSelectedServiceInvoicePartyDisplay" class="search-result-display" style="display:none;"></div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" id="cancelCreateMyTaskAccrualBtn">İptal</button>
+                    <button type="button" class="btn btn-primary" id="saveNewMyTaskAccrualBtn">Tahakkuku Oluştur</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script type="module">
         import { authService, taskService, ipRecordsService, accrualService, personService, auth } from './firebase-config.js';
         import { showNotification } from './utils.js';
@@ -333,36 +404,53 @@
                     this.allTasks = [];
                     this.allIpRecords = [];
                     this.allPersons = [];
+                    this.currentTaskForAccrual = null; // Yeni: Üzerinde tahakkuk oluşturulacak görev
+                    this.createMyTaskSelectedTpInvoiceParty = null; // Yeni: Yeni tahakkuk modalı için TP Fatura Tarafı
+                    this.createMyTaskSelectedServiceInvoiceParty = null; // Yeni: Yeni tahakkuk modalı için Hizmet Fatura Tarafı
                 }
 
                 init() {
                     authService.auth.onAuthStateChanged(async (user) => {
-                            this.currentUser = authService.getCurrentUser();
+                        if (user) {
+                            this.currentUser = user; // Mevcut kullanıcıyı set et
                             await this.loadAllData();
                             this.setupEventListeners();
-                     
+                        } else {
+                            window.location.href = 'index.html';
+                        }
                     });
                 }
 
-                // updateUserInfo() { /* Bu fonksiyon artık layout-loader.js içinde */ }
-
                 setupEventListeners() {
-                    // document.getElementById('logoutBtn').addEventListener('click', () => authService.signOut()); // Bu artık layout-loader.js içinde
                     document.getElementById('statusFilter').addEventListener('change', (e) => this.renderTasks(e.target.value));
                     
                     document.getElementById('myTasksTableBody').addEventListener('click', (e) => {
                         if (e.target.classList.contains('action-btn')) {
                             e.preventDefault();
-                            const taskId = e.target.dataset.taskId;
+                            const taskId = e.target.dataset.id;
                             if (e.target.dataset.action === 'view') {
                                 this.showTaskDetailModal(taskId);
                             } else if (e.target.dataset.action === 'edit') {
                                 window.location.href = `task-detail.html?id=${taskId}`;
+                            } else if (e.target.classList.contains('add-accrual-btn')) { // Yeni Ek Tahakkuk Oluştur butonu
+                                this.showCreateMyTaskAccrualModal(taskId);
                             }
                         }
                     });
 
                     document.getElementById('closeTaskDetailModal').addEventListener('click', () => this.closeModal('taskDetailModal'));
+
+                    // Yeni Ek Tahakkuk Oluştur modalı event listener'ları
+                    document.getElementById('closeCreateMyTaskAccrualModal').addEventListener('click', () => this.closeModal('createMyTaskAccrualModal'));
+                    document.getElementById('cancelCreateMyTaskAccrualBtn').addEventListener('click', () => this.closeModal('createMyTaskAccrualModal'));
+                    document.getElementById('saveNewMyTaskAccrualBtn').addEventListener('click', () => this.handleSaveNewAccrual());
+
+                    ['createMyTaskOfficialFee', 'createMyTaskServiceFee', 'createMyTaskVatRate', 'createMyTaskApplyVatToOfficialFee'].forEach(id => {
+                        const el = document.getElementById(id);
+                        if (el) el.addEventListener('input', () => this.calculateCreateMyTaskTotalAmount());
+                    });
+                    document.getElementById('createMyTaskTpInvoicePartySearch').addEventListener('input', e => this.searchPersonsForCreateMyTaskAccrual(e.target.value, 'createMyTaskTpInvoiceParty'));
+                    document.getElementById('createMyTaskServiceInvoicePartySearch').addEventListener('input', e => this.searchPersonsForCreateMyTaskAccrual(e.target.value, 'createMyTaskServiceInvoiceParty'));
                 }
 
                 async loadAllData() {
@@ -421,12 +509,12 @@
                             <td>
                                 <button class="action-btn" data-task-id="${task.id}" data-action="view">Görüntüle</button>
                                 <button class="action-btn" data-task-id="${task.id}" data-action="edit">Düzenle</button>
-                            </td>
+                                <button class="action-btn add-accrual-btn" data-id="${task.id}">Ek Tahakkuk Oluştur</button> </td>
                         `;
                         tableBody.appendChild(row);
                     });
                 }
-                // showTaskDetailModal fonksiyonunun başına bu fonksiyonu ekleyin
+
                 cleanHistoryAction(action) {
                     if (action.includes('İş güncellendi. Değişen alanlar:')) {
                         return 'İş güncellendi';
@@ -517,8 +605,175 @@
                     modal.classList.add('show');
                 }
 
+                // Yeni Tahakkuk Oluşturma Modalı Fonksiyonları
+                showCreateMyTaskAccrualModal = (taskId) => {
+                    this.currentTaskForAccrual = this.allTasks.find(t => t.id === taskId);
+                    if (!this.currentTaskForAccrual) {
+                        showNotification('İlgili iş bulunamadı.', 'error');
+                        return;
+                    }
+
+                    // İş başlığını ve ID'sini görüntüle, başlık yoksa 'Başlıksız İş' kullan
+                    document.getElementById('createMyTaskAccrualTaskTitleDisplay').value = `${this.currentTaskForAccrual.title || 'Başlıksız İş'} (${this.currentTaskForAccrual.id.substring(0,8)}...)`;
+                    
+                    // Formu temizle ve varsayılanları ayarla
+                    document.getElementById('createMyTaskAccrualForm').reset();
+                    document.getElementById('createMyTaskOfficialFeeCurrency').value = 'TRY';
+                    document.getElementById('createMyTaskServiceFeeCurrency').value = 'TRY';
+                    document.getElementById('createMyTaskVatRate').value = '20';
+                    document.getElementById('createMyTaskApplyVatToOfficialFee').checked = true;
+                    this.calculateCreateMyTaskTotalAmount(); // Başlangıçta toplamı hesapla
+                    
+                    this.createMyTaskSelectedTpInvoiceParty = null;
+                    this.createMyTaskSelectedServiceInvoiceParty = null;
+                    document.getElementById('createMyTaskSelectedTpInvoicePartyDisplay').style.display = 'none';
+                    document.getElementById('createMyTaskSelectedServiceInvoicePartyDisplay').style.display = 'none';
+                    document.getElementById('createMyTaskTpInvoicePartySearch').value = '';
+                    document.getElementById('createMyTaskServiceInvoicePartySearch').value = '';
+
+                    document.getElementById('createMyTaskAccrualModal').classList.add('show');
+                }
+
+                calculateCreateMyTaskTotalAmount() {
+                    const officialFee = parseFloat(document.getElementById('createMyTaskOfficialFee').value) || 0;
+                    const serviceFee = parseFloat(document.getElementById('createMyTaskServiceFee').value) || 0;
+                    const vatRate = parseFloat(document.getElementById('createMyTaskVatRate').value) || 0;
+                    const applyVatToOfficial = document.getElementById('createMyTaskApplyVatToOfficialFee').checked;
+
+                    let total;
+                    if (applyVatToOfficial) {
+                        total = (officialFee + serviceFee) * (1 + vatRate / 100);
+                    } else {
+                        total = officialFee + (serviceFee * (1 + vatRate / 100));
+                    }
+                    document.getElementById('createMyTaskTotalAmountDisplay').textContent = new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' }).format(total);
+                }
+
+                searchPersonsForCreateMyTaskAccrual(query, target) {
+                    const resultsContainerId = {
+                        'createMyTaskTpInvoiceParty': 'createMyTaskTpInvoicePartyResults',
+                        'createMyTaskServiceInvoiceParty': 'createMyTaskServiceInvoicePartyResults'
+                    }[target];
+
+                    const container = document.getElementById(resultsContainerId);
+                    if (!container) return;
+                    container.innerHTML = '';
+                    if (query.length < 2) { container.innerHTML = ''; return; }
+                    
+                    const filtered = this.allPersons.filter(p => p.name.toLowerCase().includes(query.toLowerCase()));
+                    if (filtered.length === 0) { container.innerHTML = '<p class="no-results-message">Kişi bulunamadı.</p>'; return; }
+
+                    filtered.forEach(p => {
+                        const item = document.createElement('div');
+                        item.className = 'search-result-item';
+                        item.dataset.id = p.id;
+                        item.innerHTML = `<div><b>${p.name}</b><br><small>${p.email || '-'}</small></div>`;
+                        item.addEventListener('click', () => this.selectPersonForCreateMyTaskAccrual(p, target));
+                        container.appendChild(item);
+                    });
+                }
+
+                selectPersonForCreateMyTaskAccrual(person, target) {
+                    const displayId = {
+                        'createMyTaskTpInvoiceParty': 'createMyTaskSelectedTpInvoicePartyDisplay',
+                        'createMyTaskServiceInvoiceParty': 'createMyTaskSelectedServiceInvoicePartyDisplay'
+                    }[target];
+
+                    const inputId = {
+                        'createMyTaskTpInvoiceParty': 'createMyTaskTpInvoicePartySearch',
+                        'createMyTaskServiceInvoiceParty': 'createMyTaskServiceInvoicePartySearch'
+                    }[target];
+
+                    const resultsId = {
+                        'createMyTaskTpInvoiceParty': 'createMyTaskTpInvoicePartyResults',
+                        'createMyTaskServiceInvoiceParty': 'createMyTaskServiceInvoicePartyResults'
+                    }[target];
+                    
+                    if(target === 'createMyTaskTpInvoiceParty') this.createMyTaskSelectedTpInvoiceParty = person;
+                    else if(target === 'createMyTaskServiceInvoiceParty') this.createMyTaskSelectedServiceInvoiceParty = person;
+
+                    const display = document.getElementById(displayId);
+                    display.innerHTML = `<p><b>Seçilen:</b> ${person.name}</p>`;
+                    display.style.display = 'block';
+
+                    document.getElementById(resultsId).innerHTML = '';
+                    document.getElementById(inputId).value = person.name;
+                }
+
+                async handleSaveNewAccrual() {
+                    if (!this.currentTaskForAccrual) {
+                        showNotification('İlgili görev bilgisi bulunamadı.', 'error');
+                        return;
+                    }
+
+                    const officialFee = parseFloat(document.getElementById('createMyTaskOfficialFee').value) || 0;
+                    const serviceFee = parseFloat(document.getElementById('createMyTaskServiceFee').value) || 0;
+
+                    if (officialFee <= 0 && serviceFee <= 0) {
+                        showNotification("Lütfen en az bir ücret girin.", 'error');
+                        return;
+                    }
+
+                    const vatRate = parseFloat(document.getElementById('createMyTaskVatRate').value) || 0;
+                    const applyVatToOfficial = document.getElementById('createMyTaskApplyVatToOfficialFee').checked;
+                    let totalAmount;
+                    if (applyVatToOfficial) {
+                        totalAmount = (officialFee + serviceFee) * (1 + vatRate / 100);
+                    } else {
+                        totalAmount = officialFee + (serviceFee * (1 + vatRate / 100));
+                    }
+
+                    const newAccrualData = {
+                        taskId: this.currentTaskForAccrual.id,
+                        taskTitle: this.currentTaskForAccrual.title,
+                        officialFee: {
+                            amount: officialFee,
+                            currency: document.getElementById('createMyTaskOfficialFeeCurrency').value
+                        },
+                        serviceFee: {
+                            amount: serviceFee,
+                            currency: document.getElementById('createMyTaskServiceFeeCurrency').value
+                        },
+                        vatRate,
+                        applyVatToOfficialFee: applyVatToOfficial,
+                        totalAmount,
+                        totalAmountCurrency: 'TRY',
+                        remainingAmount: totalAmount, // Yeni tahakkuk başlangıçta toplam tutar kadar kalan tutara sahip
+                        tpInvoiceParty: this.createMyTaskSelectedTpInvoiceParty ? { id: this.createMyTaskSelectedTpInvoiceParty.id, name: this.createMyTaskSelectedTpInvoiceParty.name } : null,
+                        serviceInvoiceParty: this.createMyTaskSelectedServiceInvoiceParty ? { id: this.createMyTaskSelectedServiceInvoiceParty.id, name: this.createMyTaskSelectedServiceInvoiceParty.name } : null,
+                        status: 'unpaid', // Yeni tahakkuk başlangıçta ödenmedi durumunda
+                        createdAt: new Date().toISOString()
+                    };
+
+                    try {
+                        const result = await accrualService.addAccrual(newAccrualData);
+                        if (result.success) {
+                            showNotification('Ek tahakkuk başarıyla oluşturuldu!', 'success');
+                            this.closeModal('createMyTaskAccrualModal');
+                            await this.loadAllData(); // Tabloyu ve tüm verileri yenile
+                        } else {
+                            throw new Error(result.error);
+                        }
+                    } catch (error) {
+                        showNotification('Ek tahakkuk oluşturulurken hata oluştu: ' + error.message, 'error');
+                        console.error('Ek tahakkuk kaydetme hatası:', error);
+                    }
+                }
+
                 closeModal(modalId) {
                     document.getElementById(modalId).classList.remove('show');
+                    if (modalId === 'taskDetailModal') { /* mevcut modal'ı resetle */ }
+                    if (modalId === 'createMyTaskAccrualModal') {
+                        document.getElementById('createMyTaskAccrualForm').reset();
+                        this.currentTaskForAccrual = null;
+                        this.createMyTaskSelectedTpInvoiceParty = null;
+                        this.createMyTaskSelectedServiceInvoiceParty = null;
+                        document.getElementById('createMyTaskSelectedTpInvoicePartyDisplay').style.display = 'none';
+                        document.getElementById('createMyTaskSelectedServiceInvoicePartyDisplay').style.display = 'none';
+                        document.getElementById('createMyTaskTpInvoicePartySearch').value = '';
+                        document.getElementById('createMyTaskServiceInvoicePartySearch').value = '';
+                        document.getElementById('createMyTaskTotalAmountDisplay').textContent = '0.00 TRY'; // Toplam tutarı sıfırla
+                    }
                 }
             }
 
