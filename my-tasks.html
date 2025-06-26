@@ -113,6 +113,7 @@
         .status-on-hold { background-color: #17a2b8; }
         .status-awaiting-approval { background-color: #6f42c1; }
 
+
         .priority-badge {
             padding: 4px 8px;
             border-radius: 10px;
@@ -258,6 +259,63 @@
             color: #666;
             margin-top: 4px;
         }
+        
+        /* Yeni Tahakkuk Modalı Stilleri (accruals.html'den kopyalandı ve adapte edildi) */
+        .form-input, .form-select, .form-textarea {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e1e8ed;
+            border-radius: 10px;
+            font-size: 1em;
+            transition: all 0.3s ease;
+            background: white;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .form-group { margin-bottom: 15px; } 
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px 25px; } 
+        /* BURADAKİ DÜZENLEME */
+        .input-with-currency { 
+            display: flex; 
+            /* gap: 10px; */ /* Boşluğu kaldır */
+        }
+        .input-with-currency .form-input { 
+            flex-grow: 1; 
+            border-right: none; /* Yan kenarlığı kaldır */
+            border-top-right-radius: 0; /* Sağ üst köşe yuvarlaklığını kaldır */
+            border-bottom-right-radius: 0; /* Sağ alt köşe yuvarlaklığını kaldır */
+        }
+        .input-with-currency .currency-select {
+            border-top-left-radius: 0; /* Sol üst köşe yuvarlaklığını kaldır */
+            border-bottom-left-radius: 0; /* Sol alt köşe yuvarlaklığını kaldır */
+        }
+        /* DÜZENLEME SONU */
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+        .checkbox-label input {
+            width: 18px;
+            height: 18px;
+        }
+        .total-amount-display {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #1e3c72;
+            text-align: right;
+            margin-top: 10px;
+            padding: 12px 15px;
+            background-color: #f0f4f8;
+            border-radius: 10px;
+        }
+        .search-results-list { max-height: 150px; overflow-y: auto; border: 1px solid #ccc; border-radius: 8px; margin-top: 5px; }
+        .search-result-item { padding: 10px; cursor: pointer; border-bottom: 1px solid #eee; }
+        .search-result-item:hover { background-color: #f0f4f8; }
+        .no-results-message { text-align: center; color: #999; padding: 15px; }
+        .search-result-display { background: #e9f5ff; border: 1px solid #bde0fe; padding: 10px; border-radius: 8px; margin-top: 10px; }
+
     </style>
 </head>
 <body>
@@ -272,6 +330,7 @@
     
             <div class="tasks-container">
                 <div class="tasks-header">
+                    <input type="text" id="taskSearchInput" class="search-input" placeholder="Başlık, numara, tip ara...">
                     <div class="filter-group">
                         <label class="filter-label" for="statusFilter">Duruma Göre Filtrele:</label>
                         <select id="statusFilter" class="filter-select">
@@ -539,13 +598,7 @@
                     
                     const ipRecord = this.allIpRecords.find(r => r.id === task.relatedIpRecordId);
                     const relatedParty = task.details?.relatedParty?.id ? this.allPersons.find(p => p.id === task.details.relatedParty.id) : null;
-
-                    document.getElementById('modalTaskTitle').textContent = `İş Detayı: ${task.title}`;
-
-                    const taskTypeParts = task.taskType ? task.taskType.split('_') : [];
-                    const mainType = taskTypeParts[0] || '';
-                    const specificType = taskTypeParts.slice(1).join(' ').replace(/\b\w/g, l => l.toUpperCase());
-
+                    
                     const renderField = (label, value) => value ? `<div class="modal-detail-item"><div class="modal-detail-label">${label}</div><div class="modal-detail-value">${value}</div></div>` : '';
                     const relatedAccruals = this.allAccruals ? this.allAccruals.filter(acc => acc.taskId === taskId) : [];
 
@@ -571,6 +624,7 @@
                     } else {
                         accrualsHtml = '<p style="color: #666; font-style: italic;">Bu işe ait tahakkuk bulunmuyor.</p>';
                     }
+                    
                     let historyHtml = '<p>İşlem geçmişi bulunmuyor.</p>';
                     if(task.history && task.history.length > 0) {
                         historyHtml = [...task.history].sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp)).map(entry => 
