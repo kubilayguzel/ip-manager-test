@@ -150,11 +150,12 @@ body {
     font-weight: 500;
 }
 
-/* "Yeni İş Oluştur" linki (Accordion içinde özel stil) */
 .accordion-content a.new-task-link {
-    background-color: rgba(78, 205, 196, 0.25);
-    font-weight: 500;
-    color: #fff;
+    /* Bu stil, bağlantı aktif DEĞİLKEN varsayılan stilini korumalıdır. */
+    /* Özel bir arka plan rengi olmasın, varsayılan akordiyon alt link stilini devralır */
+    background-color: transparent; */ /* Eğer linkin varsayılanı farklıysa bunu ekleyebilirsiniz */
+    color: white; */ /* veya rgba(255, 255, 255, 0.7); */
+    font-weight: normal; */
 }
 
 /* Yalnızca "Yeni İş Oluştur" bağlantısı aynı zamanda aktifse özel arka planı uygulayın */
