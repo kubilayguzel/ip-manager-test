@@ -41,8 +41,8 @@ const menuItems = [
         icon: 'fas fa-list-check', // İstediğiniz yeni ikon uygulandı
         category: 'Yönetim',
         subItems: [
-            { id: 'scheduled-tasks', text: 'Zamanlanmış Görevler', link: 'scheduled-tasks.html' }, // Buraya taşındı
-            { id: 'triggered-tasks', text: 'Tetiklenen Görevler', link: '#' }, // Yeni eklenen sekme
+            { id: 'scheduled-tasks', text: 'Zamanlanmış Görevler', link: 'scheduled-tasks.html' },
+            { id: 'triggered-tasks', text: 'Tetiklenen Görevler', link: 'triggered-tasks.html' },
             { id: 'client-notifications', text: 'Müvekkil Bildirimleri', link: '#' } // Müvekkil Bildirimleri buraya direkt link olarak eklendi
         ]
     },
