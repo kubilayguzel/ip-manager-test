@@ -29,8 +29,8 @@ async function addMissingChildTransactionTypes() {
             ipType: 'trademark',
             order: 320,
             documentDesignationDefault: 'Karar',
-        }
-                {
+        },
+        {
             id: 'itiraz_kabul_itiraz_sahibi',
             name: 'İtiraz Sahibi - İtiraz Kabul',
             alias: 'İtiraz Sahibi - İtiraz Kabul',
