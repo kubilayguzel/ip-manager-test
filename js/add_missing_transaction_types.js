@@ -3,61 +3,29 @@ import { transactionTypeService } from '../firebase-config.js'; // firebase-conf
 
 async function addMissingChildTransactionTypes() {
     const missingChildTypes = [
-        {
-            id: 'itiraz_kabul_basvuru_sahibi',
-            name: 'Başvuru Sahibi - İtiraz Kabul',
-            alias: 'Başvuru Sahibi - İtiraz Kabul',
-            hierarchy: 'child',
-            ipType: 'trademark',
-            order: 300,
-            documentDesignationDefault: 'Karar',
-        },
-        {
-            id: 'itiraz_kısmen_kabul_basvuru_sahibi',
-            name: 'Başvuru Sahibi - İtiraz Kısmen Kabul',
-            alias: 'Başvuru Sahibi - İtiraz Kısmen Kabul',
-            hierarchy: 'child',
-            ipType: 'trademark',
-            order: 310,
-            documentDesignationDefault: 'Karar',
-        },
-        {
-            id: 'itiraz_ret_basvuru_sahibi',
-            name: 'Başvuru Sahibi - İtiraz Ret',
-            alias: 'Başvuru Sahibi - İtiraz Ret',
-            hierarchy: 'child',
-            ipType: 'trademark',
-            order: 320,
-            documentDesignationDefault: 'Karar',
-        },
-        {
-            id: 'itiraz_kabul_itiraz_sahibi',
-            name: 'İtiraz Sahibi - İtiraz Kabul',
-            alias: 'İtiraz Sahibi - İtiraz Kabul',
-            hierarchy: 'child',
-            ipType: 'trademark',
-            order: 330,
-            documentDesignationDefault: 'Karar',
-        },
-        {
-            id: 'itiraz_kısmen_kabul_itiraz_sahibi',
-            name: 'İtiraz Sahibi - İtiraz Kısmen Kabul',
-            alias: 'İtiraz Sahibi - İtiraz Kısmen Kabul',
-            hierarchy: 'child',
-            ipType: 'trademark',
-            order: 340,
-            documentDesignationDefault: 'Karar',
-        },
-        {
-            id: 'itiraz_ret_itiraz_sahibi',
-            name: 'İtiraz Sahibi - İtiraz Ret',
-            alias: 'İtiraz Sahibi - İtiraz Ret',
-            hierarchy: 'child',
-            ipType: 'trademark',
-            order: 350,
-            documentDesignationDefault: 'Karar',
-        }
-       
+    {
+    "id": "litigation_main_type",
+    "name": "Dava",
+    "ipType": "dava",
+    "hierarchy": "parent",
+    "applicableToMainType": ["all"],
+    "allowedChildTypes": ["litigation_yidk_annulment", "dava_acma", "dava_cevap", "duruşma", "bilirkişi_raporu", "istinaf", "temyiz", "karar"],
+    "documentDesignationDefault": "Dava Dosyası",
+    "order": 200,
+    "alias": "Dava"
+    },
+    {
+    "id": "litigation_yidk_annulment",
+    "name": "YİDK Kararının İptali",
+    "alias": "YİDK Kararının İptali",
+    "ipType": "dava",
+    "hierarchy": "child",
+    "applicableToMainType": ["all"],
+    "documentDesignationDefault": "Mahkeme Kararı",
+    "order": 210,
+    "isTopLevelSelectable": true,
+    }
+      
     ];
 
     console.log("Eksik alt işlem tipleri Firestore'a ekleniyor/güncelleniyor...");
