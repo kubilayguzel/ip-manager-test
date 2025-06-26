@@ -842,14 +842,15 @@
                 }
 
                 // Yeni Tahakkuk Oluşturma Modalı Fonksiyonları
-                showCreateTaskAccrualModal = (taskId) => { // Bu satır güncellendi
+                showCreateTaskAccrualModal = (taskId) => { 
                     this.currentTaskForAccrual = this.allTasks.find(t => t.id === taskId);
                     if (!this.currentTaskForAccrual) {
                         showNotification('İlgili iş bulunamadı.', 'error');
                         return;
                     }
 
-                    document.getElementById('createTaskAccrualTaskTitleDisplay').value = `${this.currentTaskForAccrual.title} (${this.currentTaskForAccrual.id.substring(0,8)}...)`;
+                    // İş başlığını ve ID'sini görüntüle, başlık yoksa 'Başlıksız İş' kullan
+                    document.getElementById('createTaskAccrualTaskTitleDisplay').value = `${this.currentTaskForAccrual.title || 'Başlıksız İş'} (${this.currentTaskForAccrual.id.substring(0,8)}...)`;
                     
                     // Formu temizle ve varsayılanları ayarla
                     document.getElementById('createTaskAccrualForm').reset();
