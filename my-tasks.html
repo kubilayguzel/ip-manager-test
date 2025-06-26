@@ -507,12 +507,27 @@
                         }
                     });
 
-                    document.getElementById('closeTaskDetailModal').addEventListener('click', () => this.closeModal('taskDetailModal'));
+                    // Modala ait elementleri doğrudan değişkene atamadan önce varlıklarını kontrol et
+                    const closeTaskDetailModalBtn = document.getElementById('closeTaskDetailModal');
+                    if (closeTaskDetailModalBtn) {
+                        closeTaskDetailModalBtn.addEventListener('click', () => this.closeModal('taskDetailModal'));
+                    }
 
-                    // Yeni Ek Tahakkuk Oluştur modalı event listener'ları
-                    document.getElementById('closeMyTaskAccrualModal').addEventListener('click', () => this.closeModal('createMyTaskAccrualModal'));
-                    document.getElementById('cancelCreateMyTaskAccrualBtn').addEventListener('click', () => this.closeModal('createMyTaskAccrualModal'));
-                    document.getElementById('saveNewMyTaskAccrualBtn').addEventListener('click', () => this.handleSaveNewAccrual());
+                    const closeMyTaskAccrualModalBtn = document.getElementById('closeMyTaskAccrualModal');
+                    if (closeMyTaskAccrualModalBtn) {
+                        closeMyTaskAccrualModalBtn.addEventListener('click', () => this.closeModal('createMyTaskAccrualModal'));
+                    }
+                    
+                    const cancelCreateMyTaskAccrualBtn = document.getElementById('cancelCreateMyTaskAccrualBtn');
+                    if (cancelCreateMyTaskAccrualBtn) {
+                        cancelCreateMyTaskAccrualBtn.addEventListener('click', () => this.closeModal('createMyTaskAccrualModal'));
+                    }
+
+                    const saveNewMyTaskAccrualBtn = document.getElementById('saveNewMyTaskAccrualBtn');
+                    if (saveNewMyTaskAccrualBtn) {
+                        saveNewMyTaskAccrualBtn.addEventListener('click', () => this.handleSaveNewAccrual());
+                    }
+
 
                     ['createMyTaskOfficialFee', 'createMyTaskServiceFee', 'createMyTaskVatRate', 'createMyTaskApplyVatToOfficialFee'].forEach(id => {
                         const el = document.getElementById(id);
@@ -646,6 +661,10 @@
                             </div>`
                         ).join('');
                     }
+                    // taskTypeParts, mainType, specificType showTaskDetailModal içinde zaten tanımlı
+                    const taskTypeParts = task.taskType ? task.taskType.split('_') : [];
+                    const mainType = taskTypeParts[0] || '';
+                    const specificType = taskTypeParts.slice(1).join(' ').replace(/\b\w/g, l => l.toUpperCase());
 
                         modalBody.innerHTML = `
                             <div class="modal-detail-grid">
