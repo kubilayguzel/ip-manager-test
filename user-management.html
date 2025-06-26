@@ -448,9 +448,10 @@
                     const userName = document.getElementById('userName').value;
                     const userEmail = document.getElementById('userEmail').value;
                     const userPassword = document.getElementById('userPassword').value;
-                    const userRole = document.getElementById('userRole').value;
+                    const userRoleEl = document.querySelector('#userForm select#userRole');
+                    const userRole = userRoleEl ? userRoleEl.value : undefined;
                     console.log("🧪 Kontrol:", { userEmail, userRole });
-                    
+
                     if (!userEmail || !userRole) {
                         showNotification('E-posta ve Rol zorunludur.', 'error');
                         return;
