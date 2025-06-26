@@ -447,7 +447,13 @@
                     event.preventDefault();
                     const userId = document.getElementById('userId').value;
                     const userNameEl = document.getElementById('userName');
-                    const userName = userNameEl ? userNameEl.value : '';
+                    const userName = (userNameEl && typeof userNameEl.value === 'string') ? userNameEl.value.trim() : '';
+
+                    if (!userName) {
+                        showNotification('Lütfen ad-soyad girin.', 'error');
+                        return;
+                    }
+
                     const userEmail = document.getElementById('userEmail').value;
                     const userPassword = document.getElementById('userPassword').value;
                     const userRoleEl = document.querySelector('#userForm select#userRole');
