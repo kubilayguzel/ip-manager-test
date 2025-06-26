@@ -453,6 +453,21 @@
                     const userRole = userRoleEl ? userRoleEl.value : undefined;
                     console.log("🧪 Kontrol:", { userEmail, userRole });
 
+                    if (!userEmail.trim()) {
+                        showNotification('Lütfen geçerli bir e-posta girin.', 'error');
+                        return;
+                    }
+
+                    if (!userRole) {
+                        showNotification('Lütfen bir rol seçin.', 'error');
+                        return;
+                    }
+
+                    if (!userName.trim()) {
+                        showNotification('Lütfen ad-soyad girin.', 'error');
+                        return;
+                    }
+
                     if (!userEmail || !userRole) {
                         showNotification('E-posta ve Rol zorunludur.', 'error');
                         return;
