@@ -503,7 +503,7 @@
     </div>
 
     <script type="module">
-        import { authService, taskService, ipRecordsService, personService, accrualService, auth, generateUUID } from './firebase-config.js';
+        import { authService, taskService, ipRecordsService, personService, accrualService, auth, generateUUID, documentDesignationTranslations } from './firebase-config.js';
         import { showNotification, formatFileSize, readFileAsDataURL, TASK_STATUSES } from './utils.js';
         import { loadSharedLayout } from './js/layout-loader.js'; // layout-loader.js eklendi
 
@@ -554,15 +554,24 @@
                         // UI setup
                         this.populateStatusDropdown();
                         this.populateAssignedToDropdown();
-                        this.setupEventListeners(); // Event listener'ları en son ekle
+                        this.setupEventListeners(); // Event listener'ları en son ekla
                         
                         console.log('DEBUG: Tüm veriler başarıyla yüklendi, sayfa hazır.');
                     } catch (error) {
                         console.error('Init sırasında hata:', error);
                         showNotification('Sayfa yüklenirken hata oluştu: ' + error.message, 'error');
                         setTimeout(() => {
-                            window.location.href = "task-management.html";
+                            if (window.top === window) {
+                                console.log('DEBUG: Hata nedeniyle task-management.html\'e yönlendiriliyor');
+                                window.location.href = "task-management.html";
+                            }
                         }, 3000);
+                    } finally {
+                        // Loading indicator'ı gizle
+                        const loadingIndicator = document.getElementById('loadingIndicator');
+                        if (loadingIndicator) {
+                            loadingIndicator.style.display = 'none';
+                        }
                     }
                 }
 
@@ -1390,7 +1399,7 @@
                         if (accrualId) {
                             result = await accrualService.updateAccrual(accrualId, accrualData);
                         } else {
-                            // ÇÖZÜM: Yeni tahakkuk ekleme durumunda addAccrual çağrısı
+                            // Yeni tahakkuk ekleme durumunda addAccrual çağrısı
                             console.log("DEBUG: Yeni tahakkuk ekleniyor:", accrualData); // Yeni log
                             result = await accrualService.addAccrual(accrualData);
                         }
@@ -1458,6 +1467,17 @@
                     this.currentTaskDocuments.forEach(doc => {
                         const fileItem = document.createElement('div');
                         fileItem.classList.add('file-item');
+                        
+                        // documentDesignationTranslations objesindeki değerleri kullanarak optionları dinamik olarak oluştur
+                        let optionsHtml = '';
+                        for (const key in documentDesignationTranslations) {
+                            if (documentDesignationTranslations.hasOwnProperty(key)) {
+                                const value = documentDesignationTranslations[key];
+                                const selected = doc.documentDesignation === value ? 'selected' : '';
+                                optionsHtml += `<option value="${value}" ${selected}>${value}</option>`;
+                            }
+                        }
+
                         fileItem.innerHTML = `
                             <div class="file-info">
                                 <span class="file-icon">📄</span>
@@ -1468,10 +1488,7 @@
                             </div>
                             <div class="file-actions">
                                 <select class="file-designation-select" data-doc-id="${doc.id}">
-                                    <option value="BasvuruBelgesi" ${doc.documentDesignation === 'BasvuruBelgesi' ? 'selected' : ''}>Başvuru Belgesi</option>
-                                    <option value="TescilBelgesi" ${doc.documentDesignation === 'TescilBelgesi' ? 'selected' : ''}>Tescil Belgesi</option>
-                                    <option value="Vekaletname" ${doc.documentDesignation === 'Vekaletname' ? 'selected' : ''}>Vekaletname</option>
-                                    <option value="Diger" ${doc.documentDesignation === 'Diğer' ? 'selected' : ''}>Diğer</option>
+                                    ${optionsHtml}
                                 </select>
                                 <button class="btn-remove-file" data-doc-id="${doc.id}">&times;</button>
                             </div>
