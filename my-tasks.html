@@ -112,6 +112,11 @@
         .status-cancelled { background-color: #dc3545; }
         .status-on-hold { background-color: #17a2b8; }
         .status-awaiting-approval { background-color: #6f42c1; }
+        /* Yeni tetiklenen görev durumları */
+        .status-awaiting_client_approval { background-color: #6f42c1; color: white; } /* Müvekkil Onayı Bekliyor - Mor */
+        .status-client_approval_opened { background-color: #28a745; color: white; } /* Müvekkil Onayı - Açıldı - Yeşil */
+        .status-client_approval_closed { background-color: #6c757d; color: white; } /* Müvekkil Onayı - Kapatıldı - Gri */
+        .status-client_no_response_closed { background-color: #fd7e14; color: white; } /* Müvekkil Cevaplamadı - Kapatıldı - Turuncu */
 
 
         .priority-badge {
@@ -450,7 +455,7 @@
 
     <script type="module">
         import { authService, taskService, ipRecordsService, accrualService, personService, auth } from './firebase-config.js';
-        import { showNotification } from './utils.js';
+        import { showNotification, TASK_STATUSES } from './utils.js'; // TASK_STATUSES import edildi
         import { loadSharedLayout } from './js/layout-loader.js'; // layout-loader.js eklendi
 
         document.addEventListener('DOMContentLoaded', async () => {
@@ -463,17 +468,34 @@
                     this.allTasks = [];
                     this.allIpRecords = [];
                     this.allPersons = [];
+                    this.allAccruals = []; // allAccruals eklendi
                     this.currentTaskForAccrual = null; // Yeni: Üzerinde tahakkuk oluşturulacak görev
                     this.createMyTaskSelectedTpInvoiceParty = null; // Yeni: Yeni tahakkuk modalı için TP Fatura Tarafı
                     this.createMyTaskSelectedServiceInvoiceParty = null; // Yeni: Yeni tahakkuk modalı için Hizmet Fatura Tarafı
+
+                    // Yeni görev durumları için harita
+                    this.statusDisplayMap = {
+                        'open': 'Açık',
+                        'in-progress': 'Devam Ediyor',
+                        'completed': 'Tamamlandı',
+                        'pending': 'Beklemede',
+                        'cancelled': 'İptal Edildi',
+                        'on-hold': 'Askıda',
+                        'awaiting-approval': 'Onay Bekliyor',
+                        'awaiting_client_approval': 'Müvekkil Onayı Bekliyor', // Yeni durum
+                        'client_approval_opened': 'Müvekkil Onayı - Açıldı', // Yeni durum
+                        'client_approval_closed': 'Müvekkil Onayı - Kapatıldı', // Yeni durum
+                        'client_no_response_closed': 'Müvekkil Cevaplamadı - Kapatıldı' // Yeni durum
+                    };
                 }
 
                 init() {
                     authService.auth.onAuthStateChanged(async (user) => {
                         if (user) {
-                            this.currentUser = user; // Mevcut kullanıcıyı set et
+                            this.currentUser = user;
                             await this.loadAllData();
                             this.setupEventListeners();
+                            this.populateStatusFilterDropdown(); // Yeni: Durum filtresini doldur
                         } else {
                             window.location.href = 'index.html';
                         }
@@ -486,19 +508,17 @@
                     document.getElementById('myTasksTableBody').addEventListener('click', (e) => {
                         if (e.target.classList.contains('action-btn')) {
                             e.preventDefault();
-                            // ID'yi almak için hem data-id hem de data-task-id'yi kontrol et
                             const taskId = e.target.dataset.id || e.target.dataset.taskId; 
                             
-                            if (!taskId) { // Eğer taskId hala yoksa hata bildir
+                            if (!taskId) {
                                 showNotification('Görev ID\'si alınamadı. Lütfen sayfayı yenileyin veya yöneticiye başvurun.', 'error');
                                 return;
                             }
 
-                            // data-action'ı kontrol ederek hangi butona tıklandığını belirle
                             const action = e.target.dataset.action;
 
                             if (action === 'view') {
-                                this.showTaskDetailModal(taskId); // showTaskDetailModal'ı çağır
+                                this.showTaskDetailModal(taskId);
                             } else if (action === 'edit') {
                                 window.location.href = `task-detail.html?id=${taskId}`; 
                             } else if (e.target.classList.contains('add-accrual-btn')) { 
@@ -507,7 +527,6 @@
                         }
                     });
 
-                    // Modala ait elementleri doğrudan değişkene atamadan önce varlıklarını kontrol et
                     const closeTaskDetailModalBtn = document.getElementById('closeTaskDetailModal');
                     if (closeTaskDetailModalBtn) {
                         closeTaskDetailModalBtn.addEventListener('click', () => this.closeModal('taskDetailModal'));
@@ -540,26 +559,42 @@
                 async loadAllData() {
                     document.getElementById('loadingIndicator').style.display = 'block';
                     try {
-                        const [tasksResult, ipRecordsResult, personsResult] = await Promise.all([
-                            taskService.getTasksForUser(this.currentUser.uid), // Sadece atanmış görevleri getir
+                        const [tasksResult, ipRecordsResult, personsResult, accrualsResult] = await Promise.all([ // accrualsResult eklendi
+                            taskService.getTasksForUser(this.currentUser.uid),
                             ipRecordsService.getRecords(),
-                            personService.getPersons()
+                            personService.getPersons(),
+                            accrualService.getAccruals() // Tüm tahakkukları çek
                         ]);
 
                         this.allTasks = tasksResult.success ? tasksResult.data : [];
                         this.allIpRecords = ipRecordsResult.success ? ipRecordsResult.data : [];
                         this.allPersons = personsResult.success ? personsResult.data : [];
-                        const accrualsResult = await accrualService.getAccruals();
-                        this.allAccruals = accrualsResult.success ? accrualsResult.data : [];
-                        console.log('Yüklenen tahakkuklar:', this.allAccruals); // Debug için
-                        console.log('DEBUG: tasksResult.data after fetching (MyTasksModule):', tasksResult.data); // NEW DEBUG LOG
-                        console.log('DEBUG: this.allTasks after assignment (MyTasksModule):', this.allTasks); // NEW DEBUG LOG
-                        this.renderTasks(); // Tüm görevleri başlangıçta render et
+                        this.allAccruals = accrualsResult.success ? accrualsResult.data : []; // Tahakkukları kaydet
+                        
+                        this.renderTasks();
                     } catch (error) {
                         showNotification('Veriler yüklenirken bir hata oluştu: ' + error.message, 'error');
                     } finally {
                         document.getElementById('loadingIndicator').style.display = 'none';
                     }
+                }
+
+                populateStatusFilterDropdown() {
+                    const statusFilterSelect = document.getElementById('statusFilter');
+                    statusFilterSelect.innerHTML = '<option value="all">Tümü</option>'; // İlk seçenek
+                    
+                    // Sadece bu sayfada görünen durumları ekle
+                    const relevantStatuses = [
+                        'open', 'in-progress', 'completed', 'pending', 'cancelled', 'on-hold', 'awaiting-approval',
+                        'awaiting_client_approval', 'client_approval_opened', 'client_approval_closed', 'client_no_response_closed'
+                    ];
+
+                    relevantStatuses.forEach(statusValue => {
+                        const option = document.createElement('option');
+                        option.value = statusValue;
+                        option.textContent = this.statusDisplayMap[statusValue] || statusValue;
+                        statusFilterSelect.appendChild(option);
+                    });
                 }
 
                 renderTasks(filterStatus = 'all') {
@@ -579,7 +614,7 @@
 
                     filteredTasks.forEach(task => {
                         const row = document.createElement('tr');
-                        const statusClass = `status-${task.status.replace(/ /g, '-').toLowerCase()}`;
+                        const statusClass = `status-${task.status.replace(/ /g, '_').toLowerCase()}`; // CSS uyumlu sınıf
                         const priorityClass = `priority-${task.priority.toLowerCase()}`;
                         const taskTypeParts = task.taskType ? task.taskType.split('_') : [];
                         const mainType = taskTypeParts[0] || '';
@@ -591,7 +626,7 @@
                             <td>${mainType.charAt(0).toUpperCase() + mainType.slice(1)} - ${specificType}</td>
                             <td><span class="priority-badge ${priorityClass}">${task.priority}</span></td>
                             <td>${task.dueDate ? new Date(task.dueDate).toLocaleDateString('tr-TR') : 'Belirtilmemiş'}</td>
-                            <td><span class="status-badge ${statusClass}">${task.status}</span></td>
+                            <td><span class="status-badge ${statusClass}">${this.statusDisplayMap[task.status] || task.status}</span></td>
                             <td>
                                 <button class="action-btn" data-id="${task.id}" data-action="view">Görüntüle</button>
                                 <button class="action-btn" data-id="${task.id}" data-action="edit">Düzenle</button>
@@ -661,7 +696,6 @@
                             </div>`
                         ).join('');
                     }
-                    // taskTypeParts, mainType, specificType showTaskDetailModal içinde zaten tanımlı
                     const taskTypeParts = task.taskType ? task.taskType.split('_') : [];
                     const mainType = taskTypeParts[0] || '';
                     const specificType = taskTypeParts.slice(1).join(' ').replace(/\b\w/g, l => l.toUpperCase());
@@ -698,16 +732,14 @@
                         return;
                     }
 
-                    // İş başlığını ve ID'sini görüntüle, başlık yoksa 'Başlıksız İş' kullan
                     document.getElementById('createMyTaskAccrualTaskTitleDisplay').value = `${this.currentTaskForAccrual.title || 'Başlıksız İş'} (${this.currentTaskForAccrual.id.substring(0,8)}...)`;
                     
-                    // Formu temizle ve varsayılanları ayarla
                     document.getElementById('createMyTaskAccrualForm').reset();
                     document.getElementById('createMyTaskOfficialFeeCurrency').value = 'TRY';
                     document.getElementById('createMyTaskServiceFeeCurrency').value = 'TRY';
                     document.getElementById('createMyTaskVatRate').value = '20';
                     document.getElementById('createMyTaskApplyVatToOfficialFee').checked = true;
-                    this.calculateCreateMyTaskTotalAmount(); // Başlangıçta toplamı hesapla
+                    this.calculateCreateMyTaskTotalAmount();
                     
                     this.createMyTaskSelectedTpInvoiceParty = null;
                     this.createMyTaskSelectedServiceInvoiceParty = null;
