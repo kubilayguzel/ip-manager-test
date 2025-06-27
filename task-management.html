@@ -500,7 +500,7 @@
     </div>
     
     <script type="module">
-        import { authService, taskService, ipRecordsService, accrualService, personService, auth } from './firebase-config.js';
+        import { authService, taskService, ipRecordsService, accrualService, personService, auth, transactionTypeService } from './firebase-config.js';
         import { showNotification } from './utils.js';
         import { loadSharedLayout } from './js/layout-loader.js'; // layout-loader.js eklendi
 
@@ -519,6 +519,7 @@
                     this.currentTaskForAccrual = null; // Yeni: Üzerinde tahakkuk oluşturulacak görev
                     this.createTaskSelectedTpInvoiceParty = null; // Yeni: Yeni tahakkuk modalı için TP Fatura Tarafı
                     this.createTaskSelectedServiceInvoiceParty = null; // Yeni: Yeni tahakkuk modalı için Hizmet Fatura Tarafı
+                    this.allTransactionTypes = []; // Yeni: İşlem tiplerini tutacak
                     
                     // Yeni görev durumları için harita
                     this.statusDisplayMap = {
@@ -551,12 +552,13 @@
                 async loadAllData() {
                     document.getElementById('loadingIndicator').style.display = 'block';
                     try {
-                        const [tasksResult, ipRecordsResult, personsResult, usersResult, accrualsResult] = await Promise.all([ // accrualsResult da eklendi
+                        const [tasksResult, ipRecordsResult, personsResult, usersResult, accrualsResult, transactionTypesResult] = await Promise.all([ // transactionTypesResult eklendi
                             taskService.getAllTasks(),
                             ipRecordsService.getRecords(),
                             personService.getPersons(),
                             taskService.getAllUsers(), // Kullanıcıları da yüklüyoruz
-                            accrualService.getAccruals() // Tüm tahakkukları çek
+                            accrualService.getAccruals(), // Tüm tahakkukları çek
+                            transactionTypeService.getTransactionTypes() // İşlem tiplerini çek
                         ]);
 
                         this.allTasks = tasksResult.success ? tasksResult.data : [];
@@ -564,6 +566,7 @@
                         this.allPersons = personsResult.success ? personsResult.data : [];
                         this.allUsers = usersResult.success ? usersResult.data : []; // Yüklenen kullanıcıları kaydediyoruz
                         this.allAccruals = accrualsResult.success ? accrualsResult.data : []; // Tahakkukları kaydet
+                        this.allTransactionTypes = transactionTypesResult.success ? transactionTypesResult.data : []; // Yeni: İşlem tiplerini kaydet
                         this.renderTasks();
                     } catch (error) {
                         showNotification('Veriler yüklenirken bir hata oluştu: ' + error.message, 'error');
@@ -725,9 +728,12 @@
                         const statusText = this.statusDisplayMap[task.status] || task.status; // Türkçe karşılık
                         
                         const priorityClass = `priority-${task.priority.toLowerCase()}`;
-                        const taskTypeParts = task.taskType ? task.taskType.split('_') : [];
-                        const mainType = taskTypeParts[0] || '';
-                        const specificType = taskTypeParts.slice(1).join(' ').replace(/\b\w/g, l => l.toUpperCase());
+                        
+                        // İşlem tipi objesini bul
+                        const transactionTypeObj = this.allTransactionTypes.find(t => t.id === task.taskType);
+                        // Görünen adı alias veya name'den al, yoksa task.taskType'ı kullan
+                        const taskTypeDisplayName = transactionTypeObj ? (transactionTypeObj.alias || transactionTypeObj.name) : (task.taskType || 'Bilinmiyor');
+
 
                         // Atanan kişiyi bulma
                         const assignedUser = this.allUsers.find(user => user.id === task.assignedTo_uid);
@@ -736,7 +742,7 @@
                         row.innerHTML = `
                             <td>${task.id}</td>
                             <td>${task.relatedIpRecordTitle || 'N/A'}</td>
-                            <td>${mainType.charAt(0).toUpperCase() + mainType.slice(1)} - ${specificType}</td>
+                            <td>${taskTypeDisplayName}</td>
                             <td><span class="priority-badge ${priorityClass}">${task.priority}</span></td>
                             <td>${assignedToDisplayName}</td>
                             <td>${task.dueDate ? new Date(task.dueDate).toLocaleDateString('tr-TR') : 'Belirtilmemiş'}</td>
@@ -1049,3 +1055,4 @@
     </script>
 </body>
 </html>
+}
