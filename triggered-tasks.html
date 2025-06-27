@@ -481,6 +481,13 @@
                         'client_approval_closed': 'Müvekkil Onayı - Kapatıldı',
                         'client_no_response_closed': 'Müvekkil Cevaplamadı - Kapatıldı'
                     };
+
+                    this.triggeredTaskStatuses = [ // Sınıf özelliği olarak tanımlandı
+                        'awaiting_client_approval',
+                        'client_approval_opened',
+                        'client_approval_closed',
+                        'client_no_response_closed'
+                    ];
                 }
 
                 init() {
@@ -552,14 +559,16 @@
                             tasksResult = await taskService.getTasksForUser(this.currentUser.uid);
                         }
 
-                        const [ipRecordsResult, personsResult] = await Promise.all([
+                        const [ipRecordsResult, personsResult, transactionTypesResult] = await Promise.all([ // transactionTypesResult eklendi
                             ipRecordsService.getRecords(),
-                            personService.getPersons()
+                            personService.getPersons(),
+                            transactionTypeService.getTransactionTypes() // İşlem tiplerini çek
                         ]);
 
                         this.allTasks = tasksResult.success ? tasksResult.data : [];
                         this.allIpRecords = ipRecordsResult.success ? ipRecordsResult.data : [];
                         this.allPersons = personsResult.success ? personsResult.data : [];
+                        this.allTransactionTypes = transactionTypesResult.success ? transactionTypesResult.data : []; // Yeni: İşlem tiplerini kaydet
                         const accrualsResult = await accrualService.getAccruals();
                         this.allAccruals = accrualsResult.success ? accrualsResult.data : [];
                         
@@ -576,17 +585,9 @@
                     const noTasksMessage = document.getElementById('noTasksMessage');
                     tableBody.innerHTML = '';
 
-                    // Sadece tetiklenen görevlerin statülerini filtrele
-                    const triggeredTaskStatuses = [
-                        'awaiting_client_approval',
-                        'client_approval_opened',
-                        'client_approval_closed',
-                        'client_no_response_closed'
-                    ];
-
                     const filteredTasks = this.allTasks.filter(task => 
                         (filterStatus === 'all' || task.status === filterStatus) &&
-                        triggeredTaskStatuses.includes(task.status) // Sadece tetiklenen görev statülerine sahip olanları göster
+                        this.triggeredTaskStatuses.includes(task.status) // Sadece tetiklenen görev statülerine sahip olanları göster
                     );
                     
                     if (filteredTasks.length === 0) {
@@ -599,14 +600,16 @@
                         const row = document.createElement('tr');
                         const statusClass = `status-${task.status.replace(/ /g, '_').toLowerCase()}`; // client_approval_opened için client_approval_opened CSS class'ı
                         const priorityClass = `priority-${task.priority.toLowerCase()}`;
-                        const taskTypeParts = task.taskType ? task.taskType.split('_') : [];
-                        const mainType = taskTypeParts[0] || '';
-                        const specificType = taskTypeParts.slice(1).join(' ').replace(/\b\w/g, l => l.toUpperCase());
+                        
+                        // İşlem tipi objesini bul
+                        const transactionTypeObj = this.allTransactionTypes.find(t => t.id === task.taskType);
+                        // Görünen adı alias veya name'den al, yoksa task.taskType'ı kullan
+                        const taskTypeDisplayName = transactionTypeObj ? (transactionTypeObj.alias || transactionTypeObj.name) : (task.taskType || 'Bilinmiyor');
 
                         row.innerHTML = `
                             <td>${task.id}</td>
                             <td>${task.relatedIpRecordTitle || 'N/A'}</td>
-                            <td>${mainType.charAt(0).toUpperCase() + mainType.slice(1)} - ${specificType}</td>
+                            <td>${taskTypeDisplayName}</td>
                             <td><span class="priority-badge ${priorityClass}">${task.priority}</span></td>
                             <td>${task.dueDate ? new Date(task.dueDate).toLocaleDateString('tr-TR') : 'Belirtilmemiş'}</td>
                             <td><span class="status-badge ${statusClass}">${this.statusDisplayMap[task.status] || task.status}</span></td>
@@ -681,15 +684,18 @@
                             </div>`
                         ).join('');
                     }
-                    const taskTypeParts = task.taskType ? task.taskType.split('_') : [];
-                    const mainType = taskTypeParts[0] || '';
-                    const specificType = taskTypeParts.slice(1).join(' ').replace(/\b\w/g, l => l.toUpperCase());
+                    // taskTypeParts, mainType, specificType showTaskDetailModal içinde zaten tanımlı
+                    // İşlem tipi objesini bul
+                    const transactionTypeObj = this.allTransactionTypes.find(t => t.id === task.taskType);
+                    // Görünen adı alias veya name'den al, yoksa task.taskType'ı kullan
+                    const taskTypeDisplayName = transactionTypeObj ? (transactionTypeObj.alias || transactionTypeObj.name) : (task.taskType || 'Bilinmiyor');
+
 
                         modalBody.innerHTML = `
                             <div class="modal-detail-grid">
                                 ${renderField('İş No.', task.id)}
                                 ${renderField('Atanan Kişi', task.assignedTo_email)}
-                                ${renderField('İş Türü', `${mainType.charAt(0).toUpperCase() + mainType.slice(1)} - ${specificType}`)}
+                                ${renderField('İş Türü', taskTypeDisplayName)}
                                 ${renderField('Bitiş Tarihi', task.dueDate ? new Date(task.dueDate).toLocaleDateString('tr-TR') : '-')}
                                 ${renderField('Öncelik', task.priority)}
                                 ${renderField('İlgili Portföy Kaydı', ipRecord ? ipRecord.title : 'Bulunamadı')}
@@ -871,10 +877,18 @@
                     document.getElementById('changeStatusModalTaskTitleDisplay').textContent = 
                         `Görev: ${this.currentTaskForStatusChange.title || 'Başlıksız Görev'} (${this.currentTaskForStatusChange.id})`;
                     
-                    // Mevcut durumu seçili getir
                     const newStatusSelect = document.getElementById('newTriggeredTaskStatus');
-                    // Seçenekler arasında mevcut durum varsa seçili hale getir.
-                    // Eğer mevcut durum, dropdown'da olmayan bir "tetiklenmiş" durum ise, varsayılan bir seçenek seçili gelir.
+                    newStatusSelect.innerHTML = ''; // Mevcut seçenekleri temizle
+
+                    // Tüm tetiklenen görev durumlarını option olarak ekle
+                    this.triggeredTaskStatuses.forEach(statusValue => {
+                        const option = document.createElement('option');
+                        option.value = statusValue;
+                        option.textContent = this.statusDisplayMap[statusValue] || statusValue;
+                        newStatusSelect.appendChild(option);
+                    });
+
+                    // Mevcut durumu seçili getir
                     newStatusSelect.value = this.currentTaskForStatusChange.status;
 
                     document.getElementById('changeTriggeredTaskStatusModal').classList.add('show');
@@ -890,9 +904,11 @@
                     let updatedStatus = newStatus;
 
                     // "Müvekkil Onayı - Açıldı" seçeneği 'open' statüsüne transfer olacak
-                    if (newStatus === 'client_approval_opened') {
-                        updatedStatus = 'open';
+                    if (newStatus === 'client_approval_opened') { // Eğer seçilen durum bu ise
+                        updatedStatus = 'open'; // Veritabanına 'open' olarak kaydedilecek
                     }
+                     // TODO: Buraya diğer özel durum geçişleri de eklenebilir, örneğin
+                     // 'client_approval_closed' seçildiğinde ilgili ana görevin 'completed' olarak işaretlenmesi vs.
 
                     try {
                         await taskService.updateTask(this.currentTaskForStatusChange.id, { status: updatedStatus });
