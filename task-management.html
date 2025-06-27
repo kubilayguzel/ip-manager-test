@@ -109,6 +109,12 @@
         .status-cancelled { background-color: #dc3545; }
         .status-on-hold { background-color: #17a2b8; }
         .status-awaiting-approval { background-color: #6f42c1; }
+        /* Yeni tetiklenen görev durumları */
+        .status-awaiting_client_approval { background-color: #6f42c1; color: white; } /* Müvekkil Onayı Bekliyor - Mor */
+        .status-client_approval_opened { background-color: #28a745; color: white; } /* Müvekkil Onayı - Açıldı - Yeşil */
+        .status-client_approval_closed { background-color: #6c757d; color: white; } /* Müvekkil Onayı - Kapatıldı - Gri */
+        .status-client_no_response_closed { background-color: #fd7e14; color: white; } /* Müvekkil Cevaplamadı - Kapatıldı - Turuncu */
+
 
         .priority-badge {
             padding: 4px 8px;
@@ -157,7 +163,7 @@
             overflow: auto; /* Enable scroll if needed */
             background-color: rgba(0,0,0,0.6); /* Black w/ opacity */
             align-items: center; /* Center horizontally */
-            justify-content: center; /* Center vertically */
+            justify-content: center; /* Vertically center */
         }
 
         .modal.show {
@@ -513,6 +519,21 @@
                     this.currentTaskForAccrual = null; // Yeni: Üzerinde tahakkuk oluşturulacak görev
                     this.createTaskSelectedTpInvoiceParty = null; // Yeni: Yeni tahakkuk modalı için TP Fatura Tarafı
                     this.createTaskSelectedServiceInvoiceParty = null; // Yeni: Yeni tahakkuk modalı için Hizmet Fatura Tarafı
+                    
+                    // Yeni görev durumları için harita
+                    this.statusDisplayMap = {
+                        'open': 'Açık',
+                        'in-progress': 'Devam Ediyor',
+                        'completed': 'Tamamlandı',
+                        'pending': 'Beklemede',
+                        'cancelled': 'İptal Edildi',
+                        'on-hold': 'Askıda',
+                        'awaiting-approval': 'Onay Bekliyor',
+                        'awaiting_client_approval': 'Müvekkil Onayı Bekliyor',
+                        'client_approval_opened': 'Müvekkil Onayı - Açıldı',
+                        'client_approval_closed': 'Müvekkil Onayı - Kapatıldı',
+                        'client_no_response_closed': 'Müvekkil Cevaplamadı - Kapatıldı'
+                    };
                 }
 
                 init() {
@@ -530,19 +551,19 @@
                 async loadAllData() {
                     document.getElementById('loadingIndicator').style.display = 'block';
                     try {
-                        const [tasksResult, ipRecordsResult, personsResult, usersResult] = await Promise.all([
+                        const [tasksResult, ipRecordsResult, personsResult, usersResult, accrualsResult] = await Promise.all([ // accrualsResult da eklendi
                             taskService.getAllTasks(),
                             ipRecordsService.getRecords(),
                             personService.getPersons(),
-                            taskService.getAllUsers() // Kullanıcıları da yüklüyoruz
+                            taskService.getAllUsers(), // Kullanıcıları da yüklüyoruz
+                            accrualService.getAccruals() // Tüm tahakkukları çek
                         ]);
 
                         this.allTasks = tasksResult.success ? tasksResult.data : [];
                         this.allIpRecords = ipRecordsResult.success ? ipRecordsResult.data : [];
                         this.allPersons = personsResult.success ? personsResult.data : [];
                         this.allUsers = usersResult.success ? usersResult.data : []; // Yüklenen kullanıcıları kaydediyoruz
-                        const accrualsResult = await accrualService.getAccruals();
-                        this.allAccruals = accrualsResult.success ? accrualsResult.data : [];
+                        this.allAccruals = accrualsResult.success ? accrualsResult.data : []; // Tahakkukları kaydet
                         this.renderTasks();
                     } catch (error) {
                         showNotification('Veriler yüklenirken bir hata oluştu: ' + error.message, 'error');
@@ -699,7 +720,10 @@
 
                     filteredTasks.forEach(task => {
                         const row = document.createElement('tr');
-                        const statusClass = `status-${task.status.replace(/ /g, '-').toLowerCase()}`;
+                        // Durum sınıfını ve metnini statusDisplayMap'ten al
+                        const statusClass = `status-${task.status.replace(/ /g, '_').toLowerCase()}`; // Alt çizgi kullanımı
+                        const statusText = this.statusDisplayMap[task.status] || task.status; // Türkçe karşılık
+                        
                         const priorityClass = `priority-${task.priority.toLowerCase()}`;
                         const taskTypeParts = task.taskType ? task.taskType.split('_') : [];
                         const mainType = taskTypeParts[0] || '';
@@ -716,7 +740,7 @@
                             <td><span class="priority-badge ${priorityClass}">${task.priority}</span></td>
                             <td>${assignedToDisplayName}</td>
                             <td>${task.dueDate ? new Date(task.dueDate).toLocaleDateString('tr-TR') : 'Belirtilmemiş'}</td>
-                            <td><span class="status-badge ${statusClass}">${task.status}</span></td>
+                            <td><span class="status-badge ${statusClass}">${statusText}</span></td>
                             <td>
                                 <button class="action-btn view-btn" data-id="${task.id}">Görüntüle</button>
                                 <button class="action-btn edit-btn" data-id="${task.id}">Düzenle</button>
