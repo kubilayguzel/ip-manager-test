@@ -620,7 +620,7 @@
                         item.dataset.id = tx.id; 
                         const transactionType = this.allTransactionTypes.find(t => t.id === tx.type);
                         console.log(`İşlem ID: ${tx.id}, İşlem Tipi ID (tx.type): ${tx.type}, Bulunan transactionType objesi:`, transactionType); 
-                        const transactionDisplayName = transactionType ? (transactionType.alias || type.name) : (tx.designation || tx.type || 'Tanımsız İşlem'); 
+                        const transactionDisplayName = transactionType ? (transactionType.alias || transactionType.name) : (tx.designation || tx.type || 'Tanımsız İşlem'); 
 
                         item.textContent = `${transactionDisplayName} - ${new Date(tx.timestamp).toLocaleDateString('tr-TR')}`;
                         item.addEventListener('click', (e) => {
@@ -725,7 +725,6 @@
 
                     if (this.activeTab === 'existing-transaction-pane') {
                         currentSelectedRecord = this.selectedRecordExisting;
-                        // checkFormCompleteness zaten tüm zorunlulukları kontrol ettiği için burada tekrar etmeye gerek yok
                         const childTypeId = document.getElementById('specificChildTransactionType').value;
                         const childTransactionType = this.allTransactionTypes.find(type => type.id === childTypeId);
                         const deliveryDate = document.getElementById('existingChildTransactionDeliveryDate').value;
@@ -738,7 +737,7 @@
                             deliveryDate: deliveryDate ? new Date(deliveryDate).toISOString() : null
                         };
                         const childResult = await ipRecordsService.addTransactionToRecord(currentSelectedRecord.id, newChildData);
-                        console.log('DEBUG: Result of addTransactionToRecord call (existing-transaction-pane):', childResult); // YENİ LOG
+                        console.log('DEBUG: Result of addTransactionToRecord call (existing-transaction-pane):', childResult);
 
                         if(!childResult.success) {
                             showNotification(childResult.error || 'Alt işlem oluşturulurken hata oluştu.', 'error');
@@ -761,31 +760,28 @@
                         transactionDesignationForFiles = childTransactionType.documentDesignationDefault || 'Diğer Belge'; 
 
                         // GÖREV TETİKLEME MANTIĞI BURADA BAŞLIYOR
-                        const triggeredTaskType = this.mapTransactionToTask(childTransactionType.alias || childTransactionType.name, currentSelectedRecord.recordType); // subTransactionId kaldırıldı
+                        // mapTransactionToTask fonksiyonuna childTransactionType objesini gönderiyoruz
+                        const triggeredTaskType = this.mapTransactionToTask(childTransactionType, currentSelectedRecord.recordType); 
                         console.log('DEBUG: Tetiklenen görev tipi:', triggeredTaskType);
 
                         if (triggeredTaskType) {
-                            // Selcan'ın bilgilerini kullan
                             let defaultAssignedToUid = SELCAN_UID; 
                             let defaultAssignedToEmail = SELCAN_EMAIL;
 
-                            // transactionTypes.json içindeki taskType ID'lerini kullanarak görev tanımını bul
                             const targetTaskDefinition = this.allTransactionTypes.find(t => t.id === triggeredTaskType);
                             
                             const newTaskData = {
                                 taskType: triggeredTaskType,
-                                // Görev başlığı için 'taskDisplayName' özelliğini önceliklendir, yoksa 'alias' veya 'name' kullan
                                 title: `[OTOMATİK GÖREV] ${targetTaskDefinition ? (targetTaskDefinition.taskDisplayName || targetTaskDefinition.alias || targetTaskDefinition.name) : 'Bilinmeyen İşlem'} - ${currentSelectedRecord.title} (${currentSelectedRecord.applicationNumber})`,
                                 description: `${currentSelectedRecord.title} (${currentSelectedRecord.applicationNumber}) kaydının ${childTransactionType.alias || childTransactionType.name} işlemi sonrasında otomatik oluşturulan görev.`,
-                                priority: 'medium', // Varsayılan öncelik
+                                priority: 'medium', 
                                 assignedTo_uid: defaultAssignedToUid,
                                 assignedTo_email: defaultAssignedToEmail,
-                                dueDate: null, // Varsayılan son tarih, null veya belirli bir tarih olabilir
-                                status: 'awaiting_client_approval', // Yeni durum: Müvekkil Onayı Bekliyor
+                                dueDate: null, 
+                                status: 'awaiting_client_approval', 
                                 relatedIpRecordId: currentSelectedRecord.id,
                                 relatedIpRecordTitle: currentSelectedRecord.title,
                                 details: {
-                                    // Eğer ana işlemde bir ilgili taraf varsa, onu göreve de taşı
                                     relatedParty: currentSelectedRecord.details?.relatedParty || null
                                 }
                             };
@@ -800,7 +796,6 @@
 
                     } else if (this.activeTab === 'manual-indexing-pane') {
                         currentSelectedRecord = this.selectedRecordManual;
-                        // checkFormCompleteness zaten tüm zorunlulukları kontrol ettiği için burada tekrar etmeye gerek yok
                         const parentTypeId = document.getElementById('specificManualTransactionType').value;
                         const childTypeId = document.getElementById('specificManualChildTransactionType').value;
                         const deliveryDate = document.getElementById('manualChildTransactionDeliveryDate').value;
@@ -809,7 +804,6 @@
                         let selectedParentTransaction = null;
                         let selectedChildTransaction = null;
 
-                        // Ana işlem zorunlu olduğu için her zaman parentTypeId değeri olacaktır
                         selectedParentTransaction = this.allTransactionTypes.find(type => type.id === parentTypeId);
                         const parentTransactionData = {
                             designation: selectedParentTransaction.alias || selectedParentTransaction.name,
@@ -835,20 +829,19 @@
                             btn.disabled = false;
                             return;
                         }
-                        transactionIdToAssociateFiles = newParentTransactionId; // Başlangıçta dosyalar ana işleme bağlı varsayıldı
+                        transactionIdToAssociateFiles = newParentTransactionId; 
                         console.log('DEBUG: manual-indexing-pane (ana işlem ID):', transactionIdToAssociateFiles); 
                         transactionDesignationForFiles = selectedParentTransaction.documentDesignationDefault || 'Diğer Belge';
                         
 
-                        if (childTypeId !== '') { // Eğer alt işlem türü seçildiyse (opsiyonel)
+                        if (childTypeId !== '') { 
                             selectedChildTransaction = this.allTransactionTypes.find(type => type.id === childTypeId);
-                            // checkFormCompleteness zaten kontrol ettiği için geçerli bir childTypeId olacak
                             
                             const childTransactionData = {
                                 designation: selectedChildTransaction.alias || selectedChildTransaction.name,
                                 type: selectedChildTransaction.id,
                                 transactionHierarchy: 'child',
-                                parentId: newParentTransactionId, // Ana işlem ID'si kullanılır
+                                parentId: newParentTransactionId, 
                                 deliveryDate: deliveryDate ? new Date(deliveryDate).toISOString() : null,
                                 timestamp: new Date().toISOString()
                             };
@@ -860,7 +853,7 @@
                                 return; 
                             }
                             if (childResult.id) {
-                                transactionIdToAssociateFiles = childResult.id; // Dosyalar alt işleme bağlanacaksa bu ID kullanılır
+                                transactionIdToAssociateFiles = childResult.id; 
                             } else if (childResult.data && childResult.data.id) {
                                 transactionIdToAssociateFiles = childResult.data.id;
                             } else {
@@ -873,11 +866,11 @@
                             transactionDesignationForFiles = selectedChildTransaction.documentDesignationDefault || 'Diğer Belge';
 
                             // GÖREV TETİKLEME MANTIĞI BURADA BAŞLIYOR (manuel alt işlem için)
-                            const triggeredTaskType = this.mapTransactionToTask(selectedChildTransaction.alias || selectedChildTransaction.name, currentSelectedRecord.recordType); // subTransactionId kaldırıldı
+                            // mapTransactionToTask fonksiyonuna selectedChildTransaction objesini gönderiyoruz
+                            const triggeredTaskType = this.mapTransactionToTask(selectedChildTransaction, currentSelectedRecord.recordType); 
                             console.log('DEBUG: Tetiklenen görev tipi (Manuel Alt İşlem):', triggeredTaskType);
 
                             if (triggeredTaskType) {
-                                // Selcan'ın bilgilerini kullan
                                 let defaultAssignedToUid = SELCAN_UID; 
                                 let defaultAssignedToEmail = SELCAN_EMAIL;
                                 
@@ -885,7 +878,6 @@
                                 
                                 const newTaskData = {
                                     taskType: triggeredTaskType,
-                                    // Görev başlığı için 'taskDisplayName' özelliğini önceliklendir, yoksa 'alias' veya 'name' kullan
                                     title: `[OTOMATİK GÖREV] ${targetTaskDefinition ? (targetTaskDefinition.taskDisplayName || targetTaskDefinition.alias || targetTaskDefinition.name) : 'Bilinmeyen İşlem'} - ${currentSelectedRecord.title} (${currentSelectedRecord.applicationNumber})`,
                                     description: `${currentSelectedRecord.title} (${currentSelectedRecord.applicationNumber}) kaydının ${selectedChildTransaction.alias || selectedChildTransaction.name} işlemi sonrasında otomatik oluşturulan görev.`,
                                     priority: 'medium',
@@ -896,7 +888,7 @@
                                     relatedIpRecordId: currentSelectedRecord.id,
                                     relatedIpRecordTitle: currentSelectedRecord.title,
                                     details: {
-                                        relatedParty: currentSelectedRecord.details?.relatedParty || null // Mevcut kaydın ilgili tarafını taşı
+                                        relatedParty: currentSelectedRecord.details?.relatedParty || null 
                                     }
                                 };
                                 
@@ -908,7 +900,6 @@
                                 }
                             }
                         }
-                        // Eğer alt işlem seçilmediyse transactionIdToAssociateFiles zaten ana işlem ID'si olarak kalır, bu doğru davranış.
 
                     } 
                     
@@ -975,49 +966,10 @@
                 }
 
                 // YENİ FONKSİYON: Alt işlem türü ile tetiklenecek görev türünü eşleştirir
-                mapTransactionToTask = (subTransactionAlias, recordType) => { // subTransactionId kaldırıldı
-                    const isThirdParty = recordType === '3. Taraf';
-
-                    switch (subTransactionAlias) {
-                        case 'Eksiklik Bildirimi': return 'eksiklik_bildirimi';
-                        case 'Ret Kararı': return 'trademark_decision_objection';
-                        case 'Kısmi Yayın Kararı': return 'trademark_decision_objection';
-                        case 'Tescil Ücreti Bildirimi': return 'tescil_ucreti_bildirimi';
-                        case 'İşlemden Kaldırma Kararı': return 'trademark_decision_objection';
-                        case 'İtiraz Bildirimi': return 'itiraza_karsi_gorus_child';
-                        case 'Kullanım Delili Sunma': return 'kullanim_ispati_delili_sunma'; 
-
-                        case 'İtiraz Kabul':
-                            if (isThirdParty) return null; 
-                            return 'trademark_reconsideration_of_publication_objection'; 
-                        case 'İtiraz Kısmen Kabul': return 'trademark_reconsideration_of_publication_objection';
-
-                        case 'İtiraz Ret':
-                            if (isThirdParty) return 'trademark_reconsideration_of_publication_objection';
-                            return null;
-                            
-                        // Kullanıcının belirttiği tam alias metinlerini ve recordType kontrolünü kullanıyoruz
-                        case 'Başvuru Sahibi - İtiraz Kabul': 
-                             if (isThirdParty) return 'litigation_yidk_annulment'; 
-                             return null; 
-                        case 'Başvuru Sahibi - İtiraz Kısmen Kabul': return 'litigation_yidk_annulment'; 
-
-                        case 'Başvuru Sahibi - İtiraz Ret':
-                            if (isThirdParty) return null; 
-                            return 'litigation_yidk_annulment'; 
-
-                        case 'İtiraz Sahibi - İtiraz Kabul':
-                            if (isThirdParty) return null; 
-                            return 'litigation_yidk_annulment'; 
-
-                        case 'İtiraz Sahibi - İtiraz Kısmen Kabul': return 'litigation_yidk_annulment'; 
-
-                        case 'İtiraz Sahibi - İtiraz Ret':
-                            if (isThirdParty) return 'litigation_yidk_annulment'; 
-                            return null; 
-
-                        default: return null; 
-                    }
+                mapTransactionToTask = (selectedChildTransactionType, recordType) => { 
+                    // selectedChildTransactionType artık doğrudan tüm işlem tipi objesini içeriyor
+                    // recordType şu anda doğrudan kullanılmıyor, ancak gelecekteki koşullar için tutulabilir.
+                    return selectedChildTransactionType.taskTriggered || null; 
                 }
             }
             
