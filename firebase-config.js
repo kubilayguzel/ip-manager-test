@@ -14,13 +14,13 @@ from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 
 // --- Firebase App Initialization ---
 const firebaseConfig = {
-    apiKey: "AIzaSyCbhoIXJT9g5ftW62YUlo44M4BOzM9tJ7M",
-    authDomain: "ip-manager-production.firebaseapp.com",
-    projectId: "ip-manager-production",
-    storageBucket: "ip-manager-production.firebasestorage.app",
-    messagingSenderId: "378017128708",
-    appId: "1:378017128708:web:e2c6fa7b8634022f2ef051",
-    measurementId: "G-TQB1CF18Q8"
+  apiKey: "AIzaSyDbdqfiVbobnl1BtyiWxhD4bfIcREw8ZRc",
+  authDomain: "ip-manager-production-aab4b.firebaseapp.com",
+  projectId: "ip-manager-production-aab4b",
+  storageBucket: "ip-manager-production-aab4b.firebasestorage.app",
+  messagingSenderId: "594650169512",
+  appId: "1:594650169512:web:43496005e063a40511829d",
+  measurementId: "G-QY1P3ZCMC4"
 };
 
 let app, auth, db;
