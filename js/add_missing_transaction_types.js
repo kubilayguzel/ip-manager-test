@@ -16,26 +16,26 @@ async function addMissingChildTransactionTypes() {
     "order": null,
     "isTopLevelSelectable": true,
     "allowedChildTypes": [
-      24,
-      25,
-      40,
-      43
+      "24",
+      "25",
+      "40",
+      "43"
     ],
     "indexFile": [
-      24,
-      40,
-      43
+      "24",
+      "40",
+      "43"
     ],
     "indexBulk": [
-      24,
-      40,
-      43
+      "24",
+      "40",
+      "43"
     ],
     "indexManuel": [
-      24,
-      25,
-      40,
-      43
+      "24",
+      "25",
+      "40",
+      "43"
     ],
     "taskTriggered": null
   },
@@ -52,50 +52,50 @@ async function addMissingChildTransactionTypes() {
     "order": null,
     "isTopLevelSelectable": true,
     "allowedChildTypes": [
-      6,
-      23,
-      24,
-      25,
-      26,
-      41,
-      42,
-      43,
-      45,
-      46,
-      47
+      "6",
+      "23",
+      "24",
+      "25",
+      "26",
+      "41",
+      "42",
+      "43",
+      "45",
+      "46",
+      "47"
     ],
     "indexFile": [
-      24,
-      26,
-      41,
-      42,
-      43,
-      45,
-      46,
-      47
+      "24",
+      "26",
+      "41",
+      "42",
+      "43",
+      "45",
+      "46",
+      "47"
     ],
     "indexBulk": [
-      24,
-      26,
-      41,
-      42,
-      43,
-      45,
-      46,
-      47
+      "24",
+      "26",
+      "41",
+      "42",
+      "43",
+      "45",
+      "46",
+      "47"
     ],
     "indexManuel": [
-      6,
-      23,
-      24,
-      25,
-      26,
-      41,
-      42,
-      43,
-      45,
-      46,
-      47
+      "6",
+      "23",
+      "24",
+      "25",
+      "26",
+      "41",
+      "42",
+      "43",
+      "45",
+      "46",
+      "47"
     ],
     "taskTriggered": null
   },
@@ -112,26 +112,26 @@ async function addMissingChildTransactionTypes() {
     "order": null,
     "isTopLevelSelectable": true,
     "allowedChildTypes": [
-      24,
-      25,
-      40,
-      43
+      "24",
+      "25",
+      "40",
+      "43"
     ],
     "indexFile": [
-      24,
-      40,
-      43
+      "24",
+      "40",
+      "43"
     ],
     "indexBulk": [
-      24,
-      40,
-      43
+      "24",
+      "40",
+      "43"
     ],
     "indexManuel": [
-      24,
-      25,
-      40,
-      43
+      "24",
+      "25",
+      "40",
+      "43"
     ],
     "taskTriggered": null
   },
@@ -148,26 +148,26 @@ async function addMissingChildTransactionTypes() {
     "order": null,
     "isTopLevelSelectable": true,
     "allowedChildTypes": [
-      24,
-      25,
-      40,
-      43
+      "24",
+      "25",
+      "40",
+      "43"
     ],
     "indexFile": [
-      24,
-      40,
-      43
+      "24",
+      "40",
+      "43"
     ],
     "indexBulk": [
-      24,
-      40,
-      43
+      "24",
+      "40",
+      "43"
     ],
     "indexManuel": [
-      24,
-      25,
-      40,
-      43
+      "24",
+      "25",
+      "40",
+      "43"
     ],
     "taskTriggered": null
   },
@@ -184,26 +184,26 @@ async function addMissingChildTransactionTypes() {
     "order": null,
     "isTopLevelSelectable": true,
     "allowedChildTypes": [
-      24,
-      25,
-      40,
-      43
+      "24",
+      "25",
+      "40",
+      "43"
     ],
     "indexFile": [
-      24,
-      40,
-      43
+      "24",
+      "40",
+      "43"
     ],
     "indexBulk": [
-      24,
-      40,
-      43
+      "24",
+      "40",
+      "43"
     ],
     "indexManuel": [
-      24,
-      25,
-      40,
-      43
+      "24",
+      "25",
+      "40",
+      "43"
     ],
     "taskTriggered": null
   },
@@ -238,34 +238,34 @@ async function addMissingChildTransactionTypes() {
     "order": null,
     "isTopLevelSelectable": true,
     "allowedChildTypes": [
-      24,
-      25,
-      28,
-      29,
-      30,
-      37,
-      44
+      "24",
+      "25",
+      "28",
+      "29",
+      "30",
+      "37",
+      "44"
     ],
     "indexFile": [
-      24,
-      28,
-      29,
-      30
+      "24",
+      "28",
+      "29",
+      "30"
     ],
     "indexBulk": [
-      24,
-      28,
-      29,
-      30
+      "24",
+      "28",
+      "29",
+      "30"
     ],
     "indexManuel": [
-      24,
-      25,
-      28,
-      29,
-      30,
-      37,
-      44
+      "24",
+      "25",
+      "28",
+      "29",
+      "30",
+      "37",
+      "44"
     ],
     "taskTriggered": null
   },
@@ -318,26 +318,26 @@ async function addMissingChildTransactionTypes() {
     "order": null,
     "isTopLevelSelectable": true,
     "allowedChildTypes": [
-      24,
-      25,
-      40,
-      43
+      "24",
+      "25",
+      "40",
+      "43"
     ],
     "indexFile": [
-      24,
-      40,
-      43
+      "24",
+      "40",
+      "43"
     ],
     "indexBulk": [
-      24,
-      40,
-      43
+      "24",
+      "40",
+      "43"
     ],
     "indexManuel": [
-      24,
-      25,
-      40,
-      43
+      "24",
+      "25",
+      "40",
+      "43"
     ],
     "taskTriggered": null
   },
@@ -372,26 +372,26 @@ async function addMissingChildTransactionTypes() {
     "order": null,
     "isTopLevelSelectable": true,
     "allowedChildTypes": [
-      24,
-      25,
-      40,
-      43
+      "24",
+      "25",
+      "40",
+      "43"
     ],
     "indexFile": [
-      24,
-      40,
-      43
+      "24",
+      "40",
+      "43"
     ],
     "indexBulk": [
-      24,
-      40,
-      43
+      "24",
+      "40",
+      "43"
     ],
     "indexManuel": [
-      24,
-      25,
-      40,
-      43
+      "24",
+      "25",
+      "40",
+      "43"
     ],
     "taskTriggered": null
   },
@@ -408,26 +408,26 @@ async function addMissingChildTransactionTypes() {
     "order": null,
     "isTopLevelSelectable": true,
     "allowedChildTypes": [
-      24,
-      25,
-      40,
-      43
+      "24",
+      "25",
+      "40",
+      "43"
     ],
     "indexFile": [
-      24,
-      40,
-      43
+      "24",
+      "40",
+      "43"
     ],
     "indexBulk": [
-      24,
-      40,
-      43
+      "24",
+      "40",
+      "43"
     ],
     "indexManuel": [
-      24,
-      25,
-      40,
-      43
+      "24",
+      "25",
+      "40",
+      "43"
     ],
     "taskTriggered": null
   },
@@ -444,26 +444,26 @@ async function addMissingChildTransactionTypes() {
     "order": null,
     "isTopLevelSelectable": true,
     "allowedChildTypes": [
-      24,
-      25,
-      40,
-      43
+      "24",
+      "25",
+      "40",
+      "43"
     ],
     "indexFile": [
-      24,
-      40,
-      43
+      "24",
+      "40",
+      "43"
     ],
     "indexBulk": [
-      24,
-      40,
-      43
+      "24",
+      "40",
+      "43"
     ],
     "indexManuel": [
-      24,
-      25,
-      40,
-      43
+      "24",
+      "25",
+      "40",
+      "43"
     ],
     "taskTriggered": null
   },
@@ -480,26 +480,26 @@ async function addMissingChildTransactionTypes() {
     "order": null,
     "isTopLevelSelectable": true,
     "allowedChildTypes": [
-      24,
-      25,
-      40,
-      43
+      "24",
+      "25",
+      "40",
+      "43"
     ],
     "indexFile": [
-      24,
-      40,
-      43
+      "24",
+      "40",
+      "43"
     ],
     "indexBulk": [
-      24,
-      40,
-      43
+      "24",
+      "40",
+      "43"
     ],
     "indexManuel": [
-      24,
-      25,
-      40,
-      43
+      "24",
+      "25",
+      "40",
+      "43"
     ],
     "taskTriggered": null
   },
@@ -516,26 +516,26 @@ async function addMissingChildTransactionTypes() {
     "order": null,
     "isTopLevelSelectable": true,
     "allowedChildTypes": [
-      24,
-      25,
-      40,
-      43
+      "24",
+      "25",
+      "40",
+      "43"
     ],
     "indexFile": [
-      24,
-      40,
-      43
+      "24",
+      "40",
+      "43"
     ],
     "indexBulk": [
-      24,
-      40,
-      43
+      "24",
+      "40",
+      "43"
     ],
     "indexManuel": [
-      24,
-      25,
-      40,
-      43
+      "24",
+      "25",
+      "40",
+      "43"
     ],
     "taskTriggered": null
   },
@@ -552,26 +552,26 @@ async function addMissingChildTransactionTypes() {
     "order": null,
     "isTopLevelSelectable": true,
     "allowedChildTypes": [
-      24,
-      25,
-      40,
-      43
+      "24",
+      "25",
+      "40",
+      "43"
     ],
     "indexFile": [
-      24,
-      40,
-      43
+      "24",
+      "40",
+      "43"
     ],
     "indexBulk": [
-      24,
-      40,
-      43
+      "24",
+      "40",
+      "43"
     ],
     "indexManuel": [
-      24,
-      25,
-      40,
-      43
+      "24",
+      "25",
+      "40",
+      "43"
     ],
     "taskTriggered": null
   },
@@ -588,26 +588,26 @@ async function addMissingChildTransactionTypes() {
     "order": null,
     "isTopLevelSelectable": true,
     "allowedChildTypes": [
-      24,
-      25,
-      40,
-      43
+      "24",
+      "25",
+      "40",
+      "43"
     ],
     "indexFile": [
-      24,
-      40,
-      43
+      "24",
+      "40",
+      "43"
     ],
     "indexBulk": [
-      24,
-      40,
-      43
+      "24",
+      "40",
+      "43"
     ],
     "indexManuel": [
-      24,
-      25,
-      40,
-      43
+      "24",
+      "25",
+      "40",
+      "43"
     ],
     "taskTriggered": null
   },
@@ -624,50 +624,50 @@ async function addMissingChildTransactionTypes() {
     "order": null,
     "isTopLevelSelectable": true,
     "allowedChildTypes": [
-      24,
-      25,
-      27,
-      31,
-      32,
-      33,
-      34,
-      35,
-      36,
-      37,
-      38
+      "24",
+      "25",
+      "27",
+      "31",
+      "32",
+      "33",
+      "34",
+      "35",
+      "36",
+      "37",
+      "38"
     ],
     "indexFile": [
-      24,
-      27,
-      31,
-      32,
-      33,
-      34,
-      35,
-      36
+      "24",
+      "27",
+      "31",
+      "32",
+      "33",
+      "34",
+      "35",
+      "36"
     ],
     "indexBulk": [
-      24,
-      27,
-      31,
-      32,
-      33,
-      34,
-      35,
-      36
+      "24",
+      "27",
+      "31",
+      "32",
+      "33",
+      "34",
+      "35",
+      "36"
     ],
     "indexManuel": [
-      24,
-      25,
-      27,
-      31,
-      32,
-      33,
-      34,
-      35,
-      36,
-      37,
-      38
+      "24",
+      "25",
+      "27",
+      "31",
+      "32",
+      "33",
+      "34",
+      "35",
+      "36",
+      "37",
+      "38"
     ],
     "taskTriggered": null
   },
@@ -684,42 +684,42 @@ async function addMissingChildTransactionTypes() {
     "order": null,
     "isTopLevelSelectable": true,
     "allowedChildTypes": [
-      24,
-      25,
-      27,
-      28,
-      29,
-      30,
-      37,
-      38,
-      39
+      "24",
+      "25",
+      "27",
+      "28",
+      "29",
+      "30",
+      "37",
+      "38",
+      "39"
     ],
     "indexFile": [
-      24,
-      27,
-      28,
-      29,
-      30,
-      48
+      "24",
+      "27",
+      "28",
+      "29",
+      "30",
+      "48"
     ],
     "indexBulk": [
-      24,
-      27,
-      28,
-      29,
-      30,
-      48
+      "24",
+      "27",
+      "28",
+      "29",
+      "30",
+      "48"
     ],
     "indexManuel": [
-      24,
-      25,
-      27,
-      28,
-      29,
-      30,
-      37,
-      38,
-      39
+      "24",
+      "25",
+      "27",
+      "28",
+      "29",
+      "30",
+      "37",
+      "38",
+      "39"
     ],
     "taskTriggered": null
   },
@@ -754,26 +754,26 @@ async function addMissingChildTransactionTypes() {
     "order": null,
     "isTopLevelSelectable": true,
     "allowedChildTypes": [
-      24,
-      25,
-      40,
-      43
+      "24",
+      "25",
+      "40",
+      "43"
     ],
     "indexFile": [
-      24,
-      40,
-      43
+      "24",
+      "40",
+      "43"
     ],
     "indexBulk": [
-      24,
-      40,
-      43
+      "24",
+      "40",
+      "43"
     ],
     "indexManuel": [
-      24,
-      25,
-      40,
-      43
+      "24",
+      "25",
+      "40",
+      "43"
     ],
     "taskTriggered": null
   },
@@ -1280,6 +1280,3 @@ async function addMissingChildTransactionTypes() {
 
 // Fonksiyonu başlat
 addMissingChildTransactionTypes();
-
-
-        <script type="module" src="./js/add_missing_transaction_types.js"></script>
