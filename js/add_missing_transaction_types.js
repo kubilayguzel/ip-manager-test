@@ -811,7 +811,7 @@ async function addMissingChildTransactionTypes() {
     "indexFile": [],
     "indexBulk": [],
     "indexManuel": [],
-    "taskTriggered": 25.0
+    "taskTriggered": "25"
   },
   {
     "id": "25",
@@ -847,7 +847,7 @@ async function addMissingChildTransactionTypes() {
     "indexFile": [],
     "indexBulk": [],
     "indexManuel": [],
-    "taskTriggered": 7.0
+    "taskTriggered": "7"
   },
   {
     "id": "27",
@@ -865,7 +865,7 @@ async function addMissingChildTransactionTypes() {
     "indexFile": [],
     "indexBulk": [],
     "indexManuel": [],
-    "taskTriggered": 38.0
+    "taskTriggered": "38"
   },
   {
     "id": "28",
@@ -883,7 +883,7 @@ async function addMissingChildTransactionTypes() {
     "indexFile": [],
     "indexBulk": [],
     "indexManuel": [],
-    "taskTriggered": 19.0
+    "taskTriggered": "19"
   },
   {
     "id": "29",
@@ -901,7 +901,7 @@ async function addMissingChildTransactionTypes() {
     "indexFile": [],
     "indexBulk": [],
     "indexManuel": [],
-    "taskTriggered": 19.0
+    "taskTriggered": "19"
   },
   {
     "id": "30",
@@ -919,7 +919,7 @@ async function addMissingChildTransactionTypes() {
     "indexFile": [],
     "indexBulk": [],
     "indexManuel": [],
-    "taskTriggered": 19.0
+    "taskTriggered": "19"
   },
   {
     "id": "31",
@@ -937,7 +937,7 @@ async function addMissingChildTransactionTypes() {
     "indexFile": [],
     "indexBulk": [],
     "indexManuel": [],
-    "taskTriggered": 49.0
+    "taskTriggered": "49"
   },
   {
     "id": "32",
@@ -955,7 +955,7 @@ async function addMissingChildTransactionTypes() {
     "indexFile": [],
     "indexBulk": [],
     "indexManuel": [],
-    "taskTriggered": 49.0
+    "taskTriggered": "49"
   },
   {
     "id": "33",
@@ -973,7 +973,7 @@ async function addMissingChildTransactionTypes() {
     "indexFile": [],
     "indexBulk": [],
     "indexManuel": [],
-    "taskTriggered": 49.0
+    "taskTriggered": "49"
   },
   {
     "id": "34",
@@ -991,7 +991,7 @@ async function addMissingChildTransactionTypes() {
     "indexFile": [],
     "indexBulk": [],
     "indexManuel": [],
-    "taskTriggered": 49.0
+    "taskTriggered": "49"
   },
   {
     "id": "35",
@@ -1009,7 +1009,7 @@ async function addMissingChildTransactionTypes() {
     "indexFile": [],
     "indexBulk": [],
     "indexManuel": [],
-    "taskTriggered": 49.0
+    "taskTriggered": "49"
   },
   {
     "id": "36",
@@ -1027,7 +1027,7 @@ async function addMissingChildTransactionTypes() {
     "indexFile": [],
     "indexBulk": [],
     "indexManuel": [],
-    "taskTriggered": 49.0
+    "taskTriggered": "49"
   },
   {
     "id": "37",
@@ -1135,7 +1135,7 @@ async function addMissingChildTransactionTypes() {
     "indexFile": [],
     "indexBulk": [],
     "indexManuel": [],
-    "taskTriggered": 7.0
+    "taskTriggered": "7"
   },
   {
     "id": "43",
@@ -1153,7 +1153,7 @@ async function addMissingChildTransactionTypes() {
     "indexFile": [],
     "indexBulk": [],
     "indexManuel": [],
-    "taskTriggered": 7.0
+    "taskTriggered": "7"
   },
   {
     "id": "44",
@@ -1207,7 +1207,7 @@ async function addMissingChildTransactionTypes() {
     "indexFile": [],
     "indexBulk": [],
     "indexManuel": [],
-    "taskTriggered": 23.0
+    "taskTriggered": "23"
   },
   {
     "id": "47",
@@ -1225,7 +1225,7 @@ async function addMissingChildTransactionTypes() {
     "indexFile": [],
     "indexBulk": [],
     "indexManuel": [],
-    "taskTriggered": 7.0
+    "taskTriggered": "7"
   },
   {
     "id": "48",
@@ -1243,7 +1243,7 @@ async function addMissingChildTransactionTypes() {
     "indexFile": [],
     "indexBulk": [],
     "indexManuel": [],
-    "taskTriggered": 39.0
+    "taskTriggered": "39"
   },
   {
     "id": "49",
@@ -1281,5 +1281,3 @@ async function addMissingChildTransactionTypes() {
 // Fonksiyonu başlat
 addMissingChildTransactionTypes();
 
-
-        <script type="module" src="./js/add_missing_transaction_types.js"></script>
