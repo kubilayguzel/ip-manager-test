@@ -502,8 +502,8 @@
                     document.getElementById('specificManualTransactionType').addEventListener('change', (e) => {
                         const selectedParentId = e.target.value;
                         const selectedParentType = this.allTransactionTypes.find(type => type.id === selectedParentId);
-                        if (selectedParentType && selectedParentType.allowedChildTypes) {
-                            this.populateManualChildTransactionTypeSelect(selectedParentType.allowedChildTypes);
+                        if (selectedParentType && selectedParentType.indexManuel) { // << BURASI GÜNCELLENDİ (indexManuel kullanıldı)
+                            this.populateManualChildTransactionTypeSelect(selectedParentType.indexManuel);
                         } else {
                             this.populateManualChildTransactionTypeSelect(null); // veya [] boş liste için
                         }
@@ -636,10 +636,11 @@
                             
                             const selectedParentTransactionDefinition = this.allTransactionTypes.find(t => t.id === tx.type); 
                             console.log('Seçilen Ana İşlem İçin transactionType objesi (alt tipler için):', selectedParentTransactionDefinition); 
-                            if (selectedParentTransactionDefinition && selectedParentTransactionDefinition.allowedChildTypes) {
-                                this.populateChildTransactionTypeSelect(selectedParentTransactionDefinition.allowedChildTypes);
+                            // selectedParentTransactionDefinition.allowedChildTypes yerine indexFile kullanılıyor
+                            if (selectedParentTransactionDefinition && selectedParentTransactionDefinition.indexFile) { // << BURASI GÜNCELLENDİ (indexFile kullanıldı)
+                                this.populateChildTransactionTypeSelect(selectedParentTransactionDefinition.indexFile);
                             } else {
-                                console.log('Seçilen ana işlem için allowedChildTypes bulunamadı veya boş.'); 
+                                console.log('Seçilen ana işlem için indexFile bulunamadı veya boş.'); 
                                 this.populateChildTransactionTypeSelect([]); 
                             }
                             this.checkFormCompleteness();
@@ -978,5 +979,6 @@
                 const indexingModule = new IndexingModule();
             });
         </script>
+        <script type="module" src="./js/add_missing_transaction_types.js"></script>
 </body>
 </html>
