@@ -449,7 +449,7 @@
     </div>
 
     <script type="module">
-        import { authService, taskService, ipRecordsService, accrualService, personService, auth } from './firebase-config.js';
+        import { authService, taskService, ipRecordsService, accrualService, personService, auth, transactionTypeService } from './firebase-config.js';
         import { showNotification } from './utils.js';
         import { loadSharedLayout } from './js/layout-loader.js';
 
@@ -467,6 +467,7 @@
                     this.createMyTaskSelectedTpInvoiceParty = null;
                     this.createMyTaskSelectedServiceInvoiceParty = null;
                     this.currentTaskForStatusChange = null; // Yeni: Durumu değiştirilecek görev
+                    this.allTransactionTypes = []; // Yeni: İşlem tiplerini tutacak
                     
                     this.statusDisplayMap = {
                         'open': 'Açık',
