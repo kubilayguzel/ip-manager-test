@@ -1,4 +1,4 @@
-import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+import { initializeApp } from '[https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js](https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js)';
 import {
     getAuth,
     signInWithEmailAndPassword,
@@ -6,11 +6,11 @@ import {
     signOut,
     onAuthStateChanged,
     updateProfile
-} from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+} from '[https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js](https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js)';
 import {getFirestore, collection, addDoc, 
         getDocs, doc, updateDoc, deleteDoc, 
-        query, orderBy, where, getDoc, setDoc, arrayUnion, writeBatch, documentId } 
-from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+        query, orderBy, where, getDoc, setDoc, arrayUnion, writeBatch, documentId, Timestamp } 
+from '[https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js](https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js)'; // Timestamp importu zaten mevcut
 
 // --- Firebase App Initialization ---
 const firebaseConfig = {
@@ -392,7 +392,7 @@ export const personService = {
 
 // --- YENİ EKLENDİ: Task Service ---
 export const taskService = {
-    async createTask(taskData) {
+    async createTask(taskData) { // officialDueDate ve officialDueDateDetails eklendi
         if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor." };
         const user = authService.getCurrentUser();
         try {
@@ -409,6 +409,14 @@ export const taskService = {
                     userEmail: user.email
                 }]
             };
+
+            // Eğer officialDueDate bir Date objesiyse Timestamp'e dönüştür
+            if (newTask.officialDueDate instanceof Date) {
+                newTask.officialDueDate = Timestamp.fromDate(newTask.officialDueDate);
+            }
+            // officialDueDateDetails direkt obje olarak kaydedilebilir
+            // newTask.officialDueDateDetails = taskData.officialDueDateDetails || null; // Bu zaten taskData içinde geliyor varsayıyorum
+
             await setDoc(doc(db, "tasks", id), newTask);
             return { success: true, id };
         } catch (error) {
@@ -456,6 +464,13 @@ export const taskService = {
                 action: `İş güncellendi. Değişen alanlar: ${Object.keys(updates).join(', ')}`,
                 userEmail: user.email
             };
+
+            // officialDueDate'ı güncellemeden önce Date objesine dönüştür
+            if (updates.officialDueDate instanceof Date) {
+                updates.officialDueDate = Timestamp.fromDate(updates.officialDueDate);
+            }
+            // officialDueDateDetails da doğrudan güncellenebilir
+
             await updateDoc(taskRef, {
                 ...updates,
                 updatedAt: new Date().toISOString(),
@@ -754,7 +769,7 @@ export const accrualService = {
     },
     // YENİ EKLENDİ: Belirli bir göreve ait tahakkukları getiren fonksiyon
     async getAccrualsByTaskId(taskId) {
-        if (!isFirebaseAvailable) return { success: true, data: [] };
+        if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor." };
         try {
             const q = query(collection(db, 'accruals'), where('taskId', '==', taskId), orderBy('createdAt', 'desc'));
             const querySnapshot = await getDocs(q);
@@ -811,10 +826,98 @@ export async function createDemoData() {
             id: personResult.data.id, 
             name: personResult.data.name, 
             personType: personResult.data.personType,
-            email: personResult.data.email 
+            email: demoPersonEmail // email buraya eklenmeli
         };
 
-        // ... (demoRecords içeriği aynı) ...
+        const demoRecords = [
+            // Patent
+            {
+                type: 'patent',
+                title: 'Otomatik Patent Başvurusu',
+                applicationNumber: 'TR2023/P12345',
+                applicationDate: '2023-01-15',
+                status: 'pending',
+                description: 'Bu bir demo patent başvurusudur.',
+                patentClass: 'A01B',
+                owners: [demoOwner],
+                recordStatus: 'aktif'
+            },
+            // Marka
+            {
+                type: 'trademark',
+                title: 'Yaratıcı Marka Tescili',
+                applicationNumber: 'TR2023/M67890',
+                applicationDate: '2023-03-20',
+                status: 'registered',
+                description: 'Bu bir demo marka tescilidir.',
+                niceClass: '01,05',
+                owners: [demoOwner],
+                recordStatus: 'aktif',
+                trademarkImage: '[https://via.placeholder.com/150/FF0000/FFFFFF?text=Marka](https://via.placeholder.com/150/FF0000/FFFFFF?text=Marka)' // Demo görsel eklendi
+            },
+            // Telif Hakkı
+            {
+                type: 'copyright',
+                title: 'Dijital Sanat Eseri Telif',
+                applicationDate: '2023-05-10',
+                status: 'active',
+                description: 'Demo telif hakkı kaydı.',
+                workType: 'Resim',
+                owners: [demoOwner],
+                recordStatus: 'aktif'
+            },
+            // Tasarım
+            {
+                type: 'design',
+                title: 'Yenilikçi Ürün Tasarımı',
+                applicationNumber: 'TR2023/D11223',
+                applicationDate: '2023-07-01',
+                status: 'approved',
+                description: 'Demo tasarım kaydı.',
+                designClass: '01.01',
+                owners: [demoOwner],
+                recordStatus: 'aktif'
+            }
+        ];
+
+        // Demo kayıtları ekleme
+        for (const recordData of demoRecords) {
+            const addRecordResult = await ipRecordsService.addRecord(recordData);
+            if (!addRecordResult.success) {
+                console.error("Demo kayıt oluşturulamadı:", recordData.title, addRecordResult.error);
+                continue;
+            }
+            const newRecordId = addRecordResult.id;
+
+            // Her yeni kayıt için başlangıç 'Başvuru' işlemini ekle
+            // transactionTypes.json'daki 'id' alanını kullanacağız
+            const applicationTransactionType = transactionTypeService.getTransactionTypes().then(result => {
+                if (result.success) {
+                    return result.data.find(type => 
+                        type.hierarchy === 'parent' && 
+                        type.alias === 'Başvuru' && 
+                        type.applicableToMainType.includes(recordData.type)
+                    );
+                }
+                return null;
+            });
+
+            const initialTransaction = await applicationTransactionType;
+
+            if (initialTransaction) {
+                const initialTransactionData = {
+                    type: initialTransaction.id, // "patent_application" gibi ID'yi kullan
+                    designation: initialTransaction.alias || initialTransaction.name, // Başvuru
+                    description: `Yeni ${recordData.type} kaydı için başlangıç başvurusu.`,
+                    timestamp: new Date(recordData.applicationDate).toISOString(), // Başvuru tarihiyle aynı yapabiliriz
+                    transactionHierarchy: 'parent'
+                };
+                await ipRecordsService.addTransactionToRecord(newRecordId, initialTransactionData);
+                console.log(`İlk 'Başvuru' işlemi ${recordData.title} kaydına eklendi.`);
+            } else {
+                console.warn(`'${recordData.type}' için uygun 'Başvuru' işlem tipi bulunamadı. İlk işlem eklenemedi.`);
+            }
+        }
 
         console.log('✅ Demo verisi başarıyla oluşturuldu!');
 
