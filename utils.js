@@ -406,3 +406,92 @@ export function exportTableToPdf(tableId, filename = 'rapor') {
     html2pdf().from(printContent).set(opt).save();
     showNotification(`Tablo başarıyla '${filename}.pdf' olarak dışa aktarıldı!`, 'success');
 }
+// --- YENİ EKLENEN KISIM: Resmi Tatiller ve Tarih Hesaplama Fonksiyonları ---
+
+// Türkiye'nin 2025 ve 2026 yılları için resmi tatiller listesi (YYYY-MM-DD formatında)
+export const TURKEY_HOLIDAYS = [
+    // 2025 Tatilleri
+    "2025-01-01", // Yılbaşı
+    "2025-03-30", // Ramazan Bayramı 1. Gün (Arife: 2025-03-29 - Cumartesi, yarım gün - hafta sonu)
+    "2025-03-31", // Ramazan Bayramı 2. Gün
+    "2025-04-01", // Ramazan Bayramı 3. Gün
+    "2025-04-23", // Ulusal Egemenlik ve Çocuk Bayramı
+    "2025-05-01", // Emek ve Dayanışma Günü
+    "2025-05-19", // Atatürk'ü Anma, Gençlik ve Spor Bayramı
+    "2025-06-06", // Kurban Bayramı 1. Gün (Arife: 2025-06-05 - Perşembe, yarım gün)
+    "2025-06-07", // Kurban Bayramı 2. Gün (Cumartesi - hafta sonu)
+    "2025-06-08", // Kurban Bayramı 3. Gün (Pazar - hafta sonu)
+    "2025-06-09", // Kurban Bayramı 4. Gün
+    "2025-07-15", // Demokrasi ve Milli Birlik Günü
+    "2025-08-30", // Zafer Bayramı (Cumartesi - hafta sonu)
+    "2025-10-29", // Cumhuriyet Bayramı (Arife: 2025-10-28 - Salı, yarım gün)
+
+    // 2026 Tatilleri
+    "2026-01-01", // Yılbaşı
+    "2026-03-19", // Ramazan Bayramı 1. Gün (Arife: 2026-03-18 - Çarşamba, yarım gün)
+    "2026-03-20", // Ramazan Bayramı 2. Gün
+    "2026-03-21", // Ramazan Bayramı 3. Gün (Cumartesi - hafta sonu)
+    "2026-03-22", // Ramazan Bayramı 4. Gün (Pazar - hafta sonu)
+    "2026-04-23", // Ulusal Egemenlik ve Çocuk Bayramı
+    "2026-05-01", // Emek ve Dayanışma Günü
+    "2026-05-27", // Kurban Bayramı 1. Gün (Arife: 2026-05-26 - Salı, yarım gün)
+    "2026-05-28", // Kurban Bayramı 2. Gün
+    "2026-05-29", // Kurban Bayramı 3. Gün
+    "2026-05-30", // Kurban Bayramı 4. Gün (Cumartesi - hafta sonu)
+    "2026-07-15", // Demokrasi ve Milli Birlik Günü
+    "2026-08-30", // Zafer Bayramı (Pazar - hafta sonu)
+    "2026-10-29"  // Cumhuriyet Bayramı (Arife: 2026-10-28 - Çarşamba, yarım gün)
+];
+
+/**
+ * Bir tarihin hafta sonu olup olmadığını kontrol eder.
+ * @param {Date} date - Kontrol edilecek tarih objesi.
+ * @returns {boolean} - Hafta sonu ise true, değilse false.
+ */
+export function isWeekend(date) {
+    const day = date.getDay(); // 0 for Sunday, 6 for Saturday
+    return day === 0 || day === 6;
+}
+
+/**
+ * Bir tarihin resmi tatil olup olmadığını kontrol eder.
+ * Tatiller TURKEY_HOLIDAYS dizisinde YYYY-MM-DD formatında olmalıdır.
+ * @param {Date} date - Kontrol edilecek tarih objesi.
+ * @param {string[]} holidays - YYYY-MM-DD formatında tatil tarihleri dizisi.
+ * @returns {boolean} - Tatil ise true, değilse false.
+ */
+export function isHoliday(date, holidays) {
+    const dateString = date.toISOString().slice(0, 10); // YYYY-MM-DD formatına çevir
+    return holidays.includes(dateString);
+}
+
+/**
+ * Bir tarihe belirtilen ay kadar ekler.
+ * Ayın son günleri gibi özel durumları Date objesi otomatik yönetir.
+ * @param {Date} date - Başlangıç tarihi.
+ * @param {number} months - Eklenecek ay sayısı.
+ * @returns {Date} - Yeni tarih objesi.
+ */
+export function addMonthsToDate(date, months) {
+    const newDate = new Date(date);
+    newDate.setMonth(newDate.getMonth() + months);
+    return newDate;
+}
+
+/**
+ * Belirtilen tarihten itibaren bir sonraki ilk iş gününü bulur (hafta sonu ve resmi tatil kontrolü yaparak).
+ * @param {Date} startDate - Başlangıç tarihi.
+ * @param {string[]} holidays - YYYY-MM-DD formatında tatil tarihleri dizisi.
+ * @returns {Date} - Bir sonraki ilk iş günü.
+ */
+export function findNextWorkingDay(startDate, holidays) {
+    let currentDate = new Date(startDate);
+    
+    // Saati ve dakikayı sıfırla, böylece tarih karşılaştırmaları doğru olur
+    currentDate.setHours(0, 0, 0, 0); 
+
+    while (isWeekend(currentDate) || isHoliday(currentDate, holidays)) {
+        currentDate.setDate(currentDate.getDate() + 1); // Bir sonraki güne geç
+    }
+    return currentDate;
+}
