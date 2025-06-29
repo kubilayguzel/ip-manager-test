@@ -737,6 +737,7 @@
 
                         if (deliveryDate && childTransactionType.duePeriod !== undefined && childTransactionType.duePeriod !== null) {
                             const initialDate = new Date(deliveryDate);
+                            initialDate.setHours(0,0,0,0); // Saati sıfırla
                             const originalCalculatedDate = addMonthsToDate(initialDate, childTransactionType.duePeriod);
                             
                             const finalOfficialDate = findNextWorkingDay(originalCalculatedDate, TURKEY_HOLIDAYS);
@@ -751,16 +752,16 @@
                             };
 
                             // Eğer operasyonel son tarih boşsa, resmi son tarihten 3 gün öncesine ayarla
-                            if (!taskDueDate) { // taskDueDate başlangıçta null, bu yüzden kontrol ediliyor
+                            // `dueDate` formda null ise veya bu işlem bir `officialDueDate` tetikliyorsa
+                            // ve taskDueDate boşsa (manuel olarak ayarlanmadıysa)
+                            if (!taskDueDate) { 
                                 const threeDaysBeforeOfficial = new Date(officialDueDate);
                                 threeDaysBeforeOfficial.setDate(officialDueDate.getDate() - 3);
                                 
-                                // 3 gün öncesi de hafta sonu veya tatilse, bir önceki iş gününü bul
-                                // Bu kısım kullanıcının isteğine göre değişebilir: iş günü olana kadar GERİ Mİ gitsin, yoksa İLK GÜNÜ MÜ seçsin?
-                                // Şu anki mantık, 3 gün geriye gittikten sonra, eğer bu gün hafta sonu veya tatilse, geriye doğru ilk iş gününü bulur.
+                                // Geriye doğru ilk iş gününü bul
                                 let tempDueDate = new Date(threeDaysBeforeOfficial);
                                 while (isWeekend(tempDueDate) || isHoliday(tempDueDate, TURKEY_HOLIDAYS)) {
-                                    tempDueDate.setDate(tempDueDate.getDate() - 1); // Geriye doğru git
+                                    tempDueDate.setDate(tempDueDate.getDate() - 1); 
                                 }
                                 taskDueDate = tempDueDate.toISOString().slice(0, 10);
                             }
@@ -917,6 +918,7 @@
                             
                             if (deliveryDate && selectedChildTransaction.duePeriod !== undefined && selectedChildTransaction.duePeriod !== null) {
                                 const initialDate = new Date(deliveryDate);
+                                initialDate.setHours(0,0,0,0); // Saati sıfırla
                                 const originalCalculatedDate = addMonthsToDate(initialDate, selectedChildTransaction.duePeriod);
                                 
                                 const finalOfficialDate = findNextWorkingDay(originalCalculatedDate, TURKEY_HOLIDAYS);
@@ -1049,9 +1051,9 @@
                 }
 
                 // YENİ FONKSİYON: Alt işlem türü ile tetiklenecek görev türünü eşleştirir
+                // Bu fonksiyon artık transactionType objesini alıyor
                 mapTransactionToTask = (selectedChildTransactionType, recordType) => { 
                     // selectedChildTransactionType artık doğrudan tüm işlem tipi objesini içeriyor
-                    // recordType şu anda doğrudan kullanılmıyor, ancak gelecekteki koşullar için tutulabilir.
                     return selectedChildTransactionType.taskTriggered || null; 
                 }
             }
