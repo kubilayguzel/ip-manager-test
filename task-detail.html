@@ -961,29 +961,27 @@
                         return;
                     }
                     const deliveryDate = new Date(deliveryDateStr);
-                    deliveryDate.setHours(0,0,0,0); // Tarih karşılaştırmaları için saat, dakika, saniyeyi sıfırla
+                    deliveryDate.setHours(0, 0, 0, 0); // Tarih karşılaştırmaları için saat, dakika, saniyeyi sıfırla
 
                     console.log('DEBUG: Tebliğ Tarihi:', deliveryDate.toISOString().slice(0,10));
                     console.log('DEBUG: Current Task Type ID:', this.currentTask.taskType);
                     console.log('DEBUG: All Transaction Types:', this.allTransactionTypes);
 
-                    // duePeriod'u görev objesinin detaylarından almayı dene (eğer indexing sırasında kaydedildiyse)
-                    let duePeriod = this.currentTask.officialDueDateDetails?.periodMonths;
-                    let sourceOfDuePeriod = 'task.officialDueDateDetails';
+                    // duePeriod'u doğrudan görev tipinin tanımından almaya çalış
+                    // Görev tipini allTransactionTypes listesinden ID'sine göre bul
+                    const taskTypeObj = this.allTransactionTypes.find(t => t.id === this.currentTask.taskType);
+                    let duePeriod = null;
+                    let sourceOfDuePeriod = 'transactionType.duePeriod'; // Kaynağı güncelledik
 
-                    // Eğer görev detaylarında duePeriod yoksa, görev tipinin kendi tanımından almaya çalış
-                    if (duePeriod === undefined || duePeriod === null) {
-                        const taskTypeObj = this.allTransactionTypes.find(t => t.id === this.currentTask.taskType);
-                        if (taskTypeObj && (taskTypeObj.duePeriod !== undefined && taskTypeObj.duePeriod !== null)) {
-                            duePeriod = taskTypeObj.duePeriod;
-                            sourceOfDuePeriod = 'transactionType.duePeriod';
-                        }
+                    // Eğer görev tipi objesi bulunduysa ve duePeriod özelliği varsa onu kullan
+                    if (taskTypeObj && (taskTypeObj.duePeriod !== undefined && taskTypeObj.duePeriod !== null)) {
+                        duePeriod = taskTypeObj.duePeriod;
                     }
                     
                     console.log('DEBUG: Bulunan duePeriod:', duePeriod, 'Kaynak:', sourceOfDuePeriod);
 
-                    if (duePeriod === undefined || duePeriod === null) {
-                        showNotification('Seçilen görev tipi veya görev detayları için duePeriod tanımlanmamış. Resmi son tarih hesaplanamaz.', 'warning');
+                    if (duePeriod === null) { // duePeriod undefined veya null ise
+                        showNotification('Seçilen görev tipi için duePeriod tanımlanmamış. Resmi son tarih hesaplanamaz.', 'warning');
                         this.calculatedOfficialDueDate = null;
                         this.calculatedOperationalDueDate = null;
                         this.calculatedOfficialDueDateDetails = null;
@@ -1022,7 +1020,6 @@
 
                     showNotification('Resmi ve Operasyonel son tarihler hesaplandı. Kaydetmek için "Değişiklikleri Kaydet" butonuna tıklayın.', 'info', 5000);
                 }
-
 
                 async handleTaskUpdate(e) {
                     e.preventDefault();
