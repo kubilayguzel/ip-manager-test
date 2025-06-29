@@ -333,8 +333,8 @@
                                 <th>İlgili Kayıt</th>
                                 <th>Tip</th>
                                 <th>Öncelik</th>
-                                <th>Operasyonel Son Tarih</th> 
-                                <th>Resmi Son Tarih</th> 
+                                <th>Son Tarih</th>
+                                <th>Resmi Son Tarih</th> <!-- Yeni Kolon Eklendi -->
                                 <th>Durum</th>
                                 <th>İşlemler</th>
                             </tr>
@@ -451,7 +451,7 @@
 
     <script type="module">
         import { authService, taskService, ipRecordsService, accrualService, personService, auth, transactionTypeService } from './firebase-config.js';
-        import { showNotification } from './utils.js';
+        import { showNotification } from './utils.js'; // showNotification utils.js'ten geliyor
         import { loadSharedLayout } from './js/layout-loader.js';
 
         document.addEventListener('DOMContentLoaded', async () => {
@@ -582,6 +582,24 @@
                     }
                 }
 
+                populateStatusFilterDropdown() {
+                    const statusFilterSelect = document.getElementById('statusFilter');
+                    statusFilterSelect.innerHTML = '<option value="all">Tümü</option>'; // İlk seçenek
+                    
+                    // Sadece bu sayfada görünen durumları ekle
+                    const relevantStatuses = [
+                        'open', 'in-progress', 'completed', 'pending', 'cancelled', 'on-hold', 'awaiting-approval',
+                        'awaiting_client_approval', 'client_approval_opened', 'client_approval_closed', 'client_no_response_closed'
+                    ];
+
+                    relevantStatuses.forEach(statusValue => {
+                        const option = document.createElement('option');
+                        option.value = statusValue;
+                        option.textContent = this.statusDisplayMap[statusValue] || statusValue;
+                        statusFilterSelect.appendChild(option);
+                    });
+                }
+
                 renderTasks(filterStatus = 'all') {
                     const tableBody = document.getElementById('myTasksTableBody');
                     const noTasksMessage = document.getElementById('noTasksMessage');
@@ -608,13 +626,16 @@
                         // Görünen adı alias veya name'den al, yoksa task.taskType'ı kullan
                         const taskTypeDisplayName = transactionTypeObj ? (transactionTypeObj.alias || transactionTypeObj.name) : (task.taskType || 'Bilinmiyor');
 
+                        // Resmi Son Tarihi formatla
+                        const officialDueDateDisplay = task.officialDueDate ? task.officialDueDate.toDate().toLocaleDateString('tr-TR') : '-';
+
                         row.innerHTML = `
                             <td>${task.id}</td>
                             <td>${task.relatedIpRecordTitle || 'N/A'}</td>
                             <td>${taskTypeDisplayName}</td>
                             <td><span class="priority-badge ${priorityClass}">${task.priority}</span></td>
                             <td>${task.dueDate ? new Date(task.dueDate).toLocaleDateString('tr-TR') : 'Belirtilmemiş'}</td>
-                            <td>${task.officialDueDate ? new Date(task.officialDueDate.seconds * 1000).toLocaleDateString('tr-TR') : 'Belirtilmemiş'}</td> <td><span class="status-badge ${statusClass}">${this.statusDisplayMap[task.status] || task.status}</span></td>
+                            <td>${officialDueDateDisplay}</td> <!-- Yeni kolon: Resmi Son Tarih -->
                             <td><span class="status-badge ${statusClass}">${this.statusDisplayMap[task.status] || task.status}</span></td>
                             <td>
                                 <button class="action-btn" data-id="${task.id}" data-action="view">Görüntüle</button>
@@ -693,19 +714,17 @@
                     // Görünen adı alias veya name'den al, yoksa task.taskType'ı kullan
                     const taskTypeDisplayName = transactionTypeObj ? (transactionTypeObj.alias || transactionTypeObj.name) : (task.taskType || 'Bilinmiyor');
 
+                    // Resmi Son Tarih ve Detayları
+                    const officialDueDateDisplay = task.officialDueDate ? task.officialDueDate.toDate().toLocaleDateString('tr-TR') : '-';
+                    const officialDueDateDetailsDisplay = task.officialDueDateDetails ? JSON.stringify(task.officialDueDateDetails, null, 2) : '-';
 
                         modalBody.innerHTML = `
                             <div class="modal-detail-grid">
                                 ${renderField('İş No.', task.id)}
                                 ${renderField('Atanan Kişi', task.assignedTo_email)}
                                 ${renderField('İş Türü', taskTypeDisplayName)}
-                                ${renderField('Operasyonel Son Tarih', task.dueDate ? new Date(task.dueDate).toLocaleDateString('tr-TR') : '-')}
-                                ${renderField('Resmi Son Tarih', task.officialDueDate ? new Date(task.officialDueDate.seconds * 1000).toLocaleDateString('tr-TR') : '-')} ${task.officialDueDateDetails ? `
-                                <h4 class="modal-detail-section-title">Resmi Son Tarih Detayları</h4>
-                                ${renderField('Başlangıç Tebliğ Tarihi', task.officialDueDateDetails.initialDeliveryDate || '-')}
-                                ${renderField('Periyot (Ay)', task.officialDueDateDetails.periodMonths || '-')}
-                                ${renderField('Orijinal Hesaplanan Tarih', task.officialDueDateDetails.originalCalculatedDate || '-')}
-                                ${renderField('Nihai Resmi Son Tarih', task.officialDueDateDetails.finalOfficialDueDate || '-')}` : ''}
+                                ${renderField('Bitiş Tarihi', task.dueDate ? new Date(task.dueDate).toLocaleDateString('tr-TR') : '-')}
+                                ${renderField('Resmi Son Tarih', officialDueDateDisplay)}
                                 ${renderField('Öncelik', task.priority)}
                                 ${renderField('İlgili Portföy Kaydı', ipRecord ? ipRecord.title : 'Bulunamadı')}
                                 ${renderField('İlgili Taraf', relatedParty ? relatedParty.name : '')}
@@ -713,7 +732,7 @@
                                     <div class="modal-detail-label">Açıklama</div>
                                     <div class="modal-detail-value long-text">${task.description || '-'}</div>
                                 </div>
-                                
+                                ${officialDueDateDetailsDisplay !== '-' ? `<div class="modal-detail-item full-width"><div class="modal-detail-label">Resmi Son Tarih Detayları</div><div class="modal-detail-value long-text"><pre>${officialDueDateDetailsDisplay}</pre></div></div>` : ''}
                                 <h4 class="modal-detail-section-title">İlişkili Tahakkuklar</h4>
                                 <div class="related-accruals-section">${accrualsHtml}</div>
                                 
@@ -854,10 +873,10 @@
                         applyVatToOfficialFee: applyVatToOfficial,
                         totalAmount,
                         totalAmountCurrency: 'TRY',
-                        remainingAmount: totalAmount,
+                        remainingAmount: totalAmount, // Yeni tahakkuk başlangıçta toplam tutar kadar kalan tutara sahip
                         tpInvoiceParty: this.createMyTaskSelectedTpInvoiceParty ? { id: this.createMyTaskSelectedTpInvoiceParty.id, name: this.createMyTaskSelectedTpInvoiceParty.name } : null,
                         serviceInvoiceParty: this.createMyTaskSelectedServiceInvoiceParty ? { id: this.createMyTaskSelectedServiceInvoiceParty.id, name: this.createMyTaskSelectedServiceInvoiceParty.name } : null,
-                        status: 'unpaid',
+                        status: 'unpaid', // Yeni tahakkuk başlangıçta ödenmedi durumunda
                         createdAt: new Date().toISOString()
                     };
 
@@ -866,7 +885,7 @@
                         if (result.success) {
                             showNotification('Ek tahakkuk başarıyla oluşturuldu!', 'success');
                             this.closeModal('createMyTaskAccrualModal');
-                            await this.loadAllData();
+                            await this.loadAllData(); // Tabloyu ve tüm verileri yenile
                         } else {
                             throw new Error(result.error);
                         }
