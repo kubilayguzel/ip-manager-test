@@ -838,7 +838,7 @@
                     const accrualInputs = ['officialFee', 'serviceFee', 'vatRate', 'applyVatToOfficialFee'];
                     accrualInputs.forEach(id => {
                         const el = document.getElementById(id);
-                        if (el) { // El has been found
+                        if (el) { 
                             el.addEventListener('input', () => this.calculateTotalAmount());
                             el.addEventListener('change', () => this.calculateTotalAmount());
                         }
@@ -1027,7 +1027,7 @@
                     const currentTaskDeliveryDateFormatted = this.currentTask.deliveryDate ? 
                         (this.currentTask.deliveryDate instanceof Date ? this.currentTask.deliveryDate.toISOString().slice(0, 10) : 
                         (typeof this.currentTask.deliveryDate === 'object' && this.currentTask.deliveryDate.toDate) ? this.currentTask.deliveryDate.toDate().toISOString().slice(0, 10) :
-                        this.currentTask.deliveryDate.slice(0, 10)) : null;
+                        String(this.currentTask.deliveryDate).slice(0, 10)) : null; // Added String() conversion
 
                     if (this.calculatedOfficialDueDate && (form.deliveryDate.value !== currentTaskDeliveryDateFormatted || !this.currentTask.officialDueDate)) {
                         let confirmation = true;
@@ -1035,11 +1035,11 @@
                         const existingOfficialDueDateFormatted = this.currentTask.officialDueDate ? 
                             (this.currentTask.officialDueDate instanceof Date ? this.currentTask.officialDueDate.toISOString().slice(0,10) :
                             (typeof this.currentTask.officialDueDate === 'object' && this.currentTask.officialDueDate.toDate) ? this.currentTask.officialDueDate.toDate().toISOString().slice(0,10) :
-                            this.currentTask.officialDueDate.slice(0,10)) : null;
+                            String(this.currentTask.officialDueDate).slice(0,10)) : null; // Added String() conversion
                         const existingDueDateFormatted = this.currentTask.dueDate; // dueDate zaten string YYYY-MM-DD formatında olmalı
 
-                        if (existingOfficialDueDateFormatted !== this.calculatedOfficialDueDateDetails.finalOfficialDueDate || 
-                            existingDueDateFormatted !== this.calculatedOfficialDueDateDetails.finalOperationalDueDate) {
+                        if (existingOfficialDueDateFormatted !== (this.calculatedOfficialDueDateDetails?.finalOfficialDueDate || null) || // Check for null before accessing property
+                            existingDueDateFormatted !== (this.calculatedOfficialDueDateDetails?.finalOperationalDueDate || null)) { // Check for null before accessing property
                             confirmation = confirm('Tebliğ tarihini değiştirdiniz veya yeni girdiniz. Resmi son tarih ve Operasyonel son tarih yeniden hesaplanacak. Onaylıyor musunuz?\n\n' +
                                                    `Yeni Resmi Son Tarih: ${this.calculatedOfficialDueDateDetails.finalOfficialDueDate}\n` +
                                                    `Yeni Operasyonel Son Tarih: ${this.calculatedOfficialDueDateDetails.finalOperationalDueDate}`);
@@ -1438,10 +1438,10 @@
 
                 handlePaymentReceiptUpload(files) {
                     for (const file of files) {
-                        if (file.size > 5 * 1024 * 1024) // 5MB limit
+                        if (file.size > 5 * 1024 * 1024) { // 5MB limit
                             showNotification(`"${file.name}" dosyası 5MB'tan büyük.`, 'error');
                             continue;
-                        }
+                        } // Düzeltildi: Fazla kapanış parantezi kaldırıldı
                         const allowedTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'image/jpeg', 'image/png'];
                         if (!allowedTypes.includes(file.type)) {
                             showNotification(`"${file.name}" desteklenmeyen bir formattadır.`, 'error');
@@ -1469,7 +1469,8 @@
                             showNotification(`"${file.name}" okunamadı.`, 'error');
                         });
                     }
-                
+                }
+
                 renderPaymentReceiptFileList() {
                     const fileList = document.getElementById('paymentReceiptFileList');
                     fileList.innerHTML = '';
