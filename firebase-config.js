@@ -443,21 +443,16 @@ export const taskService = {
             return { success: false, error: error.message };
         }
     },
-async getTasksForUser(userId) {
-    if (!isFirebaseAvailable) return { success: true, data: [] };
-    try {
-        const q = query(
-            collection(db, "tasks"),
-            where("assignedTo_uid", "==", userId),
-            orderBy("createdAt", "desc")
-        );
-        const querySnapshot = await getDocs(q);
-        return { success: true, data: querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) };
-    } catch (error) {
-        return { success: false, error: error.message };
-    }
-},
-
+    async getTasksForUser(userId) {
+        if (!isFirebaseAvailable) return { success: true, data: [] };
+        try {
+            const q = query(collection(db, "tasks"), where("assignedTo_uid", "==", userId), orderBy("createdAt", "desc"));
+            const querySnapshot = await getDocs(q);
+            return { success: true, data: querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) };
+        } catch (error) {
+            return { success: false, error: error.message };
+        }
+    },
     async updateTask(taskId, updates) {
         if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor." };
         const user = authService.getCurrentUser();
