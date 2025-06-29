@@ -304,6 +304,7 @@
                         <div class="form-group"><label for="taskStatus" class="form-label">Durum:</label><select id="taskStatus" class="form-select"></select></div>
                         <div class="form-group"><label for="assignedTo" class="form-label">Atanan Kullanıcı:</label><select id="assignedTo" class="form-select"></select></div>
                         <div class="form-group"><label for="taskDueDate" class="form-label">Operasyonel Son Tarih:</label><input type="date" id="taskDueDate" class="form-input"></div>
+                        <!-- YENİ EKLENEN KISIM: Tebliğ Tarihi -->
                         <div class="form-group"><label for="deliveryDate" class="form-label">Tebliğ Tarihi:</label><input type="date" id="deliveryDate" name="deliveryDate" class="form-input"></div>
                     </div>
 
@@ -683,8 +684,14 @@
                     document.getElementById('taskStatus').value = task.status || 'open';
                     document.getElementById('assignedTo').value = task.assignedTo_uid || '';
                     document.getElementById('taskDueDate').value = task.dueDate || '';
-                    // YENİ: Tebliğ Tarihi alanını doldur
-                    document.getElementById('deliveryDate').value = task.deliveryDate ? task.deliveryDate.slice(0, 10) : '';
+                    // YENİ: Tebliğ Tarihi alanını doldur - OfficialDueDate'tan gelen deliveryDate'i kullanıyoruz
+                    // task.deliveryDate değeri doğrudan string olarak geliyorsa slice(0,10) kullanırız
+                    // Eğer timestamp ise toDate().toISOString().slice(0,10) kullanılır
+                    document.getElementById('deliveryDate').value = task.deliveryDate ? 
+                        (task.deliveryDate instanceof Date ? task.deliveryDate.toISOString().slice(0, 10) : 
+                        (typeof task.deliveryDate === 'object' && task.deliveryDate.toDate) ? task.deliveryDate.toDate().toISOString().slice(0, 10) :
+                        task.deliveryDate.slice(0, 10)) : '';
+
 
                     const taskTypeParts = task.taskType ? task.taskType.split('_') : [];
                     const mainType = taskTypeParts[0] || '';
@@ -815,9 +822,11 @@
                     // Tahakkuk form input listener'ları
                     const accrualInputs = ['officialFee', 'serviceFee', 'vatRate', 'applyVatToOfficialFee'];
                     accrualInputs.forEach(id => {
-                        const element = document.getElementById(id);
-                        if (el) el.addEventListener('input', () => this.calculateTotalAmount());
-                        if (el) el.addEventListener('change', () => this.calculateTotalAmount());
+                        const el = document.getElementById(id);
+                        if (el) {
+                            el.addEventListener('input', () => this.calculateTotalAmount());
+                            el.addEventListener('change', () => this.calculateTotalAmount());
+                        }
                     });
                     // Person Modal listener'ları
                     const closePersonModal = document.getElementById('closeAddPersonModal');
@@ -841,7 +850,7 @@
                     // Tahakkuk listesi için event delegation (en önemli kısım!)
                     this.setupAccrualContainerListeners();
 
-                    console.log('DEBUG: Event listener\'lar başarıyla ayarlandı');
+                    console.log('DEBUG: Tüm event listener\'lar başarıyla ayarlandı');
                 }
 
                 // Mevcut listener'ları temizlemek için yardımcı fonksiyon
@@ -939,7 +948,14 @@
                         updatedTaskData.status = form.taskStatus.value;
                     } else if (this.currentTask.status) {
                         // Eğer formda değer değişmediyse ama currentTask'te bir değer varsa, onu koru
-                        updatedTaskData.status = this.currentTask.status;
+                        // Bu kısım, eğer formda status alanı null veya undefined dönerse,
+                        // ancak currentTask.status'un bir değeri varsa, bu değeri korumak için.
+                        // Ancak, HTML'de select box'ın varsayılan bir değeri veya boş bir seçeneği olduğu için
+                        // genellikle her zaman bir `form.taskStatus.value` olacaktır.
+                        // Daha doğru bir kontrol:
+                        if (form.taskStatus.value !== this.currentTask.status) {
+                             updatedTaskData.status = form.taskStatus.value;
+                         }
                     }
                     // Eğer hem formda boşsa hem currentTask'te boşsa, undefined kalır, bu da Firestore'un merge davranışıyla uyumludur.
 
