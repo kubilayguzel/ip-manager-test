@@ -929,8 +929,9 @@
                 }
             }
 
-            async recalculateOfficialAndOperationalDueDates() {
+ async recalculateOfficialAndOperationalDueDates() {
                     console.log('DEBUG: recalculateOfficialAndOperationalDueDates çağrıldı.');
+                    console.log('DEBUG: Current Task Object:', this.currentTask); // BU SATIRI BURAYA EKLEYİN
                     const deliveryDateStr = document.getElementById('deliveryDate').value;
                     
                     if (!deliveryDateStr) {
@@ -1011,7 +1012,6 @@
 
                     showNotification('Resmi ve Operasyonel son tarihler hesaplandı. Kaydetmek için "Değişiklikleri Kaydet" butonuna tıklayın.', 'info', 5000);
                 }
-
             async handleTaskUpdate(e) {
                 e.preventDefault();
                 const form = document.getElementById('taskDetailForm');
