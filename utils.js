@@ -461,7 +461,12 @@ export function isWeekend(date) {
  * @returns {boolean} - Tatil ise true, değilse false.
  */
 export function isHoliday(date, holidays) {
-    const dateString = date.toISOString().slice(0, 10); // YYYY-MM-DD formatına çevir
+    // YENİ: Tarihin yerel yıl, ay ve gün bileşenlerini kullanarak string oluştur
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0'); // Ay 0'dan başladığı için +1
+    const day = String(date.getDate()).padStart(2, '0');
+    const dateString = `${year}-${month}-${day}`; // YYYY-MM-DD formatı
+
     return holidays.includes(dateString);
 }
 
