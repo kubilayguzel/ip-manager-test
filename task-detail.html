@@ -304,6 +304,7 @@
                         <div class="form-group"><label for="taskStatus" class="form-label">Durum:</label><select id="taskStatus" class="form-select"></select></div>
                         <div class="form-group"><label for="assignedTo" class="form-label">Atanan Kullanıcı:</label><select id="assignedTo" class="form-select"></select></div>
                         <div class="form-group"><label for="taskDueDate" class="form-label">Operasyonel Son Tarih:</label><input type="date" id="taskDueDate" class="form-input"></div>
+                        <!-- YENİ EKLENEN KISIM: Tebliğ Tarihi -->
                         <div class="form-group"><label for="deliveryDate" class="form-label">Tebliğ Tarihi:</label><input type="date" id="deliveryDate" name="deliveryDate" class="form-input"></div>
                     </div>
 
@@ -467,7 +468,7 @@
 
     <div class="modal" id="addPersonModal">
         <div class="modal-content">
-            <span class="close-modal-btn" id="closeAddPersonModal">&times;şçöü.üğşöü.</button>
+            <span class="close-modal-btn" id="closeAddPersonModal">&times;</span>
             <h3 class="modal-title">Yeni Kişi Ekle</h3>
             <form id="personForm">
                 <div class="form-group">
@@ -504,7 +505,7 @@
     </div>
 
     <script type="module">
-        import { authService, taskService, ipRecordsService, personService, accrualService, auth, generateUUID, documentDesignationTranslations } from './firebase-config.js';
+        import { authService, taskService, ipRecordsService, personService, accrualService, auth, generateUUID, documentDesignationTranslations, transactionTypeService } from './firebase-config.js';
         import { showNotification, formatFileSize, readFileAsDataURL, TASK_STATUSES, TURKEY_HOLIDAYS, addMonthsToDate, isWeekend, isHoliday, findNextWorkingDay } from './utils.js';
         import { loadSharedLayout } from './js/layout-loader.js'; // layout-loader.js eklendi
 
@@ -520,6 +521,7 @@
                     this.allIpRecords = [];
                     this.allPersons = [];
                     this.allUsers = [];
+                    this.allTransactionTypes = []; // YENİ: transactionTypes'ı tutacak
                     this.currentAccruals = [];
                     this.currentTaskDocuments = []; // Göreve özel belgeler
                     this.uploadedAccrualReceipts = []; // Tahakkuk modalı için
@@ -527,6 +529,11 @@
                     this.selectedRelatedParty = null;
                     this.selectedTpInvoiceParty = null; // Tahakkuk formu için
                     this.selectedServiceInvoiceParty = null; // Tahakkuk formu için
+
+                    // Hesaplanan tarihler için geçici değişkenler
+                    this.calculatedOfficialDueDate = null;
+                    this.calculatedOperationalDueDate = null;
+                    this.calculatedOfficialDueDateDetails = null;
                 }
 
                 async init() {
@@ -548,11 +555,11 @@
                     }
 
                     try {
-                        // Sıralı veri yükleme
+                        // Sıralı veri yükleme (transactionTypeService eklendi)
                         await this.loadAllData();
                         await this.loadTaskData(); // Task verisini önce yükle
                         
-                        // UI setup
+                        // UI setup (populateDropdown'lar loadTaskData sonrası çağrılmalı)
                         this.populateStatusDropdown();
                         this.populateAssignedToDropdown();
                         this.setupEventListeners(); // Event listener'ları en son ekla
@@ -591,14 +598,17 @@
                 }
                 async loadAllData() {
                     try {
-                        const [ipRecordsResult, personsResult, usersResult] = await Promise.all([
+                        // YENİ: transactionTypeService eklendi
+                        const [ipRecordsResult, personsResult, usersResult, transactionTypesResult] = await Promise.all([
                             ipRecordsService.getRecords(),
                             personService.getPersons(),
-                            taskService.getAllUsers()
+                            taskService.getAllUsers(),
+                            transactionTypeService.getTransactionTypes() // YENİ: İşlem tipleri de yüklendi
                         ]);
                         this.allIpRecords = ipRecordsResult.data || [];
                         this.allPersons = personsResult.data || [];
                         this.allUsers = usersResult.data || [];
+                        this.allTransactionTypes = transactionTypesResult.data || []; // YENİ: İşlem tipleri kaydedildi
                         console.log('DEBUG: Tüm ana veriler yüklendi.');
                     } catch (error) {
                         console.error("Master veriler yüklenirken hata oluştu:", error);
@@ -684,7 +694,7 @@
                     document.getElementById('assignedTo').value = task.assignedTo_uid || '';
                     document.getElementById('taskDueDate').value = task.dueDate || '';
                     
-                    // YENİ: Tebliğ Tarihi alanını doldur
+                    // YENİ: Tebliğ Tarihi alanını doldur - OfficialDueDate'tan gelen deliveryDate'i kullanıyoruz
                     // task.deliveryDate değeri bir Timestamp objesi ise toDate() ile Date objesine çevir
                     // Aksi takdirde, doğrudan string olarak kabul et (indexing.html'den gelen format)
                     let deliveryDateValue = '';
@@ -941,15 +951,23 @@
                 async recalculateOfficialAndOperationalDueDates() {
                     const deliveryDateStr = document.getElementById('deliveryDate').value;
                     if (!deliveryDateStr) {
-                        showNotification('Tebliğ Tarihi boş bırakılamaz.', 'warning');
+                        // showNotification('Tebliğ Tarihi boş bırakılamaz.', 'warning'); // Eğer boş bırakılabilirse bu uyarı kaldırılmalı
+                        this.calculatedOfficialDueDate = null;
+                        this.calculatedOperationalDueDate = null;
+                        this.calculatedOfficialDueDateDetails = null;
                         return;
                     }
                     const deliveryDate = new Date(deliveryDateStr);
                     
+                    // currentTask.taskType bir ID'dir. Bu ID ile allTransactionTypes'tan tam objeyi bul
                     const taskTypeObj = this.allTransactionTypes.find(t => t.id === this.currentTask.taskType);
                     
+                    // duePeriod kontrolü. duePeriod undefined veya null ise hesaplama yapma
                     if (!taskTypeObj || taskTypeObj.duePeriod === undefined || taskTypeObj.duePeriod === null) {
                         showNotification('Seçilen görev tipi için duePeriod tanımlanmamış. Resmi son tarih hesaplanamaz.', 'warning');
+                        this.calculatedOfficialDueDate = null;
+                        this.calculatedOperationalDueDate = null;
+                        this.calculatedOfficialDueDateDetails = null;
                         return;
                     }
 
@@ -958,9 +976,13 @@
 
                     const threeDaysBeforeOfficial = new Date(finalOfficialDueDate);
                     threeDaysBeforeOfficial.setDate(finalOfficialDueDate.getDate() - 3);
-                    const finalOperationalDueDate = findNextWorkingDay(threeDaysBeforeOfficial, TURKEY_HOLIDAYS); // Normalde geriye giderken de findPreviousWorkingDay olmalı, ancak talepte "ilk iş günü" dendiği için ileri gidiyor. Varsayılan olarak en yakın iş günü önceki tarihi bulmak için biraz daha karmaşık bir mantık gerekir. Şimdilik findNextWorkingDay kullanılıyor, bu durumda tarih 3 gün geriye gittikten sonra da ileri doğru ilk iş gününü bulur.
+                    // 3 gün öncesi de hafta sonu veya tatilse, bir önceki iş gününü bul (şimdilik bu fonksiyon geriye gitmiyor, ileriye doğru ilk iş gününü buluyor)
+                    // Gerçek geriye doğru iş günü bulma için daha gelişmiş bir fonksiyon gerekir.
+                    // Şimdilik, sadece ileri doğru ilk iş gününü bulan fonksiyonu kullanırsak, 3 gün öncesi tatilse, ileri doğru ilk iş gününe gider.
+                    // Bu, kullanıcının beklentisinden farklı olabilir. Ancak elimizdeki utils fonksiyonları ile şimdilik bu şekilde yapabiliriz.
+                    const finalOperationalDueDate = findNextWorkingDay(threeDaysBeforeOfficial, TURKEY_HOLIDAYS); 
 
-                    // Hesaplanan değerleri güncel Task objesine geçici olarak kaydet
+                    // Hesaplanan değerleri sınıf özelliklerine kaydet
                     this.calculatedOfficialDueDate = finalOfficialDueDate;
                     this.calculatedOperationalDueDate = finalOperationalDueDate;
                     this.calculatedOfficialDueDateDetails = {
@@ -1000,14 +1022,24 @@
 
                     // Resmi ve Operasyonel son tarihleri hesaplayıp ekle
                     // Kullanıcı deliveryDate'i değiştirdiyse veya ilk defa giriyorsa
-                    if (this.calculatedOfficialDueDate && (form.deliveryDate.value !== this.currentTask.deliveryDate || !this.currentTask.officialDueDate)) {
+                    // Yalnızca deliveryDate değeri değiştiyse veya ilk defa giriliyorsa hesaplama ve onaylama yap.
+                    // currentTask.deliveryDate Firebase Timestamp objesi olabilir, bu yüzden stringe çevirip karşılaştır.
+                    const currentTaskDeliveryDateFormatted = this.currentTask.deliveryDate ? 
+                        (this.currentTask.deliveryDate instanceof Date ? this.currentTask.deliveryDate.toISOString().slice(0, 10) : 
+                        (typeof this.currentTask.deliveryDate === 'object' && this.currentTask.deliveryDate.toDate) ? this.currentTask.deliveryDate.toDate().toISOString().slice(0, 10) :
+                        this.currentTask.deliveryDate.slice(0, 10)) : null;
+
+                    if (this.calculatedOfficialDueDate && (form.deliveryDate.value !== currentTaskDeliveryDateFormatted || !this.currentTask.officialDueDate)) {
                         let confirmation = true;
                         // Eğer hesaplanan tarihler mevcut tarihlerden farklıysa uyarı ver
-                        const existingOfficialDueDate = this.currentTask.officialDueDate instanceof Date ? this.currentTask.officialDueDate.toISOString().slice(0,10) : (this.currentTask.officialDueDate && this.currentTask.officialDueDate.toDate) ? this.currentTask.officialDueDate.toDate().toISOString().slice(0,10) : null;
-                        const existingDueDate = this.currentTask.dueDate;
+                        const existingOfficialDueDateFormatted = this.currentTask.officialDueDate ? 
+                            (this.currentTask.officialDueDate instanceof Date ? this.currentTask.officialDueDate.toISOString().slice(0,10) :
+                            (typeof this.currentTask.officialDueDate === 'object' && this.currentTask.officialDueDate.toDate) ? this.currentTask.officialDueDate.toDate().toISOString().slice(0,10) :
+                            this.currentTask.officialDueDate.slice(0,10)) : null;
+                        const existingDueDateFormatted = this.currentTask.dueDate; // dueDate zaten string YYYY-MM-DD formatında olmalı
 
-                        if (existingOfficialDueDate !== this.calculatedOfficialDueDateDetails.finalOfficialDueDate || 
-                            existingDueDate !== this.calculatedOfficialDueDateDetails.finalOperationalDueDate) {
+                        if (existingOfficialDueDateFormatted !== this.calculatedOfficialDueDateDetails.finalOfficialDueDate || 
+                            existingDueDateFormatted !== this.calculatedOfficialDueDateDetails.finalOperationalDueDate) {
                             confirmation = confirm('Tebliğ tarihini değiştirdiniz veya yeni girdiniz. Resmi son tarih ve Operasyonel son tarih yeniden hesaplanacak. Onaylıyor musunuz?\n\n' +
                                                    `Yeni Resmi Son Tarih: ${this.calculatedOfficialDueDateDetails.finalOfficialDueDate}\n` +
                                                    `Yeni Operasyonel Son Tarih: ${this.calculatedOfficialDueDateDetails.finalOperationalDueDate}`);
@@ -1018,7 +1050,7 @@
                             updatedTaskData.officialDueDateDetails = this.calculatedOfficialDueDateDetails;
                             // Eğer Operasyonel Son Tarih formda boşsa veya hesaplanan yeni bir değer varsa
                             // Sadece Operasyonel Son Tarih alanına dokunulmadıysa otomatik ata
-                            if (!form.taskDueDate.value || form.taskDueDate.value === this.currentTask.dueDate) {
+                            if (!form.taskDueDate.value) { // Eğer formdaki Operasyonel Son Tarih alanı boşsa
                                 updatedTaskData.dueDate = this.calculatedOperationalDueDate.toISOString().slice(0,10);
                             } else {
                                 // Kullanıcı operasyonel son tarihi manuel girdiyse, onu koru
@@ -1406,7 +1438,7 @@
 
                 handlePaymentReceiptUpload(files) {
                     for (const file of files) {
-                        if (file.size > 5 * 1024 * 1024) { // 5MB limit
+                        if (file.size > 5 * 1024 * 1024) // 5MB limit
                             showNotification(`"${file.name}" dosyası 5MB'tan büyük.`, 'error');
                             continue;
                         }
@@ -1437,8 +1469,7 @@
                             showNotification(`"${file.name}" okunamadı.`, 'error');
                         });
                     }
-                }
-
+                
                 renderPaymentReceiptFileList() {
                     const fileList = document.getElementById('paymentReceiptFileList');
                     fileList.innerHTML = '';
