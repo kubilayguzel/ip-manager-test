@@ -949,30 +949,30 @@
                     }
                 }
 
-                closeModal(modalId) {
-                    document.getElementById(modalId).classList.remove('show');
-                    if (modalId === 'taskDetailModal') { /* mevcut modal'ı resetle */ }
-                    if (modalId === 'createMyTaskAccrualModal') {
-                        document.getElementById('createMyTaskAccrualForm').reset();
-                        this.currentTaskForAccrual = null;
-                        this.createMyTaskSelectedTpInvoiceParty = null;
-                        this.createMyTaskSelectedServiceInvoiceParty = null;
-                        document.getElementById('createMyTaskSelectedTpInvoicePartyDisplay').style.display = 'none';
-                        document.getElementById('createMyTaskSelectedServiceInvoicePartyDisplay').style.display = 'none';
-                        document.getElementById('createMyTaskTpInvoicePartySearch').value = '';
-                        document.getElementById('createMyTaskServiceInvoicePartySearch').value = '';
-                        document.getElementById('createMyTaskTotalAmountDisplay').textContent = '0.00 TRY';
-                    }
-                    if (modalId === 'changeTriggeredTaskStatusModal') {
-                        this.currentTaskForStatusChange = null;
-                    }
-                }
-            }
+ closeModal(modalId) {
+    document.getElementById(modalId).classList.remove('show');
+    if (modalId === 'taskDetailModal') { /* mevcut modal'ı resetle */ }
+    if (modalId === 'createMyTaskAccrualModal') {
+        document.getElementById('createMyTaskAccrualForm').reset();
+        this.currentTaskForAccrual = null;
+        this.createMyTaskSelectedTpInvoiceParty = null;
+        this.createMyTaskSelectedServiceInvoiceParty = null;
+        document.getElementById('createMyTaskTpInvoicePartyDisplay').style.display = 'none';
+        document.getElementById('createMyTaskServiceInvoicePartyDisplay').style.display = 'none';
+        document.getElementById('createMyTaskTpInvoicePartySearch').value = '';
+        document.getElementById('createMyTaskServiceInvoicePartySearch').value = '';
+        document.getElementById('createMyTaskTotalAmountDisplay').textContent = '0.00 TRY';
+    }
+    if (modalId === 'changeTriggeredTaskStatusModal') {
+        this.currentTaskForStatusChange = null;
+    }
+} // BU SATIR sadece closeModal() fonksiyonunu kapatır
 
-            const myTasksModule = new MyTasksModule();
-            myTasksModule.init();
-        });
-        window.triggeredTasksModule = this;
-    </script>
+} // BU SATIR class MyTasksModule {}’yi kapatır
+const myTasksModule = new MyTasksModule();
+    await myTasksModule.init();
+    window.triggeredTasksModule = myTasksModule;
+});
+</script>
 </body>
 </html>
