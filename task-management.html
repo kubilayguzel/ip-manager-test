@@ -385,7 +385,7 @@
                                 <th>Öncelik</th>
                                 <th>Atanan</th>
                                 <th>Operasyonel Son Tarih</th>
-                                <th>Resmi Son Tarih</th> 
+                                <th>Resmi Son Tarih</th>
                                 <th>Durum</th>
                                 <th>İşlemler</th>
                             </tr>
@@ -749,7 +749,7 @@
                             <td><span class="priority-badge ${priorityClass}">${task.priority}</span></td>
                             <td>${assignedToDisplayName}</td>
                             <td>${task.dueDate ? new Date(task.dueDate).toLocaleDateString('tr-TR') : 'Belirtilmemiş'}</td>
-                            <td>${task.officialDueDate ? new Date(task.officialDueDate.seconds * 1000).toLocaleDateString('tr-TR') : 'Belirtilmemiş'}</td> <td><span class="status-badge ${statusClass}">${statusText}</span></td>
+                            <td>${task.officialDueDate ? new Date(task.officialDueDate.seconds * 1000).toLocaleDateString('tr-TR') : 'Belirtilmemiş'}</td> 
                             <td><span class="status-badge ${statusClass}">${statusText}</span></td>
                             <td>
                                 <button class="action-btn view-btn" data-id="${task.id}">Görüntüle</button>
