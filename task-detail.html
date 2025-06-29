@@ -929,7 +929,7 @@
                 }
             }
 
- async recalculateOfficialAndOperationalDueDates() {
+async recalculateOfficialAndOperationalDueDates() {
     console.log('DEBUG: recalculateOfficialAndOperationalDueDates çağrıldı.');
     const deliveryDateStr = document.getElementById('deliveryDate').value;
     
@@ -948,95 +948,38 @@
     deliveryDate.setHours(0, 0, 0, 0);
 
     console.log('DEBUG: Güncellenen Tebliğ Tarihi:', this.formatDateToYYYYMMDD(deliveryDate));
-    
-    // *** DETAYLI DEBUG ÇIKTISI ***
-    console.log('=== TASK OBJESİ DETAY ===');
-    console.log('Task ID:', this.currentTask.id);
-    console.log('Task Type:', this.currentTask.taskType);
-    console.log('Task Title:', this.currentTask.title);
-    console.log('officialDueDateDetails tamamı:', JSON.stringify(this.currentTask.officialDueDateDetails, null, 2));
-    console.log('relatedIpRecordId:', this.currentTask.relatedIpRecordId);
-    console.log('deliveryDate:', this.currentTask.deliveryDate);
-    
-    // Task tipini kontrol et
-    const debugTaskTypeObj = this.allTransactionTypes.find(t => t.id === this.currentTask.taskType);
-    console.log('Task Type Objesi:', debugTaskTypeObj);
-    console.log('allTransactionTypes length:', this.allTransactionTypes.length);
-    console.log('===========================');
+    console.log('DEBUG: Task triggeringTransactionType:', this.currentTask.triggeringTransactionType);
 
     let duePeriod = null;
     let sourceOfDuePeriod = 'unknown';
 
-    // *** DUEPERIOD BULMA STRATEJİSİ (Geliştirilmiş) ***
-    
-    // 1. Öncelik: officialDueDateDetails.periodMonths (tetikleyici alt işlem tipinin duePeriod'u)
+    // *** 1. Öncelik: Mevcut officialDueDateDetails.periodMonths ***
     if (this.currentTask.officialDueDateDetails && 
         this.currentTask.officialDueDateDetails.periodMonths !== undefined && 
         this.currentTask.officialDueDateDetails.periodMonths !== null) {
         
         duePeriod = this.currentTask.officialDueDateDetails.periodMonths;
-        sourceOfDuePeriod = 'officialDueDateDetails.periodMonths (tetikleyici alt işlem tipi)';
-        console.log('DEBUG: Tetikleyici alt işlem tipinin duePeriod kullanılıyor:', duePeriod);
-        
-    } 
-    // 2. Öncelik: İşin kendi taskType'ının duePeriod'u
-    else {
-        const taskTypeObj = this.allTransactionTypes.find(t => t.id === this.currentTask.taskType);
-        if (taskTypeObj && taskTypeObj.duePeriod !== undefined && taskTypeObj.duePeriod !== null) {
-            duePeriod = taskTypeObj.duePeriod;
-            sourceOfDuePeriod = 'taskType.duePeriod (işin kendi tipi)';
-            console.log('DEBUG: İşin kendi tipinin duePeriod kullanılıyor:', duePeriod);
-        }
+        sourceOfDuePeriod = 'mevcut officialDueDateDetails.periodMonths';
+        console.log('DEBUG: Mevcut officialDueDateDetails.periodMonths kullanılıyor:', duePeriod);
     }
     
-    // *** YENİ: İLGİLİ IP KAYDINI KONTROL ET ***
-    // Eğer hala duePeriod bulunamadıysa, ilgili IP kaydının işlemlerini kontrol et
-    if ((duePeriod === null || duePeriod === undefined) && this.currentTask.relatedIpRecordId) {
-        console.log('DEBUG: duePeriod bulunamadı, ilgili IP kaydının işlemleri kontrol ediliyor...');
+    // *** 2. Öncelik: Tetikleyici alt işlem tipi ID'si ***
+    else if (this.currentTask.triggeringTransactionType) {
+        console.log('DEBUG: triggeringTransactionType bulundu:', this.currentTask.triggeringTransactionType);
         
-        try {
-            // IP kaydını getir
-            const recordResult = await ipRecordsService.getRecordById(this.currentTask.relatedIpRecordId);
-            if (recordResult.success && recordResult.data.transactions) {
-                console.log('DEBUG: IP kaydı başarıyla getirildi');
-                console.log('DEBUG: IP kaydının işlemleri sayısı:', recordResult.data.transactions.length);
-                console.log('DEBUG: IP kaydının tüm işlemleri:', JSON.stringify(recordResult.data.transactions, null, 2));
-                
-                // Bu task ile aynı tebliğ tarihine sahip işlemleri bul
-                const currentTaskDeliveryDate = this.currentTask.deliveryDate ? 
-                    new Date(this.currentTask.deliveryDate).toISOString().slice(0, 10) : 
-                    deliveryDateStr; // Eğer task'ta yoksa input'tan al
-                    
-                console.log('DEBUG: Aranan tebliğ tarihi:', currentTaskDeliveryDate);
-                
-                const matchingTransactions = recordResult.data.transactions.filter(tx => {
-                    if (!tx.deliveryDate) return false;
-                    const txDeliveryDate = new Date(tx.deliveryDate).toISOString().slice(0, 10);
-                    console.log('DEBUG: İşlem tebliğ tarihi:', txDeliveryDate, 'Aranan:', currentTaskDeliveryDate);
-                    return txDeliveryDate === currentTaskDeliveryDate;
-                });
-                
-                console.log('DEBUG: Eşleşen işlemler:', matchingTransactions);
-                
-                // Bu işlemlerden birinin duePeriod'unu bul
-                for (const tx of matchingTransactions) {
-                    console.log('DEBUG: İşlem kontrol ediliyor:', tx.type);
-                    const transactionTypeObj = this.allTransactionTypes.find(t => t.id === tx.type);
-                    console.log('DEBUG: İşlem tipi objesi:', transactionTypeObj);
-                    if (transactionTypeObj && transactionTypeObj.duePeriod !== undefined && transactionTypeObj.duePeriod !== null) {
-                        duePeriod = transactionTypeObj.duePeriod;
-                        sourceOfDuePeriod = `ilgili IP kaydının ${tx.type} işlem tipinin duePeriod'u`;
-                        console.log('DEBUG: IP kaydından bulunan duePeriod:', duePeriod, 'İşlem tipi:', tx.type);
-                        break;
-                    }
-                }
-            } else {
-                console.log('DEBUG: IP kaydı getirilemedi veya işlem yok:', recordResult);
-            }
-            }
-        catch (error) {
-            console.error('DEBUG: IP kaydı kontrol edilirken hata:', error);
+        const triggeringTransactionType = this.allTransactionTypes.find(t => t.id === this.currentTask.triggeringTransactionType);
+        if (triggeringTransactionType && 
+            triggeringTransactionType.duePeriod !== undefined && 
+            triggeringTransactionType.duePeriod !== null) {
+            
+            duePeriod = triggeringTransactionType.duePeriod;
+            sourceOfDuePeriod = `tetikleyici alt işlem tipi ${this.currentTask.triggeringTransactionType} (${triggeringTransactionType.name})`;
+            console.log('DEBUG: Tetikleyici alt işlem tipinin duePeriod bulundu:', duePeriod);
+        } else {
+            console.log('DEBUG: Tetikleyici alt işlem tipi bulunamadı veya duePeriod yok');
         }
+    } else {
+        console.log('DEBUG: triggeringTransactionType alanı yok - bu eski bir task olabilir');
     }
     
     console.log('DEBUG: Final duePeriod:', duePeriod, 'Kaynak:', sourceOfDuePeriod);
@@ -1045,24 +988,26 @@
     if (duePeriod === null || duePeriod === undefined) {
         console.log('DEBUG: duePeriod bulunamadı, sadece tebliğ tarihi güncelleniyor.');
         
+        // Mevcut resmi/operasyonel tarihleri koru
         this.calculatedOfficialDueDate = this.currentTask.officialDueDate || null;
         this.calculatedOperationalDueDate = this.currentTask.dueDate ? new Date(this.currentTask.dueDate) : null;
         
+        // officialDueDateDetails'i güncelle - sadece tebliğ tarihini değiştir
         this.calculatedOfficialDueDateDetails = {
-            initialDeliveryDate: deliveryDateStr,
-            periodMonths: null,
-            originalCalculatedDate: null,
-            finalOfficialDueDate: null,
-            finalOperationalDueDate: null,
+            initialDeliveryDate: deliveryDateStr, // Sadece bu güncellenir
+            periodMonths: this.currentTask.officialDueDateDetails?.periodMonths || null,
+            originalCalculatedDate: this.currentTask.officialDueDateDetails?.originalCalculatedDate || null,
+            finalOfficialDueDate: this.currentTask.officialDueDateDetails?.finalOfficialDueDate || null,
+            finalOperationalDueDate: this.currentTask.officialDueDateDetails?.finalOperationalDueDate || null,
             adjustments: this.currentTask.officialDueDateDetails?.adjustments || []
         };
         
-        showNotification('Tebliğ tarihi güncellendi. duePeriod tanımlanmadığı için resmi tarihler hesaplanamadı.', 'info');
+        showNotification('Tebliğ tarihi güncellendi. Tetikleyici alt işlem bilgisi olmadığı için resmi tarihler yeniden hesaplanmadı.', 'info');
         return;
     }
 
-    // *** NORMAL TARİH HESAPLAMASI ***
-    console.log('DEBUG: duePeriod bulundu, tarih hesaplaması yapılıyor...');
+    // *** TETİKLEYİCİ ALT İŞLEM TİPİNİN DUEPERIOD'U İLE TARİH HESAPLAMASI ***
+    console.log('DEBUG: Tetikleyici alt işlem tipinin duePeriod\'u ile tarih hesaplaması yapılıyor...', duePeriod, 'ay');
     
     const originalCalculatedOfficialDate = addMonthsToDate(deliveryDate, duePeriod);
     console.log('DEBUG: duePeriod (' + duePeriod + ' ay) eklendikten sonraki orijinal tarih:', this.formatDateToYYYYMMDD(originalCalculatedOfficialDate));
@@ -1085,6 +1030,7 @@
     this.calculatedOfficialDueDate = finalOfficialDueDate;
     this.calculatedOperationalDueDate = finalOperationalDueDate;
     
+    // officialDueDateDetails'i oluştur/güncelle
     this.calculatedOfficialDueDateDetails = {
         initialDeliveryDate: deliveryDateStr,
         periodMonths: duePeriod,
@@ -1094,8 +1040,8 @@
         adjustments: this.currentTask.officialDueDateDetails?.adjustments || []
     };
 
-    console.log('DEBUG: Tarih hesaplaması tamamlandı.');
-    showNotification(`Tebliğ tarihi güncellendi. duePeriod (${duePeriod} ay) ile resmi ve operasyonel son tarihler yeniden hesaplandı. Kaynak: ${sourceOfDuePeriod}`, 'success');
+    console.log('DEBUG: Tarih hesaplaması tamamlandı - Kaynak:', sourceOfDuePeriod);
+    showNotification(`Tebliğ tarihi güncellendi ve resmi/operasyonel son tarihler yeniden hesaplandı. (${duePeriod} ay duePeriod kullanıldı)`, 'success');
 }
             async handleTaskUpdate(e) {
                 e.preventDefault();
