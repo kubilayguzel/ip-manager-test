@@ -1,4 +1,4 @@
-import { initializeApp } from '[https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js](https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js)';
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
 import {
     getAuth,
     signInWithEmailAndPassword,
@@ -6,12 +6,11 @@ import {
     signOut,
     onAuthStateChanged,
     updateProfile
-} from '[https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js](https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js)';
+} from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
 import {getFirestore, collection, addDoc, 
         getDocs, doc, updateDoc, deleteDoc, 
         query, orderBy, where, getDoc, setDoc, arrayUnion, writeBatch, documentId, Timestamp } 
-from '[https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js](https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js)'; // Timestamp importu zaten mevcut
-
+from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 // --- Firebase App Initialization ---
 const firebaseConfig = {
   apiKey: "AIzaSyDbdqfiVbobnl1BtyiWxhD4bfIcREw8ZRc",
