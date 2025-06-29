@@ -690,11 +690,12 @@
                     document.getElementById('taskTitle').value = task.title || '';
                     document.getElementById('taskDescription').value = task.description || '';
                     document.getElementById('taskPriority').value = task.priority || 'medium';
-                    document.getElementById('taskStatus').value = task.status || 'open'; // Mevcut durumu set et
+                    // Burası populateStatusDropdown çağrıldıktan sonra çalışmalı
+                    document.getElementById('taskStatus').value = task.status || 'open'; 
                     document.getElementById('assignedTo').value = task.assignedTo_uid || '';
                     document.getElementById('taskDueDate').value = task.dueDate || '';
                     
-                    // YENİ: Tebliğ Tarihi alanını doldur - OfficialDueDate'tan gelen deliveryDate'i kullanıyoruz
+                    // YENİ: Tebliğ Tarihi alanını doldur
                     // task.deliveryDate değeri bir Timestamp objesi ise toDate() ile Date objesine çevir
                     // Aksi takdirde, doğrudan string olarak kabul et (indexing.html'den gelen format)
                     let deliveryDateValue = '';
@@ -968,12 +969,14 @@
                     console.log('DEBUG: All Transaction Types:', this.allTransactionTypes);
 
                     // currentTask.taskType bir ID'dir. Bu ID ile allTransactionTypes'tan tam objeyi bul
-                    const taskTypeObj = this.allTransactionTypes.find(t => t.id === this.currentTask.taskType);
+                    // Burada task.taskType'a karşılık gelen işlemin duePeriod'unu bulacağız
+                    const triggeredTransactionTypeObj = this.allTransactionTypes.find(t => t.id === this.currentTask.taskType);
                     
-                    console.log('DEBUG: Bulunan taskTypeObj:', taskTypeObj);
+                    console.log('DEBUG: Bulunan triggeredTransactionTypeObj:', triggeredTransactionTypeObj);
 
                     // duePeriod kontrolü. duePeriod undefined veya null ise hesaplama yapma
-                    if (!taskTypeObj || taskTypeObj.duePeriod === undefined || taskTypeObj.duePeriod === null) {
+                    // duePeriod artık doğrudan bu triggeredTransactionTypeObj üzerinde olması bekleniyor
+                    if (!triggeredTransactionTypeObj || triggeredTransactionTypeObj.duePeriod === undefined || triggeredTransactionTypeObj.duePeriod === null) {
                         showNotification('Seçilen görev tipi için duePeriod tanımlanmamış. Resmi son tarih hesaplanamaz.', 'warning');
                         this.calculatedOfficialDueDate = null;
                         this.calculatedOperationalDueDate = null;
@@ -982,7 +985,7 @@
                         return;
                     }
 
-                    const originalCalculatedOfficialDate = addMonthsToDate(deliveryDate, taskTypeObj.duePeriod);
+                    const originalCalculatedOfficialDate = addMonthsToDate(deliveryDate, triggeredTransactionTypeObj.duePeriod);
                     console.log('DEBUG: duePeriod eklendikten sonraki orijinal tarih:', originalCalculatedOfficialDate.toISOString().slice(0,10));
                     
                     const finalOfficialDueDate = findNextWorkingDay(originalCalculatedOfficialDate, TURKEY_HOLIDAYS);
@@ -991,13 +994,8 @@
                     const threeDaysBeforeOfficial = new Date(finalOfficialDueDate);
                     threeDaysBeforeOfficial.setDate(finalOfficialDueDate.getDate() - 3);
                     
-                    // Operasyonel son tarih için geriye doğru ilk iş gününü bulma
-                    // Not: findNextWorkingDay geriye doğru çalışmaz. Eğer 3 gün öncesi tatil veya hafta sonu ise,
-                    // ileriye değil, geriye doğru ilk iş gününü bulmamız gerekir.
-                    // Şimdilik basitçe `threeDaysBeforeOfficial`'ı kullanıyorum, eğer o da tatilse yine manuel kontrol gerekir.
-                    // Daha gelişmiş bir çözüm için isWorkingDay() ve döngüyü geriye doğru çalıştıran bir fonksiyon yazılabilir.
+                    // Geriye doğru ilk iş gününü bulmak için döngü (Operasyonel Son Tarih için)
                     let tempOperationalDueDate = new Date(threeDaysBeforeOfficial);
-                    // Geriye doğru ilk iş gününü bulmak için döngü
                     while (isWeekend(tempOperationalDueDate) || isHoliday(tempOperationalDueDate, TURKEY_HOLIDAYS)) {
                         tempOperationalDueDate.setDate(tempOperationalDueDate.getDate() - 1); // Geriye doğru git
                     }
@@ -1009,7 +1007,7 @@
                     this.calculatedOperationalDueDate = finalOperationalDueDate;
                     this.calculatedOfficialDueDateDetails = {
                         initialDeliveryDate: deliveryDateStr,
-                        periodMonths: taskTypeObj.duePeriod,
+                        periodMonths: triggeredTransactionTypeObj.duePeriod,
                         originalCalculatedDate: originalCalculatedOfficialDate.toISOString().slice(0,10),
                         finalOfficialDueDate: finalOfficialDueDate.toISOString().slice(0,10),
                         finalOperationalDueDate: finalOperationalDueDate.toISOString().slice(0,10),
@@ -1029,7 +1027,7 @@
                         priority: form.taskPriority.value,
                         assignedTo_uid: form.assignedTo.value,
                         assignedTo_email: this.allUsers.find(u => u.id === form.assignedTo.value)?.email || '',
-                        deliveryDate: form.deliveryDate.value || null,
+                        deliveryDate: form.deliveryDate.value || null, // YENİ: Tebliğ Tarihi eklendi
                         updatedAt: new Date().toISOString()
                     };
 
@@ -1041,14 +1039,16 @@
 
                     // Resmi ve Operasyonel son tarihleri hesaplayıp ekle
                     // Kullanıcı deliveryDate'i değiştirdiyse veya ilk defa giriyorsa
+                    // Yalnızca deliveryDate değeri değiştiyse veya ilk defa giriliyorsa hesaplama ve onaylama yap.
+                    // currentTask.deliveryDate Firebase Timestamp objesi olabilir, bu yüzden stringe çevirip karşılaştır.
                     const currentTaskDeliveryDateFormatted = this.currentTask.deliveryDate ? 
                         (this.currentTask.deliveryDate instanceof Date ? this.currentTask.deliveryDate.toISOString().slice(0, 10) : 
                         (typeof this.currentTask.deliveryDate === 'object' && this.currentTask.deliveryDate.toDate) ? this.currentTask.deliveryDate.toDate().toISOString().slice(0, 10) :
                         String(this.currentTask.deliveryDate).slice(0, 10)) : null;
 
-                    // Eğer tebliğ tarihi değiştiyse VEYA daha önce resmi son tarih hesaplanmamışsa
-                    // VE calculateOfficialAndOperationalDueDates başarıyla çalışmışsa
-                    if (form.deliveryDate.value !== currentTaskDeliveryDateFormatted && this.calculatedOfficialDueDate) { // Sadece tebliğ tarihi değiştiğinde tetikle
+                    // Eğer tebliğ tarihi değiştiyse VEYA daha önce resmi son tarih hesaplanmamışsa (veya tebliğ tarihi boş iken yeni girildiyse)
+                    // VE recalculateOfficialAndOperationalDueDates başarıyla çalışmışsa (calculatedOfficialDueDate null değilse)
+                    if ((form.deliveryDate.value !== currentTaskDeliveryDateFormatted || (!this.currentTask.officialDueDate && form.deliveryDate.value)) && this.calculatedOfficialDueDate) {
                         let confirmation = true;
                         // Eğer hesaplanan tarihler mevcut tarihlerden farklıysa uyarı ver
                         const existingOfficialDueDateFormatted = this.currentTask.officialDueDate ? 
@@ -1057,19 +1057,22 @@
                             String(this.currentTask.officialDueDate).slice(0,10)) : null;
                         const existingDueDateFormatted = this.currentTask.dueDate; // dueDate zaten string YYYY-MM-DD formatında olmalı
 
-                        // Hesaplanan tarihlerle mevcut tarihler farklıysa onay iste
+                        // Sadece hesaplanan tarihler mevcut tarihlerden farklıysa onay iste
                         if (this.calculatedOfficialDueDateDetails && (existingOfficialDueDateFormatted !== this.calculatedOfficialDueDateDetails.finalOfficialDueDate || 
                             existingDueDateFormatted !== this.calculatedOfficialDueDateDetails.finalOperationalDueDate)) {
                             
                             confirmation = confirm('Tebliğ tarihini değiştirdiniz veya yeni girdiniz. Resmi son tarih ve Operasyonel son tarih yeniden hesaplanacak. Onaylıyor musunuz?\n\n' +
                                                    `Yeni Resmi Son Tarih: ${this.calculatedOfficialDueDateDetails.finalOfficialDueDate}\n` +
                                                    `Yeni Operasyonel Son Tarih: ${this.calculatedOfficialDueDateDetails.finalOperationalDueDate}`);
-                        } else if (!this.calculatedOfficialDueDateDetails && form.deliveryDate.value) { // Yeni tebliğ tarihi girildi ve ilk kez hesaplandı
-                             confirmation = confirm('Tebliğ tarihi girildi. Resmi son tarih ve Operasyonel son tarih hesaplanacak. Onaylıyor musunuz?');
+                        } else if (!this.currentTask.officialDueDate && form.deliveryDate.value && this.calculatedOfficialDueDate) {
+                             // Daha önce resmi son tarih yoksa ve tebliğ tarihi girildiyse otomatik hesaplama ve uyarı
+                             confirmation = confirm('Tebliğ tarihi girildi. Resmi son tarih ve Operasyonel son tarih hesaplanacak. Onaylıyor musunuz?\n\n' +
+                                                   `Hesaplanan Resmi Son Tarih: ${this.calculatedOfficialDueDateDetails.finalOfficialDueDate}\n` +
+                                                   `Hesaplanan Operasyonel Son Tarih: ${this.calculatedOfficialDueDateDetails.finalOperationalDueDate}`);
                         }
 
 
-                        if (confirmation && this.calculatedOfficialDueDate) { // Kullanıcı onaylarsa ve hesaplanmış tarihler varsa
+                        if (confirmation) { // Kullanıcı onaylarsa ve hesaplanmış tarihler varsa
                             updatedTaskData.officialDueDate = this.calculatedOfficialDueDate;
                             updatedTaskData.officialDueDateDetails = this.calculatedOfficialDueDateDetails;
                             // Eğer Operasyonel Son Tarih formda boşsa, hesaplanan değeri ata
@@ -1079,19 +1082,13 @@
                                 // Kullanıcı operasyonel son tarihi manuel girdiyse, onu koru
                                 updatedTaskData.dueDate = form.taskDueDate.value;
                             }
-                        } else if (!confirmation && this.calculatedOfficialDueDate) { // Kullanıcı onaylamazsa ama tarihler hesaplandıysa eski değerleri koru
+                        } else { // Kullanıcı onaylamazsa, hesaplanan tarihleri kaydetme
                             showNotification('Resmi ve Operasyonel son tarih güncellemeleri iptal edildi.', 'info');
                             // Mevcut değerleri geri yükle veya güncelleme verisinden çıkar
                             if(this.currentTask.officialDueDate) updatedTaskData.officialDueDate = this.currentTask.officialDueDate;
                             if(this.currentTask.officialDueDateDetails) updatedTaskData.officialDueDateDetails = this.currentTask.officialDueDateDetails;
-                            if(this.currentTask.dueDate) updatedTaskData.dueDate = this.currentTask.dueDate; // Operasyonel son tarihi de geri yükle
-                            else updatedTaskData.dueDate = null; // Eğer orijinali yoksa null yap
-                        } else { // Hesaplama yapılmadıysa mevcut değerleri koru
-                            if(this.currentTask.officialDueDate) updatedTaskData.officialDueDate = this.currentTask.officialDueDate;
-                            if(this.currentTask.officialDueDateDetails) updatedTaskData.officialDueDateDetails = this.currentTask.officialDueDateDetails;
-                            if(form.taskDueDate.value) updatedTaskData.dueDate = form.taskDueDate.value; 
-                            else if(this.currentTask.dueDate) updatedTaskData.dueDate = this.currentTask.dueDate; 
-                            else updatedTaskData.dueDate = null;
+                            if(this.currentTask.dueDate) updatedTaskData.dueDate = this.currentTask.dueDate; 
+                            else updatedTaskData.dueDate = null; 
                         }
                     } else { // Tebliğ tarihi değişmediyse veya hiç duePeriod yoksa, mevcutları koru
                         if(this.currentTask.officialDueDate) updatedTaskData.officialDueDate = this.currentTask.officialDueDate;
@@ -1602,7 +1599,7 @@
                         }
                         
                         if (this.currentTaskDocuments.some(d => d.name === file.name && d.size === file.size)) {
-                            showNotification(`"${file.name}" dosyası zaten eklenmiş.`, 'info');
+                            showNotification(`"${file.name}" zaten eklenmiş.`, 'info');
                             continue;
                         }
 
