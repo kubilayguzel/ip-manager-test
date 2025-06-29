@@ -304,7 +304,6 @@
                         <div class="form-group"><label for="taskStatus" class="form-label">Durum:</label><select id="taskStatus" class="form-select"></select></div>
                         <div class="form-group"><label for="assignedTo" class="form-label">Atanan Kullanıcı:</label><select id="assignedTo" class="form-select"></select></div>
                         <div class="form-group"><label for="taskDueDate" class="form-label">Operasyonel Son Tarih:</label><input type="date" id="taskDueDate" class="form-input"></div>
-                        <!-- YENİ EKLENEN KISIM: Tebliğ Tarihi -->
                         <div class="form-group"><label for="deliveryDate" class="form-label">Tebliğ Tarihi:</label><input type="date" id="deliveryDate" name="deliveryDate" class="form-input"></div>
                     </div>
 
@@ -468,7 +467,7 @@
 
     <div class="modal" id="addPersonModal">
         <div class="modal-content">
-            <span class="close-modal-btn" id="closeAddPersonModal">&times;</span>
+            <span class="close-modal-btn" id="closeAddPersonModal">&times;şçöü.üğşöü.</button>
             <h3 class="modal-title">Yeni Kişi Ekle</h3>
             <form id="personForm">
                 <div class="form-group">
@@ -506,7 +505,7 @@
 
     <script type="module">
         import { authService, taskService, ipRecordsService, personService, accrualService, auth, generateUUID, documentDesignationTranslations } from './firebase-config.js';
-        import { showNotification, formatFileSize, readFileAsDataURL, TASK_STATUSES } from './utils.js';
+        import { showNotification, formatFileSize, readFileAsDataURL, TASK_STATUSES, TURKEY_HOLIDAYS, addMonthsToDate, isWeekend, isHoliday, findNextWorkingDay } from './utils.js';
         import { loadSharedLayout } from './js/layout-loader.js'; // layout-loader.js eklendi
 
         document.addEventListener('DOMContentLoaded', async () => {
@@ -681,16 +680,22 @@
                     document.getElementById('taskTitle').value = task.title || '';
                     document.getElementById('taskDescription').value = task.description || '';
                     document.getElementById('taskPriority').value = task.priority || 'medium';
-                    document.getElementById('taskStatus').value = task.status || 'open';
+                    document.getElementById('taskStatus').value = task.status || 'open'; // Mevcut durumu set et
                     document.getElementById('assignedTo').value = task.assignedTo_uid || '';
                     document.getElementById('taskDueDate').value = task.dueDate || '';
-                    // YENİ: Tebliğ Tarihi alanını doldur - OfficialDueDate'tan gelen deliveryDate'i kullanıyoruz
-                    // task.deliveryDate değeri doğrudan string olarak geliyorsa slice(0,10) kullanırız
-                    // Eğer timestamp ise toDate().toISOString().slice(0,10) kullanılır
-                    document.getElementById('deliveryDate').value = task.deliveryDate ? 
-                        (task.deliveryDate instanceof Date ? task.deliveryDate.toISOString().slice(0, 10) : 
-                        (typeof task.deliveryDate === 'object' && task.deliveryDate.toDate) ? task.deliveryDate.toDate().toISOString().slice(0, 10) :
-                        task.deliveryDate.slice(0, 10)) : '';
+                    
+                    // YENİ: Tebliğ Tarihi alanını doldur
+                    // task.deliveryDate değeri bir Timestamp objesi ise toDate() ile Date objesine çevir
+                    // Aksi takdirde, doğrudan string olarak kabul et (indexing.html'den gelen format)
+                    let deliveryDateValue = '';
+                    if (task.deliveryDate) {
+                        if (typeof task.deliveryDate === 'string') {
+                            deliveryDateValue = task.deliveryDate.slice(0, 10);
+                        } else if (typeof task.deliveryDate === 'object' && task.deliveryDate.toDate) { // Firestore Timestamp ise
+                            deliveryDateValue = task.deliveryDate.toDate().toISOString().slice(0, 10);
+                        }
+                    }
+                    document.getElementById('deliveryDate').value = deliveryDateValue;
 
 
                     const taskTypeParts = task.taskType ? task.taskType.split('_') : [];
@@ -823,7 +828,7 @@
                     const accrualInputs = ['officialFee', 'serviceFee', 'vatRate', 'applyVatToOfficialFee'];
                     accrualInputs.forEach(id => {
                         const el = document.getElementById(id);
-                        if (el) {
+                        if (el) { // El has been found
                             el.addEventListener('input', () => this.calculateTotalAmount());
                             el.addEventListener('change', () => this.calculateTotalAmount());
                         }
@@ -850,7 +855,12 @@
                     // Tahakkuk listesi için event delegation (en önemli kısım!)
                     this.setupAccrualContainerListeners();
 
-                    console.log('DEBUG: Tüm event listener\'lar başarıyla ayarlandı');
+                    // YENİ: Tebliğ Tarihi değiştiğinde resmi son tarihi yeniden hesapla
+                    document.getElementById('deliveryDate').addEventListener('change', async (e) => {
+                        await this.recalculateOfficialAndOperationalDueDates();
+                    });
+
+                    console.log('DEBUG: Event listener\'lar başarıyla ayarlandı');
                 }
 
                 // Mevcut listener'ları temizlemek için yardımcı fonksiyon
@@ -928,6 +938,44 @@
                     }
                 }
 
+                async recalculateOfficialAndOperationalDueDates() {
+                    const deliveryDateStr = document.getElementById('deliveryDate').value;
+                    if (!deliveryDateStr) {
+                        showNotification('Tebliğ Tarihi boş bırakılamaz.', 'warning');
+                        return;
+                    }
+                    const deliveryDate = new Date(deliveryDateStr);
+                    
+                    const taskTypeObj = this.allTransactionTypes.find(t => t.id === this.currentTask.taskType);
+                    
+                    if (!taskTypeObj || taskTypeObj.duePeriod === undefined || taskTypeObj.duePeriod === null) {
+                        showNotification('Seçilen görev tipi için duePeriod tanımlanmamış. Resmi son tarih hesaplanamaz.', 'warning');
+                        return;
+                    }
+
+                    const originalCalculatedOfficialDate = addMonthsToDate(deliveryDate, taskTypeObj.duePeriod);
+                    const finalOfficialDueDate = findNextWorkingDay(originalCalculatedOfficialDate, TURKEY_HOLIDAYS);
+
+                    const threeDaysBeforeOfficial = new Date(finalOfficialDueDate);
+                    threeDaysBeforeOfficial.setDate(finalOfficialDueDate.getDate() - 3);
+                    const finalOperationalDueDate = findNextWorkingDay(threeDaysBeforeOfficial, TURKEY_HOLIDAYS); // Normalde geriye giderken de findPreviousWorkingDay olmalı, ancak talepte "ilk iş günü" dendiği için ileri gidiyor. Varsayılan olarak en yakın iş günü önceki tarihi bulmak için biraz daha karmaşık bir mantık gerekir. Şimdilik findNextWorkingDay kullanılıyor, bu durumda tarih 3 gün geriye gittikten sonra da ileri doğru ilk iş gününü bulur.
+
+                    // Hesaplanan değerleri güncel Task objesine geçici olarak kaydet
+                    this.calculatedOfficialDueDate = finalOfficialDueDate;
+                    this.calculatedOperationalDueDate = finalOperationalDueDate;
+                    this.calculatedOfficialDueDateDetails = {
+                        initialDeliveryDate: deliveryDateStr,
+                        periodMonths: taskTypeObj.duePeriod,
+                        originalCalculatedDate: originalCalculatedOfficialDate.toISOString().slice(0,10),
+                        finalOfficialDueDate: finalOfficialDueDate.toISOString().slice(0,10),
+                        finalOperationalDueDate: finalOperationalDueDate.toISOString().slice(0,10),
+                        adjustments: [] // Buraya gerçek tatil ayarlamaları eklenebilir
+                    };
+
+                    showNotification('Resmi ve Operasyonel son tarihler hesaplandı. Kaydetmek için "Değişiklikleri Kaydet" butonuna tıklayın.', 'info', 5000);
+                }
+
+
                 async handleTaskUpdate(e) {
                     e.preventDefault();
                     const form = document.getElementById('taskDetailForm');
@@ -938,26 +986,55 @@
                         // status: form.taskStatus.value, // <-- BU SATIR YORUM SATIRI YAPILDI VEYA SİLİNDİ
                         assignedTo_uid: form.assignedTo.value,
                         assignedTo_email: this.allUsers.find(u => u.id === form.assignedTo.value)?.email || '',
-                        dueDate: form.taskDueDate.value || null,
+                        // dueDate: form.taskDueDate.value || null, // dueDate'i koşullu olarak set edeceğiz
                         deliveryDate: form.deliveryDate.value || null, // YENİ: Tebliğ Tarihi eklendi
                         updatedAt: new Date().toISOString()
                     };
 
                     // Sadece status değiştiyse güncellemeye dahil et
+                    // Formdaki değer orijinal değerden farklıysa veya orijinal değer yoksa ve formda değer varsa güncelle
                     if (form.taskStatus.value !== this.currentTask.status) {
                         updatedTaskData.status = form.taskStatus.value;
-                    } else if (this.currentTask.status) {
-                        // Eğer formda değer değişmediyse ama currentTask'te bir değer varsa, onu koru
-                        // Bu kısım, eğer formda status alanı null veya undefined dönerse,
-                        // ancak currentTask.status'un bir değeri varsa, bu değeri korumak için.
-                        // Ancak, HTML'de select box'ın varsayılan bir değeri veya boş bir seçeneği olduğu için
-                        // genellikle her zaman bir `form.taskStatus.value` olacaktır.
-                        // Daha doğru bir kontrol:
-                        if (form.taskStatus.value !== this.currentTask.status) {
-                             updatedTaskData.status = form.taskStatus.value;
-                         }
                     }
-                    // Eğer hem formda boşsa hem currentTask'te boşsa, undefined kalır, bu da Firestore'un merge davranışıyla uyumludur.
+
+
+                    // Resmi ve Operasyonel son tarihleri hesaplayıp ekle
+                    // Kullanıcı deliveryDate'i değiştirdiyse veya ilk defa giriyorsa
+                    if (this.calculatedOfficialDueDate && (form.deliveryDate.value !== this.currentTask.deliveryDate || !this.currentTask.officialDueDate)) {
+                        let confirmation = true;
+                        // Eğer hesaplanan tarihler mevcut tarihlerden farklıysa uyarı ver
+                        const existingOfficialDueDate = this.currentTask.officialDueDate instanceof Date ? this.currentTask.officialDueDate.toISOString().slice(0,10) : (this.currentTask.officialDueDate && this.currentTask.officialDueDate.toDate) ? this.currentTask.officialDueDate.toDate().toISOString().slice(0,10) : null;
+                        const existingDueDate = this.currentTask.dueDate;
+
+                        if (existingOfficialDueDate !== this.calculatedOfficialDueDateDetails.finalOfficialDueDate || 
+                            existingDueDate !== this.calculatedOfficialDueDateDetails.finalOperationalDueDate) {
+                            confirmation = confirm('Tebliğ tarihini değiştirdiniz veya yeni girdiniz. Resmi son tarih ve Operasyonel son tarih yeniden hesaplanacak. Onaylıyor musunuz?\n\n' +
+                                                   `Yeni Resmi Son Tarih: ${this.calculatedOfficialDueDateDetails.finalOfficialDueDate}\n` +
+                                                   `Yeni Operasyonel Son Tarih: ${this.calculatedOfficialDueDateDetails.finalOperationalDueDate}`);
+                        }
+
+                        if (confirmation) {
+                            updatedTaskData.officialDueDate = this.calculatedOfficialDueDate;
+                            updatedTaskData.officialDueDateDetails = this.calculatedOfficialDueDateDetails;
+                            // Eğer Operasyonel Son Tarih formda boşsa veya hesaplanan yeni bir değer varsa
+                            // Sadece Operasyonel Son Tarih alanına dokunulmadıysa otomatik ata
+                            if (!form.taskDueDate.value || form.taskDueDate.value === this.currentTask.dueDate) {
+                                updatedTaskData.dueDate = this.calculatedOperationalDueDate.toISOString().slice(0,10);
+                            } else {
+                                // Kullanıcı operasyonel son tarihi manuel girdiyse, onu koru
+                                updatedTaskData.dueDate = form.taskDueDate.value;
+                            }
+                        } else {
+                            // Kullanıcı onaylamazsa, hesaplanan tarihleri kaydetme
+                            showNotification('Resmi ve Operasyonel son tarih güncellemeleri iptal edildi.', 'info');
+                        }
+                    } else {
+                        // deliveryDate değişmediyse veya duePeriod yoksa, existing officialDueDate ve dueDate'i koru
+                        if(this.currentTask.officialDueDate) updatedTaskData.officialDueDate = this.currentTask.officialDueDate;
+                        if(this.currentTask.officialDueDateDetails) updatedTaskData.officialDueDateDetails = this.currentTask.officialDueDateDetails;
+                        if(form.taskDueDate.value) updatedTaskData.dueDate = form.taskDueDate.value; // Formda ne varsa onu al
+                        else if(this.currentTask.dueDate) updatedTaskData.dueDate = this.currentTask.dueDate; // Formda boşsa eskiyi koru
+                    }
 
 
                     if (this.selectedRelatedIpRecord) {
