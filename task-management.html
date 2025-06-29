@@ -698,81 +698,76 @@
 
             // task-management.html ve task-detail.html'de fillTaskForm() fonksiyonunu şu şekilde değiştirin:
 
-            fillTaskForm() {
-                const task = this.currentTask;
-                
-                // *** DEBUG: Task durumunu kontrol et ***
-                console.log('DEBUG fillTaskForm - task.status:', task.status);
-                console.log('DEBUG fillTaskForm - task objesi:', task);
-                
-                document.getElementById('taskTitle').value = task.title || '';
-                document.getElementById('taskDescription').value = task.description || '';
-                document.getElementById('taskPriority').value = task.priority || 'medium';
-                
-                // *** ÖNEMLİ: Önce dropdown'ı doldur, sonra value'yu set et ***
-                this.populateStatusDropdown(); // Dropdown'ı doldur
-                
-                // *** DEBUG: Dropdown sonrası kontrol ***
-                const statusSelect = document.getElementById('taskStatus');
-                console.log('DEBUG fillTaskForm - dropdown options:', Array.from(statusSelect.options).map(opt => opt.value));
-                
-                // *** DÜZELTİLMİŞ: Mevcut durumu koru, 'open' zorla ***
-                if (task.status) {
-                    statusSelect.value = task.status;
-                    Array.from(statusSelect.options).forEach(option => {
-                        if (option.value === task.status) {
-                            option.selected = true;
-                        } else {
-                            option.selected = false;
-                        }
-                    });
-                    console.log('DEBUG fillTaskForm - status set edildi:', task.status);
-                    console.log('DEBUG fillTaskForm - statusSelect.value şu anda:', statusSelect.value);
-                    console.log('DEBUG: Dropdown display text:', statusSelect.options[statusSelect.selectedIndex]?.text); // 👈 BURAYA
+ // fillTaskForm() fonksiyonunu şu şekilde güncelleyin:
 
-                } else {
-                    statusSelect.value = '';
-                    console.log('DEBUG fillTaskForm - status boş bırakıldı');
-                }
-                
-                document.getElementById('assignedTo').value = task.assignedTo_uid || '';
-                document.getElementById('taskDueDate').value = this.formatDateToYYYYMMDD(task.dueDate) || '';
-                document.getElementById('deliveryDate').value = this.formatDateToYYYYMMDD(task.deliveryDate) || '';
-
-                // Geri kalan kod aynı...
-                const taskTypeParts = task.taskType ? task.taskType.split('_') : [];
-                const mainType = taskTypeParts[0] || '';
-                const specificType = taskTypeParts.slice(1).join(' ').replace(/\b\w/g, l => l.toUpperCase());
-                document.getElementById('taskTypeDisplay').value = `${mainType.charAt(0).toUpperCase() + mainType.slice(1)} - ${specificType}`;
-
-                // IP kaydı ve taraf bilgileri...
-                if (task.relatedIpRecordId) {
-                    this.selectedRelatedIpRecord = this.allIpRecords.find(rec => rec.id === task.relatedIpRecordId);
-                    if (this.selectedRelatedIpRecord) {
-                        const display = document.getElementById('selectedIpRecordDisplay');
-                        display.innerHTML = `<p><b>Seçilen Varlık:</b> ${this.selectedRelatedIpRecord.title}</p>`;
-                        display.style.display = 'flex';
-                        document.getElementById('relatedIpRecordSearch').value = '';
-                    }
-                } else {
-                    document.getElementById('selectedIpRecordDisplay').style.display = 'none';
-                    document.getElementById('relatedIpRecordSearch').value = '';
-                }
-
-                if (task.details?.relatedParty?.id) {
-                    this.selectedRelatedParty = this.allPersons.find(p => p.id === task.details.relatedParty.id);
-                    if (this.selectedRelatedParty) {
-                        const display = document.getElementById('selectedRelatedPartyDisplay');
-                        display.innerHTML = `<p><b>Seçilen Taraf:</b> ${this.selectedRelatedParty.name}</p>`;
-                        display.style.display = 'flex';
-                        document.getElementById('relatedPartySearch').value = '';
-                    }
-                } else {
-                    document.getElementById('selectedRelatedPartyDisplay').style.display = 'none';
-                    document.getElementById('relatedPartySearch').value = '';
-                }
+fillTaskForm() {
+    const task = this.currentTask;
+    
+    console.log('DEBUG fillTaskForm - task.status:', task.status);
+    
+    document.getElementById('taskTitle').value = task.title || '';
+    document.getElementById('taskDescription').value = task.description || '';
+    document.getElementById('taskPriority').value = task.priority || 'medium';
+    
+    // *** DEBUG: Select element kontrolü ***
+    const statusSelect = document.getElementById('taskStatus');
+    console.log('DEBUG: taskStatus select elementi:', statusSelect);
+    console.log('DEBUG: Mevcut option sayısı (öncesi):', statusSelect ? statusSelect.options.length : 'Element yok');
+    
+    // *** ÖNEMLİ: Önce dropdown'ı doldur ***
+    this.populateStatusDropdown();
+    
+    // *** DEBUG: Dropdown doldurulduktan sonra kontrol ***
+    console.log('DEBUG: Mevcut option sayısı (sonrası):', statusSelect ? statusSelect.options.length : 'Element yok');
+    console.log('DEBUG: Options:', statusSelect ? Array.from(statusSelect.options).map(opt => `${opt.value}: ${opt.text}`) : 'Element yok');
+    
+    // *** Status set etme ***
+    if (task.status && statusSelect) {
+        statusSelect.value = task.status;
+        
+        // Manuel olarak selected attribute'unu ekle
+        Array.from(statusSelect.options).forEach(option => {
+            if (option.value === task.status) {
+                option.selected = true;
+            } else {
+                option.selected = false;
             }
+        });
+        
+        console.log('DEBUG fillTaskForm - status set edildi:', task.status);
+        console.log('DEBUG fillTaskForm - statusSelect.value şu anda:', statusSelect.value);
+        console.log('DEBUG: Dropdown display text:', statusSelect.options[statusSelect.selectedIndex]?.text);
+    }
+    
+    // Geri kalan kod aynı...
+}
 
+// *** Ayrıca populateStatusDropdown fonksiyonuna da debug ekleyin: ***
+populateStatusDropdown() {
+    console.log('DEBUG: populateStatusDropdown çağrıldı');
+    console.log('DEBUG: TASK_STATUSES:', TASK_STATUSES);
+    
+    const statusSelect = document.getElementById('taskStatus');
+    console.log('DEBUG: populateStatusDropdown - statusSelect elementi:', statusSelect);
+    
+    if (!statusSelect) {
+        console.error('ERROR: taskStatus select elementi bulunamadı!');
+        return;
+    }
+    
+    statusSelect.innerHTML = '';
+    console.log('DEBUG: Select innerHTML temizlendi');
+    
+    TASK_STATUSES.forEach((status, index) => {
+        console.log(`DEBUG: Option ${index} ekleniyor:`, status);
+        const option = document.createElement('option');
+        option.value = status.value;
+        option.textContent = status.text;
+        statusSelect.appendChild(option);
+    });
+    
+    console.log('DEBUG: populateStatusDropdown tamamlandı, final option count:', statusSelect.options.length);
+}
             populateStatusDropdown() {
                 const statusSelect = document.getElementById('taskStatus');
                 statusSelect.innerHTML = '';
