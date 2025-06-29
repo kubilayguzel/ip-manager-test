@@ -948,6 +948,21 @@
     deliveryDate.setHours(0, 0, 0, 0);
 
     console.log('DEBUG: Güncellenen Tebliğ Tarihi:', this.formatDateToYYYYMMDD(deliveryDate));
+    
+    // *** DETAYLI DEBUG ÇIKTISI ***
+    console.log('=== TASK OBJESİ DETAY ===');
+    console.log('Task ID:', this.currentTask.id);
+    console.log('Task Type:', this.currentTask.taskType);
+    console.log('Task Title:', this.currentTask.title);
+    console.log('officialDueDateDetails tamamı:', JSON.stringify(this.currentTask.officialDueDateDetails, null, 2));
+    console.log('relatedIpRecordId:', this.currentTask.relatedIpRecordId);
+    console.log('deliveryDate:', this.currentTask.deliveryDate);
+    
+    // Task tipini kontrol et
+    const debugTaskTypeObj = this.allTransactionTypes.find(t => t.id === this.currentTask.taskType);
+    console.log('Task Type Objesi:', debugTaskTypeObj);
+    console.log('allTransactionTypes length:', this.allTransactionTypes.length);
+    console.log('===========================');
 
     let duePeriod = null;
     let sourceOfDuePeriod = 'unknown';
@@ -983,22 +998,31 @@
             // IP kaydını getir
             const recordResult = await ipRecordsService.getRecordById(this.currentTask.relatedIpRecordId);
             if (recordResult.success && recordResult.data.transactions) {
-                console.log('DEBUG: IP kaydının işlemleri:', recordResult.data.transactions);
+                console.log('DEBUG: IP kaydı başarıyla getirildi');
+                console.log('DEBUG: IP kaydının işlemleri sayısı:', recordResult.data.transactions.length);
+                console.log('DEBUG: IP kaydının tüm işlemleri:', JSON.stringify(recordResult.data.transactions, null, 2));
                 
                 // Bu task ile aynı tebliğ tarihine sahip işlemleri bul
+                const currentTaskDeliveryDate = this.currentTask.deliveryDate ? 
+                    new Date(this.currentTask.deliveryDate).toISOString().slice(0, 10) : 
+                    deliveryDateStr; // Eğer task'ta yoksa input'tan al
+                    
+                console.log('DEBUG: Aranan tebliğ tarihi:', currentTaskDeliveryDate);
+                
                 const matchingTransactions = recordResult.data.transactions.filter(tx => {
                     if (!tx.deliveryDate) return false;
                     const txDeliveryDate = new Date(tx.deliveryDate).toISOString().slice(0, 10);
-                    const currentDeliveryDate = this.currentTask.deliveryDate ? 
-                        new Date(this.currentTask.deliveryDate).toISOString().slice(0, 10) : null;
-                    return txDeliveryDate === currentDeliveryDate;
+                    console.log('DEBUG: İşlem tebliğ tarihi:', txDeliveryDate, 'Aranan:', currentTaskDeliveryDate);
+                    return txDeliveryDate === currentTaskDeliveryDate;
                 });
                 
                 console.log('DEBUG: Eşleşen işlemler:', matchingTransactions);
                 
                 // Bu işlemlerden birinin duePeriod'unu bul
                 for (const tx of matchingTransactions) {
+                    console.log('DEBUG: İşlem kontrol ediliyor:', tx.type);
                     const transactionTypeObj = this.allTransactionTypes.find(t => t.id === tx.type);
+                    console.log('DEBUG: İşlem tipi objesi:', transactionTypeObj);
                     if (transactionTypeObj && transactionTypeObj.duePeriod !== undefined && transactionTypeObj.duePeriod !== null) {
                         duePeriod = transactionTypeObj.duePeriod;
                         sourceOfDuePeriod = `ilgili IP kaydının ${tx.type} işlem tipinin duePeriod'u`;
@@ -1006,8 +1030,11 @@
                         break;
                     }
                 }
+            } else {
+                console.log('DEBUG: IP kaydı getirilemedi veya işlem yok:', recordResult);
             }
-        } catch (error) {
+            }
+        catch (error) {
             console.error('DEBUG: IP kaydı kontrol edilirken hata:', error);
         }
     }
