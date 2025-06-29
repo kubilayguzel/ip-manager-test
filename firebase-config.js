@@ -449,12 +449,6 @@ async getTasksForUser(userId) {
         const q = query(
             collection(db, "tasks"),
             where("assignedTo_uid", "==", userId),
-            where("status", "in", [
-                "awaiting_client_approval",
-                "client_approval_opened",
-                "client_approval_closed",
-                "client_no_response_closed"
-            ]),
             orderBy("createdAt", "desc")
         );
         const querySnapshot = await getDocs(q);
