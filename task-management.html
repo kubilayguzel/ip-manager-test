@@ -384,12 +384,15 @@
                                 <th>Tip</th>
                                 <th>Öncelik</th>
                                 <th>Atanan</th>
-                                <th>Son Tarih</th>
+                                <th>Operasyonel Son Tarih</th>
+                                <th>Resmi Son Tarih</th> 
                                 <th>Durum</th>
                                 <th>İşlemler</th>
                             </tr>
                         </thead>
                         <tbody id="tasksTableBody">
+                            <td>${task.dueDate ? new Date(task.dueDate).toLocaleDateString('tr-TR') : 'Belirtilmemiş'}</td>
+                            <td>${task.officialDueDate ? new Date(task.officialDueDate.seconds * 1000).toLocaleDateString('tr-TR') : 'Belirtilmemiş'}</td>
                             </tbody>
                     </table>
                 </div>
@@ -858,6 +861,13 @@
                             ${renderField('Öncelik', task.priority)}
                             ${renderField('İlgili Portföy Kaydı', ipRecord ? ipRecord.title : 'Bulunamadı')}
                             ${renderField('İlgili Taraf', relatedParty ? relatedParty.name : '')}
+                            ${renderField('Operasyonel Son Tarih', task.dueDate ? new Date(task.dueDate).toLocaleDateString('tr-TR') : '-')}
+                            ${renderField('Resmi Son Tarih', task.officialDueDate ? new Date(task.officialDueDate.seconds * 1000).toLocaleDateString('tr-TR') : '-')} ${task.officialDueDateDetails ? `
+                            <h4 class="modal-detail-section-title">Resmi Son Tarih Detayları</h4>
+                            ${renderField('Başlangıç Tebliğ Tarihi', task.officialDueDateDetails.initialDeliveryDate || '-')}
+                            ${renderField('Periyot (Ay)', task.officialDueDateDetails.periodMonths || '-')}
+                            ${renderField('Orijinal Hesaplanan Tarih', task.officialDueDateDetails.originalCalculatedDate || '-')}
+                            ${renderField('Nihai Resmi Son Tarih', task.officialDueDateDetails.finalOfficialDueDate || '-')}` : ''}
                             <div class="modal-detail-item full-width">
                                 <div class="modal-detail-label">Açıklama</div>
                                 <div class="modal-detail-value long-text">${task.description || '-'}</div>
