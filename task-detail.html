@@ -304,6 +304,8 @@
                         <div class="form-group"><label for="taskStatus" class="form-label">Durum:</label><select id="taskStatus" class="form-select"></select></div>
                         <div class="form-group"><label for="assignedTo" class="form-label">Atanan Kullanıcı:</label><select id="assignedTo" class="form-select"></select></div>
                         <div class="form-group"><label for="taskDueDate" class="form-label">Operasyonel Son Tarih:</label><input type="date" id="taskDueDate" class="form-input"></div>
+                        <!-- YENİ EKLENEN KISIM: Tebliğ Tarihi -->
+                        <div class="form-group"><label for="deliveryDate" class="form-label">Tebliğ Tarihi:</label><input type="date" id="deliveryDate" name="deliveryDate" class="form-input"></div>
                     </div>
 
                     <h3 class="section-title">İlgili Varlık ve Taraf</h3>
@@ -682,7 +684,9 @@
                     document.getElementById('taskStatus').value = task.status || 'open';
                     document.getElementById('assignedTo').value = task.assignedTo_uid || '';
                     document.getElementById('taskDueDate').value = task.dueDate || '';
-                    
+                    // YENİ: Tebliğ Tarihi alanını doldur
+                    document.getElementById('deliveryDate').value = task.deliveryDate ? task.deliveryDate.slice(0, 10) : '';
+
                     const taskTypeParts = task.taskType ? task.taskType.split('_') : [];
                     const mainType = taskTypeParts[0] || '';
                     const specificType = taskTypeParts.slice(1).join(' ').replace(/\b\w/g, l => l.toUpperCase());
@@ -929,6 +933,7 @@
                         assignedTo_uid: form.assignedTo.value,
                         assignedTo_email: this.allUsers.find(u => u.id === form.assignedTo.value)?.email || '',
                         dueDate: form.taskDueDate.value || null,
+                        deliveryDate: form.deliveryDate.value || null, // YENİ: Tebliğ Tarihi eklendi
                         updatedAt: new Date().toISOString()
                     };
 
@@ -1340,7 +1345,7 @@
                     this.uploadedAccrualReceipts.forEach(file => {
                         const fileItem = document.createElement('div');
                         fileItem.className = 'file-item';
-                        fileItem.innerHTML = `<span>${file.name} (${formatFileSize(file.size)})</span><button type="button" class="btn-remove-file" data-id="${file.id}">&times;</button>`;
+                        fileItem.innerHTML = `<span>${file.name} (${formatFileSize(file.size)})</span><button type="button" class="btn-remove-file" data-id="${file.id}">&times;şçöü.üğşöü.</button>`;
                         fileItem.querySelector('.btn-remove-file').addEventListener('click', (e) => {
                             this.uploadedAccrualReceipts = this.uploadedAccrualReceipts.filter(f => f.id !== e.target.dataset.id);
                             this.renderPaymentReceiptFileList();
