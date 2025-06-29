@@ -575,6 +575,7 @@
                         ) : 'Belirtilmemiş';
 
                     return `
+                    </tr>
                         <td>${task.id}</td>
                         <td>${relatedRecordDisplay}</td>
                         <td>${taskTypeDisplayName}</td>
@@ -587,6 +588,7 @@
                             <button class="action-btn status-btn" data-task-id="${task.id}">Durum</button>
                             <button class="action-btn accrual-btn" data-task-id="${task.id}">Tahakkuk</button>
                         </td>
+                    </tr>
                     `;
                 }
 
