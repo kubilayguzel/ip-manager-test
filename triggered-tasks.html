@@ -594,7 +594,7 @@
                         document.getElementById('loadingIndicator').style.display = 'block';
                         
                         const [tasksResult, ipRecordsResult, personsResult, transactionTypesResult] = await Promise.all([
-                            taskService.getTasks(),
+                            taskService.getAllTasks(),
                             ipRecordsService.getRecords(),
                             personService.getPersons(),
                             transactionTypeService.getTransactionTypes()
