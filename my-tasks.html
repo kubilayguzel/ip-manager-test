@@ -366,8 +366,7 @@
                         </thead>
                         <tbody id="myTasksTableBody">
                             <td>${task.dueDate ? new Date(task.dueDate).toLocaleDateString('tr-TR') : 'Belirtilmemiş'}</td>
-                            <td>${task.officialDueDate ? new Date(task.officialDueDate.seconds * 1000).toLocaleDateString('tr-TR') : 'Belirtilmemiş'}</td> ```
-                                *Not:`task.officialDueDate` bir Firestore Zaman Damgası olarak saklandığından, `Date` nesnesi oluşturmak için `.seconds * 1000` kullanılarak milisaniyeye dönüştürülmüştür.*
+                            <td>${task.officialDueDate ? new Date(task.officialDueDate.seconds * 1000).toLocaleDateString('tr-TR') : 'Belirtilmemiş'}</td>
                             </tbody>
                     </table>
                 </div>
@@ -630,6 +629,7 @@
                             <td>${mainType.charAt(0).toUpperCase() + mainType.slice(1)} - ${specificType}</td>
                             <td><span class="priority-badge ${priorityClass}">${task.priority}</span></td>
                             <td>${task.dueDate ? new Date(task.dueDate).toLocaleDateString('tr-TR') : 'Belirtilmemiş'}</td>
+                            <td>${task.officialDueDate ? new Date(task.officialDueDate.seconds * 1000).toLocaleDateString('tr-TR') : 'Belirtilmemiş'}</td> <td><span class="status-badge ${statusClass}">${this.statusDisplayMap[task.status] || task.status}</span></td>
                             <td><span class="status-badge ${statusClass}">${this.statusDisplayMap[task.status] || task.status}</span></td>
                             <td>
                                 <button class="action-btn" data-id="${task.id}" data-action="view">Görüntüle</button>
