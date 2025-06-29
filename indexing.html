@@ -242,7 +242,7 @@
             import { authService, ipRecordsService, auth, generateUUID, transactionTypeService, taskService } from './firebase-config.js'; // taskService eklendi
             import { getFirestore, writeBatch, doc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 
-            import { showNotification, formatFileSize, readFileAsDataURL } from './utils.js';
+            import { showNotification, formatFileSize, readFileAsDataURL, addMonthsToDate, isWeekend, isHoliday, findNextWorkingDay, TURKEY_HOLIDAYS } from './utils.js';
             import { loadSharedLayout } from './js/layout-loader.js';
             // documentDesignationTranslations artık firebase-config.js'ten geliyor
 
@@ -636,7 +636,6 @@
                             
                             const selectedParentTransactionDefinition = this.allTransactionTypes.find(t => t.id === tx.type); 
                             console.log('Seçilen Ana İşlem İçin transactionType objesi (alt tipler için):', selectedParentTransactionDefinition); 
-                            // selectedParentTransactionDefinition.allowedChildTypes yerine indexFile kullanılıyor
                             if (selectedParentTransactionDefinition && selectedParentTransactionDefinition.indexFile) { // << BURASI GÜNCELLENDİ (indexFile kullanıldı)
                                 this.populateChildTransactionTypeSelect(selectedParentTransactionDefinition.indexFile);
                             } else {
@@ -726,10 +725,47 @@
 
                     if (this.activeTab === 'existing-transaction-pane') {
                         currentSelectedRecord = this.selectedRecordExisting;
+                        // checkFormCompleteness zaten tüm zorunlulukları kontrol ettiği için burada tekrar etmeye gerek yok
                         const childTypeId = document.getElementById('specificChildTransactionType').value;
                         const childTransactionType = this.allTransactionTypes.find(type => type.id === childTypeId);
-                        const deliveryDate = document.getElementById('existingChildTransactionDeliveryDate').value;
-                        
+                        const deliveryDate = document.getElementById('existingChildTransactionDeliveryDate').value; // Tebliğ tarihi
+
+                        // Resmi son tarih ve operasyonel son tarih hesaplaması
+                        let officialDueDate = null;
+                        let officialDueDateDetails = null;
+                        let taskDueDate = null; // Operasyonel son tarih
+
+                        if (deliveryDate && childTransactionType.duePeriod !== undefined && childTransactionType.duePeriod !== null) {
+                            const initialDate = new Date(deliveryDate);
+                            const originalCalculatedDate = addMonthsToDate(initialDate, childTransactionType.duePeriod);
+                            
+                            const finalOfficialDate = findNextWorkingDay(originalCalculatedDate, TURKEY_HOLIDAYS);
+                            officialDueDate = finalOfficialDate;
+
+                            officialDueDateDetails = {
+                                initialDeliveryDate: deliveryDate,
+                                periodMonths: childTransactionType.duePeriod,
+                                originalCalculatedDate: originalCalculatedDate.toISOString().slice(0, 10),
+                                finalOfficialDueDate: finalOfficialDate.toISOString().slice(0, 10),
+                                adjustments: [] // Tatil ve hafta sonu ayarlamaları buraya eklenebilir
+                            };
+
+                            // Eğer operasyonel son tarih boşsa, resmi son tarihten 3 gün öncesine ayarla
+                            if (!taskDueDate) { // taskDueDate başlangıçta null, bu yüzden kontrol ediliyor
+                                const threeDaysBeforeOfficial = new Date(officialDueDate);
+                                threeDaysBeforeOfficial.setDate(officialDueDate.getDate() - 3);
+                                
+                                // 3 gün öncesi de hafta sonu veya tatilse, bir önceki iş gününü bul
+                                // Bu kısım kullanıcının isteğine göre değişebilir: iş günü olana kadar GERİ Mİ gitsin, yoksa İLK GÜNÜ MÜ seçsin?
+                                // Şu anki mantık, 3 gün geriye gittikten sonra, eğer bu gün hafta sonu veya tatilse, geriye doğru ilk iş gününü bulur.
+                                let tempDueDate = new Date(threeDaysBeforeOfficial);
+                                while (isWeekend(tempDueDate) || isHoliday(tempDueDate, TURKEY_HOLIDAYS)) {
+                                    tempDueDate.setDate(tempDueDate.getDate() - 1); // Geriye doğru git
+                                }
+                                taskDueDate = tempDueDate.toISOString().slice(0, 10);
+                            }
+                        }
+
                         const newChildData = {
                             designation: childTransactionType.alias || childTransactionType.name,
                             type: childTransactionType.id, 
@@ -761,7 +797,6 @@
                         transactionDesignationForFiles = childTransactionType.documentDesignationDefault || 'Diğer Belge'; 
 
                         // GÖREV TETİKLEME MANTIĞI BURADA BAŞLIYOR
-                        // mapTransactionToTask fonksiyonuna childTransactionType objesini gönderiyoruz
                         const triggeredTaskType = this.mapTransactionToTask(childTransactionType, currentSelectedRecord.recordType); 
                         console.log('DEBUG: Tetiklenen görev tipi:', triggeredTaskType);
 
@@ -778,7 +813,7 @@
                                 priority: 'medium', 
                                 assignedTo_uid: defaultAssignedToUid,
                                 assignedTo_email: defaultAssignedToEmail,
-                                dueDate: null, 
+                                dueDate: taskDueDate, // HESAPLANAN OPERASYONEL SON TARİH
                                 status: 'awaiting_client_approval', 
                                 relatedIpRecordId: currentSelectedRecord.id,
                                 relatedIpRecordTitle: currentSelectedRecord.title,
@@ -787,6 +822,12 @@
                                 }
                             };
                             
+                            // Resmi son tarih ve detaylarını taskData'ya ekle
+                            if (officialDueDate) {
+                                newTaskData.officialDueDate = officialDueDate;
+                                newTaskData.officialDueDateDetails = officialDueDateDetails;
+                            }
+
                             const taskCreationResult = await taskService.createTask(newTaskData);
                             if (taskCreationResult.success) {
                                 showNotification(`Yeni görev otomatik olarak oluşturuldu: "${newTaskData.title}".`, 'success', 5000);
@@ -805,6 +846,7 @@
                         let selectedParentTransaction = null;
                         let selectedChildTransaction = null;
 
+                        // Ana işlem zorunlu olduğu için her zaman parentTypeId değeri olacaktır
                         selectedParentTransaction = this.allTransactionTypes.find(type => type.id === parentTypeId);
                         const parentTransactionData = {
                             designation: selectedParentTransaction.alias || selectedParentTransaction.name,
@@ -835,8 +877,9 @@
                         transactionDesignationForFiles = selectedParentTransaction.documentDesignationDefault || 'Diğer Belge';
                         
 
-                        if (childTypeId !== '') { 
+                        if (childTypeId !== '') { // Eğer alt işlem türü seçildiyse (opsiyonel)
                             selectedChildTransaction = this.allTransactionTypes.find(type => type.id === childTypeId);
+                            // checkFormCompleteness zaten kontrol ettiği için geçerli bir childTypeId olacak
                             
                             const childTransactionData = {
                                 designation: selectedChildTransaction.alias || selectedChildTransaction.name,
@@ -867,7 +910,39 @@
                             transactionDesignationForFiles = selectedChildTransaction.documentDesignationDefault || 'Diğer Belge';
 
                             // GÖREV TETİKLEME MANTIĞI BURADA BAŞLIYOR (manuel alt işlem için)
-                            // mapTransactionToTask fonksiyonuna selectedChildTransaction objesini gönderiyoruz
+                            // Resmi son tarih ve operasyonel son tarih hesaplaması
+                            let officialDueDate = null;
+                            let officialDueDateDetails = null;
+                            let taskDueDate = null; // Operasyonel son tarih
+                            
+                            if (deliveryDate && selectedChildTransaction.duePeriod !== undefined && selectedChildTransaction.duePeriod !== null) {
+                                const initialDate = new Date(deliveryDate);
+                                const originalCalculatedDate = addMonthsToDate(initialDate, selectedChildTransaction.duePeriod);
+                                
+                                const finalOfficialDate = findNextWorkingDay(originalCalculatedDate, TURKEY_HOLIDAYS);
+                                officialDueDate = finalOfficialDate;
+
+                                officialDueDateDetails = {
+                                    initialDeliveryDate: deliveryDate,
+                                    periodMonths: selectedChildTransaction.duePeriod,
+                                    originalCalculatedDate: originalCalculatedDate.toISOString().slice(0, 10),
+                                    finalOfficialDueDate: finalOfficialDate.toISOString().slice(0, 10),
+                                    adjustments: [] // Tatil ve hafta sonu ayarlamaları buraya eklenebilir
+                                };
+
+                                // Eğer operasyonel son tarih boşsa, resmi son tarihten 3 gün öncesine ayarla
+                                if (!taskDueDate) { // taskDueDate başlangıçta null, bu yüzden kontrol ediliyor
+                                    const threeDaysBeforeOfficial = new Date(officialDueDate);
+                                    threeDaysBeforeOfficial.setDate(officialDueDate.getDate() - 3);
+                                    
+                                    let tempDueDate = new Date(threeDaysBeforeOfficial);
+                                    while (isWeekend(tempDueDate) || isHoliday(tempDueDate, TURKEY_HOLIDAYS)) {
+                                        tempDueDate.setDate(tempDueDate.getDate() - 1); // Geriye doğru git
+                                    }
+                                    taskDueDate = tempDueDate.toISOString().slice(0, 10);
+                                }
+                            }
+
                             const triggeredTaskType = this.mapTransactionToTask(selectedChildTransaction, currentSelectedRecord.recordType); 
                             console.log('DEBUG: Tetiklenen görev tipi (Manuel Alt İşlem):', triggeredTaskType);
 
@@ -884,7 +959,7 @@
                                     priority: 'medium',
                                     assignedTo_uid: defaultAssignedToUid,
                                     assignedTo_email: defaultAssignedToEmail,
-                                    dueDate: null,
+                                    dueDate: taskDueDate, // HESAPLANAN OPERASYONEL SON TARİH
                                     status: 'awaiting_client_approval',
                                     relatedIpRecordId: currentSelectedRecord.id,
                                     relatedIpRecordTitle: currentSelectedRecord.title,
@@ -893,6 +968,12 @@
                                     }
                                 };
                                 
+                                // Resmi son tarih ve detaylarını taskData'ya ekle
+                                if (officialDueDate) {
+                                    newTaskData.officialDueDate = officialDueDate;
+                                    newTaskData.officialDueDateDetails = officialDueDateDetails;
+                                }
+
                                 const taskCreationResult = await taskService.createTask(newTaskData);
                                 if (taskCreationResult.success) {
                                     showNotification(`Yeni görev otomatik olarak oluşturuldu: "${newTaskData.title}".`, 'success', 5000);
@@ -901,6 +982,7 @@
                                 }
                             }
                         }
+                        // Eğer alt işlem seçilmediyse transactionIdToAssociateFiles zaten ana işlem ID'si olarak kalır, bu doğru davranış.
 
                     } 
                     
