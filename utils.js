@@ -472,14 +472,23 @@ export function isHoliday(date, holidays) {
 
 /**
  * Bir tarihe belirtilen ay kadar ekler.
- * Ayın son günleri gibi özel durumları Date objesi otomatik yönetir.
+ * Yerel saat diliminde güvenli ay hesaplaması yapar.
  * @param {Date} date - Başlangıç tarihi.
  * @param {number} months - Eklenecek ay sayısı.
  * @returns {Date} - Yeni tarih objesi.
  */
 export function addMonthsToDate(date, months) {
-    const newDate = new Date(date);
-    newDate.setMonth(newDate.getMonth() + months);
+    // Yerel saat diliminde güvenli ay hesaplaması
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    const day = date.getDate();
+    
+    // Yeni tarih objesi oluştur
+    const newDate = new Date(year, month + months, day);
+    
+    // Debug için log ekle
+    console.log(`DEBUG addMonthsToDate: ${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')} + ${months} ay = ${newDate.getFullYear()}-${String(newDate.getMonth()+1).padStart(2,'0')}-${String(newDate.getDate()).padStart(2,'0')}`);
+    
     return newDate;
 }
 
