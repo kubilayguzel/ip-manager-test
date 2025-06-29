@@ -721,6 +721,8 @@
                     statusSelect.value = task.status;
                     console.log('DEBUG fillTaskForm - status set edildi:', task.status);
                     console.log('DEBUG fillTaskForm - statusSelect.value şu anda:', statusSelect.value);
+                    console.log('DEBUG: Dropdown display text:', statusSelect.options[statusSelect.selectedIndex]?.text); // 👈 BURAYA
+
                 } else {
                     statusSelect.value = '';
                     console.log('DEBUG fillTaskForm - status boş bırakıldı');
