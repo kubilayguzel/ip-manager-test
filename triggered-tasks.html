@@ -511,6 +511,7 @@
                 }
 
                 initializeTable() {
+                    console.log('DEBUG: initializeTable çağrıldı');
                     const columnDefinitions = [
                         { key: 'id', label: 'İş No.', sortable: true, searchable: true, fixedWidth: '100px' },
                         { key: 'relatedRecord', label: 'İlgili Kayıt', sortable: true, searchable: true, fixedWidth: '200px' },
@@ -521,6 +522,9 @@
                         { key: 'status', label: 'Durum', sortable: true, searchable: true, fixedWidth: '150px' },
                         { key: 'actions', label: 'İşlemler', sortable: false, searchable: false, fixedWidth: '120px' }
                     ];
+
+                    console.log('DEBUG: Column definitions:', columnDefinitions);
+                    console.log('DEBUG: Initial filtered tasks:', this.getFilteredTasks().length);
 
                     this.tableManager = new TableManager({
                         allRecords: this.getFilteredTasks(),
@@ -535,13 +539,19 @@
                         customTypeFilter: null
                     });
 
+                    console.log('DEBUG: TableManager oluşturuldu:', this.tableManager);
                     this.tableManager.initializeTable();
+                    console.log('DEBUG: TableManager.initializeTable() tamamlandı');
                 }
 
                 getFilteredTasks() {
-                    return this.allTasks.filter(task => 
+                    const filtered = this.allTasks.filter(task => 
                         this.triggeredTaskStatuses.includes(task.status)
                     );
+                    console.log('DEBUG: getFilteredTasks - All tasks:', this.allTasks.length);
+                    console.log('DEBUG: getFilteredTasks - Filtered count:', filtered.length);
+                    console.log('DEBUG: getFilteredTasks - Sample task statuses:', this.allTasks.slice(0, 5).map(t => t.status));
+                    return filtered;
                 }
 
                 generateTaskRowHtml(task, allPersons, allUsers) {
@@ -592,29 +602,46 @@
                 async loadAllData() {
                     try {
                         document.getElementById('loadingIndicator').style.display = 'block';
+                        console.log('DEBUG: Veri yükleme başlatıldı');
                         
                         const [tasksResult, ipRecordsResult, personsResult, transactionTypesResult] = await Promise.all([
-                            taskService.getAllTasks(),
+                            taskService.getAllTasks(), // getTasks yerine getAllTasks
                             ipRecordsService.getRecords(),
                             personService.getPersons(),
                             transactionTypeService.getTransactionTypes()
                         ]);
+                        
+                        console.log('DEBUG: Tasks result:', tasksResult);
+                        console.log('DEBUG: IP Records result:', ipRecordsResult);
+                        console.log('DEBUG: Transaction Types result:', transactionTypesResult);
                         
                         this.allTasks = tasksResult.success ? tasksResult.data : [];
                         this.allIpRecords = ipRecordsResult.success ? ipRecordsResult.data : [];
                         this.allPersons = personsResult.success ? personsResult.data : [];
                         this.allTransactionTypes = transactionTypesResult.success ? transactionTypesResult.data : [];
                         
+                        console.log('DEBUG: All tasks count:', this.allTasks.length);
+                        console.log('DEBUG: Triggered task statuses:', this.triggeredTaskStatuses);
+                        
+                        const filteredTasks = this.getFilteredTasks();
+                        console.log('DEBUG: Filtered tasks count:', filteredTasks.length);
+                        console.log('DEBUG: Filtered tasks:', filteredTasks);
+                        
                         const accrualsResult = await accrualService.getAccruals();
                         this.allAccruals = accrualsResult.success ? accrualsResult.data : [];
                         
+                        // TableManager'ı güncelle
                         if (this.tableManager) {
-                            this.tableManager.allRecords = this.getFilteredTasks();
+                            console.log('DEBUG: TableManager güncelleniyor');
+                            this.tableManager.allRecords = filteredTasks;
                             this.tableManager.populateTableBody();
                             this.tableManager.applyFiltersAndSort();
+                        } else {
+                            console.log('DEBUG: TableManager henüz oluşturulmamış');
                         }
                         
                     } catch (error) {
+                        console.error('DEBUG: Veri yükleme hatası:', error);
                         showNotification('Veriler yüklenirken bir hata oluştu: ' + error.message, 'error');
                     } finally {
                         document.getElementById('loadingIndicator').style.display = 'none';
