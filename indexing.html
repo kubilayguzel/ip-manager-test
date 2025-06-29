@@ -783,6 +783,8 @@
                                 status: 'awaiting_client_approval', 
                                 relatedIpRecordId: currentSelectedRecord.id,
                                 relatedIpRecordTitle: currentSelectedRecord.title,
+                                triggeringTransactionId: transactionIdToAssociateFiles, // Alt işlem ID'si
+                                triggeringTransactionType: childTransactionType.id, // Alt işlem tipi ID'si
                                 details: {
                                     relatedParty: currentSelectedRecord.details?.relatedParty || null
                                 }
