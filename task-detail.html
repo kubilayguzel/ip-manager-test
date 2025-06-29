@@ -304,7 +304,6 @@
                         <div class="form-group"><label for="taskStatus" class="form-label">Durum:</label><select id="taskStatus" class="form-select"></select></div>
                         <div class="form-group"><label for="assignedTo" class="form-label">Atanan Kullanıcı:</label><select id="assignedTo" class="form-select"></select></div>
                         <div class="form-group"><label for="taskDueDate" class="form-label">Operasyonel Son Tarih:</label><input type="date" id="taskDueDate" class="form-input"></div>
-                        <!-- YENİ EKLENEN KISIM: Tebliğ Tarihi -->
                         <div class="form-group"><label for="deliveryDate" class="form-label">Tebliğ Tarihi:</label><input type="date" id="deliveryDate" name="deliveryDate" class="form-input"></div>
                     </div>
 
@@ -817,10 +816,8 @@
                     const accrualInputs = ['officialFee', 'serviceFee', 'vatRate', 'applyVatToOfficialFee'];
                     accrualInputs.forEach(id => {
                         const element = document.getElementById(id);
-                        if (element) {
-                            element.addEventListener('input', () => this.calculateTotalAmount());
-                            element.addEventListener('change', () => this.calculateTotalAmount());
-                        }
+                        if (el) el.addEventListener('input', () => this.calculateTotalAmount());
+                        if (el) el.addEventListener('change', () => this.calculateTotalAmount());
                     });
                     // Person Modal listener'ları
                     const closePersonModal = document.getElementById('closeAddPersonModal');
@@ -844,7 +841,7 @@
                     // Tahakkuk listesi için event delegation (en önemli kısım!)
                     this.setupAccrualContainerListeners();
 
-                    console.log('DEBUG: Tüm event listener\'lar başarıyla ayarlandı');
+                    console.log('DEBUG: Event listener\'lar başarıyla ayarlandı');
                 }
 
                 // Mevcut listener'ları temizlemek için yardımcı fonksiyon
@@ -929,13 +926,23 @@
                         title: form.taskTitle.value,
                         description: form.taskDescription.value,
                         priority: form.taskPriority.value,
-                        status: form.taskStatus.value,
+                        // status: form.taskStatus.value, // <-- BU SATIR YORUM SATIRI YAPILDI VEYA SİLİNDİ
                         assignedTo_uid: form.assignedTo.value,
                         assignedTo_email: this.allUsers.find(u => u.id === form.assignedTo.value)?.email || '',
                         dueDate: form.taskDueDate.value || null,
                         deliveryDate: form.deliveryDate.value || null, // YENİ: Tebliğ Tarihi eklendi
                         updatedAt: new Date().toISOString()
                     };
+
+                    // Sadece status değiştiyse güncellemeye dahil et
+                    if (form.taskStatus.value !== this.currentTask.status) {
+                        updatedTaskData.status = form.taskStatus.value;
+                    } else if (this.currentTask.status) {
+                        // Eğer formda değer değişmediyse ama currentTask'te bir değer varsa, onu koru
+                        updatedTaskData.status = this.currentTask.status;
+                    }
+                    // Eğer hem formda boşsa hem currentTask'te boşsa, undefined kalır, bu da Firestore'un merge davranışıyla uyumludur.
+
 
                     if (this.selectedRelatedIpRecord) {
                         updatedTaskData.relatedIpRecordId = this.selectedRelatedIpRecord.id;
@@ -1345,7 +1352,7 @@
                     this.uploadedAccrualReceipts.forEach(file => {
                         const fileItem = document.createElement('div');
                         fileItem.className = 'file-item';
-                        fileItem.innerHTML = `<span>${file.name} (${formatFileSize(file.size)})</span><button type="button" class="btn-remove-file" data-id="${file.id}">&times;şçöü.üğşöü.</button>`;
+                        fileItem.innerHTML = `<span>${file.name} (${formatFileSize(file.size)})</span><button type="button" class="btn-remove-file" data-id="${file.id}">&times;</button>`;
                         fileItem.querySelector('.btn-remove-file').addEventListener('click', (e) => {
                             this.uploadedAccrualReceipts = this.uploadedAccrualReceipts.filter(f => f.id !== e.target.dataset.id);
                             this.renderPaymentReceiptFileList();
@@ -1411,7 +1418,7 @@
                         
                         if (result.success) {
                             showNotification('Tahakkuk başarıyla kaydedildi!', 'success');
-                            this.closeAccrualModal(); // Modal'ı kapat
+                            this.closeModal('accrualModal'); // Modal'ı kapat
                             await this.loadAccrualsForTask(); // Tahakkuk listesini güncelle
                             // Sayfa yönlendirme komutu buradaydı, kaldırıldı.
                         } else {
