@@ -513,14 +513,14 @@
                 initializeTable() {
                     console.log('DEBUG: initializeTable çağrıldı');
                     const columnDefinitions = [
-                        { key: 'id', label: 'İş No.', sortable: true, searchable: true, fixedWidth: '100px' },
+                        { key: 'id', label: 'İş No.', sortable: true, searchable: true, fixedWidth: '40px' },
                         { key: 'relatedRecord', label: 'İlgili Kayıt', sortable: true, searchable: true, fixedWidth: '200px' },
                         { key: 'taskType', label: 'Tip', sortable: true, searchable: true, fixedWidth: '150px' },
-                        { key: 'priority', label: 'Öncelik', sortable: true, searchable: true, fixedWidth: '100px' },
-                        { key: 'dueDate', label: 'Operasyonel Son Tarih', sortable: true, searchable: false, fixedWidth: '150px' },
-                        { key: 'officialDueDate', label: 'Resmi Son Tarih', sortable: true, searchable: false, fixedWidth: '150px' },
-                        { key: 'status', label: 'Durum', sortable: true, searchable: true, fixedWidth: '150px' },
-                        { key: 'actions', label: 'İşlemler', sortable: false, searchable: false, fixedWidth: '120px' }
+                        { key: 'priority', label: 'Öncelik', sortable: true, searchable: true, fixedWidth: '50px' },
+                        { key: 'dueDate', label: 'Operasyonel Son Tarih', sortable: true, searchable: false, fixedWidth: '100px' },
+                        { key: 'officialDueDate', label: 'Resmi Son Tarih', sortable: true, searchable: false, fixedWidth: '100px' },
+                        { key: 'status', label: 'Durum', sortable: true, searchable: true, fixedWidth: '100px' },
+                        { key: 'actions', label: 'İşlemler', sortable: false, searchable: false, fixedWidth: '250px' }
                     ];
 
                     console.log('DEBUG: Column definitions:', columnDefinitions);
