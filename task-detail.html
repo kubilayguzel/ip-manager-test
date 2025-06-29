@@ -718,6 +718,13 @@
             // *** DÜZELTİLMİŞ: Mevcut durumu koru, 'open' zorla ***
             if (task.status) {
                 statusSelect.value = task.status;
+              Array.from(statusSelect.options).forEach(option => {
+                if (option.value === task.status) {
+                    option.selected = true;
+                } else {
+                    option.selected = false;
+                }
+                });
                 console.log('DEBUG fillTaskForm - status set edildi:', task.status);
                 console.log('DEBUG fillTaskForm - statusSelect.value şu anda:', statusSelect.value);
                 console.log('DEBUG: Dropdown display text:', statusSelect.options[statusSelect.selectedIndex]?.text); // 👈 BURAYA
