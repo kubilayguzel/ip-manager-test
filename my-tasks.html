@@ -358,12 +358,16 @@
                                 <th>İlgili Kayıt</th>
                                 <th>Tip</th>
                                 <th>Öncelik</th>
-                                <th>Son Tarih</th>
+                                <th>Operasyonel Son Tarih</th> 
+                                <th>Resmi Son Tarih</th> 
                                 <th>Durum</th>
                                 <th>İşlemler</th>
                             </tr>
                         </thead>
                         <tbody id="myTasksTableBody">
+                            <td>${task.dueDate ? new Date(task.dueDate).toLocaleDateString('tr-TR') : 'Belirtilmemiş'}</td>
+                            <td>${task.officialDueDate ? new Date(task.officialDueDate.seconds * 1000).toLocaleDateString('tr-TR') : 'Belirtilmemiş'}</td> ```
+                                *Not:`task.officialDueDate` bir Firestore Zaman Damgası olarak saklandığından, `Date` nesnesi oluşturmak için `.seconds * 1000` kullanılarak milisaniyeye dönüştürülmüştür.*
                             </tbody>
                     </table>
                 </div>
@@ -705,7 +709,13 @@
                                 ${renderField('İş No.', task.id)}
                                 ${renderField('Atanan Kişi', task.assignedTo_email)}
                                 ${renderField('İş Türü', `${mainType.charAt(0).toUpperCase() + mainType.slice(1)} - ${specificType}`)}
-                                ${renderField('Bitiş Tarihi', task.dueDate ? new Date(task.dueDate).toLocaleDateString('tr-TR') : '-')}
+                                ${renderField('Operasyonel Son Tarih', task.dueDate ? new Date(task.dueDate).toLocaleDateString('tr-TR') : '-')}
+                                ${renderField('Resmi Son Tarih', task.officialDueDate ? new Date(task.officialDueDate.seconds * 1000).toLocaleDateString('tr-TR') : '-')} ${task.officialDueDateDetails ? `
+                                <h4 class="modal-detail-section-title">Resmi Son Tarih Detayları</h4>
+                                ${renderField('Başlangıç Tebliğ Tarihi', task.officialDueDateDetails.initialDeliveryDate || '-')}
+                                ${renderField('Periyot (Ay)', task.officialDueDateDetails.periodMonths || '-')}
+                                ${renderField('Orijinal Hesaplanan Tarih', task.officialDueDateDetails.originalCalculatedDate || '-')}
+                                ${renderField('Nihai Resmi Son Tarih', task.officialDueDateDetails.finalOfficialDueDate || '-')}` : ''}
                                 ${renderField('Öncelik', task.priority)}
                                 ${renderField('İlgili Portföy Kaydı', ipRecord ? ipRecord.title : 'Bulunamadı')}
                                 ${renderField('İlgili Taraf', relatedParty ? relatedParty.name : '')}
