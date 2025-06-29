@@ -695,52 +695,73 @@
                 this.renderAccruals();
             }
 
-            fillTaskForm() {
-                const task = this.currentTask;
-                document.getElementById('taskTitle').value = task.title || '';
-                document.getElementById('taskDescription').value = task.description || '';
-                document.getElementById('taskPriority').value = task.priority || 'medium';
-                document.getElementById('taskStatus').value = task.status || ''; 
-                document.getElementById('assignedTo').value = task.assignedTo_uid || '';
-                
-                // OPERASYONEL SON TARİHİ GÜNCELLEME (Issue 2)
-                document.getElementById('taskDueDate').value = this.formatDateToYYYYMMDD(task.dueDate) || '';
-                
-                // TEBLİĞ TARİHİ ALANINI DOLDUR (Mevcut mantık korunuyor, ancak yeni helper kullanılıyor)
-                document.getElementById('deliveryDate').value = this.formatDateToYYYYMMDD(task.deliveryDate) || '';
+        // task-management.html ve task-detail.html'de fillTaskForm() fonksiyonunu şu şekilde değiştirin:
 
-                const taskTypeParts = task.taskType ? task.taskType.split('_') : [];
-                const mainType = taskTypeParts[0] || '';
-                const specificType = taskTypeParts.slice(1).join(' ').replace(/\b\w/g, l => l.toUpperCase());
-                document.getElementById('taskTypeDisplay').value = `${mainType.charAt(0).toUpperCase() + mainType.slice(1)} - ${specificType}`;
+        fillTaskForm() {
+            const task = this.currentTask;
+            
+            // *** DEBUG: Task durumunu kontrol et ***
+            console.log('DEBUG fillTaskForm - task.status:', task.status);
+            console.log('DEBUG fillTaskForm - task objesi:', task);
+            
+            document.getElementById('taskTitle').value = task.title || '';
+            document.getElementById('taskDescription').value = task.description || '';
+            document.getElementById('taskPriority').value = task.priority || 'medium';
+            
+            // *** ÖNEMLİ: Önce dropdown'ı doldur, sonra value'yu set et ***
+            this.populateStatusDropdown(); // Dropdown'ı doldur
+            
+            // *** DEBUG: Dropdown sonrası kontrol ***
+            const statusSelect = document.getElementById('taskStatus');
+            console.log('DEBUG fillTaskForm - dropdown options:', Array.from(statusSelect.options).map(opt => opt.value));
+            
+            // *** DÜZELTİLMİŞ: Mevcut durumu koru, 'open' zorla ***
+            if (task.status) {
+                statusSelect.value = task.status;
+                console.log('DEBUG fillTaskForm - status set edildi:', task.status);
+                console.log('DEBUG fillTaskForm - statusSelect.value şu anda:', statusSelect.value);
+            } else {
+                statusSelect.value = '';
+                console.log('DEBUG fillTaskForm - status boş bırakıldı');
+            }
+            
+            document.getElementById('assignedTo').value = task.assignedTo_uid || '';
+            document.getElementById('taskDueDate').value = this.formatDateToYYYYMMDD(task.dueDate) || '';
+            document.getElementById('deliveryDate').value = this.formatDateToYYYYMMDD(task.deliveryDate) || '';
 
-                if (task.relatedIpRecordId) {
-                    this.selectedRelatedIpRecord = this.allIpRecords.find(rec => rec.id === task.relatedIpRecordId);
-                    if (this.selectedRelatedIpRecord) {
-                        const display = document.getElementById('selectedIpRecordDisplay');
-                        display.innerHTML = `<p><b>Seçilen Varlık:</b> ${this.selectedRelatedIpRecord.title}</p>`;
-                        display.style.display = 'flex';
-                        document.getElementById('relatedIpRecordSearch').value = '';
-                    }
-                } else {
-                    document.getElementById('selectedIpRecordDisplay').style.display = 'none';
+            // Geri kalan kod aynı...
+            const taskTypeParts = task.taskType ? task.taskType.split('_') : [];
+            const mainType = taskTypeParts[0] || '';
+            const specificType = taskTypeParts.slice(1).join(' ').replace(/\b\w/g, l => l.toUpperCase());
+            document.getElementById('taskTypeDisplay').value = `${mainType.charAt(0).toUpperCase() + mainType.slice(1)} - ${specificType}`;
+
+            // IP kaydı ve taraf bilgileri...
+            if (task.relatedIpRecordId) {
+                this.selectedRelatedIpRecord = this.allIpRecords.find(rec => rec.id === task.relatedIpRecordId);
+                if (this.selectedRelatedIpRecord) {
+                    const display = document.getElementById('selectedIpRecordDisplay');
+                    display.innerHTML = `<p><b>Seçilen Varlık:</b> ${this.selectedRelatedIpRecord.title}</p>`;
+                    display.style.display = 'flex';
                     document.getElementById('relatedIpRecordSearch').value = '';
                 }
-
-                if (task.details?.relatedParty?.id) {
-                    this.selectedRelatedParty = this.allPersons.find(p => p.id === task.details.relatedParty.id);
-                    if (this.selectedRelatedParty) {
-                        const display = document.getElementById('selectedRelatedPartyDisplay');
-                        display.innerHTML = `<p><b>Seçilen Taraf:</b> ${this.selectedRelatedParty.name}</p>`;
-                        display.style.display = 'flex';
-                        document.getElementById('relatedPartySearch').value = '';
-                    }
-                } else {
-                    document.getElementById('selectedRelatedPartyDisplay').style.display = 'none';
-                    document.getElementById('relatedPartySearch').value = '';
-                }
+            } else {
+                document.getElementById('selectedIpRecordDisplay').style.display = 'none';
+                document.getElementById('relatedIpRecordSearch').value = '';
             }
 
+            if (task.details?.relatedParty?.id) {
+                this.selectedRelatedParty = this.allPersons.find(p => p.id === task.details.relatedParty.id);
+                if (this.selectedRelatedParty) {
+                    const display = document.getElementById('selectedRelatedPartyDisplay');
+                    display.innerHTML = `<p><b>Seçilen Taraf:</b> ${this.selectedRelatedParty.name}</p>`;
+                    display.style.display = 'flex';
+                    document.getElementById('relatedPartySearch').value = '';
+                }
+            } else {
+                document.getElementById('selectedRelatedPartyDisplay').style.display = 'none';
+                document.getElementById('relatedPartySearch').value = '';
+            }
+        }
             populateStatusDropdown() {
                 const statusSelect = document.getElementById('taskStatus');
                 statusSelect.innerHTML = '';
