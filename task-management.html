@@ -1757,7 +1757,8 @@
                         searchableStatus: task.status
                     };
                 });
-                tasksTableManager.setTableData(formattedTasks);
+                tasksTableManager.allRecords = formattedTasks; // Veri kaynağını günceller
+                tasksTableManager.applyFiltersAndSort(); // Filtreleri ve sıralamayı uygulayarak tabloyu yeniden oluşturur
                 tasksTableManager.renderTable();
                 
             } else {
