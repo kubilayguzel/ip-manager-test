@@ -21,7 +21,9 @@
             background: rgba(255, 255, 255, 0.95);
             border-radius: 20px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-            overflow: hidden;
+            /* overflow: hidden;  <-- BU SATIR KALDIRILDI */
+            overflow-x: auto; /* <-- YENİ EKLENDİ: Yatay kaydırmaya izin ver */
+            overflow-y: hidden; /* <-- YENİ EKLENDİ: Dikey kaydırmayı engelle */
         }
 
         .tasks-header {
@@ -79,6 +81,7 @@
         .tasks-table {
             width: 100%;
             border-collapse: collapse;
+            table-layout: auto; /* <-- YENİ EKLENDİ: Dinamik genişlikleri zorla */
         }
 
         .tasks-table th,
@@ -86,8 +89,10 @@
             padding: 15px;
             text-align: left;
             border-bottom: 1px solid #f0f0f0;
+            /* Optional: word-break for content in general cells, if needed */
+            /* word-break: break-word; */ 
         }
-
+        
         .tasks-table th {
             background: #f8f9fa;
             font-weight: 600;
@@ -199,12 +204,14 @@
             flex-wrap: nowrap; /* Yeni satıra geçmelerini engeller */
         }
 
+        /* İşi Başkasına Ata modalındaki butonların 100% genişlik almasını engellemek için */
         #assignTaskModal .modal-content .form-actions .btn {
             width: auto; /* Butonların otomatik genişlik almasını sağlar */
             margin-bottom: 0; /* Alt boşluğu kaldırır */
             flex-shrink: 0; /* Butonların küçülmesini engeller */
         }
 
+        /* Ek olarak, eğer butonların minimum genişliği sorun yaratıyorsa */
         #assignTaskModal .modal-content .form-actions .btn-primary,
         #assignTaskModal .modal-content .form-actions .btn-secondary {
             min-width: unset; /* Minimum genişliği kaldır, içeriğe göre ayarlansın */
@@ -350,7 +357,7 @@
         .tasks-table th.actions-column-header,
         .tasks-table td.actions-cell {
             white-space: nowrap; 
-            min-width: 180px; 
+            min-width: 220px; /* Arttırıldı */
             overflow: visible; 
             text-align: center;
         }
@@ -948,9 +955,9 @@
                                            `Yeni Resmi Son Tarih: ${this.calculatedOfficialDueDateDetails.finalOfficialDueDate}\n` +
                                            `Yeni Operasyonel Son Tarih: ${this.calculatedOfficialDueDateDetails.finalOperationalDueDate}`);
                 } else if (isOfficialDueDatePreviouslyEmpty) {
-                     confirmation = confirm('Tebliğ tarihi girildi. Resmi son tarih ve Operasyonel son tarih hesaplanacak. Onaylıyor musunuz?\n\n' +
-                                           `Hesaplanan Resmi Son Tarih: ${this.calculatedOfficialDueDateDetails.finalOfficialDueDate}\n` +
-                                           `Hesaplanan Operasyonel Son Tarih: ${this.calculatedOfficialDueDateDetails.finalOperationalDueDate}`);
+                         confirmation = confirm('Tebliğ tarihi girildi. Resmi son tarih ve Operasyonel son tarih hesaplanacak. Onaylıyor musunuz?\n\n' +
+                                               `Hesaplanan Resmi Son Tarih: ${this.calculatedOfficialDueDateDetails.finalOfficialDueDate}\n` +
+                                               `Hesaplanan Operasyonel Son Tarih: ${this.calculatedOfficialDueDateDetails.finalOperationalDueDate}`);
                 }
 
 
@@ -1146,7 +1153,7 @@
             modal.classList.add('show');
             document.body.classList.add('modal-open');
             
-            const accrualInputs = ['createTaskOfficialFee', 'createTaskServiceFee', 'createTaskVatRate', 'createTaskApplyVatToOfficialFee', 'createTaskOfficialFeeCurrency', 'createTaskAccrualServiceFeeCurrency'];
+            const accrualInputs = ['createTaskOfficialFee', 'createTaskServiceFee', 'createTaskVatRate', 'createTaskApplyVatToOfficialFee', 'createTaskOfficialFeeCurrency', 'createTaskServiceFeeCurrency'];
             accrualInputs.forEach(id => {
                 const el = document.getElementById(id);
                 if (el) { 
@@ -1510,7 +1517,7 @@
             
             const parts = deliveryDateStr.split('-');
             const deliveryDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
-            deliveryDate.setHours(0,0,0,0);
+            deliveryDate.setHours(0, 0, 0, 0);
 
             console.log('DEBUG: Tebliğ Tarihi:', this.formatDateToYYYYMMDD(deliveryDate));
             console.log('DEBUG: Current Task Type ID:', this.currentTask.taskType);
