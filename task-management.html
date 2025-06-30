@@ -199,14 +199,12 @@
             flex-wrap: nowrap; /* Yeni satıra geçmelerini engeller */
         }
 
-        /* İşi Başkasına Ata modalındaki butonların 100% genişlik almasını engellemek için */
         #assignTaskModal .modal-content .form-actions .btn {
             width: auto; /* Butonların otomatik genişlik almasını sağlar */
             margin-bottom: 0; /* Alt boşluğu kaldırır */
             flex-shrink: 0; /* Butonların küçülmesini engeller */
         }
 
-        /* Ek olarak, eğer butonların minimum genişliği sorun yaratıyorsa */
         #assignTaskModal .modal-content .form-actions .btn-primary,
         #assignTaskModal .modal-content .form-actions .btn-secondary {
             min-width: unset; /* Minimum genişliği kaldır, içeriğe göre ayarlansın */
@@ -391,8 +389,6 @@
                             </tr>
                         </thead>
                         <tbody id="tasksTableBody">
-                            <td>${task.dueDate ? new Date(task.dueDate).toLocaleDateString('tr-TR') : 'Belirtilmemiş'}</td>
-                            <td>${task.officialDueDate ? new Date(task.officialDueDate.seconds * 1000).toLocaleDateString('tr-TR') : 'Belirtilmemiş'}</td>
                             </tbody>
                     </table>
                 </div>
@@ -508,8 +504,6 @@
     import { loadSharedLayout } from './js/layout-loader.js';
     import { TableManager } from './js/table-manager.js';
 
-    // Moved TaskDetailModule's core logic into a new class specific to handling task details within a modal.
-    // This class will be instantiated and its methods called when a task is selected from the list.
     class TaskModalManager {
         constructor() {
             this.taskId = null;
@@ -529,11 +523,10 @@
             this.calculatedOfficialDueDate = null;
             this.calculatedOperationalDueDate = null;
             this.calculatedOfficialDueDateDetails = null;
-            this.statusDropdownPopulated = false; // Used to prevent re-populating on every modal open
-            this.isInitialized = false; // Flag to ensure initial data load happens only once
+            this.statusDropdownPopulated = false;
+            this.isInitialized = false;
         }
 
-        // YARDIMCI FONKSİYON: Tarihleri YYYY-MM-DD formatına dönüştürür (yerel saat diliminde)
         formatDateToYYYYMMDD(date) {
             if (!date) return null;
             let actualDate = date;
@@ -561,7 +554,6 @@
         }
 
         async init() {
-            // This init is called once on DOMContentLoaded
             this.currentUser = authService.getCurrentUser();
             if (!this.currentUser) {
                 console.log('DEBUG: Kullanıcı oturumu açık değil, index.html adresine yönlendiriliyor.');
@@ -569,12 +561,11 @@
                 return;
             }
 
-            // Load all master data only once
             if (!this.isInitialized) {
                 await this.loadAllData();
-                this.populateAssignedToDropdown(); // Populate dropdown for assignment modal
-                this.populateStatusDropdown(); // Populate dropdown for task detail modal
-                this.setupGeneralEventListeners(); // Setup general listeners for modals
+                this.populateAssignedToDropdown();
+                this.populateStatusDropdown();
+                this.setupGeneralEventListeners();
                 this.isInitialized = true;
                 console.log('DEBUG: TaskModalManager temel verileri yüklendi ve event listenerlar ayarlandı.');
             }
@@ -603,7 +594,7 @@
             this.taskId = taskId;
             console.log('DEBUG: openTaskDetailModal çağrıldı, Task ID:', this.taskId);
             try {
-                const loadingIndicator = document.getElementById('loadingIndicator'); // Using general loading for now
+                const loadingIndicator = document.getElementById('loadingIndicator');
                 if (loadingIndicator) {
                     loadingIndicator.style.display = 'block';
                 }
@@ -649,7 +640,6 @@
         resetTaskModalForm() {
             const form = document.getElementById('taskDetailForm');
             if (form) form.reset();
-            // Reset other dynamic elements
             document.getElementById('selectedIpRecordDisplay').style.display = 'none';
             document.getElementById('relatedIpRecordSearch').value = '';
             document.getElementById('selectedRelatedPartyDisplay').style.display = 'none';
@@ -679,18 +669,13 @@
         }
 
         fillTaskForm() {
-            // This function populates the taskDetailModal content
             const task = this.currentTask;
-            const modalBody = document.getElementById('modalBody'); // This should be the actual form
+            const modalBody = document.getElementById('modalBody');
             if (!modalBody) {
                 console.error('modalBody elementi bulunamadı!');
                 return;
             }
 
-            // Create or update form elements inside modalBody
-            // This is a placeholder, actual rendering logic should be more robust
-            // and likely involve dynamically creating the form structure if not already present.
-            // For now, assuming task-detail.html's original form structure is loaded.
             modalBody.innerHTML = `
                 <form id="taskDetailForm" onsubmit="return false;">
                     <div class="form-grid">
@@ -713,12 +698,12 @@
                         <div class="form-group">
                             <label for="taskStatus" class="form-label">Durum</label>
                             <select id="taskStatus" class="form-select">
-                                </select>
+                            </select>
                         </div>
                         <div class="form-group">
                             <label for="assignedTo" class="form-label">Atanan</label>
                             <select id="assignedTo" class="form-select">
-                                </select>
+                            </select>
                         </div>
                         <div class="form-group">
                             <label for="deliveryDate" class="form-label">Tebliğ Tarihi</label>
@@ -786,18 +771,16 @@
                     </div>
                 </form>
             `;
-            // Re-populate dropdowns after modal content is rendered
             this.populateStatusDropdown();
             document.getElementById('taskStatus').value = task.status || '';
             this.populateAssignedToDropdown();
             document.getElementById('assignedTo').value = task.assignedTo_uid || '';
 
-            // Re-attach event listeners for the new modal content
             this.setupModalEventListeners();
         }
 
         populateStatusDropdown() {
-            if (this.statusDropdownPopulated) return; // Only populate once
+            if (this.statusDropdownPopulated) return;
             const statusSelect = document.getElementById('taskStatus');
             if (statusSelect) {
                 statusSelect.innerHTML = '';
@@ -813,7 +796,7 @@
 
         populateAssignedToDropdown() {
             const assignedToSelect = document.getElementById('assignedTo');
-            const newAssignedToSelect = document.getElementById('newAssignedTo'); // For assign task modal
+            const newAssignedToSelect = document.getElementById('newAssignedTo');
             [assignedToSelect, newAssignedToSelect].forEach(selectEl => {
                 if (selectEl) {
                     selectEl.innerHTML = '<option value="">Seçiniz...</option>';
@@ -828,40 +811,35 @@
         }
 
         setupGeneralEventListeners() {
-            // Listeners for closing modals
             document.getElementById('closeTaskDetailModal').addEventListener('click', () => this.closeTaskDetailModal());
             document.getElementById('closeAssignTaskModal').addEventListener('click', () => document.getElementById('assignTaskModal').classList.remove('show'));
             document.getElementById('cancelAssignmentBtn').addEventListener('click', () => document.getElementById('assignTaskModal').classList.remove('show'));
             document.getElementById('closeCreateTaskAccrualModal').addEventListener('click', () => this.closeAccrualModal());
             document.getElementById('cancelCreateTaskAccrualBtn').addEventListener('click', () => this.closeAccrualModal());
 
-            // Listeners for "Assign Task" modal buttons
             document.getElementById('saveNewAssignmentBtn').addEventListener('click', () => this.handleAssignTask());
 
-            // Listeners for "Create Task Accrual" modal buttons (these need to be on the modal itself, not dynamic content)
             document.getElementById('saveNewAccrualBtn').addEventListener('click', (e) => this.handleAccrualSubmit(e, 'createTaskAccrual'));
             
-            // Re-attach listeners for dynamically loaded content within task detail modal
-            // These will be called after fillTaskForm renders the content
         }
 
         setupModalEventListeners() {
             console.log('DEBUG: Modal içi event listener\'lar ayarlanıyor...');
             const taskForm = document.getElementById('taskDetailForm');
             if (taskForm) {
-                taskForm.removeEventListener('submit', (e) => this.handleTaskUpdate(e)); // Remove old listener
+                taskForm.removeEventListener('submit', (e) => this.handleTaskUpdate(e));
                 taskForm.addEventListener('submit', (e) => this.handleTaskUpdate(e));
             }
 
             const saveBtn = document.getElementById('saveTaskChangesBtn');
             if (saveBtn) {
-                saveBtn.removeEventListener('click', (e) => this.handleTaskUpdate(e)); // Remove old listener
+                saveBtn.removeEventListener('click', (e) => this.handleTaskUpdate(e));
                 saveBtn.addEventListener('click', (e) => this.handleTaskUpdate(e));
             }
 
             const cancelBtn = document.getElementById('cancelEditBtn');
             if (cancelBtn) {
-                cancelBtn.removeEventListener('click', () => this.closeTaskDetailModal()); // Remove old listener
+                cancelBtn.removeEventListener('click', () => this.closeTaskDetailModal());
                 cancelBtn.addEventListener('click', () => this.closeTaskDetailModal());
             }
 
@@ -902,10 +880,9 @@
             const accrualsContainer = document.getElementById('accrualsContainer');
             if (accrualsContainer) {
                 accrualsContainer.removeEventListener('click', (e) => this.setupAccrualContainerListeners(e));
-                accrualsContainer.addEventListener('click', (e) => this.setupAccrualContainerListeners(e)); // Pass event
+                accrualsContainer.addEventListener('click', (e) => this.setupAccrualContainerListeners(e));
             }
             
-            // Recalculate due dates on delivery date change
             const deliveryDateInput = document.getElementById('deliveryDate');
             if (deliveryDateInput) {
                 deliveryDateInput.removeEventListener('change', (e) => this.recalculateOfficialAndOperationalDueDates());
@@ -916,13 +893,9 @@
             console.log('DEBUG: Modal içi event listener\'lar başarıyla ayarlandı.');
         }
 
-        // Previous TaskDetailModule methods (handleTaskUpdate, searchIpRecords, selectIpRecord, searchPersons, selectPerson, etc.)
-        // These methods now belong to TaskModalManager and should be called via its instance.
-        // I will only include a few examples here to show the structure.
-
         async handleTaskUpdate(e) {
             e.preventDefault();
-            const form = document.getElementById('taskDetailForm'); // Assuming the form is in the modalBody
+            const form = document.getElementById('taskDetailForm');
             const updatedTaskData = {
                 title: form.taskTitle.value,
                 description: form.taskDescription.value,
@@ -1006,7 +979,6 @@
                 const result = await taskService.updateTask(this.taskId, updatedTaskData);
                 if (result.success) {
                     showNotification('İş başarıyla güncellendi!', 'success');
-                    // Reload the main task list after updating a task in the modal
                     await loadTasksIntoTable();
                     this.closeTaskDetailModal();
                 } else {
@@ -1016,13 +988,6 @@
                 showNotification('İş güncellenirken hata oluştu: ' + error.message, 'error');
             }
         }
-
-        // ... other methods like searchIpRecords, selectIpRecord, searchPersons, selectPerson, showAccrualModal,
-        // resetAccrualModal, populateAccrualModal, calculateTotalAmount, closeAccrualModal,
-        // calculateAccrualTotalAmount, handlePaymentReceiptUpload, renderPaymentReceiptFileList,
-        // handleAccrualSubmit, handleTaskDocumentsUpload, renderDocuments, removeDocument,
-        // saveDocumentsToTask, cleanHistoryAction, renderHistory, recalculateOfficialAndOperationalDueDates
-        // would go here, adapted to be methods of TaskModalManager.
 
         searchIpRecords(query) {
             const searchResultsContainer = document.getElementById('relatedIpRecordSearchResults');
@@ -1136,10 +1101,10 @@
 
             console.log('DEBUG: Tahakkuk modalı açılıyor, mode:', mode, 'accrualId:', accrualId);
 
-            const modal = document.getElementById('createTaskAccrualModal'); // Use the specific accrual modal for task
-            const form = document.getElementById('createTaskAccrualForm'); // Use the specific accrual form for task
+            const modal = document.getElementById('createTaskAccrualModal');
+            const form = document.getElementById('createTaskAccrualForm');
             
-            this.resetAccrualModal(); // Reset the specific accrual modal
+            this.resetAccrualModal();
 
             if (mode === 'edit' && accrualId) {
                 const accrual = this.currentAccruals.find(a => a.id === accrualId);
@@ -1163,7 +1128,6 @@
             modal.classList.add('show');
             document.body.classList.add('modal-open');
             
-            // Setup listeners specific to the accrual modal form
             const accrualInputs = ['createTaskOfficialFee', 'createTaskServiceFee', 'createTaskVatRate', 'createTaskApplyVatToOfficialFee', 'createTaskOfficialFeeCurrency', 'createTaskServiceFeeCurrency'];
             accrualInputs.forEach(id => {
                 const el = document.getElementById(id);
@@ -1202,7 +1166,6 @@
 
         populateAccrualModal(accrual) {
             document.getElementById('createTaskAccrualTaskTitleDisplay').value = accrual.taskTitle || this.currentTask.title;
-            // No accrualId input in this modal, but if it were, set it here.
             document.getElementById('createTaskOfficialFee').value = accrual.officialFee?.amount || 0;
             document.getElementById('createTaskOfficialFeeCurrency').value = accrual.officialFee?.currency || 'TRY';
             document.getElementById('createTaskServiceFee').value = accrual.serviceFee?.amount || 0;
@@ -1225,7 +1188,7 @@
                 document.getElementById('createTaskSelectedServiceInvoicePartyDisplay').innerHTML = `<p><b>Seçilen:</b> ${this.selectedServiceInvoiceParty.name}</p>`;
             }
 
-            this.calculateAccrualTotalAmount(); // Use the new function name
+            this.calculateAccrualTotalAmount();
         }
 
         calculateAccrualTotalAmount() {
@@ -1261,7 +1224,7 @@
 
         async handleAccrualSubmit(event) {
             event.preventDefault();
-            const accrualId = document.getElementById('accrualId')?.value; // Check if accrualId exists
+            const accrualId = document.getElementById('accrualId')?.value;
             const officialFee = parseFloat(document.getElementById('createTaskOfficialFee').value) || 0;
             const serviceFee = parseFloat(document.getElementById('createTaskServiceFee').value) || 0;
 
@@ -1272,10 +1235,9 @@
 
             const vatRate = parseFloat(document.getElementById('createTaskVatRate').value) || 0;
             const applyVatToOfficial = document.getElementById('createTaskApplyVatToOfficialFee').checked;
-            const totalAmount = this.calculateAccrualTotalAmount(); // Use the calculated total
+            const totalAmount = this.calculateAccrualTotalAmount();
 
-            // Assume paymentDate is collected somewhere, if not, set to null
-            const paymentDate = null; // document.getElementById('paymentDate')?.value;
+            const paymentDate = null;
 
             const accrualData = {
                 taskId: this.taskId,
@@ -1298,15 +1260,11 @@
                 status: paymentDate ? 'paid' : 'unpaid'
             };
             
-            // Accrual receipts handling for the general task accrual modal
-            // (assuming 'paymentReceiptFileList' is tied to 'createTaskAccrualModal' if receipts are allowed)
-            // accrualData.files = this.uploadedAccrualReceipts; 
-
             try {
                 let result;
-                if (accrualId) { // If editing an existing accrual
+                if (accrualId) {
                     result = await accrualService.updateAccrual(accrualId, accrualData);
-                } else { // If creating a new accrual
+                } else {
                     console.log("DEBUG: Yeni tahakkuk ekleniyor:", accrualData);
                     result = await accrualService.addAccrual(accrualData);
                 }
@@ -1314,7 +1272,7 @@
                 if (result.success) {
                     showNotification('Tahakkuk başarıyla kaydedildi!', 'success');
                     this.closeAccrualModal();
-                    await this.loadAccrualsForTask(); // Reload accruals for current task
+                    await this.loadAccrualsForTask();
                 } else {
                     throw new Error(result.error);
                 }
@@ -1437,7 +1395,7 @@
                 const designationSelect = fileItem.querySelector('.file-designation-select');
                 if (designationSelect) {
                     designationSelect.removeEventListener('change', this.handleDocumentDesignationChange);
-                    this.handleDocumentDesignationChange = (e) => { // Capture 'this'
+                    this.handleDocumentDesignationChange = (e) => {
                         const changedDoc = this.currentTaskDocuments.find(d => d.id === e.target.dataset.docId);
                         if (changedDoc) {
                             changedDoc.documentDesignation = e.target.value;
@@ -1450,7 +1408,7 @@
                 const removeBtn = fileItem.querySelector('.btn-remove-file');
                 if (removeBtn) {
                     removeBtn.removeEventListener('click', this.removeDocumentHandler);
-                    this.removeDocumentHandler = (e) => this.removeDocument(e.target.dataset.docId); // Capture 'this'
+                    this.removeDocumentHandler = (e) => this.removeDocument(e.target.dataset.docId);
                     removeBtn.addEventListener('click', this.removeDocumentHandler);
                 }
                 fileListContainer.appendChild(fileItem);
@@ -1470,7 +1428,6 @@
                 const result = await taskService.updateTask(this.taskId, { documents: this.currentTaskDocuments });
                 if (result.success) {
                     showNotification('Belgeler başarıyla güncellendi.', 'success');
-                    // No need to reload task data fully here, just confirm success
                 } else {
                     throw new Error(result.error);
                 }
@@ -1527,8 +1484,8 @@
                 this.calculatedOfficialDueDate = null;
                 this.calculatedOperationalDueDate = null;
                 this.calculatedOfficialDueDateDetails = null;
-                document.getElementById('officialDueDate').value = ''; // Clear official due date display
-                document.getElementById('taskDueDate').value = ''; // Clear operational due date display
+                document.getElementById('officialDueDate').value = '';
+                document.getElementById('taskDueDate').value = '';
                 console.log('DEBUG: Tebliğ Tarihi boş, hesaplama iptal edildi.');
                 return;
             }
@@ -1544,7 +1501,6 @@
             let duePeriod = null;
             let sourceOfDuePeriod = 'unknown';
 
-            // First check if it's explicitly set on the task itself
             if (this.currentTask.officialDueDateDetails && 
                 this.currentTask.officialDueDateDetails.periodMonths !== undefined && 
                 this.currentTask.officialDueDateDetails.periodMonths !== null) {
@@ -1552,7 +1508,6 @@
                 duePeriod = this.currentTask.officialDueDateDetails.periodMonths;
                 sourceOfDuePeriod = 'task.officialDueDateDetails.periodMonths';
             } else {
-                // Otherwise, check the transaction type
                 const taskTypeObj = this.allTransactionTypes.find(t => t.id === this.currentTask.taskType);
                 if (taskTypeObj && taskTypeObj.duePeriod !== undefined && taskTypeObj.duePeriod !== null) {
                     duePeriod = taskTypeObj.duePeriod;
@@ -1602,7 +1557,6 @@
                 adjustments: []
             };
 
-            // Update the form fields with calculated dates
             document.getElementById('officialDueDate').value = this.calculatedOfficialDueDateDetails.finalOfficialDueDate;
             document.getElementById('taskDueDate').value = this.calculatedOfficialDueDateDetails.finalOperationalDueDate;
 
@@ -1633,7 +1587,7 @@
                     const result = await accrualService.deleteAccrual(accrualId);
                     if (result.success) {
                         showNotification('Tahakkuk başarıyla silindi!', 'success');
-                        await this.loadAccrualsForTask(); // Reload accruals after deletion
+                        await this.loadAccrualsForTask();
                     } else {
                         throw new Error(result.error);
                     }
@@ -1662,15 +1616,14 @@
                     assignedTo_uid: newAssignedToUser.id,
                     assignedTo_email: newAssignedToUser.email,
                     updatedAt: new Date().toISOString(),
-                    // Consider adding a history entry here if not handled by backend
                 };
                 const result = await taskService.updateTask(this.taskId, updatedTaskData);
                 if (result.success) {
                     showNotification('İş başarıyla yeniden atandı!', 'success');
                     document.getElementById('assignTaskModal').classList.remove('show');
                     document.body.classList.remove('modal-open');
-                    await this.loadTaskData(); // Reload task data to reflect changes
-                    await loadTasksIntoTable(); // Reload main table to reflect changes
+                    await this.loadTaskData();
+                    await loadTasksIntoTable();
                 } else {
                     throw new Error(result.error);
                 }
@@ -1679,15 +1632,14 @@
                 console.error('İş atama hatası:', error);
             }
         }
-    } // End of TaskModalManager class
+    }
 
-    // Main script logic for task-management.html (listing functionality)
-    let tasksTableManager; // To hold the TableManager instance
-    const taskModalManager = new TaskModalManager(); // Instantiate the modal manager
+    let tasksTableManager;
+    const taskModalManager = new TaskModalManager();
 
     document.addEventListener('DOMContentLoaded', async () => {
         await loadSharedLayout({ activeMenuLink: 'task-management.html' });
-        await taskModalManager.init(); // Initialize the modal manager (loads master data once)
+        await taskModalManager.init();
 
         const currentUser = authService.getCurrentUser();
         if (!currentUser) {
@@ -1696,14 +1648,66 @@
             return;
         }
 
-        // Initialize TableManager
-        tasksTableManager = new TableManager('tasksTableBody', 'taskSearchInput', ['title', 'ipRecordTitle', 'taskType', 'assignedTo_email', 'status'], (taskId) => {
-            // Callback for when a row is clicked (or edit button)
-            taskModalManager.openTaskDetailModal(taskId);
+        // TableManager'ı doğru şekilde başlatırken, veriyi constructor'da geçirin.
+        // allRecords'ı başlangıçta boş bir dizi olarak veriyoruz.
+        // allPersons ve allUsers da gerekli. taskModalManager.allPersons ve taskModalManager.allUsers'dan alabiliriz.
+        tasksTableManager = new TableManager({
+            tableId: 'accruals-table', // Assuming this is the table ID for task management
+            tableBodyId: 'tasksTableBody',
+            tableHeaderRowId: 'tasksTableHeaderRow', // Add this ID to your HTML <thead><tr> for headers
+            tableFilterRowId: 'tasksTableFilterRow', // Add this ID to your HTML <thead><tr> for filters
+            globalSearchInputId: 'taskSearchInput',
+            noRecordsMessageId: 'noTasksMessage',
+            columnDefinitions: [
+                { key: 'taskNumber', label: 'İş No.', sortable: true, searchable: true },
+                { key: 'relatedIpRecord', label: 'İlgili Kayıt', sortable: true, searchable: true },
+                { key: 'taskType', label: 'Tip', sortable: true, searchable: true },
+                { key: 'priority', label: 'Öncelik', sortable: true, searchable: true },
+                { key: 'assignedTo', label: 'Atanan', sortable: true, searchable: true },
+                { key: 'operationalDueDate', label: 'Operasyonel Son Tarih', sortable: true, searchable: true },
+                { key: 'officialDueDate', label: 'Resmi Son Tarih', sortable: true, searchable: true },
+                { key: 'status', label: 'Durum', sortable: true, searchable: true },
+                { key: 'actions', label: 'İşlemler', sortable: false, searchable: false }
+            ],
+            allRecords: [], // Başlangıçta boş olacak, loadTasksIntoTable dolduracak
+            allPersons: taskModalManager.allPersons, // TaskModalManager'dan al
+            allUsers: taskModalManager.allUsers, // TaskModalManager'dan al
+            customRecordHtml: (task, allPersons, allUsers) => {
+                const assignedUserName = allUsers.find(u => u.id === task.assignedTo_uid)?.displayName || task.assignedTo_email || 'Bilinmiyor';
+                const statusClass = `status-${task.status.replace(/ /g, '_').toLowerCase()}`;
+                const priorityClass = `priority-${task.priority.toLowerCase()}`;
+
+                const taskTypeParts = task.taskType ? task.taskType.split('_') : [];
+                const specificType = taskTypeParts.slice(1).join(' ').replace(/\b\w/g, l => l.toUpperCase());
+                const taskTypeDisplay = `${taskTypeParts[0] ? (taskTypeParts[0].charAt(0).toUpperCase() + taskTypeParts[0].slice(1)) : 'N/A'} - ${specificType || 'N/A'}`;
+
+                return `
+                    <td>${task.taskNumber}</td>
+                    <td>${task.relatedIpRecord || 'Yok'}</td>
+                    <td>${taskTypeDisplay}</td>
+                    <td><span class="priority-badge ${priorityClass}">${task.priority}</span></td>
+                    <td>${assignedUserName}</td>
+                    <td>${task.operationalDueDate}</td>
+                    <td>${task.officialDueDate}</td>
+                    <td><span class="status-badge ${statusClass}">${task.status}</span></td>
+                    <td>
+                        <button class="action-btn edit-btn" data-id="${task.id}">Düzenle</button>
+                        <button class="action-btn assign-btn" data-id="${task.id}">Ata</button>
+                    </td>
+                `;
+            },
+            // TableManager'ın tıklama callback'i
+            // Bu callback, TableManager tarafından bir satır veya buton tıklandığında çağrılır.
+            onRowClick: (recordId) => {
+                 taskModalManager.openTaskDetailModal(recordId);
+            }
         });
 
+        // TableManager'ın initializeTable metodunu çağırın. Bu başlıkları ve event listener'ları kurar.
+        tasksTableManager.initializeTable();
+
         await loadTasksIntoTable();
-        setupListingPageEventListeners();
+        setupListingPageEventListeners(); // Bu fonksiyon zaten TableManager'ı kullanıyor
     });
 
     async function loadTasksIntoTable() {
@@ -1711,28 +1715,25 @@
         const noTasksMessage = document.getElementById('noTasksMessage');
         loadingIndicator.style.display = 'block';
         noTasksMessage.style.display = 'none';
-        const tasksTableBody = document.getElementById('tasksTableBody');
-        tasksTableBody.innerHTML = ''; // Clear existing rows
-
+        
         try {
-            const result = await taskService.getAllTasks(); // Fetches all tasks
+            const result = await taskService.getAllTasks(); // Düzeltme yapıldı
             if (result.success && result.data && result.data.length > 0) {
                 let tasks = result.data;
-                const currentUser = authService.getCurrentUser();
                 
-                // Fetch all users to map assignedTo_uid to displayName/email
                 const usersResult = await taskService.getAllUsers();
                 const allUsersMap = new Map((usersResult.data || []).map(user => [user.id, user.displayName || user.email]));
 
-                // For filtering tasks by current user in 'My Tasks' if this page were combined,
-                // but this is 'Task Management' so it should show all tasks for authorized users.
-                // If there's a need to filter by 'my tasks', it should be a separate page (my-tasks.html).
+                // TaskModalManager'ın allTransactionTypes'ına erişim
+                const allTransactionTypes = taskModalManager.allTransactionTypes; 
+                const transactionTypeMap = new Map((allTransactionTypes || []).map(type => [type.id, type.alias || type.name]));
+
 
                 const formattedTasks = tasks.map(task => {
                     const assignedUserName = allUsersMap.get(task.assignedTo_uid) || 'Bilinmiyor';
-                    const taskTypeParts = task.taskType ? task.taskType.split('_') : [];
-                    const specificType = taskTypeParts.slice(1).join(' ').replace(/\b\w/g, l => l.toUpperCase());
-                    const taskTypeDisplay = `${taskTypeParts[0] ? (taskTypeParts[0].charAt(0).toUpperCase() + taskTypeParts[0].slice(1)) : 'N/A'} - ${specificType || 'N/A'}`;
+                    
+                    // Task Type için görünen adı al
+                    const taskTypeDisplayName = transactionTypeMap.get(task.taskType) || (task.taskType ? task.taskType.split('_').map(part => part.charAt(0).toUpperCase() + part.slice(1)).join(' ') : 'N/A');
                     
                     const officialDueDate = task.officialDueDate ? 
                         (task.officialDueDate.seconds ? new Date(task.officialDueDate.seconds * 1000).toLocaleDateString('tr-TR') : new Date(task.officialDueDate).toLocaleDateString('tr-TR')) : 'Belirtilmemiş';
@@ -1743,23 +1744,24 @@
                         id: task.id,
                         taskNumber: task.taskNumber || task.id.substring(0, 8),
                         relatedIpRecord: task.relatedIpRecordTitle || 'Yok',
-                        taskType: taskTypeDisplay,
+                        taskType: taskTypeDisplayName, // Artık görünen ad
                         priority: task.priority,
                         assignedTo: assignedUserName,
                         operationalDueDate: operationalDueDate,
                         officialDueDate: officialDueDate,
                         status: task.status,
-                        // Add more fields if needed for TableManager's search
                         searchableTitle: task.title,
                         searchableIpRecordTitle: task.relatedIpRecordTitle,
-                        searchableTaskType: taskTypeDisplay,
+                        searchableTaskType: taskTypeDisplayName, // Aranabilir alana da görünen adı ekle
                         searchableAssignedToEmail: task.assignedTo_email,
                         searchableStatus: task.status
                     };
                 });
-                tasksTableManager.allRecords = formattedTasks; // Veri kaynağını günceller
-                tasksTableManager.applyFiltersAndSort(); // Filtreleri ve sıralamayı uygulayarak tabloyu yeniden oluşturur
-                tasksTableManager.renderTable();
+
+                // tasksTableManager'ın allRecords özelliğini güncelle
+                tasksTableManager.allRecords = formattedTasks; 
+                // Filtreleri ve sıralamayı uygulayarak tabloyu yeniden render et
+                tasksTableManager.applyFiltersAndSort(); 
                 
             } else {
                 noTasksMessage.style.display = 'block';
@@ -1775,27 +1777,23 @@
     }
 
     function setupListingPageEventListeners() {
-        // "Yeni İş Oluştur" button
         document.querySelector('.btn-add-task').addEventListener('click', () => {
             window.location.href = 'create-task.html';
         });
 
-        // Search input
         document.getElementById('taskSearchInput').addEventListener('input', (e) => {
-            tasksTableManager.setSearchQuery(e.target.value);
-            tasksTableManager.renderTable();
+            tasksTableManager.globalSearchTerm = e.target.value; // Global arama terimini ayarla
+            tasksTableManager.applyFiltersAndSort(); // Filtreleri ve sıralamayı yeniden uygula
         });
 
-        // Add event listeners for table row clicks to open the modal
+        // Tablo başlıklarına ve filtre satırlarına ID eklediğinizden emin olun
+        // ve TableManager constructor'da bu ID'leri doğru şekilde belirttiğinizden.
+        // TableManager'ın kendi event listener'ları olduğu için, burada sadece
+        // ek bir click listener ekleyelim, eğer aksi bir durum olursa diye.
         document.getElementById('tasksTableBody').addEventListener('click', (event) => {
-            const targetRow = event.target.closest('tr');
-            if (targetRow && targetRow.dataset.id) {
-                taskModalManager.openTaskDetailModal(targetRow.dataset.id);
-            }
-            // Delegate click for action buttons if they are within table rows
             const editBtn = event.target.closest('.action-btn.edit-btn');
             if (editBtn) {
-                event.preventDefault(); // Prevent default row click if an action button is clicked
+                event.preventDefault(); // Varsayılan satır tıklamasını engelle
                 const taskId = editBtn.dataset.id;
                 taskModalManager.openTaskDetailModal(taskId);
             }
@@ -1803,18 +1801,16 @@
             if (assignBtn) {
                 event.preventDefault();
                 const taskId = assignBtn.dataset.id;
-                taskModalManager.taskId = taskId; // Set current task ID for assignment
-                taskModalManager.populateAssignedToDropdown(); // Ensure latest users are loaded
+                taskModalManager.taskId = taskId;
+                taskModalManager.populateAssignedToDropdown();
                 document.getElementById('assignTaskModal').classList.add('show');
                 document.body.classList.add('modal-open');
             }
         });
     }
 
-    // Assign the taskModalManager to the window object for easier debugging if needed,
-    // though generally, direct window assignments should be minimized.
     window.taskModalManager = taskModalManager;
-    window.loadTasksIntoTable = loadTasksIntoTable; // Expose if needed for external calls (e.g., after a task is updated in modal)
+    window.loadTasksIntoTable = loadTasksIntoTable;
 
 </script>
 </body>
