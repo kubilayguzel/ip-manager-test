@@ -1,117 +1,680 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-  <meta charset="UTF-8">
-  <title>IP Manager - Toplu Belge İndeksleme</title>
-  <link rel="stylesheet" href="css/shared-styles.css">
-  <script type="module" src="js/layout-loader.js"></script>
-  <script type="module" src="js/bulk-indexing-logic.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IP Manager - Toplu Belge İndeksleme</title>
+    <link rel="stylesheet" href="css/shared-styles.css">
+    <script type="module" src="js/layout-loader.js"></script>
+    <style>
+        /* Sadece bu sayfaya özel CSS */
+        .file-upload-wrapper {
+            position: relative;
+            overflow: hidden;
+            display: inline-block;
+            width: 100%;
+            cursor: pointer;
+        }
+
+        .file-upload-wrapper input[type=file] {
+            position: absolute;
+            left: 0;
+            top: 0;
+            opacity: 0;
+            cursor: pointer;
+            width: 100%;
+            height: 100%;
+        }
+
+        .file-upload-button {
+            display: block;
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e1e8ed;
+            border-radius: 10px;
+            font-size: 1em;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f0f4f8;
+            color: #333;
+            text-align: left;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .file-upload-button:hover {
+            background-color: #e6f2ff;
+            border-color: #a3d4ff;
+        }
+
+        .file-upload-button.dragover {
+            background-color: #e0e7ff;
+            border-color: #667eea;
+            transform: scale(1.02);
+        }
+
+        .file-upload-info {
+            font-size: 0.9em;
+            color: #777;
+            margin-top: 5px;
+            padding-left: 5px;
+        }
+
+        .pdf-list-item {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            border: 1px solid #e1e8ed;
+            border-radius: 10px;
+            margin-bottom: 12px;
+            background: white;
+            transition: all 0.3s ease;
+        }
+
+        .pdf-list-item:hover {
+            border-color: #cbd5e1;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .pdf-list-item.matched {
+            border-color: #28a745;
+            background-color: #f8fff9;
+        }
+
+        .pdf-list-item.unmatched {
+            border-color: #dc3545;
+            background-color: #fff8f8;
+        }
+
+        .pdf-icon {
+            font-size: 2rem;
+            margin-right: 15px;
+            color: #dc2626;
+        }
+
+        .pdf-details {
+            flex: 1;
+        }
+
+        .pdf-name {
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 5px;
+        }
+
+        .pdf-meta {
+            font-size: 0.9rem;
+            color: #64748b;
+            margin-bottom: 5px;
+        }
+
+        .match-status {
+            font-size: 0.9rem;
+            padding: 4px 8px;
+            border-radius: 15px;
+            font-weight: 500;
+        }
+
+        .match-status.matched {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .match-status.unmatched {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .pdf-actions {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .stats-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 25px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+        .empty-message {
+            text-align: center;
+            padding: 40px 20px;
+            color: #6c757d;
+            background: #f8f9fa;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+
+        .empty-icon {
+            font-size: 3rem;
+            margin-bottom: 15px;
+        }
+
+        .progress-container {
+            background: #e9ecef;
+            border-radius: 10px;
+            height: 8px;
+            margin: 20px 0;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #28a745, #20c997);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        /* Tab badge styles */
+        .bulk-tab-btn {
+            position: relative;
+        }
+
+        .tab-badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background: #dc3545;
+            color: white;
+            font-size: 0.7rem;
+            padding: 2px 6px;
+            border-radius: 50%;
+            min-width: 18px;
+            text-align: center;
+        }
+
+        .tab-badge.success {
+            background: #28a745;
+        }
+
+        .bulk-action-container {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #e1e8ed;
+        }
+
+        @media (max-width: 768px) {
+            .pdf-list-item {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .pdf-actions {
+                margin-top: 15px;
+                width: 100%;
+                justify-content: flex-end;
+            }
+            
+            .stats-container {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
 </head>
 <body>
-  <div class="notification-container"></div>
-  <div id="layout-placeholder"></div>
-    <div class="page-wrapper">
-    <main class="main-container">
-        <div class="page-header-section">
-            <h1 class="page-title">Toplu Belge İndeksleme</h1>
-            <p class="page-subtitle">Birden fazla PDF dosyasını yükleyin ve işlemleri hızlıca indeksleyin.</p>
-        </div>
-<div class="form-container">
-  <div class="form-section">
-    <h2 class="section-title"><span>1.</span> Toplu Belge Yükleme ve İndeksleme</h2>
+    <div class="notification-container"></div>
+    <div id="layout-placeholder"></div>
     
-    <div class="form-group">
-      <label class="form-label" for="bulkDeliveryDate">
-        A- Ortak Tebliğ Tarihi <span style="color: red;">*</span>
-      </label>
-      <input type="date" id="bulkDeliveryDate" class="form-input" style="max-width: 300px;">
+    <div class="page-wrapper">
+        <main class="main-container">
+            <div class="page-header-section">
+                <h1 class="page-title">Toplu Belge İndeksleme</h1>
+                <p class="page-subtitle">PDF dosyalarını yükleyin, portföy kayıtlarıyla eşleştirin ve toplu indeksleme işlemlerini başlatın</p>
+            </div>
+
+            <div class="form-container">
+                <!-- Upload Section -->
+                <div class="form-section">
+                    <h2 class="section-title"><span>1.</span> PDF Dosyalarını Yükleyin</h2>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="bulkFiles">
+                            PDF Dosyalarını Seçin <span style="color: red;">*</span>
+                        </label>
+                        <div class="file-upload-wrapper">
+                            <input type="file" id="bulkFiles" multiple accept=".pdf" name="bulkFiles">
+                            <div class="file-upload-button" id="bulkFilesButton">
+                                📎 PDF dosyalarını sürükleyip bırakın veya seçmek için tıklayın
+                            </div>
+                        </div>
+                        <div class="file-upload-info" id="bulkFilesInfo">
+                            Henüz PDF dosyası seçilmedi. Birden fazla PDF dosyası seçebilirsiniz.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Statistics Section -->
+                <div class="form-section" id="statsSection" style="display: none;">
+                    <h2 class="section-title"><span>2.</span> İstatistikler</h2>
+                    
+                    <div class="stats-container">
+                        <div class="stat-card">
+                            <div class="stat-number" id="totalFiles">0</div>
+                            <div class="stat-label">Toplam Dosya</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-number" id="matchedFiles">0</div>
+                            <div class="stat-label">Eşleşen</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-number" id="unmatchedFiles">0</div>
+                            <div class="stat-label">Eşleşmeyen</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-number" id="readyFiles">0</div>
+                            <div class="stat-label">İşleme Hazır</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- File List Section -->
+                <div class="form-section" id="fileListSection" style="display: none;">
+                    <h2 class="section-title"><span>3.</span> Yüklenen PDF Dosyaları</h2>
+                    
+                    <div class="bulk-tabs-container">
+                        <button type="button" class="bulk-tab-btn active" data-bulk-tab="all-files-pane">
+                            Tümü
+                            <span class="tab-badge" id="allCount">0</span>
+                        </button>
+                        <button type="button" class="bulk-tab-btn" data-bulk-tab="matched-files-pane">
+                            Eşleşenler
+                            <span class="tab-badge success" id="matchedCount">0</span>
+                        </button>
+                        <button type="button" class="bulk-tab-btn" data-bulk-tab="unmatched-files-pane">
+                            Eşleşmeyenler
+                            <span class="tab-badge" id="unmatchedCount">0</span>
+                        </button>
+                    </div>
+
+                    <div class="bulk-tab-content-container">
+                        <div id="all-files-pane" class="bulk-tab-pane active">
+                            <div id="allFilesList"></div>
+                        </div>
+                        
+                        <div id="matched-files-pane" class="bulk-tab-pane">
+                            <div id="matchedFilesList"></div>
+                        </div>
+                        
+                        <div id="unmatched-files-pane" class="bulk-tab-pane">
+                            <div id="unmatchedFilesList"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bulk Actions Section -->
+                <div class="form-section bulk-action-container" id="bulkActionSection" style="display: none;">
+                    <h2 class="section-title"><span>4.</span> Toplu İşlemler</h2>
+                    
+                    <div class="progress-container" id="progressContainer" style="display: none;">
+                        <div class="progress-bar" id="progressBar"></div>
+                    </div>
+                    
+                    <div class="form-actions">
+                        <button type="button" class="btn action-btn complete-btn" id="startBulkIndexingBtn" disabled>
+                            🚀 Toplu İndeksleme Başlat
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </main>
     </div>
-    <div class="form-group">
-      <label class="form-label" for="bulkFiles">
-        B- PDF Dosyalarını Yükleyin <span style="color: red;">*</span>
-      </label>
-      <div class="file-upload-wrapper">
-        <input type="file" id="bulkFiles" multiple accept=".pdf" name="bulkFiles">
-        <div class="file-upload-button" id="bulkFilesButton">PDF Dosyalarını Seç</div>
-      </div>
-      <div class="file-upload-info" id="bulkFilesInfo">Henüz PDF dosyası seçilmedi.</div>
-    </div>
-  </div>    
 
-  <div class="form-section">
-    <div class="bulk-tabs-container" style="margin-top: 20px;">
-      <button type="button" class="bulk-tab-btn active" data-bulk-tab="pending-bulk-pane">Bekleyen İşlemler</button>
-      <button type="button" class="bulk-tab-btn" data-bulk-tab="processed-bulk-pane">İşlenmiş Olanlar</button>
-    </div>
+    <script>
+        class BulkDocumentIndexing {
+            constructor() {
+                this.uploadedFiles = [];
+                this.portfolioRecords = this.generateSamplePortfolioRecords();
+                this.isProcessing = false;
+                this.init();
+            }
 
-    <div class="bulk-tab-content-container">
-      <div id="pending-bulk-pane" class="bulk-tab-pane active">
-        <div id="bulkTableNoJobs" class="text-muted p-4">İşlem listesi boş. Lütfen PDF dosyaları yükleyin.</div>
-        <div id="bulkTableContainer" class="bulk-table-container" style="display: none;">
-          <table class="table table-bordered bulk-table" id="bulkIndexingTable">
-            <thead>
-              <tr>
-                <th><input type="checkbox" id="selectAllBulkJobs" title="Tümünü Seç/Bırak"></th>
-                <th>PDF Dosyası</th>
-                <th>Başvuru No</th>
-                <th>Eşleşen Kayıt</th>
-                <th>Ana İşlem</th>
-                <th>Alt İşlem</th>
-                <th>Tebliğ Tarihi</th>
-                <th>Durum</th>
-                <th>İşlemler</th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-          </table>
-        </div>
-      </div>
-      <div id="processed-bulk-pane" class="bulk-tab-pane">
-        <div id="indexedBulkTableNoJobs" class="text-muted p-4">Daha önce işlenmiş bir kayıt bulunmuyor.</div>
-        <div id="indexedBulkTableContainerProcessed" class="bulk-table-container" style="display: none;">
-          <table class="table table-bordered bulk-table" id="indexedBulkTable">
-            <thead>
-              <tr>
-                <th>PDF Dosyası</th>
-                <th>Başvuru No</th>
-                <th>Eşleşen Kayıt</th>
-                <th>Ana İşlem</th>
-                <th>Alt İşlem</th>
-                <th>Tebliğ Tarihi</th>
-                <th>Durum</th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-</main>
-</div>
-<script type="module">
-  import { loadSharedLayout } from './js/layout-loader.js';
-  loadSharedLayout();
-</script>
+            init() {
+                this.setupEventListeners();
+                this.updateUI();
+            }
 
-<script type="module">
-  import { authService, ipRecordsService } from './firebase-config.js';
-  import { BulkIndexingModule } from './js/bulk-indexing-logic.js';
+            setupEventListeners() {
+                // File upload events
+                const uploadButton = document.getElementById('bulkFilesButton');
+                const fileInput = document.getElementById('bulkFiles');
 
-  async function initBulk() {
-    // Firebase'den mevcut kayıtları çekelim
-    const recordsResult = await ipRecordsService.getRecords();
-    let allRecords = [];
-    if (recordsResult.success) {
-      allRecords = recordsResult.data;
-    }
-    // Modülü başlat
-    new BulkIndexingModule(allRecords);
-  }
+                uploadButton.addEventListener('click', () => fileInput.click());
+                uploadButton.addEventListener('dragover', this.handleDragOver.bind(this));
+                uploadButton.addEventListener('dragleave', this.handleDragLeave.bind(this));
+                uploadButton.addEventListener('drop', this.handleDrop.bind(this));
+                fileInput.addEventListener('change', this.handleFileSelect.bind(this));
 
-  initBulk();
-</script>
+                // Tab events
+                document.querySelectorAll('.bulk-tab-btn').forEach(tab => {
+                    tab.addEventListener('click', (e) => {
+                        const targetPane = e.target.getAttribute('data-bulk-tab');
+                        this.switchTab(targetPane);
+                    });
+                });
 
+                // Bulk indexing button
+                document.getElementById('startBulkIndexingBtn').addEventListener('click', this.startBulkIndexing.bind(this));
+            }
+
+            generateSamplePortfolioRecords() {
+                return [
+                    { id: 1, applicationNumber: '2025/1', title: 'ABC Teknoloji Marka Başvurusu', type: 'Marka' },
+                    { id: 2, applicationNumber: '2025/2', title: 'XYZ Patent Başvurusu', type: 'Patent' },
+                    { id: 3, applicationNumber: '2025/3', title: 'DEF Tasarım Başvurusu', type: 'Tasarım' },
+                    { id: 4, applicationNumber: '2024/158', title: 'GHI Marka Başvurusu', type: 'Marka' },
+                    { id: 5, applicationNumber: '2024/159', title: 'JKL Patent Başvurusu', type: 'Patent' }
+                ];
+            }
+
+            handleDragOver(e) {
+                e.preventDefault();
+                e.currentTarget.classList.add('dragover');
+            }
+
+            handleDragLeave(e) {
+                e.currentTarget.classList.remove('dragover');
+            }
+
+            handleDrop(e) {
+                e.preventDefault();
+                e.currentTarget.classList.remove('dragover');
+                const files = Array.from(e.dataTransfer.files).filter(file => file.type === 'application/pdf');
+                this.processFiles(files);
+            }
+
+            handleFileSelect(e) {
+                const files = Array.from(e.target.files);
+                this.processFiles(files);
+            }
+
+            processFiles(files) {
+                if (files.length === 0) return;
+
+                files.forEach(file => {
+                    const fileData = {
+                        id: Date.now() + Math.random(),
+                        file: file,
+                        name: file.name,
+                        size: file.size,
+                        extractedAppNumber: this.extractApplicationNumber(file.name),
+                        matchedRecord: null,
+                        isMatched: false,
+                        status: 'pending',
+                        isSelected: false
+                    };
+
+                    // Eşleştirme kontrolü
+                    if (fileData.extractedAppNumber) {
+                        const normalizedExtracted = fileData.extractedAppNumber.replace(/[-_]/g, '/');
+                        fileData.matchedRecord = this.portfolioRecords.find(record => 
+                            record.applicationNumber === normalizedExtracted
+                        );
+                        fileData.isMatched = !!fileData.matchedRecord;
+                        fileData.isSelected = fileData.isMatched;
+                    }
+
+                    this.uploadedFiles.push(fileData);
+                });
+
+                this.updateUI();
+                this.showNotification(`${files.length} PDF dosyası yüklendi ve analiz edildi`, 'success');
+            }
+
+            extractApplicationNumber(fileName) {
+                // Format: "2025-1 250369056 Marka Başvurusu"
+                // Başındaki yıl-numara formatını yakala
+                const regex = /^(\d{4}[-_]\d+)/;
+                const match = fileName.match(regex);
+                return match ? match[1] : null;
+            }
+
+            switchTab(targetPane) {
+                // Tüm tab butonlarını pasif yap
+                document.querySelectorAll('.bulk-tab-btn').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+                
+                // Tüm tab panellerini gizle
+                document.querySelectorAll('.bulk-tab-pane').forEach(pane => {
+                    pane.classList.remove('active');
+                });
+                
+                // Seçilen tab butonunu aktif yap
+                const selectedTab = document.querySelector(`[data-bulk-tab="${targetPane}"]`);
+                if (selectedTab) selectedTab.classList.add('active');
+                
+                // Seçilen paneli göster
+                const selectedPane = document.getElementById(targetPane);
+                if (selectedPane) selectedPane.classList.add('active');
+            }
+
+            updateUI() {
+                this.updateStats();
+                this.updateSections();
+                this.renderFileLists();
+                this.updateBulkActionButton();
+            }
+
+            updateStats() {
+                const total = this.uploadedFiles.length;
+                const matched = this.uploadedFiles.filter(f => f.isMatched).length;
+                const unmatched = total - matched;
+                const ready = this.uploadedFiles.filter(f => f.isMatched && f.status === 'pending').length;
+
+                // Stats cards
+                document.getElementById('totalFiles').textContent = total;
+                document.getElementById('matchedFiles').textContent = matched;
+                document.getElementById('unmatchedFiles').textContent = unmatched;
+                document.getElementById('readyFiles').textContent = ready;
+
+                // Tab badges
+                document.getElementById('allCount').textContent = total;
+                document.getElementById('matchedCount').textContent = matched;
+                document.getElementById('unmatchedCount').textContent = unmatched;
+            }
+
+            updateSections() {
+                const hasFiles = this.uploadedFiles.length > 0;
+                
+                document.getElementById('statsSection').style.display = hasFiles ? 'block' : 'none';
+                document.getElementById('fileListSection').style.display = hasFiles ? 'block' : 'none';
+                document.getElementById('bulkActionSection').style.display = hasFiles ? 'block' : 'none';
+                
+                // Update file info
+                const fileInfo = document.getElementById('bulkFilesInfo');
+                if (hasFiles) {
+                    fileInfo.textContent = `${this.uploadedFiles.length} PDF dosyası yüklendi`;
+                } else {
+                    fileInfo.textContent = 'Henüz PDF dosyası seçilmedi. Birden fazla PDF dosyası seçebilirsiniz.';
+                }
+            }
+
+            renderFileLists() {
+                const allFiles = this.uploadedFiles;
+                const matchedFiles = this.uploadedFiles.filter(f => f.isMatched);
+                const unmatchedFiles = this.uploadedFiles.filter(f => !f.isMatched);
+
+                document.getElementById('allFilesList').innerHTML = this.renderFileList(allFiles);
+                document.getElementById('matchedFilesList').innerHTML = this.renderFileList(matchedFiles);
+                document.getElementById('unmatchedFilesList').innerHTML = this.renderFileList(unmatchedFiles);
+            }
+
+            renderFileList(files) {
+                if (files.length === 0) {
+                    return `
+                        <div class="empty-message">
+                            <div class="empty-icon">📄</div>
+                            <h3>Bu kategoride dosya bulunmuyor</h3>
+                        </div>
+                    `;
+                }
+
+                return files.map(file => `
+                    <div class="pdf-list-item ${file.isMatched ? 'matched' : 'unmatched'}">
+                        <div class="pdf-icon">📄</div>
+                        <div class="pdf-details">
+                            <div class="pdf-name">${file.name}</div>
+                            <div class="pdf-meta">
+                                Boyut: ${this.formatFileSize(file.size)} • 
+                                Çıkarılan No: ${file.extractedAppNumber || 'Tespit edilemedi'}
+                            </div>
+                            <div class="match-status ${file.isMatched ? 'matched' : 'unmatched'}">
+                                ${file.isMatched ? 
+                                    `✅ Eşleşti: ${file.matchedRecord.title} (${file.matchedRecord.applicationNumber})` : 
+                                    '❌ Portföyde eşleşme bulunamadı'
+                                }
+                            </div>
+                        </div>
+                        <div class="pdf-actions">
+                            ${file.isMatched ? `
+                                <button class="action-btn complete-btn" onclick="indexing.triggerJob('${file.id}')" 
+                                    ${file.status === 'completed' ? 'disabled' : ''}>
+                                    ${file.status === 'completed' ? '✅ İşlendi' : 
+                                      file.status === 'processing' ? '⏳ İşleniyor' : '🚀 İş Tetikle'}
+                                </button>
+                            ` : `
+                                <button class="action-btn edit-btn" onclick="indexing.manualMatch('${file.id}')">
+                                    🔗 Manuel Eşleştir
+                                </button>
+                            `}
+                            <button class="action-btn delete-btn" onclick="indexing.removeFile('${file.id}')">
+                                🗑️ Kaldır
+                            </button>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            formatFileSize(bytes) {
+                if (bytes === 0) return '0 B';
+                const k = 1024;
+                const sizes = ['B', 'KB', 'MB', 'GB'];
+                const i = Math.floor(Math.log(bytes) / Math.log(k));
+                return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+            }
+
+            triggerJob(fileId) {
+                const file = this.uploadedFiles.find(f => f.id == fileId);
+                if (!file || !file.isMatched || file.status !== 'pending') return;
+
+                file.status = 'processing';
+                this.updateUI();
+                this.showNotification(`${file.name} için iş tetikleniyor...`, 'info');
+
+                // Simulate job processing
+                setTimeout(() => {
+                    file.status = 'completed';
+                    this.updateUI();
+                    this.showNotification(`${file.name} başarıyla indekslendi`, 'success');
+                }, 2000);
+            }
+
+            manualMatch(fileId) {
+                const file = this.uploadedFiles.find(f => f.id == fileId);
+                if (!file) return;
+
+                // Simulate manual matching dialog
+                let options = 'Portföy kayıtları:\n';
+                this.portfolioRecords.forEach((record, index) => {
+                    options += `${index + 1}. ${record.applicationNumber} - ${record.title}\n`;
+                });
+                
+                const selectedIndex = prompt(options + '\nSeçmek istediğiniz kayıt numarasını girin (1-5):');
+                if (selectedIndex && selectedIndex >= 1 && selectedIndex <= this.portfolioRecords.length) {
+                    file.matchedRecord = this.portfolioRecords[selectedIndex - 1];
+                    file.isMatched = true;
+                    file.isSelected = true;
+                    this.updateUI();
+                    this.showNotification(`${file.name} manuel olarak eşleştirildi`, 'success');
+                }
+            }
+
+            removeFile(fileId) {
+                this.uploadedFiles = this.uploadedFiles.filter(f => f.id != fileId);
+                this.updateUI();
+                this.showNotification('Dosya kaldırıldı', 'info');
+            }
+
+            updateBulkActionButton() {
+                const btn = document.getElementById('startBulkIndexingBtn');
+                const readyFiles = this.uploadedFiles.filter(f => f.isMatched && f.status === 'pending');
+                
+                btn.disabled = readyFiles.length === 0 || this.isProcessing;
+                
+                if (this.isProcessing) {
+                    btn.textContent = '⏳ İşleniyor...';
+                } else if (readyFiles.length === 0) {
+                    btn.textContent = '🚀 Toplu İndeksleme Başlat';
+                } else {
+                    btn.textContent = `🚀 Toplu İndeksleme Başlat (${readyFiles.length} dosya)`;
+                }
+            }
+
+            async startBulkIndexing() {
+                const readyFiles = this.uploadedFiles.filter(f => f.isMatched && f.status === 'pending');
+                if (readyFiles.length === 0) return;
+
+                this.isProcessing = true;
+                this.updateBulkActionButton();
+
+                const progressContainer = document.getElementById('progressContainer');
+                const progressBar = document.getElementById('progressBar');
+                progressContainer.style.display = 'block';
+
+                this.showNotification(`${readyFiles.length} dosya için toplu indeksleme başlatılıyor...`, 'info');
+
+                for (let i = 0; i < readyFiles.length; i++) {
+                    const file = readyFiles[i];
+                    file.status = 'processing';
+                    this.updateUI();
+
+                    // Simulate processing time
+                    await new Promise(resolve => setTimeout(resolve, 1500));
+
+                    file.status = 'completed';
+                    const progress = ((i + 1) / readyFiles.length) * 100;
+                    progressBar.style.width = `${progress}%`;
+                    this.updateUI();
+                }
+
+                this.isProcessing = false;
+                progressContainer.style.display = 'none';
+                progressBar.style.width = '0%';
+                this.updateBulkActionButton();
+                this.showNotification(`Toplu indeksleme tamamlandı! ${readyFiles.length} dosya başarıyla işlendi.`, 'success');
+            }
+
+            showNotification(message, type = 'info') {
+                // Mevcut notification sistemini kullan
+                const event = new CustomEvent('showNotification', {
+                    detail: { message, type }
+                });
+                window.dispatchEvent(event);
+            }
+        }
+
+        // Initialize the application
+        const indexing = new BulkDocumentIndexing();
+    </script>
 </body>
 </html>
