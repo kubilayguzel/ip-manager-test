@@ -346,6 +346,22 @@
         .no-results-message { text-align: center; color: #999; padding: 15px; }
         .search-result-display { background: #e9f5ff; border: 1px solid #bde0fe; padding: 10px; border-radius: 8px; margin-top: 10px; }
 
+        /* Styles for the actions column */
+        .tasks-table th.actions-column-header,
+        .tasks-table td.actions-cell {
+            white-space: nowrap; 
+            min-width: 180px; 
+            overflow: visible; 
+            text-align: center;
+        }
+
+        .tasks-table td.actions-cell .action-btn {
+            margin-right: 5px; 
+        }
+        .tasks-table td.actions-cell .action-btn:last-child {
+            margin-right: 0;
+        }
+
     </style>
 </head>
 <body>
@@ -354,7 +370,7 @@
         position: fixed;
         top: 20px;
         right: 20px;
-        z-index: 10000; /* Diğer her şeyin üstünde olmasını sağlar */
+        z-index: 10000;
         display: flex;
         flex-direction: column;
         gap: 10px;
@@ -376,7 +392,8 @@
                 <div class="table-container">
                     <table class="tasks-table">
                         <thead>
-                            <tr id="tasksTableHeaderRow"> <th>İş No.</th>
+                            <tr id="tasksTableHeaderRow">
+                                <th>İş No.</th>
                                 <th>İlgili Kayıt</th>
                                 <th>Tip</th>
                                 <th>Öncelik</th>
@@ -384,9 +401,10 @@
                                 <th>Operasyonel Son Tarih</th>
                                 <th>Resmi Son Tarih</th>
                                 <th>Durum</th>
-                                <th>İşlemler</th>
+                                <th class="actions-column-header">İşlemler</th>
                             </tr>
-                            <tr id="tasksTableFilterRow"> </tr>
+                            <tr id="tasksTableFilterRow">
+                                </tr>
                         </thead>
                         <tbody id="tasksTableBody">
                             </tbody>
@@ -1121,14 +1139,14 @@
                 this.populateAccrualModal(accrual);
             } else {
                 document.querySelector('#createTaskAccrualModal .modal-title').textContent = 'Yeni Tahakkuk Ekle';
-                document.getElementById('saveNewAccrualBtn').textContent = 'Tahakkuk Ekle';
+                document.getElementById('saveNewAccrualBtn').textContent = 'Tahakkuku Oluştur';
                 document.getElementById('createTaskAccrualTaskTitleDisplay').value = this.currentTask.title;
             }
 
             modal.classList.add('show');
             document.body.classList.add('modal-open');
             
-            const accrualInputs = ['createTaskOfficialFee', 'createTaskServiceFee', 'createTaskVatRate', 'createTaskApplyVatToOfficialFee', 'createTaskOfficialFeeCurrency', 'createTaskServiceFeeCurrency'];
+            const accrualInputs = ['createTaskOfficialFee', 'createTaskServiceFee', 'createTaskVatRate', 'createTaskApplyVatToOfficialFee', 'createTaskOfficialFeeCurrency', 'createTaskAccrualServiceFeeCurrency'];
             accrualInputs.forEach(id => {
                 const el = document.getElementById(id);
                 if (el) { 
@@ -1492,7 +1510,7 @@
             
             const parts = deliveryDateStr.split('-');
             const deliveryDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
-            deliveryDate.setHours(0, 0, 0, 0);
+            deliveryDate.setHours(0,0,0,0);
 
             console.log('DEBUG: Tebliğ Tarihi:', this.formatDateToYYYYMMDD(deliveryDate));
             console.log('DEBUG: Current Task Type ID:', this.currentTask.taskType);
@@ -1648,7 +1666,6 @@
             return;
         }
 
-        // TableManager'ı doğru şekilde başlatırken, veriyi constructor'da geçirin.
         tasksTableManager = new TableManager({
             tableId: 'tasks-table',
             tableBodyId: 'tasksTableBody',
@@ -1665,7 +1682,7 @@
                 { key: 'operationalDueDate', label: 'Operasyonel Son Tarih', sortable: true, searchable: true },
                 { key: 'officialDueDate', label: 'Resmi Son Tarih', sortable: true, searchable: true },
                 { key: 'status', label: 'Durum', sortable: true, searchable: true },
-                { key: 'actions', label: 'İşlemler', sortable: false, searchable: false }
+                { key: 'actions', label: 'İşlemler', sortable: false, searchable: false, className: 'actions-column-header' }
             ],
             allRecords: [],
             allPersons: taskModalManager.allPersons,
@@ -1675,19 +1692,18 @@
                 const statusClass = `status-${task.status.replace(/ /g, '_').toLowerCase()}`;
                 const priorityClass = `priority-${task.priority.toLowerCase()}`;
 
-                // task.taskType artık display name olarak geliyor
                 const taskTypeDisplay = task.taskType; 
 
                 return `
-                    <td>${task.taskNumber}</td>
-                    <td>${task.relatedIpRecord || 'Yok'}</td>
-                    <td>${taskTypeDisplay}</td>
-                    <td><span class="priority-badge ${priorityClass}">${task.priority}</span></td>
-                    <td>${assignedUserName}</td>
-                    <td>${task.operationalDueDate}</td>
-                    <td>${task.officialDueDate}</td>
-                    <td><span class="status-badge ${statusClass}">${task.status}</span></td>
-                    <td>
+                    <td data-label="İş No.">${task.taskNumber}</td>
+                    <td data-label="İlgili Kayıt">${task.relatedIpRecord || 'Yok'}</td>
+                    <td data-label="Tip">${taskTypeDisplay}</td>
+                    <td data-label="Öncelik"><span class="priority-badge ${priorityClass}">${task.priority}</span></td>
+                    <td data-label="Atanan">${assignedUserName}</td>
+                    <td data-label="Operasyonel Son Tarih">${task.operationalDueDate}</td>
+                    <td data-label="Resmi Son Tarih">${task.officialDueDate}</td>
+                    <td data-label="Durum"><span class="status-badge ${statusClass}">${task.status}</span></td>
+                    <td data-label="İşlemler" class="actions-cell">
                         <button class="action-btn edit-btn" data-id="${task.id}">Düzenle</button>
                         <button class="action-btn assign-btn" data-id="${task.id}">Ata</button>
                     </td>
@@ -1699,6 +1715,7 @@
         });
 
         tasksTableManager.initializeTable();
+
         await loadTasksIntoTable();
         setupListingPageEventListeners();
     });
@@ -1770,7 +1787,7 @@
         });
 
         document.getElementById('taskSearchInput').addEventListener('input', (e) => {
-            tasksTableManager.globalSearchInputId = 'taskSearchInput'; // TableManager'ın bunu almasını sağlamak için
+            tasksTableManager.setSearchQuery(e.target.value); 
             tasksTableManager.applyFiltersAndSort(); 
         });
 
