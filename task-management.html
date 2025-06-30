@@ -687,6 +687,52 @@
             this.renderAccruals();
         }
 
+        renderAccruals() {
+            const container = document.getElementById('accrualsContainer');
+            container.innerHTML = '';
+
+            if (!Array.isArray(this.currentAccruals) || this.currentAccruals.length === 0) {
+                container.innerHTML = '<p>Henüz tahakkuk bulunmuyor.</p>';
+                return;
+            } 
+
+            this.currentAccruals.forEach(accrual => {
+                const accrualElement = document.createElement('div');
+                accrualElement.classList.add('accrual-card');
+
+                const statusText = accrual.status === 'paid' ? 'Ödendi' : 'Ödenmedi';
+                const statusClass = accrual.status === 'paid' ? 'status-paid' : 'status-unpaid';
+
+                const currencyFormatter = (amount, currency) => {
+                    try {
+                        return new Intl.NumberFormat('tr-TR', { style: 'currency', currency: currency || 'TRY' }).format(amount);
+                    } catch (e) {
+                        return new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' }).format(amount);
+                    }
+                };
+                const totalAmountFormatted = currencyFormatter(accrual.totalAmount || 0, accrual.totalAmountCurrency || 'TRY');
+                const officialFeeFormatted = currencyFormatter(accrual.officialFee?.amount || 0, accrual.officialFee?.currency || 'TRY');
+                const serviceFeeFormatted = currencyFormatter(accrual.serviceFee?.amount || 0, accrual.serviceFee?.currency || 'TRY');
+                
+                accrualElement.innerHTML = `
+                    <div class="accrual-card-header">
+                        <h4>Tahakkuk ID: ${accrual.id.substring(0, 8)}...</h4>
+                        <span class="status-badge ${statusClass}">${statusText}</span>
+                    </div>
+                    <div class="accrual-card-body">
+                        <p><strong>Resmi Ücret:</strong> ${officialFeeFormatted}</p>
+                        <p><strong>Hizmet Bedeli:</strong> ${serviceFeeFormatted}</p>
+                        <p><strong>Toplam Tutar:</strong> ${totalAmountFormatted}</p>
+                        <p><strong>Oluşturulma:</strong> ${new Date(accrual.createdAt).toLocaleDateString('tr-TR')}</p>
+                    </div>
+                    <div class="accrual-card-actions">
+                        <button class="action-btn edit-accrual-btn" data-id="${accrual.id}">Düzenle</button>
+                    </div>
+                `;
+                container.appendChild(accrualElement);
+            });
+        }
+
         fillTaskForm() {
             const task = this.currentTask;
             const modalBody = document.getElementById('modalBody');
