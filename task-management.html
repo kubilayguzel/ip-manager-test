@@ -354,7 +354,7 @@
         .tasks-table th.actions-column-header,
         .tasks-table td.actions-cell {
             white-space: nowrap; 
-            min-width: 220px; /* Genişlik artırıldı */
+            min-width: 280px; /* Genişlik daha da artırıldı */
             overflow: visible; 
             text-align: center;
         }
@@ -406,9 +406,7 @@
                                 <th>Durum</th>
                                 <th class="actions-column-header">İşlemler</th>
                             </tr>
-                            <tr id="tasksTableFilterRow">
-                                </tr>
-                        </thead>
+                            </thead>
                         <tbody id="tasksTableBody">
                             </tbody>
                     </table>
@@ -1299,7 +1297,6 @@
                 }
             } catch (error) {
                 showNotification('Tahakkuk kaydedilirken hata oluştu: ' + error.message, 'error');
-                console.error('Tahakkuk kaydetme hatası:', error);
             }
         }
 
@@ -1673,8 +1670,8 @@
             tableId: 'tasks-table',
             tableBodyId: 'tasksTableBody',
             tableHeaderRowId: 'tasksTableHeaderRow',
-            // tableFilterRowId: 'tasksTableFilterRow', // Kaldırıldı
-            globalSearchInputId: null, // Kaldırıldı
+            tableFilterRowId: null, // Kolon filtreleme satırı kaldırıldı
+            globalSearchInputId: null, // Global arama çubuğu kaldırıldı
             noRecordsMessageId: 'noTasksMessage',
             columnDefinitions: [
                 { key: 'taskNumber', label: 'İş No.', sortable: true, searchable: true },
@@ -1709,6 +1706,9 @@
                     <td data-label="İşlemler" class="actions-cell">
                         <button class="action-btn edit-btn" data-id="${task.id}">Düzenle</button>
                         <button class="action-btn assign-btn" data-id="${task.id}">Ata</button>
+                        <button class="action-btn view-btn" data-id="${task.id}">Görüntüle</button>
+                        <button class="action-btn add-accrual-btn" data-id="${task.id}">Ek Tahakkuk Oluştur</button>
+                        <button class="action-btn delete-btn" data-id="${task.id}">Sil</button>
                     </td>
                 `;
             },
@@ -1768,7 +1768,7 @@
                     };
                 });
 
-                tasksTableManager.setTableData(formattedTasks); // setTableData metodunu çağırarak veriyi TableManager'a ilet
+                tasksTableManager.setTableData(formattedTasks);
                 
             } else {
                 noTasksMessage.style.display = 'block';
@@ -1797,20 +1797,43 @@
         */
 
         document.getElementById('tasksTableBody').addEventListener('click', (event) => {
-            const editBtn = event.target.closest('.action-btn.edit-btn');
-            if (editBtn) {
-                event.preventDefault();
-                const taskId = editBtn.dataset.id;
+            const targetButton = event.target.closest('.action-btn');
+            if (!targetButton) return; // Sadece action-btn'lere odaklan
+
+            const taskId = targetButton.dataset.id;
+            const action = targetButton.classList[1]; // action-btn'den sonraki sınıf (edit-btn, view-btn vb.)
+
+            if (action === 'edit-btn') {
+                // Düzenle butonu tıklaması
                 taskModalManager.openTaskDetailModal(taskId);
-            }
-            const assignBtn = event.target.closest('.action-btn.assign-btn');
-            if (assignBtn) {
-                event.preventDefault();
-                const taskId = assignBtn.dataset.id;
+            } else if (action === 'assign-btn') {
+                // Ata butonu tıklaması
                 taskModalManager.taskId = taskId;
                 taskModalManager.populateAssignedToDropdown();
                 document.getElementById('assignTaskModal').classList.add('show');
                 document.body.classList.add('modal-open');
+            } else if (action === 'view-btn') {
+                // Görüntüle butonu tıklaması
+                taskModalManager.openTaskDetailModal(taskId); // View için de aynı modalı kullanabiliriz
+            } else if (action === 'add-accrual-btn') {
+                // Ek Tahakkuk Oluştur butonu tıklaması
+                taskModalManager.taskId = taskId; // Modal Manager'a task ID'sini ata
+                taskModalManager.showAccrualModal('create', taskId); // Tahakkuk oluşturma modalını aç
+            } else if (action === 'delete-btn') {
+                // Sil butonu tıklaması
+                if (confirm('Bu görevi silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.')) {
+                    taskService.deleteTask(taskId).then(result => {
+                        if (result.success) {
+                            showNotification('Görev başarıyla silindi!', 'success');
+                            loadTasksIntoTable(); // Tabloyu yenile
+                        } else {
+                            showNotification('Görev silinirken hata oluştu: ' + result.error, 'error');
+                        }
+                    }).catch(error => {
+                        showNotification('Görev silinirken beklenmeyen bir hata oluştu.', 'error');
+                        console.error('Görev silme hatası:', error);
+                    });
+                }
             }
         });
     }
