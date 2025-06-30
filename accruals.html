@@ -367,10 +367,9 @@
     <script type="module">
     import { authService, accrualService, taskService, ipRecordsService, personService, auth, generateUUID } from './firebase-config.js';
     import { showNotification, formatFileSize, readFileAsDataURL } from './utils.js';
-    import { loadSharedLayout } from './js/layout-loader.js'; // layout-loader.js eklendi
+    import { loadSharedLayout } from './js/layout-loader.js';
 
     document.addEventListener('DOMContentLoaded', async () => {
-        // Ortak layout'u yükle ve bu sayfanın aktif linkini belirt
         await loadSharedLayout({ activeMenuLink: 'accruals.html' });
 
         class AccrualsModule {
@@ -387,12 +386,9 @@
                 this.uploadedPaymentReceipts = []; 
             }
 
-            // init metodunu async olarak doğru tanımlama
             async init() {
                 this.currentUser = authService.getCurrentUser();
                 
-                // layout-loader zaten kullanıcı yoksa yönlendirme yaptığı için burada ekstra bir if (!this.currentUser) kontrolü şart değil.
-                // Ancak, hata ayıklama veya ek güvenlik için bırakılabilir, hata vermez.
                 if (!this.currentUser) {
                     console.error('DEBUG: currentUser bulunamadı, ancak layout-loader yönlendirmedi.');
                     window.location.href = 'index.html'; 
@@ -403,10 +399,7 @@
                 this.setupEventListeners();
             }
 
-            // updateUserInfo() { /* Bu fonksiyon artık layout-loader.js içinde */ }
-
             setupEventListeners() {
-                // document.getElementById('logoutBtn').addEventListener('click', () => authService.signOut()); // Bu artık layout-loader.js içinde
                 document.getElementById('statusFilter').addEventListener('change', (e) => this.renderTable(e.target.value));
                 document.getElementById('selectAllCheckbox').addEventListener('change', (e) => this.toggleSelectAll(e.target.checked));
                 
@@ -428,7 +421,7 @@
                             this.showEditAccrualModal(accrualId);
                         } else if (e.target.classList.contains('view-btn')) {
                             this.showViewAccrualDetailModal(accrualId);
-                        } else if (e.target.classList.contains('delete-btn')) { /* Yeni sil butonu */
+                        } else if (e.target.classList.contains('delete-btn')) {
                             this.deleteAccrual(accrualId);
                         }
                     }
@@ -454,14 +447,13 @@
                 document.getElementById('cancelMarkPaidBtn').addEventListener('click', () => this.closeModal('markPaidModal'));
                 document.getElementById('confirmMarkPaidBtn').addEventListener('click', () => this.handleBulkUpdate('paid'));
                 
-                // Kalan Tutar alanı için event listener (modal açıldığında görünürse)
                 document.getElementById('remainingAmount').addEventListener('input', () => {
                     const remainingAmountInput = parseFloat(document.getElementById('remainingAmount').value) || 0;
                     const displayAccrualTotalAmount = parseFloat(document.getElementById('displayAccrualTotalAmount').textContent.replace(/[^\d.,]/g, '').replace('.', '').replace(',', '.')) || 0;
                     
                     if (remainingAmountInput > displayAccrualTotalAmount) {
                         showNotification("Kalan Tutar, Toplam Tutar'dan büyük olamaz.", 'error');
-                        document.getElementById('remainingAmount').value = displayAccrualTotalAmount; // veya boşalt
+                        document.getElementById('remainingAmount').value = displayAccrualTotalAmount;
                     }
                 });
 
@@ -555,9 +547,8 @@
                     const isSelected = this.selectedAccruals.has(accrual.id);
 
                     const isPaid = accrual.status === 'paid';
-                    const editButtonDisabled = isPaid ? 'disabled' : ''; // Sadece tamamen ödendi ise düzenle pasif olacak
+                    const editButtonDisabled = isPaid ? 'disabled' : '';
 
-                    // İlgili İş adı ve ID'si için yeni gösterim
                     const relatedTaskDisplay = accrual.taskTitle ? `${accrual.taskTitle} (${accrual.taskId})` : (accrual.taskId || 'İş Detayı');
 
                     row.innerHTML = `
@@ -577,15 +568,15 @@
                 });
             }
 
-            async deleteAccrual(accrualId) { /* Yeni Fonksiyon: Tahakkuk Silme */
+            async deleteAccrual(accrualId) {
                 if (confirm('Bu tahakkuku silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.')) {
                     try {
                         const result = await accrualService.deleteAccrual(accrualId);
                         if (result.success) {
                             showNotification('Tahakkuk başarıyla silindi.', 'success');
-                            this.selectedAccruals.delete(accrualId); // Seçimden çıkar
-                            this.updateBulkActionsVisibility(); // Toplu işlem butonlarını güncelle
-                            await this.loadAllData(); // Tabloyu yenile
+                            this.selectedAccruals.delete(accrualId);
+                            this.updateBulkActionsVisibility();
+                            await this.loadAllData();
                         } else {
                             showNotification('Tahakkuk silinirken hata oluştu: ' + result.error, 'error');
                         }
@@ -595,8 +586,6 @@
                     }
                 }
             }
-
-            // markAs fonksiyonu kaldırıldı, handleBulkUpdate kullanılacak
 
             toggleSelectAll(checked) {
                 const checkboxes = document.querySelectorAll('.row-checkbox');
@@ -628,7 +617,7 @@
 
                 if (newStatus === 'paid') {
                     const paymentDate = document.getElementById('paymentDate').value;
-                    const remainingAmountInput = parseFloat(document.getElementById('remainingAmount').value); // Kalan Tutar input'u
+                    const remainingAmountInput = parseFloat(document.getElementById('remainingAmount').value);
                     let accrualTotalAmount = 0;
                     let selectedAccrual = null;
 
@@ -637,15 +626,14 @@
                         accrualTotalAmount = selectedAccrual?.totalAmount || 0;
                     }
                     
-
                     if (!paymentDate) {
                         showNotification('Lütfen ödeme tarihini girin.', 'error');
                         return;
                     }
 
                     let confirmMessage;
-                    let targetStatusForSingleAccrual = 'paid'; // Varsayılan olarak ödendi
-                    let finalRemainingAmount = 0; // Varsayılan olarak kalan tutar 0
+                    let targetStatusForSingleAccrual = 'paid';
+                    let finalRemainingAmount = 0;
 
                     if (this.selectedAccruals.size === 1) {
                         if (remainingAmountInput > 0 && remainingAmountInput < accrualTotalAmount) {
@@ -659,14 +647,14 @@
                         } else if (remainingAmountInput >= accrualTotalAmount && accrualTotalAmount > 0) {
                              showNotification("Kalan Tutar, Toplam Tutar'dan büyük veya eşit olamaz (Tam Ödeme için 0 girin).", 'error');
                              return;
-                         } else { // kalan tutar negatif veya geçerli bir sayı değil
+                         } else {
                              confirmMessage = `Seçilen tahakkuku "Ödendi" olarak işaretlemek istediğinizden emin misiniz?`;
                              targetStatusForSingleAccrual = 'paid';
                              finalRemainingAmount = 0;
                          }
-                    } else { // Çoklu seçim
+                    } else {
                         confirmMessage = `${this.selectedAccruals.size} adet tahakkuku "Ödendi" olarak işaretlemek istediğinizden emin misiniz?`;
-                        targetStatusForSingleAccrual = 'paid'; // Çoklu seçimde her zaman tamamen ödendi
+                        targetStatusForSingleAccrual = 'paid';
                         finalRemainingAmount = 0;
                     }
                     
@@ -675,14 +663,13 @@
                             let updates = { paymentDate: paymentDate };
                             let currentAccrual = this.allAccruals.find(acc => acc.id === id);
 
-                            if (this.selectedAccruals.size === 1) { // Tekli seçimdeki özel durumları uygula
+                            if (this.selectedAccruals.size === 1) {
                                 updates.status = targetStatusForSingleAccrual;
                                 updates.remainingAmount = finalRemainingAmount;
-                            } else { // Çoklu seçimde varsayılan olarak tamamen ödendi
+                            } else {
                                 updates.status = 'paid';
                                 updates.remainingAmount = 0;
                             }
-
 
                             if (this.uploadedPaymentReceipts.length > 0) {
                                 let currentFiles = currentAccrual ? (currentAccrual.files || []) : [];
@@ -713,7 +700,6 @@
                             const currentAccrual = this.allAccruals.find(acc => acc.id === id);
                             let updatedFiles = (currentAccrual.files || []).filter(file => file.documentDesignation !== 'Ödeme Dekontu');
                             
-                            // 'partially_paid' durumundan 'unpaid' durumuna geçerken kalan tutarı toplam tutara geri döndür
                             const newRemainingAmount = currentAccrual.totalAmount; 
 
                             return accrualService.updateAccrual(id, { status: newStatus, files: updatedFiles, paymentDate: null, remainingAmount: newRemainingAmount });
@@ -931,7 +917,6 @@
                     applyVatToOfficialFee: applyVatToOfficial,
                     totalAmount,
                     totalAmountCurrency: 'TRY',
-                    // Edit modalında kalan tutar değişimi yok, bu yüzden mevcut değerini koru
                     remainingAmount: this.currentEditAccrual.remainingAmount !== undefined ? this.currentEditAccrual.remainingAmount : totalAmount,
                     tpInvoiceParty: this.editSelectedTpInvoiceParty ? { id: this.editSelectedTpInvoiceParty.id, name: this.editSelectedTpInvoiceParty.name } : null,
                     serviceInvoiceParty: this.editSelectedServiceInvoiceParty ? { id: this.editSelectedServiceInvoiceParty.id, name: this.editSelectedServiceInvoiceParty.name } : null,
@@ -1025,9 +1010,9 @@
                 }
                 if (modalId === 'markPaidModal') {
                     document.getElementById('paymentDate').valueAsDate = new Date();
-                    document.getElementById('remainingAmount').value = ''; // Kalan tutarı temizle
-                    document.getElementById('singleAccrualTotalAmountDisplay').style.display = 'none'; // Toplam tutar alanını gizle
-                    document.getElementById('remainingAmountGroup').style.display = 'none'; // Kalan tutar grubunu gizle
+                    document.getElementById('remainingAmount').value = '';
+                    document.getElementById('singleAccrualTotalAmountDisplay').style.display = 'none';
+                    document.getElementById('remainingAmountGroup').style.display = 'none';
                     this.uploadedPaymentReceipts = [];
                     document.getElementById('paymentReceiptFileList').innerHTML = '';
                 }
@@ -1041,7 +1026,6 @@
                 }
                 document.getElementById('paidAccrualCount').textContent = this.selectedAccruals.size;
                 
-                // Eğer tek bir tahakkuk seçildiyse toplam tutarı ve kalan tutar alanını göster
                 if (this.selectedAccruals.size === 1) {
                     const selectedAccrualId = Array.from(this.selectedAccruals)[0];
                     const selectedAccrual = this.allAccruals.find(acc => acc.id === selectedAccrualId);
@@ -1049,13 +1033,14 @@
                         document.getElementById('displayAccrualTotalAmount').textContent = new Intl.NumberFormat('tr-TR', { style: 'currency', currency: selectedAccrual.totalAmountCurrency || 'TRY' }).format(selectedAccrual.totalAmount || 0);
                         document.getElementById('singleAccrualTotalAmountDisplay').style.display = 'block';
                         document.getElementById('remainingAmountGroup').style.display = 'block';
-                        // Kalan tutarı mevcut kalan tutarla ön doldur veya toplam tutarla (eğer henüz ödeme yapılmamışsa)
-                        document.getElementById('remainingAmount').value = selectedAccrual.remainingAmount !== undefined ? selectedAccrual.remainingAmount : selectedAccrual.totalAmount || 0;
+                        
+                        // Kalan Tutar alanını varsayılan olarak 0 yap
+                        document.getElementById('remainingAmount').value = 0; 
                     }
                 } else {
                     document.getElementById('singleAccrualTotalAmountDisplay').style.display = 'none';
                     document.getElementById('remainingAmountGroup').style.display = 'none';
-                    document.getElementById('remainingAmount').value = ''; // Çoklu seçimde alanı temizle
+                    document.getElementById('remainingAmount').value = '';
                 }
 
                 document.getElementById('markPaidModal').classList.add('show');
@@ -1148,7 +1133,7 @@
                 document.getElementById('viewAccrualVatRate').textContent = (accrual.vatRate || 0) + '%';
                 document.getElementById('viewAccrualApplyVatToOfficial').textContent = (accrual.applyVatToOfficialFee !== undefined ? accrual.applyVatToOfficialFee : true) ? 'Evet' : 'Hayır';
                 document.getElementById('viewAccrualTotalAmount').textContent = currencyFormatter(accrual.totalAmount || 0, accrual.totalAmountCurrency || 'TRY');
-                document.getElementById('viewAccrualRemainingAmount').textContent = currencyFormatter(accrual.remainingAmount !== undefined ? accrual.remainingAmount : accrual.totalAmount || 0, accrual.totalAmountCurrency || 'TRY'); // Kalan Tutar gösterimi
+                document.getElementById('viewAccrualRemainingAmount').textContent = currencyFormatter(accrual.remainingAmount !== undefined ? accrual.remainingAmount : accrual.totalAmount || 0, accrual.totalAmountCurrency || 'TRY');
                 
                 document.getElementById('viewAccrualTpInvoiceParty').textContent = accrual.tpInvoiceParty?.name || '-';
                 document.getElementById('viewAccrualServiceInvoiceParty').textContent = accrual.serviceInvoiceParty?.name || '-';
