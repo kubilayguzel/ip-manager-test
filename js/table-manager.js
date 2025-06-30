@@ -56,15 +56,23 @@ class TableManager {
     // Tablo başlıklarını ve filtre inputlarını dinamik olarak oluşturur
     renderTableHeadersAndFilters() {
         const tableHeaderRow = document.getElementById(this.tableHeaderRowId);
-        const tableFilterRow = document.getElementById(this.tableFilterRowId); 
         
-        if (!tableHeaderRow || !tableFilterRow) {
-            console.error(`Table header (ID: ${this.tableHeaderRowId}) or filter row (ID: ${this.tableFilterRowId}) not found. Please ensure these IDs are present in your HTML.`);
-            return; // Elementler bulunamazsa hata vermemek için erken çık
+        if (!tableHeaderRow) {
+            console.error(`Table header (ID: ${this.tableHeaderRowId}) not found. Please ensure this ID is present in your HTML.`);
+            return; 
         }
 
         tableHeaderRow.innerHTML = ''; 
-        tableFilterRow.innerHTML = ''; 
+
+        let tableFilterRow = null;
+        if (this.tableFilterRowId) { // tableFilterRowId varsa filtre satırını işlemeye çalış
+            tableFilterRow = document.getElementById(this.tableFilterRowId);
+            if (!tableFilterRow) {
+                console.error(`Table filter row (ID: ${this.tableFilterRowId}) not found. Please ensure this ID is present in your HTML.`);
+                return;
+            }
+            tableFilterRow.innerHTML = ''; // Filtre satırı bulunduysa içeriğini temizle
+        }
 
         // Başlıkları ve filtre inputlarını oluştur
         this.columnDefinitions.forEach(col => {
@@ -77,9 +85,9 @@ class TableManager {
             th.textContent = col.label; 
             tableHeaderRow.appendChild(th);
 
-            // Filter Row (Filtre Inputları)
+            // Filter Row (Filtre Inputları) - Sadece filtre satırı varsa oluştur
             const thFilter = document.createElement('th');
-            if (col.searchable) {
+            if (col.searchable && tableFilterRow) { // Sadece aranabilir ve filtre satırı varsa input oluştur
                 const input = document.createElement('input');
                 input.type = 'text';
                 input.classList.add('column-filter');
@@ -88,12 +96,11 @@ class TableManager {
                 input.value = this.columnFilters[col.key] || ''; 
                 thFilter.appendChild(input);
             }
-            tableFilterRow.appendChild(thFilter);
+            if (tableFilterRow) { // Sadece filtre satırı varsa thFilter'ı ekle
+                tableFilterRow.appendChild(thFilter);
+            }
         });
     }
-
-    // Tüm kayıtları DOM'a bir kez ekler (Bu fonksiyon artık initializeTable'dan çağrılmaz, mantığı applyFiltersAndSort içinde birleştirilmiştir)
-    // populateTableBody() { /* Bu fonksiyonun içeriği artık applyFiltersAndSort içinde yer alıyor */ }
 
     // Tablo event listener'larını ayarlar
     setupTableEventListeners() {
@@ -115,16 +122,18 @@ class TableManager {
         // `<thead>` elementine event listener ekleyerek input değişikliklerini yakalayabiliriz
         const tableHeaderElement = document.getElementById(this.tableHeaderRowId);
         if (tableHeaderElement && tableHeaderElement.parentElement) {
-            tableHeaderElement.parentElement.addEventListener('input', (e) => {
-                if (e.target.classList.contains('column-filter')) {
-                    clearTimeout(this.columnFilterTimeout);
-                    this.columnFilterTimeout = setTimeout(() => {
-                        const columnKey = e.target.dataset.column;
-                        this.columnFilters[columnKey] = e.target.value.toLowerCase();
-                        this.applyFiltersAndSort();
-                    }, 300); // 300ms gecikme
-                }
-            });
+            if (this.tableFilterRowId) { // Sadece filtre satırı varsa input olaylarını dinle
+                tableHeaderElement.parentElement.addEventListener('input', (e) => {
+                    if (e.target.classList.contains('column-filter')) {
+                        clearTimeout(this.columnFilterTimeout);
+                        this.columnFilterTimeout = setTimeout(() => {
+                            const columnKey = e.target.dataset.column;
+                            this.columnFilters[columnKey] = e.target.value.toLowerCase();
+                            this.applyFiltersAndSort();
+                        }, 300); // 300ms gecikme
+                    }
+                });
+            }
 
             // Sıralama (Sorting) için event listener (delegation)
             tableHeaderElement.addEventListener('click', (e) => {
@@ -188,18 +197,20 @@ class TableManager {
             });
         }
 
-        // 3. Sütun Bazlı Filtreleme
-        filteredRecords = filteredRecords.filter(record => {
-            return this.columnDefinitions.every(col => {
-                if (!col.searchable || !this.columnFilters[col.key]) {
-                    return true; // Aranabilir değilse veya filtre boşsa True
-                }
+        // 3. Sütun Bazlı Filtreleme - Sadece tableFilterRowId varsa ve searchable ise uygulanır
+        if (this.tableFilterRowId) {
+            filteredRecords = filteredRecords.filter(record => {
+                return this.columnDefinitions.every(col => {
+                    if (!col.searchable || !this.columnFilters[col.key]) {
+                        return true; // Aranabilir değilse veya filtre boşsa True
+                    }
 
-                let recordValue = this.getRecordValueForColumn(record, col.key);
-                // Değerin string olduğundan emin olun ve küçük harfe çevirerek karşılaştırın
-                return String(recordValue).toLowerCase().includes(this.columnFilters[col.key]);
+                    let recordValue = this.getRecordValueForColumn(record, col.key);
+                    // Değerin string olduğundan emin olun ve küçük harfe çevirerek karşılaştırın
+                    return String(recordValue).toLowerCase().includes(this.columnFilters[col.key]);
+                });
             });
-        });
+        }
 
         // 4. Sıralama
         if (this.sortBy.column) {
