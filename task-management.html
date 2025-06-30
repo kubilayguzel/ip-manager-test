@@ -21,9 +21,8 @@
             background: rgba(255, 255, 255, 0.95);
             border-radius: 20px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-            /* overflow: hidden;  <-- BU SATIR KALDIRILDI */
-            overflow-x: auto; /* <-- YENİ EKLENDİ: Yatay kaydırmaya izin ver */
-            overflow-y: hidden; /* <-- YENİ EKLENDİ: Dikey kaydırmayı engelle */
+            overflow-x: auto; /* Yatay kaydırmaya izin ver */
+            overflow-y: hidden; /* Dikey kaydırmayı engelle */
         }
 
         .tasks-header {
@@ -81,7 +80,7 @@
         .tasks-table {
             width: 100%;
             border-collapse: collapse;
-            table-layout: auto; /* <-- YENİ EKLENDİ: Dinamik genişlikleri zorla */
+            table-layout: auto; /* Dinamik genişlikleri zorla */
         }
 
         .tasks-table th,
@@ -89,8 +88,6 @@
             padding: 15px;
             text-align: left;
             border-bottom: 1px solid #f0f0f0;
-            /* Optional: word-break for content in general cells, if needed */
-            /* word-break: break-word; */ 
         }
         
         .tasks-table th {
@@ -357,7 +354,7 @@
         .tasks-table th.actions-column-header,
         .tasks-table td.actions-cell {
             white-space: nowrap; 
-            min-width: 220px; /* Arttırıldı */
+            min-width: 220px; /* Genişlik artırıldı */
             overflow: visible; 
             text-align: center;
         }
@@ -391,7 +388,6 @@
     
             <div class="tasks-container">
                 <div class="tasks-header">
-                    <input type="text" id="taskSearchInput" class="search-input" placeholder="Başlık, numara, tip ara...">
                     <button class="btn-add-task" onclick="window.location.href='create-task.html'">
                         <span>&#x2795;</span> Yeni İş Oluştur
                     </button>
@@ -1517,7 +1513,7 @@
             
             const parts = deliveryDateStr.split('-');
             const deliveryDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
-            deliveryDate.setHours(0, 0, 0, 0);
+            deliveryDate.setHours(0,0,0,0);
 
             console.log('DEBUG: Tebliğ Tarihi:', this.formatDateToYYYYMMDD(deliveryDate));
             console.log('DEBUG: Current Task Type ID:', this.currentTask.taskType);
@@ -1677,8 +1673,8 @@
             tableId: 'tasks-table',
             tableBodyId: 'tasksTableBody',
             tableHeaderRowId: 'tasksTableHeaderRow',
-            tableFilterRowId: 'tasksTableFilterRow',
-            globalSearchInputId: 'taskSearchInput',
+            // tableFilterRowId: 'tasksTableFilterRow', // Kaldırıldı
+            globalSearchInputId: null, // Kaldırıldı
             noRecordsMessageId: 'noTasksMessage',
             columnDefinitions: [
                 { key: 'taskNumber', label: 'İş No.', sortable: true, searchable: true },
@@ -1772,8 +1768,7 @@
                     };
                 });
 
-                tasksTableManager.allRecords = formattedTasks; 
-                tasksTableManager.applyFiltersAndSort(); 
+                tasksTableManager.setTableData(formattedTasks); // setTableData metodunu çağırarak veriyi TableManager'a ilet
                 
             } else {
                 noTasksMessage.style.display = 'block';
@@ -1793,10 +1788,13 @@
             window.location.href = 'create-task.html';
         });
 
+        // Arama inputu kaldırıldığı için bu event listener kaldırıldı
+        /*
         document.getElementById('taskSearchInput').addEventListener('input', (e) => {
             tasksTableManager.setSearchQuery(e.target.value); 
             tasksTableManager.applyFiltersAndSort(); 
         });
+        */
 
         document.getElementById('tasksTableBody').addEventListener('click', (event) => {
             const editBtn = event.target.closest('.action-btn.edit-btn');
