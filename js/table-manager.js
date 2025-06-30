@@ -14,29 +14,43 @@ class TableManager {
         this.columnDefinitions = options.columnDefinitions;
         
         // Veri kaynağı (tüm kayıtlar)
-        this.allRecords = options.allRecords; // Dışarıdan yüklenecek (örneğin PortfolioModule.allRecords)
-        this.allPersons = options.allPersons; // Dışarıdan yüklenecek (örneğin PortfolioModule.allPersons - hak sahipleri için)
-        this.allUsers = options.allUsers; // Dışarıdan yüklenecek (örneğin TaskManagementModule.allUsers - atanan kullanıcılar için)
+        // Başlangıçta boş veya dışarıdan verilen değerle başlat
+        this.allRecords = options.allRecords || []; 
+        this.allPersons = options.allPersons || []; 
+        this.allUsers = options.allUsers || []; 
 
         // Filtre ve sıralama durumları
         this.columnFilters = {};
         this.sortBy = { column: null, direction: 'asc' };
-
+        this.globalSearchTerm = ''; // Global arama terimi
+        
         // Debounce timeout'ları
         this.globalSearchTimeout = null;
         this.columnFilterTimeout = null;
 
         // Özel filtreleme veya sıralama için callback'ler
-        this.customTypeFilter = options.customTypeFilter || null; // Tab filtrelemesi için
-        this.customSortLogic = options.customSortLogic || null; // Varsayılan sıralama dışında özel sıralama için
-        this.customRecordHtml = options.customRecordHtml || null; // Satır HTML'ini özelleştirmek için
+        this.customTypeFilter = options.customTypeFilter || null; 
+        this.customSortLogic = options.customSortLogic || null; 
+        this.customRecordHtml = options.customRecordHtml || null; 
+        this.onRowClick = options.onRowClick || null; // Satır tıklaması için callback
     }
 
     initializeTable() {
         this.renderTableHeadersAndFilters(); // Başlıkları ve filtreleri oluştur
-        this.populateTableBody();           // Tüm kayıtları DOM'a ekle
         this.setupTableEventListeners();    // Event listener'ları ayarla
-        this.applyFiltersAndSort();         // İlk filtreleme ve sıralamayı uygula
+        // Tabloyu başlangıçta mevcut verilerle render et
+        this.applyFiltersAndSort();         
+    }
+
+    // Tablo verisini güncellemek ve yeniden render etmek için yeni metod
+    setTableData(records) {
+        this.allRecords = records;
+        this.applyFiltersAndSort();
+    }
+
+    // Global arama sorgusunu ayarlamak için metod
+    setSearchQuery(query) {
+        this.globalSearchTerm = query.toLowerCase();
     }
 
     // Tablo başlıklarını ve filtre inputlarını dinamik olarak oluşturur
@@ -44,6 +58,11 @@ class TableManager {
         const tableHeaderRow = document.getElementById(this.tableHeaderRowId);
         const tableFilterRow = document.getElementById(this.tableFilterRowId); 
         
+        if (!tableHeaderRow || !tableFilterRow) {
+            console.error(`Table header (ID: ${this.tableHeaderRowId}) or filter row (ID: ${this.tableFilterRowId}) not found. Please ensure these IDs are present in your HTML.`);
+            return; // Elementler bulunamazsa hata vermemek için erken çık
+        }
+
         tableHeaderRow.innerHTML = ''; 
         tableFilterRow.innerHTML = ''; 
 
@@ -73,60 +92,64 @@ class TableManager {
         });
     }
 
-    // Tüm kayıtları DOM'a bir kez ekler
-    populateTableBody() {
-        const tableBody = document.getElementById(this.tableBodyId);
-        tableBody.innerHTML = ''; // Önceki tüm satırları temizle
-
-        this.allRecords.forEach(record => {
-            const row = document.createElement('tr');
-            row.dataset.recordId = record.id; // Her satıra record ID'sini ekle
-            
-            // Satır içeriğini oluşturmak için customRecordHtml callback'i kullanılır
-            if (this.customRecordHtml) {
-                row.innerHTML = this.customRecordHtml(record, this.allPersons, this.allUsers);
-            } else {
-                // Varsayılan HTML yapısı, temel bir tablo satırı
-                row.innerHTML = `<td>${record.id}</td><td>${record.title}</td>`; // Örnek
-            }
-            
-            tableBody.appendChild(row);
-        });
-    }
+    // Tüm kayıtları DOM'a bir kez ekler (Bu fonksiyon artık initializeTable'dan çağrılmaz, mantığı applyFiltersAndSort içinde birleştirilmiştir)
+    // populateTableBody() { /* Bu fonksiyonun içeriği artık applyFiltersAndSort içinde yer alıyor */ }
 
     // Tablo event listener'larını ayarlar
     setupTableEventListeners() {
         // Genel arama çubuğu için debounced event listener
         if (this.globalSearchInputId) {
-            document.getElementById(this.globalSearchInputId).addEventListener('input', (e) => {
-                clearTimeout(this.globalSearchTimeout);
-                this.globalSearchTimeout = setTimeout(() => {
-                    this.applyFiltersAndSort();
-                }, 300); // 300ms gecikme
-            });
+            const globalSearchInput = document.getElementById(this.globalSearchInputId);
+            if (globalSearchInput) {
+                globalSearchInput.addEventListener('input', (e) => {
+                    clearTimeout(this.globalSearchTimeout);
+                    this.globalSearchTimeout = setTimeout(() => {
+                        this.globalSearchTerm = e.target.value.toLowerCase();
+                        this.applyFiltersAndSort();
+                    }, 300); // 300ms gecikme
+                });
+            }
         }
 
         // Sütun filtreleri için debounced event listener (delegation)
         // `<thead>` elementine event listener ekleyerek input değişikliklerini yakalayabiliriz
-        document.getElementById(this.tableHeaderRowId).parentElement.addEventListener('input', (e) => {
-            if (e.target.classList.contains('column-filter')) {
-                clearTimeout(this.columnFilterTimeout);
-                this.columnFilterTimeout = setTimeout(() => {
-                    const columnKey = e.target.dataset.column;
-                    this.columnFilters[columnKey] = e.target.value.toLowerCase();
-                    this.applyFiltersAndSort();
-                }, 300); // 300ms gecikme
-            }
-        });
+        const tableHeaderElement = document.getElementById(this.tableHeaderRowId);
+        if (tableHeaderElement && tableHeaderElement.parentElement) {
+            tableHeaderElement.parentElement.addEventListener('input', (e) => {
+                if (e.target.classList.contains('column-filter')) {
+                    clearTimeout(this.columnFilterTimeout);
+                    this.columnFilterTimeout = setTimeout(() => {
+                        const columnKey = e.target.dataset.column;
+                        this.columnFilters[columnKey] = e.target.value.toLowerCase();
+                        this.applyFiltersAndSort();
+                    }, 300); // 300ms gecikme
+                }
+            });
 
-        // Sıralama (Sorting) için event listener (delegation)
-        document.getElementById(this.tableHeaderRowId).addEventListener('click', (e) => {
-            const targetTh = e.target.closest('.sortable-header');
-            if (targetTh) {
-                const columnKey = targetTh.dataset.column;
-                this.toggleSort(columnKey);
-            }
-        });
+            // Sıralama (Sorting) için event listener (delegation)
+            tableHeaderElement.addEventListener('click', (e) => {
+                const targetTh = e.target.closest('.sortable-header');
+                if (targetTh) {
+                    const columnKey = targetTh.dataset.column;
+                    this.toggleSort(columnKey);
+                }
+            });
+        }
+
+        // Satır tıklaması için event delegation
+        const tableBody = document.getElementById(this.tableBodyId);
+        if (tableBody && this.onRowClick) {
+            tableBody.addEventListener('click', (e) => {
+                const row = e.target.closest('tr[data-id]'); // data-record-id yerine data-id kullanıldı
+                if (row) {
+                    // Eğer tıklanan element bir buton ise, onRowClick'i tetikleme (isteğe bağlı)
+                    if (e.target.tagName === 'BUTTON' || e.target.closest('button')) {
+                        return; // Buton tıklaması ise satır tıklamasını engelle
+                    }
+                    this.onRowClick(row.dataset.id);
+                }
+            });
+        }
     }
 
     // Sıralama yönünü değiştirir ve filtrelemeyi yeniden tetikler
@@ -145,8 +168,10 @@ class TableManager {
         const tableBody = document.getElementById(this.tableBodyId);
         const noRecordsMessage = document.getElementById(this.noRecordsMessageId);
         
-        // Record ID'sinden gerçek record objesine harita oluştur (hızlı erişim için)
-        const recordMap = new Map(this.allRecords.map(record => [record.id, record]));
+        if (!tableBody || !noRecordsMessage) {
+            console.error(`Table body (ID: ${this.tableBodyId}) or no records message (ID: ${this.noRecordsMessageId}) element not found.`);
+            return;
+        }
 
         let filteredRecords = [...this.allRecords]; // Tüm kayıtların bir kopyası üzerinde çalış
 
@@ -156,11 +181,10 @@ class TableManager {
         }
 
         // 2. Genel Arama Çubuğu Filtrelemesi
-        const globalSearchTerm = this.globalSearchInputId ? document.getElementById(this.globalSearchInputId).value.toLowerCase() : '';
-        if (globalSearchTerm) {
+        if (this.globalSearchTerm) {
             filteredRecords = filteredRecords.filter(record => {
                 const searchContent = this.getRecordSearchContent(record); // Tüm aranabilir alanları birleştir
-                return searchContent.includes(globalSearchTerm);
+                return searchContent.includes(this.globalSearchTerm);
             });
         }
 
@@ -171,14 +195,8 @@ class TableManager {
                     return true; // Aranabilir değilse veya filtre boşsa True
                 }
 
-                // Eğer sütun sadece belirli bir tabda görünüyorsa ve o tab aktif değilse bu filtreyi atla
-                // Bu kontrolün TableManager içinde değil, customTypeFilter içinde olması daha mantıklı olabilir.
-                // Ancak şimdilik burada da bırakılabilir.
-                if (col.onlyTrademark && this.customTypeFilter && !this.customTypeFilter(record)) { // Eğer customTypeFilter'a bağlıysa
-                    return true;
-                }
-
                 let recordValue = this.getRecordValueForColumn(record, col.key);
+                // Değerin string olduğundan emin olun ve küçük harfe çevirerek karşılaştırın
                 return String(recordValue).toLowerCase().includes(this.columnFilters[col.key]);
             });
         });
@@ -227,44 +245,45 @@ class TableManager {
             }
         });
 
-        // Mevcut DOM satırlarını güncelle (gizle/göster ve sırala)
-        tableBody.innerHTML = ''; // Tüm satırları kaldır
+        // Tablo içeriğini yeniden oluştur
+        tableBody.innerHTML = ''; // Mevcut tüm satırları kaldır
+        
         if (filteredRecords.length === 0) {
             noRecordsMessage.style.display = 'block';
-            tableBody.style.display = 'none';
+            tableBody.style.display = 'none'; // Kayıt yoksa tablo gövdesini gizle
         } else {
             noRecordsMessage.style.display = 'none';
-            tableBody.style.display = 'table-row-group';
+            tableBody.style.display = 'table-row-group'; // Kayıt varsa tablo gövdesini göster
+            
             filteredRecords.forEach(record => {
-                const row = document.getElementById(this.tableBodyId).querySelector(`tr[data-record-id="${record.id}"]`);
-                if (row) {
-                    // Sütunların dinamik görünürlüğünü güncelle
-                    // Bu kısım populateTableBody ve renderTableHeadersAndFilters ile birlikte çalışmalı.
-                    // Şimdilik sadece marka görseli özel durumu var.
-                    const currentTypeFilter_in_apply = this.customTypeFilter ? this.customTypeFilter.currentFilter : 'all'; // Eğer type filter varsa onun değerini al
-
-                    const cells = Array.from(row.children); // Mevcut hücreleri al
-                    let colIndex = 0;
+                const row = document.createElement('tr'); // Her kayıt için yeni bir satır oluştur
+                row.dataset.id = record.id; // Satır ID'sini data-id özelliğine ata
+                
+                // customRecordHtml callback'i varsa onu kullanarak satır içeriğini oluştur
+                if (this.customRecordHtml) {
+                    row.innerHTML = this.customRecordHtml(record, this.allPersons, this.allUsers);
+                } else {
+                    // customRecordHtml yoksa varsayılan olarak sütun tanımlarına göre içeriği oluştur
+                    let rowContent = '';
                     this.columnDefinitions.forEach(col => {
-                         if (col.onlyTrademark) { // Eğer marka görseli sütunu ise
-                            const td = cells[colIndex];
-                            if (currentTypeFilter_in_apply === 'trademark' && td) {
-                                td.style.display = ''; // Göster
-                                if (record.type === 'trademark' && record.trademarkImage && record.trademarkImage.content) {
-                                    td.innerHTML = `<div class="trademark-image-wrapper"><img src="${record.trademarkImage.content}" alt="Marka Görseli" class="trademark-image-thumbnail"></div>`;
-                                } else {
-                                    td.innerHTML = `<td>-</td>`; // Boş veya tire
-                                }
-                            } else if (td) {
-                                td.style.display = 'none'; // Gizle
-                            }
+                        let value = this.getRecordValueForColumn(record, col.key);
+                        // Durum ve Öncelik gibi özel renklendirme gerektiren alanlar için
+                        if (col.key === 'status') {
+                            const statusClass = `status-${String(value).toLowerCase().replace(/ /g, '_')}`;
+                            rowContent += `<td><span class="status-badge ${statusClass}">${value}</span></td>`;
+                        } else if (col.key === 'priority') {
+                            const priorityClass = `priority-${String(value).toLowerCase()}`;
+                            rowContent += `<td><span class="priority-badge ${priorityClass}">${value}</span></td>`;
+                        } else if (col.key === 'actions') {
+                            // Aksiyon butonu örneği (eğer customRecordHtml'de işlenmiyorsa)
+                            rowContent += `<td><button class="action-btn view-btn" data-id="${record.id}">Görüntüle</button></td>`;
+                        } else {
+                            rowContent += `<td>${value !== null && value !== undefined ? value : ''}</td>`;
                         }
-                        colIndex++; // Sonraki sütuna geç
                     });
-
-
-                    tableBody.appendChild(row); // DOM'a yeniden ekle
+                    row.innerHTML = rowContent;
                 }
+                tableBody.appendChild(row); // Yeni oluşturulan satırı tabloya ekle
             });
         }
     }
@@ -273,7 +292,12 @@ class TableManager {
     getRecordSearchContent(record) {
         const searchValues = [
             record.type, record.title, record.applicationNumber, record.status, record.description,
-            record.patentClass, record.niceClass, record.copyrightType, record.designClass
+            record.patentClass, record.niceClass, record.copyrightType, record.designClass,
+            // task-management sayfasından gelen aranabilir alanları da dahil et
+            record.taskNumber, record.relatedIpRecord, record.taskType, record.assignedTo,
+            record.operationalDueDate, record.officialDueDate, record.status,
+            record.searchableTitle, record.searchableIpRecordTitle, record.searchableTaskType,
+            record.searchableAssignedToEmail, record.searchableStatus
         ].filter(Boolean).map(val => String(val));
 
         const ownerNames = record.owners ? record.owners.map(owner => this.allPersons.find(p => p.id === owner.id)?.name || '').filter(Boolean).join(' ') : '';
@@ -286,13 +310,23 @@ class TableManager {
     getRecordValueForColumn(record, columnKey) {
         if (columnKey === 'owners') {
             return record.owners ? record.owners.map(owner => this.allPersons.find(p => p.id === owner.id)?.name || '').filter(Boolean).join(' ') : '';
-        } else if (columnKey === 'applicationDate') {
-            return record.applicationDate ? new Date(record.applicationDate) : null;
-        } else {
+        } else if (columnKey === 'applicationDate' || columnKey === 'operationalDueDate' || columnKey === 'officialDueDate') {
+            // Firestore Timestamp objesi ise Date objesine çevir
+            if (record[columnKey] && typeof record[columnKey].toDate === 'function') {
+                return record[columnKey].toDate().toLocaleDateString('tr-TR');
+            }
+            return record[columnKey] ? new Date(record[columnKey]).toLocaleDateString('tr-TR') : null;
+        } else if (columnKey === 'assignedTo') { // Görev yönetimi için, atanan kullanıcının UID'sini isme dönüştür
+             const assignedUser = this.allUsers.find(u => u.id === record.assignedTo_uid);
+             return assignedUser ? (assignedUser.displayName || assignedUser.email) : (record.assignedTo_email || '');
+        } else if (columnKey === 'taskType') {
+            // task.taskType zaten displayName olarak geliyor (task-management.html tarafında formatlandı)
+            return record.taskType;
+        }
+        else {
             return record[columnKey] !== undefined ? record[columnKey] : null;
         }
     }
 }
 
-// Global olarak kullanılması gereken fonksiyonları dışa aktar (eğer başka modüller kullanacaksa)
 export { TableManager };
