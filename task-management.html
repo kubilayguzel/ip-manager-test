@@ -1715,7 +1715,7 @@
         tasksTableBody.innerHTML = ''; // Clear existing rows
 
         try {
-            const result = await taskService.getTasks(); // Fetches all tasks
+            const result = await taskService.getAllTasks(); // Fetches all tasks
             if (result.success && result.data && result.data.length > 0) {
                 let tasks = result.data;
                 const currentUser = authService.getCurrentUser();
