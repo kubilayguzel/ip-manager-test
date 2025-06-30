@@ -3,11 +3,32 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>IP Manager - Toplu Belge İndeksleme</title>
-    <link rel="stylesheet" href="css/shared-styles.css">
+    <title>IP Manager - Belge İndeksleme</title>
+    <link rel="stylesheet" href="css/shared-styles.css"> 
     <script type="module" src="js/layout-loader.js"></script>
     <style>
-        /* Sadece bu sayfaya özel CSS */
+        /* Genel CSS stilleri - indexing.html'den kopyalanan */
+        .main-container { width: 100%; padding: 30px; margin: 0; }
+        .page-header-section { background: rgba(255, 255, 255, 0.95); padding: 30px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1); text-align: center; margin-bottom: 30px; }
+        .page-title { font-size: 2em; color: #1e3c72; margin-bottom: 10px; }
+        .page-subtitle { color: #666; font-size: 1.1em; }
+        .form-container { background: rgba(255, 255, 255, 0.95); padding: 40px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1); }
+        .form-section { border-bottom: 1px solid #e1e8ed; padding-bottom: 25px; margin-bottom: 25px; }
+        .form-section:last-child { border-bottom: none; }
+        .section-title { font-size: 1.3em; color: #1e3c72; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+        .form-label { display: block; margin-bottom: 8px; color: #333; font-weight: 500; }
+        .form-input, .form-select { width: 100%; padding: 12px 15px; border: 2px solid #e1e8ed; border-radius: 10px; font-size: 1em; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .form-actions { display: flex; gap: 15px; margin-top: 40px; padding-top: 30px; border-top: 2px solid #e1e8ed; justify-content: flex-end; }
+        .btn { padding: 15px 30px; border-radius: 10px; font-size: 1.1em; font-weight: 600; }
+
+        /* Tab sistemi - indexing.html'den kopyalanan */
+        .tabs-container { display: flex; border-bottom: 2px solid #dee2e6; margin-bottom: 1rem; }
+        .tab-btn { padding: 0.75rem 1.25rem; border: none; background: none; cursor: pointer; font-size: 1rem; font-weight: 500; color: #6c757d; border-bottom: 2px solid transparent; margin-bottom: -2px; }
+        .tab-btn.active { color: #1e3c72; border-color: #1e3c72; }
+        .tab-pane { display: none; }
+        .tab-pane.active { display: block; }
+
+        /* File upload wrapper - mevcut sistemden */
         .file-upload-wrapper {
             position: relative;
             overflow: hidden;
@@ -59,6 +80,7 @@
             padding-left: 5px;
         }
 
+        /* PDF liste stilleri */
         .pdf-list-item {
             display: flex;
             align-items: center;
@@ -130,6 +152,7 @@
             align-items: center;
         }
 
+        /* İstatistik kartları */
         .stats-container {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -156,6 +179,7 @@
             opacity: 0.9;
         }
 
+        /* Empty state */
         .empty-message {
             text-align: center;
             padding: 40px 20px;
@@ -170,6 +194,7 @@
             margin-bottom: 15px;
         }
 
+        /* Progress bar */
         .progress-container {
             background: #e9ecef;
             border-radius: 10px;
@@ -185,8 +210,8 @@
             transition: width 0.3s ease;
         }
 
-        /* Tab badge styles */
-        .bulk-tab-btn {
+        /* Tab badge */
+        .tab-btn {
             position: relative;
         }
 
@@ -205,12 +230,6 @@
 
         .tab-badge.success {
             background: #28a745;
-        }
-
-        .bulk-action-container {
-            margin-top: 30px;
-            padding-top: 20px;
-            border-top: 1px solid #e1e8ed;
         }
 
         @media (max-width: 768px) {
@@ -238,103 +257,132 @@
     <div class="page-wrapper">
         <main class="main-container">
             <div class="page-header-section">
-                <h1 class="page-title">Toplu Belge İndeksleme</h1>
-                <p class="page-subtitle">PDF dosyalarını yükleyin, portföy kayıtlarıyla eşleştirin ve toplu indeksleme işlemlerini başlatın</p>
+                <h1 class="page-title">Belge İndeksleme</h1>
+                <p class="page-subtitle">Mevcut fikri mülkiyet kayıtlarına belge ekleyin ve indeksleyin.</p>
             </div>
 
             <div class="form-container">
-                <!-- Upload Section -->
-                <div class="form-section">
-                    <h2 class="section-title"><span>1.</span> PDF Dosyalarını Yükleyin</h2>
-                    
-                    <div class="form-group">
-                        <label class="form-label" for="bulkFiles">
-                            PDF Dosyalarını Seçin <span style="color: red;">*</span>
-                        </label>
-                        <div class="file-upload-wrapper">
-                            <input type="file" id="bulkFiles" multiple accept=".pdf" name="bulkFiles">
-                            <div class="file-upload-button" id="bulkFilesButton">
-                                📎 PDF dosyalarını sürükleyip bırakın veya seçmek için tıklayın
+                <form id="indexingForm" onsubmit="return false;">
+                    <div class="form-section document-upload-section">
+                        <h2 class="section-title"><span>1.</span>Belgeleri Yükleyin ve İndeksleyin</h2> 
+                        
+                        <div class="tabs-container">
+                            <button type="button" class="tab-btn" data-tab="existing-transaction-pane">İşleme Dosya Ekle</button>
+                            <button type="button" class="tab-btn" data-tab="manual-indexing-pane">Manuel İşlem Oluştur</button>
+                            <button type="button" class="tab-btn active" data-tab="bulk-indexing-pane">
+                                Toplu İndeksleme
+                                <span class="tab-badge" id="totalBadge">0</span>
+                            </button>
+                        </div>
+                        
+                        <div class="tab-content-container">
+                            <div id="existing-transaction-pane" class="tab-pane">
+                                <p class="text-muted">İşleme Dosya Ekle sekmesi</p>
+                            </div>
+
+                            <div id="manual-indexing-pane" class="tab-pane">
+                                <p class="text-muted">Manuel İşlem Oluştur sekmesi</p>
+                            </div>
+
+                            <div id="bulk-indexing-pane" class="tab-pane active">
+                                <!-- Upload Section -->
+                                <div class="form-section">
+                                    <h2 class="section-title"><span>1.1</span> PDF Dosyalarını Yükleyin</h2>
+                                    
+                                    <div class="form-group">
+                                        <label class="form-label" for="bulkFiles">
+                                            PDF Dosyalarını Seçin <span style="color: red;">*</span>
+                                        </label>
+                                        <div class="file-upload-wrapper">
+                                            <input type="file" id="bulkFiles" multiple accept=".pdf" name="bulkFiles">
+                                            <div class="file-upload-button" id="bulkFilesButton">
+                                                📎 PDF dosyalarını sürükleyip bırakın veya seçmek için tıklayın
+                                            </div>
+                                        </div>
+                                        <div class="file-upload-info" id="bulkFilesInfo">
+                                            Henüz PDF dosyası seçilmedi. Birden fazla PDF dosyası seçebilirsiniz.
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Statistics Section -->
+                                <div class="form-section" id="statsSection" style="display: none;">
+                                    <h2 class="section-title"><span>1.2</span> İstatistikler</h2>
+                                    
+                                    <div class="stats-container">
+                                        <div class="stat-card">
+                                            <div class="stat-number" id="totalFiles">0</div>
+                                            <div class="stat-label">Toplam Dosya</div>
+                                        </div>
+                                        <div class="stat-card">
+                                            <div class="stat-number" id="matchedFiles">0</div>
+                                            <div class="stat-label">Eşleşen</div>
+                                        </div>
+                                        <div class="stat-card">
+                                            <div class="stat-number" id="unmatchedFiles">0</div>
+                                            <div class="stat-label">Eşleşmeyen</div>
+                                        </div>
+                                        <div class="stat-card">
+                                            <div class="stat-number" id="readyFiles">0</div>
+                                            <div class="stat-label">İşleme Hazır</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- File List Section -->
+                                <div class="form-section" id="fileListSection" style="display: none;">
+                                    <h2 class="section-title"><span>1.3</span> Yüklenen PDF Dosyaları</h2>
+                                    
+                                    <div class="tabs-container">
+                                        <button type="button" class="tab-btn active" data-tab="all-files-pane">
+                                            Tümü
+                                            <span class="tab-badge" id="allCount">0</span>
+                                        </button>
+                                        <button type="button" class="tab-btn" data-tab="matched-files-pane">
+                                            Eşleşenler
+                                            <span class="tab-badge success" id="matchedCount">0</span>
+                                        </button>
+                                        <button type="button" class="tab-btn" data-tab="unmatched-files-pane">
+                                            Eşleşmeyenler
+                                            <span class="tab-badge" id="unmatchedCount">0</span>
+                                        </button>
+                                    </div>
+
+                                    <div class="tab-content-container">
+                                        <div id="all-files-pane" class="tab-pane active">
+                                            <div id="allFilesList"></div>
+                                        </div>
+                                        
+                                        <div id="matched-files-pane" class="tab-pane">
+                                            <div id="matchedFilesList"></div>
+                                        </div>
+                                        
+                                        <div id="unmatched-files-pane" class="tab-pane">
+                                            <div id="unmatchedFilesList"></div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Progress Section -->
+                                <div id="progressSection" style="display: none;">
+                                    <div class="progress-container">
+                                        <div class="progress-bar" id="progressBar"></div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                        <div class="file-upload-info" id="bulkFilesInfo">
-                            Henüz PDF dosyası seçilmedi. Birden fazla PDF dosyası seçebilirsiniz.
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Statistics Section -->
-                <div class="form-section" id="statsSection" style="display: none;">
-                    <h2 class="section-title"><span>2.</span> İstatistikler</h2>
-                    
-                    <div class="stats-container">
-                        <div class="stat-card">
-                            <div class="stat-number" id="totalFiles">0</div>
-                            <div class="stat-label">Toplam Dosya</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-number" id="matchedFiles">0</div>
-                            <div class="stat-label">Eşleşen</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-number" id="unmatchedFiles">0</div>
-                            <div class="stat-label">Eşleşmeyen</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-number" id="readyFiles">0</div>
-                            <div class="stat-label">İşleme Hazır</div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- File List Section -->
-                <div class="form-section" id="fileListSection" style="display: none;">
-                    <h2 class="section-title"><span>3.</span> Yüklenen PDF Dosyaları</h2>
-                    
-                    <div class="bulk-tabs-container">
-                        <button type="button" class="bulk-tab-btn active" data-bulk-tab="all-files-pane">
-                            Tümü
-                            <span class="tab-badge" id="allCount">0</span>
-                        </button>
-                        <button type="button" class="bulk-tab-btn" data-bulk-tab="matched-files-pane">
-                            Eşleşenler
-                            <span class="tab-badge success" id="matchedCount">0</span>
-                        </button>
-                        <button type="button" class="bulk-tab-btn" data-bulk-tab="unmatched-files-pane">
-                            Eşleşmeyenler
-                            <span class="tab-badge" id="unmatchedCount">0</span>
-                        </button>
                     </div>
 
-                    <div class="bulk-tab-content-container">
-                        <div id="all-files-pane" class="bulk-tab-pane active">
-                            <div id="allFilesList"></div>
-                        </div>
-                        
-                        <div id="matched-files-pane" class="bulk-tab-pane">
-                            <div id="matchedFilesList"></div>
-                        </div>
-                        
-                        <div id="unmatched-files-pane" class="bulk-tab-pane">
-                            <div id="unmatchedFilesList"></div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Bulk Actions Section -->
-                <div class="form-section bulk-action-container" id="bulkActionSection" style="display: none;">
-                    <h2 class="section-title"><span>4.</span> Toplu İşlemler</h2>
-                    
-                    <div class="progress-container" id="progressContainer" style="display: none;">
-                        <div class="progress-bar" id="progressBar"></div>
-                    </div>
-                    
-                    <div class="form-actions">
+                    <!-- Form Actions -->
+                    <div class="form-actions" id="bulkFormActions" style="display: none;">
                         <button type="button" class="btn action-btn complete-btn" id="startBulkIndexingBtn" disabled>
                             🚀 Toplu İndeksleme Başlat
                         </button>
+                        <button type="button" class="btn action-btn edit-btn" id="resetBulkFormBtn">
+                            🔄 Formu Sıfırla
+                        </button>
                     </div>
-                </div>
+                </form>
             </div>
         </main>
     </div>
@@ -345,6 +393,7 @@
                 this.uploadedFiles = [];
                 this.portfolioRecords = this.generateSamplePortfolioRecords();
                 this.isProcessing = false;
+                this.activeFileTab = 'all-files-pane';
                 this.init();
             }
 
@@ -364,16 +413,27 @@
                 uploadButton.addEventListener('drop', this.handleDrop.bind(this));
                 fileInput.addEventListener('change', this.handleFileSelect.bind(this));
 
-                // Tab events
-                document.querySelectorAll('.bulk-tab-btn').forEach(tab => {
-                    tab.addEventListener('click', (e) => {
-                        const targetPane = e.target.getAttribute('data-bulk-tab');
-                        this.switchTab(targetPane);
-                    });
+                // Main tab events (İşleme Dosya Ekle, Manuel İşlem, Toplu İndeksleme)
+                document.querySelectorAll('.tabs-container .tab-btn').forEach(tab => {
+                    if (!tab.closest('.tab-content-container')) { // Sadece ana tablar için
+                        tab.addEventListener('click', (e) => {
+                            const targetTab = e.target.getAttribute('data-tab');
+                            this.switchMainTab(targetTab);
+                        });
+                    }
                 });
 
-                // Bulk indexing button
+                // File list sub-tab events
+                document.addEventListener('click', (e) => {
+                    if (e.target.closest('.tab-content-container') && e.target.classList.contains('tab-btn')) {
+                        const targetPane = e.target.getAttribute('data-tab');
+                        this.switchFileTab(targetPane);
+                    }
+                });
+
+                // Action buttons
                 document.getElementById('startBulkIndexingBtn').addEventListener('click', this.startBulkIndexing.bind(this));
+                document.getElementById('resetBulkFormBtn').addEventListener('click', this.resetForm.bind(this));
             }
 
             generateSamplePortfolioRecords() {
@@ -448,24 +508,46 @@
                 return match ? match[1] : null;
             }
 
-            switchTab(targetPane) {
-                // Tüm tab butonlarını pasif yap
-                document.querySelectorAll('.bulk-tab-btn').forEach(btn => {
-                    btn.classList.remove('active');
+            switchMainTab(targetTab) {
+                // Ana tab butonlarını güncelle
+                document.querySelectorAll('.tabs-container .tab-btn').forEach(btn => {
+                    if (!btn.closest('.tab-content-container')) {
+                        btn.classList.remove('active');
+                    }
                 });
                 
-                // Tüm tab panellerini gizle
-                document.querySelectorAll('.bulk-tab-pane').forEach(pane => {
+                // Ana tab panellerini güncelle
+                document.querySelectorAll('.tab-content-container > .tab-pane').forEach(pane => {
                     pane.classList.remove('active');
                 });
                 
-                // Seçilen tab butonunu aktif yap
-                const selectedTab = document.querySelector(`[data-bulk-tab="${targetPane}"]`);
+                // Seçilen tab'ı aktif yap
+                const selectedTab = document.querySelector(`[data-tab="${targetTab}"]:not(.tab-content-container .tab-btn)`);
                 if (selectedTab) selectedTab.classList.add('active');
                 
-                // Seçilen paneli göster
+                const selectedPane = document.getElementById(targetTab);
+                if (selectedPane) selectedPane.classList.add('active');
+            }
+
+            switchFileTab(targetPane) {
+                // Sub-tab butonlarını güncelle
+                document.querySelectorAll('.tab-content-container .tab-btn').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+                
+                // Sub-tab panellerini güncelle
+                document.querySelectorAll('.tab-content-container .tab-pane').forEach(pane => {
+                    pane.classList.remove('active');
+                });
+                
+                // Seçilen sub-tab'ı aktif yap
+                const selectedTab = document.querySelector(`.tab-content-container [data-tab="${targetPane}"]`);
+                if (selectedTab) selectedTab.classList.add('active');
+                
                 const selectedPane = document.getElementById(targetPane);
                 if (selectedPane) selectedPane.classList.add('active');
+                
+                this.activeFileTab = targetPane;
             }
 
             updateUI() {
@@ -488,6 +570,7 @@
                 document.getElementById('readyFiles').textContent = ready;
 
                 // Tab badges
+                document.getElementById('totalBadge').textContent = total;
                 document.getElementById('allCount').textContent = total;
                 document.getElementById('matchedCount').textContent = matched;
                 document.getElementById('unmatchedCount').textContent = unmatched;
@@ -498,7 +581,7 @@
                 
                 document.getElementById('statsSection').style.display = hasFiles ? 'block' : 'none';
                 document.getElementById('fileListSection').style.display = hasFiles ? 'block' : 'none';
-                document.getElementById('bulkActionSection').style.display = hasFiles ? 'block' : 'none';
+                document.getElementById('bulkFormActions').style.display = hasFiles ? 'flex' : 'none';
                 
                 // Update file info
                 const fileInfo = document.getElementById('bulkFilesInfo');
@@ -615,6 +698,13 @@
                 this.showNotification('Dosya kaldırıldı', 'info');
             }
 
+            resetForm() {
+                this.uploadedFiles = [];
+                document.getElementById('bulkFiles').value = '';
+                this.updateUI();
+                this.showNotification('Form sıfırlandı', 'info');
+            }
+
             updateBulkActionButton() {
                 const btn = document.getElementById('startBulkIndexingBtn');
                 const readyFiles = this.uploadedFiles.filter(f => f.isMatched && f.status === 'pending');
@@ -637,9 +727,9 @@
                 this.isProcessing = true;
                 this.updateBulkActionButton();
 
-                const progressContainer = document.getElementById('progressContainer');
+                const progressSection = document.getElementById('progressSection');
                 const progressBar = document.getElementById('progressBar');
-                progressContainer.style.display = 'block';
+                progressSection.style.display = 'block';
 
                 this.showNotification(`${readyFiles.length} dosya için toplu indeksleme başlatılıyor...`, 'info');
 
@@ -658,18 +748,20 @@
                 }
 
                 this.isProcessing = false;
-                progressContainer.style.display = 'none';
+                progressSection.style.display = 'none';
                 progressBar.style.width = '0%';
                 this.updateBulkActionButton();
                 this.showNotification(`Toplu indeksleme tamamlandı! ${readyFiles.length} dosya başarıyla işlendi.`, 'success');
             }
 
             showNotification(message, type = 'info') {
-                // Mevcut notification sistemini kullan
-                const event = new CustomEvent('showNotification', {
-                    detail: { message, type }
-                });
-                window.dispatchEvent(event);
+                // Mevcut notification sistemini kullanabilirsiniz
+                console.log(`${type.toUpperCase()}: ${message}`);
+                
+                // Eğer global showNotification fonksiyonu varsa
+                if (typeof showNotification === 'function') {
+                    showNotification(message, type);
+                }
             }
         }
 
