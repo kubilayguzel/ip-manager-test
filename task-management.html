@@ -376,8 +376,7 @@
                 <div class="table-container">
                     <table class="tasks-table">
                         <thead>
-                            <tr>
-                                <th>İş No.</th>
+                            <tr id="tasksTableHeaderRow"> <th>İş No.</th>
                                 <th>İlgili Kayıt</th>
                                 <th>Tip</th>
                                 <th>Öncelik</th>
@@ -387,6 +386,7 @@
                                 <th>Durum</th>
                                 <th>İşlemler</th>
                             </tr>
+                            <tr id="tasksTableFilterRow"> </tr>
                         </thead>
                         <tbody id="tasksTableBody">
                             </tbody>
@@ -1036,8 +1036,8 @@
         searchPersons(query, targetField) {
             const resultsContainerId = {
                 'relatedParty': 'relatedPartySearchResults',
-                'tpInvoiceParty': 'tpInvoicePartySearchResults',
-                'serviceInvoiceParty': 'serviceInvoicePartySearchResults'
+                'tpInvoiceParty': 'tpInvoicePartyResults',
+                'serviceInvoiceParty': 'serviceInvoicePartyResults'
             }[targetField];
             const inputId = {
                 'relatedParty': 'relatedPartySearch',
@@ -1649,13 +1649,11 @@
         }
 
         // TableManager'ı doğru şekilde başlatırken, veriyi constructor'da geçirin.
-        // allRecords'ı başlangıçta boş bir dizi olarak veriyoruz.
-        // allPersons ve allUsers da gerekli. taskModalManager.allPersons ve taskModalManager.allUsers'dan alabiliriz.
         tasksTableManager = new TableManager({
-            tableId: 'accruals-table', // Assuming this is the table ID for task management
+            tableId: 'tasks-table',
             tableBodyId: 'tasksTableBody',
-            tableHeaderRowId: 'tasksTableHeaderRow', // Add this ID to your HTML <thead><tr> for headers
-            tableFilterRowId: 'tasksTableFilterRow', // Add this ID to your HTML <thead><tr> for filters
+            tableHeaderRowId: 'tasksTableHeaderRow',
+            tableFilterRowId: 'tasksTableFilterRow',
             globalSearchInputId: 'taskSearchInput',
             noRecordsMessageId: 'noTasksMessage',
             columnDefinitions: [
@@ -1669,17 +1667,16 @@
                 { key: 'status', label: 'Durum', sortable: true, searchable: true },
                 { key: 'actions', label: 'İşlemler', sortable: false, searchable: false }
             ],
-            allRecords: [], // Başlangıçta boş olacak, loadTasksIntoTable dolduracak
-            allPersons: taskModalManager.allPersons, // TaskModalManager'dan al
-            allUsers: taskModalManager.allUsers, // TaskModalManager'dan al
+            allRecords: [],
+            allPersons: taskModalManager.allPersons,
+            allUsers: taskModalManager.allUsers,
             customRecordHtml: (task, allPersons, allUsers) => {
                 const assignedUserName = allUsers.find(u => u.id === task.assignedTo_uid)?.displayName || task.assignedTo_email || 'Bilinmiyor';
                 const statusClass = `status-${task.status.replace(/ /g, '_').toLowerCase()}`;
                 const priorityClass = `priority-${task.priority.toLowerCase()}`;
 
-                const taskTypeParts = task.taskType ? task.taskType.split('_') : [];
-                const specificType = taskTypeParts.slice(1).join(' ').replace(/\b\w/g, l => l.toUpperCase());
-                const taskTypeDisplay = `${taskTypeParts[0] ? (taskTypeParts[0].charAt(0).toUpperCase() + taskTypeParts[0].slice(1)) : 'N/A'} - ${specificType || 'N/A'}`;
+                // task.taskType artık display name olarak geliyor
+                const taskTypeDisplay = task.taskType; 
 
                 return `
                     <td>${task.taskNumber}</td>
@@ -1696,18 +1693,15 @@
                     </td>
                 `;
             },
-            // TableManager'ın tıklama callback'i
-            // Bu callback, TableManager tarafından bir satır veya buton tıklandığında çağrılır.
             onRowClick: (recordId) => {
                  taskModalManager.openTaskDetailModal(recordId);
             }
         });
 
-        // TableManager'ın initializeTable metodunu çağırın. Bu başlıkları ve event listener'ları kurar.
         tasksTableManager.initializeTable();
 
         await loadTasksIntoTable();
-        setupListingPageEventListeners(); // Bu fonksiyon zaten TableManager'ı kullanıyor
+        setupListingPageEventListeners();
     });
 
     async function loadTasksIntoTable() {
@@ -1717,22 +1711,19 @@
         noTasksMessage.style.display = 'none';
         
         try {
-            const result = await taskService.getAllTasks(); // Düzeltme yapıldı
+            const result = await taskService.getAllTasks();
             if (result.success && result.data && result.data.length > 0) {
                 let tasks = result.data;
                 
                 const usersResult = await taskService.getAllUsers();
                 const allUsersMap = new Map((usersResult.data || []).map(user => [user.id, user.displayName || user.email]));
 
-                // TaskModalManager'ın allTransactionTypes'ına erişim
                 const allTransactionTypes = taskModalManager.allTransactionTypes; 
                 const transactionTypeMap = new Map((allTransactionTypes || []).map(type => [type.id, type.alias || type.name]));
-
 
                 const formattedTasks = tasks.map(task => {
                     const assignedUserName = allUsersMap.get(task.assignedTo_uid) || 'Bilinmiyor';
                     
-                    // Task Type için görünen adı al
                     const taskTypeDisplayName = transactionTypeMap.get(task.taskType) || (task.taskType ? task.taskType.split('_').map(part => part.charAt(0).toUpperCase() + part.slice(1)).join(' ') : 'N/A');
                     
                     const officialDueDate = task.officialDueDate ? 
@@ -1744,7 +1735,7 @@
                         id: task.id,
                         taskNumber: task.taskNumber || task.id.substring(0, 8),
                         relatedIpRecord: task.relatedIpRecordTitle || 'Yok',
-                        taskType: taskTypeDisplayName, // Artık görünen ad
+                        taskType: taskTypeDisplayName,
                         priority: task.priority,
                         assignedTo: assignedUserName,
                         operationalDueDate: operationalDueDate,
@@ -1752,15 +1743,13 @@
                         status: task.status,
                         searchableTitle: task.title,
                         searchableIpRecordTitle: task.relatedIpRecordTitle,
-                        searchableTaskType: taskTypeDisplayName, // Aranabilir alana da görünen adı ekle
+                        searchableTaskType: taskTypeDisplayName,
                         searchableAssignedToEmail: task.assignedTo_email,
                         searchableStatus: task.status
                     };
                 });
 
-                // tasksTableManager'ın allRecords özelliğini güncelle
                 tasksTableManager.allRecords = formattedTasks; 
-                // Filtreleri ve sıralamayı uygulayarak tabloyu yeniden render et
                 tasksTableManager.applyFiltersAndSort(); 
                 
             } else {
@@ -1782,18 +1771,14 @@
         });
 
         document.getElementById('taskSearchInput').addEventListener('input', (e) => {
-            tasksTableManager.globalSearchTerm = e.target.value; // Global arama terimini ayarla
-            tasksTableManager.applyFiltersAndSort(); // Filtreleri ve sıralamayı yeniden uygula
+            tasksTableManager.globalSearchInputId = 'taskSearchInput'; // TableManager'ın bunu almasını sağlamak için
+            tasksTableManager.applyFiltersAndSort(); 
         });
 
-        // Tablo başlıklarına ve filtre satırlarına ID eklediğinizden emin olun
-        // ve TableManager constructor'da bu ID'leri doğru şekilde belirttiğinizden.
-        // TableManager'ın kendi event listener'ları olduğu için, burada sadece
-        // ek bir click listener ekleyelim, eğer aksi bir durum olursa diye.
         document.getElementById('tasksTableBody').addEventListener('click', (event) => {
             const editBtn = event.target.closest('.action-btn.edit-btn');
             if (editBtn) {
-                event.preventDefault(); // Varsayılan satır tıklamasını engelle
+                event.preventDefault();
                 const taskId = editBtn.dataset.id;
                 taskModalManager.openTaskDetailModal(taskId);
             }
