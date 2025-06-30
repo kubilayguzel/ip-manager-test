@@ -4,53 +4,6 @@
   <meta charset="UTF-8">
   <title>IP Manager - Toplu Belge İndeksleme</title>
   <link rel="stylesheet" href="css/shared-styles.css">
-  <style>
-    /* Dosya yükleme alanı için özel stiller - indexing.html ile aynı */
-    .file-upload-wrapper {
-        position: relative;
-        overflow: hidden;
-        display: inline-block;
-        width: 100%; 
-        cursor: pointer;
-    }
-
-    .file-upload-wrapper input[type=file] {
-        position: absolute;
-        left: 0;
-        top: 0;
-        opacity: 0;
-        cursor: pointer;
-        width: 100%;
-        height: 100%;
-    }
-
-    .file-upload-button {
-        display: block;
-        width: 100%;
-        padding: 12px 15px;
-        border: 2px solid #e1e8ed;
-        border-radius: 10px;
-        font-size: 1em;
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        background-color: #f0f4f8; 
-        color: #333;
-        text-align: left;
-        cursor: pointer;
-        transition: all 0.2s ease;
-    }
-
-    .file-upload-button:hover {
-        background-color: #e6f2ff;
-        border-color: #a3d4ff;
-    }
-
-    .file-upload-info {
-        font-size: 0.9em;
-        color: #777;
-        margin-top: 5px;
-        padding-left: 5px;
-    }
-  </style>
   <script type="module" src="js/layout-loader.js"></script>
   <script type="module" src="js/bulk-indexing-logic.js"></script>
 </head>
@@ -93,55 +46,72 @@
 
     <div class="bulk-tab-content-container">
       <div id="pending-bulk-pane" class="bulk-tab-pane active">
-        <div id="bulkTableNoJobs" class="text-muted p-4">İşlem listesi boş.</div>
-        <div id="bulkTableContainer" style="display: none;">
-          <table class="table" id="bulkTable">
+        <div id="bulkTableNoJobs" class="text-muted p-4">İşlem listesi boş. Lütfen PDF dosyaları yükleyin.</div>
+        <div id="bulkTableContainer" class="bulk-table-container" style="display: none;">
+          <table class="table table-bordered bulk-table" id="bulkIndexingTable">
             <thead>
               <tr>
-                <th width="5%"><input type="checkbox" id="selectAllBulk"></th>
-                <th width="20%">Dosya Adı</th>
-                <th width="15%">Dosya Boyutu</th>
-                <th width="15%">Durum</th>
-                <th width="20%">İşlem Türü</th>
-                <th width="15%">Tebliğ Tarihi</th>
-                <th width="10%">İşlemler</th>
+                <th><input type="checkbox" id="selectAllBulkJobs" title="Tümünü Seç/Bırak"></th>
+                <th>PDF Dosyası</th>
+                <th>Başvuru No</th>
+                <th>Eşleşen Kayıt</th>
+                <th>Ana İşlem</th>
+                <th>Alt İşlem</th>
+                <th>Tebliğ Tarihi</th>
+                <th>Durum</th>
+                <th>İşlemler</th>
               </tr>
             </thead>
-            <tbody id="bulkTableBody">
-              <!-- Dinamik içerik buraya gelecek -->
-            </tbody>
+            <tbody></tbody>
           </table>
-          <div class="bulk-actions" style="margin-top: 20px;">
-            <button type="button" class="btn btn-primary" id="processBulkSelectedBtn" disabled>Seçilenleri İşle</button>
-            <button type="button" class="btn btn-secondary" id="clearBulkListBtn">Listeyi Temizle</button>
-          </div>
         </div>
       </div>
-      
       <div id="processed-bulk-pane" class="bulk-tab-pane">
-        <div id="processedTableNoItems" class="text-muted p-4">Henüz işlenmiş kayıt yok.</div>
-        <div id="processedTableContainer" style="display: none;">
-          <table class="table" id="processedTable">
+        <div id="indexedBulkTableNoJobs" class="text-muted p-4">Daha önce işlenmiş bir kayıt bulunmuyor.</div>
+        <div id="indexedBulkTableContainerProcessed" class="bulk-table-container" style="display: none;">
+          <table class="table table-bordered bulk-table" id="indexedBulkTable">
             <thead>
               <tr>
-                <th width="25%">Dosya Adı</th>
-                <th width="20%">İşlem Türü</th>
-                <th width="15%">Tebliğ Tarihi</th>
-                <th width="15%">İşlem Tarihi</th>
-                <th width="15%">Durum</th>
-                <th width="10%">İşlemler</th>
+                <th>PDF Dosyası</th>
+                <th>Başvuru No</th>
+                <th>Eşleşen Kayıt</th>
+                <th>Ana İşlem</th>
+                <th>Alt İşlem</th>
+                <th>Tebliğ Tarihi</th>
+                <th>Durum</th>
               </tr>
             </thead>
-            <tbody id="processedTableBody">
-              <!-- İşlenmiş kayıtlar buraya gelecek -->
-            </tbody>
+            <tbody></tbody>
           </table>
         </div>
       </div>
     </div>
   </div>
 </div>
-    </main>
-    </div>
+</main>
+</div>
+<script type="module">
+  import { loadSharedLayout } from './js/layout-loader.js';
+  loadSharedLayout();
+</script>
+
+<script type="module">
+  import { authService, ipRecordsService } from './firebase-config.js';
+  import { BulkIndexingModule } from './js/bulk-indexing-logic.js';
+
+  async function initBulk() {
+    // Firebase'den mevcut kayıtları çekelim
+    const recordsResult = await ipRecordsService.getRecords();
+    let allRecords = [];
+    if (recordsResult.success) {
+      allRecords = recordsResult.data;
+    }
+    // Modülü başlat
+    new BulkIndexingModule(allRecords);
+  }
+
+  initBulk();
+</script>
+
 </body>
 </html>
