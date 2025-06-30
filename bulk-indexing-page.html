@@ -115,12 +115,30 @@
         </div>
     </div>
 </div>
-
 </main>
 </div>
 <script type="module">
   import { loadSharedLayout } from './js/layout-loader.js';
   loadSharedLayout();
 </script>
+
+<script type="module">
+  import { authService, ipRecordsService } from './js/firebase-config.js';
+  import { BulkIndexingModule } from './js/bulk-indexing-logic.js';
+
+  async function initBulk() {
+    // Firebase'den mevcut kayıtları çekelim
+    const recordsResult = await ipRecordsService.getRecords();
+    let allRecords = [];
+    if (recordsResult.success) {
+      allRecords = recordsResult.data;
+    }
+    // Modülü başlat
+    new BulkIndexingModule(allRecords);
+  }
+
+  initBulk();
+</script>
+
 </body>
 </html>
