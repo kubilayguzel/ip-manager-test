@@ -115,6 +115,41 @@
         </div>
     </div>
 </div>
+<div class="form-container">
+  <div class="form-section">
+    <h2 class="section-title"><span>1.</span>Toplu Belge Yükleme ve İndeksleme</h2>
+    
+    <div class="form-group">
+      <label class="form-label" for="bulkDeliveryDate">
+        A- Ortak Tebliğ Tarihi <span style="color: red;">*</span>
+      </label>
+      <input type="date" id="bulkDeliveryDate" class="form-input" style="max-width: 300px;">
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="bulkFiles">
+        B- PDF Dosyalarını Yükleyin <span style="color: red;">*</span>
+      </label>
+      <div class="file-upload-wrapper">
+        <input type="file" id="bulkFiles" multiple accept=".pdf" name="bulkFiles">
+        <div class="file-upload-button" id="bulkFilesButton">PDF Dosyalarını Seç</div>
+      </div>
+      <div class="file-upload-info" id="bulkFilesInfo">Henüz PDF dosyası seçilmedi.</div>
+    </div>
+  </div>
+
+  <div class="form-section">
+    <div class="bulk-tabs-container" style="margin-top: 20px;">
+      <button type="button" class="bulk-tab-btn active" data-bulk-tab="pending-bulk-pane">Bekleyen İşlemler</button>
+      <button type="button" class="bulk-tab-btn" data-bulk-tab="processed-bulk-pane">İşlenmiş Olanlar</button>
+    </div>
+
+    <div class="bulk-tab-content-container">
+      <!-- Tablolar burada -->
+    </div>
+  </div>
+</div>
+
 </main>
 </div>
 <script type="module">
