@@ -202,44 +202,48 @@ export class BulkIndexingModule {
         return match ? match[0] : null;
     }
 
-    async loadPdfsFromFirestore() {
-        if (!this.currentUser) return;
-        try {
-            const q = query(collection(firebaseServices.db,UNINDEXED_PDFS_COLLECTION)
-                .where('userId', '==', this.currentUser.uid)
-                .orderBy('uploadedAt', 'desc');
+async loadPdfsFromFirestore() {
+    if (!this.currentUser) return;
+    try {
+        const q = query(
+            collection(firebaseServices.db, UNINDEXED_PDFS_COLLECTION), // collection çağrısı düzeltildi
+            where('userId', '==', this.currentUser.uid), // where argüman olarak
+            orderBy('uploadedAt', 'desc') // orderBy argüman olarak
+        );
 
-            const snapshot = await q.get();
-            this.uploadedFiles = snapshot.docs.map(doc => ({
-                id: doc.id,
-                ...doc.data(),
-                uploadedAt: doc.data().uploadedAt ? doc.data().uploadedAt.toDate() : new Date() // Timestamp'i Date objesine çevir
-            }));
-            this.updateUI();
-        } catch (error) {
-            console.error("PDF'ler Firestore'dan yüklenirken hata:", error);
-            showNotification("PDF'ler yüklenirken bir hata oluştu.", "error");
-        }
+        const snapshot = await q.get();
+        this.uploadedFiles = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data(),
+            uploadedAt: doc.data().uploadedAt ? doc.data().uploadedAt.toDate() : new Date() // Timestamp'i Date objesine çevir
+        }));
+        this.updateUI();
+    } catch (error) {
+        console.error("PDF'ler Firestore'dan yüklenirken hata:", error);
+        showNotification("PDF'ler yüklenirken bir hata oluştu.", "error");
     }
+}
 
-    setupRealtimeListener() {
-        if (!this.currentUser) return;
-        const q = query(collection(firebaseServices.db,UNINDEXED_PDFS_COLLECTION)
-            .where('userId', '==', this.currentUser.uid)
-            .orderBy('uploadedAt', 'desc');
+setupRealtimeListener() {
+    if (!this.currentUser) return;
+    const q = query(
+        collection(firebaseServices.db, UNINDEXED_PDFS_COLLECTION), // collection çağrısı düzeltildi
+        where('userId', '==', this.currentUser.uid), // where argüman olarak
+        orderBy('uploadedAt', 'desc') // orderBy argüman olarak
+    );
 
-        this.unsubscribe = q.onSnapshot(snapshot => {
-            this.uploadedFiles = snapshot.docs.map(doc => ({
-                id: doc.id,
-                ...doc.data(),
-                uploadedAt: doc.data().uploadedAt ? doc.data().uploadedAt.toDate() : new Date()
-            }));
-            this.updateUI();
-        }, error => {
-            console.error("Gerçek zamanlı dinleyici hatası:", error);
-            showNotification("Dosya listesi güncellenirken bir hata oluştu.", "error");
-        });
-    }
+    this.unsubscribe = onSnapshot(q, snapshot => { // onSnapshot'ı doğrudan kullanıyoruz
+        this.uploadedFiles = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data(),
+            uploadedAt: doc.data().uploadedAt ? doc.data().uploadedAt.toDate() : new Date()
+        }));
+        this.updateUI();
+    }, error => {
+        console.error("Gerçek zamanlı dinleyici hatası:", error);
+        showNotification("Dosya listesi güncellenirken bir hata oluştu.", "error");
+    });
+}
 
     switchMainTab(targetTab) {
         document.querySelectorAll('.tabs-container .tab-btn').forEach(btn => {
@@ -383,78 +387,81 @@ export class BulkIndexingModule {
         }
     }
 
-    async removeFile(fileId) {
-        try {
-            const fileToRemove = this.uploadedFiles.find(f => f.id === fileId);
-            if (!fileToRemove) {
-                showNotification('Dosya bulunamadı.', 'error');
-                return;
-            }
+async removeFile(fileId) {
+    try {
+        const fileToRemove = this.uploadedFiles.find(f => f.id === fileId);
+        if (!fileToRemove) {
+            showNotification('Dosya bulunamadı.', 'error');
+            return;
+        }
 
-            // Firestore'da durumu 'removed' olarak güncelle
-            await updateDoc(doc(collection(firebaseServices.db, UNINDEXED_PDFS_COLLECTION).doc(fileId).update({
-                status: 'removed',
+        // Firestore'da durumu 'removed' olarak güncelle
+        // Düzeltildi: doc() ve updateDoc() fonksiyonlarının doğru kullanımı
+        await updateDoc(doc(collection(firebaseServices.db, UNINDEXED_PDFS_COLLECTION), fileId), {
+            status: 'removed',
+            removedAt: firebaseServices.FieldValue.serverTimestamp()
+        });
+
+        showNotification(`'${fileToRemove.fileName}' kaldırıldı.`, 'info');
+    } catch (error) {
+        console.error("Dosya kaldırılırken hata:", error);
+        showNotification("Dosya kaldırılırken bir hata oluştu.", "error");
+    }
+}
+ async restoreFile(fileId) {
+    try {
+        const fileToRestore = this.uploadedFiles.find(f => f.id === fileId);
+        if (!fileToRestore) {
+            showNotification('Dosya bulunamadı.', 'error');
+            return;
+        }
+
+        // Firestore'da durumu 'pending' olarak geri al
+        // Düzeltildi: doc() ve updateDoc() fonksiyonlarının doğru kullanımı
+        await updateDoc(doc(collection(firebaseServices.db, UNINDEXED_PDFS_COLLECTION), fileId), {
+            status: 'pending',
+            // FieldValue.delete() removedAt alanını Firestore'dan siler
+            removedAt: firebaseServices.FieldValue.delete()
+        });
+
+        showNotification(`'${fileToRestore.fileName}' geri yüklendi.`, 'success');
+    } catch (error) {
+        console.error("Dosya geri yüklenirken hata:", error);
+        showNotification("Dosya geri yüklenirken bir hata oluştu.", "error");
+    }
+}
+
+async resetForm() {
+    if (!this.currentUser) return;
+    
+    showNotification('Form sıfırlanıyor...', 'info');
+
+    try {
+        const q = query(
+            collection(firebaseServices.db, UNINDEXED_PDFS_COLLECTION), // collection çağrısı düzeltildi
+            where('userId', '==', this.currentUser.uid), // where argüman olarak
+            where('status', 'in', ['pending', 'indexed']) // where argüman olarak
+        );
+
+        const snapshot = await q.get();
+        const batch = firebaseServices.db.batch();
+
+        snapshot.docs.forEach(doc => {
+            // Durumunu 'removed' olarak güncelle
+            batch.update(doc.ref, { 
+                status: 'removed', 
                 removedAt: firebaseServices.FieldValue.serverTimestamp()
             });
+        });
+        await batch.commit();
 
-            showNotification(`'${fileToRemove.fileName}' kaldırıldı.`, 'info');
-        } catch (error) {
-            console.error("Dosya kaldırılırken hata:", error);
-            showNotification("Dosya kaldırılırken bir hata oluştu.", "error");
-        }
+        document.getElementById('bulkFiles').value = '';
+        showNotification('Yükleme alanı temizlendi ve listedeki PDF\'ler "Kaldırılanlar" sekmesine taşındı.', 'info');
+    } catch (error) {
+        console.error("Form sıfırlanırken hata:", error);
+        showNotification("Form sıfırlanırken bir hata oluştu.", "error");
     }
-
-    async restoreFile(fileId) {
-        try {
-            const fileToRestore = this.uploadedFiles.find(f => f.id === fileId);
-            if (!fileToRestore) {
-                showNotification('Dosya bulunamadı.', 'error');
-                return;
-            }
-
-            // Firestore'da durumu 'pending' olarak geri al
-            await updateDoc(doc(collection(firebaseServices.db,UNINDEXED_PDFS_COLLECTION).doc(fileId).update({
-                status: 'pending',
-                // FieldValue.delete() removedAt alanını Firestore'dan siler
-                removedAt: firebaseServices.FieldValue.delete()
-            });
-
-            showNotification(`'${fileToRestore.fileName}' geri yüklendi.`, 'success');
-        } catch (error) {
-            console.error("Dosya geri yüklenirken hata:", error);
-            showNotification("Dosya geri yüklenirken bir hata oluştu.", "error");
-        }
-    }
-
-    async resetForm() {
-        if (!this.currentUser) return;
-        
-        showNotification('Form sıfırlanıyor...', 'info');
-
-        try {
-            const q = query(collection(firebaseServices.db, UNINDEXED_PDFS_COLLECTION)
-                .where('userId', '==', this.currentUser.uid)
-                .where('status', 'in', ['pending', 'indexed']); // Sadece bekleyen veya indekslenmişleri hedefle
-
-            const snapshot = await q.get();
-            const batch = firebaseServices.db.batch();
-
-            snapshot.docs.forEach(doc => {
-                // Durumunu 'removed' olarak güncelle
-                batch.update(doc.ref, { 
-                    status: 'removed', 
-                    removedAt: firebaseServices.FieldValue.serverTimestamp()
-                });
-            });
-            await batch.commit();
-
-            document.getElementById('bulkFiles').value = '';
-            showNotification('Yükleme alanı temizlendi ve listedeki PDF\'ler "Kaldırılanlar" sekmesine taşındı.', 'info');
-        } catch (error) {
-            console.error("Form sıfırlanırken hata:", error);
-            showNotification("Form sıfırlanırken bir hata oluştu.", "error");
-        }
-    }
+}
 
     showNotification(message, type = 'info', duration = 3000) {
         if (typeof showNotification === 'function') {
