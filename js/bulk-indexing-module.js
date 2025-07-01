@@ -84,15 +84,14 @@ export class BulkIndexingModule {
             }
         });
 
-       document.addEventListener('click', (e) => {
-            if (e.target.closest('.tab-content-container') && e.target.classList.contains('tab-btn')) {
-                const targetPane = e.target.getAttribute('data-tab');
-                // Sadece yeni tanımladığımız dosya sekmelerini burada ele alıyoruz
-                if (targetPane === 'all-files-pane' || targetPane === 'removed-files-pane') {
-                    this.switchFileTab(targetPane);
+        document.addEventListener('click', (e) => {
+                if (e.target.closest('.tab-content-container') && e.target.classList.contains('tab-btn')) {
+                    const targetPane = e.target.getAttribute('data-tab');
+                    if (targetPane === 'all-files-pane' || targetPane === 'removed-files-pane') { // <-- Bu satır
+                        this.switchFileTab(targetPane);
+                    }
                 }
-            }
-        });
+            });
 
         const resetFormBtn = document.getElementById('resetBulkFormBtn');
         if (resetFormBtn) {
