@@ -319,16 +319,15 @@
                 </div>
             </main>
         </div>
-
     <script type="module">
-        import { BulkIndexingModule } from './js/bulk-indexing-module.js';   
+        import { BulkIndexingModule } from './js/bulk-indexing-module.js';
+        import { loadSharedLayout } from './js/layout-loader.js'; // layout-loader'ı da import etmeyi unutmayın
+
         document.addEventListener('DOMContentLoaded', () => {
-            const indexing = new BulkIndexingModule();
+            window.indexingModule = new BulkIndexingModule(); // 'indexing' yerine 'window.indexingModule' kullanıldı
+            // Layout'u da yükleyelim
+            loadSharedLayout({ activeMenuLink: 'bulk-indexing-page.html' }); 
         });
     </script>
-    <script type="module">
-        import { loadSharedLayout } from './js/layout-loader.js';
-        loadSharedLayout();
-    </script>
-    </body>
+</body>
 </html>
