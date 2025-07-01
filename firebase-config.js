@@ -909,7 +909,7 @@ export const bulkIndexingService = {
 };
 
 // --- Exports ---
-export {auth, db, FieldValue}; 
+export {auth, db}; 
 export const firebaseServices = { 
     auth: auth,
     db: db,
@@ -918,5 +918,4 @@ export const firebaseServices = {
     uploadBytesResumable: uploadBytesResumable, 
     getDownloadURL: getDownloadURL, 
     deleteObject: deleteObject,
-    FieldValue: FieldValue 
-};
+ };
