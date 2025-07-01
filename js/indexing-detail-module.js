@@ -83,20 +83,16 @@ export class IndexingDetailModule {
             const recordsResult = await ipRecordsService.getRecords();
             if (recordsResult.success) {
                 this.allRecords = recordsResult.data;
-                console.log('IP kayıtları yüklendi:', this.allRecords.length);
             }
 
             // Transaction türlerini yükle
             const transactionTypesResult = await transactionTypeService.getTransactionTypes();
             if (transactionTypesResult.success) {
                 this.allTransactionTypes = transactionTypesResult.data;
-                console.log('Transaction türleri yüklendi:', this.allTransactionTypes.length);
-                console.log('Örnek transaction türleri:', this.allTransactionTypes.slice(0, 3));
             } else {
                 console.error('Transaction türleri yüklenemedi:', transactionTypesResult.error);
             }
 
-            console.log('Kayıtlar ve transaction türleri yüklendi');
         } catch (error) {
             console.error('Veriler yüklenirken hata:', error);
             showNotification('Veriler yüklenirken hata oluştu.', 'error');
@@ -160,8 +156,6 @@ export class IndexingDetailModule {
         try {
             const transactionsResult = await ipRecordsService.getTransactionsForRecord(this.matchedRecord.id);
             
-            console.log('getTransactionsForRecord sonucu:', transactionsResult);
-            
             if (!transactionsResult.success) {
                 document.getElementById('transactionsList').innerHTML = 
                     '<p class="text-muted p-2">İşlemler yüklenirken hata oluştu.</p>';
@@ -169,13 +163,9 @@ export class IndexingDetailModule {
             }
 
             const transactions = transactionsResult.transactions;
-            console.log('Kayıttan gelen transactions:', transactions);
-            
             const parentTransactions = transactions
                 .filter(tx => tx.transactionHierarchy === 'parent' || !tx.transactionHierarchy)
                 .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-
-            console.log('Filtrelenmiş parent transactions:', parentTransactions);
 
             if (parentTransactions.length === 0) {
                 document.getElementById('transactionsList').innerHTML = 
@@ -193,8 +183,6 @@ export class IndexingDetailModule {
                 item.dataset.id = tx.id;
 
                 const transactionType = this.allTransactionTypes.find(t => t.id === tx.type);
-                console.log(`Transaction ID: ${tx.id}, Type: ${tx.type}, Definition:`, transactionType);
-                
                 const transactionDisplayName = transactionType ? 
                     (transactionType.alias || transactionType.name) : 
                     (tx.designation || tx.type || 'Tanımsız İşlem');
@@ -202,7 +190,6 @@ export class IndexingDetailModule {
                 item.textContent = `${transactionDisplayName} - ${new Date(tx.timestamp).toLocaleDateString('tr-TR')}`;
                 
                 item.addEventListener('click', (e) => {
-                    console.log('Transaction item tıklandı:', tx.id, tx.type);
                     this.selectTransaction(e.currentTarget.dataset.id, tx.type);
                 });
 
@@ -251,50 +238,13 @@ export class IndexingDetailModule {
         const selectElement = document.getElementById('childTransactionType');
         selectElement.innerHTML = '<option value="" disabled selected>Alt işlem türü seçin...</option>';
 
-        console.log('indexFile array:', indexFile);
-        console.log('Tüm transaction types:', this.allTransactionTypes);
-
-        // DEBUGGING: İlk birkaç transaction'ın yapısını kontrol et
-        console.log('İlk 5 transaction yapısı:', this.allTransactionTypes.slice(0, 5).map(t => ({
-            id: t.id,
-            hierarchy: t.hierarchy,
-            transactionHierarchy: t.transactionHierarchy,
-            name: t.name,
-            alias: t.alias
-        })));
-
-        // DEBUGGING: Child hierarchy'e sahip tüm transaction'ları bul
-        const allChildTypes = this.allTransactionTypes.filter(type => 
-            type.hierarchy === 'child' || type.transactionHierarchy === 'child'
-        );
-        console.log('Tüm child types:', allChildTypes.map(t => ({
-            id: t.id,
-            name: t.name,
-            hierarchy: t.hierarchy || t.transactionHierarchy
-        })));
-
-        // DEBUGGING: indexFile'daki ID'lerle eşleşen transaction'ları bul
-        const matchingIds = this.allTransactionTypes.filter(type => 
-            indexFile.includes(type.id) || indexFile.includes(String(type.id)) || indexFile.includes(Number(type.id))
-        );
-        console.log('indexFile ile eşleşen ID\'ler:', matchingIds.map(t => ({
-            id: t.id,
-            name: t.name,
-            hierarchy: t.hierarchy || t.transactionHierarchy
-        })));
-
-        // Hem hierarchy kontrolü hem ID eşleşmesi
-        const childTypes = this.allTransactionTypes.filter(type => {
-            const isChild = type.hierarchy === 'child' || type.transactionHierarchy === 'child';
-            const isInIndexFile = indexFile && Array.isArray(indexFile) && 
-                (indexFile.includes(type.id) || indexFile.includes(String(type.id)) || indexFile.includes(Number(type.id)));
-            
-            console.log(`Transaction ${type.id} (${type.name}): isChild=${isChild}, isInIndexFile=${isInIndexFile}`);
-            
-            return isChild && isInIndexFile;
-        });
-
-        console.log('Final bulunan child types:', childTypes);
+        // İndeksleme HTML'deki çalışan mantığı uygula
+        const childTypes = this.allTransactionTypes.filter(type => 
+            type.hierarchy === 'child' &&  // transactionHierarchy DEĞİL, hierarchy!
+            indexFile && 
+            Array.isArray(indexFile) && 
+            indexFile.includes(type.id)
+        ).sort((a, b) => (a.order || 999) - (b.order || 999)); // Sıralama da ekle
 
         if (childTypes.length === 0) {
             const noOption = document.createElement('option');
@@ -319,17 +269,8 @@ export class IndexingDetailModule {
         const hasSelectedChildType = childTransactionInputsVisible ? 
             document.getElementById('childTransactionType').value !== '' : true;
 
-        console.log('Form completeness check:', {
-            hasSelectedTransaction,
-            childTransactionInputsVisible,
-            hasSelectedChildType,
-            selectedTransactionId: this.selectedTransactionId
-        });
-
         const canSubmit = hasSelectedTransaction && hasSelectedChildType;
         document.getElementById('indexBtn').disabled = !canSubmit;
-        
-        console.log('İndeksle butonu durumu:', canSubmit ? 'aktif' : 'pasif');
     }
 
     async handleIndexing() {
