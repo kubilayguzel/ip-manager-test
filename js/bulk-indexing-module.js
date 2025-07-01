@@ -184,7 +184,7 @@ export class BulkIndexingModule {
 
                     try {
                         // Firestore'a kaydet
-                        await collection(firebaseServices.db,UNINDEXED_PDFS_COLLECTION).doc(pdfId).set(newPdfDoc);
+                        await setDoc(doc(collection(firebaseServices.db,UNINDEXED_PDFS_COLLECTION).doc(pdfId).set(newPdfDoc);
                         showNotification(`'${file.name}' başarıyla yüklendi ve işleme alındı!`, 'success', 3000);
                     } catch (firestoreError) {
                         console.error("Firestore'a kaydedilirken hata:", firestoreError);
@@ -392,7 +392,7 @@ export class BulkIndexingModule {
             }
 
             // Firestore'da durumu 'removed' olarak güncelle
-            await collection(firebaseServices.db,UNINDEXED_PDFS_COLLECTION).doc(fileId).update({
+            await updateDoc(doc(collection(firebaseServices.db, UNINDEXED_PDFS_COLLECTION).doc(fileId).update({
                 status: 'removed',
                 removedAt: firebaseServices.FieldValue.serverTimestamp()
             });
@@ -413,7 +413,7 @@ export class BulkIndexingModule {
             }
 
             // Firestore'da durumu 'pending' olarak geri al
-            await collection(firebaseServices.db,UNINDEXED_PDFS_COLLECTION).doc(fileId).update({
+            await updateDoc(doc(collection(firebaseServices.db,UNINDEXED_PDFS_COLLECTION).doc(fileId).update({
                 status: 'pending',
                 // FieldValue.delete() removedAt alanını Firestore'dan siler
                 removedAt: firebaseServices.FieldValue.delete()
