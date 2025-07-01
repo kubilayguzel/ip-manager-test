@@ -818,69 +818,6 @@ export const bulkIndexingService = {
     },
 };
 
-// --- Accrual Service ---
-export const accrualService = {
-    async addAccrual(accrualData) {
-        if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor. Tahakkuk eklenemez." };
-        const user = authService.getCurrentUser();
-        if (!user) return { success: false, error: "Kullanıcı girişi yapılmamış." };
-        
-        try {
-            const accrualId = await getNextAccrualId();
-            
-            const newAccrual = {
-                ...accrualData,
-                id: accrualId, 
-                status: 'unpaid',
-                createdAt: new Date().toISOString(),
-                createdBy_uid: user.uid,
-                createdBy_email: user.email,
-                files: (accrualData.files || []).map(f => ({ ...f, id: f.id || generateUUID() })),
-                paymentDate: null
-            };
-            await setDoc(doc(db, 'accruals', accrualId), newAccrual); 
-            return { success: true, data: newAccrual };
-        } catch (error) {
-            return { success: false, error: error.message };
-        }
-    },
-    async getAccruals() {
-        if (!isFirebaseAvailable) return { success: true, data: [] };
-        try {
-            const q = query(collection(db, 'accruals'), orderBy('createdAt', 'desc'));
-            const querySnapshot = await getDocs(q);
-            return { success: true, data: querySnapshot.docs.map(d => ({id: d.id, ...d.data()})) };
-        } catch (error) {
-            return { success: false, error: error.message, data: [] };
-        }
-    },
-    async getAccrualsByTaskId(taskId) {
-        if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor." };
-        try {
-            const q = query(collection(db, 'accruals'), where('taskId', '==', taskId), orderBy('createdAt', 'desc'));
-            const querySnapshot = await getDocs(q);
-            return { success: true, data: querySnapshot.docs.map(d => ({id: d.id, ...d.data()})) };
-        } catch (error) {
-            return { success: false, error: error.message, data: [] };
-        }
-    },
-    async updateAccrual(accrualId, updates) {
-        if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor. Tahakkuk güncellenemez." };
-        try {
-            const accrualRef = doc(db, 'accruals', accrualId);
-            const currentAccrualDoc = await getDoc(accrualRef);
-            if (!currentAccrualDoc.exists()) {
-                return { success: false, error: "Tahakkuk bulunamadı." };
-            }
-            const finalUpdates = { ...updates, updatedAt: new Date().toISOString() };
-            await updateDoc(accrualRef, finalUpdates);
-            return { success: true };
-        } catch (error) {
-            return { success: false, error: error.message };
-        }
-    }
-};
-
 // --- Demo Data Function ---
 export async function createDemoData() {
     console.log('🧪 Demo verisi oluşturuluyor...');
