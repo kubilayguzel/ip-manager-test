@@ -12,7 +12,7 @@
         .page-header-section { background: rgba(255, 255, 255, 0.95); padding: 30px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1); text-align: center; margin-bottom: 30px; }
         .page-title { font-size: 2em; color: #1e3c72; margin-bottom: 10px; }
         .page-subtitle { color: #666; font-size: 1.1em; }
-        .form-container { background: rgba(255, 255, 0.95); padding: 40px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1); }
+        .form-container { background: rgba(255, 255, 255, 0.95); padding: 40px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1); }
         .form-section { border-bottom: 1px solid #e1e8ed; padding-bottom: 25px; margin-bottom: 25px; }
         .form-section:last-child { border-bottom: none; }
         .section-title { font-size: 1.3em; color: #1e3c72; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
@@ -160,7 +160,7 @@
         }
         .file-status .status-pending { background-color: #ffc107; color: #343a40; } /* Yellow for pending */
         .file-status .status-indexed { background-color: #28a745; } /* Green for indexed */
-        .file-status .status-unmatched_by_user { background-color: #6c757d; } /* Gray for unmatched by user */
+        .file-status .status-removed { background-color: #6c757d; } /* Gray for removed */
 
         /* Empty state */
         .empty-message {
@@ -178,7 +178,11 @@
         }
 
         /* Tab badge */
-        .tab-badge, .badge { /* Hem ana tab hem de iç tab için */
+        .tab-btn {
+            position: relative;
+        }
+
+        .tab-badge {
             position: absolute;
             top: -5px;
             right: -5px;
@@ -191,7 +195,7 @@
             text-align: center;
         }
 
-        .tab-badge.success, .badge.success {
+        .tab-badge.success {
             background: #28a745;
         }
 
@@ -210,9 +214,8 @@
     </style>
 </head>
 <body>
-    <div class="notification-container"></div> 
+    <div class="notification-container"></div>
     <div id="layout-placeholder"></div>
-    
     <div class="page-wrapper">
         <main class="main-container">
             <div class="page-header-section">
@@ -228,9 +231,10 @@
                         <div class="tabs-container">
                             <button type="button" class="tab-btn" data-tab="existing-transaction-pane">İşleme Dosya Ekle</button>
                             <button type="button" class="tab-btn" data-tab="manual-indexing-pane">Manuel İşlem Oluştur</button>
-                            <button type="button" class="tab-btn active" data-tab="bulk-indexing-main-pane">
-                                PDF Yükleme ve Yönetimi
-                                <span class="tab-badge" id="mainTabCount">0</span> </button>
+                            <button type="button" class="tab-btn active" data-tab="bulk-indexing-pane">
+                                PDF Yükleme ve Listeleme
+                                <span class="tab-badge" id="totalBadge">0</span>
+                            </button>
                         </div>
                         
                         <div class="tab-content-container">
@@ -242,7 +246,8 @@
                                 <p class="text-muted">Manuel İşlem Oluştur sekmesi (Bu bölüm mevcut indexing.html içeriğinizden buraya taşınabilir)</p>
                             </div>
 
-                            <div id="bulk-indexing-main-pane" class="tab-pane active"> <div class="form-section">
+                            <div id="bulk-indexing-pane" class="tab-pane active">
+                                <div class="form-section">
                                     <h2 class="section-title"><span>1.1</span> PDF Dosyalarını Yükleyin</h2>
                                     
                                     <div class="form-group">
@@ -260,30 +265,25 @@
                                         </div>
                                     </div>
                                 </div>
-                                
-                                <div class="form-section" id="fileListSection">
-                                    <h2 class="section-title"><span>1.2</span> Yüklenen PDF Dosyaları</h2>
-                                    
-                                    <div class="tabs-container">
-                                        <button class="tab-btn active" data-tab="all-files-pane">
-                                            İndekslenecek Dokümanlar
-                                            <span class="badge" id="allCount">0</span>
-                                        </button>
-                                        <button class="tab-btn" data-tab="unmatched-files-pane">
-                                            Eşleşmeyenler
-                                            <span class="badge" id="unmatchedByUserCount">0</span>
-                                        </button>
-                                    </div>
 
-                                    <div class="tab-content-container">
-                                        <div id="all-files-pane" class="tab-pane active">
-                                            <div id="allFilesList"></div>
-                                        </div>
-                                        <div id="unmatched-files-pane" class="tab-pane">
-                                            <div id="unmatchedFilesList"></div>
-                                        </div>
+                                <div class="form-section" id="fileListSection">
+                                    <h2 class="section-title"><span>1.2</span> Yüklenen PDF Dosyaları</h2>                             
+                                    <div class="tabs-container">
+                                        <button class="tab-btn active" data-tab="all-files-pane">İndekslenecek Dokümanlar <span class="badge" id="allCount">0</span></button>
+                                        <button class="tab-btn active" data-tab="all-files-pane">Eşleşmeyenler <span class="badge" id="allCount">0</span></button>
+                                    </div>
+                                <div class="tab-content-container">
+                                    <div id="all-files-pane" class="tab-pane active">
+                                        <div id="allFilesList" class="pdf-list"></div>
+                                    </div>
+                                    <div id="unmatched-files-pane" class="tab-pane"> <div id="unmatchedFilesList" class="pdf-list"></div>
                                     </div>
                                 </div>
+                            </div>
+
+                            <div id="removed-files-pane" class="tab-pane">
+                                <h2 class="section-title"><span>1.3</span> Kaldırılan PDF Dosyaları</h2>
+                                <div id="removedFilesList"></div>
                             </div>
                         </div>
 
@@ -296,14 +296,13 @@
                 </div>
             </main>
         </div>
-
     <script type="module">
         import { BulkIndexingModule } from './js/bulk-indexing-module.js';
-        import { loadSharedLayout } from './js/layout-loader.js';
-        
+        import { loadSharedLayout } from './js/layout-loader.js'; // layout-loader'ı da import etmeyi unutmayın
+
         document.addEventListener('DOMContentLoaded', () => {
-            window.indexingModule = new BulkIndexingModule();
-            // Layout'u da yükleyelim, aktif menü linkini belirtmeyi unutmayın
+            window.indexingModule = new BulkIndexingModule(); // 'indexing' yerine 'window.indexingModule' kullanıldı
+            // Layout'u da yükleyelim
             loadSharedLayout({ activeMenuLink: 'bulk-indexing-page.html' }); 
         });
     </script>
