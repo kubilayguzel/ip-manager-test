@@ -765,7 +765,7 @@ export async function createDemoData() {
 
 
 // --- Exports ---
-export {auth, db, FieldValue}; 
+export {auth, db, bulkIndexingService, FieldValue}; 
 export const firebaseServices = { 
     auth: auth,
     db: db,
