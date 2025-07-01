@@ -87,6 +87,7 @@ export class BulkIndexingModule {
         // Dosya listesi alt-tab olayları
         document.addEventListener('click', (e) => {
             if (e.target.closest('.tab-content-container') && e.target.classList.contains('tab-btn')) {
+                e.preventDefault();
                 const targetPane = e.target.getAttribute('data-tab');
                 if (targetPane === 'all-files-pane' || targetPane === 'matched-files-pane' ||
                     targetPane === 'unmatched-files-pane' || targetPane === 'removed-files-pane') {
