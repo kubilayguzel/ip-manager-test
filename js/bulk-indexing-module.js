@@ -84,25 +84,20 @@ export class BulkIndexingModule {
             }
         });
 
+        // Dosya tab olayları - HER İKİ TAB İÇİN
         document.addEventListener('click', (e) => {
-                if (e.target.closest('.tab-content-container') && e.target.classList.contains('tab-btn')) {
-                    const targetPane = e.target.getAttribute('data-tab');
-                    if (targetPane === 'all-files-pane') { // Sadece 'all-files-pane' kaldı
-                        this.switchFileTab(targetPane);
-                    }
+            if (e.target.closest('.tab-content-container') && e.target.classList.contains('tab-btn')) {
+                const targetPane = e.target.getAttribute('data-tab');
+                if (targetPane === 'all-files-pane' || targetPane === 'unmatched-files-pane') {
+                    this.switchFileTab(targetPane);
                 }
-            });
+            }
+        });
 
         const resetFormBtn = document.getElementById('resetBulkFormBtn');
         if (resetFormBtn) {
-            resetFormBtn.addEventListener('click', this.resetForm.bind(this));
+            resetFormBtn.addEventListener('click', () => this.resetForm());
         }
-
-        window.addEventListener('beforeunload', () => {
-            if (this.unsubscribe) {
-                this.unsubscribe();
-            }
-        });
     }
 
     handleDragOver(e) {
@@ -262,23 +257,31 @@ setupRealtimeListener() {
     }
 
     switchFileTab(targetPane) {
-        document.querySelectorAll('.tab-content-container .tab-btn').forEach(btn => {
-            btn.classList.remove('active');
-        });
+// Sadece tab-content-container içindeki tab button'ları etkile
+    document.querySelectorAll('.tab-content-container .tab-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
 
-        document.querySelectorAll('.tab-content-container .tab-pane').forEach(pane => {
-            pane.classList.remove('active');
-        });
+    document.querySelectorAll('.tab-content-container .tab-pane').forEach(pane => {
+        pane.classList.remove('active');
+    });
 
-        const selectedTab = document.querySelector(`.tab-content-container [data-tab="${targetPane}"]`);
-        if (selectedTab) selectedTab.classList.add('active');
-
-        const selectedPane = document.getElementById(targetPane);
-        if (selectedPane) selectedPane.classList.add('active');
-
-        this.activeFileTab = targetPane;
-        this.updateUI();
+    // Tıklanan tab'ı active yap
+    const selectedTab = document.querySelector(`.tab-content-container [data-tab="${targetPane}"]`);
+    if (selectedTab) {
+        selectedTab.classList.add('active');
     }
+
+    // İlgili pane'i göster
+    const selectedPane = document.getElementById(targetPane);
+    if (selectedPane) {
+        selectedPane.classList.add('active');
+    }
+
+    // Aktif tab'ı güncelle ve UI'yi yeniden render et
+    this.activeFileTab = targetPane;
+    this.updateUI();
+}
 
     updateUI() {
         this.updateSections();
@@ -286,36 +289,50 @@ setupRealtimeListener() {
     }
 
     updateSections() {
-        const hasFiles = this.uploadedFiles.length > 0;
+    const hasFiles = this.uploadedFiles.length > 0;
+    document.getElementById('fileListSection').style.display = hasFiles ? 'block' : 'none';
+    document.getElementById('bulkFormActions').style.display = hasFiles ? 'flex' : 'none';
 
-        document.getElementById('fileListSection').style.display = hasFiles ? 'block' : 'none';
-        document.getElementById('bulkFormActions').style.display = hasFiles ? 'flex' : 'none';
-
-        const fileInfo = document.getElementById('bulkFilesInfo');
-        if (fileInfo) {
-            if (hasFiles) {
-                fileInfo.textContent = `${this.uploadedFiles.filter(f => f.status !== 'removed').length} PDF dosyası yüklendi ve işleme alınıyor.`;
-            } else {
-                fileInfo.textContent = 'Henüz PDF dosyası seçilmedi. Birden fazla PDF dosyası seçebilirsiniz.';
-            }
+    const fileInfo = document.getElementById('bulkFilesInfo');
+    if (fileInfo) {
+        if (hasFiles) {
+            fileInfo.textContent = `${this.uploadedFiles.filter(f => f.status !== 'removed').length} PDF dosyası yüklendi ve işleme alınıyor.`;
+        } else {
+            fileInfo.textContent = 'Henüz PDF dosyası seçilmedi. Birden fazla PDF dosyası seçebilirsiniz.';
         }
-
-        // Yeni sekme yapısına göre sayıları güncelle
-        document.getElementById('totalBadge').textContent = this.uploadedFiles.filter(f => f.status !== 'removed').length;
-        document.getElementById('allCount').textContent = this.uploadedFiles.filter(f => f.status !== 'removed').length;
-        document.getElementById('unmatchedByUserCount').textContent = this.uploadedFiles.filter(f => f.status === 'unmatched_by_user').length; // Yeni eşleşmeyenler sayısı
-
     }
 
-        renderFileLists() {
-                // "İndekslenecek Dokümanlar" sekmesi için: Kullanıcı tarafından eşleşmeyen olarak işaretlenmemiş dosyalar
-                const indexableDocs = this.uploadedFiles.filter(f => f.status !== 'unmatched_by_user');
-                // "Eşleşmeyenler" sekmesi için: Kullanıcı tarafından eşleşmeyen olarak işaretlenmiş dosyalar
-                const unmatchedByUserDocs = this.uploadedFiles.filter(f => f.status === 'unmatched_by_user');
+    // DÜZELTME: Badge'leri doğru şekilde güncelle
+    const totalBadgeElement = document.getElementById('totalBadge');
+    const allCountElement = document.getElementById('allCount');
+    const unmatchedCountElement = document.getElementById('unmatchedCount');
 
-                document.getElementById('allFilesList').innerHTML = this.renderFileListHtml(indexableDocs);
-                document.getElementById('unmatchedFilesList').innerHTML = this.renderFileListHtml(unmatchedByUserDocs); // Yeni eşleşmeyenler listesini render et
-            }
+    if (totalBadgeElement) {
+        totalBadgeElement.textContent = this.uploadedFiles.filter(f => f.status !== 'removed').length;
+    }
+    if (allCountElement) {
+        allCountElement.textContent = this.uploadedFiles.filter(f => f.status !== 'unmatched_by_user' && f.status !== 'removed').length;
+    }
+    if (unmatchedCountElement) {
+        unmatchedCountElement.textContent = this.uploadedFiles.filter(f => f.status === 'unmatched_by_user').length;
+    }
+}
+        renderFileLists() {
+ // "İndekslenecek Dokümanlar" sekmesi için: Kullanıcı tarafından eşleşmeyen olarak işaretlenmemiş dosyalar
+    const indexableDocs = this.uploadedFiles.filter(f => f.status !== 'unmatched_by_user' && f.status !== 'removed');
+    // "Eşleşmeyenler" sekmesi için: Kullanıcı tarafından eşleşmeyen olarak işaretlenmiş dosyalar
+    const unmatchedByUserDocs = this.uploadedFiles.filter(f => f.status === 'unmatched_by_user');
+
+    const allFilesListElement = document.getElementById('allFilesList');
+    const unmatchedFilesListElement = document.getElementById('unmatchedFilesList');
+
+    if (allFilesListElement) {
+        allFilesListElement.innerHTML = this.renderFileListHtml(indexableDocs);
+    }
+    if (unmatchedFilesListElement) {
+        unmatchedFilesListElement.innerHTML = this.renderFileListHtml(unmatchedByUserDocs);
+    }
+}
 
     renderFileListHtml(files) {
         if (files.length === 0) {
