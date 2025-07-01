@@ -184,7 +184,7 @@ export class BulkIndexingModule {
 
                     try {
                         // Firestore'a kaydet
-                        await setDoc(doc(collection(firebaseServices.db,UNINDEXED_PDFS_COLLECTION).doc(pdfId).set(newPdfDoc);
+                        await setDoc(doc(collection(firebaseServices.db, UNINDEXED_PDFS_COLLECTION), pdfId), newPdfDoc); 
                         showNotification(`'${file.name}' başarıyla yüklendi ve işleme alındı!`, 'success', 3000);
                     } catch (firestoreError) {
                         console.error("Firestore'a kaydedilirken hata:", firestoreError);
@@ -432,7 +432,7 @@ export class BulkIndexingModule {
         showNotification('Form sıfırlanıyor...', 'info');
 
         try {
-            const q = query(collection(firebaseServices.db,UNINDEXED_PDFS_COLLECTION)
+            const q = query(collection(firebaseServices.db, UNINDEXED_PDFS_COLLECTION)
                 .where('userId', '==', this.currentUser.uid)
                 .where('status', 'in', ['pending', 'indexed']); // Sadece bekleyen veya indekslenmişleri hedefle
 
