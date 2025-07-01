@@ -818,39 +818,6 @@ export const bulkIndexingService = {
     },
 };
 
-
-// Tahakkuk ID counter fonksiyonu
-async function getNextAccrualId() {
-    if (!isFirebaseAvailable) return '1';
-
-    try {
-        const counterRef = doc(db, 'counters', 'accruals');
-
-        const counterDoc = await getDoc(counterRef);
-
-        let currentId = 0;
-
-        if (counterDoc.exists()) {
-            const data = counterDoc.data();
-            if (data && typeof data.lastId === 'number') {
-                currentId = data.lastId;
-            }
-        } else {
-            await setDoc(counterRef, { lastId: 0 });
-            currentId = 0;
-        }
-
-        const nextId = currentId + 1;
-
-        await setDoc(counterRef, { lastId: nextId }, { merge: true });
-
-        return nextId.toString();
-
-    } catch (error) {
-        console.error('🔥 Tahakkuk ID üretim hatası:', error);
-        return 'error';
-    }
-}
 export async function getNextTaskId() {
     if (!isFirebaseAvailable) return '1';
 
@@ -1069,7 +1036,8 @@ export async function createDemoData() {
 
 
 // --- Exports ---
-export {auth, db, bulkIndexingService, FieldValue}; 
+export {auth, db, FieldValue}; 
+export { authService, ipRecordsService, personService, taskService, transactionTypeService, bulkIndexingService, generateUUID, accrualService }; 
 export const firebaseServices = { 
     auth: auth,
     db: db,
