@@ -152,33 +152,6 @@
             align-items: center;
         }
 
-        /* İstatistik kartları */
-        .stats-container {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 20px;
-            margin-bottom: 25px;
-        }
-
-        .stat-card {
-            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
-            color: white;
-            padding: 20px;
-            border-radius: 10px;
-            text-align: center;
-        }
-
-        .stat-number {
-            font-size: 2rem;
-            font-weight: 700;
-            margin-bottom: 5px;
-        }
-
-        .stat-label {
-            font-size: 0.9rem;
-            opacity: 0.9;
-        }
-
         /* Empty state */
         .empty-message {
             text-align: center;
@@ -216,6 +189,66 @@
             background: #28a745;
         }
 
+        /* Modal Styles */
+        .modal {
+            display: none; /* Hidden by default */
+            position: fixed; /* Stay in place */
+            z-index: 1000; /* Sit on top */
+            left: 0;
+            top: 0;
+            width: 100%; /* Full width */
+            height: 100%; /* Full height */
+            overflow: auto; /* Enable scroll if needed */
+            background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            margin: 5% auto; /* 5% from the top and centered */
+            padding: 30px;
+            border-radius: 15px;
+            width: 80%; /* Could be more or less, depending on screen size */
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            position: relative;
+        }
+
+        .close-button {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+        .close-button:hover,
+        .close-button:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        .modal-title {
+            color: #1e3c72;
+            font-size: 1.8em;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #e1e8ed;
+            padding-bottom: 10px;
+        }
+
+        .modal-body .form-group {
+            margin-bottom: 20px;
+        }
+
+        .modal-body .form-label {
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .modal-body .form-input, .modal-body .form-select {
+            border: 1px solid #ccc;
+            padding: 10px;
+            border-radius: 8px;
+        }
+
         @media (max-width: 768px) {
             .pdf-list-item {
                 flex-direction: column;
@@ -228,8 +261,13 @@
                 justify-content: flex-end;
             }
             
-            .stats-container {
+            .stats-container { /* İstatistik bölümü kaldırıldığı için bu stil artık geçerli değil ama diğer media sorguları için bırakıldı */
                 grid-template-columns: 1fr;
+            }
+
+            .modal-content {
+                width: 95%;
+                margin: 2% auto;
             }
         }
     </style>
@@ -262,11 +300,11 @@
                         <div class="tab-content-container">
                             <div id="existing-transaction-pane" class="tab-pane">
                                 <p class="text-muted">İşleme Dosya Ekle sekmesi</p>
-                            </div>
+                                </div>
 
                             <div id="manual-indexing-pane" class="tab-pane">
                                 <p class="text-muted">Manuel İşlem Oluştur sekmesi</p>
-                            </div>
+                                </div>
 
                             <div id="bulk-indexing-pane" class="tab-pane active">
                                 <div class="form-section">
@@ -288,31 +326,8 @@
                                     </div>
                                 </div>
 
-                                <div class="form-section" id="statsSection">
-                                    <h2 class="section-title"><span>1.2</span> İstatistikler</h2>
-                                    
-                                    <div class="stats-container">
-                                        <div class="stat-card">
-                                            <div class="stat-number" id="totalFiles">0</div>
-                                            <div class="stat-label">Toplam Dosya</div>
-                                        </div>
-                                        <div class="stat-card">
-                                            <div class="stat-number" id="matchedFiles">0</div>
-                                            <div class="stat-label">Eşleşen</div>
-                                        </div>
-                                        <div class="stat-card">
-                                            <div class="stat-number" id="unmatchedFiles">0</div>
-                                            <div class="stat-label">Eşleşmeyen</div>
-                                        </div>
-                                        <div class="stat-card">
-                                            <div class="stat-number" id="readyFiles">0</div>
-                                            <div class="stat-label">İşleme Hazır (Manuel İşlem İçin)</div>
-                                        </div>
-                                    </div>
-                                </div>
-
                                 <div class="form-section" id="fileListSection">
-                                    <h2 class="section-title"><span>1.3</span> Yüklenen PDF Dosyaları</h2>
+                                    <h2 class="section-title"><span>1.2</span> Yüklenen PDF Dosyaları</h2>
                                     
                                     <div class="tabs-container">
                                         <button type="button" class="tab-btn active" data-tab="all-files-pane">
@@ -347,9 +362,6 @@
                         </div>
 
                         <div class="form-actions" id="bulkFormActions">
-                            <button type="button" class="btn action-btn complete-btn" id="startBulkIndexingBtn" disabled>
-                                ⛔ Toplu İşlem Devre Dışı
-                            </button>
                             <button type="button" class="btn action-btn edit-btn" id="resetBulkFormBtn">
                                 🔄 Formu Sıfırla
                             </button>
@@ -359,13 +371,53 @@
             </main>
         </div>
 
+        <div id="indexingModal" class="modal">
+            <div class="modal-content">
+                <span class="close-button" onclick="indexing.closeIndexingModal()">&times;</span>
+                <h2 class="modal-title">Belge İndeksle: <span id="modalFileName"></span></h2>
+                <div class="modal-body">
+                    <input type="hidden" id="modalFileId">
+                    <div class="form-group">
+                        <label class="form-label" for="modalMatchedRecord">İlgili IP Kaydı:</label>
+                        <input type="text" id="modalMatchedRecord" class="form-input" disabled>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="modalParentTransaction">İlgili Ana İşlem:</label>
+                        <select id="modalParentTransaction" class="form-select">
+                            <option value="">Seçiniz...</option>
+                            </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="modalChildTransactionType">Alt İşlem Türü:</label>
+                        <select id="modalChildTransactionType" class="form-select">
+                            <option value="">Seçiniz...</option>
+                            <option value="Ret Kararı">Ret Kararı</option>
+                            <option value="Kabul Kararı">Kabul Kararı</option>
+                            <option value="Eksiklik Bildirimi">Eksiklik Bildirimi</option>
+                            <option value="Karara İtiraz">Karara İtiraz</option>
+                            <option value="Yayına İtiraz">Yayına İtiraz</option>
+                            <option value="İtiraza Cevap">İtiraza Cevap</option>
+                            <option value="Genel">Genel</option>
+                            <option value="Diğer">Diğer</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="modalDeliveryDate">Tebliğ Tarihi:</label>
+                        <input type="date" id="modalDeliveryDate" class="form-input">
+                    </div>
+                </div>
+                <div class="form-actions" style="justify-content: flex-end;">
+                    <button type="button" class="btn complete-btn" id="saveIndexingBtn">İndeksle ve Kaydet</button>
+                </div>
+            </div>
+        </div>
+
     <script>
         class BulkDocumentIndexing {
             constructor() {
                 this.uploadedFiles = [];
-                // Bu örnek kayıtlar gerçek veritabanınızdan alınmalıdır.
+                // ÖNEMLİ: Bu örnek kayıtlar, gerçek uygulamanızda Firebase/Firestore'dan alınmalıdır.
                 this.portfolioRecords = this.generateSamplePortfolioRecords(); 
-                this.isProcessing = false; // Bu artık toplu işlem için kullanılmayacak
                 this.activeFileTab = 'all-files-pane';
                 this.init();
             }
@@ -405,18 +457,37 @@
                 });
 
                 // Action buttons
-                // "Toplu İndeksleme Başlat" butonu artık event dinleyiciye sahip değil, her zaman devre dışı kalacak
                 document.getElementById('resetBulkFormBtn').addEventListener('click', this.resetForm.bind(this));
+
+                // Modal Save Button
+                document.getElementById('saveIndexingBtn').addEventListener('click', this.handleSaveIndexing.bind(this));
             }
 
+            // ÖNEMLİ: Bu örnek veriler gerçek Firestore verilerinizle değiştirilmelidir.
             generateSamplePortfolioRecords() {
-                // Bu örnek veriler gerçek Firestore verilerinizle değiştirilmelidir.
                 return [
-                    { id: 'rec_1', applicationNumber: '2025/1', title: 'ABC Teknoloji Marka Başvurusu', type: 'Marka' },
-                    { id: 'rec_2', applicationNumber: '2025/2', title: 'XYZ Patent Başvurusu', type: 'Patent' },
-                    { id: 'rec_3', applicationNumber: '2025/3', title: 'DEF Tasarım Başvurusu', type: 'Tasarım' },
-                    { id: 'rec_4', applicationNumber: '2024/158', title: 'GHI Marka Başvurusu', type: 'Marka' },
-                    { id: 'rec_5', applicationNumber: '2024/159', title: 'JKL Patent Başvurusu', type: 'Patent' }
+                    { id: 'rec_1', applicationNumber: '2025/1', title: 'ABC Teknoloji Marka Başvurusu', type: 'Marka', 
+                      transactions: [
+                          { transactionId: 'tx_1_parent', designation: 'Başvuru', transactionHierarchy: 'parent', timestamp: '2025-01-10T10:00:00Z' },
+                          { transactionId: 'tx_2_parent', designation: 'Yayın', transactionHierarchy: 'parent', timestamp: '2025-03-15T10:00:00Z' }
+                      ]
+                    },
+                    { id: 'rec_2', applicationNumber: '2025/2', title: 'XYZ Patent Başvurusu', type: 'Patent',
+                      transactions: [
+                          { transactionId: 'tx_3_parent', designation: 'Başvuru', transactionHierarchy: 'parent', timestamp: '2025-02-20T10:00:00Z' }
+                      ]
+                    },
+                    { id: 'rec_3', applicationNumber: '2025/3', title: 'DEF Tasarım Başvurusu', type: 'Tasarım',
+                      transactions: []
+                    },
+                    { id: 'rec_4', applicationNumber: '2024/158', title: 'GHI Marka Başvurusu', type: 'Marka',
+                      transactions: [
+                          { transactionId: 'tx_4_parent', designation: 'Yenileme', transactionHierarchy: 'parent', timestamp: '2024-10-01T10:00:00Z' }
+                      ]
+                    },
+                    { id: 'rec_5', applicationNumber: '2024/159', title: 'JKL Patent Başvurusu', type: 'Patent',
+                      transactions: []
+                    }
                 ];
             }
 
@@ -453,8 +524,7 @@
                         extractedAppNumber: this.extractApplicationNumber(file.name),
                         matchedRecord: null,
                         isMatched: false,
-                        status: 'pending', // 'pending', 'processing', 'completed', 'error'
-                        isSelected: false // For future use if selection is needed
+                        status: 'pending' // 'pending', 'indexed', 'error'
                     };
 
                     // Eşleştirme kontrolü
@@ -464,7 +534,6 @@
                             record.applicationNumber === normalizedExtracted
                         );
                         fileData.isMatched = !!fileData.matchedRecord;
-                        fileData.isSelected = fileData.isMatched; // Eşleşenler başlangıçta seçili olsun
                     }
 
                     this.uploadedFiles.push(fileData);
@@ -476,7 +545,6 @@
 
             extractApplicationNumber(fileName) {
                 // Dosya adından başvuru numarasını çıkarmak için örnek regex
-                // Format: "2025-1 250369056 Marka Başvurusu" veya "TR2024/123 PDF"
                 const regex = /(TR)?\d{4}[-_/]\d+/i; // TR2024-123, 2024_123, 2024/123 gibi formatları yakalar
                 const match = fileName.match(regex);
                 return match ? match[0] : null;
@@ -525,36 +593,18 @@
             }
 
             updateUI() {
-                this.updateStats();
+                // İstatistikler artık kaldırıldığı için updateStats çağrılmıyor
                 this.updateSections();
                 this.renderFileLists();
-                this.updateBulkActionButton(); // Buton durumunu güncelle
+                // updateBulkActionButton de kaldırıldı
             }
 
-            updateStats() {
-                const total = this.uploadedFiles.length;
-                const matched = this.uploadedFiles.filter(f => f.isMatched).length;
-                const unmatched = total - matched;
-                const ready = this.uploadedFiles.filter(f => f.isMatched && f.status === 'pending').length;
-
-                // Stats cards
-                document.getElementById('totalFiles').textContent = total;
-                document.getElementById('matchedFiles').textContent = matched;
-                document.getElementById('unmatchedFiles').textContent = unmatched;
-                document.getElementById('readyFiles').textContent = ready;
-
-                // Tab badges
-                document.getElementById('totalBadge').textContent = total;
-                document.getElementById('allCount').textContent = total;
-                document.getElementById('matchedCount').textContent = matched;
-                document.getElementById('unmatchedCount').textContent = unmatched;
-            }
+            // updateStats fonksiyonu kaldırıldı
 
             updateSections() {
                 const hasFiles = this.uploadedFiles.length > 0;
                 
-                // Bölümlerin görünürlüğünü yönetin, başlangıçta varsayılan olarak "block" ayarlandı
-                document.getElementById('statsSection').style.display = hasFiles ? 'block' : 'none';
+                // İstatistik bölümü kaldırıldığı için statSection kontrolü yok
                 document.getElementById('fileListSection').style.display = hasFiles ? 'block' : 'none';
                 document.getElementById('bulkFormActions').style.display = hasFiles ? 'flex' : 'none';
                 
@@ -565,6 +615,12 @@
                 } else {
                     fileInfo.textContent = 'Henüz PDF dosyası seçilmedi. Birden fazla PDF dosyası seçebilirsiniz.';
                 }
+
+                // Toplam dosya sayısını badge'de göster
+                document.getElementById('totalBadge').textContent = this.uploadedFiles.length;
+                document.getElementById('allCount').textContent = this.uploadedFiles.length;
+                document.getElementById('matchedCount').textContent = this.uploadedFiles.filter(f => f.isMatched).length;
+                document.getElementById('unmatchedCount').textContent = this.uploadedFiles.filter(f => !f.isMatched).length;
             }
 
             renderFileLists() {
@@ -604,17 +660,11 @@
                             </div>
                         </div>
                         <div class="pdf-actions">
-                            ${file.isMatched ? `
-                                <button class="action-btn complete-btn" onclick="indexing.triggerJob('${file.id}')" 
-                                    ${file.status === 'completed' ? 'disabled' : ''}>
-                                    ${file.status === 'completed' ? '✅ İşlendi' : 
-                                      file.status === 'processing' ? '⏳ İşleniyor' : '🚀 İş Tetikle'}
-                                </button>
-                            ` : `
-                                <button class="action-btn edit-btn" onclick="indexing.manualMatch('${file.id}')">
-                                    🔗 Manuel Eşleştir
-                                </button>
-                            `}
+                            <a href="${URL.createObjectURL(file.file)}" target="_blank" class="action-btn view-btn" title="PDF Görüntüle">👁️ Görüntüle</a>
+                            <button class="action-btn complete-btn" onclick="indexing.openIndexingModal('${file.id}')" 
+                                ${file.status === 'indexed' ? 'disabled' : ''}>
+                                ${file.status === 'indexed' ? '✅ İndekslendi' : '✨ İndeksle'}
+                            </button>
                             <button class="action-btn delete-btn" onclick="indexing.removeFile('${file.id}')">
                                 🗑️ Kaldır
                             </button>
@@ -631,43 +681,6 @@
                 return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
             }
 
-            triggerJob(fileId) {
-                // Tekil dosya için iş tetikleme simülasyonu
-                const file = this.uploadedFiles.find(f => f.id == fileId);
-                if (!file || !file.isMatched || file.status !== 'pending') return;
-
-                file.status = 'processing';
-                this.updateUI();
-                this.showNotification(`${file.name} için tekil iş tetikleniyor...`, 'info');
-
-                // Simulate job processing
-                setTimeout(() => {
-                    file.status = 'completed';
-                    this.updateUI();
-                    this.showNotification(`${file.name} başarıyla işlendi (manuel)`, 'success');
-                }, 2000);
-            }
-
-            manualMatch(fileId) {
-                const file = this.uploadedFiles.find(f => f.id == fileId);
-                if (!file) return;
-
-                // Simulate manual matching dialog
-                let options = 'Portföy kayıtları:\n';
-                this.portfolioRecords.forEach((record, index) => {
-                    options += `${index + 1}. ${record.applicationNumber} - ${record.title}\n`;
-                });
-                
-                const selectedIndex = prompt(options + '\nSeçmek istediğiniz kayıt numarasını girin (1-5):');
-                if (selectedIndex && selectedIndex >= 1 && selectedIndex <= this.portfolioRecords.length) {
-                    file.matchedRecord = this.portfolioRecords[selectedIndex - 1];
-                    file.isMatched = true;
-                    file.isSelected = true;
-                    this.updateUI();
-                    this.showNotification(`${file.name} manuel olarak eşleştirildi`, 'success');
-                }
-            }
-
             removeFile(fileId) {
                 this.uploadedFiles = this.uploadedFiles.filter(f => f.id != fileId);
                 this.updateUI();
@@ -681,14 +694,129 @@
                 this.showNotification('Form sıfırlandı', 'info');
             }
 
-            updateBulkActionButton() {
-                // "Toplu İndeksleme Başlat" butonu her zaman devre dışı kalacak
-                const btn = document.getElementById('startBulkIndexingBtn');
-                btn.disabled = true;
-                btn.textContent = '⛔ Toplu İşlem Devre Dışı';
+            // Toplu indeksleme başlat butonu ve fonksiyonu kaldırıldı
+
+            // Modal Fonksiyonları
+            openIndexingModal(fileId) {
+                const file = this.uploadedFiles.find(f => f.id == fileId);
+                if (!file) {
+                    this.showNotification('Dosya bulunamadı!', 'error');
+                    return;
+                }
+
+                document.getElementById('modalFileId').value = file.id;
+                document.getElementById('modalFileName').textContent = file.name;
+                document.getElementById('modalMatchedRecord').value = file.isMatched ? 
+                    `${file.matchedRecord.title} (${file.matchedRecord.applicationNumber})` : 'Eşleşme Yok';
+                
+                // Parent işlemlerini yükle
+                const parentSelect = document.getElementById('modalParentTransaction');
+                parentSelect.innerHTML = '<option value="">Seçiniz...</option>';
+                if (file.isMatched && file.matchedRecord.transactions) {
+                    file.matchedRecord.transactions
+                        .filter(tx => tx.transactionHierarchy === 'parent' || !tx.transactionHierarchy) // Sadece parent işlemleri veya hiyerarşisi belirtilmemişse
+                        .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+                        .forEach(tx => {
+                            const option = document.createElement('option');
+                            option.value = tx.transactionId;
+                            option.textContent = `${tx.designation || tx.transactionType} (${new Date(tx.timestamp).toLocaleDateString('tr-TR')})`;
+                            parentSelect.appendChild(option);
+                        });
+                } else {
+                     const option = document.createElement('option');
+                     option.value = '';
+                     option.textContent = 'Ana İşlem Bulunamadı';
+                     option.disabled = true;
+                     parentSelect.appendChild(option);
+                }
+
+                // Varsayılan tebliğ tarihi
+                document.getElementById('modalDeliveryDate').valueAsDate = new Date();
+
+
+                document.getElementById('indexingModal').style.display = 'block';
             }
 
-            // Toplu indeksleme işlemi kaldırıldığı için startBulkIndexing metodu kaldırıldı.
+            closeIndexingModal() {
+                document.getElementById('indexingModal').style.display = 'none';
+                // Modalı kapatırken formu temizle (isteğe bağlı)
+                document.getElementById('modalParentTransaction').value = '';
+                document.getElementById('modalChildTransactionType').value = '';
+                document.getElementById('modalDeliveryDate').value = '';
+            }
+
+            async handleSaveIndexing() {
+                const fileId = document.getElementById('modalFileId').value;
+                const parentTransactionId = document.getElementById('modalParentTransaction').value;
+                const childTransactionType = document.getElementById('modalChildTransactionType').value;
+                const deliveryDate = document.getElementById('modalDeliveryDate').value;
+
+                if (!parentTransactionId || !childTransactionType || !deliveryDate) {
+                    this.showNotification('Lütfen tüm alanları doldurun.', 'error');
+                    return;
+                }
+
+                const fileToProcess = this.uploadedFiles.find(f => f.id == fileId);
+                if (!fileToProcess || !fileToProcess.isMatched) {
+                    this.showNotification('İlgili dosya veya eşleşen kayıt bulunamadı!', 'error');
+                    return;
+                }
+
+                this.showNotification(`${fileToProcess.name} için indeksleme başlatılıyor...`, 'info');
+                
+                // ÖNEMLİ: Burada gerçek Firebase/Firestore yazma işlemlerini yapmalısınız.
+                // Örneğin:
+                // try {
+                //     const recordId = fileToProcess.matchedRecord.id;
+                //     const newTransactionData = {
+                //         designation: childTransactionType,
+                //         transactionType: childTransactionType,
+                //         notes: `Manuel indeksleme ile eklenen PDF (${fileToProcess.name}).`,
+                //         transactionHierarchy: 'child',
+                //         parentId: parentTransactionId,
+                //         deliveryDate: new Date(deliveryDate).toISOString()
+                //     };
+                //     const transactionResult = await ipRecordsService.addTransactionToRecord(recordId, newTransactionData);
+
+                //     if (transactionResult.success) {
+                //         const newTransactionId = transactionResult.data.transactionId;
+                //         const fileContentBase64 = await this.readFileAsDataURL(fileToProcess.file); // utils.js'den readFileAsDataURL kullanılabilir
+                //         const fileToUpload = {
+                //             fileName: fileToProcess.name,
+                //             fileType: fileToProcess.file.type,
+                //             fileSize: fileToProcess.file.size,
+                //             fileUrl: fileContentBase64, // Firebase Storage'a yüklenmeli ve URL'si buraya gelmeli
+                //             relatedTransactionId: newTransactionId,
+                //             documentDesignation: childTransactionType
+                //         };
+                //         const fileAddResult = await ipRecordsService.addFileToRecord(recordId, fileToUpload);
+
+                //         if (fileAddResult.success) {
+                //             fileToProcess.status = 'indexed';
+                //             this.showNotification(`${fileToProcess.name} başarıyla indekslendi!`, 'success');
+                //         } else {
+                //             throw new Error(fileAddResult.error || 'Dosya yüklenirken hata oluştu.');
+                //         }
+                //     } else {
+                //         throw new Error(transactionResult.error || 'İşlem oluşturulurken hata oluştu.');
+                //     }
+                // } catch (error) {
+                //     fileToProcess.status = 'error';
+                //     this.showNotification(`İndeksleme hatası: ${error.message}`, 'error', 8000);
+                //     console.error("İndeksleme hatası:", error);
+                // } finally {
+                //     this.updateUI();
+                //     this.closeIndexingModal();
+                // }
+
+                // Simülasyon (yukarıdaki gerçek kod yerine):
+                await new Promise(resolve => setTimeout(resolve, 1500));
+                fileToProcess.status = 'indexed';
+                this.showNotification(`${fileToProcess.name} başarıyla indekslendi!`, 'success');
+                this.updateUI();
+                this.closeIndexingModal();
+            }
+
 
             showNotification(message, type = 'info') {
                 // Mevcut notification sistemini kullanın
