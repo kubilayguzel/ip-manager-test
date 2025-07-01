@@ -819,7 +819,7 @@ export const bulkIndexingService = {
 };
 
 // --- Exports ---
-export {auth, db, FieldValue,bulkIndexingService}; 
+export {auth, db, FieldValue}; 
 export const firebaseServices = { 
     auth: auth,
     db: db,
