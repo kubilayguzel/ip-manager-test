@@ -322,12 +322,14 @@
         </div>
 
     <script type="module">
-        import { BulkIndexingModule } from './js/bulk-indexing-module.js';
-        
+        import { BulkIndexingModule } from './js/bulk-indexing-module.js';   
         document.addEventListener('DOMContentLoaded', () => {
             const indexing = new BulkIndexingModule();
         });
     </script>
-
+    <script type="module">
+        import { loadSharedLayout } from './js/layout-loader.js';
+        loadSharedLayout();
+    </script>
     </body>
 </html>
