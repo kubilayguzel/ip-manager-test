@@ -303,20 +303,16 @@ setupRealtimeListener() {
         // Yeni sekme yapısına göre sayıları güncelle
         document.getElementById('totalBadge').textContent = this.uploadedFiles.filter(f => f.status !== 'removed').length;
         document.getElementById('allCount').textContent = this.uploadedFiles.filter(f => f.status !== 'removed').length;
-        // Eski matchedCount ve unmatchedCount güncellemeleri kaldırıldı
-        document.getElementById('removedCount').textContent = this.uploadedFiles.filter(f => f.status === 'removed').length;
     }
 
-    renderFileLists() {
-        // "İndekslenecek Dokümanlar" sekmesi için: Kaldırılmamış tüm dosyalar
-        const indexableDocs = this.uploadedFiles.filter(f => f.status !== 'removed');
-        // "Eşleşmeyenler" sekmesi için (eski "Kaldırılanlar"): Kaldırılmış tüm dosyalar
-        const removedDocs = this.uploadedFiles.filter(f => f.status === 'removed');
+        renderFileLists() {
+                // "İndekslenecek Dokümanlar" sekmesi için: Kaldırılmamış tüm dosyalar
+                const indexableDocs = this.uploadedFiles.filter(f => f.status !== 'removed');
+                // Kaldırılanlar (removed) artık ayrı bir sekmede gösterilmiyor, bu yüzden filtrelemeye gerek yok
 
-        document.getElementById('allFilesList').innerHTML = this.renderFileListHtml(indexableDocs);
-        // Eski matchedFilesList ve unmatchedFilesList render'ları kaldırıldı
-        document.getElementById('removedFilesList').innerHTML = this.renderFileListHtml(removedDocs);
-    }
+                document.getElementById('allFilesList').innerHTML = this.renderFileListHtml(indexableDocs);
+                // matchedFilesList, unmatchedFilesList ve removedFilesList için render çağrıları kaldırıldı
+        }
 
     renderFileListHtml(files) {
         if (files.length === 0) {
