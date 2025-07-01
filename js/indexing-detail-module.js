@@ -5,6 +5,7 @@ import {
     authService,
     ipRecordsService,
     transactionTypeService,
+    taskService,
     generateUUID,
     db,
     firebaseServices
@@ -17,11 +18,20 @@ import {
 
 // utils.js'den yardımcı fonksiyonları import et
 import {
-    showNotification
+    showNotification,
+    addMonthsToDate,
+    isWeekend,
+    isHoliday,
+    findNextWorkingDay,
+    TURKEY_HOLIDAYS
 } from '../utils.js';
 
 // Constants
 const UNINDEXED_PDFS_COLLECTION = 'unindexed_pdfs';
+
+// Selcan'ın bilgileri (indexing.html'den alındı)
+const SELCAN_UID = '5GD0KCpyeVUneDJq4pP0yxZEP6r1';
+const SELCAN_EMAIL = 'selcan@gmail.com';
 
 export class IndexingDetailModule {
     constructor() {
@@ -432,15 +442,104 @@ export class IndexingDetailModule {
             return;
         }
         
-        console.log('Task oluşturulacak:', { transactionId, taskType });
-        
-        // TODO: Gerçek task oluşturma kodu eklenecek
         try {
-            // Task service kullanarak gerçek task oluşturma
-            // const taskResult = await taskService.createTask({...});
-            console.log('Task oluşturma henüz implement edilmedi');
+            // Task definition'ı bul
+            const targetTaskDefinition = this.allTransactionTypes.find(t => t.id === taskType);
+            if (!targetTaskDefinition) {
+                console.error('Task definition bulunamadı:', taskType);
+                return;
+            }
+
+            console.log('Task oluşturuluyor:', targetTaskDefinition);
+
+            // Varsayılan atama: Selcan
+            let defaultAssignedToUid = SELCAN_UID;
+            let defaultAssignedToEmail = SELCAN_EMAIL;
+
+            // Tebliğ tarihini al
+            const deliveryDateStr = document.getElementById('deliveryDate').value;
+            let taskDueDate = null;
+            let officialDueDate = null;
+            let officialDueDateDetails = null;
+
+            // Tarih hesaplamalarını yap
+            if (deliveryDateStr && targetTaskDefinition.duePeriod) {
+                const deliveryDate = new Date(deliveryDateStr);
+                deliveryDate.setHours(0, 0, 0, 0);
+
+                console.log('Tarih hesaplaması:', {
+                    deliveryDate: deliveryDate.toDateString(),
+                    duePeriod: targetTaskDefinition.duePeriod
+                });
+
+                // Resmi son tarihi hesapla
+                const rawOfficialDueDate = addMonthsToDate(deliveryDate, targetTaskDefinition.duePeriod);
+                officialDueDate = findNextWorkingDay(rawOfficialDueDate);
+
+                officialDueDateDetails = {
+                    deliveryDate: deliveryDateStr,
+                    periodMonths: targetTaskDefinition.duePeriod,
+                    calculatedDate: officialDueDate.toISOString(),
+                    isCalculated: true
+                };
+
+                // Operasyonel son tarih (resmi son tarihten 5 gün öncesi)
+                const operationalDueDate = new Date(officialDueDate);
+                operationalDueDate.setDate(operationalDueDate.getDate() - 5);
+                taskDueDate = findNextWorkingDay(operationalDueDate).toISOString().split('T')[0]; // YYYY-MM-DD format
+
+                console.log('Hesaplanan tarihler:', {
+                    officialDueDate: officialDueDate.toDateString(),
+                    operationalDueDate: taskDueDate
+                });
+            }
+
+            // Task data objesi oluştur
+            const newTaskData = {
+                taskType: taskType,
+                title: `[OTOMATİK GÖREV] ${targetTaskDefinition.taskDisplayName || targetTaskDefinition.alias || targetTaskDefinition.name} - ${this.matchedRecord.title} (${this.matchedRecord.applicationNumber})`,
+                description: `${this.matchedRecord.title} (${this.matchedRecord.applicationNumber}) kaydının ${targetTaskDefinition.alias || targetTaskDefinition.name} işlemi sonrasında otomatik oluşturulan görev.`,
+                priority: 'medium',
+                assignedTo_uid: defaultAssignedToUid,
+                assignedTo_email: defaultAssignedToEmail,
+                dueDate: taskDueDate,
+                status: 'awaiting_client_approval',
+                relatedIpRecordId: this.matchedRecord.id,
+                relatedIpRecordTitle: this.matchedRecord.title,
+                triggeringTransactionId: transactionId,
+                triggeringTransactionType: taskType,
+                details: {
+                    relatedParty: this.matchedRecord.details?.relatedParty || null
+                }
+            };
+
+            // Resmi son tarih bilgilerini ekle
+            if (officialDueDate) {
+                newTaskData.officialDueDate = officialDueDate;
+                newTaskData.officialDueDateDetails = officialDueDateDetails;
+            }
+
+            // Tebliğ tarihini de göreve ekle
+            if (deliveryDateStr) {
+                newTaskData.deliveryDate = deliveryDateStr;
+            }
+
+            console.log('Oluşturulacak task data:', newTaskData);
+
+            // Task'ı oluştur
+            const taskCreationResult = await taskService.createTask(newTaskData);
+            
+            if (taskCreationResult.success) {
+                console.log('Task başarıyla oluşturuldu:', taskCreationResult);
+                showNotification(`Yeni görev otomatik olarak oluşturuldu: "${newTaskData.title}".`, 'success', 5000);
+            } else {
+                console.error('Task oluşturma başarısız:', taskCreationResult);
+                showNotification(`Otomatik görev oluşturulurken hata oluştu: ${taskCreationResult.error}`, 'error', 8000);
+            }
+
         } catch (error) {
             console.error('Task oluşturma hatası:', error);
+            showNotification('Görev oluşturulurken hata oluştu: ' + error.message, 'error');
         }
     }
 
