@@ -211,7 +211,7 @@ async loadPdfsFromFirestore() {
             orderBy('uploadedAt', 'desc') // orderBy argüman olarak
         );
 
-        const snapshot = await q.get();
+        const snapshot = await getDocs(q);
         this.uploadedFiles = snapshot.docs.map(doc => ({
             id: doc.id,
             ...doc.data(),
@@ -443,7 +443,7 @@ async resetForm() {
             where('status', 'in', ['pending', 'indexed']) // where argüman olarak
         );
 
-        const snapshot = await q.get();
+        const snapshot = await getDocs(q);
         const batch = firebaseServices.db.batch();
 
         snapshot.docs.forEach(doc => {
