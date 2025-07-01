@@ -2,14 +2,14 @@ import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebas
 import {
     getAuth,
     signInWithEmailAndPassword,
-    createUserWithAuthAndEmail,
+    createUserWithEmailAndPassword, // Hata düzeltildi: createUserWithAuthAndEmail yerine createUserWithEmailAndPassword
     signOut,
     onAuthStateChanged,
     updateProfile
 } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
 import {getFirestore, collection, addDoc, 
         getDocs, doc, updateDoc, deleteDoc, 
-        query, orderBy, where, getDoc, setDoc, arrayUnion, writeBatch, documentId, Timestamp, FieldValue } // FieldValue buraya eklendi
+        query, orderBy, where, getDoc, setDoc, arrayUnion, writeBatch, documentId, Timestamp, FieldValue } 
 from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 import { getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js';
 
@@ -31,7 +31,7 @@ try {
     app = initializeApp(firebaseConfig);
     auth = getAuth(app);
     db = getFirestore(app);
-    storage = getStorage(app); // Storage başlatıldı
+    storage = getStorage(app);
     isFirebaseAvailable = true;
     console.log('🔥 Firebase initialized successfully');
 } catch (error) {
@@ -139,7 +139,7 @@ export const authService = {
     async signUp(email, password, displayName, initialRole = 'user') {
         if (!isFirebaseAvailable) return this.localSignUp(email, password, displayName, initialRole);
         try {
-            const result = await createUserWithAuthAndEmail(auth, email, password);
+            const result = await createUserWithEmailAndPassword(auth, email, password); // Hata düzeltildi
             const user = result.user;
             await updateProfile(user, { displayName });
             const setRoleResult = await this.setUserRole(user.uid, email, displayName, initialRole);
@@ -765,8 +765,8 @@ export async function createDemoData() {
 
 
 // --- Exports ---
-export {auth, db, FieldValue}; // FieldValue'ı burada da dışa aktarıyoruz
-export const firebaseServices = { // firebaseServices objesinin doğru şekilde tanımlandığından ve dışa aktarıldığından emin olun
+export {auth, db, FieldValue}; 
+export const firebaseServices = { 
     auth: auth,
     db: db,
     storage: storage, 
@@ -774,5 +774,5 @@ export const firebaseServices = { // firebaseServices objesinin doğru şekilde 
     uploadBytesResumable: uploadBytesResumable, 
     getDownloadURL: getDownloadURL, 
     deleteObject: deleteObject,
-    FieldValue: FieldValue // FieldValue'ı da firebaseServices objesine ekledik
+    FieldValue: FieldValue // FieldValue'ı firebaseServices objesine ekledik
 };
