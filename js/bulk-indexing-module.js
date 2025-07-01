@@ -19,8 +19,7 @@ import {
 
 // utils.js'den yardımcı fonksiyonları import et
 import {
-    showNotification,
-    formatFileSize
+    showNotification
 } from '../utils.js';
 
 // Constants
@@ -156,9 +155,9 @@ export class BulkIndexingModule {
         const fileInfo = document.getElementById('bulkFilesInfo');
         if (fileInfo) {
             if (hasFiles) {
-                fileInfo.textContent = `${this.uploadedFiles.filter(f => f.status !== 'removed').length} PDF dosyası yüklendi.`;
+                fileInfo.textContent = `${this.uploadedFiles.filter(f => f.status !== 'removed').length} PDF dosyası mevcut.`;
             } else {
-                fileInfo.textContent = 'Henüz PDF dosyası seçilmedi. Birden fazla PDF dosyası seçebilirsiniz.';
+                fileInfo.textContent = 'PDF dosyası seçin veya sürükleyip bırakın.';
             }
         }
 
@@ -207,7 +206,6 @@ export class BulkIndexingModule {
                 <div class="pdf-details">
                     <div class="pdf-name">${file.fileName}</div>
                     <div class="pdf-meta">
-                        <span>Boyut: ${formatFileSize(file.fileSize)}</span> • 
                         <span>Yükleme: ${file.uploadedAt ? new Date(file.uploadedAt).toLocaleDateString('tr-TR') : 'Bilinmiyor'}</span>
                     </div>
                     <div class="pdf-meta">
@@ -219,11 +217,12 @@ export class BulkIndexingModule {
                             '❌ Portföy kaydı ile eşleşmedi'
                         }
                     </div>
-                    <div class="file-status">
-                        Durum: <span class="status-text status-${file.status}">${this.getStatusText(file.status)}</span>
-                    </div>
                 </div>
                 <div class="pdf-actions">
+                    <button class="action-btn view-btn" onclick="window.open('${file.fileUrl}', '_blank')">
+                        👁️ Görüntüle
+                    </button>
+                    
                     ${file.status === 'pending' ? `
                         <button class="action-btn complete-btn" onclick="window.location.href='indexing-detail.html?pdfId=${file.id}'">
                             ✨ İndeksle
@@ -246,15 +245,7 @@ export class BulkIndexingModule {
         `).join('');
     }
 
-    getStatusText(status) {
-        switch(status) {
-            case 'pending': return 'Beklemede';
-            case 'indexed': return 'İndekslendi';
-            case 'removed': return 'Kaldırıldı';
-            case 'unmatched_by_user': return 'Eşleşmeyen';
-            default: return 'Bilinmiyor';
-        }
-    }
+    // getStatusText fonksiyonu artık gerekli değil - durum bilgisi gösterilmiyor
 
     async restoreFile(fileId) {
         try {
