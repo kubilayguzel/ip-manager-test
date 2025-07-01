@@ -514,6 +514,96 @@ export const taskService = {
         }
     }
 };
+// --- YENİ EKLENDİ: Transaction Type Service ---
+export const transactionTypeService = {
+    collectionRef: collection(db, 'transactionTypes'),
+
+    async addTransactionType(typeData) {
+        if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor. İşlem tipi eklenemez." };
+        try {
+            const id = typeData.id || generateUUID(); 
+            const newType = {
+                ...typeData,
+                id,
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString()
+            };
+            await setDoc(doc(this.collectionRef, id), newType);
+            return { success: true, data: newType };
+        } catch (error) {
+            console.error("İşlem tipi eklenirken hata:", error);
+            return { success: false, error: error.message };
+        }
+    },
+
+    async getTransactionTypes() {
+        if (!isFirebaseAvailable) return { success: true, data: [] };
+        try {
+            const q = query(this.collectionRef, orderBy('name', 'asc'));
+            const querySnapshot = await getDocs(q);
+            return { success: true, data: querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) };
+        } catch (error) {
+            console.error("İşlem tipleri yüklenirken hata:", error);
+            return { success: false, error: error.message, data: [] };
+        }
+    },
+
+    async getTransactionTypeById(typeId) {
+        if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor." };
+        try {
+            const docRef = doc(this.collectionRef, typeId);
+            const docSnap = await getDoc(docRef);
+            return docSnap.exists() ? { success: true, data: { id: docSnap.id, ...docSnap.data() } } : { success: false, error: "İşlem tipi bulunamadı." };
+        } catch (error) {
+            return { success: false, error: error.message };
+        }
+    },
+
+    async getFilteredTransactionTypes(filters = {}) {
+        if (!isFirebaseAvailable) return { success: true, data: [] };
+        try {
+            let q = this.collectionRef;
+
+            if (filters.hierarchy) {
+                q = query(q, where('hierarchy', '==', filters.hierarchy));
+            }
+            if (filters.ipType) {
+                q = query(q, where('applicableToMainType', 'array-contains', filters.ipType));
+            }
+            if (filters.ids && filters.ids.length > 0) {
+                q = query(q, where(documentId(), 'in', filters.ids));
+            }
+
+            q = query(q, orderBy('name', 'asc')); 
+
+            const querySnapshot = await getDocs(q);
+            return { success: true, data: querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) };
+        } catch (error) {
+            console.error("Filtrelenmiş işlem tipleri yüklenirken hata:", error);
+            return { success: false, error: error.message, data: [] };
+        }
+    },
+
+    async updateTransactionType(typeId, updates) {
+        if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor. İşlem tipi güncellenemez." };
+        try {
+            await updateDoc(doc(this.collectionRef, typeId), { ...updates, updatedAt: new Date().toISOString() });
+            return { success: true };
+        } catch (error) {
+            return { success: false, error: error.message };
+        }
+    },
+
+    async deleteTransactionType(typeId) {
+        if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor. İşlem tipi silinemez." };
+        try {
+            await deleteDoc(doc(this.collectionRef, typeId));
+            return { success: true };
+        } catch (error) {
+            return { success: false, error: error.message };
+        }
+    }
+};
 
 // Tahakkuk ID counter fonksiyonu
 async function getNextAccrualId() {
