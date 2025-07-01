@@ -84,13 +84,11 @@ export class BulkIndexingModule {
             }
         });
 
-        // Dosya listesi alt-tab olayları
-        document.addEventListener('click', (e) => {
+       document.addEventListener('click', (e) => {
             if (e.target.closest('.tab-content-container') && e.target.classList.contains('tab-btn')) {
-                e.preventDefault();
                 const targetPane = e.target.getAttribute('data-tab');
-                if (targetPane === 'all-files-pane' || targetPane === 'matched-files-pane' ||
-                    targetPane === 'unmatched-files-pane' || targetPane === 'removed-files-pane') {
+                // Sadece yeni tanımladığımız dosya sekmelerini burada ele alıyoruz
+                if (targetPane === 'all-files-pane' || targetPane === 'removed-files-pane') {
                     this.switchFileTab(targetPane);
                 }
             }
@@ -303,25 +301,22 @@ setupRealtimeListener() {
             }
         }
 
-        // Tab badge'lerini güncelle
+        // Yeni sekme yapısına göre sayıları güncelle
         document.getElementById('totalBadge').textContent = this.uploadedFiles.filter(f => f.status !== 'removed').length;
         document.getElementById('allCount').textContent = this.uploadedFiles.filter(f => f.status !== 'removed').length;
-        document.getElementById('matchedCount').textContent = this.uploadedFiles.filter(f => f.status !== 'removed' && f.matchedRecordId).length;
-        document.getElementById('unmatchedCount').textContent = this.uploadedFiles.filter(f => f.status !== 'removed' && !f.matchedRecordId).length;
+        // Eski matchedCount ve unmatchedCount güncellemeleri kaldırıldı
         document.getElementById('removedCount').textContent = this.uploadedFiles.filter(f => f.status === 'removed').length;
     }
 
     renderFileLists() {
-        const allPending = this.uploadedFiles.filter(f => f.status !== 'removed');
-        const matched = allPending.filter(f => f.matchedRecordId);
-        const unmatched = allPending.filter(f => !f.matchedRecordId);
-        const removed = this.uploadedFiles.filter(f => f.status === 'removed');
+        // "İndekslenecek Dokümanlar" sekmesi için: Kaldırılmamış tüm dosyalar
+        const indexableDocs = this.uploadedFiles.filter(f => f.status !== 'removed');
+        // "Eşleşmeyenler" sekmesi için (eski "Kaldırılanlar"): Kaldırılmış tüm dosyalar
+        const removedDocs = this.uploadedFiles.filter(f => f.status === 'removed');
 
-
-        document.getElementById('allFilesList').innerHTML = this.renderFileListHtml(allPending);
-        document.getElementById('matchedFilesList').innerHTML = this.renderFileListHtml(matched);
-        document.getElementById('unmatchedFilesList').innerHTML = this.renderFileListHtml(unmatched);
-        document.getElementById('removedFilesList').innerHTML = this.renderFileListHtml(removed);
+        document.getElementById('allFilesList').innerHTML = this.renderFileListHtml(indexableDocs);
+        // Eski matchedFilesList ve unmatchedFilesList render'ları kaldırıldı
+        document.getElementById('removedFilesList').innerHTML = this.renderFileListHtml(removedDocs);
     }
 
     renderFileListHtml(files) {
