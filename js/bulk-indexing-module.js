@@ -11,7 +11,7 @@ import {
 } from '../firebase-config.js';
 
 // Firestore'dan doğrudan gereken fonksiyonları import et
-import { collection, query, where, orderBy, doc, updateDoc, getDocs, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js'; // collection ve diğerleri buraya eklendi
+import { collection, query, where, orderBy, doc, updateDoc, getDocs, onSnapshot, FieldValue } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js'; // collection ve diğerleri buraya eklendi
 
 // utils.js'den yardımcı fonksiyonları import et
 import {
@@ -177,7 +177,7 @@ export class BulkIndexingModule {
                         matchedRecordId: matchedRecord ? matchedRecord.id : null,
                         matchedRecordDisplay: matchedRecordDisplay,
                         status: 'pending', // 'pending', 'indexed', 'removed'
-                        uploadedAt: firebaseServices.FieldValue.serverTimestamp(), // Firestore'un kendi zaman damgası
+                        uploadedAt: FieldValue.serverTimestamp(), // Firestore'un kendi zaman damgası
                         userId: this.currentUser.uid,
                         userEmail: this.currentUser.email
                     };
@@ -399,7 +399,7 @@ async removeFile(fileId) {
         // Düzeltildi: doc() ve updateDoc() fonksiyonlarının doğru kullanımı
         await updateDoc(doc(collection(firebaseServices.db, UNINDEXED_PDFS_COLLECTION), fileId), {
             status: 'removed',
-            removedAt: firebaseServices.FieldValue.serverTimestamp()
+            removedAt: FieldValue.serverTimestamp()
         });
 
         showNotification(`'${fileToRemove.fileName}' kaldırıldı.`, 'info');
@@ -421,7 +421,7 @@ async removeFile(fileId) {
         await updateDoc(doc(collection(firebaseServices.db, UNINDEXED_PDFS_COLLECTION), fileId), {
             status: 'pending',
             // FieldValue.delete() removedAt alanını Firestore'dan siler
-            removedAt: firebaseServices.FieldValue.delete()
+            removedAt: FieldValue.delete()
         });
 
         showNotification(`'${fileToRestore.fileName}' geri yüklendi.`, 'success');
@@ -450,7 +450,7 @@ async resetForm() {
             // Durumunu 'removed' olarak güncelle
             batch.update(doc.ref, { 
                 status: 'removed', 
-                removedAt: firebaseServices.FieldValue.serverTimestamp()
+                removedAt: FieldValue.serverTimestamp()
             });
         });
         await batch.commit();
