@@ -6,15 +6,15 @@ import {
     ipRecordsService,
     bulkIndexingService,
     generateUUID,
-    db, // db instance'ı hala firebase-config'den geliyor
-    firebaseServices // Yeni eklenen Firebase Storage servisleri için
+    db,
+    firebaseServices
 } from '../firebase-config.js';
 
 // Firestore'dan doğrudan gereken fonksiyonları import et
 import { 
     collection, query, where, orderBy, doc, updateDoc, 
     getDocs, setDoc, onSnapshot, serverTimestamp, 
-    deleteField, deleteDoc // Kalıcı silme için eklendi
+    deleteField, deleteDoc
 } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 
 // utils.js'den yardımcı fonksiyonları import et
@@ -30,28 +30,27 @@ export class BulkIndexingModule {
     constructor() {
         this.currentUser = authService.getCurrentUser();
         if (!this.currentUser) {
-            window.location.href = 'index.html'; // Kullanıcı yoksa giriş sayfasına yönlendir
+            window.location.href = 'index.html';
             return;
         }
 
-        this.uploadedFiles = []; // Firestore'dan çekilen tüm PDF'ler (pending, indexed, removed)
-        this.portfolioRecords = []; // Gerçek IP kayıtları Firestore'dan yüklenecek
-        this.activeFileTab = 'all-files-pane'; // Varsayılan aktif sekme
-        this.unsubscribe = null; // Firestore dinleyicisini kapatmak için
+        this.uploadedFiles = [];
+        this.portfolioRecords = [];
+        this.activeFileTab = 'all-files-pane';
+        this.unsubscribe = null;
 
         this.init();
     }
 
     async init() {
         this.setupEventListeners();
-        await this.loadPortfolioRecords(); // Gerçek IP kayıtlarını yükle
-        await this.loadPdfsFromFirestore(); // Sayfa yüklendiğinde PDF'leri Firestore'dan çek
-        this.setupRealtimeListener(); // Firestore'dan gerçek zamanlı güncellemeler için dinleyici kur
-        this.updateUI(); // Başlangıç UI güncellemesi
+        await this.loadPortfolioRecords();
+        await this.loadPdfsFromFirestore();
+        this.setupRealtimeListener();
+        this.updateUI();
     }
 
     async loadPortfolioRecords() {
-        // Gerçek IP kayıtlarını Firestore'dan çek
         const result = await ipRecordsService.getRecords();
         if (result.success) {
             this.portfolioRecords = result.data;
@@ -79,7 +78,7 @@ export class BulkIndexingModule {
             this.updateUI();
         } catch (error) {
             console.error("PDF'ler yüklenirken hata:", error);
-            showNotification("Dosya listesi yüklenirken bir hata oluştu.", "error");
+            showNotification("Dosya listesi yüklenirken hata oluştu.", "error");
         }
     }
 
@@ -99,7 +98,6 @@ export class BulkIndexingModule {
             this.updateUI();
         }, error => {
             console.error("Gerçek zamanlı dinleyici hatası:", error);
-            showNotification("Dosya listesi güncellenirken bir hata oluştu.", "error");
         });
     }
 
@@ -122,9 +120,6 @@ export class BulkIndexingModule {
     }
 
     switchFileTab(targetPane) {
-        console.log('switchFileTab çağrıldı:', targetPane);
-        
-        // Sadece file section içindeki tab button'ları etkile
         document.querySelectorAll('#fileListSection .tab-btn').forEach(btn => {
             btn.classList.remove('active');
         });
@@ -133,30 +128,21 @@ export class BulkIndexingModule {
             pane.classList.remove('active');
         });
 
-        // Tıklanan tab'ı active yap
         const selectedTab = document.querySelector(`#fileListSection [data-tab="${targetPane}"]`);
         if (selectedTab) {
             selectedTab.classList.add('active');
-            console.log('Tab aktif edildi:', selectedTab);
         }
 
-        // İlgili pane'i göster
         const selectedPane = document.getElementById(targetPane);
         if (selectedPane) {
             selectedPane.classList.add('active');
-            console.log('Pane aktif edildi:', selectedPane);
         }
 
-        // Aktif tab'ı güncelle ve UI'yi yeniden render et
         this.activeFileTab = targetPane;
-        console.log('Aktif tab güncellendi:', this.activeFileTab);
-        
-        // UI'yi yeniden render et
         this.updateUI();
     }
 
     updateUI() {
-        console.log('updateUI çağrıldı, dosya sayısı:', this.uploadedFiles.length);
         this.updateSections();
         this.renderFileLists();
     }
@@ -170,13 +156,13 @@ export class BulkIndexingModule {
         const fileInfo = document.getElementById('bulkFilesInfo');
         if (fileInfo) {
             if (hasFiles) {
-                fileInfo.textContent = `${this.uploadedFiles.filter(f => f.status !== 'removed').length} PDF dosyası yüklendi ve işleme alınıyor.`;
+                fileInfo.textContent = `${this.uploadedFiles.filter(f => f.status !== 'removed').length} PDF dosyası yüklendi.`;
             } else {
                 fileInfo.textContent = 'Henüz PDF dosyası seçilmedi. Birden fazla PDF dosyası seçebilirsiniz.';
             }
         }
 
-        // Badge güncellemeleri - Tüm elementleri kontrol et
+        // Badge güncellemeleri
         const totalBadgeElement = document.getElementById('totalBadge');
         const allCountElement = document.getElementById('allCount');
         const unmatchedCountElement = document.getElementById('unmatchedCount');
@@ -191,27 +177,17 @@ export class BulkIndexingModule {
     }
 
     renderFileLists() {
-        console.log('renderFileLists çağrıldı, aktif tab:', this.activeFileTab);
-        
-        // "İndekslenecek Dokümanlar" sekmesi için
         const indexableDocs = this.uploadedFiles.filter(f => f.status !== 'unmatched_by_user' && f.status !== 'removed');
-        
-        // "Eşleşmeyenler" sekmesi için
         const unmatchedByUserDocs = this.uploadedFiles.filter(f => f.status === 'unmatched_by_user');
-
-        console.log('İndekslenebilir dokümanlar:', indexableDocs.length);
-        console.log('Eşleşmeyen dokümanlar:', unmatchedByUserDocs.length);
 
         const allFilesListElement = document.getElementById('allFilesList');
         const unmatchedFilesListElement = document.getElementById('unmatchedFilesList');
 
         if (allFilesListElement) {
             allFilesListElement.innerHTML = this.renderFileListHtml(indexableDocs);
-            console.log('allFilesList güncellendi');
         }
         if (unmatchedFilesListElement) {
             unmatchedFilesListElement.innerHTML = this.renderFileListHtml(unmatchedByUserDocs);
-            console.log('unmatchedFilesList güncellendi');
         }
     }
 
@@ -262,13 +238,6 @@ export class BulkIndexingModule {
                         </button>
                     ` : ''}
                     
-                    ${file.status !== 'unmatched_by_user' ? `
-                        <button class="action-btn warning-btn" onclick="window.indexingModule.removeFile('${file.id}')">
-                            🗑️ Kaldır
-                        </button>
-                    ` : ''}
-                    
-                    <!-- Kaydı Kalıcı Sil Butonu -->
                     <button class="action-btn danger-btn" onclick="window.indexingModule.deleteFilePermanently('${file.id}')">
                         🚫 Kaydı Sil
                     </button>
@@ -287,26 +256,6 @@ export class BulkIndexingModule {
         }
     }
 
-    async removeFile(fileId) {
-        try {
-            const fileToRemove = this.uploadedFiles.find(f => f.id === fileId);
-            if (!fileToRemove) {
-                showNotification('Dosya bulunamadı.', 'error');
-                return;
-            }
-
-            await updateDoc(doc(collection(firebaseServices.db, UNINDEXED_PDFS_COLLECTION), fileId), {
-                status: 'unmatched_by_user',
-                unmatchedAt: serverTimestamp()
-            });
-
-            showNotification(`'${fileToRemove.fileName}' eşleşmeyen olarak işaretlendi.`, 'info');
-        } catch (error) {
-            console.error("Dosya eşleşmeyen olarak işaretlenirken hata:", error);
-            showNotification("Dosya eşleşmeyen olarak işaretlenirken bir hata oluştu.", "error");
-        }
-    }
-
     async restoreFile(fileId) {
         try {
             const fileToRestore = this.uploadedFiles.find(f => f.id === fileId);
@@ -320,10 +269,10 @@ export class BulkIndexingModule {
                 unmatchedAt: deleteField()
             });
 
-            showNotification(`'${fileToRestore.fileName}' tekrar indekslenecek dokümanlara eklendi.`, 'success');
+            showNotification(`${fileToRestore.fileName} geri yüklendi.`, 'success');
         } catch (error) {
             console.error("Dosya geri yüklenirken hata:", error);
-            showNotification("Dosya geri yüklenirken bir hata oluştu.", "error");
+            showNotification("Dosya geri yüklenirken hata oluştu.", "error");
         }
     }
 
@@ -331,8 +280,7 @@ export class BulkIndexingModule {
         const confirmMessage = 'Bu dosyayı kalıcı olarak silmek istediğinizden emin misiniz?\n\n' +
                               '⚠️ Bu işlem geri alınamaz!\n' +
                               '• Dosya Firebase Storage\'dan silinecek\n' +
-                              '• Veritabanı kaydı silinecek\n' +
-                              '• Tüm veriler kaybolacak';
+                              '• Veritabanı kaydı silinecek';
         
         if (!confirm(confirmMessage)) {
             return;
@@ -345,38 +293,31 @@ export class BulkIndexingModule {
                 return;
             }
 
-            showNotification('Dosya kalıcı olarak siliniyor...', 'info');
-
-            // 1. Firebase Storage'dan dosyayı sil
+            // Firebase Storage'dan dosyayı sil
             if (fileToDelete.fileUrl) {
                 try {
-                    // Storage reference'ı URL'den çıkar
                     const storageRef = firebaseServices.storageRef(firebaseServices.storage, 
                         `${UNINDEXED_PDFS_COLLECTION}/${this.currentUser.uid}/${fileId}_${fileToDelete.fileName.replaceAll(' ', '_')}`
                     );
                     await firebaseServices.deleteObject(storageRef);
-                    console.log('Dosya Storage\'dan silindi');
                 } catch (storageError) {
-                    console.warn('Storage\'dan silinirken hata (devam ediliyor):', storageError);
+                    console.warn('Storage\'dan silinirken hata:', storageError);
                 }
             }
 
-            // 2. Firestore'dan kaydı sil
+            // Firestore'dan kaydı sil
             await deleteDoc(doc(collection(firebaseServices.db, UNINDEXED_PDFS_COLLECTION), fileId));
 
-            showNotification(`'${fileToDelete.fileName}' kalıcı olarak silindi.`, 'success');
-            console.log('Dosya başarıyla silindi:', fileToDelete.fileName);
+            showNotification(`${fileToDelete.fileName} kalıcı olarak silindi.`, 'success');
 
         } catch (error) {
-            console.error("Dosya kalıcı olarak silinirken hata:", error);
-            showNotification("Dosya silinirken bir hata oluştu: " + error.message, "error");
+            console.error("Dosya silinirken hata:", error);
+            showNotification("Dosya silinirken hata oluştu.", "error");
         }
     }
 
     async resetForm() {
         if (!this.currentUser) return;
-        
-        showNotification('Form sıfırlanıyor...', 'info');
 
         try {
             const q = query(
@@ -397,10 +338,10 @@ export class BulkIndexingModule {
             await batch.commit();
 
             document.getElementById('bulkFiles').value = '';
-            showNotification('Yükleme alanı temizlendi ve listedeki PDF\'ler "Eşleşmeyenler" sekmesine taşındı.', 'info');
+            showNotification('Form sıfırlandı.', 'info');
         } catch (error) {
             console.error("Form sıfırlanırken hata:", error);
-            showNotification("Form sıfırlanırken bir hata oluştu.", "error");
+            showNotification("Form sıfırlanırken hata oluştu.", "error");
         }
     }
 
@@ -428,9 +369,8 @@ export class BulkIndexingModule {
             }
         });
 
-        // Dosya tab olayları - Event delegation kullan
+        // Dosya tab olayları
         document.addEventListener('click', (e) => {
-            // Tab button'a tıklandığında
             if (e.target.classList.contains('tab-btn') && 
                 e.target.closest('#fileListSection')) {
                 const targetPane = e.target.getAttribute('data-tab');
@@ -476,7 +416,11 @@ export class BulkIndexingModule {
     async uploadFiles(files) {
         if (files.length === 0) return;
 
-        showNotification('PDF dosyaları yükleniyor ve analiz ediliyor...', 'info', 3000);
+        // TEK BİLDİRİM: Başlangıç
+        showNotification(`${files.length} PDF dosyası yükleniyor...`, 'info', 2000);
+
+        let matchedCount = 0;
+        let unmatchedCount = 0;
 
         for (const file of files) {
             const pdfId = generateUUID();
@@ -487,12 +431,11 @@ export class BulkIndexingModule {
 
             uploadTask.on('state_changed',
                 (snapshot) => {
-                    const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-                    console.log('Upload is ' + progress + '% done for ' + file.name);
+                    // Progress log kaldırıldı
                 },
                 (error) => {
                     console.error("Dosya yüklenirken hata:", error);
-                    showNotification(`'${file.name}' yüklenemedi: ${error.message}`, 'error', 8000);
+                    showNotification(`${file.name} yüklenemedi.`, 'error');
                 },
                 async () => {
                     const downloadURL = await firebaseServices.getDownloadURL(uploadTask.snapshot.ref);
@@ -500,6 +443,7 @@ export class BulkIndexingModule {
                     let matchedRecord = null;
                     let matchedRecordDisplay = 'Eşleşme Yok';
 
+                    // Eşleşme kontrolü
                     if (extractedAppNumber) {
                         const normalizedExtracted = extractedAppNumber.replace(/[-_]/g, '/');
                         matchedRecord = this.portfolioRecords.find(record =>
@@ -508,8 +452,16 @@ export class BulkIndexingModule {
                         );
                         if (matchedRecord) {
                             matchedRecordDisplay = `${matchedRecord.title} (${matchedRecord.applicationNumber})`;
+                            matchedCount++;
+                        } else {
+                            unmatchedCount++;
                         }
+                    } else {
+                        unmatchedCount++;
                     }
+
+                    // Otomatik status belirleme
+                    const fileStatus = matchedRecord ? 'pending' : 'unmatched_by_user';
 
                     const newPdfDoc = {
                         id: pdfId,
@@ -520,22 +472,36 @@ export class BulkIndexingModule {
                         extractedAppNumber: extractedAppNumber,
                         matchedRecordId: matchedRecord ? matchedRecord.id : null,
                         matchedRecordDisplay: matchedRecordDisplay,
-                        status: 'pending',
+                        status: fileStatus,
                         uploadedAt: serverTimestamp(),
                         userId: this.currentUser.uid,
-                        userEmail: this.currentUser.email
+                        userEmail: this.currentUser.email,
+                        unmatchedAt: fileStatus === 'unmatched_by_user' ? serverTimestamp() : null
                     };
 
                     try {
-                        await setDoc(doc(collection(firebaseServices.db, UNINDEXED_PDFS_COLLECTION), pdfId), newPdfDoc); 
-                        showNotification(`'${file.name}' başarıyla yüklendi ve işleme alındı!`, 'success', 3000);
+                        await setDoc(doc(collection(firebaseServices.db, UNINDEXED_PDFS_COLLECTION), pdfId), newPdfDoc);
                     } catch (firestoreError) {
                         console.error("Firestore'a kaydedilirken hata:", firestoreError);
-                        showNotification(`'${file.name}' bilgisi kaydedilemedi: ${firestoreError.message}`, 'error', 8000);
+                        showNotification(`${file.name} kaydedilemedi.`, 'error');
                     }
                 }
             );
         }
+
+        // TEK BİLDİRİM: Sonuç (Upload tamamlandıktan sonra)
+        setTimeout(() => {
+            let resultMessage = `${files.length} dosya yüklendi.`;
+            if (matchedCount > 0 && unmatchedCount > 0) {
+                resultMessage += ` ${matchedCount} eşleşti, ${unmatchedCount} eşleşmedi.`;
+            } else if (matchedCount > 0) {
+                resultMessage += ` Tümü eşleşti.`;
+            } else if (unmatchedCount > 0) {
+                resultMessage += ` Hiçbiri eşleşmedi.`;
+            }
+            showNotification(resultMessage, 'success', 3000);
+        }, 2000);
+
         document.getElementById('bulkFiles').value = '';
     }
 
@@ -545,7 +511,6 @@ export class BulkIndexingModule {
         return match ? match[0].toUpperCase() : null;
     }
 
-    // Cleanup function
     destroy() {
         if (this.unsubscribe) {
             this.unsubscribe();
