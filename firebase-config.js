@@ -2,16 +2,16 @@ import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebas
 import {
     getAuth,
     signInWithEmailAndPassword,
-    createUserWithEmailAndPassword,
+    createUserWithAuthAndEmail,
     signOut,
     onAuthStateChanged,
     updateProfile
 } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
 import {getFirestore, collection, addDoc, 
         getDocs, doc, updateDoc, deleteDoc, 
-        query, orderBy, where, getDoc, setDoc, arrayUnion, writeBatch, documentId, Timestamp, FieldValue } 
+        query, orderBy, where, getDoc, setDoc, arrayUnion, writeBatch, documentId, Timestamp, FieldValue } // FieldValue buraya eklendi
 from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
-import { getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js'; // YENİ EKLENDİ
+import { getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js';
 
 // --- Firebase App Initialization ---
 const firebaseConfig = {
@@ -24,14 +24,14 @@ const firebaseConfig = {
   measurementId: "G-QY1P3ZCMC4"
 };
 
-let app, auth, db, storage; // 'storage' değişkenini buraya ekledik
+let app, auth, db, storage;
 let isFirebaseAvailable = false;
 
 try {
     app = initializeApp(firebaseConfig);
     auth = getAuth(app);
     db = getFirestore(app);
-    storage = getStorage(app); // Firebase Storage'ı başlattık
+    storage = getStorage(app); // Storage başlatıldı
     isFirebaseAvailable = true;
     console.log('🔥 Firebase initialized successfully');
 } catch (error) {
@@ -139,7 +139,7 @@ export const authService = {
     async signUp(email, password, displayName, initialRole = 'user') {
         if (!isFirebaseAvailable) return this.localSignUp(email, password, displayName, initialRole);
         try {
-            const result = await createUserWithEmailAndPassword(auth, email, password);
+            const result = await createUserWithAuthAndEmail(auth, email, password);
             const user = result.user;
             await updateProfile(user, { displayName });
             const setRoleResult = await this.setUserRole(user.uid, email, displayName, initialRole);
@@ -235,7 +235,6 @@ export const ipRecordsService = {
         try {
             const recordRef = doc(db, 'ipRecords', recordId);
             const transactionsCollectionRef = collection(recordRef, 'transactions');
-            // Transaction'ları zaman damgasına göre azalan sırada (en yeni en üstte) sıralayalım
             const q = query(transactionsCollectionRef, orderBy('timestamp', 'desc'));
             const querySnapshot = await getDocs(q);
             
@@ -251,7 +250,7 @@ export const ipRecordsService = {
         if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor." };
         try {
             const transactionsRef = collection(db, 'ipRecords', recordId, 'transactions');
-            const q = query(transactionsRef, orderBy('timestamp', 'asc')); // İşlemleri zamana göre sırala
+            const q = query(transactionsRef, orderBy('timestamp', 'asc')); 
             const querySnapshot = await getDocs(q);
             const transactions = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             return { success: true, transactions: transactions };
@@ -294,11 +293,10 @@ export const ipRecordsService = {
             const recordRef = doc(db, 'ipRecords', recordId);
             const transactionsCollectionRef = collection(recordRef, 'transactions');
 
-            const currentUser = auth.currentUser; // Mevcut kullanıcıyı al
-            let userName = 'Bilinmeyen Kullanıcı'; // Varsayılan değer
+            const currentUser = auth.currentUser; 
+            let userName = 'Bilinmeyen Kullanıcı'; 
 
             if (currentUser) {
-                // Kullanıcının görünen adını al, yoksa emailini kullan
                 userName = currentUser.displayName || currentUser.email; 
             }
 
@@ -515,144 +513,6 @@ export const taskService = {
             return { success: false, error: error.message };
         }
     }
-};
-
-// --- YENİ EKLENDİ: Transaction Type Service ---
-export const transactionTypeService = {
-    collectionRef: collection(db, 'transactionTypes'),
-
-    async addTransactionType(typeData) {
-        if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor. İşlem tipi eklenemez." };
-        try {
-            const id = typeData.id || generateUUID(); 
-            const newType = {
-                ...typeData,
-                id,
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString()
-            };
-            await setDoc(doc(this.collectionRef, id), newType);
-            return { success: true, data: newType };
-        } catch (error) {
-            console.error("İşlem tipi eklenirken hata:", error);
-            return { success: false, error: error.message };
-        }
-    },
-
-    async getTransactionTypes() {
-        if (!isFirebaseAvailable) return { success: true, data: [] };
-        try {
-            const q = query(this.collectionRef, orderBy('name', 'asc'));
-            const querySnapshot = await getDocs(q);
-            return { success: true, data: querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) };
-        } catch (error) {
-            console.error("İşlem tipleri yüklenirken hata:", error);
-            return { success: false, error: error.message, data: [] };
-        }
-    },
-
-    async getTransactionTypeById(typeId) {
-        if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor." };
-        try {
-            const docRef = doc(this.collectionRef, typeId);
-            const docSnap = await getDoc(docRef);
-            return docSnap.exists() ? { success: true, data: { id: docSnap.id, ...docSnap.data() } } : { success: false, error: "İşlem tipi bulunamadı." };
-        } catch (error) {
-            return { success: false, error: error.message };
-        }
-    },
-
-    async getFilteredTransactionTypes(filters = {}) {
-        if (!isFirebaseAvailable) return { success: true, data: [] };
-        try {
-            let q = this.collectionRef;
-
-            if (filters.hierarchy) {
-                q = query(q, where('hierarchy', '==', filters.hierarchy));
-            }
-            if (filters.ipType) {
-                q = query(q, where('applicableToMainType', 'array-contains', filters.ipType));
-            }
-            if (filters.ids && filters.ids.length > 0) {
-                q = query(q, where(documentId(), 'in', filters.ids));
-            }
-
-            q = query(q, orderBy('name', 'asc')); 
-
-            const querySnapshot = await getDocs(q);
-            return { success: true, data: querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) };
-        } catch (error) {
-            console.error("Filtrelenmiş işlem tipleri yüklenirken hata:", error);
-            return { success: false, error: error.message, data: [] };
-        }
-    },
-
-    async updateTransactionType(typeId, updates) {
-        if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor. İşlem tipi güncellenemez." };
-        try {
-            await updateDoc(doc(this.collectionRef, typeId), { ...updates, updatedAt: new Date().toISOString() });
-            return { success: true };
-        } catch (error) {
-            return { success: false, error: error.message };
-        }
-    },
-
-    async deleteTransactionType(typeId) {
-        if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor. İşlem tipi silinemez." };
-        try {
-            await deleteDoc(doc(this.collectionRef, typeId));
-            return { success: true };
-        } catch (error) {
-            return { success: false, error: error.message };
-        }
-    }
-};
-
-// --- Bulk Indexing Service ---
-export const bulkIndexingService = {
-    collectionRef: collection(db, 'pendingBulkIndexJobs'), // Bu koleksiyonun adını 'unindexed_pdfs' olarak değiştireceğiz
-    async addJob(jobData) {
-        if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor." };
-        const currentUser = authService.getCurrentUser();
-        if (!currentUser) return { success: false, error: "Kullanıcı girişi yapılmamış." };
-
-        const newJob = { ...jobData, createdAt: new Date().toISOString(), userId: currentUser.uid, userEmail: currentUser.email };
-        try {
-            await setDoc(doc(this.collectionRef, jobData.jobId), newJob);
-            return { success: true, data: newJob };
-        } catch (error) {
-            return { success: false, error: error.message };
-        }
-    },
-    async getPendingJobs(userId) {
-        if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor.", data: [] };
-        try {
-            const q = query(this.collectionRef, where('userId', '==', userId), orderBy('createdAt', 'asc'));
-            const snapshot = await getDocs(q);
-            return { success: true, data: snapshot.docs.map(d => ({ jobId: d.id, ...d.data() })) };
-        } catch (error) {
-            return { success: false, error: error.message, data: [] };
-        }
-    },
-    async updateJob(jobId, updates) {
-        if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor." };
-        try {
-            await updateDoc(doc(this.collectionRef, jobId), updates);
-            return { success: true };
-        } catch (error) {
-            return { success: false, error: error.message };
-        }
-    },
-    async deleteJob(jobId) {
-        if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor." };
-        try {
-            await deleteDoc(doc(this.collectionRef, jobId));
-            return { success: true };
-        }
-        catch (error) {
-            return { success: false, error: error.message };
-        }
-    },
 };
 
 // Tahakkuk ID counter fonksiyonu
@@ -905,4 +765,14 @@ export async function createDemoData() {
 
 
 // --- Exports ---
-export {auth, db, FieldValue}; // FieldValue'ı da dışa aktar
+export {auth, db, FieldValue}; // FieldValue'ı burada da dışa aktarıyoruz
+export const firebaseServices = { // firebaseServices objesinin doğru şekilde tanımlandığından ve dışa aktarıldığından emin olun
+    auth: auth,
+    db: db,
+    storage: storage, 
+    storageRef: ref, 
+    uploadBytesResumable: uploadBytesResumable, 
+    getDownloadURL: getDownloadURL, 
+    deleteObject: deleteObject,
+    FieldValue: FieldValue // FieldValue'ı da firebaseServices objesine ekledik
+};
