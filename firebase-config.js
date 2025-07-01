@@ -9,9 +9,9 @@ import {
 } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
 import {getFirestore, collection, addDoc, 
         getDocs, doc, updateDoc, deleteDoc, 
-        query, orderBy, where, getDoc, setDoc, arrayUnion, writeBatch, documentId, Timestamp } 
+        query, orderBy, where, getDoc, setDoc, arrayUnion, writeBatch, documentId, Timestamp, FieldValue } 
 from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
-import { getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js';
+import { getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js'; // YENİ EKLENDİ
 
 // --- Firebase App Initialization ---
 const firebaseConfig = {
@@ -24,13 +24,14 @@ const firebaseConfig = {
   measurementId: "G-QY1P3ZCMC4"
 };
 
-let app, auth, db;
+let app, auth, db, storage; // 'storage' değişkenini buraya ekledik
 let isFirebaseAvailable = false;
 
 try {
     app = initializeApp(firebaseConfig);
     auth = getAuth(app);
     db = getFirestore(app);
+    storage = getStorage(app); // Firebase Storage'ı başlattık
     isFirebaseAvailable = true;
     console.log('🔥 Firebase initialized successfully');
 } catch (error) {
@@ -299,17 +300,14 @@ export const ipRecordsService = {
             if (currentUser) {
                 // Kullanıcının görünen adını al, yoksa emailini kullan
                 userName = currentUser.displayName || currentUser.email; 
-                // Daha gelişmiş bir senaryo için: eğer persons koleksiyonundaki bir belgede
-                // kullanıcının UID'si tutuluyorsa (örneğin 'firebaseUid' alanı)
-                // o zaman buradan kişinin adını çekebiliriz. Şimdilik displayName/email yeterli.
             }
 
             const transactionToAdd = {
                 ...transactionData,
                 timestamp: new Date().toISOString(),
-                userId: currentUser ? currentUser.uid : 'anonymous', // Firebase UID
+                userId: currentUser ? currentUser.uid : 'anonymous', 
                 userEmail: currentUser ? currentUser.email : 'anonymous@example.com',
-                userName: userName // YENİ EKLENDİ: İşlemi yapan kullanıcının görünen adını/email'ini kaydet
+                userName: userName 
             };
 
             const docRef = await addDoc(transactionsCollectionRef, transactionToAdd);
@@ -323,21 +321,18 @@ export const ipRecordsService = {
         if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor." };
         try {
             const recordRef = doc(db, 'ipRecords', recordId);
-            const user = authService.getCurrentUser(); // Kullanıcı objesini al
-            console.log('addFileToRecord: Current User Object:', user); // DEBUG LOG
-            const userEmail = user ? user.email : 'anonymous@example.com'; // user.email için güvenli erişim ve fallback
-            console.log('addFileToRecord: User Email to be used:', userEmail); // DEBUG LOG
+            const user = authService.getCurrentUser(); 
+            const userEmail = user ? user.email : 'anonymous@example.com'; 
             const newFile = {
                 ...fileData,
                 id: generateUUID(),
                 uploadedAt: new Date().toISOString(),
-                userEmail: userEmail // user.email yerine userEmail değişkeni kullanıldı
+                userEmail: userEmail 
             };
-            console.log('addFileToRecord: newFile object being added:', newFile); // DEBUG LOG
             await updateDoc(recordRef, { files: arrayUnion(newFile) });
             return { success: true, data: newFile };
         } catch (error) {
-            console.error("Error in addFileToRecord:", error); // Enhanced error log
+            console.error("Error in addFileToRecord:", error); 
             return { success: false, error: error.message };
         }
     },
@@ -393,7 +388,7 @@ export const personService = {
 
 // --- YENİ EKLENDİ: Task Service ---
 export const taskService = {
-    async createTask(taskData) { // officialDueDate ve officialDueDateDetails eklendi
+    async createTask(taskData) { 
         if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor." };
         const user = authService.getCurrentUser();
         try {
@@ -411,12 +406,9 @@ export const taskService = {
                 }]
             };
 
-            // Eğer officialDueDate bir Date objesiyse Timestamp'e dönüştür
             if (newTask.officialDueDate instanceof Date) {
                 newTask.officialDueDate = Timestamp.fromDate(newTask.officialDueDate);
             }
-            // officialDueDateDetails direkt obje olarak kaydedilebilir
-            // newTask.officialDueDateDetails = taskData.officialDueDateDetails || null; // Bu zaten taskData içinde geliyor varsayıyorum
 
             await setDoc(doc(db, "tasks", id), newTask);
             return { success: true, id };
@@ -466,11 +458,9 @@ export const taskService = {
                 userEmail: user.email
             };
 
-            // officialDueDate'ı güncellemeden önce Date objesine dönüştür
             if (updates.officialDueDate instanceof Date) {
                 updates.officialDueDate = Timestamp.fromDate(updates.officialDueDate);
             }
-            // officialDueDateDetails da doğrudan güncellenebilir
 
             await updateDoc(taskRef, {
                 ...updates,
@@ -534,7 +524,7 @@ export const transactionTypeService = {
     async addTransactionType(typeData) {
         if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor. İşlem tipi eklenemez." };
         try {
-            const id = typeData.id || generateUUID(); // ID yoksa otomatik oluştur
+            const id = typeData.id || generateUUID(); 
             const newType = {
                 ...typeData,
                 id,
@@ -581,15 +571,13 @@ export const transactionTypeService = {
                 q = query(q, where('hierarchy', '==', filters.hierarchy));
             }
             if (filters.ipType) {
-                // applicableToMainType dizisi içinde filters.ipType olanları bul
                 q = query(q, where('applicableToMainType', 'array-contains', filters.ipType));
             }
             if (filters.ids && filters.ids.length > 0) {
-                // Belirli ID'lere göre filtreleme
                 q = query(q, where(documentId(), 'in', filters.ids));
             }
 
-            q = query(q, orderBy('name', 'asc')); // İsim sırasına göre sırala
+            q = query(q, orderBy('name', 'asc')); 
 
             const querySnapshot = await getDocs(q);
             return { success: true, data: querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) };
@@ -622,7 +610,7 @@ export const transactionTypeService = {
 
 // --- Bulk Indexing Service ---
 export const bulkIndexingService = {
-    collectionRef: collection(db, 'pendingBulkIndexJobs'),
+    collectionRef: collection(db, 'pendingBulkIndexJobs'), // Bu koleksiyonun adını 'unindexed_pdfs' olarak değiştireceğiz
     async addJob(jobData) {
         if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor." };
         const currentUser = authService.getCurrentUser();
@@ -674,7 +662,6 @@ async function getNextAccrualId() {
     try {
         const counterRef = doc(db, 'counters', 'accruals');
 
-        // Dokümanı oku
         const counterDoc = await getDoc(counterRef);
 
         let currentId = 0;
@@ -685,14 +672,12 @@ async function getNextAccrualId() {
                 currentId = data.lastId;
             }
         } else {
-            // Doküman hiç yoksa başlat
             await setDoc(counterRef, { lastId: 0 });
             currentId = 0;
         }
 
         const nextId = currentId + 1;
 
-        // Güncelleme işlemi
         await setDoc(counterRef, { lastId: nextId }, { merge: true });
 
         return nextId.toString();
@@ -739,12 +724,11 @@ export const accrualService = {
         if (!user) return { success: false, error: "Kullanıcı girişi yapılmamış." };
         
         try {
-            // Sıralı ID al
             const accrualId = await getNextAccrualId();
             
             const newAccrual = {
                 ...accrualData,
-                id: accrualId, // UUID yerine sıralı sayı
+                id: accrualId, 
                 status: 'unpaid',
                 createdAt: new Date().toISOString(),
                 createdBy_uid: user.uid,
@@ -752,7 +736,7 @@ export const accrualService = {
                 files: (accrualData.files || []).map(f => ({ ...f, id: f.id || generateUUID() })),
                 paymentDate: null
             };
-            await setDoc(doc(db, 'accruals', accrualId), newAccrual); // ID olarak sıralı sayı kullan
+            await setDoc(doc(db, 'accruals', accrualId), newAccrual); 
             return { success: true, data: newAccrual };
         } catch (error) {
             return { success: false, error: error.message };
@@ -768,7 +752,6 @@ export const accrualService = {
             return { success: false, error: error.message, data: [] };
         }
     },
-    // YENİ EKLENDİ: Belirli bir göreve ait tahakkukları getiren fonksiyon
     async getAccrualsByTaskId(taskId) {
         if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor." };
         try {
@@ -795,16 +778,7 @@ export const accrualService = {
         }
     }
 };
-// Tüm Firebase servislerini tek bir obje altında toplamak daha düzenli olabilir
-export const firebaseServices = {
-    auth: auth,
-    db: db,
-    storage: storage, // Storage servisini dışa aktar
-    storageRef: ref, // ref fonksiyonunu dışa aktar
-    uploadBytesResumable: uploadBytesResumable, // uploadBytesResumable fonksiyonunu dışa aktar
-    getDownloadURL: getDownloadURL, // getDownloadURL fonksiyonunu dışa aktar
-    deleteObject: deleteObject // deleteObject fonksiyonunu dışa aktar
-};
+
 // --- Demo Data Function ---
 export async function createDemoData() {
     console.log('🧪 Demo verisi oluşturuluyor...');
@@ -827,7 +801,7 @@ export async function createDemoData() {
             country: 'Türkiye',
             city: 'İstanbul'
         };
-        const personResult = await personService.addPerson(demoPerson); // DEĞİŞTİ: personsService -> personService
+        const personResult = await personService.addPerson(demoPerson); 
         if (!personResult.success) {
             console.error("Demo kişi oluşturulamadı:", personResult.error);
             return;
@@ -836,11 +810,10 @@ export async function createDemoData() {
             id: personResult.data.id, 
             name: personResult.data.name, 
             personType: personResult.data.personType,
-            email: demoPersonEmail // email buraya eklenmeli
+            email: demoPersonEmail 
         };
 
         const demoRecords = [
-            // Patent
             {
                 type: 'patent',
                 title: 'Otomatik Patent Başvurusu',
@@ -852,7 +825,6 @@ export async function createDemoData() {
                 owners: [demoOwner],
                 recordStatus: 'aktif'
             },
-            // Marka
             {
                 type: 'trademark',
                 title: 'Yaratıcı Marka Tescili',
@@ -863,9 +835,8 @@ export async function createDemoData() {
                 niceClass: '01,05',
                 owners: [demoOwner],
                 recordStatus: 'aktif',
-                trademarkImage: '[https://via.placeholder.com/150/FF0000/FFFFFF?text=Marka](https://via.placeholder.com/150/FF0000/FFFFFF?text=Marka)' // Demo görsel eklendi
+                trademarkImage: '[https://via.placeholder.com/150/FF0000/FFFFFF?text=Marka](https://via.placeholder.com/150/FF0000/FFFFFF?text=Marka)' 
             },
-            // Telif Hakkı
             {
                 type: 'copyright',
                 title: 'Dijital Sanat Eseri Telif',
@@ -876,7 +847,6 @@ export async function createDemoData() {
                 owners: [demoOwner],
                 recordStatus: 'aktif'
             },
-            // Tasarım
             {
                 type: 'design',
                 title: 'Yenilikçi Ürün Tasarımı',
@@ -890,7 +860,6 @@ export async function createDemoData() {
             }
         ];
 
-        // Demo kayıtları ekleme
         for (const recordData of demoRecords) {
             const addRecordResult = await ipRecordsService.addRecord(recordData);
             if (!addRecordResult.success) {
@@ -899,8 +868,6 @@ export async function createDemoData() {
             }
             const newRecordId = addRecordResult.id;
 
-            // Her yeni kayıt için başlangıç 'Başvuru' işlemini ekle
-            // transactionTypes.json'daki 'id' alanını kullanacağız
             const applicationTransactionType = transactionTypeService.getTransactionTypes().then(result => {
                 if (result.success) {
                     return result.data.find(type => 
@@ -916,10 +883,10 @@ export async function createDemoData() {
 
             if (initialTransaction) {
                 const initialTransactionData = {
-                    type: initialTransaction.id, // "patent_application" gibi ID'yi kullan
-                    designation: initialTransaction.alias || initialTransaction.name, // Başvuru
+                    type: initialTransaction.id, 
+                    designation: initialTransaction.alias || initialTransaction.name, 
                     description: `Yeni ${recordData.type} kaydı için başlangıç başvurusu.`,
-                    timestamp: new Date(recordData.applicationDate).toISOString(), // Başvuru tarihiyle aynı yapabiliriz
+                    timestamp: new Date(recordData.applicationDate).toISOString(), 
                     transactionHierarchy: 'parent'
                 };
                 await ipRecordsService.addTransactionToRecord(newRecordId, initialTransactionData);
@@ -938,4 +905,6 @@ export async function createDemoData() {
 
 
 // --- Exports ---
-export {auth, db};
+export {auth, db, FieldValue}; // FieldValue'ı da dışa aktar
+export { authService, ipRecordsService, personService, taskService, transactionTypeService, bulkIndexingService, generateUUID, getNextTaskId, accrualService };
+export { firebaseServices }; // Tüm Firebase servislerini içeren obje
