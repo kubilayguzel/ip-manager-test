@@ -298,9 +298,11 @@ export class IndexingDetailModule {
                     type: childTypeId,
                     description: `${childTransactionType.name} alt işlemi.`,
                     parentId: this.selectedTransactionId,
-                    transactionHierarchy: "child",
+                    transactionHierarchy: "child",  // Bu alan transaction'larda kullanılıyor
                     deliveryDate: deliveryDate
                 };
+
+                console.log('Oluşturulacak child transaction:', childTransactionData);
 
                 const childResult = await ipRecordsService.addTransactionToRecord(
                     this.matchedRecord.id, 
@@ -323,12 +325,21 @@ export class IndexingDetailModule {
             // PDF'yi kayda dosya olarak ekle
             const fileToUpload = {
                 name: this.pdfData.fileName,
-                fileType: this.pdfData.fileType,
-                fileSize: this.pdfData.fileSize,
+                fileType: this.pdfData.fileType || 'application/pdf',  // undefined kontrolü
+                fileSize: this.pdfData.fileSize || 0,                   // undefined kontrolü
                 fileUrl: this.pdfData.fileUrl,
                 relatedTransactionId: transactionIdToAssociateFiles,
                 documentDesignation: 'İndekslenmiş Belge'
             };
+
+            console.log('Yüklenecek dosya verisi:', fileToUpload);
+            
+            // Undefined alanları kontrol et
+            Object.keys(fileToUpload).forEach(key => {
+                if (fileToUpload[key] === undefined) {
+                    console.error(`UNDEFINED ALAN BULUNDU: ${key}`, fileToUpload[key]);
+                }
+            });
 
             const fileAddResult = await ipRecordsService.addFileToRecord(this.matchedRecord.id, fileToUpload);
             
@@ -359,13 +370,34 @@ export class IndexingDetailModule {
     }
 
     mapTransactionToTask(selectedChildTransactionType, recordType) {
-        return selectedChildTransactionType.taskTriggered || null;
+        console.log('mapTransactionToTask çağırıldı:', {
+            childTransactionType: selectedChildTransactionType,
+            taskTriggered: selectedChildTransactionType?.taskTriggered,
+            recordType
+        });
+        return selectedChildTransactionType?.taskTriggered || null;
     }
 
     async createTaskForTransaction(transactionId, taskType) {
+        console.log('createTaskForTransaction çağırıldı:', { transactionId, taskType });
+        
+        if (!taskType) {
+            console.log('Task type boş, task oluşturulmayacak');
+            return;
+        }
+        
         // Task oluşturma mantığı burada implement edilecek
         // Şimdilik basit bir log
         console.log('Task oluşturulacak:', { transactionId, taskType });
+        
+        // TODO: Gerçek task oluşturma kodu eklenecek
+        try {
+            // Task service kullanarak gerçek task oluşturma
+            // const taskResult = await taskService.createTask({...});
+            console.log('Task oluşturma henüz implement edilmedi');
+        } catch (error) {
+            console.error('Task oluşturma hatası:', error);
+        }
     }
 
     setupEventListeners() {
