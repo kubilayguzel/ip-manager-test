@@ -139,7 +139,7 @@ export const authService = {
     async signUp(email, password, displayName, initialRole = 'user') {
         if (!isFirebaseAvailable) return this.localSignUp(email, password, displayName, initialRole);
         try {
-            const result = await createUserWithEmailAndPassword(auth, email, password); // Hata düzeltildi
+            const result = await createUserWithEmailAndPassword(auth, email, password);
             const user = result.user;
             await updateProfile(user, { displayName });
             const setRoleResult = await this.setUserRole(user.uid, email, displayName, initialRole);
@@ -695,7 +695,311 @@ export async function createDemoData() {
                 niceClass: '01,05',
                 owners: [demoOwner],
                 recordStatus: 'aktif',
-                trademarkImage: '[https://via.placeholder.com/150/FF0000/FFFFFF?text=Marka](https://via.placeholder.com/150/FF0000/FFFFFF?text=Marka)' 
+                trademarkImage: 'https://via.placeholder.com/150/FF0000/FFFFFF?text=Marka' 
+            },
+            {
+                type: 'copyright',
+                title: 'Dijital Sanat Eseri Telif',
+                applicationDate: '2023-05-10',
+                status: 'active',
+                description: 'Demo telif hakkı kaydı.',
+                workType: 'Resim',
+                owners: [demoOwner],
+                recordStatus: 'aktif'
+            },
+            {
+                type: 'design',
+                title: 'Yenilikçi Ürün Tasarımı',
+                applicationNumber: 'TR2023/D11223',
+                applicationDate: '2023-07-01',
+                status: 'approved',
+                description: 'Demo tasarım kaydı.',
+                designClass: '01.01',
+                owners: [demoOwner],
+                recordStatus: 'aktif'
+            }
+        ];
+
+        for (const recordData of demoRecords) {
+            const addRecordResult = await ipRecordsService.addRecord(recordData);
+            if (!addRecordResult.success) {
+                console.error("Demo kayıt oluşturulamadı:", recordData.title, addRecordResult.error);
+                continue;
+            }
+            const newRecordId = addRecordResult.id;
+
+            const applicationTransactionType = transactionTypeService.getTransactionTypes().then(result => {
+                if (result.success) {
+                    return result.data.find(type => 
+                        type.hierarchy === 'parent' && 
+                        type.alias === 'Başvuru' && 
+                        type.applicableToMainType.includes(recordData.type)
+                    );
+                }
+                return null;
+            });
+
+            const initialTransaction = await applicationTransactionType;
+
+            if (initialTransaction) {
+                const initialTransactionData = {
+                    type: initialTransaction.id, 
+                    designation: initialTransaction.alias || initialTransaction.name, 
+                    description: `Yeni ${recordData.type} kaydı için başlangıç başvurusu.`,
+                    timestamp: new Date(recordData.applicationDate).toISOString(), 
+                    transactionHierarchy: 'parent'
+                };
+                await ipRecordsService.addTransactionToRecord(newRecordId, initialTransactionData);
+                console.log(`İlk 'Başvuru' işlemi ${recordData.title} kaydına eklendi.`);
+            } else {
+                console.warn(`'${recordData.type}' için uygun 'Başvuru' işlem tipi bulunamadı. İlk işlem eklenemedi.`);
+            }
+        }
+
+        console.log('✅ Demo verisi başarıyla oluşturuldu!');
+
+    } catch (error) {
+        console.error('Demo verisi oluşturulurken hata:', error);
+    }
+}
+
+// --- Bulk Indexing Service ---
+// YENİ EKLENDİ: bulkIndexingService tanımı
+export const bulkIndexingService = {
+    // collectionRef: collection(db, 'pendingBulkIndexJobs'), // Bu koleksiyonun adını 'unindexed_pdfs' olarak değiştireceğiz
+    // NOT: bulk-indexing-module.js içinde UNINDEXED_PDFS_COLLECTION sabitini kullanıyoruz.
+    // Bu servis buraya tam olarak taşınmışsa, collectionRef'i doğrudan kullanabiliriz.
+    // Ancak bu servis artık kullanılmayacaksa, bu tanımı da kaldırabiliriz.
+    // Şimdilik, daha önceki haliyle geri getiriyorum, hata düzelince karar veririz.
+
+    collectionRef: collection(db, 'pendingBulkIndexJobs'), // Önceki tanımına geri döndürüldü
+
+    async addJob(jobData) {
+        if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor." };
+        const currentUser = authService.getCurrentUser();
+        if (!currentUser) return { success: false, error: "Kullanıcı girişi yapılmamış." };
+
+        const newJob = { ...jobData, createdAt: new Date().toISOString(), userId: currentUser.uid, userEmail: currentUser.email };
+        try {
+            await setDoc(doc(this.collectionRef, jobData.jobId), newJob);
+            return { success: true, data: newJob };
+        } catch (error) {
+            return { success: false, error: error.message };
+        }
+    },
+    async getPendingJobs(userId) {
+        if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor.", data: [] };
+        try {
+            const q = query(this.collectionRef, where('userId', '==', userId), orderBy('createdAt', 'asc'));
+            const snapshot = await getDocs(q);
+            return { success: true, data: snapshot.docs.map(d => ({ jobId: d.id, ...d.data() })) };
+        } catch (error) {
+            return { success: false, error: error.message, data: [] };
+        }
+    },
+    async updateJob(jobId, updates) {
+        if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor." };
+        try {
+            await updateDoc(doc(this.collectionRef, jobId), updates);
+            return { success: true };
+        } catch (error) {
+            return { success: false, error: error.message };
+        }
+    },
+    async deleteJob(jobId) {
+        if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor." };
+        try {
+            await deleteDoc(doc(this.collectionRef, jobId));
+            return { success: true };
+        }
+        catch (error) {
+            return { success: false, error: error.message };
+        }
+    },
+};
+
+
+// Tahakkuk ID counter fonksiyonu
+async function getNextAccrualId() {
+    if (!isFirebaseAvailable) return '1';
+
+    try {
+        const counterRef = doc(db, 'counters', 'accruals');
+
+        const counterDoc = await getDoc(counterRef);
+
+        let currentId = 0;
+
+        if (counterDoc.exists()) {
+            const data = counterDoc.data();
+            if (data && typeof data.lastId === 'number') {
+                currentId = data.lastId;
+            }
+        } else {
+            await setDoc(counterRef, { lastId: 0 });
+            currentId = 0;
+        }
+
+        const nextId = currentId + 1;
+
+        await setDoc(counterRef, { lastId: nextId }, { merge: true });
+
+        return nextId.toString();
+
+    } catch (error) {
+        console.error('🔥 Tahakkuk ID üretim hatası:', error);
+        return 'error';
+    }
+}
+export async function getNextTaskId() {
+    if (!isFirebaseAvailable) return '1';
+
+    try {
+        const counterRef = doc(db, 'counters', 'tasks');
+        const counterDoc = await getDoc(counterRef);
+
+        let currentId = 0;
+
+        if (counterDoc.exists()) {
+            const data = counterDoc.data();
+            if (data && typeof data.lastId === 'number') {
+                currentId = data.lastId;
+            }
+        } else {
+            await setDoc(counterRef, { lastId: 0 });
+            currentId = 0;
+        }
+
+        const nextId = currentId + 1;
+        await setDoc(counterRef, { lastId: nextId }, { merge: true });
+
+        return nextId.toString();
+    } catch (error) {
+        console.error('🔥 Task ID üretim hatası:', error);
+        return 'error';
+    }
+}
+
+// --- Accrual Service ---
+export const accrualService = {
+    async addAccrual(accrualData) {
+        if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor. Tahakkuk eklenemez." };
+        const user = authService.getCurrentUser();
+        if (!user) return { success: false, error: "Kullanıcı girişi yapılmamış." };
+        
+        try {
+            const accrualId = await getNextAccrualId();
+            
+            const newAccrual = {
+                ...accrualData,
+                id: accrualId, 
+                status: 'unpaid',
+                createdAt: new Date().toISOString(),
+                createdBy_uid: user.uid,
+                createdBy_email: user.email,
+                files: (accrualData.files || []).map(f => ({ ...f, id: f.id || generateUUID() })),
+                paymentDate: null
+            };
+            await setDoc(doc(db, 'accruals', accrualId), newAccrual); 
+            return { success: true, data: newAccrual };
+        } catch (error) {
+            return { success: false, error: error.message };
+        }
+    },
+    async getAccruals() {
+        if (!isFirebaseAvailable) return { success: true, data: [] };
+        try {
+            const q = query(collection(db, 'accruals'), orderBy('createdAt', 'desc'));
+            const querySnapshot = await getDocs(q);
+            return { success: true, data: querySnapshot.docs.map(d => ({id: d.id, ...d.data()})) };
+        } catch (error) {
+            return { success: false, error: error.message, data: [] };
+        }
+    },
+    async getAccrualsByTaskId(taskId) {
+        if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor." };
+        try {
+            const q = query(collection(db, 'accruals'), where('taskId', '==', taskId), orderBy('createdAt', 'desc'));
+            const querySnapshot = await getDocs(q);
+            return { success: true, data: querySnapshot.docs.map(d => ({id: d.id, ...d.data()})) };
+        } catch (error) {
+            return { success: false, error: error.message, data: [] };
+        }
+    },
+    async updateAccrual(accrualId, updates) {
+        if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor. Tahakkuk güncellenemez." };
+        try {
+            const accrualRef = doc(db, 'accruals', accrualId);
+            const currentAccrualDoc = await getDoc(accrualRef);
+            if (!currentAccrualDoc.exists()) {
+                return { success: false, error: "Tahakkuk bulunamadı." };
+            }
+            const finalUpdates = { ...updates, updatedAt: new Date().toISOString() };
+            await updateDoc(accrualRef, finalUpdates);
+            return { success: true };
+        } catch (error) {
+            return { success: false, error: error.message };
+        }
+    }
+};
+
+// --- Demo Data Function ---
+export async function createDemoData() {
+    console.log('🧪 Demo verisi oluşturuluyor...');
+    const user = authService.getCurrentUser();
+    if (!user) {
+        console.error('Demo verisi oluşturmak için kullanıcı girişi yapılmamış.');
+        return;
+    }
+
+    try {
+        const demoPersonEmail = `demo.owner.${Date.now()}@example.com`;
+        const demoPerson = {
+            personType: 'real',
+            firstName: 'Demo',
+            lastName: 'Hak Sahibi',
+            name: 'Demo Hak Sahibi',
+            email: demoPersonEmail,
+            phone: '0555 123 4567',
+            address: 'Demo Adres, No:1, İstanbul',
+            country: 'Türkiye',
+            city: 'İstanbul'
+        };
+        const personResult = await personService.addPerson(demoPerson); 
+        if (!personResult.success) {
+            console.error("Demo kişi oluşturulamadı:", personResult.error);
+            return;
+        }
+        const demoOwner = { 
+            id: personResult.data.id, 
+            name: personResult.data.name, 
+            personType: personResult.data.personType,
+            email: demoPersonEmail 
+        };
+
+        const demoRecords = [
+            {
+                type: 'patent',
+                title: 'Otomatik Patent Başvurusu',
+                applicationNumber: 'TR2023/P12345',
+                applicationDate: '2023-01-15',
+                status: 'pending',
+                description: 'Bu bir demo patent başvurusudur.',
+                patentClass: 'A01B',
+                owners: [demoOwner],
+                recordStatus: 'aktif'
+            },
+            {
+                type: 'trademark',
+                title: 'Yaratıcı Marka Tescili',
+                applicationNumber: 'TR2023/M67890',
+                applicationDate: '2023-03-20',
+                status: 'registered',
+                description: 'Bu bir demo marka tescilidir.',
+                niceClass: '01,05',
+                owners: [demoOwner],
+                recordStatus: 'aktif',
+                trademarkImage: 'https://via.placeholder.com/150/FF0000/FFFFFF?text=Marka' 
             },
             {
                 type: 'copyright',
@@ -774,5 +1078,5 @@ export const firebaseServices = {
     uploadBytesResumable: uploadBytesResumable, 
     getDownloadURL: getDownloadURL, 
     deleteObject: deleteObject,
-    FieldValue: FieldValue // FieldValue'ı firebaseServices objesine ekledik
+    FieldValue: FieldValue 
 };
