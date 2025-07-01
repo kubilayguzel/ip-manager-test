@@ -83,12 +83,17 @@ export class IndexingDetailModule {
             const recordsResult = await ipRecordsService.getRecords();
             if (recordsResult.success) {
                 this.allRecords = recordsResult.data;
+                console.log('IP kayıtları yüklendi:', this.allRecords.length);
             }
 
             // Transaction türlerini yükle
             const transactionTypesResult = await transactionTypeService.getTransactionTypes();
             if (transactionTypesResult.success) {
                 this.allTransactionTypes = transactionTypesResult.data;
+                console.log('Transaction türleri yüklendi:', this.allTransactionTypes.length);
+                console.log('Örnek transaction türleri:', this.allTransactionTypes.slice(0, 3));
+            } else {
+                console.error('Transaction türleri yüklenemedi:', transactionTypesResult.error);
             }
 
             console.log('Kayıtlar ve transaction türleri yüklendi');
@@ -155,6 +160,8 @@ export class IndexingDetailModule {
         try {
             const transactionsResult = await ipRecordsService.getTransactionsForRecord(this.matchedRecord.id);
             
+            console.log('getTransactionsForRecord sonucu:', transactionsResult);
+            
             if (!transactionsResult.success) {
                 document.getElementById('transactionsList').innerHTML = 
                     '<p class="text-muted p-2">İşlemler yüklenirken hata oluştu.</p>';
@@ -162,9 +169,13 @@ export class IndexingDetailModule {
             }
 
             const transactions = transactionsResult.transactions;
+            console.log('Kayıttan gelen transactions:', transactions);
+            
             const parentTransactions = transactions
                 .filter(tx => tx.transactionHierarchy === 'parent' || !tx.transactionHierarchy)
                 .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+            console.log('Filtrelenmiş parent transactions:', parentTransactions);
 
             if (parentTransactions.length === 0) {
                 document.getElementById('transactionsList').innerHTML = 
@@ -182,6 +193,8 @@ export class IndexingDetailModule {
                 item.dataset.id = tx.id;
 
                 const transactionType = this.allTransactionTypes.find(t => t.id === tx.type);
+                console.log(`Transaction ID: ${tx.id}, Type: ${tx.type}, Definition:`, transactionType);
+                
                 const transactionDisplayName = transactionType ? 
                     (transactionType.alias || transactionType.name) : 
                     (tx.designation || tx.type || 'Tanımsız İşlem');
@@ -189,6 +202,7 @@ export class IndexingDetailModule {
                 item.textContent = `${transactionDisplayName} - ${new Date(tx.timestamp).toLocaleDateString('tr-TR')}`;
                 
                 item.addEventListener('click', (e) => {
+                    console.log('Transaction item tıklandı:', tx.id, tx.type);
                     this.selectTransaction(e.currentTarget.dataset.id, tx.type);
                 });
 
@@ -205,18 +219,24 @@ export class IndexingDetailModule {
     selectTransaction(transactionId, transactionType) {
         this.selectedTransactionId = transactionId;
 
+        console.log('selectTransaction çağırıldı:', { transactionId, transactionType });
+
         // Seçili işlemi vurgula
         document.querySelectorAll('.transaction-list-item').forEach(el => 
             el.classList.remove('selected'));
         document.querySelector(`[data-id="${transactionId}"]`).classList.add('selected');
 
-        // Alt işlem seçimi bölümünü göster
+        // Transaction definition'ı bul
         const selectedTransactionDefinition = this.allTransactionTypes.find(t => t.id === transactionType);
         
+        console.log('Bulunan transaction definition:', selectedTransactionDefinition);
+
         if (selectedTransactionDefinition && selectedTransactionDefinition.indexFile) {
+            console.log('indexFile bulundu:', selectedTransactionDefinition.indexFile);
             this.populateChildTransactionTypeSelect(selectedTransactionDefinition.indexFile);
             document.getElementById('childTransactionInputs').style.display = 'block';
         } else {
+            console.log('indexFile bulunamadı veya boş');
             document.getElementById('childTransactionInputs').style.display = 'none';
         }
 
@@ -231,9 +251,27 @@ export class IndexingDetailModule {
         const selectElement = document.getElementById('childTransactionType');
         selectElement.innerHTML = '<option value="" disabled selected>Alt işlem türü seçin...</option>';
 
+        console.log('indexFile array:', indexFile);
+        console.log('Tüm transaction types:', this.allTransactionTypes);
+
+        // indexFile array'inde bulunan ID'lere sahip child transaction'ları filtrele
         const childTypes = this.allTransactionTypes.filter(type => 
-            type.indexFile === indexFile && type.transactionHierarchy === 'child'
+            type.transactionHierarchy === 'child' && 
+            indexFile && 
+            Array.isArray(indexFile) && 
+            indexFile.includes(type.id)
         );
+
+        console.log('Bulunan child types:', childTypes);
+
+        if (childTypes.length === 0) {
+            const noOption = document.createElement('option');
+            noOption.value = '';
+            noOption.textContent = 'Bu ana işlem için alt işlem bulunamadı';
+            noOption.disabled = true;
+            selectElement.appendChild(noOption);
+            return;
+        }
 
         childTypes.forEach(type => {
             const option = document.createElement('option');
@@ -249,8 +287,17 @@ export class IndexingDetailModule {
         const hasSelectedChildType = childTransactionInputsVisible ? 
             document.getElementById('childTransactionType').value !== '' : true;
 
+        console.log('Form completeness check:', {
+            hasSelectedTransaction,
+            childTransactionInputsVisible,
+            hasSelectedChildType,
+            selectedTransactionId: this.selectedTransactionId
+        });
+
         const canSubmit = hasSelectedTransaction && hasSelectedChildType;
         document.getElementById('indexBtn').disabled = !canSubmit;
+        
+        console.log('İndeksle butonu durumu:', canSubmit ? 'aktif' : 'pasif');
     }
 
     async handleIndexing() {
