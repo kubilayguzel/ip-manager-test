@@ -3,18 +3,22 @@
 // Firebase servisleri ve yardımcı fonksiyonları import et
 import {
     authService,
-    ipRecordsService, // IP kayıtlarını ve transaction'ları yönetmek için
-    bulkIndexingService, // Bekleyen PDF'leri yönetmek için
+    ipRecordsService,
+    bulkIndexingService,
     generateUUID,
-    db, // Firestore instance
+    db, // db instance'ı hala firebase-config'den geliyor
     firebaseServices // Yeni eklenen Firebase Storage servisleri için
 } from '../firebase-config.js';
+
+// Firestore'dan doğrudan gereken fonksiyonları import et
+import { collection, query, where, orderBy, doc, updateDoc, getDocs, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js'; // collection ve diğerleri buraya eklendi
 
 // utils.js'den yardımcı fonksiyonları import et
 import {
     showNotification,
     formatFileSize
 } from '../utils.js';
+
 
 // Constants
 const UNINDEXED_PDFS_COLLECTION = 'unindexed_pdfs';
@@ -180,7 +184,7 @@ export class BulkIndexingModule {
 
                     try {
                         // Firestore'a kaydet
-                        await firebaseServices.db.collection(UNINDEXED_PDFS_COLLECTION).doc(pdfId).set(newPdfDoc);
+                        await collection(firebaseServices.db,UNINDEXED_PDFS_COLLECTION).doc(pdfId).set(newPdfDoc);
                         showNotification(`'${file.name}' başarıyla yüklendi ve işleme alındı!`, 'success', 3000);
                     } catch (firestoreError) {
                         console.error("Firestore'a kaydedilirken hata:", firestoreError);
@@ -201,7 +205,7 @@ export class BulkIndexingModule {
     async loadPdfsFromFirestore() {
         if (!this.currentUser) return;
         try {
-            const q = firebaseServices.db.collection(UNINDEXED_PDFS_COLLECTION)
+            const q = query(collection(firebaseServices.db,UNINDEXED_PDFS_COLLECTION)
                 .where('userId', '==', this.currentUser.uid)
                 .orderBy('uploadedAt', 'desc');
 
@@ -220,7 +224,7 @@ export class BulkIndexingModule {
 
     setupRealtimeListener() {
         if (!this.currentUser) return;
-        const q = firebaseServices.db.collection(UNINDEXED_PDFS_COLLECTION)
+        const q = query(collection(firebaseServices.db,UNINDEXED_PDFS_COLLECTION)
             .where('userId', '==', this.currentUser.uid)
             .orderBy('uploadedAt', 'desc');
 
@@ -388,7 +392,7 @@ export class BulkIndexingModule {
             }
 
             // Firestore'da durumu 'removed' olarak güncelle
-            await firebaseServices.db.collection(UNINDEXED_PDFS_COLLECTION).doc(fileId).update({
+            await collection(firebaseServices.db,UNINDEXED_PDFS_COLLECTION).doc(fileId).update({
                 status: 'removed',
                 removedAt: firebaseServices.FieldValue.serverTimestamp()
             });
@@ -409,7 +413,7 @@ export class BulkIndexingModule {
             }
 
             // Firestore'da durumu 'pending' olarak geri al
-            await firebaseServices.db.collection(UNINDEXED_PDFS_COLLECTION).doc(fileId).update({
+            await collection(firebaseServices.db,UNINDEXED_PDFS_COLLECTION).doc(fileId).update({
                 status: 'pending',
                 // FieldValue.delete() removedAt alanını Firestore'dan siler
                 removedAt: firebaseServices.FieldValue.delete()
@@ -428,7 +432,7 @@ export class BulkIndexingModule {
         showNotification('Form sıfırlanıyor...', 'info');
 
         try {
-            const q = firebaseServices.db.collection(UNINDEXED_PDFS_COLLECTION)
+            const q = query(collection(firebaseServices.db,UNINDEXED_PDFS_COLLECTION)
                 .where('userId', '==', this.currentUser.uid)
                 .where('status', 'in', ['pending', 'indexed']); // Sadece bekleyen veya indekslenmişleri hedefle
 
