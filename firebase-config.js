@@ -819,8 +819,7 @@ export const bulkIndexingService = {
 };
 
 // --- Exports ---
-export {auth, db, FieldValue}; 
-export { authService, ipRecordsService, personService, taskService, transactionTypeService, bulkIndexingService, generateUUID, accrualService }; 
+export {auth, db, FieldValue,bulkIndexingService}; 
 export const firebaseServices = { 
     auth: auth,
     db: db,
