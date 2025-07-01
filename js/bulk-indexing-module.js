@@ -303,16 +303,19 @@ setupRealtimeListener() {
         // Yeni sekme yapısına göre sayıları güncelle
         document.getElementById('totalBadge').textContent = this.uploadedFiles.filter(f => f.status !== 'removed').length;
         document.getElementById('allCount').textContent = this.uploadedFiles.filter(f => f.status !== 'removed').length;
+        document.getElementById('unmatchedByUserCount').textContent = this.uploadedFiles.filter(f => f.status === 'unmatched_by_user').length; // Yeni eşleşmeyenler sayısı
+
     }
 
         renderFileLists() {
-                // "İndekslenecek Dokümanlar" sekmesi için: Kaldırılmamış tüm dosyalar
-                const indexableDocs = this.uploadedFiles.filter(f => f.status !== 'removed');
-                // Kaldırılanlar (removed) artık ayrı bir sekmede gösterilmiyor, bu yüzden filtrelemeye gerek yok
+                // "İndekslenecek Dokümanlar" sekmesi için: Kullanıcı tarafından eşleşmeyen olarak işaretlenmemiş dosyalar
+                const indexableDocs = this.uploadedFiles.filter(f => f.status !== 'unmatched_by_user');
+                // "Eşleşmeyenler" sekmesi için: Kullanıcı tarafından eşleşmeyen olarak işaretlenmiş dosyalar
+                const unmatchedByUserDocs = this.uploadedFiles.filter(f => f.status === 'unmatched_by_user');
 
                 document.getElementById('allFilesList').innerHTML = this.renderFileListHtml(indexableDocs);
-                // matchedFilesList, unmatchedFilesList ve removedFilesList için render çağrıları kaldırıldı
-        }
+                document.getElementById('unmatchedFilesList').innerHTML = this.renderFileListHtml(unmatchedByUserDocs); // Yeni eşleşmeyenler listesini render et
+            }
 
     renderFileListHtml(files) {
         if (files.length === 0) {
@@ -324,25 +327,10 @@ setupRealtimeListener() {
             `;
         }
 
-        return files.map(file => `
+       return files.map(file => `
             <div class="pdf-list-item ${file.matchedRecordId ? 'matched' : 'unmatched'}">
-                <div class="pdf-icon">📄</div>
-                <div class="pdf-details">
-                    <div class="pdf-name">${file.fileName}</div>
-                    <div class="pdf-meta">
-                        Boyut: ${formatFileSize(file.fileSize)} • 
-                        Yükleme Tarihi: ${file.uploadedAt ? file.uploadedAt.toLocaleDateString('tr-TR') : 'Bilinmiyor'} •
-                        Çıkarılan No: ${file.extractedAppNumber || 'Tespit edilemedi'}
-                    </div>
-                    <div class="match-status ${file.matchedRecordId ? 'matched' : 'unmatched'}">
-                        ${file.matchedRecordId ? 
-                            `✅ Eşleşti: ${file.matchedRecordDisplay || file.extractedAppNumber}` : 
-                            '❌ Portföyde eşleşme bulunamadı'
-                        }
-                    </div>
-                    <div class="file-status">
-                        Durum: <span class="status-text status-${file.status}">${this.getStatusText(file.status)}</span>
-                    </div>
+                <div class="file-status">
+                    Durum: <span class="status-text status-${file.status}">${this.getStatusText(file.status)}</span>
                 </div>
                 <div class="pdf-actions">
                     ${file.status === 'pending' ? `
@@ -353,14 +341,12 @@ setupRealtimeListener() {
                         <button class="action-btn complete-btn" disabled>
                             ✅ İndekslendi
                         </button>
-                    ` : file.status === 'removed' ? `
-                        <button class="action-btn info-btn" onclick="window.indexingModule.restoreFile('${file.id}')">
+                    ` : file.status === 'unmatched_by_user' ? ` <button class="action-btn info-btn" onclick="window.indexingModule.restoreFile('${file.id}')">
                             ↩️ Geri Yükle
                         </button>
                     ` : ''}
                     
-                    ${file.status !== 'removed' ? `
-                        <button class="action-btn delete-btn" onclick="window.indexingModule.restoreFile('${file.id}'))">
+                    ${file.status !== 'unmatched_by_user' ? ` <button class="action-btn delete-btn" onclick="window.indexingModule.removeFile('${file.id}')">
                             🗑️ Kaldır
                         </button>
                     ` : ''}
@@ -374,85 +360,80 @@ setupRealtimeListener() {
             case 'pending': return 'Beklemede';
             case 'indexed': return 'İndekslendi';
             case 'removed': return 'Kaldırıldı';
+            case 'unmatched_by_user': return 'Eşleşmeyen'; // Yeni durum metni
             default: return 'Bilinmiyor';
         }
     }
 
-async removeFile(fileId) {
-    try {
-        const fileToRemove = this.uploadedFiles.find(f => f.id === fileId);
-        if (!fileToRemove) {
-            showNotification('Dosya bulunamadı.', 'error');
-            return;
+    async removeFile(fileId) {
+        try {
+            const fileToRemove = this.uploadedFiles.find(f => f.id === fileId);
+            if (!fileToRemove) {
+                showNotification('Dosya bulunamadı.', 'error');
+                return;
+            }
+
+            await updateDoc(doc(collection(firebaseServices.db, UNINDEXED_PDFS_COLLECTION), fileId), {
+                status: 'unmatched_by_user', // Durumu 'unmatched_by_user' olarak ayarla
+                unmatchedAt: serverTimestamp() // Yeni bir zaman damgası ekleyebiliriz
+            });
+
+            showNotification(`'${fileToRemove.fileName}' eşleşmeyen olarak işaretlendi.`, 'info');
+        } catch (error) {
+            console.error("Dosya eşleşmeyen olarak işaretlenirken hata:", error);
+            showNotification("Dosya eşleşmeyen olarak işaretlenirken bir hata oluştu.", "error");
         }
-
-        // Firestore'da durumu 'removed' olarak güncelle
-        // Düzeltildi: doc() ve updateDoc() fonksiyonlarının doğru kullanımı
-        await updateDoc(doc(collection(firebaseServices.db, UNINDEXED_PDFS_COLLECTION), fileId), {
-            status: 'removed',
-            removedAt: deleteField()
-        });
-
-        showNotification(`'${fileToRemove.fileName}' kaldırıldı.`, 'info');
-    } catch (error) {
-        console.error("Dosya kaldırılırken hata:", error);
-        showNotification("Dosya kaldırılırken bir hata oluştu.", "error");
     }
-}
- async restoreFile(fileId) {
-    try {
-        const fileToRestore = this.uploadedFiles.find(f => f.id === fileId);
-        if (!fileToRestore) {
-            showNotification('Dosya bulunamadı.', 'error');
-            return;
+    async restoreFile(fileId) {
+        try {
+            const fileToRestore = this.uploadedFiles.find(f => f.id === fileId);
+            if (!fileToRestore) {
+                showNotification('Dosya bulunamadı.', 'error');
+                return;
+            }
+
+            await updateDoc(doc(collection(firebaseServices.db, UNINDEXED_PDFS_COLLECTION), fileId), {
+                status: 'pending', // Durumu 'pending' olarak geri ayarla
+                unmatchedAt: deleteField() // unmatchedAt alanını kaldır
+            });
+
+            showNotification(`'${fileToRestore.fileName}' tekrar indekslenecek dokümanlara eklendi.`, 'success');
+        } catch (error) {
+            console.error("Dosya geri yüklenirken hata:", error);
+            showNotification("Dosya geri yüklenirken bir hata oluştu.", "error");
         }
-
-        // Firestore'da durumu 'pending' olarak geri al
-        // Düzeltildi: doc() ve updateDoc() fonksiyonlarının doğru kullanımı
-        await updateDoc(doc(collection(firebaseServices.db, UNINDEXED_PDFS_COLLECTION), fileId), {
-            status: 'pending',
-            // FieldValue.delete() removedAt alanını Firestore'dan siler
-            removedAt: FieldValue.delete()
-        });
-
-        showNotification(`'${fileToRestore.fileName}' geri yüklendi.`, 'success');
-    } catch (error) {
-        console.error("Dosya geri yüklenirken hata:", error);
-        showNotification("Dosya geri yüklenirken bir hata oluştu.", "error");
     }
-}
 
 async resetForm() {
-    if (!this.currentUser) return;
-    
-    showNotification('Form sıfırlanıyor...', 'info');
+        if (!this.currentUser) return;
+        
+        showNotification('Form sıfırlanıyor...', 'info');
 
-    try {
-        const q = query(
-            collection(firebaseServices.db, UNINDEXED_PDFS_COLLECTION), // collection çağrısı düzeltildi
-            where('userId', '==', this.currentUser.uid), // where argüman olarak
-            where('status', 'in', ['pending', 'indexed']) // where argüman olarak
-        );
+        try {
+            const q = query(
+                collection(firebaseServices.db, UNINDEXED_PDFS_COLLECTION),
+                where('userId', '==', this.currentUser.uid),
+                where('status', 'in', ['pending', 'indexed']) // Sadece beklemede ve indekslenmiş olanları hedefle
+            );
 
-        const snapshot = await getDocs(q);
-        const batch = firebaseServices.db.batch();
+            const snapshot = await getDocs(q);
+            const batch = firebaseServices.db.batch();
 
-        snapshot.docs.forEach(doc => {
-            // Durumunu 'removed' olarak güncelle
-            batch.update(doc.ref, { 
-                status: 'removed', 
-                removedAt: FieldValue.serverTimestamp()
+            snapshot.docs.forEach(doc => {
+                batch.update(doc.ref, { 
+                    status: 'unmatched_by_user', // Durumu 'unmatched_by_user' olarak ayarla
+                    unmatchedAt: serverTimestamp() // Yeni zaman damgası
+                });
             });
-        });
-        await batch.commit();
+            await batch.commit();
 
-        document.getElementById('bulkFiles').value = '';
-        showNotification('Yükleme alanı temizlendi ve listedeki PDF\'ler "Kaldırılanlar" sekmesine taşındı.', 'info');
-    } catch (error) {
-        console.error("Form sıfırlanırken hata:", error);
-        showNotification("Form sıfırlanırken bir hata oluştu.", "error");
+            document.getElementById('bulkFiles').value = '';
+            showNotification('Yükleme alanı temizlendi ve listedeki PDF\'ler "Eşleşmeyenler" sekmesine taşındı.', 'info'); // Bildirim metni güncellendi
+        } catch (error) {
+            console.error("Form sıfırlanırken hata:", error);
+            showNotification("Form sıfırlanırken bir hata oluştu.", "error");
+        }
     }
-}
 
     showNotification(message, type = 'info', duration = 3000) {
         if (typeof showNotification === 'function') {
