@@ -11,6 +11,8 @@ import {getFirestore, collection, addDoc,
         getDocs, doc, updateDoc, deleteDoc, 
         query, orderBy, where, getDoc, setDoc, arrayUnion, writeBatch, documentId, Timestamp } 
 from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+import { getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js';
+
 // --- Firebase App Initialization ---
 const firebaseConfig = {
   apiKey: "AIzaSyDbdqfiVbobnl1BtyiWxhD4bfIcREw8ZRc",
@@ -793,7 +795,16 @@ export const accrualService = {
         }
     }
 };
-
+// Tüm Firebase servislerini tek bir obje altında toplamak daha düzenli olabilir
+export const firebaseServices = {
+    auth: auth,
+    db: db,
+    storage: storage, // Storage servisini dışa aktar
+    storageRef: ref, // ref fonksiyonunu dışa aktar
+    uploadBytesResumable: uploadBytesResumable, // uploadBytesResumable fonksiyonunu dışa aktar
+    getDownloadURL: getDownloadURL, // getDownloadURL fonksiyonunu dışa aktar
+    deleteObject: deleteObject // deleteObject fonksiyonunu dışa aktar
+};
 // --- Demo Data Function ---
 export async function createDemoData() {
     console.log('🧪 Demo verisi oluşturuluyor...');
