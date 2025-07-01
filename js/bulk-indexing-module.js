@@ -354,13 +354,13 @@ setupRealtimeListener() {
                             ✅ İndekslendi
                         </button>
                     ` : file.status === 'removed' ? `
-                        <button class="action-btn info-btn" onclick="indexingModule.restoreFile('${file.id}')">
+                        <button class="action-btn info-btn" onclick="window.indexingModule.restoreFile('${file.id}')">
                             ↩️ Geri Yükle
                         </button>
                     ` : ''}
                     
                     ${file.status !== 'removed' ? `
-                        <button class="action-btn delete-btn" onclick="indexingModule.removeFile('${file.id}')">
+                        <button class="action-btn delete-btn" onclick="window.indexingModule.restoreFile('${file.id}'))">
                             🗑️ Kaldır
                         </button>
                     ` : ''}
