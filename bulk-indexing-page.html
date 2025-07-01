@@ -271,34 +271,17 @@
                                 </div>
 
                                 <div class="form-section" id="fileListSection">
-                                    <h2 class="section-title"><span>1.2</span> Yüklenen PDF Dosyaları</h2>
-                                    
+                                    <h2 class="section-title"><span>1.2</span> Yüklenen PDF Dosyaları</h2>                             
                                     <div class="tabs-container">
-                                        <button type="button" class="tab-btn active" data-tab="all-files-pane">
-                                            Tümü
-                                            <span class="tab-badge" id="allCount">0</span>
-                                        </button>
-                                        <button type="button" class="tab-btn" data-tab="matched-files-pane">
-                                            Eşleşenler
-                                            <span class="tab-badge success" id="matchedCount">0</span>
-                                        </button>
-                                        <button type="button" class="tab-btn" data-tab="unmatched-files-pane">
-                                            Eşleşmeyenler
-                                            <span class="tab-badge" id="unmatchedCount">0</span>
-                                        </button>
+                                        <button class="tab-btn active" data-tab="all-files-pane">İndekslenecek Dokümanlar <span class="badge" id="allCount">0</span></button>
+                                        <button class="tab-btn" data-tab="removed-files-pane">Eşleşmeyenler <span class="badge" id="removedCount">0</span></button>
                                     </div>
-
                                     <div class="tab-content-container">
                                         <div id="all-files-pane" class="tab-pane active">
-                                            <div id="allFilesList"></div>
+                                        <div id="allFilesList" class="pdf-list"></div>
                                         </div>
-                                        
-                                        <div id="matched-files-pane" class="tab-pane">
-                                            <div id="matchedFilesList"></div>
-                                        </div>
-                                        
-                                        <div id="unmatched-files-pane" class="tab-pane">
-                                            <div id="unmatchedFilesList"></div>
+                                        <div id="removed-files-pane" class="tab-pane">
+                                        <div id="removedFilesList" class="pdf-list"></div>
                                         </div>
                                     </div>
                                 </div>
