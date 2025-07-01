@@ -906,5 +906,5 @@ export async function createDemoData() {
 
 // --- Exports ---
 export {auth, db, FieldValue}; // FieldValue'ı da dışa aktar
-export { authService, ipRecordsService, personService, taskService, transactionTypeService, bulkIndexingService, generateUUID, getNextTaskId, accrualService };
+export { authService, ipRecordsService, personService, taskService, transactionTypeService, bulkIndexingService, generateUUID, getNextTaskId };
 export { firebaseServices }; // Tüm Firebase servislerini içeren obje
