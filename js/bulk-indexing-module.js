@@ -11,7 +11,7 @@ import {
 } from '../firebase-config.js';
 
 // Firestore'dan doğrudan gereken fonksiyonları import et
-import { collection, query, where, orderBy, doc, updateDoc, getDocs, onSnapshot, FieldValue } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js'; // collection ve diğerleri buraya eklendi
+import { collection, query, where, orderBy, doc, updateDoc, getDocs, onSnapshot, serverTimestamp, deleteField } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 
 // utils.js'den yardımcı fonksiyonları import et
 import {
@@ -177,7 +177,7 @@ export class BulkIndexingModule {
                         matchedRecordId: matchedRecord ? matchedRecord.id : null,
                         matchedRecordDisplay: matchedRecordDisplay,
                         status: 'pending', // 'pending', 'indexed', 'removed'
-                        uploadedAt: FieldValue.serverTimestamp(), // Firestore'un kendi zaman damgası
+                        uploadedAt: serverTimestamp(), // Firestore'un kendi zaman damgası
                         userId: this.currentUser.uid,
                         userEmail: this.currentUser.email
                     };
@@ -399,7 +399,7 @@ async removeFile(fileId) {
         // Düzeltildi: doc() ve updateDoc() fonksiyonlarının doğru kullanımı
         await updateDoc(doc(collection(firebaseServices.db, UNINDEXED_PDFS_COLLECTION), fileId), {
             status: 'removed',
-            removedAt: FieldValue.serverTimestamp()
+            removedAt: deleteField()
         });
 
         showNotification(`'${fileToRemove.fileName}' kaldırıldı.`, 'info');
