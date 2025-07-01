@@ -11,7 +11,7 @@ import {
 } from '../firebase-config.js';
 
 // Firestore'dan doğrudan gereken fonksiyonları import et
-import { collection, query, where, orderBy, doc, updateDoc, getDocs, onSnapshot, serverTimestamp, deleteField } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+import { collection, query, where, orderBy, doc, updateDoc, getDocs, setDoc, onSnapshot, serverTimestamp, deleteField } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 
 // utils.js'den yardımcı fonksiyonları import et
 import {
