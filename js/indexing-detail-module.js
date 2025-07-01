@@ -254,15 +254,47 @@ export class IndexingDetailModule {
         console.log('indexFile array:', indexFile);
         console.log('Tüm transaction types:', this.allTransactionTypes);
 
-        // indexFile array'inde bulunan ID'lere sahip child transaction'ları filtrele
-        const childTypes = this.allTransactionTypes.filter(type => 
-            type.transactionHierarchy === 'child' && 
-            indexFile && 
-            Array.isArray(indexFile) && 
-            indexFile.includes(type.id)
-        );
+        // DEBUGGING: İlk birkaç transaction'ın yapısını kontrol et
+        console.log('İlk 5 transaction yapısı:', this.allTransactionTypes.slice(0, 5).map(t => ({
+            id: t.id,
+            hierarchy: t.hierarchy,
+            transactionHierarchy: t.transactionHierarchy,
+            name: t.name,
+            alias: t.alias
+        })));
 
-        console.log('Bulunan child types:', childTypes);
+        // DEBUGGING: Child hierarchy'e sahip tüm transaction'ları bul
+        const allChildTypes = this.allTransactionTypes.filter(type => 
+            type.hierarchy === 'child' || type.transactionHierarchy === 'child'
+        );
+        console.log('Tüm child types:', allChildTypes.map(t => ({
+            id: t.id,
+            name: t.name,
+            hierarchy: t.hierarchy || t.transactionHierarchy
+        })));
+
+        // DEBUGGING: indexFile'daki ID'lerle eşleşen transaction'ları bul
+        const matchingIds = this.allTransactionTypes.filter(type => 
+            indexFile.includes(type.id) || indexFile.includes(String(type.id)) || indexFile.includes(Number(type.id))
+        );
+        console.log('indexFile ile eşleşen ID\'ler:', matchingIds.map(t => ({
+            id: t.id,
+            name: t.name,
+            hierarchy: t.hierarchy || t.transactionHierarchy
+        })));
+
+        // Hem hierarchy kontrolü hem ID eşleşmesi
+        const childTypes = this.allTransactionTypes.filter(type => {
+            const isChild = type.hierarchy === 'child' || type.transactionHierarchy === 'child';
+            const isInIndexFile = indexFile && Array.isArray(indexFile) && 
+                (indexFile.includes(type.id) || indexFile.includes(String(type.id)) || indexFile.includes(Number(type.id)));
+            
+            console.log(`Transaction ${type.id} (${type.name}): isChild=${isChild}, isInIndexFile=${isInIndexFile}`);
+            
+            return isChild && isInIndexFile;
+        });
+
+        console.log('Final bulunan child types:', childTypes);
 
         if (childTypes.length === 0) {
             const noOption = document.createElement('option');
