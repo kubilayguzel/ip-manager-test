@@ -28,56 +28,158 @@
         .tab-pane { display: none; }
         .tab-pane.active { display: block; }
 
+        /* Arama bileşeni stilleri */
+        .search-wrapper { 
+            position: relative; 
+        }
+
+        .search-results-container {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            width: 100%;
+            max-height: 250px;
+            overflow-y: auto;
+            border: 1px solid #e1e8ed;
+            border-top: none;
+            border-radius: 0 0 8px 8px;
+            background-color: white;
+            z-index: 100;
+            display: none;
+        }
+
+        .record-search-item { 
+            display: flex; 
+            align-items: center; 
+            padding: 10px 15px; 
+            border-bottom: 1px dashed #e1e8ed; 
+            cursor: pointer; 
+        }
+
+        .record-search-item:hover { 
+            background-color: #f0f4f8; 
+        }
+
+        .record-search-item:last-child { 
+            border-bottom: none; 
+        }
+
+        .record-search-item.selected { 
+            background-color: #e6f2ff; 
+        }
+
         /* File upload wrapper */
         .file-upload-wrapper {
             position: relative;
-            overflow: hidden;
-            display: inline-block;
-            width: 100%;
+            border: 2px dashed #e1e8ed;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            transition: border-color 0.3s ease;
             cursor: pointer;
         }
 
-        .file-upload-wrapper input[type=file] {
+        .file-upload-wrapper:hover {
+            border-color: #1e3c72;
+        }
+
+        .file-upload-wrapper input[type="file"] {
             position: absolute;
-            left: 0;
-            top: 0;
             opacity: 0;
-            cursor: pointer;
             width: 100%;
             height: 100%;
+            cursor: pointer;
         }
 
         .file-upload-button {
-            display: block;
-            width: 100%;
-            padding: 12px 15px;
-            border: 2px solid #e1e8ed;
-            border-radius: 10px;
-            font-size: 1em;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f0f4f8;
-            color: #333;
-            text-align: left;
+            color: #1e3c72;
+            font-weight: 500;
             cursor: pointer;
-            transition: all 0.2s ease;
-        }
-
-        .file-upload-button:hover {
-            background-color: #e6f2ff;
-            border-color: #a3d4ff;
-        }
-
-        .file-upload-button.dragover {
-            background-color: #e0e7ff;
-            border-color: #667eea;
-            transform: scale(1.02);
+            padding: 10px;
         }
 
         .file-upload-info {
+            margin-top: 10px;
             font-size: 0.9em;
-            color: #777;
-            margin-top: 5px;
-            padding-left: 5px;
+            color: #666;
+        }
+
+        /* Dosya listesi stilleri */
+        .file-list { 
+            margin-top: 15px; 
+        }
+
+        .file-item { 
+            display: flex; 
+            flex-direction: column; 
+            padding: 10px; 
+            background: #f8f9fa; 
+            border-radius: 8px; 
+            margin-bottom: 10px; 
+        }
+
+        .file-item-controls { 
+            display: flex; 
+            align-items: flex-start; 
+            gap: 10px; 
+            flex-wrap: wrap; 
+            width: 100%; 
+            margin-top: 5px; 
+        }
+
+        .file-item-select { 
+            flex-grow: 1; 
+            min-width: 150px; 
+            padding: 5px 8px; 
+            border: 1px solid #ccc; 
+            border-radius: 5px; 
+            font-size: 0.85em; 
+        }
+
+        .remove-file { 
+            background: #ff6b6b; 
+            color: white; 
+            border: none; 
+            border-radius: 50%; 
+            width: 25px; 
+            height: 25px; 
+            cursor: pointer; 
+            flex-shrink: 0; 
+            align-self: center; 
+        }
+
+        /* İşlem listesi stilleri */
+        .transaction-list-container { 
+            max-height: 200px; 
+            overflow-y: auto; 
+            border: 1px solid #e1e8ed; 
+            border-radius: 8px; 
+            padding: 5px; 
+        }
+
+        .transaction-list-item { 
+            padding: 10px; 
+            cursor: pointer; 
+            border-radius: 6px; 
+        }
+
+        .transaction-list-item:hover { 
+            background-color: #f0f4f8; 
+        }
+
+        .transaction-list-item.selected { 
+            background-color: #e6f2ff; 
+            color: #1e3c72; 
+            font-weight: bold; 
+        }
+
+        /* Alt işlem giriş alanları */
+        .child-transaction-inputs {
+            margin-top: 15px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #1e3c72;
         }
 
         /* PDF liste stilleri */
@@ -158,9 +260,9 @@
             font-weight: 500;
             color: white;
         }
-        .file-status .status-pending { background-color: #ffc107; color: #343a40; } /* Yellow for pending */
-        .file-status .status-indexed { background-color: #28a745; } /* Green for indexed */
-        .file-status .status-removed { background-color: #6c757d; } /* Gray for removed */
+        .file-status .status-pending { background-color: #ffc107; color: #343a40; }
+        .file-status .status-indexed { background-color: #28a745; }
+        .file-status .status-removed { background-color: #6c757d; }
 
         /* Empty state */
         .empty-message {
@@ -199,6 +301,20 @@
             background: #28a745;
         }
 
+        /* Genel yardımcı sınıflar */
+        .text-muted { 
+            color: #6c757d; 
+        }
+
+        .p-2 { 
+            padding: 0.5rem; 
+        }
+
+        .no-results-message {
+            font-style: italic;
+            color: #666;
+        }
+
         @media (max-width: 768px) {
             .pdf-list-item {
                 flex-direction: column;
@@ -229,24 +345,123 @@
                         <h2 class="section-title"><span>1.</span>Belgeleri Yükleyin ve İndeksleyin</h2> 
                         
                         <div class="tabs-container">
-                            <button type="button" class="tab-btn" data-tab="existing-transaction-pane">İşleme Dosya Ekle</button>
+                            <button type="button" class="tab-btn active" data-tab="existing-transaction-pane">İşleme Dosya Ekle</button>
                             <button type="button" class="tab-btn" data-tab="manual-indexing-pane">Manuel İşlem Oluştur</button>
-                            <button type="button" class="tab-btn active" data-tab="bulk-indexing-pane">
-                                PDF Yükleme ve Listeleme
+                            <button type="button" class="tab-btn" data-tab="bulk-indexing-pane">
+                                Toplu İndeksleme
                                 <span class="tab-badge" id="totalBadge">0</span>
                             </button>
                         </div>
                         
                         <div class="tab-content-container">
-                            <div id="existing-transaction-pane" class="tab-pane">
-                                <p class="text-muted">İşleme Dosya Ekle sekmesi (Bu bölüm mevcut indexing.html içeriğinizden buraya taşınabilir)</p>
+                            <!-- İşleme Dosya Ekle Tab -->
+                            <div id="existing-transaction-pane" class="tab-pane active">
+                                <div class="form-section record-search-section">
+                                    <h2 class="section-title"><span>1.1</span>Kayıt Seçin</h2>
+                                    <div class="form-group search-wrapper">
+                                        <label class="form-label" for="recordSearchInputExisting">Başvuru Numarası veya Başlık ile Ara</label>
+                                        <input type="text" id="recordSearchInputExisting" class="form-input" placeholder="Örn: TR2024/123, Proje X..." autocomplete="off">
+                                        <div class="search-results-container" id="searchResultsContainerExisting">
+                                            <p class="no-results-message p-2">Arama yapmak için yukarıya yazın.</p>
+                                        </div>
+                                    </div>
+                                    <div class="form-group" style="margin-top: 20px;">
+                                        <label class="form-label">Seçili Kayıt:</label>
+                                        <input type="text" id="selectedRecordDisplayExisting" class="form-input" readonly placeholder="Henüz kayıt seçilmedi.">
+                                    </div>
+                                </div>
+
+                                <div class="form-section transactions-selection-section">
+                                    <h2 class="section-title"><span>1.2</span>Ana İşlem Seçin</h2>
+                                    <div class="transaction-list-container" id="transactions-list-for-selection">
+                                        <p class="text-muted p-2">Önce bir kayıt seçiniz.</p>
+                                    </div>
+                                </div>
+
+                                <div class="form-section child-transaction-inputs" id="existingChildTransactionInputs" style="display: none;">
+                                    <h2 class="section-title"><span>1.3</span>Alt İşlem Detayları</h2>
+                                    
+                                    <div class="form-group">
+                                        <label class="form-label" for="specificChildTransactionType">Alt İşlem Türü <span style="color: red;">*</span></label>
+                                        <select id="specificChildTransactionType" class="form-select">
+                                            <option value="" disabled selected>Alt işlem türü seçin...</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label class="form-label" for="existingChildTransactionDeliveryDate">Tebliğ Tarihi</label>
+                                        <input type="date" id="existingChildTransactionDeliveryDate" class="form-input">
+                                    </div>
+                                </div>
+
+                                <div class="form-section file-upload-section">
+                                    <h2 class="section-title"><span>1.4</span>Dosya Seçin</h2>
+                                    <div class="form-group">
+                                        <label class="form-label" for="filesExisting">Dosyalar <span style="color: red;">*</span></label>
+                                        <div class="file-upload-wrapper">
+                                            <input type="file" id="filesExisting" multiple accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png">
+                                            <div class="file-upload-button" id="filesExistingButton">Dosya Seç</div>
+                                        </div>
+                                        <div class="file-upload-info" id="filesExistingInfo">Henüz dosya seçilmedi.</div>
+                                    </div>
+                                    <div class="file-list" id="fileListExisting"></div>
+                                </div>
                             </div>
 
+                            <!-- Manuel İşlem Oluştur Tab -->
                             <div id="manual-indexing-pane" class="tab-pane">
-                                <p class="text-muted">Manuel İşlem Oluştur sekmesi (Bu bölüm mevcut indexing.html içeriğinizden buraya taşınabilir)</p>
+                                <div class="form-section record-search-section">
+                                    <h2 class="section-title"><span>1.1</span>Kayıt Seçin</h2>
+                                    <div class="form-group search-wrapper">
+                                        <label class="form-label" for="recordSearchInputManual">Başvuru Numarası veya Başlık ile Ara</label>
+                                        <input type="text" id="recordSearchInputManual" class="form-input" placeholder="Örn: TR2024/123, Proje X..." autocomplete="off">
+                                        <div class="search-results-container" id="searchResultsContainerManual">
+                                            <p class="no-results-message p-2">Arama yapmak için yukarıya yazın.</p>
+                                        </div>
+                                    </div>
+                                    <div class="form-group" style="margin-top: 20px;">
+                                        <label class="form-label">Seçili Kayıt:</label>
+                                        <input type="text" id="selectedRecordDisplayManual" class="form-input" readonly placeholder="Henüz kayıt seçilmedi.">
+                                    </div>
+                                </div>
+
+                                <div class="form-section manual-transaction-section">
+                                    <h2 class="section-title"><span>1.2</span>Yeni İşlem Detayları</h2>
+                                    
+                                    <div class="form-group">
+                                        <label class="form-label" for="specificManualTransactionType">İşlem Türü <span style="color: red;">*</span></label>
+                                        <select id="specificManualTransactionType" class="form-select">
+                                            <option value="" disabled selected>İşlem türü seçin...</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label class="form-label" for="manualTransactionDeliveryDate">Tebliğ Tarihi</label>
+                                        <input type="date" id="manualTransactionDeliveryDate" class="form-input">
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label class="form-label" for="manualTransactionNotes">Notlar</label>
+                                        <textarea id="manualTransactionNotes" class="form-input" rows="3" placeholder="İşlemle ilgili notlarınızı buraya yazabilirsiniz..."></textarea>
+                                    </div>
+                                </div>
+
+                                <div class="form-section file-upload-section">
+                                    <h2 class="section-title"><span>1.3</span>Dosya Seçin</h2>
+                                    <div class="form-group">
+                                        <label class="form-label" for="filesManual">Dosyalar <span style="color: red;">*</span></label>
+                                        <div class="file-upload-wrapper">
+                                            <input type="file" id="filesManual" multiple accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png">
+                                            <div class="file-upload-button" id="filesManualButton">Dosya Seç</div>
+                                        </div>
+                                        <div class="file-upload-info" id="filesManualInfo">Henüz dosya seçilmedi.</div>
+                                    </div>
+                                    <div class="file-list" id="fileListManual"></div>
+                                </div>
                             </div>
 
-                            <div id="bulk-indexing-pane" class="tab-pane active">
+                            <!-- Toplu İndeksleme Tab -->
+                            <div id="bulk-indexing-pane" class="tab-pane">
                                 <div class="form-section">
                                     <h2 class="section-title"><span>1.1</span> PDF Dosyalarını Yükleyin</h2>
                                     
@@ -286,22 +501,23 @@
                             </div>
                         </div>
 
-                        <div class="form-actions" id="bulkFormActions">
-                            <button type="button" class="btn action-btn edit-btn" id="resetBulkFormBtn">
-                                🔄 Formu Sıfırla
-                            </button>
                         </div>
-                    </form>
-                </div>
-            </main>
-        </div>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-secondary" id="resetIndexingFormBtn">Temizle</button>
+                        <button type="submit" class="btn btn-primary" id="indexDocumentsBtn" disabled>Değişiklikleri Kaydet</button>
+                    </div>
+                </form>
+            </div>
+        </main>
+    </div>
     <script type="module">
         import { BulkIndexingModule } from './js/bulk-indexing-module.js';
-        import { loadSharedLayout } from './js/layout-loader.js'; // layout-loader'ı da import etmeyi unutmayın
+        import { loadSharedLayout } from './js/layout-loader.js';
 
         document.addEventListener('DOMContentLoaded', () => {
-            window.indexingModule = new BulkIndexingModule(); // 'indexing' yerine 'window.indexingModule' kullanıldı
-            // Layout'u da yükleyelim
+            window.indexingModule = new BulkIndexingModule();
             loadSharedLayout({ activeMenuLink: 'bulk-indexing-page.html' }); 
         });
     </script>
