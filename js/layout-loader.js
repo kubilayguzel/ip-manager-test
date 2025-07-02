@@ -57,7 +57,8 @@ const menuItems = [
     },
     { id: 'accruals', text: 'Tahakkuklarım', link: 'accruals.html', icon: 'fas fa-file-invoice-dollar', category: 'Finans' },
     
-    { id: 'indexing', text: 'Belge İndeksleme', link: 'indexing.html', icon: 'fas fa-folder-open', category: 'Araçlar' },
+    // GÜNCELLENMIŞ: indexing.html → bulk-indexing-page.html
+    { id: 'indexing', text: 'Belge İndeksleme', link: 'bulk-indexing-page.html', icon: 'fas fa-folder-open', category: 'Araçlar' },
     { id: 'reports', text: 'Raporlar', link: '#', icon: 'fas fa-chart-line', category: 'Araçlar', disabled: true },
     { id: 'settings', text: 'Ayarlar', link: '#', icon: 'fas fa-cog', category: 'Araçlar', disabled: true }
 ];
@@ -192,46 +193,57 @@ function renderMenu(container, userRole) { // currentPage parametresi kaldırıl
 function setupMenuInteractions(currentPage) {
     // 1. Accordion başlıklarına tıklama olay dinleyicilerini ekle
     // Bu kısım, accordionların tıklama ile açılıp kapanmasını sağlar.
-    const accordions = document.querySelectorAll('.accordion-header');
-    accordions.forEach(accordion => {
-        accordion.addEventListener('click', function(event) {
-            this.classList.toggle('active');
-            const content = this.nextElementSibling;
-            if (content.style.maxHeight) {
-                content.style.maxHeight = null;
-            } else {
-                content.style.maxHeight = content.scrollHeight + "px";
+    document.querySelectorAll('.accordion-header').forEach(header => {
+        header.addEventListener('click', () => {
+            const content = header.nextElementSibling;
+            const isActive = header.classList.contains('active');
+
+            // Tüm accordion'ları kapat
+            document.querySelectorAll('.accordion-header').forEach(h => h.classList.remove('active'));
+            document.querySelectorAll('.accordion-content').forEach(c => c.style.maxHeight = '0');
+
+            // Eğer tıklanan accordion kapalıydı, aç
+            if (!isActive) {
+                header.classList.add('active');
+                content.style.maxHeight = content.scrollHeight + 'px';
             }
         });
     });
 
-    // 2. Önce tüm mevcut aktif sınıfları kaldır ve akordiyonları kapat
-    // Bu adım, her sayfa yüklendiğinde menünün temiz bir durumda olmasını sağlar.
-    document.querySelectorAll('.sidebar-nav-item, .accordion-content a, .accordion-header').forEach(el => {
-        el.classList.remove('active');
-        // Akordiyon içeriğini de kapat
-        if (el.classList.contains('accordion-header')) {
-            const content = el.nextElementSibling;
-            if (content && content.classList.contains('accordion-content')) {
-                content.style.maxHeight = null;
+    // 2. Aktif sayfanın menüsünü vurgula
+    highlightActiveMenu(currentPage);
+}
+
+function highlightActiveMenu(currentPage) {
+    // Tüm aktif sınıfları temizle
+    document.querySelectorAll('.sidebar-nav-item, .accordion-content a').forEach(link => {
+        link.classList.remove('active');
+    });
+
+    // Aktif linki bul
+    let activeLink = null;
+    let parentAccordion = null;
+
+    document.querySelectorAll('.sidebar-nav-item, .accordion-content a').forEach(link => {
+        const href = link.getAttribute('href');
+        if (href && href === currentPage) {
+            link.classList.add('active');
+            activeLink = link;
+            
+            // Eğer accordion içindeyse, parent accordion'ı bul
+            const accordion = link.closest('.accordion');
+            if (accordion) {
+                parentAccordion = accordion;
             }
         }
     });
 
-    // 3. Sayfa yüklendiğinde doğru aktif menüyü ayarla ve ilgili akordiyonu aç
-    // Bu adım, mevcut sayfayı ve ilgili ana akordiyonu aktif olarak işaretler.
-    document.querySelectorAll('.sidebar-nav-item, .accordion-content a').forEach(link => {
-        if (link.getAttribute('href') === currentPage) {
-            link.classList.add('active');
-            // Eğer link bir akordiyon içeriğindeyse, akordiyonu aç
-            const parentAccordionContent = link.closest('.accordion-content');
-            if (parentAccordionContent) {
-                const parentAccordionHeader = parentAccordionContent.previousElementSibling;
-                if (parentAccordionHeader && parentAccordionHeader.classList.contains('accordion-header')) {
-                    parentAccordionHeader.classList.add('active');
-                    parentAccordionContent.style.maxHeight = parentAccordionContent.scrollHeight + "px";
-                }
-            }
-        }
-    });
+    // Eğer aktif link accordion içindeyse, accordion'ı aç
+    if (parentAccordion) {
+        const accordionHeader = parentAccordion.querySelector('.accordion-header');
+        const accordionContent = parentAccordion.querySelector('.accordion-content');
+        
+        accordionHeader.classList.add('active');
+        accordionContent.style.maxHeight = accordionContent.scrollHeight + 'px';
+    }
 }
