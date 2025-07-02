@@ -72,8 +72,8 @@ export class BulkIndexingModule {
     async loadAllData() {
         try {
             const [recordsResult, transactionTypesResult] = await Promise.all([
-                ipRecordsService.getAllRecords(),
-                transactionTypeService.getAllTransactionTypes()
+                ipRecordsService.getRecords(),
+                transactionTypeService.getTransactionTypes()
             ]);
 
             if (recordsResult.success) {
