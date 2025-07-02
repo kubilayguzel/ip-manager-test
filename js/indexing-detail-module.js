@@ -349,7 +349,7 @@ export class IndexingDetailModule {
                         // Task tetikleme
                         const taskType = this.mapTransactionToTask(childTransactionType, this.matchedRecord.type);
                         if (taskType) {
-                            await this.createTaskForTransaction(transactionIdToAssociateFiles, taskType);
+                            await this.createTaskForTransaction(transactionIdToAssociateFiles, taskType, childTransactionType);
                         }
                     } else {
                         console.error('Child transaction başarısız:', childResult);
@@ -426,16 +426,22 @@ export class IndexingDetailModule {
     }
 
     mapTransactionToTask(selectedChildTransactionType, recordType) {
-        console.log('mapTransactionToTask çağırıldı:', {
-            childTransactionType: selectedChildTransactionType,
-            taskTriggered: selectedChildTransactionType?.taskTriggered,
+        const taskTriggered = selectedChildTransactionType?.taskTriggered;
+        console.log('Task tetikleniyor:', {
+            childTransactionName: selectedChildTransactionType?.name,
+            taskTriggered: taskTriggered,
             recordType
         });
-        return selectedChildTransactionType?.taskTriggered || null;
+        return taskTriggered || null;
     }
 
-    async createTaskForTransaction(transactionId, taskType) {
-        console.log('createTaskForTransaction çağırıldı:', { transactionId, taskType });
+    async createTaskForTransaction(transactionId, taskType, childTransactionType = null) {
+        console.log('createTaskForTransaction çağırıldı:', { 
+            transactionId, 
+            taskType, 
+            childTransactionType: childTransactionType?.name,
+            childTransactionId: childTransactionType?.id
+        });
         
         if (!taskType) {
             console.log('Task type boş, task oluşturulmayacak');
@@ -498,7 +504,7 @@ export class IndexingDetailModule {
             const newTaskData = {
                 taskType: taskType,
                 title: `[OTOMATİK GÖREV] ${targetTaskDefinition.taskDisplayName || targetTaskDefinition.alias || targetTaskDefinition.name} - ${this.matchedRecord.title} (${this.matchedRecord.applicationNumber})`,
-                description: `${this.matchedRecord.title} (${this.matchedRecord.applicationNumber}) kaydının ${targetTaskDefinition.alias || targetTaskDefinition.name} işlemi sonrasında otomatik oluşturulan görev.`,
+                description: `${this.matchedRecord.title} (${this.matchedRecord.applicationNumber}) kaydının ${childTransactionType?.alias || childTransactionType?.name || 'işlem'} sonrasında otomatik oluşturulan görev.`,
                 priority: 'medium',
                 assignedTo_uid: defaultAssignedToUid,
                 assignedTo_email: defaultAssignedToEmail,
@@ -506,8 +512,8 @@ export class IndexingDetailModule {
                 status: 'awaiting_client_approval',
                 relatedIpRecordId: this.matchedRecord.id,
                 relatedIpRecordTitle: this.matchedRecord.title,
-                triggeringTransactionId: transactionId,
-                triggeringTransactionType: taskType,
+                triggeringTransactionId: transactionId,                          // Child transaction ID'si
+                triggeringTransactionType: childTransactionType?.id || null,     // Child transaction TYPE ID'si (DÜZELTME!)
                 details: {
                     relatedParty: this.matchedRecord.details?.relatedParty || null
                 }
@@ -524,7 +530,12 @@ export class IndexingDetailModule {
                 newTaskData.deliveryDate = deliveryDateStr;
             }
 
-            console.log('Oluşturulacak task data:', newTaskData);
+            console.log('Oluşturulacak task data:', {
+                ...newTaskData,
+                triggeringTransactionId: newTaskData.triggeringTransactionId,
+                triggeringTransactionType: newTaskData.triggeringTransactionType,
+                childTransactionName: childTransactionType?.name
+            });
 
             // Task'ı oluştur
             const taskCreationResult = await taskService.createTask(newTaskData);
