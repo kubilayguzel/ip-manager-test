@@ -2,6 +2,14 @@
 
 import { 
     firebaseServices, 
+    authService, 
+    ipRecordsService, 
+    transactionTypeService,
+    generateUUID 
+} from '../firebase-config.js';
+
+// Firestore fonksiyonlarını doğrudan Firebase'den import et
+import { 
     collection, 
     addDoc, 
     updateDoc, 
@@ -12,11 +20,9 @@ import {
     orderBy, 
     onSnapshot, 
     deleteField,
-    authService, 
-    ipRecordsService, 
-    transactionTypeService,
-    generateUUID 
-} from '../firebase-config.js';
+    getDocs,
+    setDoc
+} from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 
 import { showNotification, formatFileSize } from '../utils.js';
 
