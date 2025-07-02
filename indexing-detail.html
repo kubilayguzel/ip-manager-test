@@ -207,6 +207,91 @@
         .p-2 {
             padding: 0.5rem !important;
         }
+        /* Arama stilleri */
+        .search-container {
+            position: relative;
+        }
+
+        .search-results {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            max-height: 300px;
+            overflow-y: auto;
+            z-index: 1000;
+        }
+
+        .search-result-item {
+            padding: 12px 15px;
+            cursor: pointer;
+            border-bottom: 1px solid #eee;
+        }
+
+        .search-result-item:hover {
+            background: #f5f5f5;
+        }
+
+        .search-result-item:last-child {
+            border-bottom: none;
+        }
+
+        .search-result-title {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 4px;
+        }
+
+        .search-result-details {
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        /* İşlem seçimi stilleri */
+        .transactions-list .transaction-item {
+            padding: 15px;
+            border: 2px solid #e1e8ed;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .transactions-list .transaction-item:hover {
+            border-color: #007bff;
+            background: #f8f9ff;
+        }
+
+        .transactions-list .transaction-item.selected {
+            border-color: #007bff;
+            background: #e3f2fd;
+        }
+
+        .transaction-main {
+            font-weight: 500;
+        }
+
+        .transaction-date {
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        /* Kartlar */
+        .matched-record-card, .selected-record-card {
+            margin-bottom: 15px;
+        }
+
+        .btn-sm {
+            padding: 8px 15px;
+            font-size: 0.9em;
+        }
 
         /* Responsive */
         @media (max-width: 1200px) {
@@ -284,17 +369,42 @@
                         </div>
                     </div>
 
-                    <form id="indexingForm">
-                        <!-- Adım 1: Ana İşlem Seçimi -->
-                        <div class="step-title">
-                            <span class="step-number">1</span>
-                            Ana İşlem Seçin
-                        </div>
-                        <div id="transactionsList" class="transaction-list-container">
-                            <p class="text-muted p-2">Eşleşen kayıt kontrol ediliyor...</p>
+<form id="indexingForm">
+                        <!-- PDF Görüntüleme -->
+                        <div class="form-group">
+                            <label class="form-label">Yüklenen PDF</label>
+                            <div id="pdfViewer" style="border: 2px solid #e1e8ed; border-radius: 10px; padding: 20px; text-align: center; background: #f8f9fa;">
+                                <p>PDF yükleniyor...</p>
+                            </div>
                         </div>
 
-                        <!-- Adım 2: Alt İşlem Seçimi -->
+                        <!-- Eşleşen Kayıt veya Manuel Arama -->
+                        <div id="recordSection" class="form-group">
+                            <label class="form-label">İP Kaydı</label>
+                            <div id="matchedRecordDisplay" style="display: none;">
+                                <!-- Otomatik eşleşen kayıt buraya gelecek -->
+                            </div>
+                            <div id="manualRecordSearch" style="display: none;">
+                                <div class="search-container">
+                                    <input type="text" id="recordSearchInput" class="form-input" 
+                                           placeholder="Portföy kayıtlarında ara (uygulama no, başlık, vb.)...">
+                                    <div id="searchResultsContainer" class="search-results" style="display: none;"></div>
+                                </div>
+                                <div id="selectedRecordDisplay" style="margin-top: 15px; display: none;">
+                                    <!-- Seçilen kayıt buraya gelecek -->
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- İşlem Seçimi -->
+                        <div id="transactionSection" class="form-group" style="display: none;">
+                            <label class="form-label">Ana İşlem Seçimi</label>
+                            <div id="transactionsList" class="transactions-list">
+                                <p class="text-muted">Lütfen önce bir kayıt seçin.</p>
+                            </div>
+                        </div>
+
+                        <!-- Alt İşlem Detayları -->
                         <div id="childTransactionInputs" class="child-transaction-inputs" style="display: none;">
                             <div class="step-title">
                                 <span class="step-number">2</span>
