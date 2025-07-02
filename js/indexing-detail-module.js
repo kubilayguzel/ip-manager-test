@@ -66,7 +66,7 @@ export class IndexingDetailModule {
         await this.loadRecordsAndTransactionTypes();
         this.displayPdf();
         this.findMatchingRecord();
-        this.loadTransactionsForRecord();
+        // this.loadTransactionsForRecord(); // Bu satırı kaldırın
     }
 
     async loadPdfData(pdfId) {
@@ -109,7 +109,7 @@ export class IndexingDetailModule {
         }
     }
 
-    displayPdf() {
+displayPdf() {
         const pdfViewer = document.getElementById('pdfViewer');
         if (!this.pdfData || !this.pdfData.fileUrl) {
             pdfViewer.innerHTML = '<p style="color: red;">PDF dosyası bulunamadı.</p>';
@@ -124,12 +124,24 @@ export class IndexingDetailModule {
                     <p><strong>Çıkarılan Uygulama No:</strong> ${this.pdfData.extractedAppNumber || 'Bulunamadı'}</p>
                 </div>
                 <div>
-                    <button type="button" class="btn btn-primary" onclick="window.open('${this.pdfData.fileUrl}', '_blank')">
+                    <button type="button" class="btn btn-primary" onclick="window.open('${this.pdfData.fileUrl}', '_blank')" style="margin-right: 10px;">
                         👁️ PDF'yi Görüntüle
+                    </button>
+                    <button type="button" class="btn btn-secondary" onclick="window.indexingDetailModule.downloadPdf()">
+                        📥 İndir
                     </button>
                 </div>
             </div>
         `;
+    }
+
+    downloadPdf() {
+        if (!this.pdfData || !this.pdfData.fileUrl) return;
+        
+        const a = document.createElement('a');
+        a.href = this.pdfData.fileUrl;
+        a.download = this.pdfData.fileName;
+        a.click();
     }
 
     findMatchingRecord() {
@@ -276,7 +288,7 @@ export class IndexingDetailModule {
         this.checkFormCompleteness();
     }
     
-    loadTransactionsForRecord() {
+loadTransactionsForRecord() {
         if (!this.matchedRecord) return;
         
         const transactionSection = document.getElementById('transactionSection');
@@ -307,7 +319,7 @@ export class IndexingDetailModule {
         transactionsList.innerHTML = transactionsHtml;
     }
 
-   selectTransaction(transactionId) {
+    selectTransaction(transactionId) {
         this.selectedTransactionId = transactionId;
         
         // Seçili işlemi görsel olarak vurgula
@@ -323,6 +335,40 @@ export class IndexingDetailModule {
         document.getElementById('childTransactionInputs').style.display = 'block';
         
         this.checkFormCompleteness();
+    }
+
+    loadChildTransactionTypes() {
+        const selectedTransaction = this.matchedRecord.transactions.find(t => t.id === this.selectedTransactionId);
+        if (!selectedTransaction) return;
+
+        const transactionType = this.allTransactionTypes.find(t => t.id === selectedTransaction.type);
+        if (!transactionType || !transactionType.indexFile) return;
+
+        const selectElement = document.getElementById('childTransactionType');
+        selectElement.innerHTML = '<option value="" disabled selected>Alt işlem türü seçin...</option>';
+
+        const childTypes = this.allTransactionTypes.filter(type => 
+            type.hierarchy === 'child' &&  
+            transactionType.indexFile && 
+            Array.isArray(transactionType.indexFile) && 
+            transactionType.indexFile.includes(type.id)
+        ).sort((a, b) => (a.order || 999) - (b.order || 999));
+
+        if (childTypes.length === 0) {
+            const noOption = document.createElement('option');
+            noOption.value = '';
+            noOption.textContent = 'Bu ana işlem için alt işlem bulunamadı';
+            noOption.disabled = true;
+            selectElement.appendChild(noOption);
+            return;
+        }
+
+        childTypes.forEach(type => {
+            const option = document.createElement('option');
+            option.value = type.id;
+            option.textContent = type.alias || type.name;
+            selectElement.appendChild(option);
+        });
     }
 
     populateChildTransactionTypeSelect(indexFile) {
@@ -355,13 +401,22 @@ export class IndexingDetailModule {
     }
 
     checkFormCompleteness() {
+        const hasMatchedRecord = this.matchedRecord !== null;
         const hasSelectedTransaction = this.selectedTransactionId !== null;
         const childTransactionInputsVisible = document.getElementById('childTransactionInputs').style.display !== 'none';
         const hasSelectedChildType = childTransactionInputsVisible ? 
             document.getElementById('childTransactionType').value !== '' : true;
 
-        const canSubmit = hasSelectedTransaction && hasSelectedChildType;
+        const canSubmit = hasMatchedRecord && hasSelectedTransaction && hasSelectedChildType;
         document.getElementById('indexBtn').disabled = !canSubmit;
+        
+        console.log('Form completeness check:', {
+            hasMatchedRecord,
+            hasSelectedTransaction,
+            childTransactionInputsVisible,
+            hasSelectedChildType,
+            canSubmit
+        });
     }
 
     async handleIndexing() {
