@@ -1081,7 +1081,7 @@ export class BulkIndexingModule {
         if (unmatchedCountEl) unmatchedCountEl.textContent = unmatchedCount;
     }
 
-    async reprocessMatching() {
+   async reprocessMatching() {
         console.log('Mevcut dosyalar yeniden eşleştiriliyor...');
         
         for (const file of this.uploadedFiles) {
@@ -1106,6 +1106,8 @@ export class BulkIndexingModule {
         
         showNotification('Dosyalar yeniden eşleştirildi!', 'success');
     }
+
+    async deleteFilePermanently(fileId) {
         if (!confirm('Bu dosyayı kalıcı olarak silmek istediğinizden emin misiniz?')) return;
         
         try {
