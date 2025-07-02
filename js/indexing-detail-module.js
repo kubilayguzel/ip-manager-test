@@ -500,7 +500,7 @@ export class IndexingDetailModule {
                 });
             }
 
-            // Task data objesi oluştur
+// Task data objesi oluştur
             const newTaskData = {
                 taskType: taskType,
                 title: `[OTOMATİK GÖREV] ${targetTaskDefinition.taskDisplayName || targetTaskDefinition.alias || targetTaskDefinition.name} - ${this.matchedRecord.title} (${this.matchedRecord.applicationNumber})`,
@@ -508,33 +508,36 @@ export class IndexingDetailModule {
                 priority: 'medium',
                 assignedTo_uid: defaultAssignedToUid,
                 assignedTo_email: defaultAssignedToEmail,
-                dueDate: taskDueDate,
+                dueDate: taskDueDate, // Operasyonel tarih (YYYY-MM-DD string formatında)
                 status: 'awaiting_client_approval',
                 relatedIpRecordId: this.matchedRecord.id,
                 relatedIpRecordTitle: this.matchedRecord.title,
-                triggeringTransactionId: transactionId,                          // Child transaction ID'si
-                triggeringTransactionType: childTransactionType?.id || null,     // Child transaction TYPE ID'si (DÜZELTME!)
+                triggeringTransactionId: transactionId,
+                triggeringTransactionType: childTransactionType?.id || null,
                 details: {
                     relatedParty: this.matchedRecord.details?.relatedParty || null
                 }
             };
 
-            // Resmi son tarih bilgilerini ekle
+            // Resmi son tarih bilgilerini ekle (Date objesi olarak)
             if (officialDueDate) {
-                newTaskData.officialDueDate = officialDueDate;
-                newTaskData.officialDueDateDetails = officialDueDateDetails;
+                newTaskData.officialDueDate = officialDueDate; // Date objesi
+                newTaskData.officialDueDateDetails = {
+                    ...officialDueDateDetails,
+                    calculatedDate: officialDueDate.toISOString() // ISO string olarak da kaydet
+                };
             }
 
             // Tebliğ tarihini de göreve ekle
             if (deliveryDateStr) {
-                newTaskData.deliveryDate = deliveryDateStr;
+                newTaskData.deliveryDate = deliveryDateStr; // YYYY-MM-DD formatında
             }
 
             console.log('Oluşturulacak task data:', {
                 ...newTaskData,
-                triggeringTransactionId: newTaskData.triggeringTransactionId,
-                triggeringTransactionType: newTaskData.triggeringTransactionType,
-                childTransactionName: childTransactionType?.name
+                officialDueDate: newTaskData.officialDueDate ? newTaskData.officialDueDate.toISOString() : null,
+                dueDate: newTaskData.dueDate,
+                deliveryDate: newTaskData.deliveryDate
             });
 
             // Task'ı oluştur
