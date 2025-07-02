@@ -110,135 +110,217 @@ export class IndexingDetailModule {
     }
 
     displayPdf() {
-        if (!this.pdfData) return;
-
-        // PDF'yi iframe'de göster
-        document.getElementById('pdfViewer').src = this.pdfData.fileUrl;
-        document.getElementById('pdfTitle').textContent = this.pdfData.fileName;
-
-        // Header butonlarını ayarla
-        document.getElementById('downloadPdfBtn').onclick = () => {
-            const a = document.createElement('a');
-            a.href = this.pdfData.fileUrl;
-            a.download = this.pdfData.fileName;
-            a.click();
-        };
-
-        document.getElementById('openNewTabBtn').onclick = () => {
-            window.open(this.pdfData.fileUrl, '_blank');
-        };
-    }
-
-    findMatchingRecord() {
-        if (!this.pdfData) return;
-
-        // Eşleşme bilgisini göster
-        const extractedAppNumber = this.pdfData.extractedAppNumber;
-        document.getElementById('extractedAppNumber').textContent = 
-            `Çıkarılan Uygulama No: ${extractedAppNumber || 'Bulunamadı'}`;
-
-        if (this.pdfData.matchedRecordId) {
-            // Eşleşen kayıt var
-            this.matchedRecord = this.allRecords.find(r => r.id === this.pdfData.matchedRecordId);
-            
-            if (this.matchedRecord) {
-                document.getElementById('matchStatus').innerHTML = `
-                    <span>✅ ${this.pdfData.matchedRecordDisplay}</span>
-                `;
-                document.getElementById('matchStatus').className = 'match-status matched';
-            }
-        } else {
-            // Eşleşme yok
-            document.getElementById('matchStatus').innerHTML = `
-                <span>❌ Portföy kaydı ile eşleşmedi</span>
-            `;
-            document.getElementById('matchStatus').className = 'match-status unmatched';
-        }
-    }
-
-    async loadTransactionsForRecord() {
-        if (!this.matchedRecord) {
-            document.getElementById('transactionsList').innerHTML = 
-                '<p class="text-muted p-2">Eşleşen kayıt bulunamadı. İndeksleme yapılamaz.</p>';
+        const pdfViewer = document.getElementById('pdfViewer');
+        if (!this.pdfData || !this.pdfData.fileUrl) {
+            pdfViewer.innerHTML = '<p style="color: red;">PDF dosyası bulunamadı.</p>';
             return;
         }
 
-        try {
-            const transactionsResult = await ipRecordsService.getTransactionsForRecord(this.matchedRecord.id);
-            
-            if (!transactionsResult.success) {
-                document.getElementById('transactionsList').innerHTML = 
-                    '<p class="text-muted p-2">İşlemler yüklenirken hata oluştu.</p>';
+        pdfViewer.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <div style="flex: 1;">
+                    <h4>${this.pdfData.fileName}</h4>
+                    <p><strong>Yükleme:</strong> ${this.pdfData.uploadedAt ? new Date(this.pdfData.uploadedAt.seconds * 1000).toLocaleDateString('tr-TR') : 'Bilinmiyor'}</p>
+                    <p><strong>Çıkarılan Uygulama No:</strong> ${this.pdfData.extractedAppNumber || 'Bulunamadı'}</p>
+                </div>
+                <div>
+                    <button type="button" class="btn btn-primary" onclick="window.open('${this.pdfData.fileUrl}', '_blank')">
+                        👁️ PDF'yi Görüntüle
+                    </button>
+                </div>
+            </div>
+        `;
+    }
+
+    findMatchingRecord() {
+        // Otomatik eşleşme kontrolü
+        if (this.pdfData.matchedRecordId) {
+            this.matchedRecord = this.allRecords.find(r => r.id === this.pdfData.matchedRecordId);
+            if (this.matchedRecord) {
+                this.showMatchedRecord();
                 return;
             }
+        }
 
-            const transactions = transactionsResult.transactions;
-            const parentTransactions = transactions
-                .filter(tx => tx.transactionHierarchy === 'parent' || !tx.transactionHierarchy)
-                .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+        // Eşleşme yoksa manuel arama göster
+        this.showManualRecordSearch();
+    }
+ showMatchedRecord() {
+        const matchedDiv = document.getElementById('matchedRecordDisplay');
+        const manualDiv = document.getElementById('manualRecordSearch');
+        
+        matchedDiv.style.display = 'block';
+        manualDiv.style.display = 'none';
+        
+        matchedDiv.innerHTML = `
+            <div class="matched-record-card" style="border: 2px solid #28a745; border-radius: 10px; padding: 15px; background: #f8fff9;">
+                <h4 style="color: #28a745; margin: 0 0 10px 0;">✅ Otomatik Eşleşen Kayıt</h4>
+                <p><strong>Başlık:</strong> ${this.matchedRecord.title}</p>
+                <p><strong>Uygulama No:</strong> ${this.matchedRecord.applicationNumber}</p>
+                <p><strong>Müvekkil:</strong> ${this.matchedRecord.client || 'Belirtilmemiş'}</p>
+                <button type="button" class="btn btn-secondary" onclick="window.indexingDetailModule.showManualRecordSearch()">
+                    🔄 Farklı Kayıt Seç
+                </button>
+            </div>
+        `;
+        
+        this.loadTransactionsForRecord();
+    }
 
-            if (parentTransactions.length === 0) {
-                document.getElementById('transactionsList').innerHTML = 
-                    '<p class="text-muted p-2">Dosya eklenecek mevcut ana işlem bulunamadı.</p>';
-                return;
-            }
-
-            // Ana işlem listesini oluştur
-            const container = document.getElementById('transactionsList');
-            container.innerHTML = '';
-
-            parentTransactions.forEach(tx => {
-                const item = document.createElement('div');
-                item.className = 'transaction-list-item';
-                item.dataset.id = tx.id;
-
-                const transactionType = this.allTransactionTypes.find(t => t.id === tx.type);
-                const transactionDisplayName = transactionType ? 
-                    (transactionType.alias || transactionType.name) : 
-                    (tx.designation || tx.type || 'Tanımsız İşlem');
-
-                item.textContent = `${transactionDisplayName} - ${new Date(tx.timestamp).toLocaleDateString('tr-TR')}`;
-                
-                item.addEventListener('click', (e) => {
-                    this.selectTransaction(e.currentTarget.dataset.id, tx.type);
-                });
-
-                container.appendChild(item);
-            });
-
-        } catch (error) {
-            console.error('İşlemler yüklenirken hata:', error);
-            document.getElementById('transactionsList').innerHTML = 
-                '<p class="text-muted p-2">İşlemler yüklenirken hata oluştu.</p>';
+    showManualRecordSearch() {
+        const matchedDiv = document.getElementById('matchedRecordDisplay');
+        const manualDiv = document.getElementById('manualRecordSearch');
+        
+        matchedDiv.style.display = 'none';
+        manualDiv.style.display = 'block';
+        
+        // Eğer daha önce seçilen kayıt varsa göster
+        if (this.matchedRecord) {
+            this.displaySelectedRecord();
         }
     }
 
-    selectTransaction(transactionId, transactionType) {
-        this.selectedTransactionId = transactionId;
-
-        console.log('selectTransaction çağırıldı:', { transactionId, transactionType });
-
-        // Seçili işlemi vurgula
-        document.querySelectorAll('.transaction-list-item').forEach(el => 
-            el.classList.remove('selected'));
-        document.querySelector(`[data-id="${transactionId}"]`).classList.add('selected');
-
-        // Transaction definition'ı bul
-        const selectedTransactionDefinition = this.allTransactionTypes.find(t => t.id === transactionType);
+    setupRecordSearch() {
+        const searchInput = document.getElementById('recordSearchInput');
+        const resultsContainer = document.getElementById('searchResultsContainer');
         
-        console.log('Bulunan transaction definition:', selectedTransactionDefinition);
+        if (searchInput) {
+            searchInput.addEventListener('input', (e) => {
+                const query = e.target.value.trim();
+                if (query.length < 2) {
+                    resultsContainer.style.display = 'none';
+                    return;
+                }
+                this.searchRecords(query);
+            });
 
-        if (selectedTransactionDefinition && selectedTransactionDefinition.indexFile) {
-            console.log('indexFile bulundu:', selectedTransactionDefinition.indexFile);
-            this.populateChildTransactionTypeSelect(selectedTransactionDefinition.indexFile);
-            document.getElementById('childTransactionInputs').style.display = 'block';
+            searchInput.addEventListener('blur', () => {
+                // Kısa gecikme ile kapat (tıklama olayının gerçekleşmesi için)
+                setTimeout(() => {
+                    resultsContainer.style.display = 'none';
+                }, 200);
+            });
+
+            searchInput.addEventListener('focus', () => {
+                if (searchInput.value.trim().length >= 2) {
+                    resultsContainer.style.display = 'block';
+                }
+            });
+        }
+    }
+
+    searchRecords(query) {
+        const resultsContainer = document.getElementById('searchResultsContainer');
+        
+        const filteredRecords = this.allRecords.filter(record => 
+            record.title.toLowerCase().includes(query.toLowerCase()) ||
+            record.applicationNumber.toLowerCase().includes(query.toLowerCase()) ||
+            (record.client && record.client.toLowerCase().includes(query.toLowerCase()))
+        ).slice(0, 10); // İlk 10 sonuç
+
+        if (filteredRecords.length === 0) {
+            resultsContainer.innerHTML = '<div class="search-result-item">Hiç sonuç bulunamadı</div>';
         } else {
-            document.getElementById('childTransactionInputs').style.display = 'none';
+            resultsContainer.innerHTML = filteredRecords.map(record => `
+                <div class="search-result-item" onclick="window.indexingDetailModule.selectRecord('${record.id}')">
+                    <div class="search-result-title">${record.title}</div>
+                    <div class="search-result-details">
+                        <span>${record.applicationNumber}</span>
+                        ${record.client ? ` • ${record.client}` : ''}
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        resultsContainer.style.display = 'block';
+    }
+
+    selectRecord(recordId) {
+        this.matchedRecord = this.allRecords.find(r => r.id === recordId);
+        if (this.matchedRecord) {
+            document.getElementById('searchResultsContainer').style.display = 'none';
+            document.getElementById('recordSearchInput').value = '';
+            this.displaySelectedRecord();
+            this.loadTransactionsForRecord();
+        }
+    }
+
+    displaySelectedRecord() {
+        const selectedDiv = document.getElementById('selectedRecordDisplay');
+        
+        if (!this.matchedRecord) {
+            selectedDiv.style.display = 'none';
+            return;
+        }
+        
+        selectedDiv.style.display = 'block';
+        selectedDiv.innerHTML = `
+            <div class="selected-record-card" style="border: 2px solid #007bff; border-radius: 10px; padding: 15px; background: #f8f9ff;">
+                <h4 style="color: #007bff; margin: 0 0 10px 0;">📋 Seçilen Kayıt</h4>
+                <p><strong>Başlık:</strong> ${this.matchedRecord.title}</p>
+                <p><strong>Uygulama No:</strong> ${this.matchedRecord.applicationNumber}</p>
+                <p><strong>Müvekkil:</strong> ${this.matchedRecord.client || 'Belirtilmemiş'}</p>
+                <button type="button" class="btn btn-secondary btn-sm" onclick="window.indexingDetailModule.clearSelectedRecord()">
+                    ❌ Seçimi Temizle
+                </button>
+            </div>
+        `;
+    }
+
+    clearSelectedRecord() {
+        this.matchedRecord = null;
+        this.selectedTransactionId = null;
+        document.getElementById('selectedRecordDisplay').style.display = 'none';
+        document.getElementById('transactionSection').style.display = 'none';
+        document.getElementById('childTransactionInputs').style.display = 'none';
+        this.checkFormCompleteness();
+    }
+    
+    loadTransactionsForRecord() {
+        if (!this.matchedRecord) return;
+        
+        const transactionSection = document.getElementById('transactionSection');
+        const transactionsList = document.getElementById('transactionsList');
+        
+        transactionSection.style.display = 'block';
+        
+        if (!this.matchedRecord.transactions || this.matchedRecord.transactions.length === 0) {
+            transactionsList.innerHTML = '<p class="text-muted">Bu kayıtta henüz işlem bulunmuyor.</p>';
+            return;
         }
 
-        // Form değerlerini temizle
-        document.getElementById('childTransactionType').value = '';
-        document.getElementById('deliveryDate').value = '';
+        const transactionsHtml = this.matchedRecord.transactions.map(transaction => {
+            const transactionType = this.allTransactionTypes.find(t => t.id === transaction.type);
+            const typeName = transactionType ? (transactionType.alias || transactionType.name) : 'Bilinmeyen Tür';
+            
+            return `
+                <div class="transaction-item" onclick="window.indexingDetailModule.selectTransaction('${transaction.id}')">
+                    <div class="transaction-main">
+                        <strong>${typeName}</strong>
+                        ${transaction.deliveryDate ? ` • Tebliğ: ${transaction.deliveryDate}` : ''}
+                    </div>
+                    <div class="transaction-date">${new Date(transaction.timestamp).toLocaleDateString('tr-TR')}</div>
+                </div>
+            `;
+        }).join('');
+
+        transactionsList.innerHTML = transactionsHtml;
+    }
+
+   selectTransaction(transactionId) {
+        this.selectedTransactionId = transactionId;
+        
+        // Seçili işlemi görsel olarak vurgula
+        document.querySelectorAll('.transaction-item').forEach(item => {
+            item.classList.remove('selected');
+        });
+        event.target.closest('.transaction-item').classList.add('selected');
+        
+        // Alt işlem türlerini yükle
+        this.loadChildTransactionTypes();
+        
+        // Alt işlem bölümünü göster
+        document.getElementById('childTransactionInputs').style.display = 'block';
         
         this.checkFormCompleteness();
     }
@@ -462,42 +544,55 @@ export class IndexingDetailModule {
             let defaultAssignedToUid = SELCAN_UID;
             let defaultAssignedToEmail = SELCAN_EMAIL;
 
-            // Tebliğ tarihini al
+ // Tebliğ tarihini al
             const deliveryDateStr = document.getElementById('deliveryDate').value;
             let taskDueDate = null;
             let officialDueDate = null;
             let officialDueDateDetails = null;
 
             // Tarih hesaplamalarını yap
-            if (deliveryDateStr && targetTaskDefinition.duePeriod) {
+            if (deliveryDateStr && childTransactionType && childTransactionType.duePeriod) {
                 const deliveryDate = new Date(deliveryDateStr);
                 deliveryDate.setHours(0, 0, 0, 0);
 
                 console.log('Tarih hesaplaması:', {
                     deliveryDate: deliveryDate.toDateString(),
-                    duePeriod: targetTaskDefinition.duePeriod
+                    duePeriod: childTransactionType.duePeriod,
+                    childTransactionType: childTransactionType.name
                 });
 
-                // Resmi son tarihi hesapla
-                const rawOfficialDueDate = addMonthsToDate(deliveryDate, targetTaskDefinition.duePeriod);
-                officialDueDate = findNextWorkingDay(rawOfficialDueDate);
+                // Resmi son tarihi hesapla (duePeriod kadar ay ekle)
+                const rawOfficialDueDate = addMonthsToDate(deliveryDate, childTransactionType.duePeriod);
+                officialDueDate = findNextWorkingDay(rawOfficialDueDate, TURKEY_HOLIDAYS);
 
                 officialDueDateDetails = {
                     deliveryDate: deliveryDateStr,
-                    periodMonths: targetTaskDefinition.duePeriod,
+                    periodMonths: childTransactionType.duePeriod,
                     calculatedDate: officialDueDate.toISOString(),
-                    isCalculated: true
+                    isCalculated: true,
+                    transactionTypeId: childTransactionType.id,
+                    transactionTypeName: childTransactionType.name
                 };
 
-                // Operasyonel son tarih (resmi son tarihten 5 gün öncesi)
+                // Operasyonel son tarih (resmi son tarihten 3 gün öncesi, hafta sonu/tatil kontrolü ile)
                 const operationalDueDate = new Date(officialDueDate);
-                operationalDueDate.setDate(operationalDueDate.getDate() - 5);
-                taskDueDate = findNextWorkingDay(operationalDueDate).toISOString().split('T')[0]; // YYYY-MM-DD format
+                operationalDueDate.setDate(operationalDueDate.getDate() - 3);
+                
+                // Hafta sonu/tatil kontrolü
+                while (isWeekend(operationalDueDate) || isHoliday(operationalDueDate, TURKEY_HOLIDAYS)) {
+                    operationalDueDate.setDate(operationalDueDate.getDate() - 1);
+                }
+                
+                taskDueDate = operationalDueDate.toISOString().split('T')[0]; // YYYY-MM-DD format
 
                 console.log('Hesaplanan tarihler:', {
                     officialDueDate: officialDueDate.toDateString(),
-                    operationalDueDate: taskDueDate
+                    operationalDueDate: taskDueDate,
+                    duePeriodMonths: childTransactionType.duePeriod
                 });
+            } else if (deliveryDateStr && (!childTransactionType || !childTransactionType.duePeriod)) {
+                console.warn('Tebliğ tarihi var ama transaction type duePeriod bilgisi yok - tarih hesaplaması yapılamıyor');
+                showNotification('Alt işlem türünde süre bilgisi bulunamadı, sadece tebliğ tarihi kaydedilecek.', 'warning');
             }
 
 // Task data objesi oluştur
@@ -572,6 +667,9 @@ export class IndexingDetailModule {
         document.getElementById('deliveryDate').addEventListener('change', () => {
             this.checkFormCompleteness();
         });
+
+        // Kayıt arama sistemi
+        this.setupRecordSearch();
 
         // Klavye kısayolları
         document.addEventListener('keydown', (e) => {
