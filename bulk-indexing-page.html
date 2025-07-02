@@ -539,8 +539,11 @@
                                 <div class="form-section" id="fileListSection">
                                     <h2 class="section-title"><span>1.2</span> Yüklenen PDF Dosyaları</h2>                             
                                     <div class="tabs-container">
-                                        <button class="tab-btn active" data-tab="all-files-pane">İndekslenecek Dokümanlar <span class="badge" id="allCount">0</span></button>
-                                        <button class="tab-btn" data-tab="unmatched-files-pane">Eşleşmeyenler <span class="badge" id="unmatchedCount">0</span></button>
+                                        <button class="tab-btn active" data-tab="all-files-pane">Eşleşen Dosyalar <span class="badge" id="allCount">0</span></button>
+                                        <button class="tab-btn" data-tab="unmatched-files-pane">Eşleşmeyen Dosyalar <span class="badge" id="unmatchedCount">0</span></button>
+                                        <button class="tab-btn" onclick="window.indexingModule.reprocessMatching()" style="margin-left: auto; background: #28a745; color: white;">
+                                            🔄 Yeniden Eşleştir
+                                        </button>
                                     </div>
                                 <div class="tab-content-container">
                                     <div id="all-files-pane" class="tab-pane active">
