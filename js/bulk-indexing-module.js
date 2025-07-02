@@ -139,7 +139,9 @@ export class BulkIndexingModule {
             if (e.target.classList.contains('tab-btn') && 
                 e.target.closest('#fileListSection')) {
                 const targetPane = e.target.getAttribute('data-tab');
-                if (targetPane === 'all-files-pane' || targetPane === 'unmatched-files-pane') {
+                if (targetPane === 'all-files-pane' || 
+                    targetPane === 'unmatched-files-pane' || 
+                    targetPane === 'indexed-files-pane') {
                     this.switchFileTab(targetPane);
                 }
             }
