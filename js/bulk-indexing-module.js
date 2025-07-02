@@ -34,7 +34,7 @@ import {
 
 import { showNotification, formatFileSize } from '../utils.js';
 
-const UNINDEXED_PDFS_COLLECTION = 'unindexedPDFs';
+const UNINDEXED_PDFS_COLLECTION = 'unindexed_pdfs';
 
 export class BulkIndexingModule {
     constructor() {
