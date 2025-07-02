@@ -738,6 +738,13 @@ export class BulkIndexingModule {
 
     async processFiles(files) {
         console.log('Processing bulk files:', files);
+        
+        // Önce records'ın yüklendiğinden emin ol
+        if (this.allRecords.length === 0) {
+            console.log('Records henüz yüklenmemiş, yeniden yükleniyor...');
+            await this.loadAllData();
+        }
+        
         showNotification(`${files.length} PDF dosyası yükleniyor...`, 'info');
         
         for (const file of files) {
@@ -795,6 +802,9 @@ export class BulkIndexingModule {
                                 if (matchedRecord) {
                                     pdfData.matchedRecordId = matchedRecord.id;
                                     pdfData.matchedRecordDisplay = `${matchedRecord.title} - ${matchedRecord.applicationNumber}`;
+                                    console.log('✅ Eşleştirme başarılı:', pdfData.fileName, '→', pdfData.matchedRecordDisplay);
+                                } else {
+                                    console.log('❌ Eşleştirme başarısız:', pdfData.fileName, 'Çıkarılan numara:', pdfData.extractedAppNumber);
                                 }
                             }
                             
@@ -812,19 +822,88 @@ export class BulkIndexingModule {
     }
 
     extractApplicationNumber(file) {
-        // Basit dosya adından uygulama numarası çıkarma
+        // Gelişmiş dosya adından uygulama numarası çıkarma
         const fileName = file.name;
-        const matches = fileName.match(/(\d{6,})/); // 6 veya daha fazla rakam
-        return matches ? matches[1] : null;
+        
+        // Çeşitli formatları yakala:
+        // - "2025-1", "2025/1", "2025 1" 
+        // - "250369056" (uzun numaralar)
+        // - "TR2024/123", "TR2025-1"
+        
+        const patterns = [
+            /(\d{4}[-\/\s]\d+)/g,          // 2025-1, 2025/1, 2025 1
+            /TR(\d{4}[-\/]\d+)/gi,         // TR2025-1, TR2025/1
+            /(\d{6,})/g                    // 250369056 (6+ rakam)
+        ];
+        
+        const extractedNumbers = [];
+        
+        patterns.forEach(pattern => {
+            const matches = fileName.match(pattern);
+            if (matches) {
+                matches.forEach(match => {
+                    // TR prefix'ini temizle
+                    let cleaned = match.replace(/^TR/i, '');
+                    extractedNumbers.push(cleaned);
+                });
+            }
+        });
+        
+        console.log('Dosya adı:', fileName, 'Çıkarılan numaralar:', extractedNumbers);
+        
+        // İlk bulunan numarayı döndür (en olası eşleşme)
+        return extractedNumbers.length > 0 ? extractedNumbers[0] : null;
     }
 
     findMatchingRecord(applicationNumber) {
         if (!applicationNumber) return null;
         
-        return this.allRecords.find(record => 
-            record.applicationNumber && 
-            record.applicationNumber.includes(applicationNumber)
-        );
+        console.log('Eşleşme aranıyor:', applicationNumber, 'Portföy kayıtları:', this.allRecords.length);
+        
+        // Çeşitli eşleşme stratejileri dene
+        for (const record of this.allRecords) {
+            if (!record.applicationNumber) continue;
+            
+            const recordAppNum = record.applicationNumber;
+            console.log('Karşılaştırma:', applicationNumber, 'vs', recordAppNum);
+            
+            // 1. Tam eşleşme
+            if (recordAppNum === applicationNumber) {
+                console.log('✅ Tam eşleşme bulundu:', record.title);
+                return record;
+            }
+            
+            // 2. Normalize edilmiş eşleşme (-, /, space'leri kaldır)
+            const normalizedExtracted = applicationNumber.replace(/[-\/\s]/g, '');
+            const normalizedRecord = recordAppNum.replace(/[-\/\s]/g, '');
+            
+            if (normalizedRecord === normalizedExtracted) {
+                console.log('✅ Normalize edilmiş eşleşme bulundu:', record.title);
+                return record;
+            }
+            
+            // 3. Partial eşleşme - bir taraf diğerini içeriyor
+            if (recordAppNum.includes(applicationNumber) || applicationNumber.includes(recordAppNum)) {
+                console.log('✅ Partial eşleşme bulundu:', record.title);
+                return record;
+            }
+            
+            // 4. Flexible pattern matching
+            // "2025-1" ile "2025/1" gibi formatlar
+            const flexPattern1 = applicationNumber.replace(/[-\/\s]/g, '[-\/\\s]?');
+            const flexPattern2 = recordAppNum.replace(/[-\/\s]/g, '[-\/\\s]?');
+            
+            const regex1 = new RegExp(flexPattern1, 'i');
+            const regex2 = new RegExp(flexPattern2, 'i');
+            
+            if (regex1.test(recordAppNum) || regex2.test(applicationNumber)) {
+                console.log('✅ Flexible pattern eşleşme bulundu:', record.title);
+                return record;
+            }
+        }
+        
+        console.log('❌ Eşleşme bulunamadı');
+        return null;
     }
 
     switchFileTab(targetPane) {
@@ -922,8 +1001,18 @@ export class BulkIndexingModule {
     }
 
     renderFileLists() {
-        this.renderFileList('allFilesList', this.uploadedFiles.filter(f => f.status !== 'removed'));
-        this.renderFileList('unmatchedFilesList', this.uploadedFiles.filter(f => f.status !== 'removed' && !f.matchedRecordId));
+        const allFiles = this.uploadedFiles.filter(f => f.status !== 'removed');
+        const matchedFiles = allFiles.filter(f => f.matchedRecordId);
+        const unmatchedFiles = allFiles.filter(f => !f.matchedRecordId);
+        
+        console.log('Dosya filtreleme:', {
+            total: allFiles.length,
+            matched: matchedFiles.length, 
+            unmatched: unmatchedFiles.length
+        });
+        
+        this.renderFileList('allFilesList', matchedFiles);
+        this.renderFileList('unmatchedFilesList', unmatchedFiles);
     }
 
     renderFileList(containerId, files) {
@@ -931,7 +1020,11 @@ export class BulkIndexingModule {
         if (!container) return;
 
         if (files.length === 0) {
-            container.innerHTML = '<div class="empty-message"><div class="empty-icon">📄</div><p>Henüz dosya yok</p></div>';
+            const isMatchedTab = containerId === 'allFilesList';
+            const emptyMessage = isMatchedTab ? 
+                'Portföy kaydıyla eşleşen dosya yok' : 
+                'Portföy kaydıyla eşleşmeyen dosya yok';
+            container.innerHTML = `<div class="empty-message"><div class="empty-icon">📄</div><p>${emptyMessage}</p></div>`;
             return;
         }
 
@@ -977,17 +1070,42 @@ export class BulkIndexingModule {
     }
 
     updateTabBadges() {
-        const allCount = this.uploadedFiles.filter(f => f.status !== 'removed').length;
-        const unmatchedCount = this.uploadedFiles.filter(f => f.status !== 'removed' && !f.matchedRecordId).length;
+        const allFiles = this.uploadedFiles.filter(f => f.status !== 'removed');
+        const matchedCount = allFiles.filter(f => f.matchedRecordId).length;
+        const unmatchedCount = allFiles.filter(f => !f.matchedRecordId).length;
         
         const allCountEl = document.getElementById('allCount');
         const unmatchedCountEl = document.getElementById('unmatchedCount');
         
-        if (allCountEl) allCountEl.textContent = allCount;
+        if (allCountEl) allCountEl.textContent = matchedCount;
         if (unmatchedCountEl) unmatchedCountEl.textContent = unmatchedCount;
     }
 
-    async deleteFilePermanently(fileId) {
+    async reprocessMatching() {
+        console.log('Mevcut dosyalar yeniden eşleştiriliyor...');
+        
+        for (const file of this.uploadedFiles) {
+            if (file.status === 'removed') continue;
+            
+            const extractedAppNumber = this.extractApplicationNumber({name: file.fileName});
+            const matchedRecord = extractedAppNumber ? this.findMatchingRecord(extractedAppNumber) : null;
+            
+            const updates = {
+                extractedAppNumber: extractedAppNumber,
+                matchedRecordId: matchedRecord ? matchedRecord.id : null,
+                matchedRecordDisplay: matchedRecord ? `${matchedRecord.title} - ${matchedRecord.applicationNumber}` : null
+            };
+            
+            try {
+                await updateDoc(doc(collection(firebaseServices.db, UNINDEXED_PDFS_COLLECTION), file.id), updates);
+                console.log('Dosya güncellendi:', file.fileName, updates);
+            } catch (error) {
+                console.error('Dosya güncellenirken hata:', error);
+            }
+        }
+        
+        showNotification('Dosyalar yeniden eşleştirildi!', 'success');
+    }
         if (!confirm('Bu dosyayı kalıcı olarak silmek istediğinizden emin misiniz?')) return;
         
         try {
