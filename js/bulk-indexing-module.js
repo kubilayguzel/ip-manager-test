@@ -982,7 +982,8 @@ export class BulkIndexingModule {
         this.updateTabBadges();
     }
 
-    updateSections() {
+updateSections() {
+        // Mevcut dosyalar varsa hep göster (yükleme olmasa da)
         const hasFiles = this.uploadedFiles.length > 0;
         const fileListSection = document.getElementById('fileListSection');
         
@@ -993,7 +994,8 @@ export class BulkIndexingModule {
         const fileInfo = document.getElementById('bulkFilesInfo');
         if (fileInfo) {
             if (hasFiles) {
-                fileInfo.textContent = `${this.uploadedFiles.filter(f => f.status !== 'removed').length} PDF dosyası mevcut.`;
+                const activeFiles = this.uploadedFiles.filter(f => f.status !== 'removed');
+                fileInfo.textContent = `${activeFiles.length} PDF dosyası mevcut.`;
             } else {
                 fileInfo.textContent = 'PDF dosyası seçin veya sürükleyip bırakın.';
             }
@@ -1002,17 +1004,20 @@ export class BulkIndexingModule {
 
     renderFileLists() {
         const allFiles = this.uploadedFiles.filter(f => f.status !== 'removed');
-        const matchedFiles = allFiles.filter(f => f.matchedRecordId);
-        const unmatchedFiles = allFiles.filter(f => !f.matchedRecordId);
+        const matchedFiles = allFiles.filter(f => f.matchedRecordId && f.status !== 'indexed');
+        const unmatchedFiles = allFiles.filter(f => !f.matchedRecordId && f.status !== 'indexed');
+        const indexedFiles = allFiles.filter(f => f.status === 'indexed');
         
         console.log('Dosya filtreleme:', {
             total: allFiles.length,
             matched: matchedFiles.length, 
-            unmatched: unmatchedFiles.length
+            unmatched: unmatchedFiles.length,
+            indexed: indexedFiles.length
         });
         
         this.renderFileList('allFilesList', matchedFiles);
         this.renderFileList('unmatchedFilesList', unmatchedFiles);
+        this.renderFileList('indexedFilesList', indexedFiles);
     }
 
     renderFileList(containerId, files) {
@@ -1020,10 +1025,14 @@ export class BulkIndexingModule {
         if (!container) return;
 
         if (files.length === 0) {
-            const isMatchedTab = containerId === 'allFilesList';
-            const emptyMessage = isMatchedTab ? 
-                'Portföy kaydıyla eşleşen dosya yok' : 
-                'Portföy kaydıyla eşleşmeyen dosya yok';
+            let emptyMessage = '';
+            if (containerId === 'allFilesList') {
+                emptyMessage = 'Portföy kaydıyla eşleşen dosya yok';
+            } else if (containerId === 'unmatchedFilesList') {
+                emptyMessage = 'Portföy kaydıyla eşleşmeyen dosya yok';
+            } else if (containerId === 'indexedFilesList') {
+                emptyMessage = 'Henüz indekslenmiş dosya yok';
+            }
             container.innerHTML = `<div class="empty-message"><div class="empty-icon">📄</div><p>${emptyMessage}</p></div>`;
             return;
         }
@@ -1045,6 +1054,11 @@ export class BulkIndexingModule {
                             '❌ Portföy kaydı ile eşleşmedi'
                         }
                     </div>
+                    ${file.status === 'indexed' && file.indexedAt ? `
+                        <div class="pdf-meta">
+                            <strong>İndekslenme:</strong> ${new Date(file.indexedAt.seconds * 1000).toLocaleDateString('tr-TR')}
+                        </div>
+                    ` : ''}
                 </div>
                 <div class="pdf-actions">
                     <button class="action-btn view-btn" onclick="window.open('${file.fileUrl}', '_blank')">
@@ -1056,7 +1070,7 @@ export class BulkIndexingModule {
                             ✨ İndeksle
                         </button>
                     ` : file.status === 'indexed' ? `
-                        <button class="action-btn complete-btn" disabled>
+                        <button class="action-btn complete-btn" disabled style="background: #28a745;">
                             ✅ İndekslendi
                         </button>
                     ` : ''}
@@ -1068,17 +1082,19 @@ export class BulkIndexingModule {
             </div>
         `).join('');
     }
-
     updateTabBadges() {
         const allFiles = this.uploadedFiles.filter(f => f.status !== 'removed');
-        const matchedCount = allFiles.filter(f => f.matchedRecordId).length;
-        const unmatchedCount = allFiles.filter(f => !f.matchedRecordId).length;
+        const matchedCount = allFiles.filter(f => f.matchedRecordId && f.status !== 'indexed').length;
+        const unmatchedCount = allFiles.filter(f => !f.matchedRecordId && f.status !== 'indexed').length;
+        const indexedCount = allFiles.filter(f => f.status === 'indexed').length;
         
         const allCountEl = document.getElementById('allCount');
         const unmatchedCountEl = document.getElementById('unmatchedCount');
+        const indexedCountEl = document.getElementById('indexedCount');
         
         if (allCountEl) allCountEl.textContent = matchedCount;
         if (unmatchedCountEl) unmatchedCountEl.textContent = unmatchedCount;
+        if (indexedCountEl) indexedCountEl.textContent = indexedCount;
     }
 
    async reprocessMatching() {
