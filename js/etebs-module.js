@@ -64,12 +64,43 @@ export class ETEBSManager {
         }
 
         this.bindEvents();
+        this.bindTabEvents(); // YENİ: Tab event listeners
         this.loadSavedToken();
         this.isInitialized = true;
         
         console.log('✅ ETEBS Manager initialized');
     }
+    // 2. YENİ: Tab event binding fonksiyonu ekleyin
+    bindTabEvents() {
+        try {
+            // Notifications tab switching
+            document.querySelectorAll('.notifications-tab-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    this.switchNotificationsTab(btn.getAttribute('data-notifications-tab'));
+                });
+            });
+        } catch (error) {
+            console.error('Error binding tab events:', error);
+        }
+    }
 
+    // 3. YENİ: Tab switching fonksiyonu ekleyin
+    switchNotificationsTab(tabName) {
+        try {
+            // Update tab buttons
+            document.querySelectorAll('.notifications-tab-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.getAttribute('data-notifications-tab') === tabName);
+            });
+
+            // Update tab content
+            document.querySelectorAll('.notifications-tab-pane').forEach(pane => {
+                pane.classList.toggle('active', pane.id === `${tabName}-notifications-tab`);
+            });
+        } catch (error) {
+            console.error('Error switching notifications tab:', error);
+        }
+    }
     bindEvents() {
         try {
             // Mode switching
@@ -286,6 +317,24 @@ export class ETEBSManager {
             console.error('Error filtering notifications:', error);
         }
     }
+    // 5. YENİ: Otomatik tab switching fonksiyonu
+    autoSwitchTab(matchedCount, unmatchedCount) {
+        try {
+            const activeTab = document.querySelector('.notifications-tab-btn.active');
+            if (!activeTab) return;
+
+            const currentTab = activeTab.getAttribute('data-notifications-tab');
+            
+            // If current tab is empty but other tab has items, switch automatically
+            if (currentTab === 'matched' && matchedCount === 0 && unmatchedCount > 0) {
+                this.switchNotificationsTab('unmatched');
+            } else if (currentTab === 'unmatched' && unmatchedCount === 0 && matchedCount > 0) {
+                this.switchNotificationsTab('matched');
+            }
+        } catch (error) {
+            console.error('Error in auto tab switch:', error);
+        }
+    }
 
     displayNotifications() {
         try {
@@ -297,24 +346,32 @@ export class ETEBSManager {
             const matchedNotifications = this.filteredNotifications.filter(n => n.matched);
             const unmatchedNotifications = this.filteredNotifications.filter(n => !n.matched);
 
+            // Set data attributes for styling
+            matchedList.setAttribute('data-type', 'matched');
+            unmatchedList.setAttribute('data-type', 'unmatched');
+
             // Display matched notifications
             this.renderNotificationsList(matchedList, matchedNotifications, true);
             
             // Display unmatched notifications  
             this.renderNotificationsList(unmatchedList, unmatchedNotifications, false);
 
-            // Update badges
-            const matchedBadge = document.getElementById('matchedBadge');
-            const unmatchedBadge = document.getElementById('unmatchedBadge');
+            // Update tab badges
+            const matchedTabBadge = document.getElementById('matchedTabBadge');
+            const unmatchedTabBadge = document.getElementById('unmatchedTabBadge');
             
-            if (matchedBadge) matchedBadge.textContent = matchedNotifications.length;
-            if (unmatchedBadge) unmatchedBadge.textContent = unmatchedNotifications.length;
+            if (matchedTabBadge) matchedTabBadge.textContent = matchedNotifications.length;
+            if (unmatchedTabBadge) unmatchedTabBadge.textContent = unmatchedNotifications.length;
+
+            // Auto-switch to appropriate tab if current tab is empty
+            this.autoSwitchTab(matchedNotifications.length, unmatchedNotifications.length);
 
         } catch (error) {
             console.error('Error displaying notifications:', error);
         }
     }
 
+    // 6. renderNotificationsList fonksiyonunu güncelleyin (değişiklik yok ama kontrol için)
     renderNotificationsList(container, notifications, isMatched) {
         if (!container) return;
 
