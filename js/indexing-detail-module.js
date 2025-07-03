@@ -147,7 +147,7 @@ displayPdf() {
         // Eşleşme yoksa manuel arama göster
         this.showManualRecordSearch();
     }
- showMatchedRecord() {
+    showMatchedRecord() {
         const matchedDiv = document.getElementById('matchedRecordDisplay');
         const manualDiv = document.getElementById('manualRecordSearch');
         
@@ -166,6 +166,7 @@ displayPdf() {
             </div>
         `;
         
+        // async olarak çağır
         this.loadTransactionsForRecord();
     }
 
@@ -278,61 +279,64 @@ displayPdf() {
         this.checkFormCompleteness();
     }
     
-    async loadTransactionsForRecord() {
-        if (!this.matchedRecord) return;
-        
-        const transactionSection = document.getElementById('transactionSection');
-        const transactionsList = document.getElementById('transactionsList');
-        
-        transactionSection.style.display = 'block';
-        
+    async loadChildTransactionTypes() {
+        if (!this.matchedRecord || !this.selectedTransactionId) return;
+
         try {
-            // API'den transactions çek
+            // API'den transaction'ları tekrar çek
             const transactionsResult = await ipRecordsService.getRecordTransactions(this.matchedRecord.id);
-            
             if (!transactionsResult.success) {
-                transactionsList.innerHTML = '<p class="text-muted">İşlemler yüklenirken hata oluştu.</p>';
+                console.error('Transactions çekilemedi:', transactionsResult.error);
                 return;
             }
-            
+
             const transactions = transactionsResult.data;
+            const selectedTransaction = transactions.find(t => t.id === this.selectedTransactionId);
             
-            if (!transactions || transactions.length === 0) {
-                transactionsList.innerHTML = '<p class="text-muted">Bu kayıtta henüz işlem bulunmuyor.</p>';
+            if (!selectedTransaction) {
+                console.error('Seçilen transaction bulunamadı:', this.selectedTransactionId);
                 return;
             }
 
-            // Sadece parent transaction'ları göster
-            const parentTransactions = transactions
-                .filter(tx => tx.transactionHierarchy === 'parent' || !tx.transactionHierarchy)
-                .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-
-            if (parentTransactions.length === 0) {
-                transactionsList.innerHTML = '<p class="text-muted">Bu kayıtta ana işlem bulunmuyor.</p>';
+            const transactionType = this.allTransactionTypes.find(t => t.id === selectedTransaction.type);
+            if (!transactionType || !transactionType.indexFile) {
+                console.log('Transaction type bulunamadı veya indexFile yok:', selectedTransaction.type);
+                document.getElementById('childTransactionInputs').style.display = 'none';
                 return;
             }
 
-            const transactionsHtml = parentTransactions.map(transaction => {
-                const transactionType = this.allTransactionTypes.find(t => t.id === transaction.type);
-                const typeName = transactionType ? (transactionType.alias || transactionType.name) : 'Bilinmeyen Tür';
-                
-                return `
-                    <div class="transaction-item" onclick="window.indexingDetailModule.selectTransaction('${transaction.id}')">
-                        <div class="transaction-main">${typeName}</div>
-                        <div class="transaction-details">
-                            ${transaction.description || 'Açıklama yok'}
-                            ${transaction.deliveryDate ? ` • Tebliğ: ${transaction.deliveryDate}` : ''}
-                        </div>
-                        <div class="transaction-date">${new Date(transaction.timestamp).toLocaleDateString('tr-TR')}</div>
-                    </div>
-                `;
-            }).join('');
+            const selectElement = document.getElementById('childTransactionType');
+            selectElement.innerHTML = '<option value="" disabled selected>Alt işlem türü seçin...</option>';
 
-            transactionsList.innerHTML = transactionsHtml;
+            const childTypes = this.allTransactionTypes.filter(type => 
+                type.hierarchy === 'child' &&  
+                transactionType.indexFile && 
+                Array.isArray(transactionType.indexFile) && 
+                transactionType.indexFile.includes(type.id)
+            ).sort((a, b) => (a.order || 999) - (b.order || 999));
+
+            if (childTypes.length === 0) {
+                const noOption = document.createElement('option');
+                noOption.value = '';
+                noOption.textContent = 'Bu ana işlem için alt işlem bulunamadı';
+                noOption.disabled = true;
+                selectElement.appendChild(noOption);
+                document.getElementById('childTransactionInputs').style.display = 'none';
+                return;
+            }
+
+            childTypes.forEach(type => {
+                const option = document.createElement('option');
+                option.value = type.id;
+                option.textContent = type.alias || type.name;
+                selectElement.appendChild(option);
+            });
+
+            // Alt işlem bölümünü göster
+            document.getElementById('childTransactionInputs').style.display = 'block';
             
         } catch (error) {
-            console.error('Transactions yüklenirken hata:', error);
-            transactionsList.innerHTML = '<p class="text-muted">İşlemler yüklenirken hata oluştu.</p>';
+            console.error('loadChildTransactionTypes error:', error);
         }
     }
 
