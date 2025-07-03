@@ -580,7 +580,7 @@ export class IndexingDetailModule {
                     
                     const taskData = {
                         ipRecordId: this.matchedRecord.id,
-                        transactionId: childTransactionId, // Artık undefined olmayacak
+                        transactionId: childTransactionId,
                         triggeringTransactionType: childTypeId,
                         deliveryDate: deliveryDateStr,
                         assignedTo: SELCAN_UID,
@@ -596,10 +596,21 @@ export class IndexingDetailModule {
                     
                     const taskResult = await taskService.createTask(taskData);
                     
+                    console.log('taskResult tam:', taskResult); // DEBUG için
+                    
                     if (taskResult.success) {
-                        console.log('İş başarıyla tetiklendi:', taskResult.data);
-                        createdTaskId = taskResult.data.id;
-                        showNotification('Alt işlem oluşturuldu ve iş tetiklendi!', 'success');
+                        // ID'yi doğru şekilde al
+                        const taskId = taskResult.data?.id || taskResult.id || taskResult.data;
+                        console.log('Task ID:', taskId);
+                        
+                        if (taskId) {
+                            createdTaskId = taskId;
+                            console.log('İş başarıyla tetiklendi, ID:', taskId);
+                            showNotification('Alt işlem oluşturuldu ve iş tetiklendi!', 'success');
+                        } else {
+                            console.log('İş oluşturuldu ama ID alınamadı');
+                            showNotification('Alt işlem oluşturuldu ve iş tetiklendi!', 'success');
+                        }
                     } else {
                         console.error('İş tetiklenemedi:', taskResult.error);
                         showNotification('Alt işlem oluşturuldu ama iş tetiklenemedi.', 'warning');
@@ -608,7 +619,7 @@ export class IndexingDetailModule {
                     console.log('İş tetiklemesi yok veya tebliğ tarihi girilmemiş');
                     showNotification('Alt işlem başarıyla oluşturuldu!', 'success');
                 }
-            }
+                }
 
             // PDF dosyasını transaction'a bağla
             console.log('PDF dosyası transaction\'a bağlanıyor...', transactionIdToAssociateFiles);
