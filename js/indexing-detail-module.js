@@ -86,7 +86,86 @@ export class IndexingDetailModule {
             showNotification('PDF verisi yüklenirken hata oluştu.', 'error');
         }
     }
+async loadETEBSData(urlParams) {
+    try {
+        const evrakNo = urlParams.get('evrakNo');
+        const dosyaNo = urlParams.get('dosyaNo');
+        const description = urlParams.get('description');
+        const dosyaTuru = urlParams.get('dosyaTuru');
 
+        console.log('ETEBS parametreleri:', { evrakNo, dosyaNo, description, dosyaTuru });
+
+        // ETEBS'ten gelen verilerle sahte pdfData oluştur
+        this.pdfData = {
+            id: 'etebs-' + evrakNo,
+            fileName: `${evrakNo}_${description || 'ETEBS_Document'}.pdf`,
+            fileUrl: null, // PDF URL'si yoksa iframe'de hata gösterir
+            source: 'etebs',
+            evrakNo: evrakNo,
+            dosyaNo: dosyaNo,
+            description: description,
+            dosyaTuru: dosyaTuru,
+            uploadedAt: new Date(),
+            extractedAppNumber: evrakNo // Eşleştirme için
+        };
+
+        // Gerçek PDF'i etebs_documents koleksiyonundan bul
+        console.log('ETEBS PDF aranıyor, evrakNo:', evrakNo, 'userId:', this.currentUser.uid);
+        
+        const etebsDocsQuery = query(
+            collection(firebaseServices.db, 'etebs_documents'),
+            where('evrakNo', '==', evrakNo),
+            where('userId', '==', this.currentUser.uid)
+        );
+        
+        const etebsDocsSnapshot = await getDocs(etebsDocsQuery);
+        
+        if (!etebsDocsSnapshot.empty) {
+            const etebsDoc = etebsDocsSnapshot.docs[0];
+            const etebsData = etebsDoc.data();
+            
+            // PDF URL'sini güncelle
+            this.pdfData.fileUrl = etebsData.fileUrl;
+            this.pdfData.id = etebsDoc.id;
+            this.pdfData.matchedRecordId = etebsData.matchedRecordId;
+            this.pdfData.matchedRecordDisplay = etebsData.matchedRecordDisplay;
+            
+            console.log('✅ ETEBS PDF verisi bulundu:', this.pdfData);
+        } else {
+            console.log('❌ ETEBS PDF bulunamadı, unindexed_pdfs koleksiyonunda aranıyor...');
+            
+            // unindexed_pdfs koleksiyonunda da ara
+            const unindexedQuery = query(
+                collection(firebaseServices.db, 'unindexed_pdfs'),
+                where('evrakNo', '==', evrakNo),
+                where('userId', '==', this.currentUser.uid),
+                where('source', '==', 'etebs')
+            );
+            
+            const unindexedSnapshot = await getDocs(unindexedQuery);
+            
+            if (!unindexedSnapshot.empty) {
+                const unindexedDoc = unindexedSnapshot.docs[0];
+                const unindexedData = unindexedDoc.data();
+                
+                // PDF URL'sini güncelle
+                this.pdfData.fileUrl = unindexedData.fileUrl;
+                this.pdfData.id = unindexedDoc.id;
+                this.pdfData.matchedRecordId = unindexedData.matchedRecordId;
+                this.pdfData.matchedRecordDisplay = unindexedData.matchedRecordDisplay;
+                
+                console.log('✅ ETEBS PDF unindexed_pdfs\'te bulundu:', this.pdfData);
+            } else {
+                console.log('❌ ETEBS PDF hiçbir koleksiyonda bulunamadı');
+                showNotification('PDF dosyası bulunamadı. Lütfen önce dosyayı indirin.', 'warning');
+            }
+        }
+        
+    } catch (error) {
+        console.error('ETEBS verisi yüklenirken hata:', error);
+        showNotification('ETEBS verisi yüklenirken hata oluştu: ' + error.message, 'error');
+    }
+}
     async loadRecordsAndTransactionTypes() {
         try {
             // IP kayıtlarını yükle
