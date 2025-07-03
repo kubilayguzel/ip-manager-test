@@ -3,7 +3,44 @@
 
 import { etebsService, etebsAutoProcessor } from '../firebase-config.js';
 import { authService } from '../firebase-config.js';
-import { showNotification } from './notification-system.js';
+
+// Notification helper - mevcut sisteminizi kullanır
+function showNotification(message, type = 'info') {
+    // Önce mevcut showNotification fonksiyonunu kontrol et
+    if (window.showNotification && typeof window.showNotification === 'function') {
+        window.showNotification(message, type);
+    } else {
+        // Fallback: basit console log veya alert
+        console.log(`[${type.toUpperCase()}] ${message}`);
+        
+        // Alternatif: basit DOM notification
+        const notificationContainer = document.querySelector('.notification-container');
+        if (notificationContainer) {
+            const notification = document.createElement('div');
+            notification.className = `notification notification-${type}`;
+            notification.textContent = message;
+            notification.style.cssText = `
+                background: ${type === 'success' ? '#d4edda' : type === 'error' ? '#f8d7da' : '#d1ecf1'};
+                color: ${type === 'success' ? '#155724' : type === 'error' ? '#721c24' : '#0c5460'};
+                padding: 12px 20px;
+                margin: 5px 0;
+                border-radius: 8px;
+                border: 1px solid ${type === 'success' ? '#c3e6cb' : type === 'error' ? '#f5c6cb' : '#bee5eb'};
+            `;
+            notificationContainer.appendChild(notification);
+            
+            // 5 saniye sonra kaldır
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.parentNode.removeChild(notification);
+                }
+            }, 5000);
+        } else {
+            // Son çare: alert
+            alert(`${type.toUpperCase()}: ${message}`);
+        }
+    }
+}
 
 export class ETEBSManager {
     constructor() {
