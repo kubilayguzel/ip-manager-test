@@ -421,23 +421,20 @@ createNotificationHTML(notification, isMatched) {
                     ${isMatched ? '<span class="status-matched">✔ Eşleşti</span>' : '<span class="status-unmatched">⚠ Eşleşmedi</span>'}
                 </div>
                 <div class="actions">
-                    ${isMatched ? `
-                        <button class="btn btn-success btn-sm notification-action-btn"
-                            data-action="downloadAndIndex"
-                            data-evrak-no="${notification.evrakNo}">
-                            📥 İndir & İndeksle
-                        </button>
-                    ` : `
-                        <button class="btn btn-primary btn-sm notification-action-btn"
-                            data-action="download"
-                            data-evrak-no="${notification.evrakNo}">
-                            📥 İndir
-                        </button>
-                    `}
+                    <button class="btn btn-primary btn-sm notification-action-btn"
+                        data-action="index"
+                        data-evrak-no="${notification.evrakNo}">
+                        📝 İndeksle
+                    </button>
+                    <button class="btn btn-success btn-sm notification-action-btn"
+                        data-action="show"
+                        data-evrak-no="${notification.evrakNo}">
+                        👁️ Göster
+                    </button>
                     <button class="btn btn-secondary btn-sm notification-action-btn"
                         data-action="preview"
                         data-evrak-no="${notification.evrakNo}">
-                        👁️ Önizle
+                        📋 Önizle
                     </button>
                 </div>
             </div>
@@ -452,24 +449,31 @@ createNotificationHTML(notification, isMatched) {
     }
 }
 
-    async handleNotificationAction(action, notification) {
-        const tokenInput = document.getElementById('etebsTokenInput');
-        if (!tokenInput) return;
+ async handleNotificationAction(action, notification) {
+    const tokenInput = document.getElementById('etebsTokenInput');
+    if (!tokenInput) return;
 
-        const token = tokenInput.value.trim();
-        
-        switch (action) {
-            case 'downloadAndIndex':
-                await this.downloadAndIndexNotification(token, notification);
-                break;
-            case 'download':
-                await this.downloadNotification(token, notification);
-                break;
-            case 'preview':
-                await this.previewNotification(token, notification);
-                break;
-        }
+    const token = tokenInput.value.trim();
+    
+    switch (action) {
+        case 'index':
+            await this.indexNotification(token, notification);
+            break;
+        case 'show':
+            await this.showNotificationPDF(token, notification);
+            break;
+        case 'preview':
+            await this.previewNotification(token, notification);
+            break;
+        // Eski fonksiyonları da koruyoruz geriye dönük uyumluluk için
+        case 'downloadAndIndex':
+            await this.downloadAndIndexNotification(token, notification);
+            break;
+        case 'download':
+            await this.downloadNotification(token, notification);
+            break;
     }
+}
 
     async downloadAndIndexNotification(token, notification) {
         try {
