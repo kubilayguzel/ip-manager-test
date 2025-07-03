@@ -118,31 +118,11 @@ displayPdf() {
     
     // PDF'i iframe'e yükle
     const pdfViewerIframe = document.getElementById('pdfViewer');
-    if (pdfViewerIframe && pdfViewerIframe.tagName === 'IFRAME') {
+    if (pdfViewerIframe) {
         pdfViewerIframe.src = this.pdfData.fileUrl;
     }
     
-    // Form kısmındaki PDF bilgilerini güncelle (iframe'i değil, form'daki div'i)
-    const pdfFormViewer = document.querySelector('#indexingForm #pdfViewer');
-    if (pdfFormViewer && pdfFormViewer.tagName === 'DIV') {
-        pdfFormViewer.innerHTML = `
-            <div style="display: flex; align-items: center; gap: 15px;">
-                <div style="flex: 1;">
-                    <h4>${this.pdfData.fileName}</h4>
-                    <p><strong>Yükleme:</strong> ${this.pdfData.uploadedAt ? new Date(this.pdfData.uploadedAt.seconds * 1000).toLocaleDateString('tr-TR') : 'Bilinmiyor'}</p>
-                    <p><strong>Çıkarılan Uygulama No:</strong> ${this.pdfData.extractedAppNumber || 'Bulunamadı'}</p>
-                </div>
-                <div>
-                    <button type="button" class="btn btn-primary" onclick="window.open('${this.pdfData.fileUrl}', '_blank')" style="margin-right: 10px;">
-                        👁️ PDF'yi Görüntüle
-                    </button>
-                    <button type="button" class="btn btn-secondary" onclick="window.indexingDetailModule.downloadPdf()">
-                        📥 İndir
-                    </button>
-                </div>
-            </div>
-        `;
-    }
+    // Form kısmındaki PDF bilgilerini kaldır - artık gerek yok
 }
 
     downloadPdf() {
