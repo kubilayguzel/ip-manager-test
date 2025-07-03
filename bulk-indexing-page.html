@@ -1609,7 +1609,6 @@
                                             <span>🔐</span>
                                             ETEBS Token Yönetimi
                                         </h2>
-                                        
                                         <div class="form-group">
                                             <label class="form-label">ETEBS Token (GUID)</label>
                                             <div class="input-group-inline">
@@ -1627,7 +1626,6 @@
                                             <!-- Status will be shown here -->
                                         </div>
                                     </div>
-
                                     <!-- Notifications Section -->
                                     <div id="notificationsSection" class="notifications-section" style="display: none;">
                                         <div class="section-header">
@@ -1774,14 +1772,14 @@
         // Shared Layout yükle
         loadSharedLayout({ activeMenuLink: 'bulk-indexing-page.html' });
 
-        // ETEBSManager'ı sadece burada yarat
-        const etebsManager = new ETEBSManager();
+        // ETEBSManager'ı window'a koy
+        window.etebsManager = new ETEBSManager();
 
-        // Butona tıklanınca init et
+        // Butona tıklayınca init et
         const fetchBtn = document.getElementById('fetchEtebsNotificationsBtn');
         if (fetchBtn) {
             fetchBtn.addEventListener('click', () => {
-                etebsManager.init();
+                window.etebsManager.init();
             });
         }
     });
