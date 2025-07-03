@@ -1,146 +1,221 @@
-const admin = require('firebase-admin');
-const { onSchedule } = require("firebase-functions/v2/scheduler"); // Yeni import
+// functions/index.js
+const functions = require('firebase-functions');
+const cors = require('cors');
+const fetch = require('node-fetch');
 
-admin.initializeApp();
+// CORS ayarları - sadece kendi domain'inizden gelen istekleri kabul et
+const corsOptions = {
+    origin: [
+        'https://kubilayguzel.github.io',
+        'http://localhost:3000',
+        'http://127.0.0.1:3000',
+        'http://localhost:5173' // Vite dev server
+    ],
+    credentials: true,
+    optionsSuccessStatus: 200
+};
 
-const db = admin.firestore();
+const corsHandler = cors(corsOptions);
 
-// Yardımcı fonksiyonlar (addMonths, getMonthsAgo) artık fonksiyonun içinde tanımlanacak
+// ETEBS API Proxy Function
+exports.etebsProxy = functions
+    .region('europe-west1') // En yakın region seçin
+    .runWith({
+        timeoutSeconds: 120, // 2 dakika timeout
+        memory: '256MB'
+    })
+    .https.onRequest((req, res) => {
+        return corsHandler(req, res, async () => {
+            // Sadece POST isteklerini kabul et
+            if (req.method !== 'POST') {
+                return res.status(405).json({ 
+                    success: false,
+                    error: 'Method not allowed' 
+                });
+            }
 
-exports.checkTrademarkRenewalsAndInvalidations = onSchedule({
-        schedule: '0 0 * * *', // Cron ifadesi aynı kalabilir veya ihtiyaca göre değiştirin
-        timeZone: 'Europe/Istanbul'
-    },
-    async (context) => { // Bu bloğun içine taşıyoruz
-        // >>> addMonths ve getMonthsAgo fonksiyonlarını BURAYA YAPIŞTIRIN <<<
-        // (fonksiyonun içinde olması için)
-        function addMonths(date, months) {
-            const d = new Date(date);
-            d.setMonth(d.getMonth() + months);
-            return d;
+            try {
+                console.log('🔥 ETEBS Proxy request:', req.body);
+                
+                const { action, token, documentNo } = req.body;
+
+                // Gerekli parametreleri kontrol et
+                if (!action || !token) {
+                    return res.status(400).json({
+                        success: false,
+                        error: 'Missing required parameters'
+                    });
+                }
+
+                // ETEBS API endpoint'ini belirle
+                let apiUrl = '';
+                let requestBody = { TOKEN: token };
+
+                switch (action) {
+                    case 'daily-notifications':
+                        apiUrl = 'https://epats.turkpatent.gov.tr/service/TP/DAILY_NOTIFICATIONS?apikey=etebs';
+                        break;
+                    
+                    case 'download-document':
+                        if (!documentNo) {
+                            return res.status(400).json({
+                                success: false,
+                                error: 'Document number required for download'
+                            });
+                        }
+                        apiUrl = 'https://epats.turkpatent.gov.tr/service/TP/DOWNLOAD_DOCUMENT?apikey=etebs';
+                        requestBody.DOCUMENT_NO = documentNo;
+                        break;
+                    
+                    default:
+                        return res.status(400).json({
+                            success: false,
+                            error: 'Invalid action'
+                        });
+                }
+
+                console.log('📡 ETEBS API call:', apiUrl);
+
+                // ETEBS API'sine istek gönder
+                const etebsResponse = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'User-Agent': 'IP-Manager-ETEBS-Proxy/1.0'
+                    },
+                    body: JSON.stringify(requestBody),
+                    timeout: 30000 // 30 saniye timeout
+                });
+
+                if (!etebsResponse.ok) {
+                    throw new Error(`ETEBS API HTTP ${etebsResponse.status}: ${etebsResponse.statusText}`);
+                }
+
+                const etebsData = await etebsResponse.json();
+                
+                console.log('✅ ETEBS API response received');
+
+                // ETEBS response'unu frontend'e döndür
+                res.json({
+                    success: true,
+                    data: etebsData,
+                    timestamp: new Date().toISOString()
+                });
+
+            } catch (error) {
+                console.error('❌ ETEBS Proxy Error:', error);
+                
+                // Hata türüne göre response
+                if (error.code === 'ENOTFOUND' || error.code === 'ECONNREFUSED') {
+                    res.status(503).json({
+                        success: false,
+                        error: 'ETEBS service unavailable',
+                        code: 'SERVICE_UNAVAILABLE'
+                    });
+                } else if (error.name === 'AbortError') {
+                    res.status(408).json({
+                        success: false,
+                        error: 'Request timeout',
+                        code: 'TIMEOUT'
+                    });
+                } else {
+                    res.status(500).json({
+                        success: false,
+                        error: 'Internal proxy error',
+                        code: 'PROXY_ERROR',
+                        message: process.env.NODE_ENV === 'development' ? error.message : undefined
+                    });
+                }
+            }
+        });
+    });
+
+// Health Check Function
+exports.etebsProxyHealth = functions
+    .region('europe-west1')
+    .https.onRequest((req, res) => {
+        return corsHandler(req, res, () => {
+            res.json({
+                status: 'healthy',
+                service: 'ETEBS Proxy',
+                timestamp: new Date().toISOString(),
+                version: '1.0.0'
+            });
+        });
+    });
+
+// ETEBS Token Validation Function
+exports.validateEtebsToken = functions
+    .region('europe-west1')
+    .https.onRequest((req, res) => {
+        return corsHandler(req, res, () => {
+            if (req.method !== 'POST') {
+                return res.status(405).json({ error: 'Method not allowed' });
+            }
+
+            const { token } = req.body;
+            
+            if (!token) {
+                return res.status(400).json({
+                    valid: false,
+                    error: 'Token required'
+                });
+            }
+
+            // GUID format validation
+            const guidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+            
+            if (!guidRegex.test(token)) {
+                return res.status(400).json({
+                    valid: false,
+                    error: 'Invalid token format'
+                });
+            }
+
+            res.json({
+                valid: true,
+                format: 'GUID',
+                timestamp: new Date().toISOString()
+            });
+        });
+    });
+
+// Rate Limiting Function (Scheduled)
+exports.cleanupEtebsLogs = functions
+    .region('europe-west1')
+    .pubsub.schedule('every 24 hours')
+    .onRun(async (context) => {
+        console.log('🧹 ETEBS logs cleanup started');
+        
+        // Firestore'dan eski logları temizle
+        const admin = require('firebase-admin');
+        if (!admin.apps.length) {
+            admin.initializeApp();
         }
 
-        function getMonthsAgo(date, months) {
-            const d = new Date(date);
-            d.setMonth(d.getMonth() - months);
-            return d;
-        }
-        // >>> Buraya yapıştırdığınızdan emin olun <<<
-
-        console.log('Marka yenileme ve geçersiz kılma kontrol fonksiyonu çalıştı!');
-
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-
-        const twelveMonthsFromNow = addMonths(today, 12); // Artık tanımlı olacak
-        const sixMonthsAgo = addMonths(today, -6); // Artık tanımlı olacak
+        const db = admin.firestore();
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
         try {
-            const ipRecordsRef = db.collection('ipRecords');
-            const trademarkSnapshot = await ipRecordsRef.where('type', '==', 'trademark').get();
-
-            if (trademarkSnapshot.empty) {
-                console.log('Hiç marka kaydı bulunamadı.');
-                return null;
-            }
+            const oldLogs = await db.collection('etebs_logs')
+                .where('timestamp', '<', thirtyDaysAgo)
+                .limit(500)
+                .get();
 
             const batch = db.batch();
-            let tasksCreatedCount = 0;
-            let recordsInvalidatedCount = 0;
-            let notificationsCreatedCount = 0;
+            oldLogs.docs.forEach(doc => {
+                batch.delete(doc.ref);
+            });
 
-            for (const doc of trademarkSnapshot.docs) {
-                const record = doc.data();
-                const recordId = doc.id;
-
-                if (!record.renewalDate) {
-                    console.log(`Marka ${record.title} (${record.applicationNumber}) için yenileme tarihi yok, atlandı.`);
-                    continue;
-                }
-
-                const renewalDate = new Date(record.renewalDate);
-                renewalDate.setHours(0, 0, 0, 0);
-
-                // Senaryo 1: Yaklaşan Marka Yenilemeleri (12 Ay İçinde)
-                if (renewalDate >= today && renewalDate <= twelveMonthsFromNow) {
-                    const existingTasksQuery = await db.collection('tasks')
-                        .where('relatedIpRecordId', '==', recordId)
-                        .where('taskType', '==', 'trademark_renewal')
-                        .where('status', '==', 'pending_client_approval')
-                        .where('isAutomated', '==', true)
-                        .where('createdAt', '>', getMonthsAgo(today, 12).toISOString())
-                        .limit(1)
-                        .get();
-
-                    if (existingTasksQuery.empty) {
-                        const newTaskId = db.collection('tasks').doc().id;
-                        const taskData = {
-                            id: newTaskId,
-                            taskType: 'trademark_renewal',
-                            title: `Marka Yenileme Onayı: ${record.title} (${record.applicationNumber})`,
-                            description: `${record.title} markasının yenileme tarihi ${record.renewalDate} yaklaşıyor. Müvekkil onayı bekleniyor.`,
-                            priority: 'high',
-                            assignedTo_uid: 'YOUR_ADMIN_UID', // Lütfen gerçek Admin UID ile değiştirin
-                            assignedTo_email: 'your_admin_email@example.com', // Lütfen gerçek Admin E-postası ile değiştirin
-                            dueDate: record.renewalDate,
-                            status: 'pending_client_approval',
-                            relatedIpRecordId: recordId,
-                            relatedIpRecordTitle: record.title,
-                            isAutomated: true,
-                            createdAt: new Date().toISOString(),
-                            updatedAt: new Date().toISOString(),
-                            history: [{
-                                timestamp: new Date().toISOString(),
-                                userId: 'automated_system',
-                                userEmail: 'system@ipmanager.com',
-                                action: `Otomatik olarak marka yenileme onay işi oluşturuldu. Yenileme Tarihi: ${record.renewalDate}`
-                            }]
-                        };
-                        batch.set(db.collection('tasks').doc(newTaskId), taskData);
-                        tasksCreatedCount++;
-                        console.log(`Yeni "Müvekkil Onayı Bekliyor" işi oluşturuldu: ${record.title}`);
-                    } else {
-                        console.log(`Marka ${record.title} için zaten "Müvekkil Onayı Bekliyor" işi mevcut veya tamamlandı.`);
-                    }
-                }
-
-                // Senaryo 2: Süresi Geçmiş ve Yenilenmemiş Markalar (6 Aydan Daha Uzun Süre Önce Geçmiş)
-                if (renewalDate < sixMonthsAgo && record.status !== 'invalid_not_renewed') {
-                    batch.update(ipRecordsRef.doc(recordId), {
-                        status: 'invalid_not_renewed',
-                        updatedAt: new Date().toISOString()
-                    });
-                    recordsInvalidatedCount++;
-                    console.log(`Marka ${record.title} (${record.applicationNumber}) yenilememe nedeniyle geçersiz kılındı.`);
-
-                    const notificationRef = db.collection('notifications').doc();
-                    const notificationData = {
-                        id: notificationRef.id,
-                        userId: 'all',
-                        message: `Marka "${record.title}" (${record.applicationNumber}) yenilememe nedeniyle geçersiz kılınmıştır. Yenileme tarihi: ${record.renewalDate}. Lütfen kontrol edin.`,
-                        type: 'warning',
-                        createdAt: new Date().toISOString(),
-                        isRead: false,
-                        relatedRecordId: recordId,
-                        relatedRecordTitle: record.title,
-                        action: 'Yenileme Gecikti'
-                    };
-                    batch.set(notificationRef, notificationData);
-                    notificationsCreatedCount++;
-                    console.log(`Hatırlatma bildirimi oluşturuldu: ${record.title}`);
-                }
-            }
-
-            if (tasksCreatedCount > 0 || recordsInvalidatedCount > 0 || notificationsCreatedCount > 0) {
-                await batch.commit();
-                console.log(`İşlem özeti: ${tasksCreatedCount} iş oluşturuldu, ${recordsInvalidatedCount} kayıt geçersiz kılındı, ${notificationsCreatedCount} bildirim oluşturuldu.`);
-            } else {
-                console.log('Herhangi bir yeni işlem yapılmadı.');
-            }
-
-            return null;
+            await batch.commit();
+            
+            console.log(`🗑️ Cleaned up ${oldLogs.docs.length} old ETEBS logs`);
         } catch (error) {
-            console.error('Marka yenileme ve geçersiz kılma kontrolünde hata oluştu:', error);
-            return null;
+            console.error('❌ Cleanup error:', error);
         }
+
+        return null;
     });
+
+console.log('🔥 ETEBS Proxy Functions loaded');
