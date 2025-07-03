@@ -579,12 +579,14 @@ export class IndexingDetailModule {
                     console.log('İş tetiklemesi yapılıyor...');
                     
                     const taskData = {
+                        title: `${childTransactionType.alias || childTransactionType.name} - ${this.matchedRecord.title}`, // Title ekle
+                        description: `${this.matchedRecord.title} için ${childTransactionType.alias || childTransactionType.name} işlemi`,
                         ipRecordId: this.matchedRecord.id,
                         transactionId: childTransactionId,
                         triggeringTransactionType: childTypeId,
                         deliveryDate: deliveryDateStr,
-                        assignedTo: SELCAN_UID,
-                        assignedToEmail: SELCAN_EMAIL,
+                        assignedTo_uid: SELCAN_UID,
+                        assignedTo_email: SELCAN_EMAIL,
                         priority: 'normal',
                         status: 'open',
                         createdAt: new Date(),
