@@ -410,44 +410,45 @@ export class ETEBSManager {
                 const konmaTarihi = new Date(notification.uygulamaKonmaTarihi).toLocaleDateString('tr-TR');
 
                 return `
-                    <div class="notification-card" data-evrak="${notification.evrakNo}">
-                        <div class="card-header">
-                            <span class="evrak-no">${notification.evrakNo}</span>
-                            <span class="status ${isMatched ? 'status-matched' : 'status-unmatched'}">
-                                ${isMatched ? '✔ Eşleşti' : '⚠ Eşleşmedi'}
-                            </span>
+                    <div class="notification-list-row" data-evrak="${notification.evrakNo}">
+                        <div class="list-col evrak-no">
+                            ${notification.evrakNo}
                         </div>
-                        <div class="card-body">
-                            <div><strong>📁 Dosya No:</strong> ${notification.dosyaNo}</div>
-                            <div><strong>📋 Tür:</strong> ${notification.dosyaTuru}</div>
-                            <div><strong>📅 Belge Tarihi:</strong> ${date}</div>
-                            <div><strong>📮 Konma Tarihi:</strong> ${konmaTarihi}</div>
-                            <div><strong>📝 Açıklama:</strong> ${notification.belgeAciklamasi}</div>
-                            ${isMatched ? `
-                                <div class="matched-info">
-                                    <strong>🎯 Eşleşen Kayıt:</strong><br>
-                                    ${notification.matchedRecord?.title || notification.matchedRecord?.applicationNumber || 'Bilinmeyen Kayıt'}
-                                    <br><small>✨ Otomatik eşleştirme (${notification.matchConfidence || 100}% güven)</small>
-                                </div>
-                            ` : ''}
+                        <div class="list-col dosya-no">
+                            ${notification.dosyaNo}
                         </div>
-                        <div class="card-footer">
+                        <div class="list-col tur">
+                            ${notification.dosyaTuru}
+                        </div>
+                        <div class="list-col belge-tarih">
+                            ${date}
+                        </div>
+                        <div class="list-col konma-tarih">
+                            ${konmaTarihi}
+                        </div>
+                        <div class="list-col aciklama">
+                            ${notification.belgeAciklamasi}
+                        </div>
+                        <div class="list-col durum">
+                            ${isMatched ? '<span class="status-matched">✔ Eşleşti</span>' : '<span class="status-unmatched">⚠ Eşleşmedi</span>'}
+                        </div>
+                        <div class="list-col actions">
                             ${isMatched ? `
-                                <button class="btn btn-success btn-sm notification-action-btn" 
-                                        data-action="downloadAndIndex" 
-                                        data-evrak-no="${notification.evrakNo}">
+                                <button class="btn btn-success btn-sm notification-action-btn"
+                                    data-action="downloadAndIndex"
+                                    data-evrak-no="${notification.evrakNo}">
                                     📥 İndir & İndeksle
                                 </button>
                             ` : `
-                                <button class="btn btn-primary btn-sm notification-action-btn" 
-                                        data-action="download" 
-                                        data-evrak-no="${notification.evrakNo}">
+                                <button class="btn btn-primary btn-sm notification-action-btn"
+                                    data-action="download"
+                                    data-evrak-no="${notification.evrakNo}">
                                     📥 İndir
                                 </button>
                             `}
-                            <button class="btn btn-secondary btn-sm notification-action-btn" 
-                                    data-action="preview" 
-                                    data-evrak-no="${notification.evrakNo}">
+                            <button class="btn btn-secondary btn-sm notification-action-btn"
+                                data-action="preview"
+                                data-evrak-no="${notification.evrakNo}">
                                 👁️ Önizle
                             </button>
                         </div>
@@ -456,19 +457,13 @@ export class ETEBSManager {
             } catch (error) {
                 console.error('Error creating notification HTML:', error);
                 return `
-                    <div class="notification-card error">
-                        <div class="card-header">
-                            <span class="evrak-no">Hata</span>
-                            <span class="status status-unmatched">❌ Hatalı</span>
-                        </div>
-                        <div class="card-body">
-                            Tebligat gösterilemiyor: ${error.message}
-                        </div>
+                    <div class="notification-list-row error">
+                        <div class="list-col">Hata</div>
+                        <div class="list-col">Tebligat gösterilemiyor: ${error.message}</div>
                     </div>
                 `;
             }
         }
-
 
     async handleNotificationAction(action, notification) {
         const tokenInput = document.getElementById('etebsTokenInput');
