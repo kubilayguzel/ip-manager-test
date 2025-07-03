@@ -532,6 +532,39 @@ createNotificationHTML(notification, isMatched) {
     }
 }
 
+async indexNotification(token, notification) {
+    try {
+        showNotification('Evrak indiriliyor ve indeksleme sayfasına yönlendiriliyor...', 'info');
+        
+        const downloadResult = await etebsService.downloadDocument(token, notification.evrakNo);
+        
+        if (downloadResult.success) {
+            // İndeksleme sayfasına yönlendir
+            const queryParams = new URLSearchParams({
+                source: 'etebs',
+                evrakNo: notification.evrakNo,
+                dosyaNo: notification.dosyaNo,
+                description: notification.belgeAciklamasi,
+                dosyaTuru: notification.dosyaTuru
+            });
+            
+            showNotification('Evrak indirildi. İndeksleme sayfasına yönlendiriliyor...', 'success');
+            
+            // Yeni tab'da aç
+            setTimeout(() => {
+                window.open(`indexing-detail.html?${queryParams.toString()}`, '_blank');
+            }, 1000);
+            
+        } else {
+            showNotification(`İndirme hatası: ${downloadResult.error}`, 'error');
+        }
+        
+    } catch (error) {
+        console.error('Index error:', error);
+        showNotification('İndeksleme sırasında hata oluştu', 'error');
+    }
+}
+
 async showNotificationPDF(token, notification) {
     try {
         showNotification('PDF açılıyor...', 'info');
@@ -582,8 +615,7 @@ async showNotificationPDF(token, notification) {
         showNotification('PDF açılırken hata oluştu', 'error');
     }
 }
-
- async handleNotificationAction(action, notification) {
+async handleNotificationAction(action, notification) {
     const tokenInput = document.getElementById('etebsTokenInput');
     if (!tokenInput) return;
 
@@ -608,38 +640,7 @@ async showNotificationPDF(token, notification) {
             break;
     }
 }
-async indexNotification(token, notification) {
-    try {
-        showNotification('Evrak indiriliyor ve indeksleme sayfasına yönlendiriliyor...', 'info');
-        
-        const downloadResult = await etebsService.downloadDocument(token, notification.evrakNo);
-        
-        if (downloadResult.success) {
-            // İndeksleme sayfasına yönlendir
-            const queryParams = new URLSearchParams({
-                source: 'etebs',
-                evrakNo: notification.evrakNo,
-                dosyaNo: notification.dosyaNo,
-                description: notification.belgeAciklamasi,
-                dosyaTuru: notification.dosyaTuru
-            });
-            
-            showNotification('Evrak indirildi. İndeksleme sayfasına yönlendiriliyor...', 'success');
-            
-            // Yeni tab'da aç
-            setTimeout(() => {
-                window.open(`indexing-detail.html?${queryParams.toString()}`, '_blank');
-            }, 1000);
-            
-        } else {
-            showNotification(`İndirme hatası: ${downloadResult.error}`, 'error');
-        }
-        
-    } catch (error) {
-        console.error('Index error:', error);
-        showNotification('İndeksleme sırasında hata oluştu', 'error');
-    }
-}
+
     async downloadAndIndexNotification(token, notification) {
         try {
             showNotification('Evrak indiriliyor ve indeksleniyor...', 'info');
