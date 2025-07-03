@@ -643,11 +643,13 @@ deactivateUploadMode() {
     }
 
     async fetchNotifications() {
+        console.log("✅ fetchNotifications başladı");
         const tokenInput = document.getElementById('etebsTokenInput');
         if (!tokenInput) return;
 
         const token = tokenInput.value.trim();
-        
+        console.log("🔑 Token:", token);
+
         if (!token) {
             this.showTokenStatus('error', 'Token giriniz');
             return;
@@ -667,6 +669,8 @@ deactivateUploadMode() {
 
             // Fetch notifications from ETEBS
             const result = await etebsService.getDailyNotifications(token);
+            console.log("📡 getDailyNotifications sonucu:", result);
+
 
             if (result.success) {
                 // Save token for future use
