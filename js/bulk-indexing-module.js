@@ -121,10 +121,7 @@ export class BulkIndexingModule {
         if (manualTransactionType) {
             manualTransactionType.addEventListener('change', () => this.checkFormCompleteness());
         }
-        
-        // Search and form listeners for existing transaction tab
-        this.setupExistingTransactionListeners();
-        
+                   
         // Search and form listeners for manual transaction tab
         this.setupManualTransactionListeners();
         
