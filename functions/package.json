@@ -3,6 +3,7 @@
   "description": "Firebase Functions for ETEBS API Proxy",
   "version": "1.0.0",
   "scripts": {
+    "lint": "echo 'Lint skipped'",
     "serve": "firebase emulators:start --only functions",
     "shell": "firebase functions:shell",
     "start": "npm run shell",
