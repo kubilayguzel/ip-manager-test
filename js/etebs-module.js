@@ -442,8 +442,9 @@ async init() {
             // Token fetch
             const fetchBtn = document.getElementById('fetchNotificationsBtn');
             if (fetchBtn) {
-                fetchBtn.addEventListener('click', () => this.fetchNotifications());
+                fetchBtn.addEventListener('click', this.fetchNotifications.bind(this));
             }
+
 
             // Refresh notifications
             const refreshBtn = document.getElementById('refreshNotificationsBtn');
