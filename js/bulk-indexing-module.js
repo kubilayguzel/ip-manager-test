@@ -129,33 +129,65 @@ export class BulkIndexingModule {
         this.setupCommonFormListeners();
     }
 
-    setupBulkUploadListeners() {
-        const uploadButton = document.getElementById('bulkFilesButton');
-        const fileInput = document.getElementById('bulkFiles');
+setupBulkUploadListeners() {
+    
+    const uploadButton = document.getElementById('bulkFilesButton');
+    const fileInput = document.getElementById('bulkFiles');
 
-        if (uploadButton) {
-            uploadButton.addEventListener('click', () => fileInput?.click());
-            uploadButton.addEventListener('dragover', this.handleDragOver.bind(this));
-            uploadButton.addEventListener('dragleave', this.handleDragLeave.bind(this));
-            uploadButton.addEventListener('drop', this.handleDrop.bind(this));
-        }
-        if (fileInput) {
-            fileInput.addEventListener('change', this.handleFileSelect.bind(this));
-        }
-
-        // File tab switching within bulk upload
-        document.addEventListener('click', (e) => {
-            if (e.target.classList.contains('tab-btn') && 
-                e.target.closest('#fileListSection')) {
-                const targetPane = e.target.getAttribute('data-tab');
-                if (targetPane === 'all-files-pane' || 
-                    targetPane === 'unmatched-files-pane' || 
-                    targetPane === 'indexed-files-pane') {
-                    this.switchFileTab(targetPane);
-                }
-            }
+    if (!uploadButton || !fileInput) {
+        console.warn('⚠️ BulkIndexingModule: Upload elementleri bulunamadı', {
+            uploadButton: !!uploadButton,
+            fileInput: !!fileInput
         });
+        return;
     }
+
+    // Mevcut listener'ları kaldırmak için elementleri klonla (çakışmaları önler)
+    const newUploadButton = uploadButton.cloneNode(true);
+    const newFileInput = fileInput.cloneNode(true);
+    
+    uploadButton.parentNode.replaceChild(newUploadButton, uploadButton);
+    fileInput.parentNode.replaceChild(newFileInput, fileInput);
+
+    // Event listener'ları yeni elementlere ekle
+    newUploadButton.addEventListener('click', (e) => {
+        e.preventDefault();
+        console.log('🖱️ BulkIndexingModule: Upload button tıklandı');
+        newFileInput.click();
+    });
+
+    newUploadButton.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        this.handleDragOver(e);
+    });
+
+    newUploadButton.addEventListener('dragleave', (e) => {
+        e.preventDefault();
+        this.handleDragLeave(e);
+    });
+
+    newUploadButton.addEventListener('drop', (e) => {
+        e.preventDefault();
+        this.handleDrop(e);
+    });
+
+    newFileInput.addEventListener('change', (e) => {
+        console.log('📂 BulkIndexingModule: Dosya input değişti');
+        this.handleFileSelect(e);
+    });
+
+    // File tab switching within bulk upload
+    document.addEventListener('click', (e) => {
+        if (e.target.classList.contains('tab-btn') && 
+            e.target.closest('#fileListSection')) {
+            const targetPane = e.target.getAttribute('data-tab');
+            if (targetPane === 'all-files-pane' || targetPane === 'matched-files-pane' || targetPane === 'unmatched-files-pane') {
+                this.switchFileTab(targetPane);
+            }
+        }
+    });
+
+}
 
     setupMainTabListeners() {
         document.querySelectorAll('.tabs-container .tab-btn').forEach(btn => {
