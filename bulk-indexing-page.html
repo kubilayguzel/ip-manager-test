@@ -1767,6 +1767,12 @@
         import { loadSharedLayout } from './js/layout-loader.js';
         import { ETEBSManager } from './js/etebs-module.js';
 
+        const etebsManager = new ETEBSManager();
+
+        document.getElementById('fetchEtebsNotificationsBtn').addEventListener('click', () => {
+            etebsManager.init();
+        });
+
         document.addEventListener('DOMContentLoaded', () => {
             window.indexingModule = new BulkIndexingModule();
             window.etebsManager = new ETEBSManager();
