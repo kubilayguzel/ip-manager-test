@@ -1139,6 +1139,232 @@
     .btn-secondary:hover {
         background: linear-gradient(135deg, #7f8c8d, #95a5a6);
     }
+/* Tab Based Notifications CSS - bulk-indexing-page.html'e ekleyin */
+
+/* Tab Container */
+.notifications-tabs-container {
+    margin-top: 25px;
+}
+
+/* Tab Headers */
+.notifications-tabs-header {
+    display: flex;
+    background: #f8f9fa;
+    border-radius: 12px 12px 0 0;
+    padding: 8px;
+    gap: 8px;
+    border-bottom: 2px solid #e1e8ed;
+}
+
+.notifications-tab-btn {
+    flex: 1;
+    padding: 15px 20px;
+    border: none;
+    background: transparent;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #7f8c8d;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    position: relative;
+}
+
+.notifications-tab-btn:hover {
+    background: rgba(255, 255, 255, 0.7);
+    color: #2c3e50;
+    transform: translateY(-1px);
+}
+
+.notifications-tab-btn.active {
+    background: white;
+    color: #1e3c72;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    transform: translateY(-2px);
+}
+
+.notifications-tab-btn span:first-child {
+    font-size: 1.2rem;
+}
+
+.tab-badge-count {
+    background: #3498db;
+    color: white;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    min-width: 25px;
+    text-align: center;
+}
+
+.notifications-tab-btn.active .tab-badge-count {
+    background: #1e3c72;
+}
+
+.notifications-tab-btn:hover .tab-badge-count {
+    transform: scale(1.1);
+}
+
+/* Tab Content */
+.notifications-tab-content {
+    background: white;
+    border-radius: 0 0 12px 12px;
+    min-height: 500px;
+    border: 1px solid #e1e8ed;
+    border-top: none;
+}
+
+.notifications-tab-pane {
+    display: none;
+    padding: 25px;
+}
+
+.notifications-tab-pane.active {
+    display: block;
+    animation: fadeInUp 0.3s ease-out;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* List Container */
+.notifications-list-container {
+    width: 100%;
+}
+
+.notifications-list-full {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+    gap: 20px;
+    max-height: 600px;
+    overflow-y: auto;
+    padding-right: 10px;
+}
+
+/* Notification Item - Full Width için düzenleme */
+.notifications-list-full .notification-item {
+    background: white;
+    border: 1px solid #e1e8ed;
+    border-radius: 12px;
+    padding: 20px;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    border-left: 4px solid #ddd;
+}
+
+.notifications-list-full .notification-item:hover {
+    box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+    transform: translateY(-3px);
+}
+
+/* Matched items */
+.notifications-list-full[data-type="matched"] .notification-item {
+    border-left-color: #27ae60;
+}
+
+/* Unmatched items */
+.notifications-list-full[data-type="unmatched"] .notification-item {
+    border-left-color: #e74c3c;
+}
+
+/* Grid responsive */
+@media (max-width: 1200px) {
+    .notifications-list-full {
+        grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    }
+}
+
+@media (max-width: 900px) {
+    .notifications-list-full {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 768px) {
+    .notifications-tabs-header {
+        flex-direction: column;
+        gap: 5px;
+    }
+    
+    .notifications-tab-btn {
+        justify-content: space-between;
+        padding: 12px 15px;
+    }
+    
+    .notifications-tab-pane {
+        padding: 15px;
+    }
+}
+
+/* Custom Scrollbar for Tab Content */
+.notifications-list-full::-webkit-scrollbar {
+    width: 8px;
+}
+
+.notifications-list-full::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+.notifications-list-full::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 4px;
+}
+
+.notifications-list-full::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+
+/* Empty State için Tab içinde */
+.notifications-tab-pane .empty-state {
+    text-align: center;
+    padding: 80px 20px;
+    color: #95a5a6;
+}
+
+.notifications-tab-pane .empty-state span {
+    font-size: 4rem;
+    display: block;
+    margin-bottom: 20px;
+    opacity: 0.5;
+}
+
+.notifications-tab-pane .empty-state p {
+    font-size: 1.1rem;
+    font-weight: 500;
+    margin: 0;
+}
+
+/* Badge Colors */
+.notifications-tab-btn[data-notifications-tab="matched"] .tab-badge-count {
+    background: #27ae60;
+}
+
+.notifications-tab-btn[data-notifications-tab="unmatched"] .tab-badge-count {
+    background: #e74c3c;
+}
+
+.notifications-tab-btn[data-notifications-tab="matched"].active .tab-badge-count {
+    background: #229954;
+}
+
+.notifications-tab-btn[data-notifications-tab="unmatched"].active .tab-badge-count {
+    background: #c0392b;
+}
+
     </style>
 </head>
 <body>
@@ -1302,43 +1528,49 @@
                                         </div>
 
                                         <!-- Two Column Layout -->
-                                        <div class="notifications-grid">
-                                            <!-- Matched Notifications -->
-                                            <div class="notification-column matched-column">
-                                                <div class="column-header">
-                                                    <h3 class="column-title">
-                                                        <span>✅</span>
-                                                        <span>Eşleşen Tebligatlar</span>
-                                                        <span class="notification-count" id="matchedBadge">0</span>
-                                                    </h3>
-                                                </div>
-                                                <div id="matchedNotificationsList" class="notifications-list">
-                                                    <div class="empty-state">
-                                                        <span>📋</span>
-                                                        <p>Henüz eşleşen tebligat yok</p>
-                                                    </div>
-                                                </div>
+                                        <!-- Tab Based Layout - İki kolonlu yapı yerine -->
+                                        <div class="notifications-tabs-container">
+                                            <!-- Tab Headers -->
+                                            <div class="notifications-tabs-header">
+                                                <button class="notifications-tab-btn active" data-notifications-tab="matched">
+                                                    <span>✅</span>
+                                                    <span>Eşleşen Tebligatlar</span>
+                                                    <span class="tab-badge-count" id="matchedTabBadge">0</span>
+                                                </button>
+                                                <button class="notifications-tab-btn" data-notifications-tab="unmatched">
+                                                    <span>❓</span>
+                                                    <span>Eşleşmeyen Tebligatlar</span>
+                                                    <span class="tab-badge-count" id="unmatchedTabBadge">0</span>
+                                                </button>
                                             </div>
 
-                                            <!-- Unmatched Notifications -->
-                                            <div class="notification-column unmatched-column">
-                                                <div class="column-header">
-                                                    <h3 class="column-title">
-                                                        <span>❓</span>
-                                                        <span>Eşleşmeyen Tebligatlar</span>
-                                                        <span class="notification-count" id="unmatchedBadge">0</span>
-                                                    </h3>
+                                            <!-- Tab Contents -->
+                                            <div class="notifications-tab-content">
+                                                <!-- Matched Notifications Tab -->
+                                                <div id="matched-notifications-tab" class="notifications-tab-pane active">
+                                                    <div class="notifications-list-container">
+                                                        <div id="matchedNotificationsList" class="notifications-list-full">
+                                                            <div class="empty-state">
+                                                                <span>📋</span>
+                                                                <p>Henüz eşleşen tebligat yok</p>
+                                                            </div>
+                                                        </div>
+                                                    </div>
                                                 </div>
-                                                <div id="unmatchedNotificationsList" class="notifications-list">
-                                                    <div class="empty-state">
-                                                        <span>📋</span>
-                                                        <p>Henüz eşleşmeyen tebligat yok</p>
+
+                                                <!-- Unmatched Notifications Tab -->
+                                                <div id="unmatched-notifications-tab" class="notifications-tab-pane">
+                                                    <div class="notifications-list-container">
+                                                        <div id="unmatchedNotificationsList" class="notifications-list-full">
+                                                            <div class="empty-state">
+                                                                <span>📋</span>
+                                                                <p>Henüz eşleşmeyen tebligat yok</p>
+                                                            </div>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </div>
                                         </div>
-                                    </div>
-                                </div>
 
                                 <!-- Upload Mode (Mevcut Bulk Upload Kodu) -->
                                 <div id="upload-mode" class="mode-content" style="display: none;">
