@@ -911,14 +911,18 @@ export const bulkIndexingService = {
 // === ETEBS SERVICE LAYER ===
 // firebase-config.js dosyasının sonuna eklenecek
 
-// ETEBS API Constants
+// firebase-config.js dosyasında ETEBS_CONFIG'i bulun ve şöyle güncelleyin:
+
+// ETEBS API Configuration - Firebase Functions Proxy kullanıyor
 const ETEBS_CONFIG = {
-    baseUrl: 'https://epats.turkpatent.gov.tr/service/TP/',
-    apiKey: 'etebs',
-    endpoints: {
-        dailyNotifications: 'DAILY_NOTIFICATIONS',
-        downloadDocument: 'DOWNLOAD_DOCUMENT'
-    }
+    // Deploy'dan aldığınız gerçek URL'ler
+    proxyUrl: 'https://europe-west1-ip-manager-production-aab4b.cloudfunctions.net/etebsProxy',
+    healthUrl: 'https://europe-west1-ip-manager-production-aab4b.cloudfunctions.net/etebsProxyHealth',
+    validateUrl: 'https://europe-west1-ip-manager-production-aab4b.cloudfunctions.net/validateEtebsToken',
+    
+    timeout: 30000, // 30 saniye
+    retryAttempts: 3,
+    retryDelay: 1000 // 1 saniye
 };
 
 // ETEBS Error Codes
