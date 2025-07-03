@@ -122,7 +122,22 @@ displayPdf() {
         pdfViewerIframe.src = this.pdfData.fileUrl;
     }
     
-    // Form kısmındaki PDF bilgilerini kaldır - artık gerek yok
+    // Header butonlarını ayarla
+    this.setupPdfViewerButtons();
+}
+
+setupPdfViewerButtons() {
+    // İndir butonu
+    const downloadBtn = document.getElementById('downloadPdfBtn');
+    if (downloadBtn) {
+        downloadBtn.onclick = () => this.downloadPdf();
+    }
+    
+    // Yeni sekmede aç butonu
+    const newTabBtn = document.getElementById('openNewTabBtn');
+    if (newTabBtn) {
+        newTabBtn.onclick = () => window.open(this.pdfData.fileUrl, '_blank');
+    }
 }
 
     downloadPdf() {
