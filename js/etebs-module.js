@@ -347,38 +347,50 @@ export class ETEBSManager {
         });
     }
 
+   // etebs-module.js'teki createNotificationHTML fonksiyonunu bununla değiştirin:
     createNotificationHTML(notification, isMatched) {
         try {
             const date = new Date(notification.belgeTarihi).toLocaleDateString('tr-TR');
+            const konmaTarihi = new Date(notification.uygulamaKonmaTarihi).toLocaleDateString('tr-TR');
             
             return `
                 <div class="notification-item" data-evrak="${notification.evrakNo}">
                     <div class="notification-header">
                         <div class="evrak-number">${notification.evrakNo}</div>
                         <div class="notification-status ${isMatched ? 'status-matched' : 'status-unmatched'}">
-                            ${isMatched ? 'Eşleşti' : 'Eşleşmedi'}
+                            ${isMatched ? '✓ Eşleşti' : '⚠ Eşleşmedi'}
                         </div>
                     </div>
                     
                     <div class="notification-details">
                         <div class="detail-row">
-                            <span class="detail-label">Dosya:</span>
-                            <span class="detail-value">${notification.dosyaNo} (${notification.dosyaTuru})</span>
+                            <span class="detail-label">📁 Dosya:</span>
+                            <span class="detail-value">${notification.dosyaNo}</span>
                         </div>
                         <div class="detail-row">
-                            <span class="detail-label">Tarih:</span>
+                            <span class="detail-label">📋 Tür:</span>
+                            <span class="detail-value">${notification.dosyaTuru}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">📅 Belge Tarihi:</span>
                             <span class="detail-value">${date}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">📮 Konma Tarihi:</span>
+                            <span class="detail-value">${konmaTarihi}</span>
                         </div>
                     </div>
 
                     <div class="notification-description">
+                        <strong>📝 Açıklama:</strong><br>
                         ${notification.belgeAciklamasi}
                     </div>
 
                     ${isMatched ? `
                         <div class="matched-record">
-                            🎯 <strong>${notification.matchedRecord?.title || notification.matchedRecord?.applicationNumber || 'Bilinmeyen Kayıt'}</strong><br>
-                            <small>Otomatik eşleştirme: Başvuru numarası ile (${notification.matchConfidence || 100}% güven)</small>
+                            <strong>🎯 Eşleşen Kayıt:</strong><br>
+                            ${notification.matchedRecord?.title || notification.matchedRecord?.applicationNumber || 'Bilinmeyen Kayıt'}<br>
+                            <small>✨ Otomatik eşleştirme (${notification.matchConfidence || 100}% güven)</small>
                         </div>
                     ` : ''}
 
@@ -387,29 +399,36 @@ export class ETEBSManager {
                             <button class="btn btn-success btn-sm notification-action-btn" 
                                     data-action="downloadAndIndex" 
                                     data-evrak-no="${notification.evrakNo}">
-                                <span>📥</span>
-                                <span>İndir & İndeksle</span>
+                                📥 İndir & İndeksle
                             </button>
                         ` : `
                             <button class="btn btn-primary btn-sm notification-action-btn" 
                                     data-action="download" 
                                     data-evrak-no="${notification.evrakNo}">
-                                <span>📥</span>
-                                <span>İndir</span>
+                                📥 İndir
                             </button>
                         `}
                         <button class="btn btn-secondary btn-sm notification-action-btn" 
                                 data-action="preview" 
                                 data-evrak-no="${notification.evrakNo}">
-                            <span>👁️</span>
-                            <span>Önizle</span>
+                            👁️ Önizle
                         </button>
                     </div>
                 </div>
             `;
         } catch (error) {
             console.error('Error creating notification HTML:', error);
-            return '<div class="notification-item">Hata: Tebligat gösterilemiyor</div>';
+            return `
+                <div class="notification-item">
+                    <div class="notification-header">
+                        <div class="evrak-number">Hata</div>
+                        <div class="notification-status status-unmatched">❌ Hatalı</div>
+                    </div>
+                    <div class="notification-description">
+                        Tebligat gösterilemiyor: ${error.message}
+                    </div>
+                </div>
+            `;
         }
     }
 
