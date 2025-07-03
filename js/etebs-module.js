@@ -148,32 +148,115 @@ export class ETEBSManager {
         }
     }
 
-    switchMode(mode) {
-        this.currentMode = mode;
+switchMode(mode) {
+    this.currentMode = mode;
+    
+    try {
+        // Update button states
+        document.querySelectorAll('.mode-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.mode === mode);
+        });
+
+        // Show/hide content
+        const etebsMode = document.getElementById('etebs-mode');
+        const uploadMode = document.getElementById('upload-mode');
         
-        try {
-            // Update button states
-            document.querySelectorAll('.mode-btn').forEach(btn => {
-                btn.classList.toggle('active', btn.dataset.mode === mode);
-            });
-
-            // Show/hide content
-            const etebsMode = document.getElementById('etebs-mode');
-            const uploadMode = document.getElementById('upload-mode');
-            
-            if (etebsMode && uploadMode) {
-                etebsMode.style.display = mode === 'etebs' ? 'block' : 'none';
-                uploadMode.style.display = mode === 'upload' ? 'block' : 'none';
-            }
-
-            // Update tab badge based on mode
-            this.updateTabBadge();
-
-        } catch (error) {
-            console.error('Error switching mode:', error);
+        if (etebsMode && uploadMode) {
+            etebsMode.style.display = mode === 'etebs' ? 'block' : 'none';
+            uploadMode.style.display = mode === 'upload' ? 'block' : 'none';
         }
-    }
 
+        // Yeni ekleme: Upload mode aktif olduğunda BulkIndexingModule'ü aktive et
+        if (mode === 'upload') {
+            this.activateUploadMode();
+        } else {
+            this.deactivateUploadMode();
+        }
+
+        // Update tab badge based on mode
+        this.updateTabBadge();
+
+    } catch (error) {
+        console.error('Error switching mode:', error);
+    }
+}
+activateUploadMode() {
+    try {
+        // BulkIndexingModule'ün dosya yükleme event listener'larını aktif et
+        if (window.indexingModule && typeof window.indexingModule.setupBulkUploadListeners === 'function') {
+            // File input'u görünür yap
+            const bulkFilesInput = document.getElementById('bulkFiles');
+            const bulkFilesButton = document.getElementById('bulkFilesButton');
+            const bulkFilesInfo = document.getElementById('bulkFilesInfo');
+            
+            if (bulkFilesInput) {
+                bulkFilesInput.style.display = 'block';
+            }
+            
+            if (bulkFilesButton) {
+                bulkFilesButton.style.display = 'block';
+                // Event listener'ı yeniden bağla
+                const newButton = bulkFilesButton.cloneNode(true);
+                bulkFilesButton.parentNode.replaceChild(newButton, bulkFilesButton);
+                
+                newButton.addEventListener('click', () => {
+                    if (bulkFilesInput) bulkFilesInput.click();
+                });
+                
+                newButton.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    newButton.classList.add('drag-over');
+                });
+                
+                newButton.addEventListener('dragleave', () => {
+                    newButton.classList.remove('drag-over');
+                });
+                
+                newButton.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    newButton.classList.remove('drag-over');
+                    if (e.dataTransfer.files.length > 0) {
+                        bulkFilesInput.files = e.dataTransfer.files;
+                        bulkFilesInput.dispatchEvent(new Event('change'));
+                    }
+                });
+            }
+            
+            if (bulkFilesInput) {
+                // File change event listener'ı yeniden bağla
+                const newInput = bulkFilesInput.cloneNode(true);
+                bulkFilesInput.parentNode.replaceChild(newInput, bulkFilesInput);
+                
+                newInput.addEventListener('change', (e) => {
+                    if (window.indexingModule && typeof window.indexingModule.handleFileSelect === 'function') {
+                        window.indexingModule.handleFileSelect(e);
+                    }
+                    
+                    // Info text'i güncelle
+                    if (bulkFilesInfo) {
+                        const fileCount = e.target.files.length;
+                        bulkFilesInfo.textContent = fileCount > 0 ? 
+                            `${fileCount} PDF dosyası seçildi.` : 
+                            'Henüz PDF dosyası seçilmedi. Birden fazla PDF dosyası seçebilirsiniz.';
+                    }
+                });
+            }
+            
+            console.log('✅ Upload mode aktif edildi');
+        }
+    } catch (error) {
+        console.error('Upload mode aktif edilirken hata:', error);
+    }
+}
+
+deactivateUploadMode() {
+    try {
+        // Upload mode'u deaktif et, ama dosyaları silme
+        console.log('Upload mode deaktif edildi');
+    } catch (error) {
+        console.error('Upload mode deaktif edilirken hata:', error);
+    }
+}
     updateTabBadge() {
         try {
             const badge = document.querySelector('.tab-badge');
@@ -449,6 +532,57 @@ createNotificationHTML(notification, isMatched) {
     }
 }
 
+async showNotificationPDF(token, notification) {
+    try {
+        showNotification('PDF açılıyor...', 'info');
+        
+        const downloadResult = await etebsService.downloadDocument(token, notification.evrakNo);
+        
+        if (downloadResult.success) {
+            // PDF'i yeni pencerede aç
+            if (downloadResult.pdfBlob) {
+                // Blob'dan URL oluştur
+                const pdfUrl = URL.createObjectURL(downloadResult.pdfBlob);
+                
+                // Yeni pencerede aç
+                const newWindow = window.open('', '_blank');
+                newWindow.location.href = pdfUrl;
+                
+                showNotification('PDF başarıyla açıldı', 'success');
+                
+                // Temizlik için bir süre sonra URL'yi iptal et
+                setTimeout(() => {
+                    URL.revokeObjectURL(pdfUrl);
+                }, 60000); // 1 dakika sonra temizle
+                
+            } else if (downloadResult.pdfData) {
+                // Base64 data ise
+                const pdfBlob = new Blob([atob(downloadResult.pdfData)], { type: 'application/pdf' });
+                const pdfUrl = URL.createObjectURL(pdfBlob);
+                
+                window.open(pdfUrl, '_blank');
+                showNotification('PDF başarıyla açıldı', 'success');
+                
+                setTimeout(() => {
+                    URL.revokeObjectURL(pdfUrl);
+                }, 60000);
+                
+            } else {
+                // Fallback - indeksleme sayfasına yönlendir
+                showNotification('PDF doğrudan açılamadı. İndeksleme sayfasına yönlendiriliyor...', 'warning');
+                await this.indexNotification(token, notification);
+            }
+            
+        } else {
+            showNotification(`PDF açma hatası: ${downloadResult.error}`, 'error');
+        }
+        
+    } catch (error) {
+        console.error('Show PDF error:', error);
+        showNotification('PDF açılırken hata oluştu', 'error');
+    }
+}
+
  async handleNotificationAction(action, notification) {
     const tokenInput = document.getElementById('etebsTokenInput');
     if (!tokenInput) return;
@@ -474,7 +608,38 @@ createNotificationHTML(notification, isMatched) {
             break;
     }
 }
-
+async indexNotification(token, notification) {
+    try {
+        showNotification('Evrak indiriliyor ve indeksleme sayfasına yönlendiriliyor...', 'info');
+        
+        const downloadResult = await etebsService.downloadDocument(token, notification.evrakNo);
+        
+        if (downloadResult.success) {
+            // İndeksleme sayfasına yönlendir
+            const queryParams = new URLSearchParams({
+                source: 'etebs',
+                evrakNo: notification.evrakNo,
+                dosyaNo: notification.dosyaNo,
+                description: notification.belgeAciklamasi,
+                dosyaTuru: notification.dosyaTuru
+            });
+            
+            showNotification('Evrak indirildi. İndeksleme sayfasına yönlendiriliyor...', 'success');
+            
+            // Yeni tab'da aç
+            setTimeout(() => {
+                window.open(`indexing-detail.html?${queryParams.toString()}`, '_blank');
+            }, 1000);
+            
+        } else {
+            showNotification(`İndirme hatası: ${downloadResult.error}`, 'error');
+        }
+        
+    } catch (error) {
+        console.error('Index error:', error);
+        showNotification('İndeksleme sırasında hata oluştu', 'error');
+    }
+}
     async downloadAndIndexNotification(token, notification) {
         try {
             showNotification('Evrak indiriliyor ve indeksleniyor...', 'info');
@@ -639,28 +804,34 @@ ${notification.tebellugeden ? `📨 Tebellüğ Eden: ${notification.tebellugeden
     }
 
     // Method to integrate with existing bulk indexing module
-    integrateWithBulkIndexing(bulkIndexingModule) {
-        try {
-            // When upload mode is active, sync with bulk indexing
-            if (this.currentMode === 'upload' && bulkIndexingModule) {
-                // Observe changes in bulk indexing and update badge
-                const observer = new MutationObserver(() => {
-                    if (this.currentMode === 'upload') {
-                        this.updateTabBadge();
-                    }
-                });
-
-                const targetNode = document.getElementById('allFilesList');
-                if (targetNode) {
-                    observer.observe(targetNode, { 
-                        childList: true, 
-                        subtree: true 
-                    });
-                }
-            }
-        } catch (error) {
-            console.error('Error integrating with bulk indexing:', error);
+  integrateWithBulkIndexing(bulkIndexingModule) {
+    try {
+        // BulkIndexingModule referansını sakla
+        this.bulkIndexingModule = bulkIndexingModule;
+        
+        // Mode değiştiğinde upload işlevselliğini aktif/deaktif et
+        if (this.currentMode === 'upload') {
+            this.activateUploadMode();
         }
+        
+        // Dosya listesi değişikliklerini izle
+        if (this.currentMode === 'upload' && bulkIndexingModule) {
+            const observer = new MutationObserver(() => {
+                if (this.currentMode === 'upload') {
+                    this.updateTabBadge();
+                }
+            });
+
+            const targetNode = document.getElementById('allFilesList');
+            if (targetNode) {
+                observer.observe(targetNode, { 
+                    childList: true, 
+                    subtree: true 
+                });
+            }
+        }
+    } catch (error) {
+        console.error('Error integrating with bulk indexing:', error);
     }
 }
 
