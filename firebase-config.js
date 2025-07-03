@@ -908,6 +908,669 @@ export const bulkIndexingService = {
     },
 };
 
+// === ETEBS SERVICE LAYER ===
+// firebase-config.js dosyasının sonuna eklenecek
+
+// ETEBS API Constants
+const ETEBS_CONFIG = {
+    baseUrl: 'https://epats.turkpatent.gov.tr/service/TP/',
+    apiKey: 'etebs',
+    endpoints: {
+        dailyNotifications: 'DAILY_NOTIFICATIONS',
+        downloadDocument: 'DOWNLOAD_DOCUMENT'
+    }
+};
+
+// ETEBS Error Codes
+const ETEBS_ERROR_CODES = {
+    '001': 'Eksik Parametre',
+    '002': 'Hatalı Token',
+    '003': 'Sistem Hatası',
+    '004': 'Hatalı Evrak Numarası',
+    '005': 'Daha Önce İndirilmiş Evrak',
+    '006': 'Evraka Ait Ek Bulunamadı'
+};
+
+// ETEBS Service
+export const etebsService = {
+    // Token validation
+    validateToken(token) {
+        if (!token || typeof token !== 'string') {
+            return { valid: false, error: 'Token gerekli' };
+        }
+        
+        // GUID format validation
+        const guidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+        
+        if (!guidRegex.test(token)) {
+            return { valid: false, error: 'Geçersiz token formatı' };
+        }
+        
+        return { valid: true };
+    },
+
+    // Get daily notifications from ETEBS
+    async getDailyNotifications(token) {
+        if (!isFirebaseAvailable) {
+            return { success: false, error: "Firebase kullanılamıyor.", data: [] };
+        }
+
+        const currentUser = authService.getCurrentUser();
+        if (!currentUser) {
+            return { success: false, error: "Kullanıcı girişi yapılmamış.", data: [] };
+        }
+
+        // Validate token
+        const tokenValidation = this.validateToken(token);
+        if (!tokenValidation.valid) {
+            return { success: false, error: tokenValidation.error, data: [] };
+        }
+
+        try {
+            const url = `${ETEBS_CONFIG.baseUrl}${ETEBS_CONFIG.endpoints.dailyNotifications}?apikey=${ETEBS_CONFIG.apiKey}`;
+            
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    TOKEN: token
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const data = await response.json();
+
+            // Handle ETEBS API errors
+            if (data.IslemSonucKod && data.IslemSonucKod !== '000') {
+                const errorMessage = ETEBS_ERROR_CODES[data.IslemSonucKod] || 'Bilinmeyen hata';
+                
+                // Log token error if needed
+                if (data.IslemSonucKod === '002') {
+                    await this.logTokenError(currentUser.uid, token, data.IslemSonucAck);
+                }
+                
+                return { 
+                    success: false, 
+                    error: errorMessage,
+                    errorCode: data.IslemSonucKod,
+                    data: [] 
+                };
+            }
+
+            // Process notifications and match with portfolio
+            const processedNotifications = await this.processNotifications(data, currentUser.uid);
+
+            // Save to Firebase for tracking
+            await this.saveNotificationsToFirebase(processedNotifications, currentUser.uid, token);
+
+            return { 
+                success: true, 
+                data: processedNotifications,
+                totalCount: processedNotifications.length,
+                matchedCount: processedNotifications.filter(n => n.matched).length,
+                unmatchedCount: processedNotifications.filter(n => !n.matched).length
+            };
+
+        } catch (error) {
+            console.error('ETEBS Daily Notifications Error:', error);
+            
+            // Log error to Firebase
+            await this.logETEBSError(currentUser.uid, 'getDailyNotifications', error.message);
+            
+            return { 
+                success: false, 
+                error: `API çağrısında hata: ${error.message}`,
+                data: [] 
+            };
+        }
+    },
+
+    // Download document from ETEBS
+    async downloadDocument(token, documentNo) {
+        if (!isFirebaseAvailable) {
+            return { success: false, error: "Firebase kullanılamıyor." };
+        }
+
+        const currentUser = authService.getCurrentUser();
+        if (!currentUser) {
+            return { success: false, error: "Kullanıcı girişi yapılmamış." };
+        }
+
+        // Validate inputs
+        const tokenValidation = this.validateToken(token);
+        if (!tokenValidation.valid) {
+            return { success: false, error: tokenValidation.error };
+        }
+
+        if (!documentNo) {
+            return { success: false, error: 'Evrak numarası gerekli' };
+        }
+
+        try {
+            const url = `${ETEBS_CONFIG.baseUrl}${ETEBS_CONFIG.endpoints.downloadDocument}?apikey=${ETEBS_CONFIG.apiKey}`;
+            
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    TOKEN: token,
+                    DOCUMENT_NO: documentNo
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const data = await response.json();
+
+            // Handle ETEBS API errors
+            if (data.IslemSonucKod && data.IslemSonucKod !== '000') {
+                const errorMessage = ETEBS_ERROR_CODES[data.IslemSonucKod] || 'Bilinmeyen hata';
+                return { 
+                    success: false, 
+                    error: errorMessage,
+                    errorCode: data.IslemSonucKod
+                };
+            }
+
+            // Process downloaded documents
+            const processedDocuments = await this.processDownloadedDocuments(data.DownloadDocumentResult, documentNo);
+
+            // Upload to Firebase Storage and save metadata
+            const uploadResults = await this.uploadDocumentsToFirebase(processedDocuments, currentUser.uid, documentNo);
+
+            return { 
+                success: true, 
+                data: uploadResults,
+                documentCount: processedDocuments.length
+            };
+
+        } catch (error) {
+            console.error('ETEBS Download Document Error:', error);
+            
+            // Log error to Firebase
+            await this.logETEBSError(currentUser.uid, 'downloadDocument', error.message, { documentNo });
+            
+            return { 
+                success: false, 
+                error: `Evrak indirme hatası: ${error.message}`
+            };
+        }
+    },
+
+    // Process notifications and match with portfolio
+    async processNotifications(notifications, userId) {
+        const processedNotifications = [];
+
+        for (const notification of notifications) {
+            // Match with portfolio using dosya_no = applicationNumber
+            const matchResult = await this.matchWithPortfolio(notification.DOSYA_NO);
+            
+            const processedNotification = {
+                evrakNo: notification.EVRAK_NO,
+                dosyaNo: notification.DOSYA_NO,
+                dosyaTuru: notification.DOSYA_TURU,
+                uygulamaKonmaTarihi: new Date(notification.UYGULAMAYA_KONMA_TARIHI),
+                belgeTarihi: new Date(notification.BELGE_TARIHI),
+                belgeAciklamasi: notification.BELGE_ACIKLAMASI,
+                ilgiliVekil: notification.ILGILI_VEKIL,
+                tebligTarihi: notification.TEBLIG_TARIHI ? new Date(notification.TEBLIG_TARIHI) : null,
+                tebellugeden: notification.TEBELLUGEDEN,
+                
+                // Matching information
+                matched: matchResult.matched,
+                matchedRecord: matchResult.matched ? matchResult.record : null,
+                matchConfidence: matchResult.confidence || 0,
+                
+                // Processing status
+                processStatus: 'pending',
+                processedAt: new Date(),
+                userId: userId
+            };
+
+            processedNotifications.push(processedNotification);
+        }
+
+        return processedNotifications;
+    },
+
+    // Match notification with portfolio records
+    async matchWithPortfolio(dosyaNo) {
+        try {
+            // Get all IP records for matching
+            const recordsResult = await ipRecordsService.getRecords();
+            
+            if (!recordsResult.success) {
+                console.error('Portfolio records fetch error:', recordsResult.error);
+                return { matched: false, confidence: 0 };
+            }
+
+            const records = recordsResult.data;
+
+            // Direct match: dosya_no = applicationNumber
+            const directMatch = records.find(record => 
+                record.applicationNumber === dosyaNo
+            );
+
+            if (directMatch) {
+                return {
+                    matched: true,
+                    record: directMatch,
+                    confidence: 100,
+                    matchType: 'applicationNumber'
+                };
+            }
+
+            // Secondary matching attempts
+            // Try with different formats (remove slashes, spaces, etc.)
+            const cleanDosyaNo = dosyaNo.replace(/[\/\s-]/g, '');
+            
+            const secondaryMatch = records.find(record => {
+                const cleanAppNumber = record.applicationNumber?.replace(/[\/\s-]/g, '') || '';
+                return cleanAppNumber === cleanDosyaNo;
+            });
+
+            if (secondaryMatch) {
+                return {
+                    matched: true,
+                    record: secondaryMatch,
+                    confidence: 85,
+                    matchType: 'applicationNumber_normalized'
+                };
+            }
+
+            // No match found
+            return { 
+                matched: false, 
+                confidence: 0,
+                searchedValue: dosyaNo
+            };
+
+        } catch (error) {
+            console.error('Portfolio matching error:', error);
+            return { matched: false, confidence: 0, error: error.message };
+        }
+    },
+
+    // Convert base64 to file object
+    async base64ToFile(base64String, fileName) {
+        try {
+            // Remove data URL prefix if present
+            const base64Data = base64String.replace(/^data:[^;]+;base64,/, '');
+            
+            // Convert base64 to binary
+            const binaryString = atob(base64Data);
+            const bytes = new Uint8Array(binaryString.length);
+            
+            for (let i = 0; i < binaryString.length; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+            }
+
+            // Create blob and file
+            const blob = new Blob([bytes], { type: 'application/pdf' });
+            const file = new File([blob], fileName, { type: 'application/pdf' });
+
+            return { success: true, file: file };
+
+        } catch (error) {
+            console.error('Base64 to file conversion error:', error);
+            return { success: false, error: error.message };
+        }
+    },
+
+    // Process downloaded documents
+    async processDownloadedDocuments(downloadResult, evrakNo) {
+        const processedDocs = [];
+
+        for (const doc of downloadResult) {
+            const fileName = `${doc.EVRAK_NO}_${doc.BELGE_ACIKLAMASI.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`;
+            
+            const fileResult = await this.base64ToFile(doc.BASE64, fileName);
+            
+            if (fileResult.success) {
+                processedDocs.push({
+                    evrakNo: doc.EVRAK_NO,
+                    belgeAciklamasi: doc.BELGE_ACIKLAMASI,
+                    fileName: fileName,
+                    file: fileResult.file,
+                    base64: doc.BASE64
+                });
+            } else {
+                console.error(`File conversion failed for ${doc.EVRAK_NO}:`, fileResult.error);
+            }
+        }
+
+        return processedDocs;
+    },
+
+    // Upload documents to Firebase Storage
+    async uploadDocumentsToFirebase(documents, userId, evrakNo) {
+        const uploadResults = [];
+
+        for (const doc of documents) {
+            try {
+                // Upload to Firebase Storage
+                const storagePath = `etebs_documents/${userId}/${evrakNo}/${doc.fileName}`;
+                const storageRef = ref(storage, storagePath);
+                
+                const uploadTask = uploadBytesResumable(storageRef, doc.file);
+                
+                // Wait for upload completion
+                await uploadTask;
+                const downloadURL = await getDownloadURL(storageRef);
+
+                // Save metadata to Firestore
+                const docData = {
+                    evrakNo: doc.evrakNo,
+                    belgeAciklamasi: doc.belgeAciklamasi,
+                    fileName: doc.fileName,
+                    fileUrl: downloadURL,
+                    filePath: storagePath,
+                    fileSize: doc.file.size,
+                    uploadedAt: new Date(),
+                    userId: userId,
+                    source: 'etebs'
+                };
+
+                const docRef = await addDoc(collection(db, 'etebs_documents'), docData);
+
+                uploadResults.push({
+                    ...docData,
+                    id: docRef.id,
+                    success: true
+                });
+
+            } catch (error) {
+                console.error(`Upload failed for ${doc.fileName}:`, error);
+                uploadResults.push({
+                    fileName: doc.fileName,
+                    evrakNo: doc.evrakNo,
+                    success: false,
+                    error: error.message
+                });
+            }
+        }
+
+        return uploadResults;
+    },
+
+    // Save notifications to Firebase for tracking
+    async saveNotificationsToFirebase(notifications, userId, token) {
+        try {
+            const batch = writeBatch(db);
+            const timestamp = new Date();
+
+            for (const notification of notifications) {
+                const docRef = doc(collection(db, 'etebs_notifications'));
+                batch.set(docRef, {
+                    ...notification,
+                    tokenUsed: token.substring(0, 8) + '...',  // Don't save full token
+                    fetchedAt: timestamp
+                });
+            }
+
+            await batch.commit();
+            
+            // Update token usage log
+            await this.updateTokenUsage(userId, token, notifications.length);
+
+        } catch (error) {
+            console.error('Failed to save notifications to Firebase:', error);
+        }
+    },
+
+    // Token management
+    async saveToken(token, userId) {
+        if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor." };
+
+        try {
+            const tokenData = {
+                token: token,
+                userId: userId,
+                createdAt: new Date(),
+                expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
+                isActive: true,
+                usageCount: 0
+            };
+
+            await setDoc(doc(db, 'etebs_tokens', userId), tokenData);
+            
+            return { success: true, data: tokenData };
+
+        } catch (error) {
+            console.error('Token save error:', error);
+            return { success: false, error: error.message };
+        }
+    },
+
+    async getToken(userId) {
+        if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor." };
+
+        try {
+            const tokenDoc = await getDoc(doc(db, 'etebs_tokens', userId));
+            
+            if (tokenDoc.exists()) {
+                const tokenData = tokenDoc.data();
+                
+                // Check if token is still valid
+                if (tokenData.expiresAt.toDate() > new Date()) {
+                    return { success: true, data: tokenData };
+                } else {
+                    return { success: false, error: 'Token süresi dolmuş' };
+                }
+            }
+            
+            return { success: false, error: 'Token bulunamadı' };
+
+        } catch (error) {
+            console.error('Token get error:', error);
+            return { success: false, error: error.message };
+        }
+    },
+
+    async updateTokenUsage(userId, token, notificationCount) {
+        try {
+            const tokenRef = doc(db, 'etebs_tokens', userId);
+            await updateDoc(tokenRef, {
+                lastUsedAt: new Date(),
+                usageCount: arrayUnion({
+                    date: new Date(),
+                    notificationCount: notificationCount
+                })
+            });
+        } catch (error) {
+            console.error('Token usage update error:', error);
+        }
+    },
+
+    // Error logging
+    async logETEBSError(userId, action, errorMessage, context = {}) {
+        try {
+            await addDoc(collection(db, 'etebs_logs'), {
+                userId: userId,
+                action: action,
+                status: 'error',
+                errorMessage: errorMessage,
+                context: context,
+                timestamp: new Date()
+            });
+        } catch (error) {
+            console.error('Error logging failed:', error);
+        }
+    },
+
+    async logTokenError(userId, token, errorMessage) {
+        try {
+            await addDoc(collection(db, 'etebs_token_errors'), {
+                userId: userId,
+                tokenPrefix: token.substring(0, 8) + '...',
+                errorMessage: errorMessage,
+                timestamp: new Date()
+            });
+        } catch (error) {
+            console.error('Token error logging failed:', error);
+        }
+    },
+
+    // Get user's ETEBS notifications
+    async getUserNotifications(userId, filters = {}) {
+        if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor.", data: [] };
+
+        try {
+            let q = query(
+                collection(db, 'etebs_notifications'),
+                where('userId', '==', userId),
+                orderBy('fetchedAt', 'desc')
+            );
+
+            // Apply filters
+            if (filters.dosyaTuru) {
+                q = query(q, where('dosyaTuru', '==', filters.dosyaTuru));
+            }
+
+            if (filters.matched !== undefined) {
+                q = query(q, where('matched', '==', filters.matched));
+            }
+
+            const snapshot = await getDocs(q);
+            const notifications = snapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data()
+            }));
+
+            return { success: true, data: notifications };
+
+        } catch (error) {
+            console.error('Get user notifications error:', error);
+            return { success: false, error: error.message, data: [] };
+        }
+    }
+};
+
+// Auto-process matched notifications
+export const etebsAutoProcessor = {
+    // Automatically process matched notifications
+    async autoProcessMatched(notifications, userId) {
+        const results = [];
+
+        for (const notification of notifications.filter(n => n.matched)) {
+            try {
+                // Determine transaction type based on document type and description
+                const transactionType = await this.determineTransactionType(notification);
+                
+                if (transactionType) {
+                    // Create automatic indexing entry
+                    const indexingResult = await this.createAutoIndexing(notification, transactionType, userId);
+                    results.push({
+                        notification: notification,
+                        success: true,
+                        indexingId: indexingResult.id,
+                        transactionType: transactionType
+                    });
+                } else {
+                    results.push({
+                        notification: notification,
+                        success: false,
+                        error: 'Transaction type belirlenemedi'
+                    });
+                }
+
+            } catch (error) {
+                console.error(`Auto processing failed for ${notification.evrakNo}:`, error);
+                results.push({
+                    notification: notification,
+                    success: false,
+                    error: error.message
+                });
+            }
+        }
+
+        return results;
+    },
+
+    // Determine transaction type based on document content
+    async determineTransactionType(notification) {
+        try {
+            // Get transaction types
+            const transactionTypesResult = await transactionTypeService.getTransactionTypes();
+            if (!transactionTypesResult.success) return null;
+
+            const transactionTypes = transactionTypesResult.data;
+            const description = notification.belgeAciklamasi.toLowerCase();
+
+            // Mapping rules based on document description
+            const mappingRules = {
+                'tescil': 'registration',
+                'başvuru': 'application',
+                'red': 'rejection',
+                'itiraz': 'opposition',
+                'yenileme': 'renewal',
+                'inceleme': 'examination',
+                'karar': 'decision',
+                'bildirim': 'notification'
+            };
+
+            // Find matching transaction type
+            for (const [keyword, typeCode] of Object.entries(mappingRules)) {
+                if (description.includes(keyword)) {
+                    const matchedType = transactionTypes.find(t => 
+                        t.code === typeCode || 
+                        t.name.toLowerCase().includes(keyword)
+                    );
+                    
+                    if (matchedType) {
+                        return matchedType;
+                    }
+                }
+            }
+
+            // Default transaction type if no specific match
+            return transactionTypes.find(t => t.isDefault) || transactionTypes[0];
+
+        } catch (error) {
+            console.error('Transaction type determination error:', error);
+            return null;
+        }
+    },
+
+    // Create automatic indexing entry
+    async createAutoIndexing(notification, transactionType, userId) {
+        try {
+            const indexingData = {
+                ipRecordId: notification.matchedRecord.id,
+                transactionTypeId: transactionType.id,
+                documentSource: 'etebs',
+                etebsEvrakNo: notification.evrakNo,
+                etebsDosyaNo: notification.dosyaNo,
+                documentDate: notification.belgeTarihi,
+                description: notification.belgeAciklamasi,
+                autoProcessed: true,
+                processedAt: new Date(),
+                userId: userId,
+                status: 'completed'
+            };
+
+            const docRef = await addDoc(collection(db, 'indexed_documents'), indexingData);
+            
+            return { success: true, id: docRef.id };
+
+        } catch (error) {
+            console.error('Auto indexing creation error:', error);
+            return { success: false, error: error.message };
+        }
+    }
+};
+
+console.log('🔐 ETEBS Service Layer loaded successfully');
+
 // --- Exports ---
 export {auth, db}; 
 export const firebaseServices = { 
