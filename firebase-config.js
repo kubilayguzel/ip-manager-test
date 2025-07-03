@@ -1055,97 +1055,94 @@ export const etebsService = {
     },
 
  // Updated downloadDocument using Firebase Functions proxy
-    async downloadDocument(token, documentNo) {
-        if (!isFirebaseAvailable) {
-            return { success: false, error: "Firebase kullanılamıyor." };
+async downloadDocument(token, documentNo) {
+    if (!isFirebaseAvailable) {
+        return { success: false, error: "Firebase kullanılamıyor." };
+    }
+
+    const currentUser = authService.getCurrentUser();
+    if (!currentUser) {
+        return { success: false, error: "Kullanıcı girişi yapılmamış." };
+    }
+
+    try {
+        console.log(`📥 Downloading document: ${documentNo}`);
+
+        const response = await fetch(ETEBS_CONFIG.proxyUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                action: 'download-document',
+                token: token,
+                documentNo: documentNo
+            }),
+            timeout: ETEBS_CONFIG.timeout
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
 
-        const currentUser = authService.getCurrentUser();
-        if (!currentUser) {
-            return { success: false, error: "Kullanıcı girişi yapılmamış." };
-        }
+        const result = await response.json();
 
-        // Validate inputs
-        const tokenValidation = this.validateToken(token);
-        if (!tokenValidation.valid) {
-            return { success: false, error: tokenValidation.error };
-        }
-
-        if (!documentNo) {
-            return { success: false, error: 'Evrak numarası gerekli' };
-        }
-
-        try {
-            console.log('🔥 ETEBS Download Document via Firebase Functions');
-
-            const response = await fetch(ETEBS_CONFIG.proxyUrl, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    action: 'download-document',
-                    token: token,
-                    documentNo: documentNo
-                })
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+        if (result.success && result.data) {
+            // PDF dosyasını Blob olarak oluştur
+            let pdfBlob = null;
+            
+            if (result.data.fileContent) {
+                // Base64 string'i Blob'a çevir
+                try {
+                    const binaryString = atob(result.data.fileContent);
+                    const bytes = new Uint8Array(binaryString.length);
+                    for (let i = 0; i < binaryString.length; i++) {
+                        bytes[i] = binaryString.charCodeAt(i);
+                    }
+                    pdfBlob = new Blob([bytes], { type: 'application/pdf' });
+                } catch (error) {
+                    console.error('Error converting base64 to blob:', error);
+                }
             }
 
-            const result = await response.json();
-
-            if (!result.success) {
-                throw new Error(result.error || 'Proxy error');
-            }
-
-            const etebsData = result.data;
-
-            // Handle ETEBS API errors
-            if (etebsData.IslemSonucKod && etebsData.IslemSonucKod !== '000') {
-                const errorMessage = ETEBS_ERROR_CODES[etebsData.IslemSonucKod] || 'Bilinmeyen hata';
-                return { 
-                    success: false, 
-                    error: errorMessage,
-                    errorCode: etebsData.IslemSonucKod
+            // Store document in Firebase for tracking
+            try {
+                const docData = {
+                    evrakNo: documentNo,
+                    fileName: result.data.fileName || `${documentNo}.pdf`,
+                    fileSize: result.data.fileSize || 0,
+                    downloadedAt: new Date(),
+                    userId: currentUser.uid,
+                    source: 'etebs',
+                    status: 'downloaded'
                 };
+
+                const docRef = await addDoc(collection(db, 'etebs_downloads'), docData);
+                console.log('Document download logged:', docRef.id);
+            } catch (error) {
+                console.error('Error logging download:', error);
+                // Download işlemi başarılı olsa da loglama hatası önemli değil
             }
 
-            // Process downloaded documents
-            const processedDocuments = await this.processDownloadedDocuments(etebsData.DownloadDocumentResult, documentNo);
-
-            // Upload to Firebase Storage and save metadata
-            const uploadResults = await this.uploadDocumentsToFirebase(processedDocuments, currentUser.uid, documentNo);
-
-            return { 
-                success: true, 
-                data: uploadResults,
-                documentCount: processedDocuments.length
+            return {
+                success: true,
+                data: result.data,
+                pdfBlob: pdfBlob, // Yeni: Blob olarak PDF verisi
+                pdfData: result.data.fileContent // Eski uyumluluk için base64 data
             };
 
-        } catch (error) {
-            console.error('ETEBS Download Document Error:', error);
-            
-            // Log error to Firebase
-            await this.logETEBSError(currentUser.uid, 'downloadDocument', error.message, { documentNo });
-            
-            // User-friendly error messages
-            let userError = 'Evrak indirme hatası';
-            
-            if (error.name === 'AbortError') {
-                userError = 'İndirme zaman aşımına uğradı';
-            } else if (error.message.includes('Failed to fetch')) {
-                userError = 'Ağ bağlantısı hatası';
-            }
-            
-            return { 
-                success: false, 
-                error: userError
-            };
+        } else {
+            const errorMsg = result.error || 'Evrak indirilemedi';
+            await this.logETEBSError(currentUser.uid, 'download-document', errorMsg, { documentNo });
+            return { success: false, error: errorMsg };
         }
-    },
+
+    } catch (error) {
+        console.error('Download document error:', error);
+        await this.logETEBSError(currentUser.uid, 'download-document', error.message, { documentNo });
+        return { success: false, error: error.message };
+    }
+},
 
     // Process notifications and match with portfolio
     async processNotifications(notifications, userId) {
