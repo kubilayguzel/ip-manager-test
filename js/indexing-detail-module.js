@@ -109,30 +109,21 @@ export class IndexingDetailModule {
         }
     }
 
-displayPdf() {
-        const pdfViewer = document.getElementById('pdfViewer');
-        if (!this.pdfData || !this.pdfData.fileUrl) {
-            pdfViewer.innerHTML = '<p style="color: red;">PDF dosyası bulunamadı.</p>';
-            return;
+    displayPdf() {
+        // PDF başlığını güncelle
+        const pdfTitle = document.getElementById('pdfTitle');
+        if (pdfTitle) {
+            pdfTitle.textContent = this.pdfData.fileName;
         }
-
-        pdfViewer.innerHTML = `
-            <div style="display: flex; align-items: center; gap: 15px;">
-                <div style="flex: 1;">
-                    <h4>${this.pdfData.fileName}</h4>
-                    <p><strong>Yükleme:</strong> ${this.pdfData.uploadedAt ? new Date(this.pdfData.uploadedAt.seconds * 1000).toLocaleDateString('tr-TR') : 'Bilinmiyor'}</p>
-                    <p><strong>Çıkarılan Uygulama No:</strong> ${this.pdfData.extractedAppNumber || 'Bulunamadı'}</p>
-                </div>
-                <div>
-                    <button type="button" class="btn btn-primary" onclick="window.open('${this.pdfData.fileUrl}', '_blank')" style="margin-right: 10px;">
-                        👁️ PDF'yi Görüntüle
-                    </button>
-                    <button type="button" class="btn btn-secondary" onclick="window.indexingDetailModule.downloadPdf()">
-                        📥 İndir
-                    </button>
-                </div>
-            </div>
-        `;
+        
+        // PDF'i iframe'e yükle
+        const pdfViewerIframe = document.getElementById('pdfViewer');
+        if (pdfViewerIframe) {
+            pdfViewerIframe.src = this.pdfData.fileUrl;
+        }
+        
+        // Header butonlarını aktif et
+        this.setupPdfViewerButtons();
     }
 
     downloadPdf() {
