@@ -461,29 +461,39 @@ export class IndexingDetailModule {
             selectElement.appendChild(option);
         });
 
+        // ALT İŞLEM SEÇİM EVENT LISTENER'INI EKLE
+        selectElement.addEventListener('change', () => {
+            console.log('Alt işlem seçildi:', selectElement.value);
+            this.checkFormCompleteness();
+        });
+
         // Alt işlem bölümünü göster
         document.getElementById('childTransactionInputs').style.display = 'block';
     }
 
+    // checkFormCompleteness() fonksiyonunu güncelle
     checkFormCompleteness() {
         const hasMatchedRecord = this.matchedRecord !== null;
         const hasSelectedTransaction = this.selectedTransactionId !== null;
-        const childTransactionInputsVisible = document.getElementById('childTransactionInputs').style.display !== 'none';
         
-        // Alt işlem seçimi opsiyonel yap
+        const childTransactionInputs = document.getElementById('childTransactionInputs');
+        const childTransactionInputsVisible = childTransactionInputs && childTransactionInputs.style.display !== 'none';
+        
         let hasSelectedChildType = true; // Default true
         if (childTransactionInputsVisible) {
             const childTypeSelect = document.getElementById('childTransactionType');
-            if (childTypeSelect && childTypeSelect.options.length > 1) {
-                // Sadece seçenekler varsa zorunlu yap
+            if (childTypeSelect) {
                 hasSelectedChildType = childTypeSelect.value !== '';
+                console.log('Child type select value:', childTypeSelect.value);
             }
         }
 
-        const canSubmit = hasMatchedRecord && hasSelectedTransaction;
+        const canSubmit = hasMatchedRecord && hasSelectedTransaction && hasSelectedChildType;
+        
         const indexBtn = document.getElementById('indexBtn');
         if (indexBtn) {
             indexBtn.disabled = !canSubmit;
+            console.log('İndeksle butonu durumu:', canSubmit ? 'AKTİF' : 'PASİF');
         }
         
         console.log('Form completeness check:', {
