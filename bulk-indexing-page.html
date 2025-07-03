@@ -1762,22 +1762,29 @@
         </main>
     </div>
 
-    <script type="module">
-        import { BulkIndexingModule } from './js/bulk-indexing-module.js';
-        import { loadSharedLayout } from './js/layout-loader.js';
-        import { ETEBSManager } from './js/etebs-module.js';
+<script type="module">
+    import { BulkIndexingModule } from './js/bulk-indexing-module.js';
+    import { loadSharedLayout } from './js/layout-loader.js';
+    import { ETEBSManager } from './js/etebs-module.js';
 
+    document.addEventListener('DOMContentLoaded', () => {
+        // Bulk Indexing başlat
+        window.indexingModule = new BulkIndexingModule();
+
+        // Shared Layout yükle
+        loadSharedLayout({ activeMenuLink: 'bulk-indexing-page.html' });
+
+        // ETEBSManager'ı sadece burada yarat
         const etebsManager = new ETEBSManager();
 
-        document.getElementById('fetchEtebsNotificationsBtn').addEventListener('click', () => {
-            etebsManager.init();
-        });
-
-        document.addEventListener('DOMContentLoaded', () => {
-            window.indexingModule = new BulkIndexingModule();
-            window.etebsManager = new ETEBSManager();
-            loadSharedLayout({ activeMenuLink: 'bulk-indexing-page.html' }); 
-        });
-    </script>
+        // Butona tıklanınca init et
+        const fetchBtn = document.getElementById('fetchEtebsNotificationsBtn');
+        if (fetchBtn) {
+            fetchBtn.addEventListener('click', () => {
+                etebsManager.init();
+            });
+        }
+    });
+</script>
 </body>
 </html>
