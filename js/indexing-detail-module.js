@@ -48,22 +48,38 @@ export class IndexingDetailModule {
         this.currentTransactions = [];
         this.selectedTransactionId = null;
 
+        // init() fonksiyonunu constructor'dan çağırıyoruz
         this.init();
     }
 
     async init() {
-        // URL parametresinden PDF ID'sini al
+        // URL parametrelerinden PDF ID'sini ve ETEBS evrakNo'yu al
         const urlParams = new URLSearchParams(window.location.search);
         const pdfId = urlParams.get('pdfId');
+        const evrakNo = urlParams.get('evrakNo'); // ETEBS evrakNo'yu da kontrol et
 
-        if (!pdfId) {
-            showNotification('PDF ID bulunamadı.', 'error');
-            window.close();
-            return;
+        if (pdfId) {
+            // Öncelik 1: pdfId varsa, unindexed_pdfs koleksiyonundan yüklemeyi dene
+            await this.loadPdfData(pdfId);
+        } else if (evrakNo) {
+            // Öncelik 2: Eğer pdfId yoksa ve evrakNo varsa, ETEBS parametreleriyle yüklemeyi dene
+            // Bu fonksiyon, başarılı olursa this.pdfData'yı dolduracaktır.
+            await this.loadETEBSData(urlParams);
         }
 
+        // Eğer pdfData hala null ise (yani ne pdfId ne de ETEBS parametreleriyle PDF yüklenememişse)
+        if (!this.pdfData) {
+            showNotification('PDF ID veya ETEBS parametreleri bulunamadı. Lütfen geçerli bir belge seçin veya indirin.', 'error', 5000);
+            console.error('URL parametrelerine göre yüklenecek bir PDF verisi bulunamadı.');
+            // Kullanıcıyı otomatik olarak belge yükleme sayfasına geri yönlendir
+            setTimeout(() => {
+                window.location.href = 'bulk-indexing-page.html';
+            }, 3000); // 3 saniye sonra yönlendir
+            return; // Daha fazla işlem yapmadan fonksiyonu sonlandır
+        }
+
+        // Eğer pdfData başarıyla yüklendiyse (pdfId veya ETEBS parametreleri ile)
         this.setupEventListeners();
-        await this.loadPdfData(pdfId);
         await this.loadRecordsAndTransactionTypes();
         this.displayPdf();
         this.findMatchingRecord();
