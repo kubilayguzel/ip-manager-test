@@ -116,18 +116,16 @@ displayPdf() {
         pdfTitle.textContent = this.pdfData.fileName;
     }
     
-    // PDF'i iframe'e yükle - BU SATIR EKSİKTİ!
+    // PDF'i iframe'e yükle
     const pdfViewerIframe = document.getElementById('pdfViewer');
-    if (pdfViewerIframe) {
+    if (pdfViewerIframe && pdfViewerIframe.tagName === 'IFRAME') {
         pdfViewerIframe.src = this.pdfData.fileUrl;
     }
-        const pdfViewer = document.getElementById('pdfViewer');
-        if (!this.pdfData || !this.pdfData.fileUrl) {
-            pdfViewer.innerHTML = '<p style="color: red;">PDF dosyası bulunamadı.</p>';
-            return;
-        }
-
-        pdfViewer.innerHTML = `
+    
+    // Form kısmındaki PDF bilgilerini güncelle (iframe'i değil, form'daki div'i)
+    const pdfFormViewer = document.querySelector('#indexingForm #pdfViewer');
+    if (pdfFormViewer && pdfFormViewer.tagName === 'DIV') {
+        pdfFormViewer.innerHTML = `
             <div style="display: flex; align-items: center; gap: 15px;">
                 <div style="flex: 1;">
                     <h4>${this.pdfData.fileName}</h4>
@@ -145,6 +143,7 @@ displayPdf() {
             </div>
         `;
     }
+}
 
     downloadPdf() {
         if (!this.pdfData || !this.pdfData.fileUrl) return;
