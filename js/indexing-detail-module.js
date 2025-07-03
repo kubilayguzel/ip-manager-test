@@ -120,6 +120,26 @@ export class IndexingDetailModule {
         const pdfViewerIframe = document.getElementById('pdfViewer');
         if (pdfViewerIframe) {
             pdfViewerIframe.src = this.pdfData.fileUrl;
+            
+            // Hata durumunda alternatif göster
+            pdfViewerIframe.onerror = () => {
+                console.log('PDF yükleme hatası, alternatif gösteriliyor...');
+                pdfViewerIframe.style.display = 'none';
+                
+                const altDiv = document.createElement('div');
+                altDiv.style.cssText = 'padding: 40px; text-align: center; background: #f8f9fa; border-radius: 8px;';
+                altDiv.innerHTML = `
+                    <h4 style="color: #666; margin-bottom: 15px;">📄 PDF Görüntüleyici</h4>
+                    <p style="color: #999; margin-bottom: 20px;">PDF dosyası güvenlik nedeniyle burada açılamıyor.</p>
+                    <button class="btn btn-primary" onclick="window.open('${this.pdfData.fileUrl}', '_blank')" style="margin-right: 10px;">
+                        🔗 Yeni Sekmede Aç
+                    </button>
+                    <button class="btn btn-secondary" onclick="window.indexingDetailModule.downloadPdf()">
+                        📥 İndir
+                    </button>
+                `;
+                pdfViewerIframe.parentNode.appendChild(altDiv);
+            };
         }
         
         // Header butonlarını ayarla
@@ -127,18 +147,39 @@ export class IndexingDetailModule {
     }
 
     setupPdfViewerButtons() {
-        // İndir butonu
-        const downloadBtn = document.getElementById('downloadPdfBtn');
-        if (downloadBtn) {
-            downloadBtn.onclick = () => this.downloadPdf();
-        }
-        
-        // Yeni sekmede aç butonu
-        const newTabBtn = document.getElementById('openNewTabBtn');
-        if (newTabBtn) {
-            newTabBtn.onclick = () => window.open(this.pdfData.fileUrl, '_blank');
-        }
+    // PDF yükleme hatası varsa alternatif yöntem
+    const pdfViewerIframe = document.getElementById('pdfViewer');
+    if (pdfViewerIframe) {
+        pdfViewerIframe.onerror = () => {
+            console.log('PDF iframe hatası, alternatif yöntem deneniyor...');
+            pdfViewerIframe.style.display = 'none';
+            
+            // Alternatif PDF görüntüleyici
+            const altDiv = document.createElement('div');
+            altDiv.style.cssText = 'padding: 20px; text-align: center; background: #f8f9fa;';
+            altDiv.innerHTML = `
+                <h4>PDF Görüntüleyici</h4>
+                <p>PDF dosyası güvenlik nedeniyle iframe'de açılamıyor.</p>
+                <button class="btn btn-primary" onclick="window.open('${this.pdfData.fileUrl}', '_blank')">
+                    📄 PDF'yi Yeni Sekmede Aç
+                </button>
+            `;
+            pdfViewerIframe.parentNode.insertBefore(altDiv, pdfViewerIframe);
+        };
     }
+    
+    // İndir butonu
+    const downloadBtn = document.getElementById('downloadPdfBtn');
+    if (downloadBtn) {
+        downloadBtn.onclick = () => this.downloadPdf();
+    }
+    
+    // Yeni sekmede aç butonu
+    const newTabBtn = document.getElementById('openNewTabBtn');
+    if (newTabBtn) {
+        newTabBtn.onclick = () => window.open(this.pdfData.fileUrl, '_blank');
+    }
+}
 
     downloadPdf() {
         if (!this.pdfData || !this.pdfData.fileUrl) return;
@@ -428,10 +469,18 @@ export class IndexingDetailModule {
         const hasMatchedRecord = this.matchedRecord !== null;
         const hasSelectedTransaction = this.selectedTransactionId !== null;
         const childTransactionInputsVisible = document.getElementById('childTransactionInputs').style.display !== 'none';
-        const hasSelectedChildType = childTransactionInputsVisible ? 
-            document.getElementById('childTransactionType').value !== '' : true;
+        
+        // Alt işlem seçimi opsiyonel yap
+        let hasSelectedChildType = true; // Default true
+        if (childTransactionInputsVisible) {
+            const childTypeSelect = document.getElementById('childTransactionType');
+            if (childTypeSelect && childTypeSelect.options.length > 1) {
+                // Sadece seçenekler varsa zorunlu yap
+                hasSelectedChildType = childTypeSelect.value !== '';
+            }
+        }
 
-        const canSubmit = hasMatchedRecord && hasSelectedTransaction && hasSelectedChildType;
+        const canSubmit = hasMatchedRecord && hasSelectedTransaction;
         const indexBtn = document.getElementById('indexBtn');
         if (indexBtn) {
             indexBtn.disabled = !canSubmit;
