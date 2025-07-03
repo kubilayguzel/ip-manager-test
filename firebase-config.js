@@ -954,6 +954,7 @@ export const etebsService = {
     },
 
     // Get daily notifications from ETEBS
+// Updated getDailyNotifications using Firebase Functions proxy
     async getDailyNotifications(token) {
         if (!isFirebaseAvailable) {
             return { success: false, error: "Firebase kullanılamıyor.", data: [] };
@@ -971,43 +972,51 @@ export const etebsService = {
         }
 
         try {
-            const url = `${ETEBS_CONFIG.baseUrl}${ETEBS_CONFIG.endpoints.dailyNotifications}?apikey=${ETEBS_CONFIG.apiKey}`;
-            
-            const response = await fetch(url, {
+            console.log('🔥 ETEBS Daily Notifications via Firebase Functions');
+
+            const response = await fetch(ETEBS_CONFIG.proxyUrl, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    TOKEN: token
+                    action: 'daily-notifications',
+                    token: token
                 })
             });
 
             if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
             }
 
-            const data = await response.json();
+            const result = await response.json();
+
+            if (!result.success) {
+                throw new Error(result.error || 'Proxy error');
+            }
+
+            const etebsData = result.data;
 
             // Handle ETEBS API errors
-            if (data.IslemSonucKod && data.IslemSonucKod !== '000') {
-                const errorMessage = ETEBS_ERROR_CODES[data.IslemSonucKod] || 'Bilinmeyen hata';
+            if (etebsData.IslemSonucKod && etebsData.IslemSonucKod !== '000') {
+                const errorMessage = ETEBS_ERROR_CODES[etebsData.IslemSonucKod] || 'Bilinmeyen hata';
                 
                 // Log token error if needed
-                if (data.IslemSonucKod === '002') {
-                    await this.logTokenError(currentUser.uid, token, data.IslemSonucAck);
+                if (etebsData.IslemSonucKod === '002') {
+                    await this.logTokenError(currentUser.uid, token, etebsData.IslemSonucAck);
                 }
                 
                 return { 
                     success: false, 
                     error: errorMessage,
-                    errorCode: data.IslemSonucKod,
+                    errorCode: etebsData.IslemSonucKod,
                     data: [] 
                 };
             }
 
             // Process notifications and match with portfolio
-            const processedNotifications = await this.processNotifications(data, currentUser.uid);
+            const processedNotifications = await this.processNotifications(etebsData, currentUser.uid);
 
             // Save to Firebase for tracking
             await this.saveNotificationsToFirebase(processedNotifications, currentUser.uid, token);
@@ -1026,15 +1035,26 @@ export const etebsService = {
             // Log error to Firebase
             await this.logETEBSError(currentUser.uid, 'getDailyNotifications', error.message);
             
+            // User-friendly error messages
+            let userError = 'Beklenmeyen bir hata oluştu';
+            
+            if (error.name === 'AbortError') {
+                userError = 'İstek zaman aşımına uğradı';
+            } else if (error.message.includes('Failed to fetch')) {
+                userError = 'Ağ bağlantısı hatası';
+            } else if (error.message.includes('SERVICE_UNAVAILABLE')) {
+                userError = 'ETEBS servisi şu anda kullanılamıyor';
+            }
+            
             return { 
                 success: false, 
-                error: `API çağrısında hata: ${error.message}`,
+                error: userError,
                 data: [] 
             };
         }
     },
 
-    // Download document from ETEBS
+ // Updated downloadDocument using Firebase Functions proxy
     async downloadDocument(token, documentNo) {
         if (!isFirebaseAvailable) {
             return { success: false, error: "Firebase kullanılamıyor." };
@@ -1056,37 +1076,45 @@ export const etebsService = {
         }
 
         try {
-            const url = `${ETEBS_CONFIG.baseUrl}${ETEBS_CONFIG.endpoints.downloadDocument}?apikey=${ETEBS_CONFIG.apiKey}`;
-            
-            const response = await fetch(url, {
+            console.log('🔥 ETEBS Download Document via Firebase Functions');
+
+            const response = await fetch(ETEBS_CONFIG.proxyUrl, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    TOKEN: token,
-                    DOCUMENT_NO: documentNo
+                    action: 'download-document',
+                    token: token,
+                    documentNo: documentNo
                 })
             });
 
             if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
             }
 
-            const data = await response.json();
+            const result = await response.json();
+
+            if (!result.success) {
+                throw new Error(result.error || 'Proxy error');
+            }
+
+            const etebsData = result.data;
 
             // Handle ETEBS API errors
-            if (data.IslemSonucKod && data.IslemSonucKod !== '000') {
-                const errorMessage = ETEBS_ERROR_CODES[data.IslemSonucKod] || 'Bilinmeyen hata';
+            if (etebsData.IslemSonucKod && etebsData.IslemSonucKod !== '000') {
+                const errorMessage = ETEBS_ERROR_CODES[etebsData.IslemSonucKod] || 'Bilinmeyen hata';
                 return { 
                     success: false, 
                     error: errorMessage,
-                    errorCode: data.IslemSonucKod
+                    errorCode: etebsData.IslemSonucKod
                 };
             }
 
             // Process downloaded documents
-            const processedDocuments = await this.processDownloadedDocuments(data.DownloadDocumentResult, documentNo);
+            const processedDocuments = await this.processDownloadedDocuments(etebsData.DownloadDocumentResult, documentNo);
 
             // Upload to Firebase Storage and save metadata
             const uploadResults = await this.uploadDocumentsToFirebase(processedDocuments, currentUser.uid, documentNo);
@@ -1103,9 +1131,18 @@ export const etebsService = {
             // Log error to Firebase
             await this.logETEBSError(currentUser.uid, 'downloadDocument', error.message, { documentNo });
             
+            // User-friendly error messages
+            let userError = 'Evrak indirme hatası';
+            
+            if (error.name === 'AbortError') {
+                userError = 'İndirme zaman aşımına uğradı';
+            } else if (error.message.includes('Failed to fetch')) {
+                userError = 'Ağ bağlantısı hatası';
+            }
+            
             return { 
                 success: false, 
-                error: `Evrak indirme hatası: ${error.message}`
+                error: userError
             };
         }
     },
