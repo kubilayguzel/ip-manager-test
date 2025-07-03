@@ -578,37 +578,88 @@ export class IndexingDetailModule {
                 if (childTransactionType.taskTriggered && deliveryDate) {
                     console.log('İş tetiklemesi yapılıyor...');
                     
-                const taskData = {
-                    title: `${childTransactionType.alias || childTransactionType.name} - ${this.matchedRecord.title}`,
-                    description: `${this.matchedRecord.title} için ${childTransactionType.alias || childTransactionType.name} işlemi`,
-                    ipRecordId: this.matchedRecord.id,
-                    transactionId: childTransactionId,
-                    triggeringTransactionType: childTypeId,
-                    deliveryDate: deliveryDateStr,
-                    assignedTo_uid: SELCAN_UID,
-                    assignedTo_email: SELCAN_EMAIL,
-                    priority: 'normal',
-                    status: 'awaiting_client_approval',  // 'open' → 'awaiting_client_approval'
-                    createdAt: new Date(),
-                    createdBy: this.currentUser.uid,
-                    taskType: childTransactionType.taskTriggered
-                };
+                    // Tarih hesaplamalarını yap
+                    let taskDueDate = null;
+                    let officialDueDate = null;
+                    let officialDueDateDetails = null;
+                    
+                    if (deliveryDateStr && childTransactionType.duePeriod) {
+                        const deliveryDate = new Date(deliveryDateStr);
+                        deliveryDate.setHours(0, 0, 0, 0);
+                        
+                        console.log('Tarih hesaplaması:', {
+                            deliveryDate: deliveryDate.toDateString(),
+                            duePeriod: childTransactionType.duePeriod,
+                            childTransactionType: childTransactionType.name
+                        });
+                        
+                        // Resmi son tarihi hesapla (duePeriod kadar ay ekle)
+                        const rawOfficialDueDate = addMonthsToDate(deliveryDate, childTransactionType.duePeriod);
+                        officialDueDate = findNextWorkingDay(rawOfficialDueDate, TURKEY_HOLIDAYS);
+                        
+                        // Operasyonel son tarih (resmi son tarihten 3 gün öncesi)
+                        const operationalDueDate = new Date(officialDueDate);
+                        operationalDueDate.setDate(operationalDueDate.getDate() - 3);
+                        
+                        // Hafta sonu/tatil kontrolü
+                        while (isWeekend(operationalDueDate) || isHoliday(operationalDueDate, TURKEY_HOLIDAYS)) {
+                            operationalDueDate.setDate(operationalDueDate.getDate() - 1);
+                        }
+                        
+                        taskDueDate = operationalDueDate.toISOString().split('T')[0]; // YYYY-MM-DD format
+                        
+                        // Due date details
+                        officialDueDateDetails = {
+                            initialDeliveryDate: deliveryDateStr,
+                            periodMonths: childTransactionType.duePeriod,
+                            originalCalculatedDate: rawOfficialDueDate.toISOString().split('T')[0],
+                            finalOfficialDueDate: officialDueDate.toISOString().split('T')[0],
+                            finalOperationalDueDate: taskDueDate,
+                            adjustments: []
+                        };
+                        
+                        console.log('Hesaplanan tarihler:', {
+                            officialDueDate: officialDueDate.toDateString(),
+                            operationalDueDate: taskDueDate,
+                            duePeriodMonths: childTransactionType.duePeriod
+                        });
+                    }
+                    
+                    const taskData = {
+                        title: `${childTransactionType.alias || childTransactionType.name} - ${this.matchedRecord.title}`,
+                        description: `${this.matchedRecord.title} için ${childTransactionType.alias || childTransactionType.name} işlemi`,
+                        ipRecordId: this.matchedRecord.id,
+                        relatedIpRecordId: this.matchedRecord.id,
+                        relatedIpRecordTitle: this.matchedRecord.title,
+                        transactionId: childTransactionId,
+                        triggeringTransactionType: childTypeId,
+                        deliveryDate: deliveryDateStr,
+                        dueDate: taskDueDate,                    // Operasyonel tarih
+                        officialDueDate: officialDueDate,        // Resmi tarih (Date objesi)
+                        officialDueDateDetails: officialDueDateDetails,  // Detaylar
+                        assignedTo_uid: SELCAN_UID,
+                        assignedTo_email: SELCAN_EMAIL,
+                        priority: 'normal',
+                        status: 'awaiting_client_approval',
+                        createdAt: new Date(),
+                        createdBy: this.currentUser.uid,
+                        taskType: childTransactionType.taskTriggered
+                    };
 
                     console.log('Tetiklenecek iş verisi:', taskData);
                     
                     const taskResult = await taskService.createTask(taskData);
                     
-                    console.log('taskResult tam:', taskResult); // DEBUG için
+                    console.log('taskResult tam:', taskResult);
                     
                     if (taskResult.success) {
-                        // ID'yi doğru şekilde al
                         const taskId = taskResult.data?.id || taskResult.id || taskResult.data;
                         console.log('Task ID:', taskId);
                         
                         if (taskId) {
                             createdTaskId = taskId;
                             console.log('İş başarıyla tetiklendi, ID:', taskId);
-                            showNotification('Alt işlem oluşturuldu ve iş tetiklendi!', 'success');
+                            showNotification('Alt işlem oluşturuldu ve iş tetiklendi! Operasyonel ve resmi tarihler hesaplandı.', 'success');
                         } else {
                             console.log('İş oluşturuldu ama ID alınamadı');
                             showNotification('Alt işlem oluşturuldu ve iş tetiklendi!', 'success');
