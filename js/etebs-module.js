@@ -48,14 +48,7 @@ export class ETEBSManager {
         this.notifications = [];
         this.filteredNotifications = [];
         this.isInitialized = false;
-        
-        // Wait for DOM and firebase to be ready
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', () => this.init());
-        } else {
-            this.init();
         }
-    }
 
 
 async uploadDocumentsToFirebase(documents, userId, evrakNo) {
