@@ -648,6 +648,4 @@ export class IndexingDetailModule {
             indexBtn.disabled = false;
         }
     }
-
-// Global erişim için
-window.indexingDetailModule = null;
+}
