@@ -278,7 +278,7 @@ displayPdf() {
         this.checkFormCompleteness();
     }
     
-loadTransactionsForRecord() {
+    async loadTransactionsForRecord() {
         if (!this.matchedRecord) return;
         
         const transactionSection = document.getElementById('transactionSection');
@@ -286,27 +286,54 @@ loadTransactionsForRecord() {
         
         transactionSection.style.display = 'block';
         
-        if (!this.matchedRecord.transactions || this.matchedRecord.transactions.length === 0) {
-            transactionsList.innerHTML = '<p class="text-muted">Bu kayıtta henüz işlem bulunmuyor.</p>';
-            return;
-        }
-
-        const transactionsHtml = this.matchedRecord.transactions.map(transaction => {
-            const transactionType = this.allTransactionTypes.find(t => t.id === transaction.type);
-            const typeName = transactionType ? (transactionType.alias || transactionType.name) : 'Bilinmeyen Tür';
+        try {
+            // API'den transactions çek
+            const transactionsResult = await ipRecordsService.getRecordTransactions(this.matchedRecord.id);
             
-            return `
-                <div class="transaction-item" onclick="window.indexingDetailModule.selectTransaction('${transaction.id}')">
-                    <div class="transaction-main">
-                        <strong>${typeName}</strong>
-                        ${transaction.deliveryDate ? ` • Tebliğ: ${transaction.deliveryDate}` : ''}
-                    </div>
-                    <div class="transaction-date">${new Date(transaction.timestamp).toLocaleDateString('tr-TR')}</div>
-                </div>
-            `;
-        }).join('');
+            if (!transactionsResult.success) {
+                transactionsList.innerHTML = '<p class="text-muted">İşlemler yüklenirken hata oluştu.</p>';
+                return;
+            }
+            
+            const transactions = transactionsResult.data;
+            
+            if (!transactions || transactions.length === 0) {
+                transactionsList.innerHTML = '<p class="text-muted">Bu kayıtta henüz işlem bulunmuyor.</p>';
+                return;
+            }
 
-        transactionsList.innerHTML = transactionsHtml;
+            // Sadece parent transaction'ları göster
+            const parentTransactions = transactions
+                .filter(tx => tx.transactionHierarchy === 'parent' || !tx.transactionHierarchy)
+                .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+            if (parentTransactions.length === 0) {
+                transactionsList.innerHTML = '<p class="text-muted">Bu kayıtta ana işlem bulunmuyor.</p>';
+                return;
+            }
+
+            const transactionsHtml = parentTransactions.map(transaction => {
+                const transactionType = this.allTransactionTypes.find(t => t.id === transaction.type);
+                const typeName = transactionType ? (transactionType.alias || transactionType.name) : 'Bilinmeyen Tür';
+                
+                return `
+                    <div class="transaction-item" onclick="window.indexingDetailModule.selectTransaction('${transaction.id}')">
+                        <div class="transaction-main">${typeName}</div>
+                        <div class="transaction-details">
+                            ${transaction.description || 'Açıklama yok'}
+                            ${transaction.deliveryDate ? ` • Tebliğ: ${transaction.deliveryDate}` : ''}
+                        </div>
+                        <div class="transaction-date">${new Date(transaction.timestamp).toLocaleDateString('tr-TR')}</div>
+                    </div>
+                `;
+            }).join('');
+
+            transactionsList.innerHTML = transactionsHtml;
+            
+        } catch (error) {
+            console.error('Transactions yüklenirken hata:', error);
+            transactionsList.innerHTML = '<p class="text-muted">İşlemler yüklenirken hata oluştu.</p>';
+        }
     }
 
     selectTransaction(transactionId) {
