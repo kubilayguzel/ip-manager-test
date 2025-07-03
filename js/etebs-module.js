@@ -44,12 +44,14 @@ function showNotification(message, type = 'info') {
 
 export class ETEBSManager {
     constructor() {
-        this.currentMode = 'etebs';
-        this.notifications = [];
-        this.filteredNotifications = [];
-        this.isInitialized = false;
-        }
+    this.currentMode = 'etebs';
+    this.notifications = [];
+    this.filteredNotifications = [];
+    this.isInitialized = false;
 
+    // 🎯 Event binding burada başlıyor
+    this.bindEvents();
+}
 
 async uploadDocumentsToFirebase(documents, userId, evrakNo) {
     const uploadResults = [];
