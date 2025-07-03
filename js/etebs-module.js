@@ -835,6 +835,7 @@ ${notification.tebellugeden ? `📨 Tebellüğ Eden: ${notification.tebellugeden
         console.error('Error integrating with bulk indexing:', error);
     }
 }
+}
 
 // Export for global access
 window.ETEBSManager = ETEBSManager;
