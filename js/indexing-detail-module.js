@@ -556,12 +556,23 @@ export class IndexingDetailModule {
                     childTransactionData
                 );
 
+                console.log('childResult tam:', childResult); // DEBUG için
+
                 if (!childResult.success) {
                     throw new Error('Alt işlem kaydedilemedi: ' + childResult.error);
                 }
 
-                console.log('Alt işlem başarıyla oluşturuldu:', childResult.data);
-                transactionIdToAssociateFiles = childResult.data.id;
+                // ID'yi doğru şekilde al
+                const childTransactionId = childResult.data?.id || childResult.id || childResult.data;
+                console.log('Child transaction ID:', childTransactionId);
+
+                if (!childTransactionId) {
+                    console.error('Child transaction ID bulunamadı, childResult:', childResult);
+                    throw new Error('Alt işlem ID\'si alınamadı');
+                }
+
+                transactionIdToAssociateFiles = childTransactionId;
+                console.log('Alt işlem başarıyla oluşturuldu, ID:', childTransactionId);
 
                 // İş tetiklemesi kontrolü
                 if (childTransactionType.taskTriggered && deliveryDate) {
@@ -569,7 +580,7 @@ export class IndexingDetailModule {
                     
                     const taskData = {
                         ipRecordId: this.matchedRecord.id,
-                        transactionId: childResult.data.id,
+                        transactionId: childTransactionId, // Artık undefined olmayacak
                         triggeringTransactionType: childTypeId,
                         deliveryDate: deliveryDateStr,
                         assignedTo: SELCAN_UID,
@@ -600,8 +611,12 @@ export class IndexingDetailModule {
             }
 
             // PDF dosyasını transaction'a bağla
-            console.log('PDF dosyası transaction\'a bağlanıyor...');
+            console.log('PDF dosyası transaction\'a bağlanıyor...', transactionIdToAssociateFiles);
             
+            if (!transactionIdToAssociateFiles) {
+                throw new Error('Transaction ID bulunamadı');
+            }
+
             const updateData = {
                 status: 'indexed',
                 indexedAt: new Date(),
@@ -633,7 +648,6 @@ export class IndexingDetailModule {
             indexBtn.disabled = false;
         }
     }
-}
 
 // Global erişim için
 window.indexingDetailModule = null;
