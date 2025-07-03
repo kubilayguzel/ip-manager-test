@@ -1290,56 +1290,71 @@ async downloadDocument(token, documentNo) {
     },
 
     // Upload documents to Firebase Storage
-    async uploadDocumentsToFirebase(documents, userId, evrakNo) {
-        const uploadResults = [];
+ async uploadDocumentsToFirebase(documents, userId, evrakNo) {
+    const uploadResults = [];
 
-        for (const doc of documents) {
-            try {
-                // Upload to Firebase Storage
-                const storagePath = `etebs_documents/${userId}/${evrakNo}/${doc.fileName}`;
-                const storageRef = ref(storage, storagePath);
-                
-                const uploadTask = uploadBytesResumable(storageRef, doc.file);
-                
-                // Wait for upload completion
-                await uploadTask;
-                const downloadURL = await getDownloadURL(storageRef);
+    for (const doc of documents) {
+        try {
+            // Upload to Firebase Storage
+            const storagePath = `etebs_documents/${userId}/${evrakNo}/${doc.fileName}`;
+            const storageRef = ref(storage, storagePath);
+            
+            const uploadTask = uploadBytesResumable(storageRef, doc.file);
+            
+            // Wait for upload completion
+            await uploadTask;
+            const downloadURL = await getDownloadURL(storageRef);
 
-                // Save metadata to Firestore
-                const docData = {
-                    evrakNo: doc.evrakNo,
-                    belgeAciklamasi: doc.belgeAciklamasi,
-                    fileName: doc.fileName,
-                    fileUrl: downloadURL,
-                    filePath: storagePath,
-                    fileSize: doc.file.size,
-                    uploadedAt: new Date(),
-                    userId: userId,
-                    source: 'etebs'
-                };
+            // Save metadata to Firestore - HEM etebs_documents HEM DE unindexed_pdfs'e kaydet
+            const docData = {
+                evrakNo: doc.evrakNo,
+                belgeAciklamasi: doc.belgeAciklamasi,
+                fileName: doc.fileName,
+                fileUrl: downloadURL,
+                filePath: storagePath,
+                fileSize: doc.file.size,
+                uploadedAt: new Date(),
+                userId: userId,
+                source: 'etebs',
+                status: 'pending', // İndeksleme için
+                extractedAppNumber: doc.evrakNo, // Evrak numarasını da uygulama numarası olarak kullan
+                matchedRecordId: null,
+                matchedRecordDisplay: null
+            };
 
-                const docRef = await addDoc(collection(db, 'etebs_documents'), docData);
-
-                uploadResults.push({
-                    ...docData,
-                    id: docRef.id,
-                    success: true
-                });
-
-            } catch (error) {
-                console.error(`Upload failed for ${doc.fileName}:`, error);
-                uploadResults.push({
-                    fileName: doc.fileName,
-                    evrakNo: doc.evrakNo,
-                    success: false,
-                    error: error.message
-                });
+            // Eşleşme kontrolü yap
+            const matchResult = await this.matchWithPortfolio(doc.evrakNo);
+            if (matchResult.matched) {
+                docData.matchedRecordId = matchResult.record.id;
+                docData.matchedRecordDisplay = `${matchResult.record.title} - ${matchResult.record.applicationNumber}`;
             }
+
+            // 1. etebs_documents koleksiyonuna kaydet (mevcut)
+            const etebsDocRef = await addDoc(collection(db, 'etebs_documents'), docData);
+
+            // 2. unindexed_pdfs koleksiyonuna da kaydet (YENİ)
+            const unindexedDocRef = await addDoc(collection(db, 'unindexed_pdfs'), docData);
+
+            uploadResults.push({
+                ...docData,
+                id: etebsDocRef.id,
+                unindexedPdfId: unindexedDocRef.id, // İndeksleme sayfası için
+                success: true
+            });
+
+        } catch (error) {
+            console.error(`Upload failed for ${doc.fileName}:`, error);
+            uploadResults.push({
+                fileName: doc.fileName,
+                evrakNo: doc.evrakNo,
+                success: false,
+                error: error.message
+            });
         }
+    }
 
-        return uploadResults;
-    },
-
+    return uploadResults;
+},
     // Save notifications to Firebase for tracking
     async saveNotificationsToFirebase(notifications, userId, token) {
         try {
