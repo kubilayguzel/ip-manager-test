@@ -1765,9 +1765,11 @@
     <script type="module">
         import { BulkIndexingModule } from './js/bulk-indexing-module.js';
         import { loadSharedLayout } from './js/layout-loader.js';
+        import { ETEBSManager } from './js/etebs-module.js';
 
         document.addEventListener('DOMContentLoaded', () => {
             window.indexingModule = new BulkIndexingModule();
+            window.etebsManager = new ETEBSManager();
             loadSharedLayout({ activeMenuLink: 'bulk-indexing-page.html' }); 
         });
     </script>
