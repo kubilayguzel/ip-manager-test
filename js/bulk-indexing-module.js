@@ -109,6 +109,18 @@ export class BulkIndexingModule {
         
         // Main tab switching listeners
         this.setupMainTabListeners();
+
+        // Manuel işlem kaydet butonu
+        const saveManualTransactionBtn = document.getElementById('saveManualTransactionBtn');
+        if (saveManualTransactionBtn) {
+            saveManualTransactionBtn.addEventListener('click', () => this.handleManualTransactionSubmit());
+        }
+        
+        // Manuel işlem form validation
+        const manualTransactionType = document.getElementById('specificManualTransactionType');
+        if (manualTransactionType) {
+            manualTransactionType.addEventListener('change', () => this.checkFormCompleteness());
+        }
         
         // Search and form listeners for existing transaction tab
         this.setupExistingTransactionListeners();
@@ -573,11 +585,15 @@ export class BulkIndexingModule {
             const specificManualTransactionTypeSelected = document.getElementById('specificManualTransactionType')?.value;
             const filesSelected = this.uploadedFilesMap.get('manual-indexing-pane')?.length > 0;
             canSubmit = this.selectedRecordManual !== null && specificManualTransactionTypeSelected && filesSelected;
+            // Manuel işlem butonu için
+            const saveManualBtn = document.getElementById('saveManualTransactionBtn');
+            if (saveManualBtn) {
+                saveManualBtn.disabled = !canSubmit;
         } else if (this.activeTab === 'bulk-indexing-pane') {
             // Bulk indexing doesn't need form validation, files are auto-processed
             canSubmit = false;
         }
-
+    }
         const submitBtn = document.getElementById('indexDocumentsBtn');
         if (submitBtn) {
             submitBtn.disabled = !canSubmit;
