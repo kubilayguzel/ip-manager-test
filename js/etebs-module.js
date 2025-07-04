@@ -694,10 +694,7 @@ deactivateUploadMode() {
                 const currentUser = authService.getCurrentUser();
                 if (currentUser) {
                     await etebsService.saveToken(token, currentUser.uid);
-                }
-                
-                this.notifications = result.data;
-                this.filteredNotifications = [...this.notifications];
+                }           
                 
                 this.showTokenStatus('success', 
                     `${result.totalCount} tebligat alındı (${result.matchedCount} eşleşen, ${result.unmatchedCount} eşleşmeyen)`
