@@ -1628,12 +1628,51 @@
                                 </div>
                                 <!-- Notifications Section -->
                                 <div id="notificationsSection" class="notifications-section" style="display: none;">
-                                    <!-- Notifications içeriği -->
-                                    (tüm buradaki notification content)
-                                </div>
-                            </div> <!-- 🔴 etebs-mode DIV BURADA KAPANIYOR -->
+                                    <div class="notifications-tabs-container">
+                                        <!-- Tab Headers -->
+                                        <div class="notifications-tabs-header">
+                                            <button class="notifications-tab-btn active" data-notifications-tab="matched">
+                                                <span>✅</span>
+                                                <span>Eşleşen Tebligatlar</span>
+                                                <span class="tab-badge-count" id="matchedTabBadge">0</span>
+                                            </button>
+                                            <button class="notifications-tab-btn" data-notifications-tab="unmatched">
+                                                <span>❓</span>
+                                                <span>Eşleşmeyen Tebligatlar</span>
+                                                <span class="tab-badge-count" id="unmatchedTabBadge">0</span>
+                                            </button>
+                                        </div>
 
-                            <!-- 🟢 Upload Mode - ARTIK DIŞARIDA -->
+                                        <!-- Tab Contents -->
+                                        <div class="notifications-tab-content">
+                                            <!-- Matched Notifications Tab -->
+                                            <div id="matched-notifications-tab" class="notifications-tab-pane active">
+                                                <div class="notifications-list-container">
+                                                    <div id="matchedNotificationsList" class="notifications-list-full">
+                                                        <div class="empty-state">
+                                                            <span>📋</span>
+                                                            <p>Henüz eşleşen tebligat yok</p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <!-- Unmatched Notifications Tab -->
+                                            <div id="unmatched-notifications-tab" class="notifications-tab-pane">
+                                                <div class="notifications-list-container">
+                                                    <div id="unmatchedNotificationsList" class="notifications-list-full">
+                                                        <div class="empty-state">
+                                                            <span>📋</span>
+                                                            <p>Henüz eşleşmeyen tebligat yok</p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                </div>
+                            </div>
                             <div id="upload-mode" class="mode-content" style="display: none;">
                                 <div class="form-section">
                                     <h2 class="section-title"><span>📁</span> PDF Dosyalarını Yükleyin</h2>
