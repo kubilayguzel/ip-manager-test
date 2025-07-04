@@ -1087,12 +1087,11 @@ async downloadDocument(token, documentNo) {
 
         const result = await response.json();
 
+        let pdfBlob = null;
+
         if (result.success && result.data) {
-            // PDF dosyasını Blob olarak oluştur
-            let pdfBlob = null;
-            
+            // Önce Base64 varsa onu kullan
             if (result.data.fileContent) {
-                // Base64 string'i Blob'a çevir
                 try {
                     const binaryString = atob(result.data.fileContent);
                     const bytes = new Uint8Array(binaryString.length);
@@ -1104,8 +1103,18 @@ async downloadDocument(token, documentNo) {
                     console.error('Error converting base64 to blob:', error);
                 }
             }
+            // Eğer Base64 yoksa downloadUrl'den çek
+            else if (result.data.downloadUrl) {
+                try {
+                    console.log(`🌐 Downloading PDF from URL: ${result.data.downloadUrl}`);
+                    const fetchResponse = await fetch(result.data.downloadUrl);
+                    pdfBlob = await fetchResponse.blob();
+                } catch (error) {
+                    console.error('Error fetching PDF from downloadUrl:', error);
+                }
+            }
 
-            // Store document in Firebase for tracking
+            // Firebase'e logla
             try {
                 const docData = {
                     evrakNo: documentNo,
@@ -1121,14 +1130,13 @@ async downloadDocument(token, documentNo) {
                 console.log('Document download logged:', docRef.id);
             } catch (error) {
                 console.error('Error logging download:', error);
-                // Download işlemi başarılı olsa da loglama hatası önemli değil
             }
 
             return {
                 success: true,
                 data: result.data,
-                pdfBlob: pdfBlob, // Yeni: Blob olarak PDF verisi
-                pdfData: result.data.fileContent // Eski uyumluluk için base64 data
+                pdfBlob: pdfBlob,
+                pdfData: result.data.fileContent // eski uyumluluk
             };
 
         } else {
