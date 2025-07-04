@@ -13,10 +13,8 @@
        <div class="nav-category-title">Finans</div>
         <a href="accruals.html" class="sidebar-nav-item"><span class="nav-icon">💰</span><span>Tahakkuklarım</span></a>
         <div class="nav-category-title">Araçlar</div>
+        <!-- GÜNCELLENMIŞ: indexing.html → bulk-indexing-page.html -->
         <a href="bulk-indexing-page.html" class="sidebar-nav-item"><span class="nav-icon">📁</span><span>Belge İndeksleme</span></a>
-        
-        <a href="notifications.html" class="sidebar-nav-item" data-vanilla-nav="true"><span class="nav-icon">✉️</span><span>Müvekkil Bildirimleri</span></a>
-        
         <a href="#" class="sidebar-nav-item" style="opacity: 0.5; cursor: not-allowed;"><span class="nav-icon">📈</span><span>Raporlar</span></a>
         <a href="#" class="sidebar-nav-item" style="opacity: 0.5; cursor: not-allowed;"><span class="nav-icon">🔧</span><span>Ayarlar</span></a>
     </nav>
@@ -58,7 +56,6 @@ document.addEventListener("DOMContentLoaded", () => {
       const accordionHeader = accordionContent.previousElementSibling;
       if (accordionHeader) accordionHeader.classList.add('open');
 
-      // --- GERİ EKLENEN KISIM ---
       // Diğer accordion'ları kapat
       document.querySelectorAll('.accordion-content').forEach(content => {
         if (content !== accordionContent) {
@@ -67,8 +64,6 @@ document.addEventListener("DOMContentLoaded", () => {
           if (otherHeader) otherHeader.classList.remove('open');
         }
       });
-      // --- GERİ EKLENEN KISIM SONU ---
-      
     } else {
       // Link accordion dışında ise tüm accordion'ları kapat
       document.querySelectorAll('.accordion-content').forEach(content => {
