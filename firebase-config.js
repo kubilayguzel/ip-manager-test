@@ -1087,67 +1087,58 @@ async downloadDocument(token, documentNo) {
 
         const result = await response.json();
 
-        let pdfBlob = null;
+        // ETEBS "daha önce indirildi" hatası kontrolü
+        if (result?.data?.IslemSonucKod === "005") {
+            return {
+                success: false,
+                error: "Bu evrak daha önce indirildi. Yeniden çekilemiyor."
+            };
+        }
 
-        if (result.success && result.data) {
-            // Önce Base64 varsa onu kullan
-            if (result.data.fileContent) {
-                try {
-                    const binaryString = atob(result.data.fileContent);
-                    const bytes = new Uint8Array(binaryString.length);
-                    for (let i = 0; i < binaryString.length; i++) {
-                        bytes[i] = binaryString.charCodeAt(i);
-                    }
-                    pdfBlob = new Blob([bytes], { type: 'application/pdf' });
-                } catch (error) {
-                    console.error('Error converting base64 to blob:', error);
-                }
-            }
-            // Eğer Base64 yoksa downloadUrl'den çek
-            else if (result.data.downloadUrl) {
-                try {
-                    console.log(`🌐 Downloading PDF from URL: ${result.data.downloadUrl}`);
-                    const fetchResponse = await fetch(result.data.downloadUrl);
-                    pdfBlob = await fetchResponse.blob();
-                } catch (error) {
-                    console.error('Error fetching PDF from downloadUrl:', error);
-                }
-            }
-
-            // Firebase'e logla
+        if (result.success && result.data && result.data.fileContent) {
+            // Base64 string'i Blob'a çevir
+            let pdfBlob = null;
             try {
-                const docData = {
-                    evrakNo: documentNo,
-                    fileName: result.data.fileName || `${documentNo}.pdf`,
-                    fileSize: result.data.fileSize || 0,
-                    downloadedAt: new Date(),
-                    userId: currentUser.uid,
-                    source: 'etebs',
-                    status: 'downloaded'
-                };
-
-                const docRef = await addDoc(collection(db, 'etebs_downloads'), docData);
-                console.log('Document download logged:', docRef.id);
+                const binaryString = atob(result.data.fileContent);
+                const bytes = new Uint8Array(binaryString.length);
+                for (let i = 0; i < binaryString.length; i++) {
+                    bytes[i] = binaryString.charCodeAt(i);
+                }
+                pdfBlob = new Blob([bytes], { type: 'application/pdf' });
             } catch (error) {
-                console.error('Error logging download:', error);
+                console.error('Base64 Blob dönüşüm hatası:', error);
+                return { success: false, error: "PDF veri dönüşümü başarısız." };
             }
+
+            // Firebase Storage'a yükle
+            const storageRef = ref(storage, `etebs_pdfs/${documentNo}.pdf`);
+            await uploadBytes(storageRef, pdfBlob);
+            console.log(`✅ Storage'a yüklendi: etebs_pdfs/${documentNo}.pdf`);
+
+            // Firestore'a metadata kaydet
+            const docData = {
+                evrakNo: documentNo,
+                storagePath: `etebs_pdfs/${documentNo}.pdf`,
+                fileName: result.data.fileName || `${documentNo}.pdf`,
+                fileSize: result.data.fileSize || 0,
+                downloadedAt: new Date(),
+                userId: currentUser.uid,
+                source: 'etebs',
+                status: 'downloaded'
+            };
+            const docRef = await addDoc(collection(db, 'etebs_downloads'), docData);
+            console.log('Document metadata Firestore’a kaydedildi:', docRef.id);
 
             return {
                 success: true,
-                data: result.data,
-                pdfBlob: pdfBlob,
-                pdfData: result.data.fileContent // eski uyumluluk
+                storagePath: docData.storagePath
             };
-
         } else {
             const errorMsg = result.error || 'Evrak indirilemedi';
-            await this.logETEBSError(currentUser.uid, 'download-document', errorMsg, { documentNo });
             return { success: false, error: errorMsg };
         }
-
     } catch (error) {
         console.error('Download document error:', error);
-        await this.logETEBSError(currentUser.uid, 'download-document', error.message, { documentNo });
         return { success: false, error: error.message };
     }
 },
