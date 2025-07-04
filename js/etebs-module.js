@@ -675,7 +675,7 @@ deactivateUploadMode() {
             console.log("📡 getDailyNotifications sonucu:", result);
             console.log("📋 Gelen Data Array:", result.data);
             // Portföy kayıtlarını al (örnek: window.indexingModule.records)
-            const records = window.indexingModule ? window.indexingModule.records : [];
+            const records = window.indexingModule && Array.isArray(window.indexingModule.allRecords) ? window.indexingModule.allRecords : [];
 
             // Eşleştirme işlemi
             this.notifications = result.data.map(n => {
