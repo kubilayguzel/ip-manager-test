@@ -12,9 +12,17 @@ import {
 } from '../firebase-config.js';
 
 // Firestore'dan doğrudan gereken fonksiyonları import et
-import { 
-    collection, query, where, doc, getDoc, updateDoc
+import {
+    collection, query, where, doc, getDoc, updateDoc, addDoc // addDoc eklendi
 } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+
+// Storage fonksiyonlarını da import et
+import {
+    ref,
+    uploadBytesResumable,
+    getDownloadURL,
+    deleteObject
+} from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js';
 
 // utils.js'den yardımcı fonksiyonları import et
 import {
@@ -28,6 +36,7 @@ import {
 
 // Constants
 const UNINDEXED_PDFS_COLLECTION = 'unindexed_pdfs';
+const INDEXED_DOCUMENTS_COLLECTION = 'indexed_documents'; // Yeni sabit eklendi
 
 // Selcan'ın bilgileri
 const SELCAN_UID = '5GD0KCpyeVUneDJq4pP0yxZEP6r1';
@@ -127,56 +136,56 @@ async loadETEBSData(urlParams) {
 
         // Gerçek PDF'i etebs_documents koleksiyonundan bul
         console.log('ETEBS PDF aranıyor, evrakNo:', evrakNo, 'userId:', this.currentUser.uid);
-        
+
         const etebsDocsQuery = query(
             collection(firebaseServices.db, 'etebs_documents'),
             where('evrakNo', '==', evrakNo),
             where('userId', '==', this.currentUser.uid)
         );
-        
+
         const etebsDocsSnapshot = await getDocs(etebsDocsQuery);
-        
+
         if (!etebsDocsSnapshot.empty) {
             const etebsDoc = etebsDocsSnapshot.docs[0];
             const etebsData = etebsDoc.data();
-            
+
             // PDF URL'sini güncelle
             this.pdfData.fileUrl = etebsData.fileUrl;
             this.pdfData.id = etebsDoc.id;
             this.pdfData.matchedRecordId = etebsData.matchedRecordId;
             this.pdfData.matchedRecordDisplay = etebsData.matchedRecordDisplay;
-            
+
             console.log('✅ ETEBS PDF verisi bulundu:', this.pdfData);
         } else {
             console.log('❌ ETEBS PDF bulunamadı, unindexed_pdfs koleksiyonunda aranıyor...');
-            
+
             // unindexed_pdfs koleksiyonunda da ara
             const unindexedQuery = query(
-                collection(firebaseServices.db, 'unindexed_pdfs'),
+                collection(firebaseServices.db, UNINDEXED_PDFS_COLLECTION),
                 where('evrakNo', '==', evrakNo),
                 where('userId', '==', this.currentUser.uid),
                 where('source', '==', 'etebs')
             );
-            
+
             const unindexedSnapshot = await getDocs(unindexedQuery);
-            
+
             if (!unindexedSnapshot.empty) {
                 const unindexedDoc = unindexedSnapshot.docs[0];
                 const unindexedData = unindexedDoc.data();
-                
+
                 // PDF URL'sini güncelle
                 this.pdfData.fileUrl = unindexedData.fileUrl;
                 this.pdfData.id = unindexedDoc.id;
                 this.pdfData.matchedRecordId = unindexedData.matchedRecordId;
                 this.pdfData.matchedRecordDisplay = unindexedData.matchedRecordDisplay;
-                
+
                 console.log('✅ ETEBS PDF unindexed_pdfs\'te bulundu:', this.pdfData);
             } else {
                 console.log('❌ ETEBS PDF hiçbir koleksiyonda bulunamadı');
                 showNotification('PDF dosyası bulunamadı. Lütfen önce dosyayı indirin.', 'warning');
             }
         }
-        
+
     } catch (error) {
         console.error('ETEBS verisi yüklenirken hata:', error);
         showNotification('ETEBS verisi yüklenirken hata oluştu: ' + error.message, 'error');
@@ -210,17 +219,17 @@ async loadETEBSData(urlParams) {
         if (pdfTitle) {
             pdfTitle.textContent = this.pdfData.fileName;
         }
-        
+
         // PDF'i iframe'e yükle
         const pdfViewerIframe = document.getElementById('pdfViewer');
         if (pdfViewerIframe) {
             pdfViewerIframe.src = this.pdfData.fileUrl;
-            
+
             // Hata durumunda alternatif göster
             pdfViewerIframe.onerror = () => {
                 console.log('PDF yükleme hatası, alternatif gösteriliyor...');
                 pdfViewerIframe.style.display = 'none';
-                
+
                 const altDiv = document.createElement('div');
                 altDiv.style.cssText = 'padding: 40px; text-align: center; background: #f8f9fa; border-radius: 8px;';
                 altDiv.innerHTML = `
@@ -236,7 +245,7 @@ async loadETEBSData(urlParams) {
                 pdfViewerIframe.parentNode.appendChild(altDiv);
             };
         }
-        
+
         // Header butonlarını ayarla
         this.setupPdfViewerButtons();
     }
@@ -248,7 +257,7 @@ async loadETEBSData(urlParams) {
         pdfViewerIframe.onerror = () => {
             console.log('PDF iframe hatası, alternatif yöntem deneniyor...');
             pdfViewerIframe.style.display = 'none';
-            
+
             // Alternatif PDF görüntüleyici
             const altDiv = document.createElement('div');
             altDiv.style.cssText = 'padding: 20px; text-align: center; background: #f8f9fa;';
@@ -262,13 +271,13 @@ async loadETEBSData(urlParams) {
             pdfViewerIframe.parentNode.insertBefore(altDiv, pdfViewerIframe);
         };
     }
-    
+
     // İndir butonu
     const downloadBtn = document.getElementById('downloadPdfBtn');
     if (downloadBtn) {
         downloadBtn.onclick = () => this.downloadPdf();
     }
-    
+
     // Yeni sekmede aç butonu
     const newTabBtn = document.getElementById('openNewTabBtn');
     if (newTabBtn) {
@@ -278,7 +287,7 @@ async loadETEBSData(urlParams) {
 
     downloadPdf() {
         if (!this.pdfData || !this.pdfData.fileUrl) return;
-        
+
         const a = document.createElement('a');
         a.href = this.pdfData.fileUrl;
         a.download = this.pdfData.fileName;
@@ -302,10 +311,10 @@ async loadETEBSData(urlParams) {
     showMatchedRecord() {
         const matchedDiv = document.getElementById('matchedRecordDisplay');
         const manualDiv = document.getElementById('manualRecordSearch');
-        
+
         matchedDiv.style.display = 'block';
         manualDiv.style.display = 'none';
-        
+
         matchedDiv.innerHTML = `
             <div class="matched-record-card" style="border: 2px solid #28a745; border-radius: 10px; padding: 15px; background: #f8fff9;">
                 <h4 style="color: #28a745; margin: 0 0 10px 0;">✅ Otomatik Eşleşen Kayıt</h4>
@@ -317,7 +326,7 @@ async loadETEBSData(urlParams) {
                 </button>
             </div>
         `;
-        
+
         // Ana işlemleri yükle
         this.loadTransactionsForRecord();
     }
@@ -325,10 +334,10 @@ async loadETEBSData(urlParams) {
     showManualRecordSearch() {
         const matchedDiv = document.getElementById('matchedRecordDisplay');
         const manualDiv = document.getElementById('manualRecordSearch');
-        
+
         matchedDiv.style.display = 'none';
         manualDiv.style.display = 'block';
-        
+
         // Eğer daha önce seçilen kayıt varsa göster
         if (this.matchedRecord) {
             this.displaySelectedRecord();
@@ -338,7 +347,7 @@ async loadETEBSData(urlParams) {
     setupEventListeners() {
         // Manuel kayıt arama
         this.setupRecordSearch();
-        
+
         // İndeksleme butonu
         const indexBtn = document.getElementById('indexBtn');
         if (indexBtn) {
@@ -349,7 +358,7 @@ async loadETEBSData(urlParams) {
     setupRecordSearch() {
         const searchInput = document.getElementById('recordSearchInput');
         const resultsContainer = document.getElementById('searchResultsContainer');
-        
+
         if (searchInput) {
             searchInput.addEventListener('input', (e) => {
                 const query = e.target.value.trim();
@@ -376,17 +385,17 @@ async loadETEBSData(urlParams) {
 
     searchRecords(query) {
         const resultsContainer = document.getElementById('searchResultsContainer');
-        
-        const filteredRecords = this.allRecords.filter(record => 
+
+        const filteredRecords = this.allRecords.filter(record =>
             record.title.toLowerCase().includes(query.toLowerCase()) ||
             record.applicationNumber.toLowerCase().includes(query.toLowerCase()) ||
             (record.client && record.client.toLowerCase().includes(query.toLowerCase()))
         ).slice(0, 10);
 
         if (filteredRecords.length === 0) {
-            resultsContainer.innerHTML = '<div class="search-result-item">Hiç sonuç bulunamadı</div>';
+            container.innerHTML = '<div class="search-result-item">Hiç sonuç bulunamadı</div>';
         } else {
-            resultsContainer.innerHTML = filteredRecords.map(record => `
+            container.innerHTML = filteredRecords.map(record => `
                 <div class="search-result-item" onclick="window.indexingDetailModule.selectRecord('${record.id}')">
                     <div class="search-result-title">${record.title}</div>
                     <div class="search-result-details">
@@ -396,8 +405,8 @@ async loadETEBSData(urlParams) {
                 </div>
             `).join('');
         }
-        
-        resultsContainer.style.display = 'block';
+
+        container.style.display = 'block';
     }
 
     async selectRecord(recordId) {
@@ -412,12 +421,12 @@ async loadETEBSData(urlParams) {
 
     displaySelectedRecord() {
         const selectedDiv = document.getElementById('selectedRecordDisplay');
-        
+
         if (!this.matchedRecord) {
             selectedDiv.style.display = 'none';
             return;
         }
-        
+
         selectedDiv.style.display = 'block';
         selectedDiv.innerHTML = `
             <div class="selected-record-card" style="border: 2px solid #007bff; border-radius: 10px; padding: 15px; background: #f8f9ff;">
@@ -444,22 +453,22 @@ async loadETEBSData(urlParams) {
 
     async loadTransactionsForRecord() {
         if (!this.matchedRecord) return;
-        
+
         const transactionSection = document.getElementById('transactionSection');
         const transactionsList = document.getElementById('transactionsList');
-        
+
         transactionSection.style.display = 'block';
-        
+
         try {
             const transactionsResult = await ipRecordsService.getRecordTransactions(this.matchedRecord.id);
-            
+
             if (!transactionsResult.success) {
                 transactionsList.innerHTML = '<p class="text-muted">İşlemler yüklenirken hata oluştu.</p>';
                 return;
             }
-            
+
             this.currentTransactions = transactionsResult.data;
-            
+
             if (!this.currentTransactions || this.currentTransactions.length === 0) {
                 transactionsList.innerHTML = '<p class="text-muted">Bu kayıtta henüz işlem bulunmuyor.</p>';
                 return;
@@ -478,7 +487,7 @@ async loadETEBSData(urlParams) {
             const transactionsHtml = parentTransactions.map(transaction => {
                 const transactionType = this.allTransactionTypes.find(t => t.id === transaction.type);
                 const typeName = transactionType ? (transactionType.alias || transactionType.name) : 'Bilinmeyen Tür';
-                
+
                 return `
                     <div class="transaction-item" onclick="window.indexingDetailModule.selectTransaction('${transaction.id}')">
                         <div class="transaction-main">${typeName}</div>
@@ -492,7 +501,7 @@ async loadETEBSData(urlParams) {
             }).join('');
 
             transactionsList.innerHTML = transactionsHtml;
-            
+
         } catch (error) {
             console.error('Transactions yüklenirken hata:', error);
             transactionsList.innerHTML = '<p class="text-muted">İşlemler yüklenirken hata oluştu.</p>';
@@ -501,19 +510,19 @@ async loadETEBSData(urlParams) {
 
     selectTransaction(transactionId) {
         this.selectedTransactionId = transactionId;
-        
+
         // Seçili işlemi görsel olarak vurgula
         document.querySelectorAll('.transaction-item').forEach(item => {
             item.classList.remove('selected');
         });
         event.target.closest('.transaction-item').classList.add('selected');
-        
+
         // Alt işlem türlerini yükle
         this.loadChildTransactionTypes();
-        
+
         // Alt işlem bölümünü göster
         document.getElementById('childTransactionInputs').style.display = 'block';
-        
+
         this.checkFormCompleteness();
     }
 
@@ -532,10 +541,10 @@ async loadETEBSData(urlParams) {
         const selectElement = document.getElementById('childTransactionType');
         selectElement.innerHTML = '<option value="" disabled selected>Alt işlem türü seçin...</option>';
 
-        const childTypes = this.allTransactionTypes.filter(type => 
-            type.hierarchy === 'child' &&  
-            transactionType.indexFile && 
-            Array.isArray(transactionType.indexFile) && 
+        const childTypes = this.allTransactionTypes.filter(type =>
+            type.hierarchy === 'child' &&
+            transactionType.indexFile &&
+            Array.isArray(transactionType.indexFile) &&
             transactionType.indexFile.includes(type.id)
         ).sort((a, b) => (a.order || 999) - (b.order || 999));
 
@@ -570,10 +579,10 @@ async loadETEBSData(urlParams) {
     checkFormCompleteness() {
         const hasMatchedRecord = this.matchedRecord !== null;
         const hasSelectedTransaction = this.selectedTransactionId !== null;
-        
+
         const childTransactionInputs = document.getElementById('childTransactionInputs');
         const childTransactionInputsVisible = childTransactionInputs && childTransactionInputs.style.display !== 'none';
-        
+
         let hasSelectedChildType = true; // Default true
         if (childTransactionInputsVisible) {
             const childTypeSelect = document.getElementById('childTransactionType');
@@ -584,13 +593,13 @@ async loadETEBSData(urlParams) {
         }
 
         const canSubmit = hasMatchedRecord && hasSelectedTransaction && hasSelectedChildType;
-        
+
         const indexBtn = document.getElementById('indexBtn');
         if (indexBtn) {
             indexBtn.disabled = !canSubmit;
             console.log('İndeksle butonu durumu:', canSubmit ? 'AKTİF' : 'PASİF');
         }
-        
+
         console.log('Form completeness check:', {
             hasMatchedRecord,
             hasSelectedTransaction,
@@ -613,7 +622,7 @@ async loadETEBSData(urlParams) {
         try {
             const childTypeId = document.getElementById('childTransactionType').value;
             const deliveryDateStr = document.getElementById('deliveryDate').value;
-            
+
             let transactionIdToAssociateFiles = this.selectedTransactionId;
             let createdTaskId = null;
 
@@ -627,14 +636,14 @@ async loadETEBSData(urlParams) {
             // Alt işlem varsa oluştur
             if (childTypeId) {
                 console.log('Alt işlem oluşturuluyor...');
-                
+
                 const childTransactionType = this.allTransactionTypes.find(type => type.id === childTypeId);
                 if (!childTransactionType) {
                     throw new Error('Alt işlem türü bulunamadı: ' + childTypeId);
                 }
-                
+
                 const deliveryDate = deliveryDateStr ? new Date(deliveryDateStr + 'T00:00:00') : null;
-                
+
                 const childTransactionData = {
                     type: childTypeId,
                     description: childTransactionType.alias || childTransactionType.name,
@@ -645,9 +654,9 @@ async loadETEBSData(urlParams) {
                 };
 
                 console.log('Alt işlem verisi:', childTransactionData);
-                
+
                 const childResult = await ipRecordsService.addTransactionToRecord(
-                    this.matchedRecord.id, 
+                    this.matchedRecord.id,
                     childTransactionData
                 );
 
@@ -672,37 +681,37 @@ async loadETEBSData(urlParams) {
                 // İş tetiklemesi kontrolü
                 if (childTransactionType.taskTriggered && deliveryDate) {
                     console.log('İş tetiklemesi yapılıyor...');
-                    
+
                     // Tarih hesaplamalarını yap
                     let taskDueDate = null;
                     let officialDueDate = null;
                     let officialDueDateDetails = null;
-                    
+
                     if (deliveryDateStr && childTransactionType.duePeriod) {
                         const deliveryDate = new Date(deliveryDateStr);
                         deliveryDate.setHours(0, 0, 0, 0);
-                        
+
                         console.log('Tarih hesaplaması:', {
                             deliveryDate: deliveryDate.toDateString(),
                             duePeriod: childTransactionType.duePeriod,
                             childTransactionType: childTransactionType.name
                         });
-                        
+
                         // Resmi son tarihi hesapla (duePeriod kadar ay ekle)
                         const rawOfficialDueDate = addMonthsToDate(deliveryDate, childTransactionType.duePeriod);
                         officialDueDate = findNextWorkingDay(rawOfficialDueDate, TURKEY_HOLIDAYS);
-                        
+
                         // Operasyonel son tarih (resmi son tarihten 3 gün öncesi)
                         const operationalDueDate = new Date(officialDueDate);
                         operationalDueDate.setDate(operationalDueDate.getDate() - 3);
-                        
+
                         // Hafta sonu/tatil kontrolü
                         while (isWeekend(operationalDueDate) || isHoliday(operationalDueDate, TURKEY_HOLIDAYS)) {
                             operationalDueDate.setDate(operationalDueDate.getDate() - 1);
                         }
-                        
+
                         taskDueDate = operationalDueDate.toISOString().split('T')[0]; // YYYY-MM-DD format
-                        
+
                         // Due date details
                         officialDueDateDetails = {
                             initialDeliveryDate: deliveryDateStr,
@@ -712,14 +721,14 @@ async loadETEBSData(urlParams) {
                             finalOperationalDueDate: taskDueDate,
                             adjustments: []
                         };
-                        
+
                         console.log('Hesaplanan tarihler:', {
                             officialDueDate: officialDueDate.toDateString(),
                             operationalDueDate: taskDueDate,
                             duePeriodMonths: childTransactionType.duePeriod
                         });
                     }
-                    
+
                     const taskData = {
                         title: `${childTransactionType.alias || childTransactionType.name} - ${this.matchedRecord.title}`,
                         description: `${this.matchedRecord.title} için ${childTransactionType.alias || childTransactionType.name} işlemi`,
@@ -742,15 +751,15 @@ async loadETEBSData(urlParams) {
                     };
 
                     console.log('Tetiklenecek iş verisi:', taskData);
-                    
+
                     const taskResult = await taskService.createTask(taskData);
-                    
+
                     console.log('taskResult tam:', taskResult);
-                    
+
                     if (taskResult.success) {
                         const taskId = taskResult.data?.id || taskResult.id || taskResult.data;
                         console.log('Task ID:', taskId);
-                        
+
                         if (taskId) {
                             createdTaskId = taskId;
                             console.log('İş başarıyla tetiklendi, ID:', taskId);
@@ -767,11 +776,11 @@ async loadETEBSData(urlParams) {
                     console.log('İş tetiklemesi yok veya tebliğ tarihi girilmemiş');
                     showNotification('Alt işlem başarıyla oluşturuldu!', 'success');
                 }
-                }
+            }
 
             // PDF dosyasını transaction'a bağla
             console.log('PDF dosyası transaction\'a bağlanıyor...', transactionIdToAssociateFiles);
-            
+
             if (!transactionIdToAssociateFiles) {
                 throw new Error('Transaction ID bulunamadı');
             }
@@ -788,14 +797,34 @@ async loadETEBSData(urlParams) {
             );
 
             console.log('PDF indeksleme tamamlandı');
-            
+
+            // YENİ: indexed_documents koleksiyonuna kayıt ekleme
+            const indexedDocumentData = {
+                pdfId: this.pdfData.id,
+                fileName: this.pdfData.fileName,
+                fileUrl: this.pdfData.fileUrl,
+                indexedAt: new Date(),
+                ipRecordId: this.matchedRecord.id,
+                ipRecordTitle: this.matchedRecord.title,
+                associatedTransactionId: transactionIdToAssociateFiles,
+                mainProcessType: this.matchedRecord.type, // IP kaydının ana tipi
+                subProcessType: childTypeId, // Alt işlem tipi
+                clientId: this.matchedRecord.owners && this.matchedRecord.owners.length > 0 ? this.matchedRecord.owners[0].id : null, // İlk hak sahibi müvekkil olarak varsayıldı
+                deliveryDate: deliveryDateStr,
+                userId: this.currentUser.uid,
+                userEmail: this.currentUser.email
+            };
+            await addDoc(collection(firebaseServices.db, INDEXED_DOCUMENTS_COLLECTION), indexedDocumentData);
+            console.log('✅ Indexed document kaydı başarıyla oluşturuldu:', indexedDocumentData);
+
+
             // Başarı mesajı ve yönlendirme
-            const successMessage = createdTaskId ? 
-                'PDF başarıyla indekslendi ve iş tetiklendi!' : 
+            const successMessage = createdTaskId ?
+                'PDF başarıyla indekslendi ve iş tetiklendi!' :
                 'PDF başarıyla indekslendi!';
-            
+
             showNotification(successMessage, 'success');
-            
+
             // 2 saniye bekle ve bulk indexing sayfasına dön
             setTimeout(() => {
                 window.location.href = 'bulk-indexing-page.html';
