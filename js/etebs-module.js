@@ -248,44 +248,62 @@ async downloadDocument(token, documentNo) {
 async indexNotification(token, notification) {
     try {
         showNotification('Evrak indiriliyor ve indeksleme sayfasına yönlendiriliyor...', 'info');
-        
+
         const downloadResult = await etebsService.downloadDocument(token, notification.evrakNo);
-        
+
         if (downloadResult.success) {
-            // İndeksleme sayfasına yönlendir - unindexedPdfId kullan
+            // Yeni indirilen dosya varsa unindexed_pdfs kaydından yönlendir
             if (downloadResult.data && downloadResult.data.length > 0 && downloadResult.data[0].unindexedPdfId) {
                 const pdfId = downloadResult.data[0].unindexedPdfId;
                 
                 showNotification('Evrak indirildi. İndeksleme sayfasına yönlendiriliyor...', 'success');
                 
-                // Yeni tab'da aç
                 setTimeout(() => {
                     window.open(`indexing-detail.html?pdfId=${pdfId}`, '_blank');
                 }, 1000);
+                return;
             } else {
-                // Fallback: Eski yöntem
-                const queryParams = new URLSearchParams({
-                    source: 'etebs',
-                    evrakNo: notification.evrakNo,
-                    dosyaNo: notification.dosyaNo,
-                    description: notification.belgeAciklamasi,
-                    dosyaTuru: notification.dosyaTuru
-                });
-                
-                showNotification('Evrak indirildi. İndeksleme sayfasına yönlendiriliyor...', 'success');
-                
-                setTimeout(() => {
-                    window.open(`indexing-detail.html?${queryParams.toString()}`, '_blank');
-                }, 1000);
+                showNotification('Evrak indirildi ancak indeksleme kaydı bulunamadı.', 'error');
+                return;
             }
-            
-        } else {
-            showNotification(`İndirme hatası: ${downloadResult.error}`, 'error');
         }
+
+        // ETEBS download başarısız olduysa ve sebep daha önce indirilmişse Firestore'dan bul
+        if (
+            downloadResult.success === false &&
+            downloadResult.error &&
+            downloadResult.error.toLowerCase().includes("daha önce indirildi")
+        ) {
+            console.log("📂 Daha önce indirilen evrak Firestore'dan bulunuyor...");
+
+            const q = query(
+                collection(db, "unindexed_pdfs"),
+                where("evrakNo", "==", notification.evrakNo)
+            );
+            const querySnapshot = await getDocs(q);
+
+            if (querySnapshot.empty) {
+                showNotification('Bu evrak daha önce indirildi ama kaydı bulunamadı.', 'error');
+                return;
+            }
+
+            const doc = querySnapshot.docs[0];
+            const pdfId = doc.id;
+
+            showNotification('Daha önce indirilen evrak bulundu. İndeksleme sayfasına yönlendiriliyor...', 'success');
+            
+            setTimeout(() => {
+                window.open(`indexing-detail.html?pdfId=${pdfId}`, '_blank');
+            }, 1000);
+            return;
+        }
+
+        // Beklenmeyen durum
+        showNotification(`İndirme hatası: ${downloadResult.error || 'Bilinmeyen hata'}`, 'error');
         
     } catch (error) {
         console.error('Index error:', error);
-        showNotification('İndeksleme sırasında hata oluştu', 'error');
+        showNotification('İndeksleme sırasında hata oluştu.', 'error');
     }
 }
 
