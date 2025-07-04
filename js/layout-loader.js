@@ -1,8 +1,7 @@
-// js/layout-loader.js (Tam ve Düzeltilmiş Hali)
+// js/layout-loader.js (Orijinal ve Düzeltilmiş Hali)
 
 import { authService } from '../firebase-config.js';
 
-// Menü yapısını daha yönetilebilir bir veri formatında tanımlıyoruz
 const menuItems = [
     { id: 'dashboard', text: 'Dashboard', link: 'dashboard.html', icon: 'fas fa-tachometer-alt', category: 'Ana Menü' },
     {
@@ -36,7 +35,7 @@ const menuItems = [
         subItems: [
             { id: 'scheduled-tasks', text: 'Zamanlanmış Görevler', link: 'scheduled-tasks.html' },
             { id: 'triggered-tasks', text: 'Tetiklenen Görevler', link: 'triggered-tasks.html' },
-            { id: 'client-notifications', text: 'Müvekkil Bildirimleri', link: 'notifications.html', isVanilla: true } // isVanilla eklendi
+            // Bu kısım bir sonraki adımda eklenecek
         ]
     },
     {
@@ -78,17 +77,9 @@ export async function loadSharedLayout(options = {}) {
             document.head.appendChild(sharedStylesLink);
         }
 
-        // --- DİNAMİK YÜKLEME KISMI ---
-        const mainContentElement = document.querySelector('.main-container');
-        if (mainContentElement && mainContentElement.children.length > 0) {
-            // Ana içerik zaten doluysa, sadece layout'u yükle, içeriği değiştirme
-            const response = await fetch('shared_layout_parts.html');
-            if (!response.ok) throw new Error('shared_layout_parts.html could not be loaded.');
-            placeholder.innerHTML = await response.text();
-        } else if (mainContentElement) {
-            // Ana içerik boşsa, tüm sayfayı yükle
-            // Bu senaryo artık pek kullanılmıyor ama fallback olarak durabilir.
-        }
+        const response = await fetch('shared_layout_parts.html');
+        if (!response.ok) throw new Error('shared_layout_parts.html could not be loaded.');
+        placeholder.innerHTML = await response.text();
         
         const user = authService.getCurrentUser();
         if (!user && window.top === window) {
@@ -117,7 +108,7 @@ export async function loadSharedLayout(options = {}) {
 
         const currentPath = window.location.pathname.split('/').pop();
         setupMenuInteractions(currentPath);
-        setupDynamicPageLoading(); // Dinamik sayfa yükleme mekanizmasını etkinleştir
+        setupDynamicPageLoading();
 
     } catch (error) {
         console.error('Error loading shared layout:', error);
@@ -151,10 +142,7 @@ function renderMenu(container, userRole) {
                         <span>${item.text}</span>
                     </div>
                     <div class="accordion-content">
-                        ${item.subItems.map(subItem => {
-                            const linkAttributes = subItem.isVanilla ? 'data-vanilla-nav="true"' : '';
-                            return `<a href="${subItem.link}" class="${subItem.specialClass || ''}" ${linkAttributes}>${subItem.text}</a>`
-                        }).join('')}
+                        ${item.subItems.map(subItem => `<a href="${subItem.link}" class="${subItem.specialClass || ''}">${subItem.text}</a>`).join('')}
                     </div>
                 </div>
             `;
@@ -212,7 +200,7 @@ function setupDynamicPageLoading() {
     document.body.addEventListener('click', (e) => {
         const link = e.target.closest('a');
 
-        if (link && link.href && link.target !== '_blank' && !link.hasAttribute('data-vanilla-nav')) {
+        if (link && link.href && link.target !== '_blank') {
             const url = new URL(link.href);
             if (url.origin === window.location.origin) {
                 e.preventDefault();
@@ -255,17 +243,14 @@ async function loadPageContent(path, pushState = true) {
             
             highlightActiveMenu(path.split('/').pop());
 
-            // Yeni yüklenen script'leri çalıştır
             const scripts = mainContent.querySelectorAll('script');
             scripts.forEach(script => {
                 const newScript = document.createElement('script');
                 if (script.src) {
                     newScript.src = script.src;
+                    if (script.type === 'module') newScript.type = 'module';
                 } else {
                     newScript.textContent = script.textContent;
-                }
-                if (script.type === 'module') {
-                    newScript.type = 'module';
                 }
                 document.body.appendChild(newScript).remove();
             });
