@@ -219,3 +219,91 @@ exports.cleanupEtebsLogs = functions
     });
 
 console.log('🔥 ETEBS Proxy Functions loaded');
+
+// --- YENİ EKLENEN E-POSTA BİLDİRİM FONKSİYONU ---
+
+/**
+ * 'indexed_documents' koleksiyonuna yeni bir belge eklendiğinde tetiklenir.
+ * Doğru mail şablonunu bulur, verilerle doldurur ve 'mail_notifications'
+ * koleksiyonuna gönderilmek üzere yeni bir kayıt ekler.
+ */
+exports.createMailNotificationOnDocumentIndex = functions.firestore
+  .document("indexed_documents/{docId}")
+  .onCreate(async (snap, context) => {
+    const newDocument = snap.data();
+    console.log(`Yeni belge algılandı: ${context.params.docId}`, newDocument);
+
+    try {
+      // 1. Kuralı Bul
+      console.log("Doğru şablon kuralı aranıyor...");
+      const rulesSnapshot = await db.collection("template_rules")
+        .where("sourceType", "==", "document")
+        .where("mainProcessType", "==", newDocument.mainProcessType)
+        .where("subProcessType", "==", newDocument.subProcessType)
+        .limit(1)
+        .get();
+
+      if (rulesSnapshot.empty) {
+        console.log("Bu belge tipi için uygun bir kural bulunamadı. İşlem sonlandırılıyor.");
+        return null;
+      }
+
+      const rule = rulesSnapshot.docs[0].data();
+      console.log(`Kural bulundu. Kullanılacak şablon ID: ${rule.templateId}`);
+
+      // 2. Mail Şablonunu Al
+      console.log("Mail şablonu veritabanından alınıyor...");
+      const templateSnapshot = await db.collection("mail_templates").doc(rule.templateId).get();
+
+      if (!templateSnapshot.exists) {
+          console.error(`Hata: ${rule.templateId} ID'li mail şablonu bulunamadı!`);
+          return null;
+      }
+      const template = templateSnapshot.data();
+
+      // 3. Müvekkil Bilgilerini Al (Varsayım: newDocument içinde clientId var)
+      console.log("Müvekkil bilgileri alınıyor...");
+      const clientSnapshot = await db.collection("clients").doc(newDocument.clientId).get();
+      if (!clientSnapshot.exists) {
+        console.error(`Hata: ${newDocument.clientId} ID'li müvekkil bulunamadı!`);
+        return null;
+      }
+      const client = clientSnapshot.data();
+
+      // 4. Parametreleri Doldur
+      console.log("Parametreler dolduruluyor...");
+      let subject = template.subject;
+      let body = template.body;
+
+      const parameters = { ...client, ...newDocument };
+
+      for (const key in parameters) {
+          const placeholder = new RegExp(`{{${key}}}`, "g");
+          subject = subject.replace(placeholder, parameters[key]);
+          body = body.replace(placeholder, parameters[key]);
+      }
+      console.log("Nihai mail içeriği oluşturuldu.");
+
+      // 5. Mail Bildirimini Oluştur
+      console.log("'mail_notifications' koleksiyonuna kayıt ekleniyor...");
+      const notificationData = {
+        recipientEmail: client.email,
+        clientId: newDocument.clientId,
+        subject: subject,
+        body: body,
+        status: "pending",
+        sourceDocumentId: context.params.docId,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      };
+
+      await db.collection("mail_notifications").add(notificationData);
+      console.log("Mail bildirimi başarıyla oluşturuldu ve gönderim için sıraya alındı.");
+
+      return null;
+
+    } catch (error) {
+      console.error("Mail bildirimi oluşturulurken beklenmedik bir hata oluştu:", error);
+      return null;
+    }
+  });
