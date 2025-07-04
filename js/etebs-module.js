@@ -645,85 +645,83 @@ deactivateUploadMode() {
         }
     }
 
-    async fetchNotifications() {
-        console.log("✅ fetchNotifications başladı");
-        const tokenInput = document.getElementById('etebsTokenInput');
-        if (!tokenInput) return;
+ async fetchNotifications() {
+    console.log("✅ fetchNotifications başladı");
+    const tokenInput = document.getElementById('etebsTokenInput');
+    if (!tokenInput) return;
 
-        const token = tokenInput.value.trim();
-        console.log("🔑 Token:", token);
+    const token = tokenInput.value.trim();
+    console.log("🔑 Token:", token);
 
-        if (!token) {
-            this.showTokenStatus('error', 'Token giriniz');
-            return;
+    if (!token) {
+        this.showTokenStatus('error', 'Token giriniz');
+        return;
+    }
+
+    const fetchBtn = document.getElementById('fetchNotificationsBtn');
+    if (!fetchBtn) return;
+
+    const originalText = fetchBtn.innerHTML;
+    
+    try {
+        fetchBtn.innerHTML = '<span class="loading-spinner"></span><span>Yükleniyor...</span>';
+        fetchBtn.disabled = true;
+        
+        this.showTokenStatus('loading', 'Tebligatlar çekiliyor...');
+
+        const result = await etebsService.getDailyNotifications(token);
+        console.log("📡 getDailyNotifications sonucu:", result);
+        console.log("📋 Gelen Data Array:", result.data);
+
+        const records = window.indexingModule && Array.isArray(window.indexingModule.allRecords)
+            ? window.indexingModule.allRecords
+            : [];
+
+        // ✅ Tek seferde eşleştirme yap ve ata
+        this.notifications = result.data.map(n => {
+            const isMatched = records.some(r => r.applicationNumber === n.dosyaNo);
+            return {
+                ...n,
+                matched: isMatched
+            };
+        });
+
+        this.filteredNotifications = [...this.notifications];
+
+        if (result.success) {
+            const currentUser = authService.getCurrentUser();
+            if (currentUser) {
+                await etebsService.saveToken(token, currentUser.uid);
+            }
+            
+            this.showTokenStatus(
+                'success',
+                `${result.totalCount} tebligat alındı (${result.matchedCount} eşleşen, ${result.unmatchedCount} eşleşmeyen)`
+            );
+
+            this.displayNotifications();
+            this.updateStatistics();
+            this.showNotificationsSection();
+            this.updateTabBadge();
+
+            showNotification(`${result.totalCount} ETEBS tebligatı başarıyla alındı`, 'success');
+
+        } else {
+            this.showTokenStatus('error', result.error);
+            showNotification(`ETEBS Hatası: ${result.error}`, 'error');
         }
 
-        const fetchBtn = document.getElementById('fetchNotificationsBtn');
-        if (!fetchBtn) return;
-
-        const originalText = fetchBtn.innerHTML;
-        
-        try {
-            // Show loading state
-            fetchBtn.innerHTML = '<span class="loading-spinner"></span><span>Yükleniyor...</span>';
-            fetchBtn.disabled = true;
-            
-            this.showTokenStatus('loading', 'Tebligatlar çekiliyor...');
-
-            // Fetch notifications from ETEBS
-            const result = await etebsService.getDailyNotifications(token);
-            console.log("📡 getDailyNotifications sonucu:", result);
-            console.log("📋 Gelen Data Array:", result.data);
-            // Portföy kayıtlarını al (örnek: window.indexingModule.records)
-            const records = window.indexingModule && Array.isArray(window.indexingModule.allRecords) ? window.indexingModule.allRecords : [];
-
-            // Eşleştirme işlemi
-            this.notifications = result.data.map(n => {
-                const isMatched = records.some(r => r.applicationNumber === n.dosyaNo);
-                return {
-                    ...n,
-                    matched: isMatched
-                };
-            });
-
-            // Kopyasını filtrelemeye ata
-            this.filteredNotifications = [...this.notifications];
-
-            if (result.success) {
-                // Save token for future use
-                const currentUser = authService.getCurrentUser();
-                if (currentUser) {
-                    await etebsService.saveToken(token, currentUser.uid);
-                }           
-                
-                this.showTokenStatus('success', 
-                    `${result.totalCount} tebligat alındı (${result.matchedCount} eşleşen, ${result.unmatchedCount} eşleşmeyen)`
-                );
-                
-                this.displayNotifications();
-                this.updateStatistics();
-                this.showNotificationsSection();
-                this.updateTabBadge();
-                
-                showNotification(`${result.totalCount} ETEBS tebligatı başarıyla alındı`, 'success');
-                
-            } else {
-                this.showTokenStatus('error', result.error);
-                showNotification(`ETEBS Hatası: ${result.error}`, 'error');
-            }
-
-        } catch (error) {
-            console.error('Fetch notifications error:', error);
-            this.showTokenStatus('error', 'Beklenmeyen bir hata oluştu');
-            showNotification('ETEBS bağlantısında hata oluştu', 'error');
-        } finally {
-            // Restore button state
-            if (fetchBtn) {
-                fetchBtn.innerHTML = originalText;
-                fetchBtn.disabled = false;
-            }
+    } catch (error) {
+        console.error('Fetch notifications error:', error);
+        this.showTokenStatus('error', 'Beklenmeyen bir hata oluştu');
+        showNotification('ETEBS bağlantısında hata oluştu', 'error');
+    } finally {
+        if (fetchBtn) {
+            fetchBtn.innerHTML = originalText;
+            fetchBtn.disabled = false;
         }
     }
+}
 
     async refreshNotifications() {
         const tokenInput = document.getElementById('etebsTokenInput');
