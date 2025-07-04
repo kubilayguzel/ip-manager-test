@@ -42,7 +42,7 @@ const menuItems = [
         subItems: [
             { id: 'scheduled-tasks', text: 'Zamanlanmış Görevler', link: 'scheduled-tasks.html' },
             { id: 'triggered-tasks', text: 'Tetiklenen Görevler', link: 'triggered-tasks.html' },
-            { id: 'client-notifications', text: 'Müvekkil Bildirimleri', link: '#' }
+            { id: 'client-notifications', text: 'Müvekkil Bildirimleri', link: 'notifications.html' }
         ]
     },
     {
