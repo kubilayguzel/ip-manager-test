@@ -1,166 +1,224 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Müvekkil Bildirimleri</title>
-    <link rel="stylesheet" href="css/shared-styles.css">
-    <style>
-        /* Bu sayfaya özel stiller burada kalabilir */
-        body { font-family: sans-serif; }
-        table { width: 100%; border-collapse: collapse; }
-        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-        th { background-color: #f2f2f2; }
-        button { cursor: pointer; padding: 5px 10px; border-radius: 5px; border: none; }
-        .status-badge { padding: 5px; border-radius: 5px; color: white; font-weight: bold; }
-        .status-sent { background-color: green; }
-        .status-failed { background-color: red; }
-        .status-pending { background-color: gray; }
-        #loader { font-size: 1.2em; }
-        #error { color: red; font-weight: bold; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Müvekkil Bildirimleri</title>
+<link rel="stylesheet" href="css/shared-styles.css">
+<style>
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    color: #333;
+    display: flex;
+}
+.page-wrapper {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow-y: auto;
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+}
+.main-container {
+    width: 100%;
+    padding: 30px;
+    margin: 0;
+}
+.page-header {
+    background: rgba(255,255,255,0.95);
+    padding: 30px;
+    border-radius: 20px;
+    margin-bottom: 30px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+}
+.page-title {
+    font-size: 2em;
+    color: #1e3c72;
+    margin-bottom: 10px;
+}
+.page-subtitle {
+    color: #666;
+    font-size: 1.1em;
+}
+.tasks-container {
+    background: rgba(255,255,255,0.95);
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    overflow: hidden;
+}
+.tasks-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+.tasks-table th,
+.tasks-table td {
+    padding: 15px;
+    text-align: left;
+    border-bottom: 1px solid #f0f0f0;
+}
+.tasks-table th {
+    background: #f8f9fa;
+    font-weight: 600;
+}
+.status-badge {
+    padding: 5px 10px;
+    border-radius: 12px;
+    color: white;
+    font-weight: 500;
+    font-size: 0.9em;
+}
+.status-sent { background-color: #28a745; }
+.status-failed { background-color: #dc3545; }
+.status-pending { background-color: #6c757d; }
+.action-btn {
+    background: #007bff;
+    color: white;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    margin-left: 5px;
+    transition: all 0.3s ease;
+}
+.action-btn:hover {
+    opacity: 0.9;
+}
+.loading { text-align: center; padding: 50px; }
+.no-records { text-align: center; padding: 50px; color: #666; }
+</style>
 </head>
 <body>
-    <div id="layout-placeholder"></div>
+<div id="notification-container" style="position: fixed; top:20px; right:20px; z-index:9999;"></div>
+<div id="layout-placeholder"></div>
+<div class="page-wrapper">
+<main class="main-container">
+<section class="page-header">
+    <h1 class="page-title">Müvekkil Bildirimleri</h1>
+    <p class="page-subtitle">Müvekkillere gönderilen bildirimleri buradan takip edebilirsiniz.</p>
+</section>
 
-    <main class="main-container">
-        <h2>Müvekkil Bildirimleri</h2>
-        <div id="loader">Yükleniyor...</div>
-        <div id="error"></div>
-        
-        <table>
-            <thead>
-                <tr>
-                    <th>Durum</th>
-                    <th>Müvekkil E-posta</th>
-                    <th>Konu</th>
-                    <th>Oluşturulma</th>
-                    <th>İşlem</th>
-                </tr>
-            </thead>
-            <tbody id="notifications-table-body">
-                </tbody>
-        </table>
-    </main>
+<div class="tasks-container">
+    <div id="loader" class="loading">Yükleniyor...</div>
+    <div id="error" class="no-records"></div>
+    <div class="table-container">
+    <table class="tasks-table">
+        <thead>
+            <tr>
+                <th>Durum</th>
+                <th>Müvekkil E-posta</th>
+                <th>Konu</th>
+                <th>Oluşturulma</th>
+                <th>İşlem</th>
+            </tr>
+        </thead>
+        <tbody id="notifications-table-body"></tbody>
+    </table>
+    </div>
+</div>
+</main>
+</div>
 
-    <script type="module">
-        // 2. DÜZELTME: Firebase Konfigürasyonu güncellendi
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
-        import { getFirestore, collection, query, orderBy, onSnapshot } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
-        import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-functions.js";
-        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
-        
-        // 3. DÜZELTME: Ortak layout'u yüklemek için script eklendi
-        import { loadSharedLayout } from './js/layout-loader.js';
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
+import { getFirestore, collection, query, orderBy, onSnapshot } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
+import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-functions.js";
+import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
+import { loadSharedLayout } from './js/layout-loader.js';
 
-        const firebaseConfig = {
-            apiKey: "AIzaSyDbdqfiVbobnl1BtyiWxhD4bfIcREw8ZRc",
-            authDomain: "ip-manager-production-aab4b.firebaseapp.com",
-            projectId: "ip-manager-production-aab4b",
-            storageBucket: "ip-manager-production-aab4b.appspot.com", // .firebasestorage.app değil, .appspot.com olmalı
-            messagingSenderId: "594650169512",
-            appId: "1:594650169512:web:43496005e063a40511829d"
-        };
+const firebaseConfig = {
+    apiKey: "AIzaSyDbdqfiVbobnl1BtyiWxhD4bfIcREw8ZRc",
+    authDomain: "ip-manager-production-aab4b.firebaseapp.com",
+    projectId: "ip-manager-production-aab4b",
+    storageBucket: "ip-manager-production-aab4b.appspot.com",
+    messagingSenderId: "594650169512",
+    appId: "1:594650169512:web:43496005e063a40511829d"
+};
 
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-        const functions = getFunctions(app, 'europe-west1');
-        const auth = getAuth(app);
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const functions = getFunctions(app, 'europe-west1');
+const auth = getAuth(app);
 
-        const tableBody = document.getElementById('notifications-table-body');
-        const loader = document.getElementById('loader');
-        const errorDiv = document.getElementById('error');
-        const sendEmail = httpsCallable(functions, 'sendEmailNotification');
+const tableBody = document.getElementById('notifications-table-body');
+const loader = document.getElementById('loader');
+const errorDiv = document.getElementById('error');
+const sendEmail = httpsCallable(functions, 'sendEmailNotification');
 
-        // Kullanıcı oturum açana kadar bekle, sonra işlemleri yap
-        onAuthStateChanged(auth, (user) => {
-            if (user) {
-                // Önce ortak layout'u yükle
-                loadSharedLayout();
+onAuthStateChanged(auth, (user) => {
+    if (user) {
+        loadSharedLayout({ activeMenuLink: 'notifications.html' });
+        startNotificationListener(user);
+    } else {
+        loader.textContent = "Bu sayfayı görmek için giriş yapmalısınız.";
+    }
+});
 
-                // Sonra bu sayfanın kendi mantığını çalıştır
-                startNotificationListener(user);
-            } else {
-                // Kullanıcı giriş yapmamışsa, login sayfasına yönlendirilebilir
-                console.log("Kullanıcı giriş yapmamış.");
-                loader.textContent = "Bu sayfayı görmek için giriş yapmalısınız.";
-            }
-        });
+function startNotificationListener(user) {
+    const q = query(collection(db, "mail_notifications"), orderBy("createdAt", "desc"));
 
+    onSnapshot(q, (snapshot) => {
+        loader.style.display = 'none';
+        tableBody.innerHTML = '';
 
-        function startNotificationListener(user) {
-            const q = query(collection(db, "mail_notifications"), orderBy("createdAt", "desc"));
-
-            onSnapshot(q, (snapshot) => {
-                loader.style.display = 'none';
-                tableBody.innerHTML = ''; 
-
-                if (snapshot.empty) {
-                    tableBody.innerHTML = '<tr><td colspan="5">Gösterilecek bildirim bulunamadı.</td></tr>';
-                    return;
-                }
-
-                snapshot.forEach(doc => {
-                    const notification = { id: doc.id, ...doc.data() };
-                    const tr = document.createElement('tr');
-                    const statusClass = notification.status === 'sent' ? 'status-sent' :
-                                        notification.status === 'failed' ? 'status-failed' : 'status-pending';
-
-                    tr.innerHTML = `
-                        <td><span class="status-badge ${statusClass}">${notification.status}</span></td>
-                        <td>${notification.recipientEmail}</td>
-                        <td>${notification.subject}</td>
-                        <td>${notification.createdAt?.toDate().toLocaleString('tr-TR') || 'Bilinmiyor'}</td>
-                        <td class="action-cell"></td>
-                    `;
-
-                    if (notification.status === 'pending' || notification.status === 'failed') {
-                        const button = document.createElement('button');
-                        button.textContent = notification.status === 'failed' ? 'Tekrar Gönder' : 'Gönder';
-                        button.dataset.id = notification.id;
-                        tr.querySelector('.action-cell').appendChild(button);
-                    }
-                    tableBody.appendChild(tr);
-                });
-            }, (error) => {
-                console.error("Firestore dinleme hatası:", error);
-                loader.style.display = 'none';
-                errorDiv.textContent = 'Bildirimler yüklenirken bir hata oluştu.';
-            });
+        if (snapshot.empty) {
+            tableBody.innerHTML = '<tr><td colspan="5" class="no-records">Gösterilecek bildirim bulunamadı.</td></tr>';
+            return;
         }
-        
-        tableBody.addEventListener('click', async (event) => {
-            if (event.target.tagName === 'BUTTON') {
-                const notificationId = event.target.dataset.id;
-                const user = auth.currentUser;
 
-                if (!user) {
-                    alert("Bu işlemi yapmak için giriş yapmalısınız!");
-                    return;
-                }
-                if (!window.confirm("Bu e-posta müvekkile gönderilecek. Emin misiniz?")) {
-                    return;
-                }
+        snapshot.forEach(doc => {
+            const notification = { id: doc.id, ...doc.data() };
+            const tr = document.createElement('tr');
+            const statusClass = notification.status === 'sent' ? 'status-sent' :
+                                notification.status === 'failed' ? 'status-failed' : 'status-pending';
 
-                event.target.textContent = 'Gönderiliyor...';
-                event.target.disabled = true;
+            tr.innerHTML = `
+                <td><span class="status-badge ${statusClass}">${notification.status}</span></td>
+                <td>${notification.recipientEmail}</td>
+                <td>${notification.subject}</td>
+                <td>${notification.createdAt?.toDate().toLocaleString('tr-TR') || 'Bilinmiyor'}</td>
+                <td class="action-cell"></td>
+            `;
 
-                try {
-                    await sendEmail({
-                        notificationId: notificationId,
-                        userEmail: user.email
-                    });
-                    alert('E-posta başarıyla gönderim sırasına alındı!');
-                } catch (err) {
-                    console.error("E-posta gönderme hatası:", err);
-                    alert(`Bir hata oluştu: ${err.message}`);
-                } finally {
-                    // Butonu tekrar eski haline getirmeye gerek yok, çünkü
-                    // sayfa zaten status değişikliği ile güncellenecek.
-                }
+            if (notification.status !== 'sent') {
+                const button = document.createElement('button');
+                button.className = 'action-btn';
+                button.textContent = notification.status === 'failed' ? 'Tekrar Gönder' : 'Gönder';
+                button.dataset.id = notification.id;
+                tr.querySelector('.action-cell').appendChild(button);
             }
+            tableBody.appendChild(tr);
         });
+    }, (error) => {
+        loader.style.display = 'none';
+        errorDiv.textContent = 'Bildirimler yüklenirken bir hata oluştu.';
+    });
+}
 
-    </script>
+tableBody.addEventListener('click', async (event) => {
+    if (event.target.classList.contains('action-btn')) {
+        const notificationId = event.target.dataset.id;
+        const user = auth.currentUser;
+        if (!user) {
+            alert("Bu işlemi yapmak için giriş yapmalısınız!");
+            return;
+        }
+        if (!window.confirm("Bu e-posta müvekkile gönderilecek. Emin misiniz?")) {
+            return;
+        }
+        event.target.textContent = 'Gönderiliyor...';
+        event.target.disabled = true;
+
+        try {
+            await sendEmail({
+                notificationId: notificationId,
+                userEmail: user.email
+            });
+            alert('E-posta başarıyla gönderim sırasına alındı!');
+        } catch (err) {
+            alert(`Bir hata oluştu: ${err.message}`);
+        }
+    }
+});
+</script>
 </body>
 </html>
