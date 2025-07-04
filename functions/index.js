@@ -444,7 +444,7 @@ exports.createMailNotificationOnDocumentStatusChange = functions.firestore
 
         // Müvekkil Bilgilerini Al
         console.log("Müvekkil bilgileri alınıyor...");
-        const clientSnapshot = await db.collection("persons").doc(newDocument.clientId).get();
+        const clientSnapshot = await db.collection("persons").doc(after.clientId).get();
         if (!clientSnapshot.exists) {
         console.error(`Hata: ${after.clientId}} ID'li müvekkil bulunamadı!`);
         return null;
