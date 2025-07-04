@@ -322,43 +322,38 @@ const GMAIL_SCOPES = ["https://www.googleapis.com/auth/gmail.send"];
  * Gmail API üzerinden gönderir.
  */
 exports.sendEmailNotification = onCall(async (request) => {
-  // Kullanıcının kimliğinin doğrulanıp doğrulanmadığını kontrol et (isteğe bağlı ama önerilir)
-  // if (!request.auth) {
-  //   throw new HttpsError("unauthenticated", "Bu işlemi yapmak için giriş yapmalısınız.");
-  // }
-
+  // 1. Yeni: Fonksiyonu çağıran kullanıcının e-postasını al
+  const userEmail = request.data.userEmail; // Arayüzden bu bilgiyi göndermemiz gerekecek
   const notificationId = request.data.notificationId;
-  if (!notificationId) {
-    throw new HttpsError("invalid-argument", "notificationId parametresi zorunludur.");
+
+  if (!notificationId || !userEmail) {
+    throw new HttpsError("invalid-argument", "notificationId ve userEmail parametreleri zorunludur.");
   }
-
-  console.log(`E-posta gönderme isteği alındı. Bildirim ID: ${notificationId}`);
-
+  
+  // ... (notification dökümanını alma kodu aynı kalıyor) ...
   const notificationRef = db.collection("mail_notifications").doc(notificationId);
   const notificationDoc = await notificationRef.get();
-
-  if (!notificationDoc.exists) {
-    throw new HttpsError("not-found", `${notificationId} ID'li bildirim bulunamadı.`);
-  }
-
+  if (!notificationDoc.exists) { throw new HttpsError("not-found", ...); }
   const notificationData = notificationDoc.data();
 
-  // E-postayı göndermek için kimlik doğrulama yap
+  // 2. Yeni: Kimlik doğrulamayı, taklit edilecek kullanıcıyı belirterek yap
   const auth = new GoogleAuth({
     scopes: GMAIL_SCOPES,
-    // Bu kısım, fonksiyonun çalıştığı ortamın servis hesabını otomatik kullanır
+    // Kimi taklit edeceğimizi 'subject' ile belirtiyoruz
+    clientOptions: {
+      subject: userEmail 
+    }
   });
   const authClient = await auth.getClient();
-
   const gmail = google.gmail({ version: "v1", auth: authClient });
 
-  // E-postayı RFC 2822 formatında oluştur
+  // 3. Yeni: "From" alanını dinamik olarak ayarla
   const rawMessage = [
-    `From: "IP Manager" <[GÖNDERİCİ_MAIL_ADRESİNİZ]>`, // Kendi Google Workspace mail adresiniz
+    `From: <${userEmail}>`, // "IP Manager" gibi bir isim de ekleyebilirsiniz
     `To: ${notificationData.recipientEmail}`,
     `Content-Type: text/html; charset=utf-8`,
     `MIME-Version: 1.0`,
-    `Subject: ${notificationData.subject}`,
+    `Subject: =?utf-8?B?${Buffer.from(notificationData.subject).toString("base64")}?=`, // Türkçe karakterler için
     "",
     notificationData.body,
   ].join("\n");
