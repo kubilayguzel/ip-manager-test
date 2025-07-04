@@ -74,7 +74,7 @@ async uploadDocumentsToFirebase(documents, userId, evrakNo) {
                 belgeAciklamasi: doc.belgeAciklamasi,
                 fileName: doc.fileName,
                 fileUrl: downloadURL,
-                filePath: storagePath,
+                storagePath: storagePath,
                 fileSize: doc.file.size,
                 uploadedAt: new Date(),
                 userId: userId,
