@@ -307,3 +307,94 @@ exports.createMailNotificationOnDocumentIndex = functions.firestore
       return null;
     }
   });
+
+  // --- YENİ EKLENEN ÇAĞRILABİLİR E-POSTA GÖNDERME FONKSİYONU ---
+
+const { onCall, HttpsError } = require("firebase-functions/v2/https");
+const { google } = require("googleapis");
+const { GoogleAuth } = require("google-auth-library");
+
+// Gmail API için gerekli yetki kapsamı
+const GMAIL_SCOPES = ["https://www.googleapis.com/auth/gmail.send"];
+
+/**
+ * Ön yüzden çağrılarak 'mail_notifications' koleksiyonundaki bir bildirimi
+ * Gmail API üzerinden gönderir.
+ */
+exports.sendEmailNotification = onCall(async (request) => {
+  // Kullanıcının kimliğinin doğrulanıp doğrulanmadığını kontrol et (isteğe bağlı ama önerilir)
+  // if (!request.auth) {
+  //   throw new HttpsError("unauthenticated", "Bu işlemi yapmak için giriş yapmalısınız.");
+  // }
+
+  const notificationId = request.data.notificationId;
+  if (!notificationId) {
+    throw new HttpsError("invalid-argument", "notificationId parametresi zorunludur.");
+  }
+
+  console.log(`E-posta gönderme isteği alındı. Bildirim ID: ${notificationId}`);
+
+  const notificationRef = db.collection("mail_notifications").doc(notificationId);
+  const notificationDoc = await notificationRef.get();
+
+  if (!notificationDoc.exists) {
+    throw new HttpsError("not-found", `${notificationId} ID'li bildirim bulunamadı.`);
+  }
+
+  const notificationData = notificationDoc.data();
+
+  // E-postayı göndermek için kimlik doğrulama yap
+  const auth = new GoogleAuth({
+    scopes: GMAIL_SCOPES,
+    // Bu kısım, fonksiyonun çalıştığı ortamın servis hesabını otomatik kullanır
+  });
+  const authClient = await auth.getClient();
+
+  const gmail = google.gmail({ version: "v1", auth: authClient });
+
+  // E-postayı RFC 2822 formatında oluştur
+  const rawMessage = [
+    `From: "IP Manager" <[GÖNDERİCİ_MAIL_ADRESİNİZ]>`, // Kendi Google Workspace mail adresiniz
+    `To: ${notificationData.recipientEmail}`,
+    `Content-Type: text/html; charset=utf-8`,
+    `MIME-Version: 1.0`,
+    `Subject: ${notificationData.subject}`,
+    "",
+    notificationData.body,
+  ].join("\n");
+
+  const encodedMessage = Buffer.from(rawMessage).toString("base64")
+                                .replace(/\+/g, "-")
+                                .replace(/\//g, "_")
+                                .replace(/=+$/, "");
+
+  try {
+    console.log("Gmail API'ye gönderme isteği yapılıyor...");
+    await gmail.users.messages.send({
+      userId: "me", // 'me' anahtar kelimesi, kimliği doğrulanmış kullanıcıyı ifade eder
+      requestBody: {
+        raw: encodedMessage,
+      },
+    });
+
+    console.log("E-posta başarıyla gönderildi.");
+    // Firestore'daki dökümanın durumunu güncelle
+    await notificationRef.update({
+      status: "sent",
+      sentAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    return { success: true, message: "E-posta başarıyla gönderildi." };
+
+  } catch (error) {
+    console.error("Gmail API hatası:", error);
+    // Hata durumunda dökümanın durumunu güncelle
+    await notificationRef.update({
+      status: "failed",
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      errorInfo: error.message,
+    });
+    throw new HttpsError("internal", "E-posta gönderilirken bir hata oluştu.", error.message);
+  }
+});
