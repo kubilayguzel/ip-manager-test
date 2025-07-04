@@ -763,40 +763,44 @@ deactivateUploadMode() {
         }
     }
 
-    displayNotifications() {
-        try {
-            const matchedList = document.getElementById('matchedNotificationsList');
-            const unmatchedList = document.getElementById('unmatchedNotificationsList');
-            
-            if (!matchedList || !unmatchedList) return;
-
-            const matchedNotifications = this.filteredNotifications.filter(n => n.matched);
-            const unmatchedNotifications = this.filteredNotifications.filter(n => !n.matched);
-
-            // Set data attributes for styling
-            matchedList.setAttribute('data-type', 'matched');
-            unmatchedList.setAttribute('data-type', 'unmatched');
-
-            // Display matched notifications
-            this.renderNotificationsList(matchedList, matchedNotifications, true);
-            
-            // Display unmatched notifications  
-            this.renderNotificationsList(unmatchedList, unmatchedNotifications, false);
-
-            // Update tab badges
-            const matchedTabBadge = document.getElementById('matchedTabBadge');
-            const unmatchedTabBadge = document.getElementById('unmatchedTabBadge');
-            
-            if (matchedTabBadge) matchedTabBadge.textContent = matchedNotifications.length;
-            if (unmatchedTabBadge) unmatchedTabBadge.textContent = unmatchedNotifications.length;
-
-            // Auto-switch to appropriate tab if current tab is empty
-            this.autoSwitchTab(matchedNotifications.length, unmatchedNotifications.length);
-
-        } catch (error) {
-            console.error('Error displaying notifications:', error);
+ displayNotifications() {
+    try {
+        const matchedList = document.getElementById('matchedNotificationsList');
+        const unmatchedList = document.getElementById('unmatchedNotificationsList');
+        
+        if (!matchedList || !unmatchedList) {
+            console.log("Liste DOM elementleri bulunamadı.");
+            return;
         }
+
+        const matchedNotifications = this.filteredNotifications.filter(n => n.matched);
+        const unmatchedNotifications = this.filteredNotifications.filter(n => !n.matched);
+
+        console.log("📋 matchedNotifications:", matchedNotifications);
+        console.log("📋 unmatchedNotifications:", unmatchedNotifications);
+
+        matchedList.setAttribute('data-type', 'matched');
+        unmatchedList.setAttribute('data-type', 'unmatched');
+
+        // Display matched notifications
+        this.renderNotificationsList(matchedList, matchedNotifications, true);
+        
+        // Display unmatched notifications  
+        this.renderNotificationsList(unmatchedList, unmatchedNotifications, false);
+
+        const matchedTabBadge = document.getElementById('matchedTabBadge');
+        const unmatchedTabBadge = document.getElementById('unmatchedTabBadge');
+
+        if (matchedTabBadge) matchedTabBadge.textContent = matchedNotifications.length;
+        if (unmatchedTabBadge) unmatchedTabBadge.textContent = unmatchedNotifications.length;
+
+        this.autoSwitchTab(matchedNotifications.length, unmatchedNotifications.length);
+
+    } catch (error) {
+        console.error('Error displaying notifications:', error);
     }
+}
+
 
     // 6. renderNotificationsList fonksiyonunu güncelleyin (değişiklik yok ama kontrol için)
     renderNotificationsList(container, notifications, isMatched) {
