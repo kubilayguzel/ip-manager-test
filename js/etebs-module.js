@@ -674,6 +674,20 @@ deactivateUploadMode() {
             const result = await etebsService.getDailyNotifications(token);
             console.log("📡 getDailyNotifications sonucu:", result);
             console.log("📋 Gelen Data Array:", result.data);
+            // Portföy kayıtlarını al (örnek: window.indexingModule.records)
+            const records = window.indexingModule ? window.indexingModule.records : [];
+
+            // Eşleştirme işlemi
+            this.notifications = result.data.map(n => {
+                const isMatched = records.some(r => r.applicationNumber === n.dosyaNo);
+                return {
+                    ...n,
+                    matched: isMatched
+                };
+            });
+
+            // Kopyasını filtrelemeye ata
+            this.filteredNotifications = [...this.notifications];
 
             if (result.success) {
                 // Save token for future use
