@@ -408,6 +408,9 @@ exports.createMailNotificationOnDocumentStatusChange = functions.firestore
     // Sadece status 'indexed' olduğunda tetikle
     if (before.status !== 'indexed' && after.status === 'indexed') {
       console.log(`Belge indexlendi: ${context.params.docId}`, after);
+      console.log("mainProcessType:", after.mainProcessType);
+    console.log("subProcessType:", after.subProcessType);
+
 
       const admin = require("firebase-admin");
       if (!admin.apps.length) {
