@@ -442,13 +442,15 @@ exports.createMailNotificationOnDocumentStatusChange = functions.firestore
 
         const template = templateSnapshot.data();
 
-        // Müvekkil bilgilerini al
-        const clientSnapshot = await db.collection("clients").doc(after.clientId).get();
+        // Müvekkil Bilgilerini Al
+        console.log("Müvekkil bilgileri alınıyor...");
+        const clientSnapshot = await db.collection("persons").doc(newDocument.clientId).get();
         if (!clientSnapshot.exists) {
-          console.error(`Müvekkil bulunamadı: ${after.clientId}`);
-          return null;
+        console.error(`Hata: ${newDocument.clientId} ID'li müvekkil bulunamadı!`);
+        return null;
         }
         const client = clientSnapshot.data();
+
 
         // Şablon parametrelerini doldur
         let subject = template.subject;
