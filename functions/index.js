@@ -3,6 +3,12 @@ const functions = require('firebase-functions');
 const cors = require('cors');
 const fetch = require('node-fetch');
 
+const admin = require('firebase-admin');
+if (!admin.apps.length) {
+  admin.initializeApp();
+}
+const db = admin.firestore();
+
 // CORS ayarları - sadece kendi domain'inizden gelen istekleri kabul et
 const corsOptions = {
     origin: [
@@ -333,7 +339,7 @@ exports.sendEmailNotification = onCall(async (request) => {
   // ... (notification dökümanını alma kodu aynı kalıyor) ...
   const notificationRef = db.collection("mail_notifications").doc(notificationId);
   const notificationDoc = await notificationRef.get();
-  if (!notificationDoc.exists) { throw new HttpsError("not-found", ...); }
+  if (!notificationDoc.exists) { throw new HttpsError("not-found", "Bildirim bulunamadı.");}
   const notificationData = notificationDoc.data();
 
   // 2. Yeni: Kimlik doğrulamayı, taklit edilecek kullanıcıyı belirterek yap
@@ -393,84 +399,88 @@ exports.sendEmailNotification = onCall(async (request) => {
     throw new HttpsError("internal", "E-posta gönderilirken bir hata oluştu.", error.message);
   }
 });
+exports.createMailNotificationOnDocumentStatusChange = functions.firestore
+  .document("unindexed_pdfs/{docId}")
+  .onUpdate(async (change, context) => {
+    const before = change.before.data();
+    const after = change.after.data();
 
-exports.createMailNotificationOnDocumentIndex = functions.firestore
-  .document("indexed_documents/{docId}")
-  .onCreate(async (snap, context) => {
-    const newDocument = snap.data();
-    console.log(`Yeni belge algılandı: ${context.params.docId}`, newDocument);
+    // Sadece status 'indexed' olduğunda tetikle
+    if (before.status !== 'indexed' && after.status === 'indexed') {
+      console.log(`Belge indexlendi: ${context.params.docId}`, after);
 
-    try {
-      // 1. Kuralı Bul
-      console.log("Doğru şablon kuralı aranıyor...");
-      const rulesSnapshot = await db.collection("template_rules")
-        .where("sourceType", "==", "document")
-        .where("mainProcessType", "==", newDocument.mainProcessType)
-        .where("subProcessType", "==", newDocument.subProcessType)
-        .limit(1)
-        .get();
-
-      if (rulesSnapshot.empty) {
-        console.log("Bu belge tipi için uygun bir kural bulunamadı. İşlem sonlandırılıyor.");
-        return null;
+      const admin = require("firebase-admin");
+      if (!admin.apps.length) {
+        admin.initializeApp();
       }
+      const db = admin.firestore();
 
-      const rule = rulesSnapshot.docs[0].data();
-      console.log(`Kural bulundu. Kullanılacak şablon ID: ${rule.templateId}`);
+      try {
+        // Şablon kuralını bul
+        const rulesSnapshot = await db.collection("template_rules")
+          .where("sourceType", "==", "document")
+          .where("mainProcessType", "==", after.mainProcessType)
+          .where("subProcessType", "==", after.subProcessType)
+          .limit(1)
+          .get();
 
-      // 2. Mail Şablonunu Al
-      console.log("Mail şablonu veritabanından alınıyor...");
-      const templateSnapshot = await db.collection("mail_templates").doc(rule.templateId).get();
-
-      if (!templateSnapshot.exists) {
-          console.error(`Hata: ${rule.templateId} ID'li mail şablonu bulunamadı!`);
+        if (rulesSnapshot.empty) {
+          console.log("Kural bulunamadı, işlem sonlandırılıyor.");
           return null;
-      }
-      const template = templateSnapshot.data();
+        }
 
-      // 3. Müvekkil Bilgilerini Al (Varsayım: newDocument içinde clientId var)
-      console.log("Müvekkil bilgileri alınıyor...");
-      const clientSnapshot = await db.collection("clients").doc(newDocument.clientId).get();
-      if (!clientSnapshot.exists) {
-        console.error(`Hata: ${newDocument.clientId} ID'li müvekkil bulunamadı!`);
-        return null;
-      }
-      const client = clientSnapshot.data();
+        const rule = rulesSnapshot.docs[0].data();
+        const templateSnapshot = await db.collection("mail_templates").doc(rule.templateId).get();
 
-      // 4. Parametreleri Doldur
-      console.log("Parametreler dolduruluyor...");
-      let subject = template.subject;
-      let body = template.body;
+        if (!templateSnapshot.exists) {
+          console.error(`Şablon bulunamadı: ${rule.templateId}`);
+          return null;
+        }
 
-      const parameters = { ...client, ...newDocument };
+        const template = templateSnapshot.data();
 
-      for (const key in parameters) {
+        // Müvekkil bilgilerini al
+        const clientSnapshot = await db.collection("clients").doc(after.clientId).get();
+        if (!clientSnapshot.exists) {
+          console.error(`Müvekkil bulunamadı: ${after.clientId}`);
+          return null;
+        }
+        const client = clientSnapshot.data();
+
+        // Şablon parametrelerini doldur
+        let subject = template.subject;
+        let body = template.body;
+        const parameters = { ...client, ...after };
+
+        for (const key in parameters) {
           const placeholder = new RegExp(`{{${key}}}`, "g");
           subject = subject.replace(placeholder, parameters[key]);
           body = body.replace(placeholder, parameters[key]);
+        }
+
+        // Bildirimi oluştur
+        const notificationData = {
+          recipientEmail: client.email,
+          clientId: after.clientId,
+          subject: subject,
+          body: body,
+          status: "pending",
+          sourceDocumentId: context.params.docId,
+          createdAt: admin.firestore.FieldValue.serverTimestamp(),
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        };
+
+        await db.collection("mail_notifications").add(notificationData);
+        console.log("Mail bildirimi başarıyla oluşturuldu.");
+
+        return null;
+
+      } catch (error) {
+        console.error("Bildirim oluşturulurken hata:", error);
+        return null;
       }
-      console.log("Nihai mail içeriği oluşturuldu.");
-
-      // 5. Mail Bildirimini Oluştur
-      console.log("'mail_notifications' koleksiyonuna kayıt ekleniyor...");
-      const notificationData = {
-        recipientEmail: client.email,
-        clientId: newDocument.clientId,
-        subject: subject,
-        body: body,
-        status: "pending",
-        sourceDocumentId: context.params.docId,
-        createdAt: admin.firestore.FieldValue.serverTimestamp(),
-        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-      };
-
-      await db.collection("mail_notifications").add(notificationData);
-      console.log("Mail bildirimi başarıyla oluşturuldu ve gönderim için sıraya alındı.");
-
-      return null;
-
-    } catch (error) {
-      console.error("Mail bildirimi oluşturulurken beklenmedik bir hata oluştu:", error);
+    } else {
+      console.log("Status değişimi indekslenme değil, işlem atlandı.");
       return null;
     }
   });
