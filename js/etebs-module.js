@@ -293,79 +293,75 @@ async indexNotification(token, notification) {
 
 async showNotificationPDF(token, notification) {
     try {
-        showNotification('PDF açılıyor...', 'info');
-        
-        const downloadResult = await etebsService.downloadDocument(token, notification.evrakNo);
-        
-        if (downloadResult.success) {
-            console.log('Download result:', downloadResult); // Debug için
-            
-            // PDF'i yeni pencerede aç
-            if (downloadResult.pdfBlob) {
-                // Blob'dan URL oluştur
-                const pdfUrl = URL.createObjectURL(downloadResult.pdfBlob);
-                
-                // Yeni pencerede aç
-                const newWindow = window.open(pdfUrl, '_blank');
-                if (newWindow) {
-                    showNotification('PDF başarıyla açıldı', 'success');
-                    
-                    // Temizlik için bir süre sonra URL'yi iptal et
-                    setTimeout(() => {
-                        URL.revokeObjectURL(pdfUrl);
-                    }, 60000); // 1 dakika sonra temizle
-                } else {
-                    showNotification('Popup engellenmiş olabilir. Tarayıcı ayarlarınızı kontrol edin.', 'warning');
-                }
-                
-            } else if (downloadResult.pdfData) {
-                // Base64 data ise Blob'a çevir
-                try {
-                    const binaryString = atob(downloadResult.pdfData);
-                    const bytes = new Uint8Array(binaryString.length);
-                    for (let i = 0; i < binaryString.length; i++) {
-                        bytes[i] = binaryString.charCodeAt(i);
-                    }
-                    const pdfBlob = new Blob([bytes], { type: 'application/pdf' });
-                    const pdfUrl = URL.createObjectURL(pdfBlob);
-                    
-                    const newWindow = window.open(pdfUrl, '_blank');
-                    if (newWindow) {
-                        showNotification('PDF başarıyla açıldı', 'success');
-                        
-                        setTimeout(() => {
-                            URL.revokeObjectURL(pdfUrl);
-                        }, 60000);
-                    } else {
-                        showNotification('Popup engellenmiş olabilir. Tarayıcı ayarlarınızı kontrol edin.', 'warning');
-                    }
-                } catch (conversionError) {
-                    console.error('PDF conversion error:', conversionError);
-                    showNotification('PDF dönüştürülemedi', 'error');
-                }
-                
-            } else if (downloadResult.data && downloadResult.data.length > 0 && downloadResult.data[0].fileUrl) {
-                // Firebase Storage URL'si varsa direkt aç
-                const fileUrl = downloadResult.data[0].fileUrl;
-                const newWindow = window.open(fileUrl, '_blank');
-                if (newWindow) {
-                    showNotification('PDF başarıyla açıldı', 'success');
-                } else {
-                    showNotification('Popup engellenmiş olabilir. Tarayıcı ayarlarınızı kontrol edin.', 'warning');
-                }
-                
-            } else {
-                showNotification('PDF açılamadı. Veri yapısı beklenen formatta değil.', 'error');
-                console.error('Unexpected download result structure:', downloadResult);
-            }
-            
-        } else {
-            showNotification(`PDF açma hatası: ${downloadResult.error}`, 'error');
+        showNotification("📄 PDF aranıyor...", "info");
+
+        const currentUser = authService.getCurrentUser();
+        if (!currentUser) {
+            showNotification("Kullanıcı girişi yapılmamış.", "error");
+            return;
         }
-        
+
+        // ETEBS'ten download etmeyi dene
+        const downloadResult = await etebsService.downloadDocument(token, notification.evrakNo);
+        console.log("Download result:", downloadResult);
+
+        // Eğer base64 ya da blob geldiyse ETEBS'ten aç
+        if (downloadResult.success && downloadResult.pdfBlob) {
+            const pdfUrl = URL.createObjectURL(downloadResult.pdfBlob);
+            window.open(pdfUrl, "_blank");
+            showNotification("PDF başarıyla açıldı", "success");
+            return;
+        }
+
+        if (downloadResult.success && downloadResult.pdfData) {
+            const binaryString = atob(downloadResult.pdfData);
+            const bytes = new Uint8Array(binaryString.length);
+            const pdfBlob = new Blob([bytes], { type: "application/pdf" });
+            const pdfUrl = URL.createObjectURL(pdfBlob);
+            window.open(pdfUrl, "_blank");
+            showNotification("PDF başarıyla açıldı", "success");
+            return;
+        }
+
+        // Eğer "zaten indirildi" cevabı döndüyse Firestore'dan bul
+        if (
+            downloadResult.success &&
+            downloadResult.data &&
+            downloadResult.data.IslemSonucKod === "005"
+        ) {
+            console.log("Evrak daha önce indirilmiş, Firestore'dan kontrol ediliyor...");
+
+            const q = query(
+                collection(db, "etebs_downloads"),
+                where("evrakNo", "==", notification.evrakNo)
+            );
+            const querySnapshot = await getDocs(q);
+
+            if (querySnapshot.empty) {
+                showNotification("Daha önce indirilen PDF kaydedilmemiş.", "error");
+                return;
+            }
+
+            const docData = querySnapshot.docs[0].data();
+            if (!docData.storagePath) {
+                showNotification("Storage yolu bulunamadı.", "error");
+                return;
+            }
+
+            // Storage URL'si al
+            const storageRef = ref(storage, docData.storagePath);
+            const downloadURL = await getDownloadURL(storageRef);
+            window.open(downloadURL, "_blank");
+            showNotification("PDF yeni sekmede açıldı.", "success");
+            return;
+        }
+
+        // Beklenmeyen durum
+        showNotification("PDF açılamadı. Veri yapısı beklenmeyen formatta.", "error");
+        console.error("Beklenmeyen download result:", downloadResult);
     } catch (error) {
-        console.error('Show PDF error:', error);
-        showNotification('PDF açılırken hata oluştu', 'error');
+        console.error("Show PDF error:", error);
+        showNotification("PDF açılırken hata oluştu.", "error");
     }
 }
 
@@ -800,7 +796,6 @@ deactivateUploadMode() {
         console.error('Error displaying notifications:', error);
     }
 }
-
 
     // 6. renderNotificationsList fonksiyonunu güncelleyin (değişiklik yok ama kontrol için)
     renderNotificationsList(container, notifications, isMatched) {
