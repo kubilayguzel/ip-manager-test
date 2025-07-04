@@ -37,6 +37,13 @@ try {
 } catch (error) {
     console.error('⚠️ Firebase initialization failed:', error.message);
 }
+import { getFunctions, httpsCallable } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-functions.js';
+
+let functions;
+if (isFirebaseAvailable) {
+    functions = getFunctions(app, 'europe-west1'); // bölgen doğruysa bu
+}
+
 
 // --- Helper Functions & Constants ---
 export function generateUUID() {
@@ -1628,7 +1635,8 @@ export {auth, db};
 export const firebaseServices = { 
     auth: auth,
     db: db,
-    storage: storage, 
+    storage: storage,
+    functions: functions,
     storageRef: ref, 
     uploadBytesResumable: uploadBytesResumable, 
     getDownloadURL: getDownloadURL, 
