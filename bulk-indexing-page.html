@@ -1602,148 +1602,79 @@
                                     </div>
                                 </div>
 
-                                <!-- ETEBS Mode -->
-                                <div id="etebs-mode" class="mode-content">
-                                    <div class="form-section">
-                                        <h2 class="section-title">
-                                            <span>🔐</span>
-                                            ETEBS Token Yönetimi
-                                        </h2>
-                                        <div class="form-group">
-                                            <label class="form-label">ETEBS Token (GUID)</label>
-                                            <div class="input-group-inline">
-                                                <input type="text" id="etebsTokenInput" class="form-input" 
-                                                       placeholder="XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX"
-                                                       style="flex: 1;">
-                                                <button id="fetchNotificationsBtn" class="btn btn-primary" type="button">
-                                                    <span>📥</span>
-                                                    <span>Tebligatları Çek</span>
-                                                </button>
-                                            </div>
-                                        </div>
-                                        
-                                        <div id="tokenStatus" class="status-indicator" style="display: none;">
-                                            <!-- Status will be shown here -->
+                            <!-- ETEBS Mode -->
+                            <div id="etebs-mode" class="mode-content">
+                                <div class="form-section">
+                                    <h2 class="section-title">
+                                        <span>🔐</span>
+                                        ETEBS Token Yönetimi
+                                    </h2>
+                                    <div class="form-group">
+                                        <label class="form-label">ETEBS Token (GUID)</label>
+                                        <div class="input-group-inline">
+                                            <input type="text" id="etebsTokenInput" class="form-input" 
+                                                placeholder="XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX"
+                                                style="flex: 1;">
+                                            <button id="fetchNotificationsBtn" class="btn btn-primary" type="button">
+                                                <span>📥</span>
+                                                <span>Tebligatları Çek</span>
+                                            </button>
                                         </div>
                                     </div>
-                                    <!-- Notifications Section -->
-                                    <div id="notificationsSection" class="notifications-section" style="display: none;">
-                                        <div class="section-header">
-                                            <h2 class="section-title">
-                                                <span>📋</span>
-                                                Günlük Tebligatlar
-                                            </h2>
-                                            <div class="section-controls">
-                                                <select id="dosyaTuruFilter" class="form-select" style="width: auto;">
-                                                    <option value="">Tüm Türler</option>
-                                                    <option value="MARKA">MARKA</option>
-                                                    <option value="PATENT">PATENT</option>
-                                                    <option value="TASARIM">TASARIM</option>
-                                                </select>
-                                                <button id="refreshNotificationsBtn" class="btn btn-secondary btn-sm" type="button">
-                                                    <span>🔄</span>
-                                                    <span>Yenile</span>
-                                                </button>
+
+                                    <div id="tokenStatus" class="status-indicator" style="display: none;">
+                                        <!-- Status will be shown here -->
+                                    </div>
+                                </div>
+                                <!-- Notifications Section -->
+                                <div id="notificationsSection" class="notifications-section" style="display: none;">
+                                    <!-- Notifications içeriği -->
+                                    (tüm buradaki notification content)
+                                </div>
+                            </div> <!-- 🔴 etebs-mode DIV BURADA KAPANIYOR -->
+
+                            <!-- 🟢 Upload Mode - ARTIK DIŞARIDA -->
+                            <div id="upload-mode" class="mode-content" style="display: none;">
+                                <div class="form-section">
+                                    <h2 class="section-title"><span>📁</span> PDF Dosyalarını Yükleyin</h2>
+                                    <div class="form-group">
+                                        <label class="form-label" for="bulkFiles">
+                                            PDF Dosyalarını Seçin <span style="color: red;">*</span>
+                                        </label>
+                                        <div class="file-upload-wrapper">
+                                            <input type="file" id="bulkFiles" multiple accept=".pdf" name="bulkFiles">
+                                            <div class="file-upload-button" id="bulkFilesButton">
+                                                📎 PDF dosyalarını sürükleyip bırakın veya seçmek için tıklayın
                                             </div>
                                         </div>
-
-                                        <!-- Statistics -->
-                                        <div id="notificationStats" class="notification-stats">
-                                            <div class="stat-item stat-total">
-                                                <span class="stat-number" id="totalCount">0</span>
-                                                <span class="stat-label">Toplam</span>
-                                            </div>
-                                            <div class="stat-item stat-matched">
-                                                <span class="stat-number" id="matchedCount">0</span>
-                                                <span class="stat-label">Eşleşen</span>
-                                            </div>
-                                            <div class="stat-item stat-unmatched">
-                                                <span class="stat-number" id="unmatchedCount">0</span>
-                                                <span class="stat-label">Eşleşmeyen</span>
-                                            </div>
-                                        </div>
-
-                                        <div class="notifications-tabs-container">
-                                            <div class="notifications-tabs-header">
-                                                <button class="notifications-tab-btn active" data-notifications-tab="matched">
-                                                    <span>✅</span>
-                                                    <span>Eşleşen Tebligatlar</span>
-                                                    <span class="tab-badge-count" id="matchedTabBadge">0</span>
-                                                </button>
-                                                <button class="notifications-tab-btn" data-notifications-tab="unmatched">
-                                                    <span>❓</span>
-                                                    <span>Eşleşmeyen Tebligatlar</span>
-                                                    <span class="tab-badge-count" id="unmatchedTabBadge">0</span>
-                                                </button>
-                                            </div>
-                                            <div class="notifications-tab-content">
-                                                <div id="matched-notifications-tab" class="notifications-tab-pane active">
-                                                    <div class="notifications-list-container">
-                                                        <div id="matchedNotificationsList" class="notifications-list-full">
-                                                            <div class="empty-state">
-                                                                <span>📋</span>
-                                                                <p>Henüz eşleşen tebligat yok</p>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <div id="unmatched-notifications-tab" class="notifications-tab-pane">
-                                                    <div class="notifications-list-container">
-                                                        <div id="unmatchedNotificationsList" class="notifications-list-full">
-                                                            <div class="empty-state">
-                                                                <span>📋</span>
-                                                                <p>Henüz eşleşmeyen tebligat yok</p>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div> <!-- 🔴 Notifications Section artık kapanıyor -->
-
-                                    <!-- 🟢 Upload Mode ARTIK DIŞARIDA -->
-                                    <div id="upload-mode" class="mode-content" style="display: none;">
-                                        <div class="form-section">
-                                            <h2 class="section-title"><span>📁</span> PDF Dosyalarını Yükleyin</h2>
-                                            <div class="form-group">
-                                                <label class="form-label" for="bulkFiles">
-                                                    PDF Dosyalarını Seçin <span style="color: red;">*</span>
-                                                </label>
-                                                <div class="file-upload-wrapper">
-                                                    <input type="file" id="bulkFiles" multiple accept=".pdf" name="bulkFiles">
-                                                    <div class="file-upload-button" id="bulkFilesButton">
-                                                        📎 PDF dosyalarını sürükleyip bırakın veya seçmek için tıklayın
-                                                    </div>
-                                                </div>
-                                                <div class="file-upload-info" id="bulkFilesInfo">
-                                                    Henüz PDF dosyası seçilmedi. Birden fazla PDF dosyası seçebilirsiniz.
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <div class="form-section" id="fileListSection">
-                                            <h2 class="section-title"><span>📄</span> Yüklenen PDF Dosyaları</h2>
-                                            <div class="tabs-container">
-                                                <button class="tab-btn active" data-tab="all-files-pane">Eşleşen Dosyalar <span class="badge" id="allCount">0</span></button>
-                                                <button class="tab-btn" data-tab="unmatched-files-pane">Eşleşmeyen Dosyalar <span class="badge" id="unmatchedCount">0</span></button>
-                                                <button class="tab-btn" data-tab="indexed-files-pane">İndekslenenler <span class="badge" id="indexedCount">0</span></button>
-                                                <button class="tab-btn" onclick="window.indexingModule.reprocessMatching()" style="margin-left: auto; background: #28a745; color: white;">
-                                                    🔄 Yeniden Eşleştir
-                                                </button>
-                                            </div>
-                                            <div class="tab-content-container">
-                                                <div id="all-files-pane" class="tab-pane active">
-                                                    <div id="allFilesList" class="pdf-list"></div>
-                                                </div>
-                                                <div id="unmatched-files-pane" class="tab-pane">
-                                                    <div id="unmatchedFilesList" class="pdf-list"></div>
-                                                </div>
-                                                <div id="indexed-files-pane" class="tab-pane">
-                                                    <div id="indexedFilesList" class="pdf-list"></div>
-                                                </div>
-                                            </div>
+                                        <div class="file-upload-info" id="bulkFilesInfo">
+                                            Henüz PDF dosyası seçilmedi. Birden fazla PDF dosyası seçebilirsiniz.
                                         </div>
                                     </div>
+                                </div>
+                                <div class="form-section" id="fileListSection">
+                                    <h2 class="section-title"><span>📄</span> Yüklenen PDF Dosyaları</h2>
+                                    <div class="tabs-container">
+                                        <button class="tab-btn active" data-tab="all-files-pane">Eşleşen Dosyalar <span class="badge" id="allCount">0</span></button>
+                                        <button class="tab-btn" data-tab="unmatched-files-pane">Eşleşmeyen Dosyalar <span class="badge" id="unmatchedCount">0</span></button>
+                                        <button class="tab-btn" data-tab="indexed-files-pane">İndekslenenler <span class="badge" id="indexedCount">0</span></button>
+                                        <button class="tab-btn" onclick="window.indexingModule.reprocessMatching()" style="margin-left: auto; background: #28a745; color: white;">
+                                            🔄 Yeniden Eşleştir
+                                        </button>
+                                    </div>
+                                    <div class="tab-content-container">
+                                        <div id="all-files-pane" class="tab-pane active">
+                                            <div id="allFilesList" class="pdf-list"></div>
+                                        </div>
+                                        <div id="unmatched-files-pane" class="tab-pane">
+                                            <div id="unmatchedFilesList" class="pdf-list"></div>
+                                        </div>
+                                        <div id="indexed-files-pane" class="tab-pane">
+                                            <div id="indexedFilesList" class="pdf-list"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
 
                 </form>
             </div>
