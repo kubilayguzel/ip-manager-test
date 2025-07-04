@@ -779,8 +779,12 @@ async loadETEBSData(urlParams) {
             const updateData = {
                 status: 'indexed',
                 indexedAt: new Date(),
-                associatedTransactionId: transactionIdToAssociateFiles
+                associatedTransactionId: transactionIdToAssociateFiles,
+                mainProcessType: this.matchedRecord?.type || 'unknown',
+                subProcessType: childTypeId || null,
+                clientId: this.matchedRecord?.owners?.[0]?.id || 'client_not_set'
             };
+
 
             await updateDoc(
                 doc(collection(firebaseServices.db, UNINDEXED_PDFS_COLLECTION), this.pdfData.id),
