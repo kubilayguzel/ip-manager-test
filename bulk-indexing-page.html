@@ -1663,10 +1663,7 @@
                                             </div>
                                         </div>
 
-                                        <!-- Two Column Layout -->
-                                        <!-- Tab Based Layout - İki kolonlu yapı yerine -->
                                         <div class="notifications-tabs-container">
-                                            <!-- Tab Headers -->
                                             <div class="notifications-tabs-header">
                                                 <button class="notifications-tab-btn active" data-notifications-tab="matched">
                                                     <span>✅</span>
@@ -1679,10 +1676,7 @@
                                                     <span class="tab-badge-count" id="unmatchedTabBadge">0</span>
                                                 </button>
                                             </div>
-
-                                            <!-- Tab Contents -->
                                             <div class="notifications-tab-content">
-                                                <!-- Matched Notifications Tab -->
                                                 <div id="matched-notifications-tab" class="notifications-tab-pane active">
                                                     <div class="notifications-list-container">
                                                         <div id="matchedNotificationsList" class="notifications-list-full">
@@ -1693,8 +1687,6 @@
                                                         </div>
                                                     </div>
                                                 </div>
-
-                                                <!-- Unmatched Notifications Tab -->
                                                 <div id="unmatched-notifications-tab" class="notifications-tab-pane">
                                                     <div class="notifications-list-container">
                                                         <div id="unmatchedNotificationsList" class="notifications-list-full">
@@ -1707,54 +1699,52 @@
                                                 </div>
                                             </div>
                                         </div>
+                                    </div> <!-- 🔴 Notifications Section artık kapanıyor -->
 
-                                <!-- Upload Mode (Mevcut Bulk Upload Kodu) -->
-                                <div id="upload-mode" class="mode-content" style="display: none;">
-                                    <div class="form-section">
-                                        <h2 class="section-title"><span>📁</span> PDF Dosyalarını Yükleyin</h2>
-                                        
-                                        <div class="form-group">
-                                            <label class="form-label" for="bulkFiles">
-                                                PDF Dosyalarını Seçin <span style="color: red;">*</span>
-                                            </label>
-                                            <div class="file-upload-wrapper">
-                                                <input type="file" id="bulkFiles" multiple accept=".pdf" name="bulkFiles">
-                                                <div class="file-upload-button" id="bulkFilesButton">
-                                                    📎 PDF dosyalarını sürükleyip bırakın veya seçmek için tıklayın
+                                    <!-- 🟢 Upload Mode ARTIK DIŞARIDA -->
+                                    <div id="upload-mode" class="mode-content" style="display: none;">
+                                        <div class="form-section">
+                                            <h2 class="section-title"><span>📁</span> PDF Dosyalarını Yükleyin</h2>
+                                            <div class="form-group">
+                                                <label class="form-label" for="bulkFiles">
+                                                    PDF Dosyalarını Seçin <span style="color: red;">*</span>
+                                                </label>
+                                                <div class="file-upload-wrapper">
+                                                    <input type="file" id="bulkFiles" multiple accept=".pdf" name="bulkFiles">
+                                                    <div class="file-upload-button" id="bulkFilesButton">
+                                                        📎 PDF dosyalarını sürükleyip bırakın veya seçmek için tıklayın
+                                                    </div>
+                                                </div>
+                                                <div class="file-upload-info" id="bulkFilesInfo">
+                                                    Henüz PDF dosyası seçilmedi. Birden fazla PDF dosyası seçebilirsiniz.
                                                 </div>
                                             </div>
-                                            <div class="file-upload-info" id="bulkFilesInfo">
-                                                Henüz PDF dosyası seçilmedi. Birden fazla PDF dosyası seçebilirsiniz.
+                                        </div>
+
+                                        <div class="form-section" id="fileListSection">
+                                            <h2 class="section-title"><span>📄</span> Yüklenen PDF Dosyaları</h2>
+                                            <div class="tabs-container">
+                                                <button class="tab-btn active" data-tab="all-files-pane">Eşleşen Dosyalar <span class="badge" id="allCount">0</span></button>
+                                                <button class="tab-btn" data-tab="unmatched-files-pane">Eşleşmeyen Dosyalar <span class="badge" id="unmatchedCount">0</span></button>
+                                                <button class="tab-btn" data-tab="indexed-files-pane">İndekslenenler <span class="badge" id="indexedCount">0</span></button>
+                                                <button class="tab-btn" onclick="window.indexingModule.reprocessMatching()" style="margin-left: auto; background: #28a745; color: white;">
+                                                    🔄 Yeniden Eşleştir
+                                                </button>
+                                            </div>
+                                            <div class="tab-content-container">
+                                                <div id="all-files-pane" class="tab-pane active">
+                                                    <div id="allFilesList" class="pdf-list"></div>
+                                                </div>
+                                                <div id="unmatched-files-pane" class="tab-pane">
+                                                    <div id="unmatchedFilesList" class="pdf-list"></div>
+                                                </div>
+                                                <div id="indexed-files-pane" class="tab-pane">
+                                                    <div id="indexedFilesList" class="pdf-list"></div>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
 
-                                    <div class="form-section" id="fileListSection">
-                                        <h2 class="section-title"><span>📄</span> Yüklenen PDF Dosyaları</h2>                             
-                                        <div class="tabs-container">
-                                            <button class="tab-btn active" data-tab="all-files-pane">Eşleşen Dosyalar <span class="badge" id="allCount">0</span></button>
-                                            <button class="tab-btn" data-tab="unmatched-files-pane">Eşleşmeyen Dosyalar <span class="badge" id="unmatchedCount">0</span></button>
-                                            <button class="tab-btn" data-tab="indexed-files-pane">İndekslenenler <span class="badge" id="indexedCount">0</span></button>
-                                            <button class="tab-btn" onclick="window.indexingModule.reprocessMatching()" style="margin-left: auto; background: #28a745; color: white;">
-                                                🔄 Yeniden Eşleştir
-                                            </button>
-                                        </div>
-                                        <div class="tab-content-container">
-                                            <div id="all-files-pane" class="tab-pane active">
-                                                <div id="allFilesList" class="pdf-list"></div>
-                                            </div>
-                                            <div id="unmatched-files-pane" class="tab-pane">
-                                                <div id="unmatchedFilesList" class="pdf-list"></div>
-                                            </div>
-                                            <div id="indexed-files-pane" class="tab-pane">
-                                                <div id="indexedFilesList" class="pdf-list"></div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
                 </form>
             </div>
         </main>
