@@ -673,7 +673,7 @@ deactivateUploadMode() {
             // Fetch notifications from ETEBS
             const result = await etebsService.getDailyNotifications(token);
             console.log("📡 getDailyNotifications sonucu:", result);
-
+            console.log("📋 Gelen Data Array:", result.data);
 
             if (result.success) {
                 // Save token for future use
