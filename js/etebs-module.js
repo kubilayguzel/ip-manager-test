@@ -301,11 +301,11 @@ async showNotificationPDF(token, notification) {
             return;
         }
 
-        // ETEBS'ten download etmeyi dene
+        // 1️⃣ ETEBS'ten download etmeyi dene
         const downloadResult = await etebsService.downloadDocument(token, notification.evrakNo);
         console.log("Download result:", downloadResult);
 
-        // Eğer base64 ya da blob geldiyse ETEBS'ten aç
+        // 2️⃣ Eğer blob geldiyse göster
         if (downloadResult.success && downloadResult.pdfBlob) {
             const pdfUrl = URL.createObjectURL(downloadResult.pdfBlob);
             window.open(pdfUrl, "_blank");
@@ -313,6 +313,7 @@ async showNotificationPDF(token, notification) {
             return;
         }
 
+        // 3️⃣ Eğer base64 geldiyse göster
         if (downloadResult.success && downloadResult.pdfData) {
             const binaryString = atob(downloadResult.pdfData);
             const bytes = new Uint8Array(binaryString.length);
@@ -323,16 +324,16 @@ async showNotificationPDF(token, notification) {
             return;
         }
 
-        // Eğer "zaten indirildi" cevabı döndüyse Firestore'dan bul
+        // 4️⃣ Eğer "daha önce indirildi" cevabı döndüyse Firestore'dan bul
         if (
-            downloadResult.success &&
-            downloadResult.data &&
-            downloadResult.data.IslemSonucKod === "005"
+            downloadResult.success === false &&
+            downloadResult.error &&
+            downloadResult.error.toLowerCase().includes("daha önce indirildi")
         ) {
             console.log("Evrak daha önce indirilmiş, Firestore'dan kontrol ediliyor...");
 
             const q = query(
-                collection(db, "etebs_downloads"),
+                collection(db, "etebs_documents"),
                 where("evrakNo", "==", notification.evrakNo)
             );
             const querySnapshot = await getDocs(q);
@@ -343,22 +344,22 @@ async showNotificationPDF(token, notification) {
             }
 
             const docData = querySnapshot.docs[0].data();
-            if (!docData.storagePath) {
+            if (!docData.filePath) {
                 showNotification("Storage yolu bulunamadı.", "error");
                 return;
             }
 
-            // Storage URL'si al
-            const storageRef = ref(storage, docData.storagePath);
+            const storageRef = ref(storage, docData.filePath);
             const downloadURL = await getDownloadURL(storageRef);
             window.open(downloadURL, "_blank");
             showNotification("PDF yeni sekmede açıldı.", "success");
             return;
         }
 
-        // Beklenmeyen durum
+        // 5️⃣ Beklenmeyen durum
         showNotification("PDF açılamadı. Veri yapısı beklenmeyen formatta.", "error");
         console.error("Beklenmeyen download result:", downloadResult);
+
     } catch (error) {
         console.error("Show PDF error:", error);
         showNotification("PDF açılırken hata oluştu.", "error");
