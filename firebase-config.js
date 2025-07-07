@@ -1061,7 +1061,6 @@ export const etebsService = {
         }
     },
 
- // Updated downloadDocument using Firebase Functions proxy
 async downloadDocument(token, documentNo) {
     if (!isFirebaseAvailable) {
         return { success: false, error: "Firebase kullanılamıyor." };
@@ -1072,8 +1071,18 @@ async downloadDocument(token, documentNo) {
         return { success: false, error: "Kullanıcı girişi yapılmamış." };
     }
 
+    // Validate inputs
+    const tokenValidation = this.validateToken(token);
+    if (!tokenValidation.valid) {
+        return { success: false, error: tokenValidation.error };
+    }
+
+    if (!documentNo) {
+        return { success: false, error: 'Evrak numarası gerekli' };
+    }
+
     try {
-        console.log(`📥 Downloading document: ${documentNo}`);
+        console.log('🔥 ETEBS Download Document via Firebase Functions');
 
         const response = await fetch(ETEBS_CONFIG.proxyUrl, {
             method: 'POST',
@@ -1084,71 +1093,85 @@ async downloadDocument(token, documentNo) {
                 action: 'download-document',
                 token: token,
                 documentNo: documentNo
-            }),
-            timeout: ETEBS_CONFIG.timeout
+            })
         });
 
         if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
         }
 
         const result = await response.json();
 
-        // ETEBS "daha önce indirildi" hatası kontrolü
-        if (result?.data?.IslemSonucKod === "005") {
-            return {
-                success: false,
-                error: "Bu evrak daha önce indirildi. Yeniden çekilemiyor."
+        if (!result.success) {
+            throw new Error(result.error || 'Proxy error');
+        }
+
+        const etebsData = result.data;
+
+        // Handle ETEBS API errors
+        if (etebsData.IslemSonucKod && etebsData.IslemSonucKod !== '000') {
+            const errorMessage = ETEBS_ERROR_CODES[etebsData.IslemSonucKod] || 'Bilinmeyen hata';
+            return { 
+                success: false, 
+                error: errorMessage,
+                errorCode: etebsData.IslemSonucKod
             };
         }
 
-        if (result.success && result.data && result.data.fileContent) {
-            // Base64 string'i Blob'a çevir
-            let pdfBlob = null;
+        // Process downloaded documents
+        const processedDocuments = await this.processDownloadedDocuments(etebsData.DownloadDocumentResult, documentNo);
+        
+        // YENİ: PDF Blob'unu oluştur
+        let pdfBlob = null;
+        if (processedDocuments.length > 0 && processedDocuments[0].base64) {
             try {
-                const binaryString = atob(result.data.fileContent);
+                const binaryString = atob(processedDocuments[0].base64);
                 const bytes = new Uint8Array(binaryString.length);
                 for (let i = 0; i < binaryString.length; i++) {
                     bytes[i] = binaryString.charCodeAt(i);
                 }
                 pdfBlob = new Blob([bytes], { type: 'application/pdf' });
+                console.log('✅ PDF Blob oluşturuldu:', pdfBlob.size, 'bytes');
             } catch (error) {
-                console.error('Base64 Blob dönüşüm hatası:', error);
-                return { success: false, error: "PDF veri dönüşümü başarısız." };
+                console.error('Error converting base64 to blob:', error);
             }
-
-            // Firebase Storage'a yükle
-            const storageRef = ref(storage, `etebs_pdfs/${documentNo}.pdf`);
-            await uploadBytes(storageRef, pdfBlob);
-            console.log(`✅ Storage'a yüklendi: etebs_pdfs/${documentNo}.pdf`);
-
-            // Firestore'a metadata kaydet
-            const docData = {
-                evrakNo: documentNo,
-                storagePath: `etebs_pdfs/${documentNo}.pdf`,
-                fileName: result.data.fileName || `${documentNo}.pdf`,
-                fileSize: result.data.fileSize || 0,
-                downloadedAt: new Date(),
-                userId: currentUser.uid,
-                source: 'etebs',
-                status: 'downloaded'
-            };
-            const docRef = await addDoc(collection(db, 'etebs_downloads'), docData);
-            console.log('Document metadata Firestore’a kaydedildi:', docRef.id);
-
-            return {
-                success: true,
-                storagePath: docData.storagePath
-            };
-        } else {
-            const errorMsg = result.error || 'Evrak indirilemedi';
-            return { success: false, error: errorMsg };
         }
+
+        // Upload to Firebase Storage and save metadata
+        const uploadResults = await this.uploadDocumentsToFirebase(processedDocuments, currentUser.uid, documentNo);
+
+        return { 
+            success: true, 
+            data: uploadResults,
+            documentCount: processedDocuments.length,
+            pdfBlob: pdfBlob, // YENİ: PDF'i blob olarak döndür
+            pdfData: processedDocuments.length > 0 ? processedDocuments[0].base64 : null // Eski uyumluluk için base64 data
+        };
+
     } catch (error) {
-        console.error('Download document error:', error);
-        return { success: false, error: error.message };
+        console.error('ETEBS Download Document Error:', error);
+        
+        // Log error to Firebase
+        await this.logETEBSError(currentUser.uid, 'downloadDocument', error.message, { documentNo });
+        
+        // User-friendly error messages
+        let userError = 'Evrak indirme hatası';
+        
+        if (error.name === 'AbortError') {
+            userError = 'İndirme zaman aşımına uğradı';
+        } else if (error.message.includes('Failed to fetch')) {
+            userError = 'Ağ bağlantısı hatası';
+        }
+        
+        return { 
+            success: false, 
+            error: userError
+        };
     }
 },
+
+
 
     // Process notifications and match with portfolio
     async processNotifications(notifications, userId) {
