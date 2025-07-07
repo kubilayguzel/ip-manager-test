@@ -678,11 +678,12 @@ async handleIndexing() {
                 let officialDueDate = null;
                 let officialDueDateDetails = null;
 
-                if (deliveryDateStr && childTransactionType.duePeriod) {
-                    const deliveryDate = new Date(deliveryDateStr);
+                if (deliveryDate) {
                     deliveryDate.setHours(0, 0, 0, 0);
-                    
-                    const rawOfficialDueDate = addMonthsToDate(deliveryDate, childTransactionType.duePeriod);
+
+                    const duePeriodMonths = Number(childTransactionType.duePeriod ?? 0);
+
+                    const rawOfficialDueDate = addMonthsToDate(deliveryDate, duePeriodMonths);
                     officialDueDate = findNextWorkingDay(rawOfficialDueDate, TURKEY_HOLIDAYS);
                     
                     const operationalDueDate = new Date(officialDueDate);
