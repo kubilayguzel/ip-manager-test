@@ -615,6 +615,8 @@ async handleIndexing() {
     try {
         const childTypeId = document.getElementById('childTransactionType').value;
         const deliveryDateStr = document.getElementById('deliveryDate').value;
+        const deliveryDate = deliveryDateStr ? new Date(deliveryDateStr + 'T00:00:00') : null;
+
 
         let transactionIdToAssociateFiles = this.selectedTransactionId;
         let createdTaskId = null;
