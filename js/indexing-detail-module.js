@@ -600,215 +600,169 @@ async loadETEBSData(urlParams) {
         });
     }
 
-    async handleIndexing() {
-        if (!this.matchedRecord || !this.selectedTransactionId) {
-            showNotification('Gerekli seçimler yapılmadı.', 'error');
-            return;
-        }
+async handleIndexing() {
+    if (!this.matchedRecord || !this.selectedTransactionId) {
+        showNotification('Gerekli seçimler yapılmadı.', 'error');
+        return;
+    }
 
-        const indexBtn = document.getElementById('indexBtn');
-        indexBtn.disabled = true;
-        showNotification('İndeksleme işlemi yapılıyor...', 'info');
+    const indexBtn = document.getElementById('indexBtn');
+    indexBtn.disabled = true;
+    showNotification('İndeksleme işlemi yapılıyor...', 'info');
 
-        try {
-            const childTypeId = document.getElementById('childTransactionType').value;
-            const deliveryDateStr = document.getElementById('deliveryDate').value;
+    try {
+        const childTypeId = document.getElementById('childTransactionType').value;
+        const deliveryDateStr = document.getElementById('deliveryDate').value;
+        
+        let transactionIdToAssociateFiles = this.selectedTransactionId;
+        let createdTaskId = null;
+
+        // 1. Alt işlem varsa oluştur
+        if (childTypeId) {
+            console.log('Alt işlem oluşturuluyor...');
             
-            let transactionIdToAssociateFiles = this.selectedTransactionId;
-            let createdTaskId = null;
-
-            console.log('İndeksleme başlangıç verileri:', {
-                matchedRecord: this.matchedRecord.id,
-                selectedTransactionId: this.selectedTransactionId,
-                childTypeId,
-                deliveryDateStr
-            });
-
-            // Alt işlem varsa oluştur
-            if (childTypeId) {
-                console.log('Alt işlem oluşturuluyor...');
-                
-                const childTransactionType = this.allTransactionTypes.find(type => type.id === childTypeId);
-                if (!childTransactionType) {
-                    throw new Error('Alt işlem türü bulunamadı: ' + childTypeId);
-                }
-                
-                const deliveryDate = deliveryDateStr ? new Date(deliveryDateStr + 'T00:00:00') : null;
-                
-                const childTransactionData = {
-                    type: childTypeId,
-                    description: childTransactionType.alias || childTransactionType.name,
-                    deliveryDate: deliveryDateStr,
-                    timestamp: deliveryDate || new Date(),
-                    transactionHierarchy: 'child',
-                    parentId: this.selectedTransactionId
-                };
-
-                console.log('Alt işlem verisi:', childTransactionData);
-                
-                const childResult = await ipRecordsService.addTransactionToRecord(
-                    this.matchedRecord.id, 
-                    childTransactionData
-                );
-
-                console.log('childResult tam:', childResult); // DEBUG için
-
-                if (!childResult.success) {
-                    throw new Error('Alt işlem kaydedilemedi: ' + childResult.error);
-                }
-
-                // ID'yi doğru şekilde al
-                const childTransactionId = childResult.data?.id || childResult.id || childResult.data;
-                console.log('Child transaction ID:', childTransactionId);
-
-                if (!childTransactionId) {
-                    console.error('Child transaction ID bulunamadı, childResult:', childResult);
-                    throw new Error('Alt işlem ID\'si alınamadı');
-                }
-
-                transactionIdToAssociateFiles = childTransactionId;
-                console.log('Alt işlem başarıyla oluşturuldu, ID:', childTransactionId);
-
-                // İş tetiklemesi kontrolü
-                if (childTransactionType.taskTriggered && deliveryDate) {
-                    console.log('İş tetiklemesi yapılıyor...');
-                    
-                    // Tarih hesaplamalarını yap
-                    let taskDueDate = null;
-                    let officialDueDate = null;
-                    let officialDueDateDetails = null;
-                    
-                    if (deliveryDateStr && childTransactionType.duePeriod) {
-                        const deliveryDate = new Date(deliveryDateStr);
-                        deliveryDate.setHours(0, 0, 0, 0);
-                        
-                        console.log('Tarih hesaplaması:', {
-                            deliveryDate: deliveryDate.toDateString(),
-                            duePeriod: childTransactionType.duePeriod,
-                            childTransactionType: childTransactionType.name
-                        });
-                        
-                        // Resmi son tarihi hesapla (duePeriod kadar ay ekle)
-                        const rawOfficialDueDate = addMonthsToDate(deliveryDate, childTransactionType.duePeriod);
-                        officialDueDate = findNextWorkingDay(rawOfficialDueDate, TURKEY_HOLIDAYS);
-                        
-                        // Operasyonel son tarih (resmi son tarihten 3 gün öncesi)
-                        const operationalDueDate = new Date(officialDueDate);
-                        operationalDueDate.setDate(operationalDueDate.getDate() - 3);
-                        
-                        // Hafta sonu/tatil kontrolü
-                        while (isWeekend(operationalDueDate) || isHoliday(operationalDueDate, TURKEY_HOLIDAYS)) {
-                            operationalDueDate.setDate(operationalDueDate.getDate() - 1);
-                        }
-                        
-                        taskDueDate = operationalDueDate.toISOString().split('T')[0]; // YYYY-MM-DD format
-                        
-                        // Due date details
-                        officialDueDateDetails = {
-                            initialDeliveryDate: deliveryDateStr,
-                            periodMonths: childTransactionType.duePeriod,
-                            originalCalculatedDate: rawOfficialDueDate.toISOString().split('T')[0],
-                            finalOfficialDueDate: officialDueDate.toISOString().split('T')[0],
-                            finalOperationalDueDate: taskDueDate,
-                            adjustments: []
-                        };
-                        
-                        console.log('Hesaplanan tarihler:', {
-                            officialDueDate: officialDueDate.toDateString(),
-                            operationalDueDate: taskDueDate,
-                            duePeriodMonths: childTransactionType.duePeriod
-                        });
-                    }
-                    
-                    const taskData = {
-                        title: `${childTransactionType.alias || childTransactionType.name} - ${this.matchedRecord.title}`,
-                        description: `${this.matchedRecord.title} için ${childTransactionType.alias || childTransactionType.name} işlemi`,
-                        ipRecordId: this.matchedRecord.id,
-                        relatedIpRecordId: this.matchedRecord.id,
-                        relatedIpRecordTitle: this.matchedRecord.title,
-                        transactionId: childTransactionId,
-                        triggeringTransactionType: childTypeId,
-                        deliveryDate: deliveryDateStr,
-                        dueDate: taskDueDate,                    // Operasyonel tarih
-                        officialDueDate: officialDueDate,        // Resmi tarih (Date objesi)
-                        officialDueDateDetails: officialDueDateDetails,  // Detaylar
-                        assignedTo_uid: SELCAN_UID,
-                        assignedTo_email: SELCAN_EMAIL,
-                        priority: 'normal',
-                        status: 'awaiting_client_approval',
-                        createdAt: new Date(),
-                        createdBy: this.currentUser.uid,
-                        taskType: childTransactionType.taskTriggered
-                    };
-
-                    console.log('Tetiklenecek iş verisi:', taskData);
-                    
-                    const taskResult = await taskService.createTask(taskData);
-                    
-                    console.log('taskResult tam:', taskResult);
-                    
-                    if (taskResult.success) {
-                        const taskId = taskResult.data?.id || taskResult.id || taskResult.data;
-                        console.log('Task ID:', taskId);
-                        
-                        if (taskId) {
-                            createdTaskId = taskId;
-                            console.log('İş başarıyla tetiklendi, ID:', taskId);
-                            showNotification('Alt işlem oluşturuldu ve iş tetiklendi! Operasyonel ve resmi tarihler hesaplandı.', 'success');
-                        } else {
-                            console.log('İş oluşturuldu ama ID alınamadı');
-                            showNotification('Alt işlem oluşturuldu ve iş tetiklendi!', 'success');
-                        }
-                    } else {
-                        console.error('İş tetiklenemedi:', taskResult.error);
-                        showNotification('Alt işlem oluşturuldu ama iş tetiklenemedi.', 'warning');
-                    }
-                } else {
-                    console.log('İş tetiklemesi yok veya tebliğ tarihi girilmemiş');
-                    showNotification('Alt işlem başarıyla oluşturuldu!', 'success');
-                }
-                }
-
-            // PDF dosyasını transaction'a bağla
-            console.log('PDF dosyası transaction\'a bağlanıyor...', transactionIdToAssociateFiles);
-            
-            if (!transactionIdToAssociateFiles) {
-                throw new Error('Transaction ID bulunamadı');
+            const childTransactionType = this.allTransactionTypes.find(type => type.id === childTypeId);
+            if (!childTransactionType) {
+                throw new Error('Alt işlem türü bulunamadı: ' + childTypeId);
             }
-
-            const updateData = {
-                status: 'indexed',
-                indexedAt: new Date(),
-                associatedTransactionId: transactionIdToAssociateFiles,
-                mainProcessType: this.matchedRecord?.type || 'unknown',
-                subProcessType: childTypeId || null,
-                clientId: this.matchedRecord?.clientId || this.matchedRecord?.owners?.[0]?.id || 'client_not_set'
+            
+            const childTransactionData = {
+                type: childTypeId,
+                description: childTransactionType.alias || childTransactionType.name,
+                deliveryDate: deliveryDateStr || null,
+                timestamp: deliveryDateStr ? new Date(deliveryDateStr) : new Date(),
+                transactionHierarchy: 'child',
+                parentId: this.selectedTransactionId
             };
 
-
-            await updateDoc(
-                doc(collection(firebaseServices.db, UNINDEXED_PDFS_COLLECTION), this.pdfData.id),
-                updateData
+            const childResult = await ipRecordsService.addTransactionToRecord(
+                this.matchedRecord.id, 
+                childTransactionData
             );
 
-            console.log('PDF indeksleme tamamlandı');
-            
-            // Başarı mesajı ve yönlendirme
-            const successMessage = createdTaskId ? 
-                'PDF başarıyla indekslendi ve iş tetiklendi!' : 
-                'PDF başarıyla indekslendi!';
-            
-            showNotification(successMessage, 'success');
-            
-            // 2 saniye bekle ve bulk indexing sayfasına dön
-            setTimeout(() => {
-                window.location.href = 'bulk-indexing-page.html';
-            }, 2000);
+            if (!childResult.success) {
+                throw new Error('Alt işlem kaydedilemedi: ' + childResult.error);
+            }
 
-        } catch (error) {
-            console.error('İndeksleme hatası:', error);
-            showNotification('İndeksleme hatası: ' + error.message, 'error');
-            indexBtn.disabled = false;
+            const childTransactionId = childResult.data?.id || childResult.id || childResult.data;
+            if (!childTransactionId) {
+                throw new Error('Alt işlem ID\'si alınamadı');
+            }
+
+            transactionIdToAssociateFiles = childTransactionId;
+            console.log('Alt işlem başarıyla oluşturuldu, ID:', childTransactionId);
+
+            // 2. İş tetiklemesi kontrolü - Tebliğ tarihi olmasa bile tetikle
+            if (childTransactionType.taskTriggered) {
+                console.log('İş tetiklemesi yapılıyor...');
+                
+                let taskDueDate = null;
+                let officialDueDate = null;
+                let officialDueDateDetails = null;
+                
+                // SADECE TEBLİĞ TARİHİ VARSA TARİHLERİ HESAPLA
+                if (deliveryDateStr && childTransactionType.duePeriod) {
+                    const deliveryDate = new Date(deliveryDateStr);
+                    deliveryDate.setHours(0, 0, 0, 0);
+                    
+                    const rawOfficialDueDate = addMonthsToDate(deliveryDate, childTransactionType.duePeriod);
+                    officialDueDate = findNextWorkingDay(rawOfficialDueDate, TURKEY_HOLIDAYS);
+                    
+                    const operationalDueDate = new Date(officialDueDate);
+                    operationalDueDate.setDate(operationalDueDate.getDate() - 3);
+                    
+                    let tempOperationalDueDate = new Date(operationalDueDate);
+                    tempOperationalDueDate.setHours(0,0,0,0);
+                    while (isWeekend(tempOperationalDueDate) || isHoliday(tempOperationalDueDate, TURKEY_HOLIDAYS)) {
+                        tempOperationalDueDate.setDate(tempOperationalDueDate.getDate() - 1);
+                    }
+                    taskDueDate = tempOperationalDueDate.toISOString().split('T')[0];
+                    
+                    officialDueDateDetails = {
+                        initialDeliveryDate: deliveryDateStr,
+                        periodMonths: childTransactionType.duePeriod,
+                        originalCalculatedDate: rawOfficialDueDate.toISOString().split('T')[0],
+                        finalOfficialDueDate: officialDueDate.toISOString().split('T')[0],
+                        finalOperationalDueDate: taskDueDate,
+                        adjustments: []
+                    };
+                    console.log('Hesaplanan tarihler:', { officialDueDate, taskDueDate });
+                }
+
+                const taskData = {
+                    title: `${childTransactionType.alias || childTransactionType.name} - ${this.matchedRecord.title}`,
+                    description: `${this.matchedRecord.title} için ${childTransactionType.alias || childTransactionType.name} işlemi`,
+                    ipRecordId: this.matchedRecord.id,
+                    relatedIpRecordId: this.matchedRecord.id,
+                    relatedIpRecordTitle: this.matchedRecord.title,
+                    transactionId: childTransactionId,
+                    triggeringTransactionType: childTypeId,
+                    deliveryDate: deliveryDateStr || null,
+                    dueDate: taskDueDate,                    // Tarih yoksa null olacak
+                    officialDueDate: officialDueDate,        // Tarih yoksa null olacak
+                    officialDueDateDetails: officialDueDateDetails,  // Tarih yoksa null olacak
+                    assignedTo_uid: SELCAN_UID,
+                    assignedTo_email: SELCAN_EMAIL,
+                    priority: 'normal',
+                    status: 'awaiting_client_approval',
+                    createdAt: new Date(),
+                    createdBy: this.currentUser.uid,
+                    taskType: childTransactionType.taskTriggered
+                };
+
+                const taskResult = await taskService.createTask(taskData);
+                
+                if (taskResult.success) {
+                    const taskId = taskResult.data?.id || taskResult.id || taskResult.data;
+                    createdTaskId = taskId;
+                    console.log('İş başarıyla tetiklendi, ID:', taskId);
+                    const notificationMessage = deliveryDateStr ? 'Alt işlem oluşturuldu ve tarihlerle birlikte iş tetiklendi!' : 'Alt işlem oluşturuldu ve iş (tarihsiz) tetiklendi!';
+                    showNotification(notificationMessage, 'success');
+                } else {
+                    console.error('İş tetiklenemedi:', taskResult.error);
+                    showNotification('Alt işlem oluşturuldu ama iş tetiklenemedi.', 'warning');
+                }
+            } else {
+                showNotification('Alt işlem başarıyla oluşturuldu!', 'success');
+            }
         }
+
+        // 3. PDF dosyasını transaction'a bağla
+        console.log('PDF dosyası transaction\'a bağlanıyor...', transactionIdToAssociateFiles);
+        if (!transactionIdToAssociateFiles) {
+            throw new Error('Transaction ID bulunamadı');
+        }
+
+        const updateData = {
+            status: 'indexed',
+            indexedAt: new Date(),
+            associatedTransactionId: transactionIdToAssociateFiles,
+            mainProcessType: this.matchedRecord?.type || 'unknown',
+            subProcessType: childTypeId || null,
+            clientId: this.matchedRecord?.clientId || this.matchedRecord?.owners?.[0]?.id || 'client_not_set'
+        };
+
+        await updateDoc(
+            doc(collection(firebaseServices.db, UNINDEXED_PDFS_COLLECTION), this.pdfData.id),
+            updateData
+        );
+
+        console.log('PDF indeksleme tamamlandı');
+        
+        const successMessage = createdTaskId ? 
+            'PDF başarıyla indekslendi ve iş tetiklendi!' : 
+            'PDF başarıyla indekslendi!';
+        
+        showNotification(successMessage, 'success');
+        
+        setTimeout(() => {
+            window.location.href = 'bulk-indexing-page.html';
+        }, 2000);
+
+    } catch (error) {
+        console.error('İndeksleme hatası:', error);
+        showNotification('İndeksleme hatası: ' + error.message, 'error');
+        indexBtn.disabled = false;
     }
+}
 }
