@@ -678,34 +678,35 @@ async handleIndexing() {
                 let officialDueDate = null;
                 let officialDueDateDetails = null;
 
-                if (deliveryDate) {
+                if (deliveryDate instanceof Date && !isNaN(deliveryDate)) {
                     deliveryDate.setHours(0, 0, 0, 0);
 
                     const duePeriodMonths = Number(childTransactionType.duePeriod ?? 0);
 
                     const rawOfficialDueDate = addMonthsToDate(deliveryDate, duePeriodMonths);
                     officialDueDate = findNextWorkingDay(rawOfficialDueDate, TURKEY_HOLIDAYS);
-                    
+
                     const operationalDueDate = new Date(officialDueDate);
                     operationalDueDate.setDate(operationalDueDate.getDate() - 3);
-                    
+
                     let tempOperationalDueDate = new Date(operationalDueDate);
                     tempOperationalDueDate.setHours(0,0,0,0);
                     while (isWeekend(tempOperationalDueDate) || isHoliday(tempOperationalDueDate, TURKEY_HOLIDAYS)) {
                         tempOperationalDueDate.setDate(tempOperationalDueDate.getDate() - 1);
                     }
                     taskDueDate = tempOperationalDueDate.toISOString().split('T')[0];
-                    
+
                     officialDueDateDetails = {
                         initialDeliveryDate: deliveryDateStr,
-                        periodMonths: childTransactionType.duePeriod,
+                        periodMonths: duePeriodMonths,
                         originalCalculatedDate: rawOfficialDueDate.toISOString().split('T')[0],
                         finalOfficialDueDate: officialDueDate.toISOString().split('T')[0],
                         finalOperationalDueDate: taskDueDate,
                         adjustments: []
                     };
+                } else {
+                    console.warn("⚠️ deliveryDate geçersiz, son tarihler hesaplanmayacak.", deliveryDate);
                 }
-
                 const taskData = {
                     title: `${childTransactionType.alias || childTransactionType.name} - ${this.matchedRecord.title}`,
                     description: `${this.matchedRecord.title} için ${childTransactionType.alias || childTransactionType.name} işlemi`,
