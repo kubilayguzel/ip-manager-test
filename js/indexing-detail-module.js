@@ -600,6 +600,8 @@ async loadETEBSData(urlParams) {
         });
     }
 
+// js/indexing-detail-module.js dosyasındaki handleIndexing fonksiyonunun tamamını bununla değiştirin.
+
 async handleIndexing() {
     if (!this.matchedRecord || !this.selectedTransactionId) {
         showNotification('Gerekli seçimler yapılmadı.', 'error');
@@ -613,19 +615,19 @@ async handleIndexing() {
     try {
         const childTypeId = document.getElementById('childTransactionType').value;
         const deliveryDateStr = document.getElementById('deliveryDate').value;
-        
+
         let transactionIdToAssociateFiles = this.selectedTransactionId;
         let createdTaskId = null;
 
         // 1. Alt işlem varsa oluştur
         if (childTypeId) {
             console.log('Alt işlem oluşturuluyor...');
-            
+
             const childTransactionType = this.allTransactionTypes.find(type => type.id === childTypeId);
             if (!childTransactionType) {
                 throw new Error('Alt işlem türü bulunamadı: ' + childTypeId);
             }
-            
+
             const childTransactionData = {
                 type: childTypeId,
                 description: childTransactionType.alias || childTransactionType.name,
@@ -635,11 +637,7 @@ async handleIndexing() {
                 parentId: this.selectedTransactionId
             };
 
-            const childResult = await ipRecordsService.addTransactionToRecord(
-                this.matchedRecord.id, 
-                childTransactionData
-            );
-
+            const childResult = await ipRecordsService.addTransactionToRecord(this.matchedRecord.id, childTransactionData);
             if (!childResult.success) {
                 throw new Error('Alt işlem kaydedilemedi: ' + childResult.error);
             }
@@ -652,15 +650,34 @@ async handleIndexing() {
             transactionIdToAssociateFiles = childTransactionId;
             console.log('Alt işlem başarıyla oluşturuldu, ID:', childTransactionId);
 
-            // 2. İş tetiklemesi kontrolü - Tebliğ tarihi olmasa bile tetikle
-            if (childTransactionType.taskTriggered) {
-                console.log('İş tetiklemesi yapılıyor...');
+            // 2. İş tetikleme koşulunu belirle
+            let shouldTriggerTask = false;
+            const recordType = this.matchedRecord.recordType;
+
+            console.log(`Koşul kontrolü: Kayıt Tipi='${recordType}', Alt İşlem ID='${childTypeId}'`);
+
+            if (recordType === 'Portföy') {
+                // Portföy senaryosu: Kabul veya Kısmen Kabul ise iş tetikle
+                if (childTypeId === '50' || childTypeId === '51') {
+                    shouldTriggerTask = true;
+                    console.log('Portföy senaryosu için iş tetiklenecek.');
+                }
+            } else if (recordType === '3. Taraf') {
+                // 3. Taraf senaryosu: Kısmen Kabul veya Ret ise iş tetikle
+                if (childTypeId === '51' || childTypeId === '52') {
+                    shouldTriggerTask = true;
+                    console.log('3. Taraf senaryosu için iş tetiklenecek.');
+                }
+            }
+            
+            // 3. İşi tetikle (eğer koşullar sağlanıyorsa)
+            if (childTransactionType.taskTriggered && shouldTriggerTask) {
+                console.log('İş tetikleme bloğuna girildi...');
                 
                 let taskDueDate = null;
                 let officialDueDate = null;
                 let officialDueDateDetails = null;
-                
-                // SADECE TEBLİĞ TARİHİ VARSA TARİHLERİ HESAPLA
+
                 if (deliveryDateStr && childTransactionType.duePeriod) {
                     const deliveryDate = new Date(deliveryDateStr);
                     deliveryDate.setHours(0, 0, 0, 0);
@@ -686,21 +703,19 @@ async handleIndexing() {
                         finalOperationalDueDate: taskDueDate,
                         adjustments: []
                     };
-                    console.log('Hesaplanan tarihler:', { officialDueDate, taskDueDate });
                 }
 
                 const taskData = {
                     title: `${childTransactionType.alias || childTransactionType.name} - ${this.matchedRecord.title}`,
                     description: `${this.matchedRecord.title} için ${childTransactionType.alias || childTransactionType.name} işlemi`,
-                    ipRecordId: this.matchedRecord.id,
                     relatedIpRecordId: this.matchedRecord.id,
                     relatedIpRecordTitle: this.matchedRecord.title,
-                    transactionId: childTransactionId,
+                    transactionId: transactionIdToAssociateFiles,
                     triggeringTransactionType: childTypeId,
                     deliveryDate: deliveryDateStr || null,
-                    dueDate: taskDueDate,                    // Tarih yoksa null olacak
-                    officialDueDate: officialDueDate,        // Tarih yoksa null olacak
-                    officialDueDateDetails: officialDueDateDetails,  // Tarih yoksa null olacak
+                    dueDate: taskDueDate,
+                    officialDueDate: officialDueDate,
+                    officialDueDateDetails: officialDueDateDetails,
                     assignedTo_uid: SELCAN_UID,
                     assignedTo_email: SELCAN_EMAIL,
                     priority: 'normal',
@@ -713,44 +728,34 @@ async handleIndexing() {
                 const taskResult = await taskService.createTask(taskData);
                 
                 if (taskResult.success) {
-                    const taskId = taskResult.data?.id || taskResult.id || taskResult.data;
-                    createdTaskId = taskId;
-                    console.log('İş başarıyla tetiklendi, ID:', taskId);
-                    const notificationMessage = deliveryDateStr ? 'Alt işlem oluşturuldu ve tarihlerle birlikte iş tetiklendi!' : 'Alt işlem oluşturuldu ve iş (tarihsiz) tetiklendi!';
-                    showNotification(notificationMessage, 'success');
+                    createdTaskId = taskResult.id || taskResult.data?.id;
+                    console.log('İş başarıyla tetiklendi, ID:', createdTaskId);
+                    showNotification('Alt işlem oluşturuldu ve koşullu iş tetiklendi!', 'success');
                 } else {
                     console.error('İş tetiklenemedi:', taskResult.error);
                     showNotification('Alt işlem oluşturuldu ama iş tetiklenemedi.', 'warning');
                 }
             } else {
-                showNotification('Alt işlem başarıyla oluşturuldu!', 'success');
+                console.log('İş tetikleme koşulları sağlanmadı. İş tetiklenmeyecek.');
+                showNotification('Alt işlem başarıyla oluşturuldu. (Belirtilen kurallar gereği iş tetiklenmedi)', 'info');
             }
         }
 
-        // 3. PDF dosyasını transaction'a bağla
-        console.log('PDF dosyası transaction\'a bağlanıyor...', transactionIdToAssociateFiles);
-        if (!transactionIdToAssociateFiles) {
-            throw new Error('Transaction ID bulunamadı');
-        }
-
-        const updateData = {
-            status: 'indexed',
-            indexedAt: new Date(),
-            associatedTransactionId: transactionIdToAssociateFiles,
-            mainProcessType: this.matchedRecord?.type || 'unknown',
-            subProcessType: childTypeId || null,
-            clientId: this.matchedRecord?.clientId || this.matchedRecord?.owners?.[0]?.id || 'client_not_set'
-        };
-
+        // 4. PDF dosyasını transaction'a bağla
         await updateDoc(
             doc(collection(firebaseServices.db, UNINDEXED_PDFS_COLLECTION), this.pdfData.id),
-            updateData
+            {
+                status: 'indexed',
+                indexedAt: new Date(),
+                associatedTransactionId: transactionIdToAssociateFiles,
+                mainProcessType: this.matchedRecord?.type || 'unknown',
+                subProcessType: childTypeId || null,
+                clientId: this.matchedRecord?.clientId || this.matchedRecord?.owners?.[0]?.id || 'client_not_set'
+            }
         );
 
-        console.log('PDF indeksleme tamamlandı');
-        
         const successMessage = createdTaskId ? 
-            'PDF başarıyla indekslendi ve iş tetiklendi!' : 
+            'PDF indekslendi ve ilgili iş tetiklendi!' : 
             'PDF başarıyla indekslendi!';
         
         showNotification(successMessage, 'success');
