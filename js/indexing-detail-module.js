@@ -618,7 +618,7 @@ async handleIndexing() {
             "Portföy": ["50", "51"],
             "3. Taraf": ["51", "52"]
         },
-        "Yayıma İtirazın Yeniden İncelenmesi": {
+        "Yayıma İtirazin Yeniden Incelenmesi": {
             "Portföy": ["32", "33", "34", "35"],
             "3. Taraf": ["31", "32", "35", "36"]
         }
