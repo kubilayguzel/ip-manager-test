@@ -612,11 +612,22 @@ async handleIndexing() {
     indexBtn.disabled = true;
     showNotification('İndeksleme işlemi yapılıyor...', 'info');
 
+    // Yeni tetikleme matrisi
+    const taskTriggerMatrix = {
+        "Yayına İtiraz": {
+            "Portföy": ["50", "51"],
+            "3. Taraf": ["51", "52"]
+        },
+        "Yayıma İtirazın Yeniden İncelenmesi": {
+            "Portföy": ["32", "33", "34", "35"],
+            "3. Taraf": ["31", "32", "35", "36"]
+        }
+    };
+
     try {
         const childTypeId = document.getElementById('childTransactionType').value;
         const deliveryDateStr = document.getElementById('deliveryDate').value;
         const deliveryDate = deliveryDateStr ? new Date(deliveryDateStr + 'T00:00:00') : null;
-
 
         let transactionIdToAssociateFiles = this.selectedTransactionId;
         let createdTaskId = null;
@@ -656,26 +667,28 @@ async handleIndexing() {
             let shouldTriggerTask = false;
             const recordType = this.matchedRecord.recordType;
 
-            console.log(`Koşul kontrolü: Kayıt Tipi='${recordType}', Alt İşlem ID='${childTypeId}'`);
+            // Ana işlem türünü belirle
+            const parentTransaction = this.currentTransactions.find(t => t.id === this.selectedTransactionId);
+            const parentTransactionType = this.allTransactionTypes.find(t => t.id === parentTransaction?.type);
+            const mainProcessName = parentTransactionType?.name || '';
+            console.log(`Ana işlem türü: '${mainProcessName}'`);
 
-            if (recordType === 'Portföy') {
-                // Portföy senaryosu: Kabul veya Kısmen Kabul ise iş tetikle
-                if (childTypeId === '50' || childTypeId === '51') {
+            if (mainProcessName && taskTriggerMatrix[mainProcessName]) {
+                const allowedTriggers = taskTriggerMatrix[mainProcessName][recordType];
+                if (allowedTriggers && allowedTriggers.includes(childTypeId)) {
                     shouldTriggerTask = true;
-                    console.log('Portföy senaryosu için iş tetiklenecek.');
+                    console.log(`✅ Tetikleme koşulu sağlandı: ${mainProcessName} - ${recordType} - Alt işlem ID ${childTypeId}`);
+                } else {
+                    console.log(`ℹ️ Tetikleme koşulu yok: ${mainProcessName} - ${recordType} - Alt işlem ID ${childTypeId}`);
                 }
-            } else if (recordType === '3. Taraf') {
-                // 3. Taraf senaryosu: Kısmen Kabul veya Ret ise iş tetikle
-                if (childTypeId === '51' || childTypeId === '52') {
-                    shouldTriggerTask = true;
-                    console.log('3. Taraf senaryosu için iş tetiklenecek.');
-                }
+            } else {
+                console.log(`⚠️ Tetikleme matrisi bulunamadı: '${mainProcessName}'`);
             }
-            
-            // 3. İşi tetikle (eğer koşullar sağlanıyorsa)
+
+            // 3. İşi tetikle
             if (childTransactionType.taskTriggered && shouldTriggerTask) {
                 console.log('İş tetikleme bloğuna girildi...');
-                
+
                 let taskDueDate = null;
                 let officialDueDate = null;
                 let officialDueDateDetails = null;
@@ -709,6 +722,7 @@ async handleIndexing() {
                 } else {
                     console.warn("⚠️ deliveryDate geçersiz, son tarihler hesaplanmayacak.", deliveryDate);
                 }
+
                 const taskData = {
                     title: `${childTransactionType.alias || childTransactionType.name} - ${this.matchedRecord.title}`,
                     description: `${this.matchedRecord.title} için ${childTransactionType.alias || childTransactionType.name} işlemi`,
@@ -730,18 +744,17 @@ async handleIndexing() {
                 };
 
                 const taskResult = await taskService.createTask(taskData);
-                
                 if (taskResult.success) {
                     createdTaskId = taskResult.id || taskResult.data?.id;
                     console.log('İş başarıyla tetiklendi, ID:', createdTaskId);
-                    showNotification('Alt işlem oluşturuldu ve koşullu iş tetiklendi!', 'success');
+                    showNotification('Alt işlem oluşturuldu ve iş tetiklendi!', 'success');
                 } else {
                     console.error('İş tetiklenemedi:', taskResult.error);
                     showNotification('Alt işlem oluşturuldu ama iş tetiklenemedi.', 'warning');
                 }
             } else {
                 console.log('İş tetikleme koşulları sağlanmadı. İş tetiklenmeyecek.');
-                showNotification('Alt işlem başarıyla oluşturuldu. (Belirtilen kurallar gereği iş tetiklenmedi)', 'info');
+                showNotification('Alt işlem başarıyla oluşturuldu. (Kurallar gereği iş tetiklenmedi)', 'info');
             }
         }
 
