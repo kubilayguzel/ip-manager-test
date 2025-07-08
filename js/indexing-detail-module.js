@@ -672,9 +672,15 @@ async handleIndexing() {
             const parentTransactionType = this.allTransactionTypes.find(t => t.id === parentTransaction?.type);
             const mainProcessName = parentTransactionType?.name || '';
             console.log(`Ana işlem türü: '${mainProcessName}'`);
+            console.log('🟢 parentTransaction:', parentTransaction);
+            console.log('🟢 parentTransactionType:', parentTransactionType);
+            console.log('🟢 mainProcessName:', mainProcessName);
+            console.log('🟢 recordType:', recordType);
+            console.log('🟢 childTypeId:', childTypeId, 'typeof:', typeof childTypeId);
 
             if (mainProcessName && taskTriggerMatrix[mainProcessName]) {
                 const allowedTriggers = taskTriggerMatrix[mainProcessName][recordType];
+                console.log('🟢 allowedTriggers:', allowedTriggers);
                 if (allowedTriggers && allowedTriggers.includes(childTypeId)) {
                     shouldTriggerTask = true;
                     console.log(`✅ Tetikleme koşulu sağlandı: ${mainProcessName} - ${recordType} - Alt işlem ID ${childTypeId}`);
