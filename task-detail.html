@@ -1133,6 +1133,10 @@ async recalculateOfficialAndOperationalDueDates() {
 }
             async handleTaskUpdate(e) {
                 e.preventDefault();
+                if (this.uploadedEpatsFile && !document.getElementById('turkpatentEvrakNo').value.trim()) {
+                showNotification('EPATS Evrakı yüklendiğinde TURKPATENT Evrak No alanı zorunludur.', 'error');
+                return; // Fonksiyonu durdur
+                }
                 const form = document.getElementById('taskDetailForm');
                 const updatedTaskData = {
                     title: form.taskTitle.value,
