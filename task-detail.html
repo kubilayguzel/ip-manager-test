@@ -936,6 +936,12 @@
                     uploadedAt: new Date().toISOString()
                 };
                 this.renderEpatsDocument();
+                // Eğer bir dosya yüklendiyse, durumu "Tamamlandı" olarak ayarla
+                const taskStatusSelect = document.getElementById('taskStatus');
+                if (taskStatusSelect) {
+                    taskStatusSelect.value = 'completed';
+                    showNotification('EPATS Evrakı eklendi, iş durumu "Tamamlandı" olarak ayarlandı.', 'info');
+                }
             }
 
             renderEpatsDocument() {
@@ -966,6 +972,12 @@
             removeEpatsDocument() {
                 this.uploadedEpatsFile = null;
                 this.renderEpatsDocument();
+                // Eğer dosya kaldırıldıysa, durumu "Açık" olarak ayarla
+                const taskStatusSelect = document.getElementById('taskStatus');
+                if (taskStatusSelect) {
+                    taskStatusSelect.value = 'open';
+                    showNotification('EPATS Evrakı kaldırıldı, iş durumu "Açık" olarak ayarlandı.', 'info');
+                }
             }
 
             setupDocumentUploadListeners() {
