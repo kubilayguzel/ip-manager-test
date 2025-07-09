@@ -367,7 +367,20 @@
                             <p style="text-align: center; color: #666; padding: 20px;">Bu işe ait belge bulunmamaktadır.</p>
                         </div>
                     </div>
-
+                    <div class="form-section" style="margin-top: 30px;">
+                        <h3 class="section-title">EPATS Evrakı</h3>
+                        <div class="form-group">
+                            <label for="turkpatentEvrakNo" class="form-label">TURKPATENT Evrak No:</label>
+                            <input type="text" id="turkpatentEvrakNo" class="form-input">
+                        </div>
+                        <div class="file-upload-area" id="epatsFileUploadArea">
+                            <input type="file" id="epatsFileInput" hidden accept=".pdf,.doc,.docx,.jpg,.jpeg,.png">
+                            <div class="upload-icon">📄</div>
+                            <div>EPATS Evrakını Yüklemek İçin Tıklayın veya Sürükleyin</div>
+                        </div>
+                        <div class="file-list-container" id="epatsFileListContainer">
+                            </div>
+                    </div>
                     <div id="tabContentHistory" class="form-section">
                         <h3 class="section-title">İşlem Geçmişi</h3>
                         <div id="historyList" class="history-list">
@@ -532,6 +545,7 @@
                 this.calculatedOperationalDueDate = null;
                 this.calculatedOfficialDueDateDetails = null;
                 this.statusDropdownPopulated = false;
+                this.uploadedEpatsFile = null;
             }
 
             // YENİ YARDIMCI FONKSİYON: Tarihleri YYYY-MM-DD formatına dönüştürür (yerel saat diliminde)
@@ -779,6 +793,13 @@
                         option.value = status.value;
                         option.textContent = status.text;
                         statusSelect.appendChild(option);
+
+                    // fillTaskForm metodunun en sonuna ekleyin
+                    if (task.details?.epatsDocument) {
+                        document.getElementById('turkpatentEvrakNo').value = task.details.epatsDocument.turkpatentEvrakNo || '';
+                        this.uploadedEpatsFile = task.details.epatsDocument;
+                        this.renderEpatsDocument();
+                    }
                     });
                     
                     this.statusDropdownPopulated = true;
@@ -878,6 +899,11 @@
                 if (savePersonBtn) {
                     savePersonBtn.addEventListener('click', () => this.saveNewPerson());
                 }
+                // EPATS Evrakı Yükleme Alanı
+                const epatsFileUploadArea = document.getElementById('epatsFileUploadArea');
+                const epatsFileInput = document.getElementById('epatsFileInput');
+                if(epatsFileUploadArea) epatsFileUploadArea.addEventListener('click', () => epatsFileInput.click());
+                if(epatsFileInput) epatsFileInput.addEventListener('change', (e) => this.handleEpatsDocumentUpload(e.target.files[0]));
 
                 this.setupDocumentUploadListeners();
                 this.setupAccrualContainerListeners();
@@ -908,6 +934,52 @@
                         element.parentNode.replaceChild(newElement, element);
                     }
                 });
+            }
+
+            // TaskDetailModule sınıfının içine herhangi bir yere ekleyebilirsiniz
+            async handleEpatsDocumentUpload(file) {
+                if (!file) return;
+
+                const dataUrl = await readFileAsDataURL(file);
+                this.uploadedEpatsFile = {
+                    id: generateUUID(),
+                    name: file.name,
+                    size: file.size,
+                    type: file.type,
+                    content: dataUrl,
+                    uploadedAt: new Date().toISOString()
+                };
+                this.renderEpatsDocument();
+            }
+
+            renderEpatsDocument() {
+                const container = document.getElementById('epatsFileListContainer');
+                container.innerHTML = '';
+
+                if (this.uploadedEpatsFile) {
+                    const file = this.uploadedEpatsFile;
+                    const fileItem = document.createElement('div');
+                    fileItem.className = 'file-item';
+                    fileItem.innerHTML = `
+                        <div class="file-info">
+                            <span class="file-icon">📄</span>
+                            <div>
+                                <div class="file-name"><a href="${file.content}" download="${file.name}">${file.name}</a></div>
+                                <div class="file-size">${formatFileSize(file.size)}</div>
+                            </div>
+                        </div>
+                        <div class="file-actions">
+                            <button class="btn-remove-file" id="removeEpatsFileBtn">&times;</button>
+                        </div>
+                    `;
+                    container.appendChild(fileItem);
+                    document.getElementById('removeEpatsFileBtn').addEventListener('click', () => this.removeEpatsDocument());
+                }
+            }
+
+            removeEpatsDocument() {
+                this.uploadedEpatsFile = null;
+                this.renderEpatsDocument();
             }
 
             setupDocumentUploadListeners() {
@@ -1154,7 +1226,18 @@ async recalculateOfficialAndOperationalDueDates() {
                     if (updatedTaskData.details) updatedTaskData.details.relatedParty = null;
                     else updatedTaskData.details = { relatedParty: null };
                 }
-                
+                if (this.uploadedEpatsFile) {
+                    updatedTaskData.details = {
+                        ...updatedTaskData.details,
+                        epatsDocument: {
+                            ...this.uploadedEpatsFile,
+                            turkpatentEvrakNo: document.getElementById('turkpatentEvrakNo').value
+                        }
+                    };
+                } else {
+                    if (updatedTaskData.details) updatedTaskData.details.epatsDocument = null;
+                    else updatedTaskData.details = { ...this.currentTask.details, epatsDocument: null };
+                }
                 try {
                     const result = await taskService.updateTask(this.taskId, updatedTaskData);
                     if (result.success) {
