@@ -594,7 +594,6 @@
                 try {
                     await this.loadAllData();
                     await this.loadTaskData();
-                    this.populateStatusDropdown();
                     this.populateAssignedToDropdown();
                     this.setupEventListeners();
                     
@@ -719,24 +718,8 @@
                     document.getElementById('taskDescription').value = task.description || '';
                     document.getElementById('taskPriority').value = task.priority || 'medium';
                     
-                    // Dropdown'ı doldur
-                    this.populateStatusDropdown();
-                    
-                    const statusSelect = document.getElementById('taskStatus');
-                    
-                    // Status set etme
-                    if (task.status) {
-                        statusSelect.value = task.status;
-                        
-                        // Manuel olarak selected attribute'unu ekle
-                        Array.from(statusSelect.options).forEach(option => {
-                            if (option.value === task.status) {
-                                option.selected = true;
-                            } else {
-                                option.selected = false;
-                            }
-                        });
-                    }
+                    // Dropdown'ı doldur ve mevcut durumu seçili yap
+                    this.populateStatusDropdown(task.status); // 'task.status' parametre olarak gönderiliyor
                     
                     document.getElementById('assignedTo').value = task.assignedTo_uid || '';
                     document.getElementById('taskDueDate').value = this.formatDateToYYYYMMDD(task.dueDate) || '';
@@ -772,12 +755,18 @@
                         document.getElementById('selectedRelatedPartyDisplay').style.display = 'none';
                         document.getElementById('relatedPartySearch').value = '';
                     }
+                    if (task.details?.epatsDocument) {
+                        document.getElementById('turkpatentEvrakNo').value = task.details.epatsDocument.turkpatentEvrakNo || '';
+                        this.uploadedEpatsFile = task.details.epatsDocument;
+                        this.renderEpatsDocument();
+                    }
                 }
 
-                // Temizlenmiş populateStatusDropdown fonksiyonu:
-                populateStatusDropdown() {
+                populateStatusDropdown(currentStatus) { // 'currentStatus' parametresini alıyor
                     // İkinci çağrıyı engelle
                     if (this.statusDropdownPopulated) {
+                        // Dropdown zaten doldurulmuşsa, sadece doğru değeri seç
+                        document.getElementById('taskStatus').value = currentStatus;
                         return;
                     }
                     
@@ -792,14 +781,11 @@
                         const option = document.createElement('option');
                         option.value = status.value;
                         option.textContent = status.text;
+                        // Parametre olarak gelen 'currentStatus' ile karşılaştır
+                        if (currentStatus === status.value) {
+                            option.selected = true;
+                        }
                         statusSelect.appendChild(option);
-
-                    // fillTaskForm metodunun en sonuna ekleyin
-                    if (task.details?.epatsDocument) {
-                        document.getElementById('turkpatentEvrakNo').value = task.details.epatsDocument.turkpatentEvrakNo || '';
-                        this.uploadedEpatsFile = task.details.epatsDocument;
-                        this.renderEpatsDocument();
-                    }
                     });
                     
                     this.statusDropdownPopulated = true;
