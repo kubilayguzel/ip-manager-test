@@ -546,6 +546,7 @@
                 this.calculatedOfficialDueDateDetails = null;
                 this.statusDropdownPopulated = false;
                 this.uploadedEpatsFile = null;
+                this.statusBeforeEpatsUpload = null;
             }
 
             // YENİ YARDIMCI FONKSİYON: Tarihleri YYYY-MM-DD formatına dönüştürür (yerel saat diliminde)
@@ -926,6 +927,13 @@
             async handleEpatsDocumentUpload(file) {
                 if (!file) return;
 
+                const taskStatusSelect = document.getElementById('taskStatus');
+                
+                // YENİ: Durumu değiştirmeden önce mevcut durumu sakla
+                if (taskStatusSelect) {
+                    this.statusBeforeEpatsUpload = taskStatusSelect.value;
+                }
+
                 const dataUrl = await readFileAsDataURL(file);
                 this.uploadedEpatsFile = {
                     id: generateUUID(),
@@ -936,8 +944,8 @@
                     uploadedAt: new Date().toISOString()
                 };
                 this.renderEpatsDocument();
+
                 // Eğer bir dosya yüklendiyse, durumu "Tamamlandı" olarak ayarla
-                const taskStatusSelect = document.getElementById('taskStatus');
                 if (taskStatusSelect) {
                     taskStatusSelect.value = 'completed';
                     showNotification('EPATS Evrakı eklendi, iş durumu "Tamamlandı" olarak ayarlandı.', 'info');
@@ -969,15 +977,20 @@
                 }
             }
 
-            removeEpatsDocument() {
+                removeEpatsDocument() {
                 this.uploadedEpatsFile = null;
                 this.renderEpatsDocument();
-                // Eğer dosya kaldırıldıysa, durumu "Açık" olarak ayarla
+
+                // YENİ EKLENEN KISIM
+                // Eğer daha önce saklanmış bir durum varsa ona dön, yoksa "Açık" yap
                 const taskStatusSelect = document.getElementById('taskStatus');
                 if (taskStatusSelect) {
-                    taskStatusSelect.value = 'open';
-                    showNotification('EPATS Evrakı kaldırıldı, iş durumu "Açık" olarak ayarlandı.', 'info');
+                    taskStatusSelect.value = this.statusBeforeEpatsUpload || 'open';
+                    showNotification('EPATS Evrakı kaldırıldı, iş durumu önceki haline getirildi.', 'info');
                 }
+                
+                // Saklanan durumu temizle
+                this.statusBeforeEpatsUpload = null;
             }
 
             setupDocumentUploadListeners() {
