@@ -316,7 +316,7 @@ exports.createMailNotificationOnDocumentIndex = functions.firestore
 
   // --- YENİ EKLENEN ÇAĞRILABİLİR E-POSTA GÖNDERME FONKSİYONU ---
 
-const { onCall, HttpsError } = require("firebase-functions/v2/https");
+
 const { google } = require("googleapis");
 const { GoogleAuth } = require("google-auth-library");
 
