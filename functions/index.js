@@ -512,16 +512,15 @@ exports.createUniversalNotificationOnTaskComplete = functions.firestore
 
     // --- TETİKLEME KOŞULLARI (YENİ YAPIYA GÖRE GÜNCELLENDİ) ---
     const isStatusChangedToCompleted = taskDataBefore.status !== "completed" && taskDataAfter.status === "completed";
-    
-    // Doğrudan epatsDocument objesini kontrol et
-    const epatsDoc = taskDataAfter.epatsDocument; 
-
-    const hasEpatsData = epatsDoc && epatsDoc.turkpatentEvrakNo && epatsDoc.downloadURL;
+    const epatsDoc = taskDataAfter.details?.epatsDocument || null;
+    const hasEpatsData = !!epatsDoc;
+    const wasOpenBefore = taskDataAfter.details?.statusBeforeEpatsUpload === "open";
 
     console.log(`Durum 'completed' olarak mı değişti?: ${isStatusChangedToCompleted}`);
-    console.log(`Gerekli EPATS verisi var mı?: ${!!hasEpatsData}`);
+    console.log(`EPATS dokümanı var mı?: ${hasEpatsData}`);
+    console.log(`Önceki durum 'open' mıydı?: ${wasOpenBefore}`);
 
-    if (isStatusChangedToCompleted && hasEpatsData) {
+    if (isStatusChangedToCompleted && hasEpatsData && wasOpenBefore) {
       console.log("--> KOŞULLAR SAĞLANDI. Bildirim oluşturma işlemi başlıyor.");
 
       try {
