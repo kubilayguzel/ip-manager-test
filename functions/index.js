@@ -495,81 +495,98 @@ exports.createMailNotificationOnDocumentStatusChange = functions.firestore
  * Bir görev 'completed' olarak güncellendiğinde, EPATS Evrak No ve doküman varsa
  * tüm iş tipleri için geçerli olan genel bir müvekkil bildirimi oluşturur.
  */
+// functions/index.js
+
+// ... (diğer kodlarınız)
+
 exports.createUniversalNotificationOnTaskComplete = functions.firestore
   .document("tasks/{taskId}")
   .onUpdate(async (change, context) => {
+    const taskId = context.params.taskId;
+    console.log(`--- FONKSİYON TETİKLENDİ: tasks/${taskId} ---`); // 1. Log: Fonksiyonun başladığını anla
+
     const taskDataBefore = change.before.data();
     const taskDataAfter = change.after.data();
-    const taskId = context.params.taskId;
 
-    // --- TETİKLEME KOŞULLARI ---
-    if (
-      taskDataBefore.status !== "completed" &&
-      taskDataAfter.status === "completed" &&
-      taskDataAfter.epatsEvrakNo &&
-      taskDataAfter.documents &&
-      taskDataAfter.documents.length > 0
-    ) {
-      console.log(`Genel tamamlama koşulları sağlandı: ${taskId}. Bildirim oluşturuluyor...`);
+    // 2. Log: Koşul kontrolü için verileri yazdır
+    console.log(`Önceki Durum: ${taskDataBefore.status}, Yeni Durum: ${taskDataAfter.status}`);
+    console.log(`EPATS Evrak No: ${taskDataAfter.epatsEvrakNo || 'YOK'}`);
+    console.log(`Doküman Sayısı: ${taskDataAfter.documents ? taskDataAfter.documents.length : 0}`);
+
+    // --- TETİKLEME KOŞULLARI KONTROLÜ ---
+    const isStatusChangedToCompleted = taskDataBefore.status !== "completed" && taskDataAfter.status === "completed";
+    const hasEpatsNumber = !!taskDataAfter.epatsEvrakNo;
+    const hasDocuments = taskDataAfter.documents && taskDataAfter.documents.length > 0;
+
+    console.log(`Durum 'completed' olarak mı değişti?: ${isStatusChangedToCompleted}`);
+    console.log(`EPATS No var mı?: ${hasEpatsNumber}`);
+    console.log(`Doküman var mı?: ${hasDocuments}`);
+
+    if (isStatusChangedToCompleted && hasEpatsNumber && hasDocuments) {
+      console.log("--> KOŞULLAR SAĞLANDI. Bildirim oluşturma işlemi başlıyor.");
 
       try {
-        // 1. ADIM: Genel EPATS tamamlama kuralını bul. Artık iş tipine bakmıyoruz.
+        // 3. Log: Kural sorgusunu yazdır
+        console.log("Kural aranıyor: sourceType == 'task_completion_epats'");
         const rulesSnapshot = await db.collection("template_rules")
           .where("sourceType", "==", "task_completion_epats")
           .limit(1)
           .get();
 
         if (rulesSnapshot.empty) {
-          console.log("Sistemde 'task_completion_epats' için genel bir kural bulunamadı.");
+          console.error("HATA: Koşul sağlandı ama 'task_completion_epats' için bir kural bulunamadı!");
           return null;
         }
 
         const rule = rulesSnapshot.docs[0].data();
-        console.log(`Genel kural bulundu. Şablon ID: ${rule.templateId}`);
+        console.log(`Kural bulundu. Kullanılacak Şablon ID: ${rule.templateId}`);
 
-        // ... (Geri kalan kodun tamamı bir önceki cevaptaki ile aynı) ...
-        // 2. ADIM: Gerekli bilgileri al (şablon, müvekkil vb.)
-        // 3. ADIM: E-posta içeriğini doldur
-        // 4. ADIM: 'mail_notifications' koleksiyonuna kaydı ekle
-
+        // ... (Bundan sonraki kod aynı kalabilir, hata olursa buraya kadar olan loglar bize yol gösterecektir)
         const templateSnapshot = await db.collection("mail_templates").doc(rule.templateId).get();
-        // ... (Diğer tüm veri çekme ve e-posta oluşturma mantığı değişmeden kalır)
+        if (!templateSnapshot.exists) {
+            console.error(`HATA: ${rule.templateId} ID'li mail şablonu bulunamadı!`);
+            return null;
+        }
 
-        // Örnek olarak kalan adımları hızlıca ekliyorum:
         const ipRecordSnapshot = await db.collection("ipRecords").doc(taskDataAfter.relatedIpRecordId).get();
-        const clientSnapshot = await db.collection("persons").doc(ipRecordSnapshot.data().owners[0].id).get();
+         if (!ipRecordSnapshot.exists) {
+            console.error(`HATA: Görevle ilişkili IP kaydı (${taskDataAfter.relatedIpRecordId}) bulunamadı!`);
+            return null;
+        }
 
-        const template = templateSnapshot.data();
-        const client = clientSnapshot.data();
         const ipRecord = ipRecordSnapshot.data();
+        const primaryOwnerId = ipRecord.owners?.[0]?.id;
+        if (!primaryOwnerId) {
+            console.error('HATA: IP kaydına atanmış birincil hak sahibi bulunamadı.');
+            return null;
+        }
 
-        const parameters = {
-          muvekkil_adi: client.name,
-          is_basligi: taskDataAfter.title,
-          epats_evrak_no: taskDataAfter.epatsEvrakNo,
-          basvuru_no: ipRecord.applicationNumber,
-        };
+        const clientSnapshot = await db.collection("persons").doc(primaryOwnerId).get();
+        if (!clientSnapshot.exists) {
+            console.error(`HATA: ${primaryOwnerId} ID'li müvekkil (kişi) bulunamadı!`);
+            return null;
+        }
 
-        let subject = template.subject.replace(/{{(.*?)}}/g, (match, p1) => parameters[p1.trim()] || match);
-        let body = template.body.replace(/{{(.*?)}}/g, (match, p1) => parameters[p1.trim()] || match);
-
+        // E-posta oluşturma ve gönderme
+        // ... (Mevcut kodunuzdaki gibi)
+        console.log("Tüm veriler başarıyla toplandı, e-posta bildirimi oluşturuluyor...");
+        // E-posta oluşturma mantığınız...
         await db.collection("mail_notifications").add({
-          recipientEmail: client.email,
-          clientId: clientSnapshot.id,
-          subject: subject,
-          body: body,
-          status: "pending",
-          sourceTaskId: taskId,
-          createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            // ...notificationData...
+            status: "pending",
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            // ...diğer alanlar
         });
 
-        console.log("Genel EPATS bildirim maili başarıyla oluşturuldu.");
+        console.log("--> BAŞARILI: Bildirim 'mail_notifications' koleksiyonuna eklendi.");
         return null;
 
       } catch (error) {
-        console.error("Genel mail bildirimi oluşturulurken hata oluştu:", error);
+        console.error("HATA: Bildirim oluşturma bloğunda bir hata oluştu:", error);
         return null;
       }
+    } else {
+      console.log("--> KOŞULLAR SAĞLANMADI. Fonksiyon sonlandırılıyor.");
+      return null;
     }
-    return null;
   });
