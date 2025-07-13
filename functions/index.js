@@ -510,16 +510,21 @@ exports.createUniversalNotificationOnTaskComplete = functions.firestore
     const taskDataBefore = change.before.data();
     const taskDataAfter = change.after.data();
 
-    // --- TETİKLEME KOŞULLARI (YENİ YAPIYA GÖRE GÜNCELLENDİ) ---
+    // Status değişimini kontrol et
     const isStatusChangedToCompleted = taskDataBefore.status !== "completed" && taskDataAfter.status === "completed";
+
+    // EPATS dokümanını kontrol et
     const epatsDoc = taskDataAfter.details?.epatsDocument || null;
     const hasEpatsData = !!epatsDoc;
-  
+
+    // Önceki durum "completed" değil mi? (herhangi başka bir statü)
+    const wasPreviouslyNotCompleted = taskDataBefore.status !== "completed";
+
     console.log(`Durum 'completed' olarak mı değişti?: ${isStatusChangedToCompleted}`);
     console.log(`EPATS dokümanı var mı?: ${hasEpatsData}`);
-    console.log(`Önceki durum 'open' mıydı?: ${wasOpenBefore}`);
+    console.log(`Önceki durum 'completed' değil miydi?: ${wasPreviouslyNotCompleted}`);
 
-    if (isStatusChangedToCompleted && hasEpatsData) {
+    if (isStatusChangedToCompleted && hasEpatsData && wasPreviouslyNotCompleted) {
       console.log("--> KOŞULLAR SAĞLANDI. Bildirim oluşturma işlemi başlıyor.");
 
       try {
@@ -539,22 +544,22 @@ exports.createUniversalNotificationOnTaskComplete = functions.firestore
         // 2. Mail Şablonunu ve Müvekkil Bilgilerini Al
         const templateSnapshot = await db.collection("mail_templates").doc(rule.templateId).get();
         if (!templateSnapshot.exists) {
-            console.error(`Hata: ${rule.templateId} ID'li mail şablonu bulunamadı!`);
-            return null;
+          console.error(`Hata: ${rule.templateId} ID'li mail şablonu bulunamadı!`);
+          return null;
         }
         const template = templateSnapshot.data();
 
         const ipRecordSnapshot = await db.collection("ipRecords").doc(taskDataAfter.relatedIpRecordId).get();
         if (!ipRecordSnapshot.exists) {
-            console.error(`Hata: Görevle ilişkili IP kaydı (${taskDataAfter.relatedIpRecordId}) bulunamadı!`);
-            return null;
+          console.error(`Hata: Görevle ilişkili IP kaydı (${taskDataAfter.relatedIpRecordId}) bulunamadı!`);
+          return null;
         }
         const ipRecord = ipRecordSnapshot.data();
-        
+
         const primaryOwnerId = ipRecord.owners?.[0]?.id;
         if (!primaryOwnerId) {
-            console.error('IP kaydına atanmış birincil hak sahibi bulunamadı.');
-            return null;
+          console.error('IP kaydına atanmış birincil hak sahibi bulunamadı.');
+          return null;
         }
         const clientSnapshot = await db.collection("persons").doc(primaryOwnerId).get();
         const client = clientSnapshot.data();
@@ -563,9 +568,8 @@ exports.createUniversalNotificationOnTaskComplete = functions.firestore
         const parameters = {
           muvekkil_adi: client.name,
           is_basligi: taskDataAfter.title,
-          epats_evrak_no: epatsDoc.turkpatentEvrakNo, // Veriyi epatsDocument'ten al
-          basvuru_no: ipRecord.applicationNumber,
-          // Diğer parametreler...
+          epats_evrak_no: epatsDoc.turkpatentEvrakNo || "",
+          basvuru_no: ipRecord.applicationNumber || "",
         };
 
         let subject = template.subject.replace(/{{(.*?)}}/g, (match, p1) => parameters[p1.trim()] || match);
