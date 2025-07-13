@@ -926,58 +926,71 @@
             }
 
             // TaskDetailModule sınıfının içine herhangi bir yere ekleyebilirsiniz
-            async handleEpatsDocumentUpload(file) {
-                if (!file) return;
+        async handleEpatsDocumentUpload(file) {
+            if (!file) return;
 
-                const taskStatusSelect = document.getElementById('taskStatus');
-                
-                // YENİ: Durumu değiştirmeden önce mevcut durumu sakla
-                if (taskStatusSelect) {
-                    this.statusBeforeEpatsUpload = taskStatusSelect.value;
-                }
-
-                const dataUrl = await readFileAsDataURL(file);
-                this.uploadedEpatsFile = {
-                    id: generateUUID(),
-                    name: file.name,
-                    size: file.size,
-                    type: file.type,
-                    content: dataUrl,
-                    uploadedAt: new Date().toISOString()
-                };
-                this.renderEpatsDocument();
-
-                // Eğer bir dosya yüklendiyse, durumu "Tamamlandı" olarak ayarla
-                if (taskStatusSelect) {
-                    taskStatusSelect.value = 'completed';
-                }
+            // Eğer statusBeforeEpatsUpload'u kaydetmek istiyorsanız aynen bırakın
+            const taskStatusSelect = document.getElementById('taskStatus');
+            if (taskStatusSelect) {
+                this.statusBeforeEpatsUpload = taskStatusSelect.value;
             }
+
+            // Benzersiz bir dosya yolu oluştur
+            const uniqueFileId = generateUUID();
+            const storagePath = `epats_documents/${uniqueFileId}_${file.name}`;
+            const storageRef = ref(firebaseServices.storage, storagePath);
+
+            // Storage'a yükle
+            await uploadBytes(storageRef, file);
+
+            // Download URL al
+            const downloadURL = await getDownloadURL(storageRef);
+
+            // Firestore'a kaydedilecek metadata
+            this.uploadedEpatsFile = {
+                id: uniqueFileId,
+                name: file.name,
+                size: file.size,
+                type: file.type,
+                storagePath: storagePath,
+                downloadURL: downloadURL,
+                uploadedAt: new Date().toISOString()
+            };
+
+            this.renderEpatsDocument();
+
+            // Durumu "Tamamlandı" olarak güncelle
+            if (taskStatusSelect) {
+                taskStatusSelect.value = 'completed';
+            }
+        }
 
             renderEpatsDocument() {
-                const container = document.getElementById('epatsFileListContainer');
-                container.innerHTML = '';
+            const container = document.getElementById('epatsFileListContainer');
+            container.innerHTML = '';
 
-                if (this.uploadedEpatsFile) {
-                    const file = this.uploadedEpatsFile;
-                    const fileItem = document.createElement('div');
-                    fileItem.className = 'file-item';
-                    fileItem.innerHTML = `
-                        <div class="file-info">
-                            <span class="file-icon">📄</span>
-                            <div>
-                                <div class="file-name"><a href="${file.content}" download="${file.name}">${file.name}</a></div>
-                                <div class="file-size">${formatFileSize(file.size)}</div>
+            if (this.uploadedEpatsFile) {
+                const file = this.uploadedEpatsFile;
+                const fileItem = document.createElement('div');
+                fileItem.className = 'file-item';
+                fileItem.innerHTML = `
+                    <div class="file-info">
+                        <span class="file-icon">📄</span>
+                        <div>
+                            <div class="file-name">
+                                <a href="${file.downloadURL}" target="_blank">${file.name}</a>
                             </div>
+                            <div class="file-size">${formatFileSize(file.size)}</div>
                         </div>
-                        <div class="file-actions">
-                            <button class="btn-remove-file" id="removeEpatsFileBtn">&times;</button>
-                        </div>
-                    `;
-                    container.appendChild(fileItem);
-                    document.getElementById('removeEpatsFileBtn').addEventListener('click', () => this.removeEpatsDocument());
-                }
+                    </div>
+                    <div class="file-actions">
+                        <button class="btn-remove-file" id="removeEpatsFileBtn">&times;</button>
+                    </div>
+                `;
+                container.appendChild(fileItem);
+                document.getElementById('removeEpatsFileBtn').addEventListener('click', () => this.removeEpatsDocument());
             }
-
+        }
             removeEpatsDocument() {
                 this.uploadedEpatsFile = null;
                 this.renderEpatsDocument();
