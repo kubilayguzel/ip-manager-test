@@ -499,83 +499,89 @@ exports.createMailNotificationOnDocumentStatusChange = functions.firestore
 
 // ... (diğer kodlarınız)
 
+// functions/index.js içindeki fonksiyonun güncellenmiş hali
+
 exports.createUniversalNotificationOnTaskComplete = functions.firestore
   .document("tasks/{taskId}")
   .onUpdate(async (change, context) => {
     const taskId = context.params.taskId;
-    console.log(`--- FONKSİYON TETİKLENDİ: tasks/${taskId} ---`); // 1. Log: Fonksiyonun başladığını anla
+    console.log(`--- FONKSİYON TETİKLENDİ: tasks/${taskId} ---`);
 
     const taskDataBefore = change.before.data();
     const taskDataAfter = change.after.data();
 
-    // 2. Log: Koşul kontrolü için verileri yazdır
-    console.log(`Önceki Durum: ${taskDataBefore.status}, Yeni Durum: ${taskDataAfter.status}`);
-    console.log(`EPATS Evrak No: ${taskDataAfter.epatsEvrakNo || 'YOK'}`);
-    console.log(`Doküman Sayısı: ${taskDataAfter.documents ? taskDataAfter.documents.length : 0}`);
-
-    // --- TETİKLEME KOŞULLARI KONTROLÜ ---
+    // --- TETİKLEME KOŞULLARI (YENİ YAPIYA GÖRE GÜNCELLENDİ) ---
     const isStatusChangedToCompleted = taskDataBefore.status !== "completed" && taskDataAfter.status === "completed";
-    const hasEpatsNumber = !!taskDataAfter.epatsEvrakNo;
-    const hasDocuments = taskDataAfter.documents && taskDataAfter.documents.length > 0;
+    
+    // Doğrudan epatsDocument objesini kontrol et
+    const epatsDoc = taskDataAfter.epatsDocument; 
+
+    const hasEpatsData = epatsDoc && epatsDoc.turkpatentEvrakNo && epatsDoc.downloadURL;
 
     console.log(`Durum 'completed' olarak mı değişti?: ${isStatusChangedToCompleted}`);
-    console.log(`EPATS No var mı?: ${hasEpatsNumber}`);
-    console.log(`Doküman var mı?: ${hasDocuments}`);
+    console.log(`Gerekli EPATS verisi var mı?: ${!!hasEpatsData}`);
 
-    if (isStatusChangedToCompleted && hasEpatsNumber && hasDocuments) {
+    if (isStatusChangedToCompleted && hasEpatsData) {
       console.log("--> KOŞULLAR SAĞLANDI. Bildirim oluşturma işlemi başlıyor.");
 
       try {
-        // 3. Log: Kural sorgusunu yazdır
-        console.log("Kural aranıyor: sourceType == 'task_completion_epats'");
+        // 1. KURALI BUL
         const rulesSnapshot = await db.collection("template_rules")
           .where("sourceType", "==", "task_completion_epats")
           .limit(1)
           .get();
 
         if (rulesSnapshot.empty) {
-          console.error("HATA: Koşul sağlandı ama 'task_completion_epats' için bir kural bulunamadı!");
+          console.error("HATA: 'task_completion_epats' için bir kural bulunamadı!");
           return null;
         }
-
         const rule = rulesSnapshot.docs[0].data();
-        console.log(`Kural bulundu. Kullanılacak Şablon ID: ${rule.templateId}`);
+        console.log(`Kural bulundu. Şablon ID: ${rule.templateId}`);
 
-        // ... (Bundan sonraki kod aynı kalabilir, hata olursa buraya kadar olan loglar bize yol gösterecektir)
+        // 2. Mail Şablonunu ve Müvekkil Bilgilerini Al
         const templateSnapshot = await db.collection("mail_templates").doc(rule.templateId).get();
         if (!templateSnapshot.exists) {
-            console.error(`HATA: ${rule.templateId} ID'li mail şablonu bulunamadı!`);
+            console.error(`Hata: ${rule.templateId} ID'li mail şablonu bulunamadı!`);
             return null;
         }
+        const template = templateSnapshot.data();
 
         const ipRecordSnapshot = await db.collection("ipRecords").doc(taskDataAfter.relatedIpRecordId).get();
-         if (!ipRecordSnapshot.exists) {
-            console.error(`HATA: Görevle ilişkili IP kaydı (${taskDataAfter.relatedIpRecordId}) bulunamadı!`);
+        if (!ipRecordSnapshot.exists) {
+            console.error(`Hata: Görevle ilişkili IP kaydı (${taskDataAfter.relatedIpRecordId}) bulunamadı!`);
             return null;
         }
-
         const ipRecord = ipRecordSnapshot.data();
+        
         const primaryOwnerId = ipRecord.owners?.[0]?.id;
         if (!primaryOwnerId) {
-            console.error('HATA: IP kaydına atanmış birincil hak sahibi bulunamadı.');
+            console.error('IP kaydına atanmış birincil hak sahibi bulunamadı.');
             return null;
         }
-
         const clientSnapshot = await db.collection("persons").doc(primaryOwnerId).get();
-        if (!clientSnapshot.exists) {
-            console.error(`HATA: ${primaryOwnerId} ID'li müvekkil (kişi) bulunamadı!`);
-            return null;
-        }
+        const client = clientSnapshot.data();
 
-        // E-posta oluşturma ve gönderme
-        // ... (Mevcut kodunuzdaki gibi)
-        console.log("Tüm veriler başarıyla toplandı, e-posta bildirimi oluşturuluyor...");
-        // E-posta oluşturma mantığınız...
+        // 3. PARAMETRELERİ DOLDUR
+        const parameters = {
+          muvekkil_adi: client.name,
+          is_basligi: taskDataAfter.title,
+          epats_evrak_no: epatsDoc.turkpatentEvrakNo, // Veriyi epatsDocument'ten al
+          basvuru_no: ipRecord.applicationNumber,
+          // Diğer parametreler...
+        };
+
+        let subject = template.subject.replace(/{{(.*?)}}/g, (match, p1) => parameters[p1.trim()] || match);
+        let body = template.body.replace(/{{(.*?)}}/g, (match, p1) => parameters[p1.trim()] || match);
+
+        // 4. MAIL BİLDİRİMİNİ OLUŞTUR
         await db.collection("mail_notifications").add({
-            // ...notificationData...
-            status: "pending",
-            createdAt: admin.firestore.FieldValue.serverTimestamp(),
-            // ...diğer alanlar
+          recipientEmail: client.email,
+          clientId: primaryOwnerId,
+          subject: subject,
+          body: body,
+          status: "pending",
+          sourceTaskId: taskId,
+          createdAt: admin.firestore.FieldValue.serverTimestamp(),
         });
 
         console.log("--> BAŞARILI: Bildirim 'mail_notifications' koleksiyonuna eklendi.");
