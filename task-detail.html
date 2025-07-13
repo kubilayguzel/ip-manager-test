@@ -1170,131 +1170,128 @@ async recalculateOfficialAndOperationalDueDates() {
     console.log('DEBUG: Tarih hesaplaması tamamlandı - Kaynak:', sourceOfDuePeriod);
     showNotification(`Tebliğ tarihi güncellendi ve resmi/operasyonel son tarihler yeniden hesaplandı. (${duePeriod} ay duePeriod kullanıldı)`, 'success');
 }
- // task-detail.html dosyanızdaki mevcut handleTaskUpdate fonksiyonunu bununla DEĞİŞTİRİN.
+        async handleTaskUpdate(e) {
+            e.preventDefault();
 
-async handleTaskUpdate(e) {
-    e.preventDefault();
-    console.log("Değişiklikleri Kaydet fonksiyonu başlatıldı.");
-
-    // --- FORM KONTROLLERİ ---
-    // EPATS dosyası varken evrak no'nun zorunlu olmasını kontrol et.
-    if (this.uploadedEpatsFile && !document.getElementById('turkpatentEvrakNo').value.trim()) {
-        showNotification('EPATS Evrakı yüklendiğinde TURKPATENT Evrak No alanı zorunludur.', 'error');
-        return;
-    }
-
-    // --- VERİ TOPLAMA ---
-    const form = document.getElementById('taskDetailForm');
-    
-    // Güncellenecek veriyi oluşturmaya başla.
-    const updatedTaskData = {
-        title: form.taskTitle.value,
-        description: form.taskDescription.value,
-        priority: form.taskPriority.value,
-        status: form.taskStatus.value,
-        assignedTo_uid: form.assignedTo.value,
-        assignedTo_email: this.allUsers.find(u => u.id === form.assignedTo.value)?.email || '',
-        deliveryDate: form.deliveryDate.value || null,
-        updatedAt: new Date().toISOString(),
-        details: { ...this.currentTask.details } // Mevcut detayları koruyarak başla.
-    };
-
-    // --- KRİTİK VERİLERİ KORUMA ve GÜNCELLEME ---
-
-    // 1. İLGİLİ IP KAYDINI İŞLE
-    // Eğer kullanıcı sayfada YENİ bir IP kaydı seçtiyse, bu yeni veriyi kullan.
-    if (this.selectedRelatedIpRecord) {
-        updatedTaskData.relatedIpRecordId = this.selectedRelatedIpRecord.id;
-        updatedTaskData.relatedIpRecordTitle = this.selectedRelatedIpRecord.title;
-    } 
-    // Eğer YENİ bir seçim yapılmamışsa, işin veritabanından gelen MEVCUT bilgisini KORU.
-    else {
-        updatedTaskData.relatedIpRecordId = this.currentTask.relatedIpRecordId || null;
-        updatedTaskData.relatedIpRecordTitle = this.currentTask.relatedIpRecordTitle || null;
-    }
-
-    // 2. EPATS DOKÜMANINI İŞLE
-    // `this.uploadedEpatsFile`, arayüzdeki dosyanın son durumunu tutar.
-    // (eski, yeni veya silinmiş/yok).
-    if (this.uploadedEpatsFile) {
-        updatedTaskData.details.epatsDocument = {
-            ...this.uploadedEpatsFile,
-            turkpatentEvrakNo: document.getElementById('turkpatentEvrakNo').value
-        };
-        // Eğer dosya yeni yüklendiyse, önceki durumu da kaydet.
-        if (this.statusBeforeEpatsUpload) {
-            updatedTaskData.details.statusBeforeEpatsUpload = this.statusBeforeEpatsUpload;
-        }
-    } else {
-        // Eğer arayüzde dosya yoksa (hiç eklenmedi veya kullanıcı tarafından silindi), null olarak ayarla.
-        updatedTaskData.details.epatsDocument = null;
-        updatedTaskData.details.statusBeforeEpatsUpload = null; // Önceki durumu da temizle.
-    }
-
-    // 3. İLGİLİ TARAFI İŞLE
-    if (this.selectedRelatedParty) {
-        updatedTaskData.details.relatedParty = { id: this.selectedRelatedParty.id, name: this.selectedRelatedParty.name };
-    } else {
-        updatedTaskData.details.relatedParty = this.currentTask.details?.relatedParty || null;
-    }
-
-    // --- TARİH HESAPLAMA KISMI ---
-    // Bu bölüm sizin orijinal kodunuzdan alındı ve doğru çalışıyor.
-    const currentTaskDeliveryDateFormatted = this.currentTask.deliveryDate ? this.formatDateToYYYYMMDD(this.currentTask.deliveryDate) : null;
-    const isDeliveryDateChanged = form.deliveryDate.value !== currentTaskDeliveryDateFormatted;
-    const isOfficialDueDatePreviouslyEmpty = !this.currentTask.officialDueDate && form.deliveryDate.value;
-
-    if ((isDeliveryDateChanged || isOfficialDueDatePreviouslyEmpty) && this.calculatedOfficialDueDate) {
-        let confirmation = true;
-        const existingOfficialDueDateFormatted = this.currentTask.officialDueDate ? this.formatDateToYYYYMMDD(this.currentTask.officialDueDate) : null;
-        const existingDueDateFormatted = this.currentTask.dueDate ? this.formatDateToYYYYMMDD(this.currentTask.dueDate) : null;
-
-        if (this.calculatedOfficialDueDateDetails && (existingOfficialDueDateFormatted !== this.calculatedOfficialDueDateDetails.finalOfficialDueDate || existingDueDateFormatted !== this.calculatedOfficialDueDateDetails.finalOperationalDueDate)) {
-            confirmation = confirm('Tebliğ tarihini değiştirdiniz veya yeni girdiniz. Resmi son tarih ve Operasyonel son tarih yeniden hesaplanacak. Onaylıyor musunuz?\n\n' +
-                `Yeni Resmi Son Tarih: ${this.calculatedOfficialDueDateDetails.finalOfficialDueDate}\n` +
-                `Yeni Operasyonel Son Tarih: ${this.calculatedOfficialDueDateDetails.finalOperationalDueDate}`);
-        } else if (isOfficialDueDatePreviouslyEmpty) {
-            confirmation = confirm('Tebliğ tarihi girildi. Resmi son tarih ve Operasyonel son tarih hesaplanacak. Onaylıyor musunuz?\n\n' +
-                `Hesaplanan Resmi Son Tarih: ${this.calculatedOfficialDueDateDetails.finalOfficialDueDate}\n` +
-                `Hesaplanan Operasyonel Son Tarih: ${this.calculatedOfficialDueDateDetails.finalOperationalDueDate}`);
-        }
-
-        if (confirmation) {
-            updatedTaskData.officialDueDate = this.calculatedOfficialDueDate;
-            updatedTaskData.officialDueDateDetails = this.calculatedOfficialDueDateDetails;
-            if (!form.taskDueDate.value || (existingDueDateFormatted !== this.calculatedOfficialDueDateDetails.finalOperationalDueDate && isDeliveryDateChanged)) {
-                updatedTaskData.dueDate = this.formatDateToYYYYMMDD(this.calculatedOperationalDueDate);
-            } else {
-                updatedTaskData.dueDate = form.taskDueDate.value;
+            if (this.uploadedEpatsFile && !document.getElementById('turkpatentEvrakNo').value.trim()) {
+                showNotification('EPATS Evrakı yüklendiğinde TURKPATENT Evrak No alanı zorunludur.', 'error');
+                return;
             }
-        } else {
-            showNotification('Resmi ve Operasyonel son tarih güncellemeleri iptal edildi.', 'info');
-            updatedTaskData.officialDueDate = this.currentTask.officialDueDate || null;
-            updatedTaskData.officialDueDateDetails = this.currentTask.officialDueDateDetails || null;
-            updatedTaskData.dueDate = this.currentTask.dueDate || null;
-        }
-    } else {
-        updatedTaskData.dueDate = form.taskDueDate.value || this.currentTask.dueDate || null;
-        updatedTaskData.officialDueDate = this.currentTask.officialDueDate || null;
-        updatedTaskData.officialDueDateDetails = this.currentTask.officialDueDateDetails || null;
-    }
+            
+            const form = document.getElementById('taskDetailForm');
+            const updatedTaskData = {
+                title: form.taskTitle.value,
+                description: form.taskDescription.value,
+                priority: form.taskPriority.value,
+                assignedTo_uid: form.assignedTo.value,
+                assignedTo_email: this.allUsers.find(u => u.id === form.assignedTo.value)?.email || '',
+                deliveryDate: form.deliveryDate.value || null,
+                updatedAt: new Date().toISOString(),
+                details: { ...this.currentTask.details } // Mevcut detaylarla başla
+            };
 
-    // --- VERİYİ KAYDETME ---
-    console.log("Kaydedilmek üzere Firestore'a gönderilen son veri:", updatedTaskData);
+            // Durumu formdan al
+            updatedTaskData.status = form.taskStatus.value;
 
-    try {
-        const result = await taskService.updateTask(this.taskId, updatedTaskData);
-        if (result.success) {
-            showNotification('İş başarıyla güncellendi!', 'success');
-            await this.loadTaskData(); // Sayfadaki veriyi en güncel haliyle yeniden yükle
-        } else {
-            throw new Error(result.error);
+            // Eğer EPATS dosyası yeni yüklendiyse, önceki durumu veritabanına kaydet
+            if (this.uploadedEpatsFile && this.statusBeforeEpatsUpload) {
+                updatedTaskData.details.statusBeforeEpatsUpload = this.statusBeforeEpatsUpload;
+            }
+            // Eğer EPATS dosyası kaldırıldıysa, veritabanındaki önceki durumu temizle
+            else if (!this.uploadedEpatsFile && this.currentTask.details?.epatsDocument) {
+                updatedTaskData.details.statusBeforeEpatsUpload = null; 
+            }
+
+            const currentTaskDeliveryDateFormatted = this.currentTask.deliveryDate ? 
+                this.formatDateToYYYYMMDD(this.currentTask.deliveryDate) : null;
+
+            const isDeliveryDateChanged = form.deliveryDate.value !== currentTaskDeliveryDateFormatted;
+            const isOfficialDueDatePreviouslyEmpty = !this.currentTask.officialDueDate && form.deliveryDate.value;
+
+            if ((isDeliveryDateChanged || isOfficialDueDatePreviouslyEmpty) && this.calculatedOfficialDueDate) {
+                let confirmation = true;
+                const existingOfficialDueDateFormatted = this.currentTask.officialDueDate ? 
+                    this.formatDateToYYYYMMDD(this.currentTask.officialDueDate) : null;
+                const existingDueDateFormatted = this.currentTask.dueDate ? 
+                    this.formatDateToYYYYMMDD(this.currentTask.dueDate) : null; 
+
+                if (this.calculatedOfficialDueDateDetails && (existingOfficialDueDateFormatted !== this.calculatedOfficialDueDateDetails.finalOfficialDueDate || 
+                    existingDueDateFormatted !== this.calculatedOfficialDueDateDetails.finalOperationalDueDate)) {
+                    
+                    confirmation = confirm('Tebliğ tarihini değiştirdiniz veya yeni girdiniz. Resmi son tarih ve Operasyonel son tarih yeniden hesaplanacak. Onaylıyor musunuz?\n\n' +
+                                        `Yeni Resmi Son Tarih: ${this.calculatedOfficialDueDateDetails.finalOfficialDueDate}\n` +
+                                        `Yeni Operasyonel Son Tarih: ${this.calculatedOfficialDueDateDetails.finalOperationalDueDate}`);
+                } else if (isOfficialDueDatePreviouslyEmpty) {
+                    confirmation = confirm('Tebliğ tarihi girildi. Resmi son tarih ve Operasyonel son tarih hesaplanacak. Onaylıyor musunuz?\n\n' +
+                                        `Hesaplanan Resmi Son Tarih: ${this.calculatedOfficialDueDateDetails.finalOfficialDueDate}\n` +
+                                        `Hesaplanan Operasyonel Son Tarih: ${this.calculatedOfficialDueDateDetails.finalOperationalDueDate}`);
+                }
+
+                if (confirmation) {
+                    updatedTaskData.officialDueDate = this.calculatedOfficialDueDate;
+                    updatedTaskData.officialDueDateDetails = this.calculatedOfficialDueDateDetails;
+                    if (!form.taskDueDate.value || (existingDueDateFormatted !== this.calculatedOfficialDueDateDetails.finalOperationalDueDate && isDeliveryDateChanged)) {
+                        updatedTaskData.dueDate = this.formatDateToYYYYMMDD(this.calculatedOperationalDueDate);
+                    } else {
+                        updatedTaskData.dueDate = form.taskDueDate.value;
+                    }
+                } else {
+                    showNotification('Resmi ve Operasyonel son tarih güncellemeleri iptal edildi.', 'info');
+                    if(this.currentTask.officialDueDate) updatedTaskData.officialDueDate = this.currentTask.officialDueDate;
+                    if(this.currentTask.officialDueDateDetails) updatedTaskData.officialDueDateDetails = this.currentTask.officialDueDateDetails;
+                    if(this.currentTask.dueDate) updatedTaskData.dueDate = this.currentTask.dueDate; 
+                    else updatedTaskData.dueDate = null; 
+                }
+            } else {
+                if(this.currentTask.officialDueDate) updatedTaskData.officialDueDate = this.currentTask.officialDueDate;
+                if(this.currentTask.officialDueDateDetails) updatedTaskData.officialDueDateDetails = this.currentTask.officialDueDateDetails;
+                if(form.taskDueDate.value) updatedTaskData.dueDate = form.taskDueDate.value; 
+                else if(this.currentTask.dueDate) updatedTaskData.dueDate = this.currentTask.dueDate; 
+                else updatedTaskData.dueDate = null;
+            }
+
+            if (this.selectedRelatedIpRecord) {
+                updatedTaskData.relatedIpRecordId = this.selectedRelatedIpRecord.id;
+                updatedTaskData.relatedIpRecordTitle = this.selectedRelatedIpRecord.title;
+            } 
+            // Eğer yeni bir seçim yapılmamışsa, işin mevcut (daha önceden kaydedilmiş) IP kaydı bilgisini koru.
+            else if (this.currentTask && this.currentTask.relatedIpRecordId) {
+                updatedTaskData.relatedIpRecordId = this.currentTask.relatedIpRecordId;
+                updatedTaskData.relatedIpRecordTitle = this.currentTask.relatedIpRecordTitle;
+            } 
+            // Yukarıdaki iki durum da geçerli değilse (yani işin hiç IP kaydı yoksa), null olarak ayarla.
+            else {
+                updatedTaskData.relatedIpRecordId = null;
+                updatedTaskData.relatedIpRecordTitle = null;
+            }
+
+            if (this.selectedRelatedParty) {
+                updatedTaskData.details.relatedParty = { id: this.selectedRelatedParty.id, name: this.selectedRelatedParty.name };
+            } else {
+                updatedTaskData.details.relatedParty = null;
+            }
+
+            if (this.uploadedEpatsFile) {
+                updatedTaskData.details.epatsDocument = {
+                    ...this.uploadedEpatsFile,
+                    turkpatentEvrakNo: document.getElementById('turkpatentEvrakNo').value
+                };
+            } else {
+                updatedTaskData.details.epatsDocument = null;
+            }
+            
+            try {
+                const result = await taskService.updateTask(this.taskId, updatedTaskData);
+                if (result.success) {
+                    showNotification('İş başarıyla güncellendi!', 'success');
+                    await this.loadTaskData();
+                } else {
+                    throw new Error(result.error);
+                }
+            } catch (error) {
+                showNotification('İş güncellenirken hata oluştu: ' + error.message, 'error');
+            }
         }
-    } catch (error) {
-        showNotification('İş güncellenirken hata oluştu: ' + error.message, 'error');
-        console.error('Güncelleme hatası:', error);
-    }
-}
 
             searchIpRecords(query) {
                 const searchResultsContainer = document.getElementById('relatedIpRecordSearchResults');
