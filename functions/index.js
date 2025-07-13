@@ -598,3 +598,67 @@ exports.createUniversalNotificationOnTaskComplete = functions.firestore
       return null;
     }
   });
+  // Nodemailer eklentisi
+const nodemailer = require("nodemailer");
+
+// 🌟 SMTP transporter
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: "kubilayguzel@evrekapatent.com",
+    pass: "rqvl tpbm vkmu lmxi" // Google'dan aldığın uygulama şifresini buraya koy
+  }
+});
+
+/**
+ * mail_notifications koleksiyonundaki bir bildirimi SMTP üzerinden gönderir.
+ * Ön yüzden çağrılır.
+ */
+exports.sendEmailNotification = functions.https.onCall(async (data, context) => {
+  const { notificationId } = data;
+
+  if (!notificationId) {
+    throw new functions.https.HttpsError("invalid-argument", "notificationId parametresi zorunludur.");
+  }
+
+  // Firestore'dan bildirimi al
+  const notificationRef = db.collection("mail_notifications").doc(notificationId);
+  const notificationDoc = await notificationRef.get();
+
+  if (!notificationDoc.exists) {
+    throw new functions.https.HttpsError("not-found", "Bildirim bulunamadı.");
+  }
+
+  const notificationData = notificationDoc.data();
+
+  const mailOptions = {
+    from: `"IP Manager" <kubilayguzel@evrekapatent.com>`,
+    to: notificationData.recipientEmail,
+    subject: notificationData.subject,
+    html: notificationData.body
+  };
+
+  try {
+    console.log("SMTP üzerinden gönderim başlıyor...");
+    await transporter.sendMail(mailOptions);
+
+    console.log(`E-posta başarıyla gönderildi: ${notificationData.recipientEmail}`);
+    await notificationRef.update({
+      status: "sent",
+      sentAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp()
+    });
+
+    return { success: true, message: "E-posta başarıyla gönderildi." };
+  } catch (error) {
+    console.error("SMTP gönderim hatası:", error);
+    await notificationRef.update({
+      status: "failed",
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      errorInfo: error.message
+    });
+
+    throw new functions.https.HttpsError("internal", "E-posta gönderilirken bir hata oluştu.", error.message);
+  }
+});
+
