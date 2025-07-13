@@ -399,6 +399,7 @@ exports.sendEmailNotification = onCall(async (request) => {
     throw new HttpsError("internal", "E-posta gönderilirken bir hata oluştu.", error.message);
   }
 });
+
 exports.createMailNotificationOnDocumentStatusChange = functions.firestore
   .document("unindexed_pdfs/{docId}")
   .onUpdate(async (change, context) => {
@@ -488,4 +489,87 @@ exports.createMailNotificationOnDocumentStatusChange = functions.firestore
       console.log("Status değişimi indekslenme değil, işlem atlandı.");
       return null;
     }
+   
+  });
+/**
+ * Bir görev 'completed' olarak güncellendiğinde, EPATS Evrak No ve doküman varsa
+ * tüm iş tipleri için geçerli olan genel bir müvekkil bildirimi oluşturur.
+ */
+exports.createUniversalNotificationOnTaskComplete = functions.firestore
+  .document("tasks/{taskId}")
+  .onUpdate(async (change, context) => {
+    const taskDataBefore = change.before.data();
+    const taskDataAfter = change.after.data();
+    const taskId = context.params.taskId;
+
+    // --- TETİKLEME KOŞULLARI ---
+    if (
+      taskDataBefore.status !== "completed" &&
+      taskDataAfter.status === "completed" &&
+      taskDataAfter.epatsEvrakNo &&
+      taskDataAfter.documents &&
+      taskDataAfter.documents.length > 0
+    ) {
+      console.log(`Genel tamamlama koşulları sağlandı: ${taskId}. Bildirim oluşturuluyor...`);
+
+      try {
+        // 1. ADIM: Genel EPATS tamamlama kuralını bul. Artık iş tipine bakmıyoruz.
+        const rulesSnapshot = await db.collection("template_rules")
+          .where("sourceType", "==", "task_completion_epats")
+          .limit(1)
+          .get();
+
+        if (rulesSnapshot.empty) {
+          console.log("Sistemde 'task_completion_epats' için genel bir kural bulunamadı.");
+          return null;
+        }
+
+        const rule = rulesSnapshot.docs[0].data();
+        console.log(`Genel kural bulundu. Şablon ID: ${rule.templateId}`);
+
+        // ... (Geri kalan kodun tamamı bir önceki cevaptaki ile aynı) ...
+        // 2. ADIM: Gerekli bilgileri al (şablon, müvekkil vb.)
+        // 3. ADIM: E-posta içeriğini doldur
+        // 4. ADIM: 'mail_notifications' koleksiyonuna kaydı ekle
+
+        const templateSnapshot = await db.collection("mail_templates").doc(rule.templateId).get();
+        // ... (Diğer tüm veri çekme ve e-posta oluşturma mantığı değişmeden kalır)
+
+        // Örnek olarak kalan adımları hızlıca ekliyorum:
+        const ipRecordSnapshot = await db.collection("ipRecords").doc(taskDataAfter.relatedIpRecordId).get();
+        const clientSnapshot = await db.collection("persons").doc(ipRecordSnapshot.data().owners[0].id).get();
+
+        const template = templateSnapshot.data();
+        const client = clientSnapshot.data();
+        const ipRecord = ipRecordSnapshot.data();
+
+        const parameters = {
+          muvekkil_adi: client.name,
+          is_basligi: taskDataAfter.title,
+          epats_evrak_no: taskDataAfter.epatsEvrakNo,
+          basvuru_no: ipRecord.applicationNumber,
+        };
+
+        let subject = template.subject.replace(/{{(.*?)}}/g, (match, p1) => parameters[p1.trim()] || match);
+        let body = template.body.replace(/{{(.*?)}}/g, (match, p1) => parameters[p1.trim()] || match);
+
+        await db.collection("mail_notifications").add({
+          recipientEmail: client.email,
+          clientId: clientSnapshot.id,
+          subject: subject,
+          body: body,
+          status: "pending",
+          sourceTaskId: taskId,
+          createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+
+        console.log("Genel EPATS bildirim maili başarıyla oluşturuldu.");
+        return null;
+
+      } catch (error) {
+        console.error("Genel mail bildirimi oluşturulurken hata oluştu:", error);
+        return null;
+      }
+    }
+    return null;
   });
