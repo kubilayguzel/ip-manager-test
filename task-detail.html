@@ -938,7 +938,7 @@
             // Benzersiz bir dosya yolu oluştur
             const uniqueFileId = generateUUID();
             const storagePath = `epats_documents/${uniqueFileId}_${file.name}`;
-            const storageRef = ref(firebaseServices.storage, storagePath);
+            const storageRef = firebaseServices.storageRef(firebaseServices.storage, storagePath);
 
             // Storage'a yükle
             await uploadBytes(storageRef, file);
