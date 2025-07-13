@@ -1253,7 +1253,14 @@ async recalculateOfficialAndOperationalDueDates() {
             if (this.selectedRelatedIpRecord) {
                 updatedTaskData.relatedIpRecordId = this.selectedRelatedIpRecord.id;
                 updatedTaskData.relatedIpRecordTitle = this.selectedRelatedIpRecord.title;
-            } else {
+            } 
+            // Eğer yeni bir seçim yapılmamışsa, işin mevcut (daha önceden kaydedilmiş) IP kaydı bilgisini koru.
+            else if (this.currentTask && this.currentTask.relatedIpRecordId) {
+                updatedTaskData.relatedIpRecordId = this.currentTask.relatedIpRecordId;
+                updatedTaskData.relatedIpRecordTitle = this.currentTask.relatedIpRecordTitle;
+            } 
+            // Yukarıdaki iki durum da geçerli değilse (yani işin hiç IP kaydı yoksa), null olarak ayarla.
+            else {
                 updatedTaskData.relatedIpRecordId = null;
                 updatedTaskData.relatedIpRecordTitle = null;
             }
