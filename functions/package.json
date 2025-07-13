@@ -20,7 +20,8 @@
     "firebase-functions": "^4.3.1",
     "google-auth-library": "^10.1.0",
     "googleapis": "^150.0.1",
-    "node-fetch": "^2.6.7"
+    "node-fetch": "^2.6.7",
+    "nodemailer": "^7.0.5"
   },
   "devDependencies": {
     "firebase-functions-test": "^3.1.0"
