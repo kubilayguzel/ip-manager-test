@@ -121,6 +121,14 @@ body {
 .missing-info {
   background-color: #fff3cd;
 }
+.missing-field {
+  display: inline-block;
+  background-color: #fd7e14; /* Turuncu zemin */
+  color: #000;               /* Siyah yazı */
+  padding: 2px 8px;
+  border-radius: 8px;
+  font-size: 0.85em;
+}
 .loading { text-align: center; padding: 50px; }
 .no-records { text-align: center; padding: 50px; color: #666; }
 </style>
@@ -277,12 +285,12 @@ function startNotificationListener(user) {
       <td>
         ${notification.recipientEmail 
           ? notification.recipientEmail 
-          : '<span style="color:#dc3545;">E-posta Eksik</span>'}
+          : '<span class="missing-field">E-posta Eksik</span>'}
       </td>
       <td>
         ${notification.subject 
           ? notification.subject 
-          : '<span style="color:#dc3545;">Konu Eksik</span>'}
+          : '<span class="missing-field">Konu Eksik</span>'}
       </td>
         <td>${applicationNumber}</td>
         <td>${mainProcessType}</td>
