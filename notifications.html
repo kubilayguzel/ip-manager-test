@@ -138,13 +138,15 @@ body {
     <div class="table-container">
     <table class="tasks-table">
         <thead>
-            <tr>
-                <th>Durum</th>
-                <th>Müvekkil E-posta</th>
-                <th>Konu</th>
-                <th>Oluşturulma</th>
-                <th>İşlem</th>
-            </tr>
+          <tr>
+            <th>Durum</th>
+            <th>Müvekkil E-posta</th>
+            <th>Konu</th>
+            <th>Başvuru No</th>
+            <th>Ana İşlem Türü</th>
+            <th>Gönderim Tarihi</th>
+            <th>İşlem</th>
+          </tr>
         </thead>
         <tbody id="notifications-table-body"></tbody>
     </table>
@@ -224,13 +226,15 @@ function startNotificationListener(user) {
       const statusClass = notification.status === 'sent' ? 'status-sent' :
                           notification.status === 'failed' ? 'status-failed' : 'status-pending';
 
-      tr.innerHTML = `
-        <td><span class="status-badge ${statusClass}">${notification.status}</span></td>
-        <td>${notification.recipientEmail}</td>
-        <td>${notification.subject}</td>
-        <td>${notification.createdAt?.toDate().toLocaleString('tr-TR') || 'Bilinmiyor'}</td>
-        <td class="action-cell"></td>
-      `;
+    tr.innerHTML = `
+      <td><span class="status-badge ${statusClass}">${notification.status}</span></td>
+      <td>${notification.recipientEmail}</td>
+      <td>${notification.subject}</td>
+      <td>${notification.relatedIpRecordApplicationNumber || '-'}</td>
+      <td>${notification.mainProcessType || '-'}</td>
+      <td>${notification.sentAt ? notification.sentAt.toDate().toLocaleString('tr-TR') : '-'}</td>
+      <td class="action-cell"></td>
+    `;
 
       if (notification.status !== 'sent') {
         const editButton = document.createElement('button');
