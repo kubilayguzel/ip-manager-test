@@ -775,6 +775,21 @@ async handleIndexing() {
         existingTransactions.forEach(tx => {
             console.log(`--> TX id=${tx.id}, type=${tx.type}, hierarchy=${tx.transactionHierarchy}`);
         });
+            console.log("🟢 Mevcut işlemler detaylı listesi:");
+            existingTransactions.forEach(tx => {
+            const txType = this.allTransactionTypes.find(t => t.id === tx.type);
+            console.log({
+                id: tx.id,
+                type: tx.type,
+                transactionHierarchy: tx.transactionHierarchy,
+                txTypeName: txType?.name,
+                allowedChildTypes: txType?.allowedChildTypes
+            });
+            });
+            console.log("🔵 Seçilen alt işlem:", {
+            id: childTransactionType.id,
+            name: childTransactionType.name
+            });
 
         // Filtreleme işlemi forEach dışında olacak
         const suitableParents = existingTransactions.filter(parentTransaction => {
