@@ -434,12 +434,18 @@ exports.createMailNotificationOnDocumentStatusChange = functions.firestore
         }
 
         // Bildirimi oluştur
+        const missingFields = [];
+        if (!client || !client.email) missingFields.push('recipientEmail');
+        if (!after.clientId) missingFields.push('clientId');
+        if (!template) missingFields.push('template');
+
         const notificationData = {
           recipientEmail: client?.email || null,
           clientId: after.clientId || null,
           subject: subject,
           body: body,
           status: status, // "pending" veya "missing_info"
+          missingFields: missingFields, // EKLENDİ!
           sourceDocumentId: context.params.docId,
           createdAt: admin.firestore.FieldValue.serverTimestamp(),
           updatedAt: admin.firestore.FieldValue.serverTimestamp(),
