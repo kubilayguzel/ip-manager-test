@@ -228,23 +228,40 @@ function startNotificationListener(user) {
 
     if (notification.sourceTaskId) {
       try {
-        const taskDoc = await getDoc(doc(db, "tasks", notification.sourceTaskId));
+        console.log("🔍 Task getiriliyor:", notification.sourceTaskId);
+        const taskRef = doc(db, "tasks", notification.sourceTaskId);
+        const taskDoc = await getDoc(taskRef);
+
         if (taskDoc.exists()) {
           const taskData = taskDoc.data();
+          console.log("✅ Task bulundu:", taskData);
+
           mainProcessType = taskData.title || '-';
 
           if (taskData.relatedIpRecordId) {
-            const ipRecordDoc = await getDoc(doc(db, "ip_records", taskData.relatedIpRecordId));
+            console.log("🔍 relatedIpRecordId bulundu:", taskData.relatedIpRecordId);
+            const ipRecordRef = doc(db, "ip_records", taskData.relatedIpRecordId);
+            const ipRecordDoc = await getDoc(ipRecordRef);
+
             if (ipRecordDoc.exists()) {
               const ipRecordData = ipRecordDoc.data();
+              console.log("✅ IP record bulundu:", ipRecordData);
+
               applicationNumber = ipRecordData.applicationNumber || '-';
+            } else {
+              console.warn("⚠️ IP record bulunamadı:", taskData.relatedIpRecordId);
             }
+          } else {
+            console.warn("⚠️ relatedIpRecordId yok.");
           }
+        } else {
+          console.warn("⚠️ Task bulunamadı:", notification.sourceTaskId);
         }
       } catch (err) {
-        console.error('Task alınırken hata oluştu:', err);
+        console.error("Task alınırken hata oluştu:", err);
       }
     }
+
 
       const tr = document.createElement('tr');
       const statusClass = notification.status === 'sent' ? 'status-sent'
