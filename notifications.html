@@ -211,30 +211,48 @@ onAuthStateChanged(auth, (user) => {
 function startNotificationListener(user) {
   const q = query(collection(db, "mail_notifications"), orderBy("createdAt", "desc"));
 
-  onSnapshot(q, (snapshot) => {
+  onSnapshot(q, async (snapshot) => {
     loader.style.display = 'none';
     tableBody.innerHTML = '';
 
     if (snapshot.empty) {
-      tableBody.innerHTML = '<tr><td colspan="5" class="no-records">Gösterilecek bildirim bulunamadı.</td></tr>';
+      tableBody.innerHTML = '<tr><td colspan="7" class="no-records">Gösterilecek bildirim bulunamadı.</td></tr>';
       return;
     }
 
-    snapshot.forEach(doc => {
-      const notification = { id: doc.id, ...doc.data() };
+    for (const docSnapshot of snapshot.docs) {
+      const notification = { id: docSnapshot.id, ...docSnapshot.data() };
+
+      let applicationNumber = "-";
+      let mainProcessType = "-";
+
+      // Eğer ilişkili ipRecordId varsa Firestore'dan getir
+      if (notification.relatedIpRecordId) {
+        try {
+          const ipRecordDoc = await getDoc(doc(db, "ipRecords", notification.relatedIpRecordId));
+          if (ipRecordDoc.exists()) {
+            const ipRecordData = ipRecordDoc.data();
+            applicationNumber = ipRecordData.applicationNumber || "-";
+            mainProcessType = ipRecordData.mainProcessType || "-";
+          }
+        } catch (err) {
+          console.error("IP Record yüklenirken hata:", err);
+        }
+      }
+
       const tr = document.createElement('tr');
       const statusClass = notification.status === 'sent' ? 'status-sent' :
                           notification.status === 'failed' ? 'status-failed' : 'status-pending';
 
-    tr.innerHTML = `
-      <td><span class="status-badge ${statusClass}">${notification.status}</span></td>
-      <td>${notification.recipientEmail}</td>
-      <td>${notification.subject}</td>
-      <td>${notification.relatedIpRecordApplicationNumber || '-'}</td>
-      <td>${notification.mainProcessType || '-'}</td>
-      <td>${notification.sentAt ? notification.sentAt.toDate().toLocaleString('tr-TR') : '-'}</td>
-      <td class="action-cell"></td>
-    `;
+      tr.innerHTML = `
+        <td><span class="status-badge ${statusClass}">${notification.status}</span></td>
+        <td>${notification.recipientEmail}</td>
+        <td>${notification.subject}</td>
+        <td>${applicationNumber}</td>
+        <td>${mainProcessType}</td>
+        <td>${notification.sentAt ? notification.sentAt.toDate().toLocaleString('tr-TR') : '-'}</td>
+        <td class="action-cell"></td>
+      `;
 
       if (notification.status !== 'sent') {
         const editButton = document.createElement('button');
@@ -261,7 +279,6 @@ function startNotificationListener(user) {
               notificationId: notification.id,
               userEmail: user.email
             });
-
             alert("E-posta gönderim sırasına alındı!");
           } catch (err) {
             console.error(err);
@@ -271,9 +288,8 @@ function startNotificationListener(user) {
         tr.querySelector('.action-cell').appendChild(sendButton);
       }
 
-      // BU SATIRI DIŞARI ÇIKARMAN LAZIM!
       tableBody.appendChild(tr);
-    });
+    }
   }, (error) => {
     loader.style.display = 'none';
     errorDiv.textContent = 'Bildirimler yüklenirken bir hata oluştu.';
