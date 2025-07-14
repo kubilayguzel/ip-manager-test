@@ -208,106 +208,76 @@ onAuthStateChanged(auth, (user) => {
         loader.textContent = "Bu sayfayı görmek için giriş yapmalısınız.";
     }
 });
-function startNotificationListener(user) {
-  const q = query(collection(db, "mail_notifications"), orderBy("createdAt", "desc"));
+snapshot.forEach(async doc => {
+  const notification = { id: doc.id, ...doc.data() };
 
-  onSnapshot(q, async (snapshot) => {
-    loader.style.display = 'none';
-    tableBody.innerHTML = '';
+  let applicationNumber = '-';
+  let mainProcessType = '-';
 
-    if (snapshot.empty) {
-      tableBody.innerHTML = '<tr><td colspan="7" class="no-records">Gösterilecek bildirim bulunamadı.</td></tr>';
-      return;
+  if (notification.sourceTaskId) {
+    try {
+      const taskDoc = await getDoc(doc(db, "tasks", notification.sourceTaskId));
+      if (taskDoc.exists()) {
+        const taskData = taskDoc.data();
+        applicationNumber = taskData.relatedIpRecordApplicationNumber || '-';
+        mainProcessType = taskData.title || '-';  // 💡 BURADA task.title'ı alıyoruz
+      }
+    } catch (err) {
+      console.error('Task alınırken hata oluştu:', err);
     }
+  }
 
-    // Snapshot verilerini diziye al (await işlemleri için)
-    const docs = snapshot.docs;
+  const tr = document.createElement('tr');
+  const statusClass = notification.status === 'sent' ? 'status-sent'
+                      : notification.status === 'failed' ? 'status-failed'
+                      : 'status-pending';
 
-    for (const docSnap of docs) {
-      const notification = { id: docSnap.id, ...docSnap.data() };
+  tr.innerHTML = `
+    <td><span class="status-badge ${statusClass}">${notification.status}</span></td>
+    <td>${notification.recipientEmail}</td>
+    <td>${notification.subject}</td>
+    <td>${applicationNumber}</td>
+    <td>${mainProcessType}</td>
+    <td>${notification.sentAt ? notification.sentAt.toDate().toLocaleString('tr-TR') : '-'}</td>
+    <td class="action-cell"></td>
+  `;
 
-      let applicationNumber = '-';
-      let mainProcessType = '-';
+  if (notification.status !== 'sent') {
+    const editButton = document.createElement('button');
+    editButton.className = 'action-btn';
+    editButton.textContent = 'Düzenle';
+    editButton.dataset.id = notification.id;
+    editButton.addEventListener('click', () => openModal(notification));
+    tr.querySelector('.action-cell').appendChild(editButton);
+
+    const sendButton = document.createElement('button');
+    sendButton.className = 'action-btn';
+    sendButton.textContent = notification.status === 'failed' ? 'Tekrar Gönder' : 'Gönder';
+    sendButton.dataset.id = notification.id;
+    sendButton.addEventListener('click', async () => {
+      const user = auth.currentUser;
+      if (!user) {
+        alert("Giriş yapmalısınız.");
+        return;
+      }
+      if (!confirm("Mail içeriğini kontrol etmeden göndermek istiyor musunuz?")) return;
 
       try {
-        let ipRecordId = notification.relatedIpRecordId || null;
-
-        // Eğer relatedIpRecordId yoksa sourceTaskId'den bulmaya çalış
-        if (!ipRecordId && notification.sourceTaskId) {
-          const taskDoc = await getDoc(doc(db, "tasks", notification.sourceTaskId));
-          if (taskDoc.exists()) {
-            const taskData = taskDoc.data();
-            ipRecordId = taskData.relatedIpRecordId || null;
-          }
-        }
-
-        if (ipRecordId) {
-          const ipDoc = await getDoc(doc(db, "ipRecords", ipRecordId));
-          if (ipDoc.exists()) {
-            const ipData = ipDoc.data();
-            applicationNumber = ipData.applicationNumber || '-';
-            mainProcessType = ipData.mainType || '-';
-          }
-        }
-      } catch (err) {
-        console.error(`IP kaydı alınırken hata oluştu:`, err);
-      }
-
-      const tr = document.createElement('tr');
-      const statusClass = notification.status === 'sent' ? 'status-sent' :
-                          notification.status === 'failed' ? 'status-failed' : 'status-pending';
-
-      tr.innerHTML = `
-        <td><span class="status-badge ${statusClass}">${notification.status}</span></td>
-        <td>${notification.recipientEmail}</td>
-        <td>${notification.subject}</td>
-        <td>${applicationNumber}</td>
-        <td>${mainProcessType}</td>
-        <td>${notification.sentAt ? notification.sentAt.toDate().toLocaleString('tr-TR') : '-'}</td>
-        <td class="action-cell"></td>
-      `;
-
-      if (notification.status !== 'sent') {
-        const editButton = document.createElement('button');
-        editButton.className = 'action-btn';
-        editButton.textContent = 'Düzenle';
-        editButton.dataset.id = notification.id;
-        editButton.addEventListener('click', () => openModal(notification));
-        tr.querySelector('.action-cell').appendChild(editButton);
-
-        const sendButton = document.createElement('button');
-        sendButton.className = 'action-btn';
-        sendButton.textContent = notification.status === 'failed' ? 'Tekrar Gönder' : 'Gönder';
-        sendButton.dataset.id = notification.id;
-        sendButton.addEventListener('click', async () => {
-          const user = auth.currentUser;
-          if (!user) {
-            alert("Giriş yapmalısınız.");
-            return;
-          }
-          if (!confirm("Mail içeriğini kontrol etmeden göndermek istiyor musunuz?")) return;
-
-          try {
-            await sendEmail({
-              notificationId: notification.id,
-              userEmail: user.email
-            });
-            alert("E-posta gönderim sırasına alındı!");
-          } catch (err) {
-            console.error(err);
-            alert("Gönderim sırasında bir hata oluştu.");
-          }
+        await sendEmail({
+          notificationId: notification.id,
+          userEmail: user.email
         });
-        tr.querySelector('.action-cell').appendChild(sendButton);
+        alert("E-posta gönderim sırasına alındı!");
+      } catch (err) {
+        console.error(err);
+        alert("Gönderim sırasında bir hata oluştu.");
       }
+    });
+    tr.querySelector('.action-cell').appendChild(sendButton);
+  }
 
-      tableBody.appendChild(tr);
-    }
-  }, (error) => {
-    loader.style.display = 'none';
-    errorDiv.textContent = 'Bildirimler yüklenirken bir hata oluştu.';
-  });
-}
+  tableBody.appendChild(tr);
+});
 
 document.getElementById('save-draft').addEventListener('click', async () => {
   const id = document.getElementById('save-draft').dataset.id;
