@@ -220,24 +220,37 @@ function startNotificationListener(user) {
       return;
     }
 
-    for (const docSnapshot of snapshot.docs) {
-      const notification = { id: docSnapshot.id, ...docSnapshot.data() };
+    // Snapshot verilerini diziye al (await işlemleri için)
+    const docs = snapshot.docs;
 
-      let applicationNumber = "-";
-      let mainProcessType = "-";
+    for (const docSnap of docs) {
+      const notification = { id: docSnap.id, ...docSnap.data() };
 
-      // Eğer ilişkili ipRecordId varsa Firestore'dan getir
-      if (notification.relatedIpRecordId) {
-        try {
-          const ipRecordDoc = await getDoc(doc(db, "ipRecords", notification.relatedIpRecordId));
-          if (ipRecordDoc.exists()) {
-            const ipRecordData = ipRecordDoc.data();
-            applicationNumber = ipRecordData.applicationNumber || "-";
-            mainProcessType = ipRecordData.mainProcessType || "-";
+      let applicationNumber = '-';
+      let mainProcessType = '-';
+
+      try {
+        let ipRecordId = notification.relatedIpRecordId || null;
+
+        // Eğer relatedIpRecordId yoksa sourceTaskId'den bulmaya çalış
+        if (!ipRecordId && notification.sourceTaskId) {
+          const taskDoc = await getDoc(doc(db, "tasks", notification.sourceTaskId));
+          if (taskDoc.exists()) {
+            const taskData = taskDoc.data();
+            ipRecordId = taskData.relatedIpRecordId || null;
           }
-        } catch (err) {
-          console.error("IP Record yüklenirken hata:", err);
         }
+
+        if (ipRecordId) {
+          const ipDoc = await getDoc(doc(db, "ipRecords", ipRecordId));
+          if (ipDoc.exists()) {
+            const ipData = ipDoc.data();
+            applicationNumber = ipData.applicationNumber || '-';
+            mainProcessType = ipData.mainType || '-';
+          }
+        }
+      } catch (err) {
+        console.error(`IP kaydı alınırken hata oluştu:`, err);
       }
 
       const tr = document.createElement('tr');
