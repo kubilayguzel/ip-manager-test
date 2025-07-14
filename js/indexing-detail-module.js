@@ -670,13 +670,6 @@ async handleIndexing() {
             const parentTransaction = this.currentTransactions.find(t => t.id === this.selectedTransactionId);
             const parentTransactionType = this.allTransactionTypes.find(t => t.id === parentTransaction?.type);
             const mainProcessName = parentTransactionType?.name || '';
-            console.log(`Ana işlem türü: '${mainProcessName}'`);
-            console.log('🟢 parentTransaction:', parentTransaction);
-            console.log('🟢 parentTransactionType:', parentTransactionType);
-            console.log('🟢 mainProcessName:', mainProcessName);
-            console.log('🟢 recordType:', recordType);
-            console.log('🟢 childTypeId:', childTypeId, 'typeof:', typeof childTypeId);
-
             if (["Yayına İtiraz", "Yayıma İtirazin Yeniden Incelenmesi"].includes(mainProcessName)) {
                 // Yalnızca bu iki işlemde matris kontrolü yap
                 if (taskTriggerMatrix[mainProcessName]) {
