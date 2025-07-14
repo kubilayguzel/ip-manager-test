@@ -984,10 +984,6 @@
                             }
 
                             const existingTransactions = recordTransactionsResult.data || [];
-                            console.log('🟢 existingTransactions:', existingTransactions);
-                            console.log('🔵 selectedTransactionType:', selectedTransactionType);
-                            console.log('🔵 expectedParentTypeIds:', selectedTransactionType.expectedParentTypeIds);
-
                             const suitableParents = existingTransactions.filter(parentTransaction => {
                             if (parentTransaction.transactionHierarchy !== "parent") return false;
 
