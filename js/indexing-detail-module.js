@@ -760,8 +760,8 @@ async handleIndexing() {
                     console.log('İş başarıyla tetiklendi, ID:', createdTaskId);
                     showNotification('Alt işlem oluşturuldu ve iş tetiklendi!', 'success');
                     if (childTransactionType && childTransactionType.hierarchy === "child" && childTransactionType.isTopLevelSelectable) {
+                    console.log("📤 Tetiklenen işlem sonrası transaction yaratma başladı.");
                     console.log("📌 Tetiklenen işlem bir child ve top-level selectable.");
-
                     const recordTransactionsResult = await ipRecordsService.getRecordTransactions(this.matchedRecord.id);
                     if (!recordTransactionsResult.success) {
                         console.error("Portföy geçmişi alınamadı:", recordTransactionsResult.error);
@@ -769,6 +769,8 @@ async handleIndexing() {
                     } else {
                         const existingTransactions = recordTransactionsResult.data || [];
                         console.log("🟢 Portföydeki mevcut işlemler:", existingTransactions);
+                        existingTransactions.forEach(tx => {
+                        console.log(`--> TX id=${tx.id}, type=${tx.type}, hierarchy=${tx.transactionHierarchy}`);
 
                         const suitableParents = existingTransactions.filter(parentTransaction => {
                             if (parentTransaction.transactionHierarchy !== "parent") return false;
