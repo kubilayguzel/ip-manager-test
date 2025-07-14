@@ -118,6 +118,9 @@ body {
   font-size:24px;
   cursor:pointer;
 }
+.missing-info {
+  background-color: #fff3cd;
+}
 .loading { text-align: center; padding: 50px; }
 .no-records { text-align: center; padding: 50px; color: #666; }
 </style>
@@ -222,6 +225,7 @@ function startNotificationListener(user) {
 
     for (const snapDoc of snapshot.docs) {
       const notification = { id: snapDoc.id, ...snapDoc.data() };
+      const hasMissingFields = !notification.recipientEmail || !notification.subject;
 
       let applicationNumber = '-';
       let mainProcessType = '-';
@@ -270,14 +274,24 @@ function startNotificationListener(user) {
 
       tr.innerHTML = `
         <td><span class="status-badge ${statusClass}">${notification.status}</span></td>
-        <td>${notification.recipientEmail}</td>
-        <td>${notification.subject}</td>
+      <td>
+        ${notification.recipientEmail 
+          ? notification.recipientEmail 
+          : '<span style="color:#dc3545;">E-posta Eksik</span>'}
+      </td>
+      <td>
+        ${notification.subject 
+          ? notification.subject 
+          : '<span style="color:#dc3545;">Konu Eksik</span>'}
+      </td>
         <td>${applicationNumber}</td>
         <td>${mainProcessType}</td>
         <td>${notification.sentAt ? notification.sentAt.toDate().toLocaleString('tr-TR') : '-'}</td>
         <td class="action-cell"></td>
       `;
-
+      if (hasMissingFields) {
+        tr.classList.add('missing-info');
+      }
       if (notification.status !== 'sent') {
         const editButton = document.createElement('button');
         editButton.className = 'action-btn';
