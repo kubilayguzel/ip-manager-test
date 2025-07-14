@@ -760,56 +760,61 @@ async handleIndexing() {
                     console.log('İş başarıyla tetiklendi, ID:', createdTaskId);
                     showNotification('Alt işlem oluşturuldu ve iş tetiklendi!', 'success');
                     if (childTransactionType && childTransactionType.hierarchy === "child" && childTransactionType.isTopLevelSelectable) {
-                    console.log("📤 Tetiklenen işlem sonrası transaction yaratma başladı.");
-                    console.log("📌 Tetiklenen işlem bir child ve top-level selectable.");
-                    const recordTransactionsResult = await ipRecordsService.getRecordTransactions(this.matchedRecord.id);
-                    if (!recordTransactionsResult.success) {
-                        console.error("Portföy geçmişi alınamadı:", recordTransactionsResult.error);
-                        showNotification("İşlem geçmişi yüklenemedi.", "error");
-                    } else {
-                        const existingTransactions = recordTransactionsResult.data || [];
-                        console.log("🟢 Portföydeki mevcut işlemler:", existingTransactions);
-                        existingTransactions.forEach(tx => {
-                        console.log(`--> TX id=${tx.id}, type=${tx.type}, hierarchy=${tx.transactionHierarchy}`);
+    console.log("📤 Tetiklenen işlem sonrası transaction yaratma başladı.");
+    console.log("📌 Tetiklenen işlem bir child ve top-level selectable.");
 
-                        const suitableParents = existingTransactions.filter(parentTransaction => {
-                            if (parentTransaction.transactionHierarchy !== "parent") return false;
-                            const parentTransactionType = this.allTransactionTypes.find(t => t.id === parentTransaction.type);
-                            console.log(
+    const recordTransactionsResult = await ipRecordsService.getRecordTransactions(this.matchedRecord.id);
+    if (!recordTransactionsResult.success) {
+        console.error("Portföy geçmişi alınamadı:", recordTransactionsResult.error);
+        showNotification("İşlem geçmişi yüklenemedi.", "error");
+    } else {
+        const existingTransactions = recordTransactionsResult.data || [];
+        console.log("🟢 Portföydeki mevcut işlemler:", existingTransactions);
+
+        // Tüm transactionları yazdır
+        existingTransactions.forEach(tx => {
+            console.log(`--> TX id=${tx.id}, type=${tx.type}, hierarchy=${tx.transactionHierarchy}`);
+        });
+
+        // Filtreleme işlemi forEach dışında olacak
+        const suitableParents = existingTransactions.filter(parentTransaction => {
+            if (parentTransaction.transactionHierarchy !== "parent") return false;
+            const parentTransactionType = this.allTransactionTypes.find(t => t.id === parentTransaction.type);
+            console.log(
                 `Kontrol -> ParentTransaction.id: ${parentTransaction.id}, ParentTransaction.type: ${parentTransaction.type}`,
                 `ParentTransactionType.id: ${parentTransactionType?.id}`,
                 `ParentTransactionType.allowedChildTypes:`,
                 parentTransactionType?.allowedChildTypes
             );
-                            return parentTransactionType?.allowedChildTypes?.includes(childTransactionType.id);
-                        });
+            return parentTransactionType?.allowedChildTypes?.includes(childTransactionType.id);
+        });
 
-                        console.log("🟢 Uygun parent işlemler:", suitableParents);
+        console.log("🟢 Uygun parent işlemler:", suitableParents);
 
-                        if (suitableParents.length === 0) {
-                            showNotification(`Bu alt işlem (${childTransactionType.name}) için portföyde uygun bir ana işlem bulunamadı. Lütfen önce ilgili ana işlemi oluşturun.`, "warning");
-                        } else {
-                            const parent = suitableParents[0];
-                            const childTransactionData = {
-                                type: childTransactionType.id,
-                                description: `${childTransactionType.name} alt işlemi.`,
-                                parentId: parent.id,
-                                transactionHierarchy: "child"
-                            };
+        if (suitableParents.length === 0) {
+            showNotification(`Bu alt işlem (${childTransactionType.name}) için portföyde uygun bir ana işlem bulunamadı. Lütfen önce ilgili ana işlemi oluşturun.`, "warning");
+        } else {
+            const parent = suitableParents[0];
+            const childTransactionData = {
+                type: childTransactionType.id,
+                description: `${childTransactionType.name} alt işlemi.`,
+                parentId: parent.id,
+                transactionHierarchy: "child"
+            };
 
-                            console.log("📤 Firestore'a child transaction ekleniyor:", childTransactionData);
-                            const addResult = await ipRecordsService.addTransactionToRecord(this.matchedRecord.id, childTransactionData);
+            console.log("📤 Firestore'a child transaction ekleniyor:", childTransactionData);
+            const addResult = await ipRecordsService.addTransactionToRecord(this.matchedRecord.id, childTransactionData);
 
-                            if (addResult.success) {
-                                console.log("✅ Child transaction başarıyla kaydedildi:", addResult.data);
-                                showNotification("İş ve ilgili işlem başarıyla kaydedildi!", "success");
-                            } else {
-                                console.error("❌ Child transaction kaydedilemedi:", addResult.error);
-                                showNotification("Alt işlem kaydedilemedi.", "error");
-                            }
-                        }
-                    }
-                }
+            if (addResult.success) {
+                console.log("✅ Child transaction başarıyla kaydedildi:", addResult.data);
+                showNotification("İş ve ilgili işlem başarıyla kaydedildi!", "success");
+            } else {
+                console.error("❌ Child transaction kaydedilemedi:", addResult.error);
+                showNotification("Alt işlem kaydedilemedi.", "error");
+            }
+        }
+    }
+}
                 } else {
                     console.error('İş tetiklenemedi:', taskResult.error);
                     showNotification('Alt işlem oluşturuldu ama iş tetiklenemedi.', 'warning');
