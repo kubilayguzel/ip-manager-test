@@ -228,7 +228,7 @@ function startNotificationListener(user) {
 
       if (notification.sourceTaskId) {
         try {
-          const taskDoc = await getDoc(snapDoc(db, "tasks", notification.sourceTaskId));
+          const taskDoc = await getDoc(doc(db, "tasks", notification.sourceTaskId));
           if (taskDoc.exists()) {
             const taskData = taskDoc.data();
             applicationNumber = taskData.relatedIpRecordApplicationNumber || '-';
