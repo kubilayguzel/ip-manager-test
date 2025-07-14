@@ -6,124 +6,10 @@
 <title>Müvekkil Bildirimleri</title>
 <link rel="stylesheet" href="css/shared-styles.css">
 <style>
-body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    color: #333;
-    display: flex;
-}
-.page-wrapper {
-    flex-grow: 1;
-    display: flex;
-    flex-direction: column;
-    height: 100vh;
-    overflow-y: auto;
-    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-}
-.main-container {
-    width: 100%;
-    padding: 30px;
-    margin: 0;
-}
-.page-header {
-    background: rgba(255,255,255,0.95);
-    padding: 30px;
-    border-radius: 20px;
-    margin-bottom: 30px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-}
-.page-title {
-    font-size: 2em;
-    color: #1e3c72;
-    margin-bottom: 10px;
-}
-.page-subtitle {
-    color: #666;
-    font-size: 1.1em;
-}
-.tasks-container {
-    background: rgba(255,255,255,0.95);
-    border-radius: 20px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-    overflow: hidden;
-}
-.tasks-table {
-    width: 100%;
-    border-collapse: collapse;
-}
-.tasks-table th,
-.tasks-table td {
-    padding: 15px;
-    text-align: left;
-    border-bottom: 1px solid #f0f0f0;
-}
-.tasks-table th {
-    background: #f8f9fa;
-    font-weight: 600;
-}
-.status-badge {
-    padding: 5px 10px;
-    border-radius: 12px;
-    color: white;
-    font-weight: 500;
-    font-size: 0.9em;
-}
-.status-sent { background-color: #28a745; }
-.status-failed { background-color: #dc3545; }
-.status-pending { background-color: #6c757d; }
-.action-btn {
-    background: #007bff;
-    color: white;
-    border: none;
-    padding: 8px 12px;
-    border-radius: 6px;
-    cursor: pointer;
-    margin-left: 5px;
-    transition: all 0.3s ease;
-}
-.action-btn:hover {
-    opacity: 0.9;
-}
-.modal {
-  position: fixed;
-  top:0;
-  left:0;
-  width:100%;
-  height:100%;
-  background: rgba(0,0,0,0.6);
-  display:none;
-  align-items:center;
-  justify-content:center;
-}
-.modal-content {
-  background:#fff;
-  padding:20px;
-  width:500px;
-  border-radius:8px;
-  box-shadow:0 0 20px rgba(0,0,0,0.2);
-}
-.modal-content label {
-  display:block;
-  margin-top:10px;
-}
-.modal-content input, .modal-content textarea {
-  width:100%;
-  margin-top:5px;
-}
-.modal-actions {
-  margin-top:15px;
-  text-align:right;
-}
-.close {
-  float:right;
-  font-size:24px;
-  cursor:pointer;
-}
-.loading { text-align: center; padding: 50px; }
-.no-records { text-align: center; padding: 50px; color: #666; }
+/* Buraya sadece modal görünümünü etkileyen stil eklersin */
 </style>
 </head>
 <body>
-<div id="notification-container" style="position: fixed; top:20px; right:20px; z-index:9999;"></div>
 <div id="layout-placeholder"></div>
 <div class="page-wrapper">
 <main class="main-container">
@@ -150,31 +36,28 @@ body {
     </table>
     </div>
 </div>
-<div id="notification-modal" class="modal">
-  <div class="modal-content-lg">
-    <div class="modal-header">
-      <h2 class="modal-title">Bildirimi Düzenle</h2>
-      <button id="close-modal" class="close-modal-btn">&times;</button>
-    </div>
-    <div class="modal-body">
-      <label for="modal-subject" class="form-label">Konu</label>
-      <input type="text" id="modal-subject" class="form-input" />
 
-      <label for="modal-body" class="form-label">İçerik</label>
-      <textarea id="modal-body"></textarea>
-    </div>
-    <div class="modal-footer">
-      <button id="save-draft" class="btn btn-secondary">Taslak Kaydet</button>
-      <button id="send-notification" class="btn btn-primary">Gönder</button>
+<div id="notification-modal" class="modal" style="display:none;">
+  <div class="modal-content">
+    <span id="close-modal" class="close-btn">&times;</span>
+    <h2>Bildirimi Düzenle</h2>
+    <label for="modal-subject">Konu</label>
+    <input type="text" id="modal-subject" />
+    <label for="modal-body">İçerik</label>
+    <textarea id="modal-body" rows="10"></textarea>
+    <div class="modal-actions">
+      <button id="save-draft" class="action-btn" style="background:#6c757d;">Taslak Kaydet</button>
+      <button id="send-notification" class="action-btn" style="background:#28a745;">Gönder</button>
     </div>
   </div>
 </div>
 </main>
 </div>
-<script src="https://cdn.tiny.cloud/1/uecky9tx0nvoenpj0odjyue9swj52q3sz49i62c745240d99/tinymce/6/tinymce.min.js" referrerpolicy="origin"></script>
+
+<!-- Firebase ve TinyMCE -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
-import { getFirestore, collection, query, orderBy, onSnapshot,doc, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
+import { getFirestore, collection, query, orderBy, onSnapshot, doc, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
 import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-functions.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
 import { loadSharedLayout } from './js/layout-loader.js';
@@ -201,15 +84,14 @@ const sendEmail = httpsCallable(functions, 'sendEmailNotification');
 onAuthStateChanged(auth, (user) => {
     if (user) {
         loadSharedLayout({ activeMenuLink: 'notifications.html' });
-        startNotificationListener(user);
+        startNotificationListener();
     } else {
         loader.textContent = "Bu sayfayı görmek için giriş yapmalısınız.";
     }
 });
 
-function startNotificationListener(user) {
+function startNotificationListener() {
     const q = query(collection(db, "mail_notifications"), orderBy("createdAt", "desc"));
-
     onSnapshot(q, (snapshot) => {
         loader.style.display = 'none';
         tableBody.innerHTML = '';
@@ -219,8 +101,8 @@ function startNotificationListener(user) {
             return;
         }
 
-        snapshot.forEach(doc => {
-            const notification = { id: doc.id, ...doc.data() };
+        snapshot.forEach(docSnap => {
+            const notification = { id: docSnap.id, ...docSnap.data() };
             const tr = document.createElement('tr');
             const statusClass = notification.status === 'sent' ? 'status-sent' :
                                 notification.status === 'failed' ? 'status-failed' : 'status-pending';
@@ -237,18 +119,15 @@ function startNotificationListener(user) {
                 const editButton = document.createElement('button');
                 editButton.className = 'action-btn';
                 editButton.textContent = 'Düzenle';
-                editButton.dataset.id = notification.id;
                 editButton.addEventListener('click', () => openModal(notification));
                 tr.querySelector('.action-cell').appendChild(editButton);
 
                 const sendButton = document.createElement('button');
                 sendButton.className = 'action-btn';
                 sendButton.textContent = notification.status === 'failed' ? 'Tekrar Gönder' : 'Gönder';
-                sendButton.dataset.id = notification.id;
                 sendButton.addEventListener('click', () => sendNotification(notification.id));
                 tr.querySelector('.action-cell').appendChild(sendButton);
             }
-
             tableBody.appendChild(tr);
         });
     }, (error) => {
@@ -256,10 +135,43 @@ function startNotificationListener(user) {
         errorDiv.textContent = 'Bildirimler yüklenirken bir hata oluştu.';
     });
 }
+
+function openModal(notification) {
+  const subjectInput = document.getElementById('modal-subject');
+
+  subjectInput.value = notification.subject || "";
+
+  if (tinymce.get('modal-body')) {
+    tinymce.get('modal-body').remove();
+  }
+
+  tinymce.init({
+    selector: '#modal-body',
+    height: 300,
+    menubar: false,
+    plugins: 'link lists',
+    toolbar: 'undo redo | bold italic underline | bullist numlist | link',
+    branding: false,
+    language: 'tr',
+    setup: (editor) => {
+      editor.on('init', () => {
+        let html = notification.body || "";
+        const bodyMatch = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+        if (bodyMatch) html = bodyMatch[1];
+        editor.setContent(html);
+      });
+    }
+  });
+
+  document.getElementById('save-draft').dataset.id = notification.id;
+  document.getElementById('send-notification').dataset.id = notification.id;
+  document.getElementById('notification-modal').style.display = "flex";
+}
+
 document.getElementById('save-draft').addEventListener('click', async () => {
   const id = document.getElementById('save-draft').dataset.id;
   const subject = document.getElementById('modal-subject').value.trim();
-  const body = tinymce.get("modal-body").getContent();
+  const body = tinymce.get('modal-body').getContent();
 
   try {
     await updateDoc(doc(db, "mail_notifications", id), {
@@ -275,10 +187,11 @@ document.getElementById('save-draft').addEventListener('click', async () => {
     alert("Taslak kaydedilemedi.");
   }
 });
+
 document.getElementById('send-notification').addEventListener('click', async () => {
   const id = document.getElementById('send-notification').dataset.id;
   const subject = document.getElementById('modal-subject').value.trim();
-  const body = tinymce.get("modal-body").getContent();
+  const body = tinymce.get('modal-body').getContent();
   const user = auth.currentUser;
   if (!user) {
     alert("Giriş yapmalısınız.");
@@ -293,12 +206,7 @@ document.getElementById('send-notification').addEventListener('click', async () 
       isDraft: false,
       updatedAt: serverTimestamp()
     });
-
-    await sendEmail({
-      notificationId: id,
-      userEmail: user.email
-    });
-
+    await sendEmail({ notificationId: id, userEmail: user.email });
     alert("E-posta gönderim sırasına alındı!");
     document.getElementById('notification-modal').style.display = "none";
   } catch (err) {
@@ -307,37 +215,11 @@ document.getElementById('send-notification').addEventListener('click', async () 
   }
 });
 
-function openModal(notification) {
-  let html = notification.body || "";
-  // Sadece <body> içeriğini almaya çalış
-  const bodyMatch = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
-  if (bodyMatch) html = bodyMatch[1];
-
-  tinymce.get("modal-body").setContent(html);
-  document.getElementById('modal-subject').value = notification.subject || "";
-  document.getElementById('save-draft').dataset.id = notification.id;
-  document.getElementById('send-notification').dataset.id = notification.id;
-  document.getElementById('notification-modal').style.display = "flex";
-}
-
 document.getElementById('close-modal').addEventListener('click', () => {
   document.getElementById('notification-modal').style.display = "none";
-});
-document.getElementById('close-modal').addEventListener('click', () => {
-  document.getElementById('notification-modal').style.display = "none";
-  document.getElementById('modal-subject').value = "";
-  document.getElementById('modal-body').value = "";
-});
-
-tinymce.init({
-  selector: '#modal-body',
-  height: 300,
-  menubar: false,
-  plugins: 'link lists',
-  toolbar: 'undo redo | bold italic underline | bullist numlist | link',
-  branding: false,
-  language: 'tr'
 });
 </script>
+
+<script src="https://cdn.tiny.cloud/1/no-api-key/tinymce/6/tinymce.min.js" referrerpolicy="origin"></script>
 </body>
 </html>
