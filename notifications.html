@@ -240,7 +240,7 @@ function startNotificationListener(user) {
 
           if (taskData.relatedIpRecordId) {
             console.log("🔍 relatedIpRecordId bulundu:", taskData.relatedIpRecordId);
-            const ipRecordRef = doc(db, "ip_records", taskData.relatedIpRecordId);
+            const ipRecordRef = doc(db, "ipRecords", taskData.relatedIpRecordId);
             const ipRecordDoc = await getDoc(ipRecordRef);
 
             if (ipRecordDoc.exists()) {
