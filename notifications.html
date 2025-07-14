@@ -288,6 +288,7 @@ document.getElementById('send-notification').addEventListener('click', async () 
   if (!confirm("Bu e-postayı göndermek istediğinize emin misiniz?")) return;
 
   try {
+    // Firestore'a kaydet
     await updateDoc(doc(db, "mail_notifications", id), {
       subject: subject,
       body: body,
@@ -295,6 +296,7 @@ document.getElementById('send-notification').addEventListener('click', async () 
       updatedAt: serverTimestamp()
     });
 
+    // Cloud Function çağır
     await sendEmail({
       notificationId: id,
       userEmail: user.email
