@@ -328,7 +328,7 @@ function startNotificationListener(user) {
     errorDiv.textContent = 'Bildirimler yüklenirken bir hata oluştu.';
   });
 }
-document.getElementById('save-draft').addEventListener('click', async () => {
+cument.getElementById('save-draft').addEventListener('click', async () => {
   const id = document.getElementById('save-draft').dataset.id;
   const subject = document.getElementById('modal-subject').value.trim();
   const body = tinymce.get('modal-body').getContent();
@@ -438,13 +438,6 @@ tinymce.init({
   branding: false,
   language: 'tr'
 });
-function showMissingInfo(notification) {
-  const missing = notification.missingFields || [];
-  const message = missing.length > 0
-    ? "Eksik Alanlar:\n\n" + missing.map(f => `- ${f}`).join("\n")
-    : "Hiçbir eksik alan tespit edilmedi.";
-  alert(message);
-}
 function showMissingInfo(notification) {
   const missing = notification.missingFields || [];
   const message = missing.length > 0
