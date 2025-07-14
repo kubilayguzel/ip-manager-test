@@ -83,6 +83,41 @@ body {
 .action-btn:hover {
     opacity: 0.9;
 }
+.modal {
+  position: fixed;
+  top:0;
+  left:0;
+  width:100%;
+  height:100%;
+  background: rgba(0,0,0,0.6);
+  display:none;
+  align-items:center;
+  justify-content:center;
+}
+.modal-content {
+  background:#fff;
+  padding:20px;
+  width:500px;
+  border-radius:8px;
+  box-shadow:0 0 20px rgba(0,0,0,0.2);
+}
+.modal-content label {
+  display:block;
+  margin-top:10px;
+}
+.modal-content input, .modal-content textarea {
+  width:100%;
+  margin-top:5px;
+}
+.modal-actions {
+  margin-top:15px;
+  text-align:right;
+}
+.close {
+  float:right;
+  font-size:24px;
+  cursor:pointer;
+}
 .loading { text-align: center; padding: 50px; }
 .no-records { text-align: center; padding: 50px; color: #666; }
 </style>
@@ -115,12 +150,26 @@ body {
     </table>
     </div>
 </div>
+<div id="notification-modal" class="modal" style="display:none;">
+  <div class="modal-content">
+    <span id="close-modal" class="close">&times;</span>
+    <h2>Bildirimi Düzenle</h2>
+    <label for="modal-subject">Konu</label>
+    <input type="text" id="modal-subject" />
+    <label for="modal-body">İçerik</label>
+    <textarea id="modal-body" rows="10"></textarea>
+    <div class="modal-actions">
+      <button id="save-draft" class="action-btn" style="background:#6c757d;">Taslak Kaydet</button>
+      <button id="send-notification" class="action-btn" style="background:#28a745;">Gönder</button>
+    </div>
+  </div>
+</div>
 </main>
 </div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
-import { getFirestore, collection, query, orderBy, onSnapshot } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
+import { getFirestore, collection, query, orderBy, onSnapshot,doc, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
 import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-functions.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
 import { loadSharedLayout } from './js/layout-loader.js';
@@ -180,12 +229,21 @@ function startNotificationListener(user) {
             `;
 
             if (notification.status !== 'sent') {
-                const button = document.createElement('button');
-                button.className = 'action-btn';
-                button.textContent = notification.status === 'failed' ? 'Tekrar Gönder' : 'Gönder';
-                button.dataset.id = notification.id;
-                tr.querySelector('.action-cell').appendChild(button);
+                const editButton = document.createElement('button');
+                editButton.className = 'action-btn';
+                editButton.textContent = 'Düzenle';
+                editButton.dataset.id = notification.id;
+                editButton.addEventListener('click', () => openModal(notification));
+                tr.querySelector('.action-cell').appendChild(editButton);
+
+                const sendButton = document.createElement('button');
+                sendButton.className = 'action-btn';
+                sendButton.textContent = notification.status === 'failed' ? 'Tekrar Gönder' : 'Gönder';
+                sendButton.dataset.id = notification.id;
+                sendButton.addEventListener('click', () => sendNotification(notification.id));
+                tr.querySelector('.action-cell').appendChild(sendButton);
             }
+
             tableBody.appendChild(tr);
         });
     }, (error) => {
@@ -193,31 +251,72 @@ function startNotificationListener(user) {
         errorDiv.textContent = 'Bildirimler yüklenirken bir hata oluştu.';
     });
 }
+document.getElementById('save-draft').addEventListener('click', async () => {
+  const id = document.getElementById('save-draft').dataset.id;
+  const subject = document.getElementById('modal-subject').value.trim();
+  const body = document.getElementById('modal-body').value.trim();
 
-tableBody.addEventListener('click', async (event) => {
-    if (event.target.classList.contains('action-btn')) {
-        const notificationId = event.target.dataset.id;
-        const user = auth.currentUser;
-        if (!user) {
-            alert("Bu işlemi yapmak için giriş yapmalısınız!");
-            return;
-        }
-        if (!window.confirm("Bu e-posta müvekkile gönderilecek. Emin misiniz?")) {
-            return;
-        }
-        event.target.textContent = 'Gönderiliyor...';
-        event.target.disabled = true;
+  try {
+    await updateDoc(doc(db, "mail_notifications", id), {
+      subject: subject,
+      body: body,
+      isDraft: true,
+      updatedAt: serverTimestamp()
+    });
+    alert("Taslak kaydedildi!");
+    document.getElementById('notification-modal').style.display = "none";
+  } catch (err) {
+    console.error(err);
+    alert("Taslak kaydedilemedi.");
+  }
+});
+document.getElementById('send-notification').addEventListener('click', async () => {
+  const id = document.getElementById('send-notification').dataset.id;
+  const subject = document.getElementById('modal-subject').value.trim();
+  const body = document.getElementById('modal-body').value.trim();
+  const user = auth.currentUser;
+  if (!user) {
+    alert("Giriş yapmalısınız.");
+    return;
+  }
+  if (!confirm("Bu e-postayı göndermek istediğinize emin misiniz?")) return;
 
-        try {
-            await sendEmail({
-                notificationId: notificationId,
-                userEmail: user.email
-            });
-            alert('E-posta başarıyla gönderim sırasına alındı!');
-        } catch (err) {
-            alert(`Bir hata oluştu: ${err.message}`);
-        }
-    }
+  try {
+    await updateDoc(doc(db, "mail_notifications", id), {
+      subject: subject,
+      body: body,
+      isDraft: false,
+      updatedAt: serverTimestamp()
+    });
+
+    await sendEmail({
+      notificationId: id,
+      userEmail: user.email
+    });
+
+    alert("E-posta gönderim sırasına alındı!");
+    document.getElementById('notification-modal').style.display = "none";
+  } catch (err) {
+    console.error(err);
+    alert("Gönderim sırasında bir hata oluştu.");
+  }
+});
+
+function openModal(notification) {
+  document.getElementById('modal-subject').value = notification.subject || "";
+  document.getElementById('modal-body').value = notification.body || "";
+  document.getElementById('save-draft').dataset.id = notification.id;
+  document.getElementById('send-notification').dataset.id = notification.id;
+  document.getElementById('notification-modal').style.display = "flex";
+}
+
+document.getElementById('close-modal').addEventListener('click', () => {
+  document.getElementById('notification-modal').style.display = "none";
+});
+document.getElementById('close-modal').addEventListener('click', () => {
+  document.getElementById('notification-modal').style.display = "none";
+  document.getElementById('modal-subject').value = "";
+  document.getElementById('modal-body').value = "";
 });
 </script>
 </body>
