@@ -72,7 +72,7 @@ async uploadDocumentsToFirebase(documents, userId, evrakNo) {
                 fileUrl: downloadURL,
                 storagePath: storagePath,
                 fileSize: doc.file.size,
-                uploadedAt: new Date(),
+                uploadedAt: serverTimestamp(),
                 userId: userId,
                 source: 'etebs',
                 status: 'pending', // İndeksleme için
@@ -248,7 +248,7 @@ async showNotificationPDF(token, notification) {
             }
 
             const docData = querySnapshot.docs[0].data();
-            if (!docData.filePath) {
+            if (!docData.storagePath) {
                 showNotification("Storage yolu bulunamadı.", "error");
                 return;
             }
