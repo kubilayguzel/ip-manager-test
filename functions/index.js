@@ -334,18 +334,17 @@ exports.createMailNotificationOnDocumentStatusChange = functions.firestore
     const before = change.before.data();
     const after = change.after.data();
 
-    // Sadece status 'indexed' olduğunda tetikle
     if (before.status !== 'indexed' && after.status === 'indexed') {
       console.log(`Belge indexlendi: ${context.params.docId}`, after);
-      console.log("mainProcessType:", after.mainProcessType);
-    console.log("subProcessType:", after.subProcessType);
 
-
-      const admin = require("firebase-admin");
-      if (!admin.apps.length) {
-        admin.initializeApp();
-      }
       const db = admin.firestore();
+
+      let rule = null;
+      let template = null;
+      let client = null;
+      let status = "pending";
+      let subject = "";
+      let body = "";
 
       try {
         // Şablon kuralını bul
@@ -357,56 +356,66 @@ exports.createMailNotificationOnDocumentStatusChange = functions.firestore
           .get();
 
         if (rulesSnapshot.empty) {
-          console.log("Kural bulunamadı, işlem sonlandırılıyor.");
-          return null;
+          console.warn("Kural bulunamadı, eksik bilgi bildirimi oluşturulacak.");
+          status = "missing_info";
+        } else {
+          rule = rulesSnapshot.docs[0].data();
+          console.log(`Kural bulundu. Şablon ID: ${rule.templateId}`);
+
+          // Mail Şablonunu al
+          const templateSnapshot = await db.collection("mail_templates").doc(rule.templateId).get();
+          if (!templateSnapshot.exists) {
+            console.warn(`Şablon bulunamadı: ${rule.templateId}`);
+            status = "missing_info";
+          } else {
+            template = templateSnapshot.data();
+          }
         }
 
-        const rule = rulesSnapshot.docs[0].data();
-        const templateSnapshot = await db.collection("mail_templates").doc(rule.templateId).get();
-
-        if (!templateSnapshot.exists) {
-          console.error(`Şablon bulunamadı: ${rule.templateId}`);
-          return null;
+        // Müvekkil bilgilerini al
+        if (after.clientId) {
+          const clientSnapshot = await db.collection("persons").doc(after.clientId).get();
+          if (!clientSnapshot.exists) {
+            console.warn(`Müvekkil bulunamadı: ${after.clientId}`);
+            status = "missing_info";
+          } else {
+            client = clientSnapshot.data();
+          }
+        } else {
+          console.warn("clientId alanı eksik.");
+          status = "missing_info";
         }
 
-        const template = templateSnapshot.data();
+        // Parametreleri doldur (sadece her şey tamamsa)
+        if (status === "pending" && template && client) {
+          subject = template.subject;
+          body = template.body;
 
-        // Müvekkil Bilgilerini Al
-        console.log("Müvekkil bilgileri alınıyor...");
-        const clientSnapshot = await db.collection("persons").doc(after.clientId).get();
-        if (!clientSnapshot.exists) {
-        console.error(`Hata: ${after.clientId}} ID'li müvekkil bulunamadı!`);
-        return null;
-        }
-        const client = clientSnapshot.data();
-
-
-        // Şablon parametrelerini doldur
-        let subject = template.subject;
-        let body = template.body;
-        const parameters = { ...client, ...after };
-
-        for (const key in parameters) {
-          const placeholder = new RegExp(`{{${key}}}`, "g");
-          subject = subject.replace(placeholder, parameters[key]);
-          body = body.replace(placeholder, parameters[key]);
+          const parameters = { ...client, ...after };
+          for (const key in parameters) {
+            const placeholder = new RegExp(`{{${key}}}`, "g");
+            subject = subject.replace(placeholder, parameters[key]);
+            body = body.replace(placeholder, parameters[key]);
+          }
+        } else {
+          subject = "Eksik Bilgi: Bildirim Tamamlanamadı";
+          body = "Bu bildirim oluşturuldu ancak gönderim için eksik bilgiler mevcut. Lütfen eksiklikleri giderin.";
         }
 
         // Bildirimi oluştur
         const notificationData = {
-          recipientEmail: client.email,
-          clientId: after.clientId,
+          recipientEmail: client?.email || null,
+          clientId: after.clientId || null,
           subject: subject,
           body: body,
-          status: "pending",
+          status: status, // "pending" veya "missing_info"
           sourceDocumentId: context.params.docId,
           createdAt: admin.firestore.FieldValue.serverTimestamp(),
           updatedAt: admin.firestore.FieldValue.serverTimestamp(),
         };
 
         await db.collection("mail_notifications").add(notificationData);
-        console.log("Mail bildirimi başarıyla oluşturuldu.");
-
+        console.log(`Mail bildirimi '${status}' olarak oluşturuldu.`);
         return null;
 
       } catch (error) {
@@ -417,8 +426,8 @@ exports.createMailNotificationOnDocumentStatusChange = functions.firestore
       console.log("Status değişimi indekslenme değil, işlem atlandı.");
       return null;
     }
-   
   });
+
 /**
  * Bir görev 'completed' olarak güncellendiğinde, EPATS Evrak No ve doküman varsa
  * tüm iş tipleri için geçerli olan genel bir müvekkil bildirimi oluşturur.
