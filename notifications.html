@@ -220,15 +220,15 @@ function startNotificationListener(user) {
       return;
     }
 
-    for (const doc of snapshot.docs) {
-      const notification = { id: doc.id, ...doc.data() };
+    for (const snapDoc of snapshot.docs) {
+      const notification = { id: snapDoc.id, ...snapDoc.data() };
 
       let applicationNumber = '-';
       let mainProcessType = '-';
 
       if (notification.sourceTaskId) {
         try {
-          const taskDoc = await getDoc(doc(db, "tasks", notification.sourceTaskId));
+          const taskDoc = await getDoc(snapDoc(db, "tasks", notification.sourceTaskId));
           if (taskDoc.exists()) {
             const taskData = taskDoc.data();
             applicationNumber = taskData.relatedIpRecordApplicationNumber || '-';
