@@ -239,9 +239,17 @@ exports.createMailNotificationOnDocumentIndex = functions.firestore
     const newDocument = snap.data();
     console.log(`Yeni belge algılandı: ${context.params.docId}`, newDocument);
 
+    const db = admin.firestore();
+    let missingFields = [];
+    let rule = null;
+    let template = null;
+    let client = null;
+    let subject = "";
+    let body = "";
+    let status = "pending";
+
     try {
-      // 1. Kuralı Bul
-      console.log("Doğru şablon kuralı aranıyor...");
+      // 1️⃣ Kuralı bul
       const rulesSnapshot = await db.collection("template_rules")
         .where("sourceType", "==", "document")
         .where("mainProcessType", "==", newDocument.mainProcessType)
@@ -250,66 +258,89 @@ exports.createMailNotificationOnDocumentIndex = functions.firestore
         .get();
 
       if (rulesSnapshot.empty) {
-        console.log("Bu belge tipi için uygun bir kural bulunamadı. İşlem sonlandırılıyor.");
-        return null;
+        console.warn("Kural bulunamadı.");
+        missingFields.push("templateRule");
+      } else {
+        rule = rulesSnapshot.docs[0].data();
       }
 
-      const rule = rulesSnapshot.docs[0].data();
-      console.log(`Kural bulundu. Kullanılacak şablon ID: ${rule.templateId}`);
-
-      // 2. Mail Şablonunu Al
-      console.log("Mail şablonu veritabanından alınıyor...");
-      const templateSnapshot = await db.collection("mail_templates").doc(rule.templateId).get();
-
-      if (!templateSnapshot.exists) {
-          console.error(`Hata: ${rule.templateId} ID'li mail şablonu bulunamadı!`);
-          return null;
+      // 2️⃣ Şablonu bul
+      if (rule) {
+        const templateSnapshot = await db.collection("mail_templates").doc(rule.templateId).get();
+        if (!templateSnapshot.exists) {
+          console.warn(`Şablon bulunamadı: ${rule.templateId}`);
+          missingFields.push("mailTemplate");
+        } else {
+          template = templateSnapshot.data();
+        }
       }
-      const template = templateSnapshot.data();
 
-      // 3. Müvekkil Bilgilerini Al (Varsayım: newDocument içinde clientId var)
-      console.log("Müvekkil bilgileri alınıyor...");
-      const clientSnapshot = await db.collection("clients").doc(newDocument.clientId).get();
-      if (!clientSnapshot.exists) {
-        console.error(`Hata: ${newDocument.clientId} ID'li müvekkil bulunamadı!`);
-        return null;
+      // 3️⃣ Müvekkil bilgilerini al
+      if (newDocument.clientId) {
+        const clientSnapshot = await db.collection("clients").doc(newDocument.clientId).get();
+        if (!clientSnapshot.exists) {
+          console.warn(`Müvekkil bulunamadı: ${newDocument.clientId}`);
+          missingFields.push("client");
+        } else {
+          client = clientSnapshot.data();
+        }
+      } else {
+        console.warn("clientId eksik.");
+        missingFields.push("clientId");
       }
-      const client = clientSnapshot.data();
 
-      // 4. Parametreleri Doldur
-      console.log("Parametreler dolduruluyor...");
-      let subject = template.subject;
-      let body = template.body;
+      // 4️⃣ Parametreleri doldur
+      if (template && client) {
+        subject = template.subject;
+        body = template.body;
 
-      const parameters = { ...client, ...newDocument };
+        const parameters = { ...client, ...newDocument };
 
-      for (const key in parameters) {
+        for (const key in parameters) {
           const placeholder = new RegExp(`{{${key}}}`, "g");
           subject = subject.replace(placeholder, parameters[key]);
           body = body.replace(placeholder, parameters[key]);
-      }
-      console.log("Nihai mail içeriği oluşturuldu.");
+        }
 
-      // 5. Mail Bildirimini Oluştur
-      console.log("'mail_notifications' koleksiyonuna kayıt ekleniyor...");
+        if (!client.email) {
+          missingFields.push("recipientEmail");
+        }
+        if (!subject) {
+          missingFields.push("subject");
+        }
+        if (!body) {
+          missingFields.push("body");
+        }
+      } else {
+        subject = "Eksik Bilgi: Bildirim Tamamlanamadı";
+        body = "Bu bildirim oluşturuldu ancak gönderim için eksik bilgiler mevcut. Lütfen tamamlayın.";
+      }
+
+      // 5️⃣ Durumu belirle
+      if (missingFields.length > 0) {
+        status = "missing_info";
+      }
+
+      // 6️⃣ Bildirimi oluştur
       const notificationData = {
-        recipientEmail: client.email,
-        clientId: newDocument.clientId,
+        recipientEmail: client?.email || null,
+        clientId: newDocument.clientId || null,
         subject: subject,
         body: body,
-        status: "pending",
+        status: status,
+        missingFields: missingFields, // 🎯 yeni alan
         sourceDocumentId: context.params.docId,
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
       };
 
       await db.collection("mail_notifications").add(notificationData);
-      console.log("Mail bildirimi başarıyla oluşturuldu ve gönderim için sıraya alındı.");
+      console.log(`Mail bildirimi '${status}' olarak oluşturuldu.`);
 
       return null;
 
     } catch (error) {
-      console.error("Mail bildirimi oluşturulurken beklenmedik bir hata oluştu:", error);
+      console.error("Mail bildirimi oluşturulurken hata:", error);
       return null;
     }
   });
