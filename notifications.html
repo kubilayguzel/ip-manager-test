@@ -226,18 +226,25 @@ function startNotificationListener(user) {
       let applicationNumber = '-';
       let mainProcessType = '-';
 
-      if (notification.sourceTaskId) {
-        try {
-          const taskDoc = await getDoc(doc(db, "tasks", notification.sourceTaskId));
-          if (taskDoc.exists()) {
-            const taskData = taskDoc.data();
-            applicationNumber = taskData.relatedIpRecordApplicationNumber || '-';
-            mainProcessType = taskData.title || '-'; // Burada task title
+    if (notification.sourceTaskId) {
+      try {
+        const taskDoc = await getDoc(doc(db, "tasks", notification.sourceTaskId));
+        if (taskDoc.exists()) {
+          const taskData = taskDoc.data();
+          mainProcessType = taskData.title || '-';
+
+          if (taskData.relatedIpRecordId) {
+            const ipRecordDoc = await getDoc(doc(db, "ip_records", taskData.relatedIpRecordId));
+            if (ipRecordDoc.exists()) {
+              const ipRecordData = ipRecordDoc.data();
+              applicationNumber = ipRecordData.applicationNumber || '-';
+            }
           }
-        } catch (err) {
-          console.error('Task alınırken hata oluştu:', err);
         }
+      } catch (err) {
+        console.error('Task alınırken hata oluştu:', err);
       }
+    }
 
       const tr = document.createElement('tr');
       const statusClass = notification.status === 'sent' ? 'status-sent'
