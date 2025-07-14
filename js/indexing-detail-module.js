@@ -667,7 +667,6 @@ async handleIndexing() {
             let shouldTriggerTask = false;
             const recordType = this.matchedRecord.recordType;
 
-            // Ana işlem türünü belirle
             const parentTransaction = this.currentTransactions.find(t => t.id === this.selectedTransactionId);
             const parentTransactionType = this.allTransactionTypes.find(t => t.id === parentTransaction?.type);
             const mainProcessName = parentTransactionType?.name || '';
@@ -678,19 +677,25 @@ async handleIndexing() {
             console.log('🟢 recordType:', recordType);
             console.log('🟢 childTypeId:', childTypeId, 'typeof:', typeof childTypeId);
 
-            if (mainProcessName && taskTriggerMatrix[mainProcessName]) {
-                const allowedTriggers = taskTriggerMatrix[mainProcessName][recordType];
-                console.log('🟢 allowedTriggers:', allowedTriggers);
-                if (allowedTriggers && allowedTriggers.includes(childTypeId)) {
-                    shouldTriggerTask = true;
-                    console.log(`✅ Tetikleme koşulu sağlandı: ${mainProcessName} - ${recordType} - Alt işlem ID ${childTypeId}`);
+            if (["Yayına İtiraz", "Yayıma İtirazin Yeniden Incelenmesi"].includes(mainProcessName)) {
+                // Yalnızca bu iki işlemde matris kontrolü yap
+                if (taskTriggerMatrix[mainProcessName]) {
+                    const allowedTriggers = taskTriggerMatrix[mainProcessName][recordType];
+                    console.log('🟢 allowedTriggers:', allowedTriggers);
+                    if (allowedTriggers && allowedTriggers.includes(childTypeId)) {
+                        shouldTriggerTask = true;
+                        console.log(`✅ Tetikleme koşulu sağlandı: ${mainProcessName} - ${recordType} - Alt işlem ID ${childTypeId}`);
+                    } else {
+                        console.log(`ℹ️ Tetikleme koşulu yok: ${mainProcessName} - ${recordType} - Alt işlem ID ${childTypeId}`);
+                    }
                 } else {
-                    console.log(`ℹ️ Tetikleme koşulu yok: ${mainProcessName} - ${recordType} - Alt işlem ID ${childTypeId}`);
+                    console.log(`⚠️ Tetikleme matrisi bulunamadı: '${mainProcessName}'`);
                 }
             } else {
-                console.log(`⚠️ Tetikleme matrisi bulunamadı: '${mainProcessName}'`);
+                // Diğer işlemlerde matris yok, sadece taskTriggered varsa tetikle
+                shouldTriggerTask = true;
+                console.log(`✅ '${mainProcessName}' için matris kontrolü yok, tetikleme serbest.`);
             }
-
             // 3. İşi tetikle
             if (childTransactionType.taskTriggered && shouldTriggerTask) {
                 console.log('İş tetikleme bloğuna girildi...');
