@@ -166,7 +166,7 @@ body {
 </div>
 </main>
 </div>
-
+<script src="https://cdn.tiny.cloud/1/uecky9tx0nvoenpj0odjyue9swj52q3sz49i62c745240d99/tinymce/6/tinymce.min.js" referrerpolicy="origin"></script>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
 import { getFirestore, collection, query, orderBy, onSnapshot,doc, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
@@ -254,7 +254,7 @@ function startNotificationListener(user) {
 document.getElementById('save-draft').addEventListener('click', async () => {
   const id = document.getElementById('save-draft').dataset.id;
   const subject = document.getElementById('modal-subject').value.trim();
-  const body = document.getElementById('modal-body').value.trim();
+  const body = tinymce.get("modal-body").getContent();
 
   try {
     await updateDoc(doc(db, "mail_notifications", id), {
@@ -273,7 +273,7 @@ document.getElementById('save-draft').addEventListener('click', async () => {
 document.getElementById('send-notification').addEventListener('click', async () => {
   const id = document.getElementById('send-notification').dataset.id;
   const subject = document.getElementById('modal-subject').value.trim();
-  const body = document.getElementById('modal-body').value.trim();
+  const body = tinymce.get("modal-body").getContent();
   const user = auth.currentUser;
   if (!user) {
     alert("Giriş yapmalısınız.");
@@ -323,6 +323,7 @@ document.getElementById('close-modal').addEventListener('click', () => {
   document.getElementById('modal-subject').value = "";
   document.getElementById('modal-body').value = "";
 });
+
 tinymce.init({
   selector: '#modal-body',
   height: 300,
@@ -333,6 +334,5 @@ tinymce.init({
   language: 'tr'
 });
 </script>
-<script src="https://cdn.tiny.cloud/1/uecky9tx0nvoenpj0odjyue9swj52q3sz49i62c745240d99/tinymce/6/tinymce.min.js" referrerpolicy="origin"></script>
 </body>
 </html>
