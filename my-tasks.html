@@ -614,6 +614,8 @@
                     noTasksMessage.style.display = 'none';
 
                     filteredTasks.forEach(task => {
+                        const ipRecord = this.allIpRecords.find(r => r.id === task.relatedIpRecordId);
+                        const relatedRecordDisplay = ipRecord ? (ipRecord.applicationNumber || ipRecord.title || 'Kayıt Bulunamadı') : 'N/A';
                         const row = document.createElement('tr');
                         const statusClass = `status-${task.status.replace(/ /g, '_').toLowerCase()}`;
                         const priorityClass = `priority-${task.priority.toLowerCase()}`;
@@ -624,7 +626,7 @@
 
                         row.innerHTML = `
                             <td>${task.id}</td>
-                            <td>${task.relatedIpRecordTitle || 'N/A'}</td>
+                            <td>${relatedRecordDisplay}</td>
                             <td>${taskTypeDisplayName}</td>
                             <td><span class="priority-badge ${priorityClass}">${task.priority}</span></td>
                             <td>${task.dueDate ? new Date(task.dueDate).toLocaleDateString('tr-TR') : 'Belirtilmemiş'}</td>
