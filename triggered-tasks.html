@@ -988,11 +988,13 @@
                             console.log('🔵 selectedTransactionType:', selectedTransactionType);
                             console.log('🔵 expectedParentTypeIds:', selectedTransactionType.expectedParentTypeIds);
 
-                            const suitableParents = existingTransactions.filter(t =>
-                                t.transactionHierarchy === 'parent' &&
-                                selectedTransactionType.expectedParentTypeIds &&
-                                selectedTransactionType.expectedParentTypeIds.includes(t.type)
-                            );
+                            const suitableParents = existingTransactions.filter(parentTransaction => {
+                            if (parentTransaction.transactionHierarchy !== "parent") return false;
+
+                            const parentTransactionType = this.allTransactionTypes.find(t => t.id === parentTransaction.type);
+                            
+                            return parentTransactionType?.allowedChildTypes?.includes(selectedTransactionType.id);
+                            });
 
                             const childTransactionData = {
                                 type: selectedTransactionType.id,
