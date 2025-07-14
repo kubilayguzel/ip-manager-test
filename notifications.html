@@ -150,17 +150,22 @@ body {
     </table>
     </div>
 </div>
-<div id="notification-modal" class="modal" style="display:none;">
-  <div class="modal-content">
-    <span id="close-modal" class="close">&times;</span>
-    <h2>Bildirimi Düzenle</h2>
-    <label for="modal-subject">Konu</label>
-    <input type="text" id="modal-subject" />
-    <label for="modal-body">İçerik</label>
-    <textarea id="modal-body" rows="10"></textarea>
-    <div class="modal-actions">
-      <button id="save-draft" class="action-btn" style="background:#6c757d;">Taslak Kaydet</button>
-      <button id="send-notification" class="action-btn" style="background:#28a745;">Gönder</button>
+<div id="notification-modal" class="modal">
+  <div class="modal-content-lg">
+    <div class="modal-header">
+      <h2 class="modal-title">Bildirimi Düzenle</h2>
+      <button id="close-modal" class="close-modal-btn">&times;</button>
+    </div>
+    <div class="modal-body">
+      <label for="modal-subject" class="form-label">Konu</label>
+      <input type="text" id="modal-subject" class="form-input" />
+
+      <label for="modal-body" class="form-label">İçerik</label>
+      <textarea id="modal-body"></textarea>
+    </div>
+    <div class="modal-footer">
+      <button id="save-draft" class="btn btn-secondary">Taslak Kaydet</button>
+      <button id="send-notification" class="btn btn-primary">Gönder</button>
     </div>
   </div>
 </div>
