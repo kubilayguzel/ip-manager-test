@@ -669,6 +669,12 @@ async handleIndexing() {
 
             const parentTransaction = this.currentTransactions.find(t => t.id === this.selectedTransactionId);
             const parentTransactionType = this.allTransactionTypes.find(t => t.id === parentTransaction?.type);
+            console.log(
+                `Kontrol -> ParentTransaction.id: ${parentTransaction.id}, ParentTransaction.type: ${parentTransaction.type}`,
+                `ParentTransactionType.id: ${parentTransactionType?.id}`,
+                `ParentTransactionType.allowedChildTypes:`,
+                parentTransactionType?.allowedChildTypes
+            );
             const mainProcessName = parentTransactionType?.name || '';
             console.log(`Ana işlem türü: '${mainProcessName}'`);
             console.log('🟢 parentTransaction:', parentTransaction);
