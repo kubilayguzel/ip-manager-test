@@ -245,7 +245,26 @@ function startNotificationListener(user) {
                 sendButton.className = 'action-btn';
                 sendButton.textContent = notification.status === 'failed' ? 'Tekrar Gönder' : 'Gönder';
                 sendButton.dataset.id = notification.id;
-                sendButton.addEventListener('click', () => sendNotification(notification.id));
+                sendButton.addEventListener('click', async () => {
+                const user = auth.currentUser;
+                if (!user) {
+                    alert("Giriş yapmalısınız.");
+                    return;
+                }
+                if (!confirm("Bu e-postayı göndermek istediğinize emin misiniz?")) return;
+
+                try {
+                    await sendEmail({
+                    notificationId: notification.id,
+                    userEmail: user.email
+                    });
+
+                    alert("E-posta gönderim sırasına alındı!");
+                } catch (err) {
+                    console.error(err);
+                    alert("Gönderim sırasında bir hata oluştu.");
+                }
+                });
                 tr.querySelector('.action-cell').appendChild(sendButton);
             }
 
