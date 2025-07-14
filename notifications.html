@@ -396,12 +396,9 @@ document.getElementById('send-notification').addEventListener('click', async () 
 
 function openModal(notification) {
   const subjectInput = document.getElementById('modal-subject');
-  const bodyTextarea = document.getElementById('modal-body');
-
-  // Konu alanını doldur
   subjectInput.value = notification.subject || "";
 
-  // TinyMCE daha önce init edildiyse önce kaldır
+  // TinyMCE daha önce varsa kaldır
   if (tinymce.get('modal-body')) {
     tinymce.get('modal-body').remove();
   }
@@ -418,10 +415,12 @@ function openModal(notification) {
     setup: (editor) => {
       editor.on('init', () => {
         let html = notification.body || "";
-        // Eğer tam HTML geldiyse sadece <body> içini ayıkla
         const bodyMatch = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
         if (bodyMatch) html = bodyMatch[1];
         editor.setContent(html);
+
+        // Modal'ı aç (init olduktan sonra)
+        document.getElementById('notification-modal').style.display = "flex";
       });
     }
   });
@@ -430,25 +429,17 @@ function openModal(notification) {
   document.getElementById('save-draft').dataset.id = notification.id;
   document.getElementById('send-notification').dataset.id = notification.id;
 
-  // Modal'ı aç
-  document.getElementById('notification-modal').style.display = "flex";
+  // Çarpı butonunu her açılışta sıfırla
+  const closeBtn = document.getElementById('close-modal');
+  closeBtn.onclick = () => {
+    document.getElementById('notification-modal').style.display = "none";
+    document.getElementById('modal-subject').value = "";
+    if (tinymce.get('modal-body')) {
+      tinymce.get('modal-body').remove();
+    }
+  };
 }
 
-document.getElementById('close-modal').addEventListener('click', () => {
-  document.getElementById('notification-modal').style.display = "none";
-  document.getElementById('modal-subject').value = "";
-  document.getElementById('modal-body').value = "";
-});
-
-tinymce.init({
-  selector: '#modal-body',
-  height: 300,
-  menubar: false,
-  plugins: 'link lists',
-  toolbar: 'undo redo | bold italic underline | bullist numlist | link',
-  branding: false,
-  language: 'tr'
-});
 function showMissingInfo(notification) {
   const missing = notification.missingFields || [];
   const message = missing.length > 0
