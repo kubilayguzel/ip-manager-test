@@ -232,24 +232,23 @@ function startNotificationListener(user) {
 
     if (notification.sourceTaskId) {
       try {
-        console.log("🔍 Task getiriliyor:", notification.sourceTaskId);
         const taskRef = doc(db, "tasks", notification.sourceTaskId);
         const taskDoc = await getDoc(taskRef);
 
         if (taskDoc.exists()) {
           const taskData = taskDoc.data();
-          console.log("✅ Task bulundu:", taskData);
+
 
           mainProcessType = taskData.title || '-';
 
           if (taskData.relatedIpRecordId) {
-            console.log("🔍 relatedIpRecordId bulundu:", taskData.relatedIpRecordId);
+
             const ipRecordRef = doc(db, "ipRecords", taskData.relatedIpRecordId);
             const ipRecordDoc = await getDoc(ipRecordRef);
 
             if (ipRecordDoc.exists()) {
               const ipRecordData = ipRecordDoc.data();
-              console.log("✅ IP record bulundu:", ipRecordData);
+
 
               applicationNumber = ipRecordData.applicationNumber || '-';
             } else {
