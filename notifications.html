@@ -251,7 +251,7 @@ function startNotificationListener(user) {
                     alert("Giriş yapmalısınız.");
                     return;
                 }
-                if (!confirm("Bu e-postayı göndermek istediğinize emin misiniz?")) return;
+                if (!confirm("Mail içeriğini kontrol etmeden göndermek istiyor musunuz?")) return;
 
                 try {
                     await sendEmail({
@@ -265,8 +265,6 @@ function startNotificationListener(user) {
                     alert("Gönderim sırasında bir hata oluştu.");
                 }
                 });
-                tr.querySelector('.action-cell').appendChild(sendButton);
-            }
 
             tableBody.appendChild(tr);
         });
