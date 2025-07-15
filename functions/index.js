@@ -643,6 +643,8 @@ exports.sendEmailNotification = functions.https.onCall(async (data, context) => 
   }
   });
 
+const { extract } = require("unrar-promise");
+
 exports.processTrademarkBulletinUpload = functions
   .runWith({
     timeoutSeconds: 300,
@@ -663,31 +665,26 @@ exports.processTrademarkBulletinUpload = functions
     }
 
     const tempFilePath = path.join(os.tmpdir(), fileName);
+    const extractDir = path.join(os.tmpdir(), "extracted_" + Date.now());
+
     await bucket.file(filePath).download({ destination: tempFilePath });
     console.log(`RAR dosyası indirildi: ${tempFilePath}`);
 
-    const data = fs.readFileSync(tempFilePath);
-    const extractor = Unrar.createExtractorFromData({ data });
+    // RAR arşivini çıkar
+    await extract(tempFilePath, extractDir);
+    console.log(`RAR dosyası çıkarıldı: ${extractDir}`);
 
-    // Tüm dosyaları çıkar
-    const extractionResult = extractor.extractFiles({ files: [] });
+    const fsPromises = fs.promises;
+    const files = await fsPromises.readdir(extractDir);
 
-    if (extractionResult[0].state !== "SUCCESS") {
-      throw new Error("RAR dosyası çıkarılamadı.");
-    }
+    console.log(`Çıkarılan dosyalar: ${files.join(", ")}`);
 
-    const entries = extractionResult[1].files;
+    // bulletin.inf oku
+    const bulletinFilePath = files.find(f => f.toLowerCase().endsWith("bulletin.inf"));
+    if (!bulletinFilePath) throw new Error("bulletin.inf bulunamadı.");
 
-    console.log(`Çıkarılan dosya sayısı: ${entries.length}`);
-    entries.forEach(e => console.log("Dosya:", e.fileHeader.name));
-
-    const bulletinEntry = entries.find(e => e.fileHeader.name.toLowerCase().endsWith("bulletin.inf"));
-    if (!bulletinEntry) {
-      throw new Error("bulletin.inf bulunamadı.");
-    }
-
-    const bulletinContent = Buffer.from(bulletinEntry.extraction).toString("utf-8");
-    console.log("bulletin.inf içeriği:", bulletinContent);
+    const bulletinContent = await fsPromises.readFile(path.join(extractDir, bulletinFilePath), "utf-8");
+    console.log("bulletin.inf:", bulletinContent);
 
     const noMatch = bulletinContent.match(/NO\s*=\s*(.*)/);
     const dateMatch = bulletinContent.match(/DATE\s*=\s*(.*)/);
@@ -701,18 +698,18 @@ exports.processTrademarkBulletinUpload = functions
       createdAt: admin.firestore.FieldValue.serverTimestamp()
     });
     const bulletinId = bulletinRef.id;
-    console.log(`Bülten kaydedildi. ID: ${bulletinId}`);
 
-    const scriptEntry = entries.find(e => e.fileHeader.name.toLowerCase().endsWith("tmbulletin.script"));
-    if (!scriptEntry) {
-      throw new Error("tmbulletin.script bulunamadı.");
-    }
+    console.log(`Bülten Firestore'a kaydedildi. ID: ${bulletinId}`);
 
-    const scriptContent = Buffer.from(scriptEntry.extraction).toString("utf-8");
-    console.log("tmbulletin.script içeriği alındı.");
+    // tmbulletin.script oku
+    const scriptFilePath = files.find(f => f.toLowerCase().endsWith("tmbulletin.script"));
+    if (!scriptFilePath) throw new Error("tmbulletin.script bulunamadı.");
+
+    const scriptContent = await fsPromises.readFile(path.join(extractDir, scriptFilePath), "utf-8");
+    console.log("tmbulletin.script alındı.");
 
     const records = parseScriptContent(scriptContent);
-    console.log(`Toplam ${records.length} kayıt bulundu.`);
+    console.log(`Toplam ${records.length} kayıt.`);
 
     const batch = db.batch();
     records.forEach((record) => {
@@ -723,13 +720,13 @@ exports.processTrademarkBulletinUpload = functions
       });
     });
     await batch.commit();
-    console.log(`Kayıtlar Firestore'a kaydedildi.`);
+    console.log("Kayıtlar Firestore'a kaydedildi.");
 
-    fs.unlinkSync(tempFilePath);
-    console.log("Geçici dosya temizlendi.");
+    await fsPromises.unlink(tempFilePath);
+    console.log("RAR dosyası silindi.");
+
     return null;
   });
-
 
   function parseScriptContent(content) {
   const lines = content.split("\n");
