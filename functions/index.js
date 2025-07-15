@@ -8,6 +8,7 @@ const storage = new Storage();
 const path = require("path");
 const os = require("os");
 const fs = require("fs");
+const AdmZip = require("adm-zip");
 const { createExtractorFromFile } = require("node-unrar-js");
 const { google } = require("googleapis");
 const { GoogleAuth } = require("google-auth-library");
@@ -651,8 +652,8 @@ exports.processTrademarkBulletinUpload = functions
 
     console.log(`Yeni dosya yüklendi: ${fileName}`);
 
-    if (!fileName.endsWith(".rar")) {
-      console.log("RAR dosyası değil, işlem yapılmadı.");
+    if (!fileName.endsWith(".zip")) {
+      console.log("ZIP dosyası değil, işlem yapılmadı.");
       return null;
     }
 
@@ -664,113 +665,32 @@ exports.processTrademarkBulletinUpload = functions
       console.log(`Çıkarma klasörü oluşturuldu: ${extractTargetDir}`);
 
       await bucket.file(filePath).download({ destination: tempFilePath });
-      console.log(`RAR dosyası indirildi: ${tempFilePath}`);
-// Alternatif 1: Doğrudan targetPath belirterek extract et
-      console.log("Extract işlemi başlıyor...");
-      
-      try {
-        const extractor = await createExtractorFromFile({
-          filepath: tempFilePath,
-          targetPath: extractTargetDir
-        });
+      console.log(`ZIP dosyası indirildi: ${tempFilePath}`);
 
-        console.log("Extractor oluşturuldu, extract işlemi başlatılıyor...");
-        
-        // Extract işlemini farklı şekilde dene
-        let extractResult;
-        try {
-          extractResult = extractor.extract();
-          console.log("Extract sonucu:", extractResult);
-          
-          // Generator'ı await ile dene
-          if (extractResult && typeof extractResult.next === 'function') {
-            console.log("Generator'ı await ile iterate ediliyor...");
-            let result = extractResult.next();
-            while (!result.done) {
-              console.log("Generator item:", result.value);
-              result = extractResult.next();
-            }
-          }
-        } catch (extractErr) {
-          console.error("Extract hatası:", extractErr);
-        }
+      console.log("ZIP extract işlemi başlıyor...");
+      const zip = new AdmZip(tempFilePath);
+      zip.extractAllTo(extractTargetDir, true);
+      console.log("ZIP extract işlemi tamamlandı.");
 
-        // Fiziksel dosyaları kontrol et (extract otomatik olarak yapılmış olabilir)
-        console.log("Extract sonrası fiziksel dosya kontrolü...");
-        let allFiles = [];
-        
-        try {
-          allFiles = listAllFilesRecursive(extractTargetDir);
-          console.log(`Fiziksel dosya sayısı: ${allFiles.length}`);
-          
-          if (allFiles.length > 0) {
-            console.log("Bulunan dosyalar:");
-            allFiles.forEach(f => {
-              console.log(` - ${path.basename(f)}`);
-            });
-          }
-        } catch (dirErr) {
-          console.error("Dizin okuma hatası:", dirErr);
-        }
+      const allFiles = listAllFilesRecursive(extractTargetDir);
+      console.log(`Toplam çıkarılan dosya sayısı: ${allFiles.length}`);
 
-        // Script dosyasını ara
-        let scriptFilePath = null;
-        if (allFiles.length > 0) {
-          scriptFilePath = allFiles.find(p =>
-            path.basename(p).toLowerCase() === "tmbulletin.script"
-          );
-        }
-
-        if (!scriptFilePath) {
-          // Son çare: Manuel RAR extract dene
-          console.log("Manuel extract deneniyor...");
-          const unrar = require('node-unrar-js');
-          
-          try {
-            const rarFile = fs.readFileSync(tempFilePath);
-            const extracted = unrar.createExtractorFromData({ data: rarFile });
-            const list = extracted.getFileList();
-            console.log("RAR içeriği:", list);
-            
-            const files = extracted.extract({ files: ["*"] });
-            for (const file of files.files) {
-              if (file.fileHeader && file.extraction) {
-                const outPath = path.join(extractTargetDir, file.fileHeader.name);
-                const outDir = path.dirname(outPath);
-                if (!fs.existsSync(outDir)) {
-                  fs.mkdirSync(outDir, { recursive: true });
-                }
-                fs.writeFileSync(outPath, Buffer.from(file.extraction));
-                console.log(`Manuel extract: ${file.fileHeader.name}`);
-              }
-            }
-            
-            // Tekrar dosya taraması yap
-            allFiles = listAllFilesRecursive(extractTargetDir);
-            scriptFilePath = allFiles.find(p =>
-              path.basename(p).toLowerCase() === "tmbulletin.script"
-            );
-            
-          } catch (manualErr) {
-            console.error("Manuel extract hatası:", manualErr);
-          }
-        }
-
-        if (!scriptFilePath) {
-          throw new Error("RAR dosyası extract edilemedi veya tmbulletin.script bulunamadı. Lütfen RAR dosyasını kontrol edin.");
-        }
-
-        console.log(`Script dosyası bulundu: ${scriptFilePath}`);
-
-      } catch (error) {
-        console.error("Extract işlemi tamamen başarısız:", error);
-        throw error;
+      if (allFiles.length === 0) {
+        throw new Error("ZIP dosyası boş veya çıkarılamadı.");
       }
 
-      // Bülten metadata parse
+      const scriptFilePath = allFiles.find(p =>
+        path.basename(p).toLowerCase() === "tmbulletin.script"
+      );
+      if (!scriptFilePath) {
+        throw new Error("'tmbulletin.script' bulunamadı.");
+      }
+      console.log(`Script dosyası bulundu: ${scriptFilePath}`);
+
+      const scriptContent = fs.readFileSync(scriptFilePath, 'utf8');
+
       const noMatch = scriptContent.match(/INSERT INTO PROPERTIES VALUES\('NO','(.*?)'\)/);
       const dateMatch = scriptContent.match(/INSERT INTO PROPERTIES VALUES\('DATE','(.*?)'\)/);
-
       const bulletinNo = noMatch ? noMatch[1].trim() : "Unknown";
       const bulletinDate = dateMatch ? dateMatch[1].trim() : "Unknown";
 
@@ -793,6 +713,7 @@ exports.processTrademarkBulletinUpload = functions
       );
 
       const batch = admin.firestore().batch();
+      let uploadedImageCount = 0;
 
       for (const record of records) {
         let imagePath = null;
@@ -801,7 +722,6 @@ exports.processTrademarkBulletinUpload = functions
           const imageFile = imageFiles.find(f =>
             f.toLowerCase().includes(record.applicationNo.replace("/", "_"))
           );
-
           if (imageFile) {
             const destFileName = `bulletins/${bulletinId}/${path.basename(imageFile)}`;
             await bucket.upload(imageFile, {
@@ -811,6 +731,7 @@ exports.processTrademarkBulletinUpload = functions
               }
             });
             imagePath = destFileName;
+            uploadedImageCount++;
           }
         }
 
@@ -830,7 +751,7 @@ exports.processTrademarkBulletinUpload = functions
       }
 
       await batch.commit();
-      console.log("Kayıtlar Firestore'a kaydedildi.");
+      console.log(`Firestore'a kayıtlar eklendi. Yüklenen resim sayısı: ${uploadedImageCount}`);
 
     } catch (error) {
       console.error("İşlem hatası:", error);
@@ -848,6 +769,9 @@ exports.processTrademarkBulletinUpload = functions
     return null;
   });
 
+/**
+ * Recursive olarak dosya listesini döner.
+ */
 function listAllFilesRecursive(dir) {
   let results = [];
   const entries = fs.readdirSync(dir, { withFileTypes: true });
@@ -862,6 +786,9 @@ function listAllFilesRecursive(dir) {
   return results;
 }
 
+/**
+ * tmbulletin.script içeriğini parse eder.
+ */
 function parseScriptContent(content) {
   const lines = content.split("\n");
   const recordsMap = {};
@@ -871,10 +798,6 @@ function parseScriptContent(content) {
 
     if (line.startsWith("INSERT INTO TRADEMARK VALUES")) {
       const values = parseValues(line);
-      if (values.length < 7) {
-        console.warn("TRADEMARK satırı eksik:", line);
-        return;
-      }
       const appNo = values[0];
       recordsMap[appNo] = {
         applicationNo: appNo,
@@ -890,10 +813,6 @@ function parseScriptContent(content) {
 
     if (line.startsWith("INSERT INTO HOLDER VALUES")) {
       const values = parseValues(line);
-      if (values.length < 8) {
-        console.warn("HOLDER satırı eksik:", line);
-        return;
-      }
       const appNo = values[0];
       if (recordsMap[appNo]) {
         recordsMap[appNo].holders.push({
@@ -906,10 +825,6 @@ function parseScriptContent(content) {
 
     if (line.startsWith("INSERT INTO GOODS VALUES")) {
       const values = parseValues(line);
-      if (values.length < 4) {
-        console.warn("GOODS satırı eksik:", line);
-        return;
-      }
       const appNo = values[0];
       if (recordsMap[appNo]) {
         recordsMap[appNo].goods.push(values[3]);
@@ -918,10 +833,6 @@ function parseScriptContent(content) {
 
     if (line.startsWith("INSERT INTO EXTRACTEDGOODS VALUES")) {
       const values = parseValues(line);
-      if (values.length < 4) {
-        console.warn("EXTRACTEDGOODS satırı eksik:", line);
-        return;
-      }
       const appNo = values[0];
       if (recordsMap[appNo]) {
         recordsMap[appNo].extractedGoods.push(values[3]);
@@ -930,10 +841,6 @@ function parseScriptContent(content) {
 
     if (line.startsWith("INSERT INTO ATTORNEY VALUES")) {
       const values = parseValues(line);
-      if (values.length < 3) {
-        console.warn("ATTORNEY satırı eksik:", line);
-        return;
-      }
       const appNo = values[0];
       if (recordsMap[appNo]) {
         recordsMap[appNo].attorneys.push(values[2]);
@@ -944,12 +851,18 @@ function parseScriptContent(content) {
   return Object.values(recordsMap);
 }
 
+/**
+ * SQL Insert satırlarını parse eder.
+ */
 function parseValues(line) {
   const inside = line.substring(line.indexOf("(") + 1, line.lastIndexOf(")"));
   const raw = inside.split("','").map(s => s.replace(/^'/, "").replace(/'$/, ""));
   return raw.map(s => s.replace(/''/g, "'"));
 }
 
+/**
+ * İçerik tipi tespiti.
+ */
 function getContentType(filePath) {
   if (/\.png$/i.test(filePath)) return "image/png";
   if (/\.jpe?g$/i.test(filePath)) return "image/jpeg";
