@@ -640,43 +640,77 @@ exports.sendEmailNotification = functions.https.onCall(async (data, context) => 
 
 exports.processTrademarkBulletinUpload = functions
   .runWith({
-    timeoutSeconds: 300,
-    memory: "1GB",
+    timeoutSeconds: 300, // 5 dakika zaman aşımı
+    memory: "1GB", // 1GB bellek
   })
   .storage.object()
   .onFinalize(async (object) => {
-    const bucket = storage.bucket(object.bucket);
+    const bucket = admin.storage().bucket(object.bucket); // Firebase Admin SDK'dan bucket alınımı
     const filePath = object.name;
     const fileName = path.basename(filePath);
 
     console.log(`Yeni dosya yüklendi: ${fileName}`);
 
+    // Sadece ZIP dosyalarını işle
     if (!fileName.endsWith(".zip")) {
       console.log("ZIP dosyası değil, işlem yapılmadı.");
       return null;
     }
 
+    // Geçici dosya ve dizin yolları
     const tempFilePath = path.join(os.tmpdir(), fileName);
     const extractTargetDir = path.join(os.tmpdir(), `extract_${Date.now()}`);
 
     try {
+      // Çıkarma klasörünü oluştur
       fs.mkdirSync(extractTargetDir, { recursive: true });
       console.log(`Çıkarma klasörü oluşturuldu: ${extractTargetDir}`);
 
+      // ZIP dosyasını Cloud Storage'dan geçici dizine indir
       await bucket.file(filePath).download({ destination: tempFilePath });
       console.log(`ZIP dosyası indirildi: ${tempFilePath}`);
 
+      // ZIP dosyasını çıkar
       const zip = new AdmZip(tempFilePath);
-      zip.extractAllTo(extractTargetDir, true);
+      zip.extractAllTo(extractTargetDir, true); // 'true' ile üzerine yazma izni verilir
       console.log("ZIP dosyası çıkarıldı.");
+
+      // !!! BURADA YENİ EKLENEN KRİTİK LOGLAR BAŞLIYOR !!!
       console.log("------------------------------------------");
-      console.log(`Çıkarılan Dizin İçeriği (${extractTargetDir}):`, fs.readdirSync(extractTargetDir));
+      try {
+        // Çıkarılan dizinin doğrudan içeriğini listele (alt dizinlere inmeden)
+        const extractedContents = fs.readdirSync(extractTargetDir);
+        console.log(`Çıkarılan Dizin (${extractTargetDir}) İçeriği (toplam ${extractedContents.length} öğe):`);
+        extractedContents.slice(0, 10).forEach(item => { // İlk 10 öğeyi göster
+            console.log(`  - ${item}`);
+        });
+        if (extractedContents.length > 10) {
+            console.log(`  ... ve ${extractedContents.length - 10} öğe daha.`);
+        }
+      } catch (dirReadError) {
+        console.error(`Dizin içeriği okunurken hata oluştu: ${dirReadError.message}`);
+      }
       console.log("------------------------------------------");
 
+      // Tüm dosyaları ve alt dizinleri listeleyen yardımcı fonksiyonu kullan
       const allFiles = listAllFilesRecursive(extractTargetDir);
-      console.log(`Toplam çıkarılan dosya sayısı: ${allFiles.length}`);
+      console.log(`Toplam çıkarılan dosya sayısı (listAllFilesRecursive tarafından): ${allFiles.length}`);
 
-      // bulletin.inf veya bulletin dosyasını bul
+      // allFiles dizisinin içeriğini kontrol et (ilk 10 öğe)
+      console.log("------------------------------------------");
+      console.log(`allFiles'ın İçeriği (ilk 10 öğe):`);
+      allFiles.slice(0, 10).forEach(file => {
+          console.log(`  - ${file}`);
+      });
+      if (allFiles.length > 10) {
+          console.log(`  ... ve ${allFiles.length - 10} öğe daha.`);
+      }
+      console.log("allFiles toplam öğe sayısı:", allFiles.length);
+      console.log("------------------------------------------");
+      // !!! YENİ EKLENEN KRİTİK LOGLAR BURADA BİTİYOR !!!
+
+
+      // ADIM 1: bulletin.inf veya bulletin dosyasını bul
       console.log("[ADIM 1] bulletin.inf veya bulletin dosyası aranıyor...");
       const bulletinInfPath = allFiles.find((p) =>
         ["bulletin.inf", "bulletin"].includes(path.basename(p).toLowerCase())
@@ -708,30 +742,25 @@ exports.processTrademarkBulletinUpload = functions
       const bulletinId = bulletinRef.id;
       console.log(`Firestore bülten kaydı oluşturuldu: ${bulletinId}`);
 
- // tmbulletin dosyasını bul
-console.log("[ADIM 2] tmbulletin dosyası aranıyor...");
-// Buraya allFiles'ın içeriğini görmek için ekleyin:
-    console.log("------------------------------------------");
-    console.log("allFiles'ın İçeriği (arama öncesi):", allFiles);
-    console.log("------------------------------------------");
+      // ADIM 2: tmbulletin dosyasını bul
+      console.log("[ADIM 2] tmbulletin dosyası aranıyor...");
 
-    // Her bir dosyanın işlenişini ve temel adını görmek için buraya ekleyin:
-    allFiles.forEach(p => {
-        // 'path' modülünün tanımlı olduğundan emin olun (örneğin: const path = require('path');)
-        console.log(`İşlenen Dosya Yolu: '${p}', Temel Ad (küçük harf): '${path.basename(p).toLowerCase()}'`);
-    });
-    console.log("------------------------------------------");
-const scriptFilePath = allFiles.find((p) =>
-  path.basename(p).toLowerCase() === "tmbulletin"
-);
+      // allFiles.forEach döngüsü kaldırıldı çünkü çok fazla log üretebiliyor ve Cloud Functions log limitlerini aşabilir.
+      // Zaten allFiles'ın ilk 10 öğesini yukarıda logladık.
 
-if (!scriptFilePath) {
-  console.error("tmbulletin bulunamadı.");
-  throw new Error("tmbulletin dosyası bulunamadı.");
-}
+      const scriptFilePath = allFiles.find((p) =>
+        path.basename(p).toLowerCase() === "tmbulletin"
+      );
 
-console.log(`[ADIM 2 BAŞARILI] tmbulletin bulundu: ${scriptFilePath}`);
-const scriptContent = fs.readFileSync(scriptFilePath, "utf8");
+      if (!scriptFilePath) {
+        console.error("tmbulletin bulunamadı.");
+        // Önemli: Buradaki hata mesajını daha açıklayıcı hale getirebiliriz:
+        // console.error(`tmbulletin bulunamadı. Aranan dizin: ${extractTargetDir}, allFiles listesi:`, allFiles);
+        throw new Error("tmbulletin dosyası bulunamadı.");
+      }
+
+      console.log(`[ADIM 2 BAŞARILI] tmbulletin bulundu: ${scriptFilePath}`);
+      const scriptContent = fs.readFileSync(scriptFilePath, "utf8");
 
       const records = parseScriptContent(scriptContent);
       console.log(`Toplam ${records.length} kayıt parse edildi.`);
@@ -788,6 +817,7 @@ const scriptContent = fs.readFileSync(scriptFilePath, "utf8");
       throw error;
     } finally {
       try {
+        // Geçici dosyaları ve dizinleri temizle
         if (fs.existsSync(tempFilePath)) fs.unlinkSync(tempFilePath);
         if (fs.existsSync(extractTargetDir)) fs.rmSync(extractTargetDir, { recursive: true, force: true });
         console.log("Geçici dosyalar temizlendi.");
@@ -798,6 +828,8 @@ const scriptContent = fs.readFileSync(scriptFilePath, "utf8");
 
     return null;
   });
+
+// Yardımcı Fonksiyonlar
 
 function listAllFilesRecursive(dir) {
   let results = [];
