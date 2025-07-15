@@ -4,6 +4,13 @@ const cors = require('cors');
 const fetch = require('node-fetch');
 
 const admin = require('firebase-admin');
+// functions/index.js
+const { Storage } = require("@google-cloud/storage");
+const path = require("path");
+const os = require("os");
+const fs = require("fs");
+const Unrar = require("node-unrar-js");
+const storage = new Storage(); 
 if (!admin.apps.length) {
   admin.initializeApp();
 }
@@ -634,5 +641,123 @@ exports.sendEmailNotification = functions.https.onCall(async (data, context) => 
 
     throw new functions.https.HttpsError("internal", "E-posta gönderilirken bir hata oluştu.", error.message);
   }
-});
+  });
+
+  exports.processTrademarkBulletinUpload = functions
+  .storage
+  .object()
+  .onFinalize(async (object) => {
+    const bucket = storage.bucket(object.bucket);
+    const filePath = object.name;
+    const fileName = path.basename(filePath);
+
+    console.log(`Yeni dosya yüklendi: ${fileName}`);
+
+    if (!fileName.endsWith(".rar")) {
+      console.log("RAR dosyası değil, işlem yapılmadı.");
+      return null;
+    }
+
+    // Geçici dizine indir
+    const tempFilePath = path.join(os.tmpdir(), fileName);
+    await bucket.file(filePath).download({ destination: tempFilePath });
+    console.log(`Dosya indirildi: ${tempFilePath}`);
+
+    // RAR içeriğini oku
+    const data = fs.readFileSync(tempFilePath);
+    const extractor = Unrar.createExtractorFromData({ data });
+
+    const list = extractor.getFileList();
+    if (list[0].state !== "SUCCESS") {
+      throw new Error("RAR listesi okunamadı.");
+    }
+
+    const entries = list[1].fileHeaders;
+
+    // bulletin.inf dosyasını bul
+    const bulletinEntry = entries.find(e => e.name.toLowerCase().endsWith("bulletin.inf"));
+    if (!bulletinEntry) {
+      throw new Error("bulletin.inf bulunamadı.");
+    }
+
+    const bulletinResult = extractor.extractFiles([bulletinEntry.name]);
+    if (bulletinResult[0].state !== "SUCCESS") {
+      throw new Error("bulletin.inf çıkarılamadı.");
+    }
+
+    const bulletinContent = Buffer.from(bulletinResult[1][0].extraction).toString("utf-8");
+    console.log("bulletin.inf:", bulletinContent);
+
+    // bulletin.inf içinden No ve Date al
+    const noMatch = bulletinContent.match(/NO\s*=\s*(.*)/);
+    const dateMatch = bulletinContent.match(/DATE\s*=\s*(.*)/);
+    const bulletinNo = noMatch ? noMatch[1].trim() : "Unknown";
+    const bulletinDate = dateMatch ? dateMatch[1].trim() : "Unknown";
+
+    // Firestore'da bülten kaydı oluştur
+    const bulletinRef = await db.collection("trademarkBulletins").add({
+      bulletinNo,
+      bulletinDate,
+      type: "marka",
+      createdAt: admin.firestore.FieldValue.serverTimestamp()
+    });
+    const bulletinId = bulletinRef.id;
+    console.log(`Bülten Firestore'a kaydedildi. ID: ${bulletinId}`);
+
+    // tmbulletin.script dosyasını bul
+    const scriptEntry = entries.find(e => e.name.toLowerCase().endsWith("tmbulletin.script"));
+    if (!scriptEntry) {
+      throw new Error("tmbulletin.script bulunamadı.");
+    }
+
+    const scriptResult = extractor.extractFiles([scriptEntry.name]);
+    if (scriptResult[0].state !== "SUCCESS") {
+      throw new Error("tmbulletin.script çıkarılamadı.");
+    }
+
+    const scriptContent = Buffer.from(scriptResult[1][0].extraction).toString("utf-8");
+    console.log("tmbulletin.script alındı.");
+
+    // script içeriğini parse et
+    const records = parseScriptContent(scriptContent);
+    console.log(`Toplam kayıt: ${records.length}`);
+
+    // Firestore'a batch kayıt
+    const batch = db.batch();
+    records.forEach((record) => {
+      const docRef = db.collection("trademarkBulletinRecords").doc();
+      batch.set(docRef, {
+        bulletinId,
+        ...record
+      });
+    });
+    await batch.commit();
+    console.log(`Başvuru kayıtları Firestore'a kaydedildi.`);
+
+    // Geçici dosyayı temizle
+    fs.unlinkSync(tempFilePath);
+
+    console.log("İşlem tamamlandı.");
+    return null;
+  });
+
+  function parseScriptContent(content) {
+  const lines = content.split("\n");
+  const records = [];
+
+  lines.forEach(line => {
+    if (line.trim() === "") return;
+    const parts = line.split(";");
+    records.push({
+      applicationNo: parts[0]?.trim(),
+      holder: parts[1]?.trim(),
+      niceClasses: parts[2]?.trim(),
+      // İhtiyacına göre diğer alanları ekle
+    });
+  });
+
+  return records;
+}
+
+
 
