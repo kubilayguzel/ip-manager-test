@@ -13,6 +13,8 @@ const { createExtractorFromFile } = require("node-unrar-js");
 const { google } = require("googleapis");
 const { GoogleAuth } = require("google-auth-library");
 const nodemailer = require("nodemailer");
+const decompress = require("decompress");
+
 
 if (!admin.apps.length) {
   admin.initializeApp();
@@ -668,29 +670,34 @@ exports.processTrademarkBulletinUpload = functions
       console.log(`ZIP dosyası indirildi: ${tempFilePath}`);
 
       console.log("ZIP extract işlemi başlıyor...");
-      const zip = new AdmZip(tempFilePath);
-      zip.extractAllTo(extractTargetDir, true);
+      await decompress(tempFilePath, extractTargetDir);
       console.log("ZIP extract işlemi tamamlandı.");
 
       const allFiles = listAllFilesRecursive(extractTargetDir);
       console.log(`Toplam çıkarılan dosya sayısı: ${allFiles.length}`);
 
-      if (allFiles.length === 0) {
-        throw new Error("ZIP dosyası boş veya çıkarılamadı.");
-      }
-
-      const scriptFilePath = allFiles.find(p =>
-        path.basename(p).toLowerCase() === "tmbulletin.script"
+      // tmbulletin veya tmbulletin.script dosyasını bul
+      let scriptFilePath = allFiles.find(p =>
+        path.basename(p).toLowerCase() === "tmbulletin"
       );
       if (!scriptFilePath) {
-        throw new Error("'tmbulletin.script' bulunamadı.");
+        scriptFilePath = allFiles.find(p =>
+          path.basename(p).toLowerCase() === "tmbulletin.script"
+        );
+      }
+      if (!scriptFilePath) {
+        console.error("tmbulletin dosyası bulunamadı.");
+        throw new Error("Veri dosyası bulunamadı: tmbulletin veya tmbulletin.script");
       }
       console.log(`Script dosyası bulundu: ${scriptFilePath}`);
 
-      const scriptContent = fs.readFileSync(scriptFilePath, 'utf8');
+      const scriptContent = fs.readFileSync(scriptFilePath, "utf8");
+      console.log(`Script dosyası okundu. Boyut: ${scriptContent.length} karakter.`);
 
+      // Bülten metadata parse
       const noMatch = scriptContent.match(/INSERT INTO PROPERTIES VALUES\('NO','(.*?)'\)/);
       const dateMatch = scriptContent.match(/INSERT INTO PROPERTIES VALUES\('DATE','(.*?)'\)/);
+
       const bulletinNo = noMatch ? noMatch[1].trim() : "Unknown";
       const bulletinDate = dateMatch ? dateMatch[1].trim() : "Unknown";
 
@@ -751,7 +758,7 @@ exports.processTrademarkBulletinUpload = functions
       }
 
       await batch.commit();
-      console.log(`Firestore'a kayıtlar eklendi. Yüklenen resim sayısı: ${uploadedImageCount}`);
+      console.log(`Kayıtlar Firestore'a kaydedildi. Yüklenen resim sayısı: ${uploadedImageCount}`);
 
     } catch (error) {
       console.error("İşlem hatası:", error);
