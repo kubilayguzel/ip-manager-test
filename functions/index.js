@@ -643,8 +643,6 @@ exports.sendEmailNotification = functions.https.onCall(async (data, context) => 
   }
   });
 
-const { extract } = require("unrar-promise");
-
 exports.processTrademarkBulletinUpload = functions
   .runWith({
     timeoutSeconds: 300,
