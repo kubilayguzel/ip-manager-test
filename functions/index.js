@@ -645,8 +645,8 @@ exports.sendEmailNotification = functions.https.onCall(async (data, context) => 
 
 exports.processTrademarkBulletinUpload = functions
   .runWith({
-    timeoutSeconds: 300, // Uzun işlem için 5 dk
-    memory: "1GB"        // Büyük dosya için artırıldı
+    timeoutSeconds: 300,
+    memory: "1GB"
   })
   .storage
   .object()
@@ -666,30 +666,29 @@ exports.processTrademarkBulletinUpload = functions
     await bucket.file(filePath).download({ destination: tempFilePath });
     console.log(`RAR dosyası indirildi: ${tempFilePath}`);
 
-    // RAR dosyasını oku
     const data = fs.readFileSync(tempFilePath);
     const extractor = Unrar.createExtractorFromData({ data });
 
-    // RAR içeriği listele
-    const listResult = extractor.getFileList();
-    if (listResult[0].state !== "SUCCESS") {
-      throw new Error("RAR içeriği listelenemedi.");
-    }
-    const entries = listResult[1].fileHeaders;
+    // Tüm dosyaları çıkar
+    const extractionResult = extractor.extractFiles({ files: [] });
 
-    // bulletin.inf çıkar
-    const bulletinEntry = entries.find(e => e.name.toLowerCase().endsWith("bulletin.inf"));
+    if (extractionResult[0].state !== "SUCCESS") {
+      throw new Error("RAR dosyası çıkarılamadı.");
+    }
+
+    const entries = extractionResult[1].files;
+
+    console.log(`Çıkarılan dosya sayısı: ${entries.length}`);
+    entries.forEach(e => console.log("Dosya:", e.fileHeader.name));
+
+    const bulletinEntry = entries.find(e => e.fileHeader.name.toLowerCase().endsWith("bulletin.inf"));
     if (!bulletinEntry) {
       throw new Error("bulletin.inf bulunamadı.");
     }
-    const bulletinResult = extractor.extract({ files: [bulletinEntry.name] });
-    if (bulletinResult[0].state !== "SUCCESS") {
-      throw new Error("bulletin.inf çıkarılamadı.");
-    }
-    const bulletinContent = Buffer.from(bulletinResult[1][0].extraction).toString("utf-8");
+
+    const bulletinContent = Buffer.from(bulletinEntry.extraction).toString("utf-8");
     console.log("bulletin.inf içeriği:", bulletinContent);
 
-    // Bilgileri parse et
     const noMatch = bulletinContent.match(/NO\s*=\s*(.*)/);
     const dateMatch = bulletinContent.match(/DATE\s*=\s*(.*)/);
     const bulletinNo = noMatch ? noMatch[1].trim() : "Unknown";
@@ -704,16 +703,12 @@ exports.processTrademarkBulletinUpload = functions
     const bulletinId = bulletinRef.id;
     console.log(`Bülten kaydedildi. ID: ${bulletinId}`);
 
-    // tmbulletin.script çıkar
-    const scriptEntry = entries.find(e => e.name.toLowerCase().endsWith("tmbulletin.script"));
+    const scriptEntry = entries.find(e => e.fileHeader.name.toLowerCase().endsWith("tmbulletin.script"));
     if (!scriptEntry) {
       throw new Error("tmbulletin.script bulunamadı.");
     }
-    const scriptResult = extractor.extract({ files: [scriptEntry.name] });
-    if (scriptResult[0].state !== "SUCCESS") {
-      throw new Error("tmbulletin.script çıkarılamadı.");
-    }
-    const scriptContent = Buffer.from(scriptResult[1][0].extraction).toString("utf-8");
+
+    const scriptContent = Buffer.from(scriptEntry.extraction).toString("utf-8");
     console.log("tmbulletin.script içeriği alındı.");
 
     const records = parseScriptContent(scriptContent);
@@ -734,6 +729,7 @@ exports.processTrademarkBulletinUpload = functions
     console.log("Geçici dosya temizlendi.");
     return null;
   });
+
 
   function parseScriptContent(content) {
   const lines = content.split("\n");
