@@ -671,16 +671,15 @@ exports.processTrademarkBulletinUpload = functions
       });
 
       const extracted = extractor.extract();
-      console.log(`RAR çıkarıldı. Toplam dosya: ${extracted.files.length}`);
+      console.log(`RAR çıkarıldı. Toplam dosya: ${extracted.length}`);
 
-      extracted.files.forEach(file => {
+      extracted.forEach(file => {
         const outPath = path.join(extractTargetDir, file.fileHeader.name);
         const outDir = path.dirname(outPath);
         if (!fs.existsSync(outDir)) fs.mkdirSync(outDir, { recursive: true });
         fs.writeFileSync(outPath, Buffer.from(file.extraction));
         console.log(`- Dosya yazıldı: ${outPath}`);
       });
-
       const allFiles = listAllFilesRecursive(extractTargetDir);
       console.log("Çıkarılan dosyalar:");
       allFiles.forEach(f => console.log(" -", f));
