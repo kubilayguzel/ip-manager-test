@@ -24,6 +24,7 @@
   </style>
 </head>
 <body>
+<div id="layout-placeholder"></div>
   <div class="main-container">
     <h1>Bülten Yükleme</h1>
     <p>Marka, patent ve tasarım bültenlerini ayrı ayrı yükleyebilirsiniz.</p>
@@ -59,7 +60,10 @@
     </div>
 
   </div>
-
+  <script type="module">
+    import { loadSharedLayout } from './js/layout-loader.js';
+    loadSharedLayout();
+  </script>
   <script src="js/bulletin-upload.js"></script>
 </body>
 </html>
