@@ -670,7 +670,18 @@ exports.processTrademarkBulletinUpload = functions
         filepath: tempFilePath
       });
 
-      const extracted = extractor.extract();
+      const extractResult = extractor.extract();
+      
+      // Extract sonucunu array'e dönüştür
+      let extracted;
+      if (Array.isArray(extractResult)) {
+        extracted = extractResult;
+      } else if (extractResult && extractResult.files) {
+        extracted = extractResult.files;
+      } else {
+        extracted = [];
+      }
+      
       console.log(`RAR çıkarıldı. Toplam dosya: ${extracted.length}`);
 
       extracted.forEach(file => {
