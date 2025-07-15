@@ -660,34 +660,28 @@ exports.processTrademarkBulletinUpload = functions
     const extractTargetDir = path.join(os.tmpdir(), `extract_${Date.now()}`);
 
     try {
-      // Geçici klasörü oluştur
       fs.mkdirSync(extractTargetDir, { recursive: true });
       console.log(`Çıkarma klasörü oluşturuldu: ${extractTargetDir}`);
 
-      // RAR dosyasını indir
       await bucket.file(filePath).download({ destination: tempFilePath });
       console.log(`RAR dosyası indirildi: ${tempFilePath}`);
 
-      // node-unrar-js ile çıkar
       const extractor = await createExtractorFromFile({
         filepath: tempFilePath,
         targetPath: extractTargetDir
       });
-
       const extracted = extractor.extract();
-      const fileHeaders = [...extracted.files];
+      console.log(`RAR çıkarıldı. Toplam dosya: ${extracted.files.length}`);
 
-      console.log(`RAR çıkarıldı. Toplam dosya: ${fileHeaders.length}`);
-      console.log(`Dosyalar: ${fileHeaders.map(f => f.fileHeader.name).join(", ")}`);
+      const allFiles = listAllFilesRecursive(extractTargetDir);
+      console.log(`Çıkarılan dosyalar: ${allFiles.join(", ")}`);
 
-      // bulletin.inf dosyasını recursive ara
-      const bulletinInfPath = findFileRecursive(extractTargetDir, "bulletin.inf");
+      const bulletinInfPath = allFiles.find(p => p.toLowerCase().endsWith("bulletin.inf"));
       if (!bulletinInfPath) throw new Error("bulletin.inf bulunamadı.");
 
       const bulletinContent = fs.readFileSync(bulletinInfPath, "utf-8");
       console.log("bulletin.inf içeriği:", bulletinContent);
 
-      // Bülten bilgileri çıkar
       const noMatch = bulletinContent.match(/NO\s*=\s*(.*)/);
       const dateMatch = bulletinContent.match(/DATE\s*=\s*(.*)/);
       const bulletinNo = noMatch ? noMatch[1].trim() : "Unknown";
@@ -702,32 +696,55 @@ exports.processTrademarkBulletinUpload = functions
       const bulletinId = bulletinRef.id;
       console.log(`Bülten Firestore'a kaydedildi. ID: ${bulletinId}`);
 
-      // tmbulletin.script dosyasını recursive ara
-      const scriptFilePath = findFileRecursive(extractTargetDir, "tmbulletin.script");
+      const scriptFilePath = allFiles.find(p => p.toLowerCase().endsWith("tmbulletin.script"));
       if (!scriptFilePath) throw new Error("tmbulletin.script bulunamadı.");
 
       const scriptContent = fs.readFileSync(scriptFilePath, "utf-8");
-      console.log("tmbulletin.script içeriği alındı.");
+      console.log("tmbulletin.script okundu.");
 
       const records = parseScriptContent(scriptContent);
-      console.log(`Toplam ${records.length} kayıt bulundu.`);
+      console.log(`Toplam ${records.length} marka kaydı bulundu.`);
 
-      // Firestore'a kayıt et
+      const imageFiles = allFiles.filter(p =>
+        /\.(jpg|jpeg|png)$/i.test(p)
+      );
+
       const batch = admin.firestore().batch();
-      records.forEach((record) => {
-        // undefined değerleri null yap
-        const normalizedRecord = {
-          applicationNo: record.applicationNo ?? null,
-          holder: record.holder ?? null,
-          niceClasses: record.niceClasses ?? null
-        };
 
+      for (const record of records) {
+        // Görseli bul
+        const imageFile = imageFiles.find(f =>
+          f.toLowerCase().includes(record.applicationNo.replace("/", "_"))
+        );
+
+        let imagePath = null;
+        if (imageFile) {
+          const destFileName = `bulletins/${bulletinId}/${path.basename(imageFile)}`;
+          await bucket.upload(imageFile, {
+            destination: destFileName,
+            metadata: {
+              contentType: getContentType(imageFile)
+            }
+          });
+          imagePath = destFileName;
+        }
+
+        // Firestore dokümanı hazırla
         const docRef = admin.firestore().collection("trademarkBulletinRecords").doc();
         batch.set(docRef, {
           bulletinId,
-          ...normalizedRecord
+          applicationNo: record.applicationNo ?? null,
+          applicationDate: record.applicationDate ?? null,
+          markName: record.markName ?? null,
+          niceClasses: record.niceClasses ?? null,
+          holders: record.holders ?? [],
+          goods: record.goods ?? [],
+          extractedGoods: record.extractedGoods ?? [],
+          attorneys: record.attorneys ?? [],
+          imagePath
         });
-      });
+      }
+
       await batch.commit();
       console.log("Kayıtlar Firestore'a kaydedildi.");
 
@@ -735,16 +752,10 @@ exports.processTrademarkBulletinUpload = functions
       console.error("İşlem hatası:", error);
       throw error;
     } finally {
-      // Temizlik
       try {
-        if (fs.existsSync(tempFilePath)) {
-          fs.unlinkSync(tempFilePath);
-          console.log("RAR geçici dosyası temizlendi.");
-        }
-        if (fs.existsSync(extractTargetDir)) {
-          fs.rmSync(extractTargetDir, { recursive: true, force: true });
-          console.log("Çıkarma klasörü temizlendi.");
-        }
+        if (fs.existsSync(tempFilePath)) fs.unlinkSync(tempFilePath);
+        if (fs.existsSync(extractTargetDir)) fs.rmSync(extractTargetDir, { recursive: true, force: true });
+        console.log("Geçici dosyalar temizlendi.");
       } catch (cleanupError) {
         console.error("Temizlik hatası:", cleanupError);
       }
@@ -756,38 +767,91 @@ exports.processTrademarkBulletinUpload = functions
 /**
  * Alt klasörlerde dosya arar.
  */
-function findFileRecursive(dir, fileName) {
+function listAllFilesRecursive(dir) {
+  let results = [];
   const entries = fs.readdirSync(dir, { withFileTypes: true });
   for (const entry of entries) {
     const entryPath = path.join(dir, entry.name);
     if (entry.isDirectory()) {
-      const result = findFileRecursive(entryPath, fileName);
-      if (result) return result;
-    } else if (entry.isFile() && entry.name.toLowerCase() === fileName.toLowerCase()) {
-      return entryPath;
+      results = results.concat(listAllFilesRecursive(entryPath));
+    } else {
+      results.push(entryPath);
     }
   }
-  return null;
+  return results;
 }
 
 /**
- * tmbulletin.script dosyasını parse eder.
+ * Dosya içeriğini parse eder.
  */
 function parseScriptContent(content) {
   const lines = content.split("\n");
-  const records = [];
+  const recordsMap = {};
 
   lines.forEach(line => {
-    if (line.trim() === "") return;
-    const parts = line.split(";");
-    records.push({
-      applicationNo: parts[0]?.trim(),
-      holder: parts[1]?.trim(),
-      niceClasses: parts[2]?.trim()
-      // İhtiyacına göre diğer alanları ekleyebilirsin
-    });
+    if (line.startsWith("INSERT INTO TRADEMARK VALUES")) {
+      const values = parseValues(line);
+      const appNo = values[0];
+      recordsMap[appNo] = {
+        applicationNo: appNo,
+        applicationDate: values[1],
+        markName: values[5],
+        niceClasses: values[6],
+        holders: [],
+        goods: [],
+        extractedGoods: [],
+        attorneys: []
+      };
+    }
+
+    if (line.startsWith("INSERT INTO HOLDER VALUES")) {
+      const values = parseValues(line);
+      const appNo = values[0];
+      if (recordsMap[appNo]) {
+        recordsMap[appNo].holders.push({
+          name: values[2],
+          address: [values[3], values[4], values[5], values[6]].filter(Boolean).join(", "),
+          country: values[7]
+        });
+      }
+    }
+
+    if (line.startsWith("INSERT INTO GOODS VALUES")) {
+      const values = parseValues(line);
+      const appNo = values[0];
+      if (recordsMap[appNo]) {
+        recordsMap[appNo].goods.push(values[3]);
+      }
+    }
+
+    if (line.startsWith("INSERT INTO EXTRACTEDGOODS VALUES")) {
+      const values = parseValues(line);
+      const appNo = values[0];
+      if (recordsMap[appNo]) {
+        recordsMap[appNo].extractedGoods.push(values[3]);
+      }
+    }
+
+    if (line.startsWith("INSERT INTO ATTORNEY VALUES")) {
+      const values = parseValues(line);
+      const appNo = values[0];
+      if (recordsMap[appNo]) {
+        recordsMap[appNo].attorneys.push(values[2]);
+      }
+    }
   });
 
-  return records;
+  return Object.values(recordsMap);
 }
 
+function parseValues(line) {
+  const inside = line.substring(line.indexOf("(") + 1, line.lastIndexOf(")"));
+  const raw = inside.split("','").map(s => s.replace(/^'/, "").replace(/'$/, ""));
+  return raw.map(s => s.replace(/''/g, "'"));
+}
+
+function getContentType(filePath) {
+  if (/\.png$/i.test(filePath)) return "image/png";
+  if (/\.jpe?g$/i.test(filePath)) return "image/jpeg";
+  return "application/octet-stream";
+}
