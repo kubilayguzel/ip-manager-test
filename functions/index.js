@@ -648,53 +648,51 @@ exports.processTrademarkBulletinUpload = functions
     const bucket = storage.bucket(object.bucket);
     const filePath = object.name;
     const fileName = path.basename(filePath);
-    
+
     console.log(`Yeni dosya yüklendi: ${fileName}`);
-    
+
     if (!fileName.endsWith(".rar")) {
       console.log("RAR dosyası değil, işlem yapılmadı.");
       return null;
     }
-    
+
     const tempFilePath = path.join(os.tmpdir(), fileName);
     const extractTargetDir = path.join(os.tmpdir(), `extract_${Date.now()}`);
-    
+
     try {
-      // Geçici çıkarma klasörü oluştur
+      // Geçici klasörü oluştur
       fs.mkdirSync(extractTargetDir, { recursive: true });
       console.log(`Çıkarma klasörü oluşturuldu: ${extractTargetDir}`);
-      
+
       // RAR dosyasını indir
       await bucket.file(filePath).download({ destination: tempFilePath });
       console.log(`RAR dosyası indirildi: ${tempFilePath}`);
-      
+
       // node-unrar-js ile çıkar
       const extractor = await createExtractorFromFile({
         filepath: tempFilePath,
         targetPath: extractTargetDir
       });
-      
+
       const extracted = extractor.extract();
       const fileHeaders = [...extracted.files];
-      
+
       console.log(`RAR çıkarıldı. Toplam dosya: ${fileHeaders.length}`);
       console.log(`Dosyalar: ${fileHeaders.map(f => f.fileHeader.name).join(", ")}`);
-      
-      // Çıkarılan dosya yolları
-      const bulletinInfPath = path.join(extractTargetDir, "bulletin.inf");
-      const scriptFilePath = path.join(extractTargetDir, "tmbulletin.script");
-      
-      // bulletin.inf oku
-      if (!fs.existsSync(bulletinInfPath)) throw new Error("bulletin.inf bulunamadı.");
+
+      // bulletin.inf dosyasını recursive ara
+      const bulletinInfPath = findFileRecursive(extractTargetDir, "bulletin.inf");
+      if (!bulletinInfPath) throw new Error("bulletin.inf bulunamadı.");
+
       const bulletinContent = fs.readFileSync(bulletinInfPath, "utf-8");
       console.log("bulletin.inf içeriği:", bulletinContent);
-      
+
       // Bülten bilgileri çıkar
       const noMatch = bulletinContent.match(/NO\s*=\s*(.*)/);
       const dateMatch = bulletinContent.match(/DATE\s*=\s*(.*)/);
       const bulletinNo = noMatch ? noMatch[1].trim() : "Unknown";
       const bulletinDate = dateMatch ? dateMatch[1].trim() : "Unknown";
-      
+
       const bulletinRef = await admin.firestore().collection("trademarkBulletins").add({
         bulletinNo,
         bulletinDate,
@@ -703,16 +701,18 @@ exports.processTrademarkBulletinUpload = functions
       });
       const bulletinId = bulletinRef.id;
       console.log(`Bülten Firestore'a kaydedildi. ID: ${bulletinId}`);
-      
-      // tmbulletin.script oku
-      if (!fs.existsSync(scriptFilePath)) throw new Error("tmbulletin.script bulunamadı.");
+
+      // tmbulletin.script dosyasını recursive ara
+      const scriptFilePath = findFileRecursive(extractTargetDir, "tmbulletin.script");
+      if (!scriptFilePath) throw new Error("tmbulletin.script bulunamadı.");
+
       const scriptContent = fs.readFileSync(scriptFilePath, "utf-8");
       console.log("tmbulletin.script içeriği alındı.");
-      
+
       const records = parseScriptContent(scriptContent);
       console.log(`Toplam ${records.length} kayıt bulundu.`);
-      
-      // Firestore'a kaydet
+
+      // Firestore'a kayıt et
       const batch = admin.firestore().batch();
       records.forEach((record) => {
         const docRef = admin.firestore().collection("trademarkBulletinRecords").doc();
@@ -723,12 +723,12 @@ exports.processTrademarkBulletinUpload = functions
       });
       await batch.commit();
       console.log("Kayıtlar Firestore'a kaydedildi.");
-      
+
     } catch (error) {
       console.error("İşlem hatası:", error);
       throw error;
     } finally {
-      // Geçici dosyaları temizle
+      // Temizlik
       try {
         if (fs.existsSync(tempFilePath)) {
           fs.unlinkSync(tempFilePath);
@@ -739,28 +739,47 @@ exports.processTrademarkBulletinUpload = functions
           console.log("Çıkarma klasörü temizlendi.");
         }
       } catch (cleanupError) {
-        console.error("Dosya temizleme hatası:", cleanupError);
+        console.error("Temizlik hatası:", cleanupError);
       }
     }
-    
+
     return null;
   });
 
+/**
+ * Alt klasörlerde dosya arar.
+ */
+function findFileRecursive(dir, fileName) {
+  const entries = fs.readdirSync(dir, { withFileTypes: true });
+  for (const entry of entries) {
+    const entryPath = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      const result = findFileRecursive(entryPath, fileName);
+      if (result) return result;
+    } else if (entry.isFile() && entry.name.toLowerCase() === fileName.toLowerCase()) {
+      return entryPath;
+    }
+  }
+  return null;
+}
 
+/**
+ * tmbulletin.script dosyasını parse eder.
+ */
 function parseScriptContent(content) {
   const lines = content.split("\n");
   const records = [];
-  
+
   lines.forEach(line => {
     if (line.trim() === "") return;
     const parts = line.split(";");
     records.push({
       applicationNo: parts[0]?.trim(),
       holder: parts[1]?.trim(),
-      niceClasses: parts[2]?.trim(),
-      // İhtiyacına göre diğer alanları ekle
+      niceClasses: parts[2]?.trim()
+      // Gerekirse diğer alanları ekle
     });
   });
-  
+
   return records;
 }
