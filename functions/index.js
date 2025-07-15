@@ -354,9 +354,6 @@ exports.createMailNotificationOnDocumentIndex = functions.firestore
   });
 
   // --- YENİ EKLENEN ÇAĞRILABİLİR E-POSTA GÖNDERME FONKSİYONU ---
-
-
-
 // Gmail API için gerekli yetki kapsamı
 const GMAIL_SCOPES = ["https://www.googleapis.com/auth/gmail.send"];
 
@@ -578,9 +575,6 @@ exports.createUniversalNotificationOnTaskComplete = functions.firestore
       return null;
     }
   });
-  // Nodemailer eklentisi
-const nodemailer = require("nodemailer");
-
 // 🌟 SMTP transporter
 const transporter = nodemailer.createTransport({
   service: "gmail",
@@ -641,11 +635,6 @@ exports.sendEmailNotification = functions.https.onCall(async (data, context) => 
     throw new functions.https.HttpsError("internal", "E-posta gönderilirken bir hata oluştu.", error.message);
   }
   });
-
-
-
-// node-unrar-js kullanın
-const { createExtractorFromFile } = require("node-unrar-js");
 
 exports.processTrademarkBulletinUpload = functions
   .runWith({
