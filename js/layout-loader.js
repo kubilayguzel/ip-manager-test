@@ -59,6 +59,11 @@ const menuItems = [
     
     // GÜNCELLENMIŞ: indexing.html → bulk-indexing-page.html
     { id: 'indexing', text: 'Belge İndeksleme', link: 'bulk-indexing-page.html', icon: 'fas fa-folder-open', category: 'Araçlar' },
+    { id: 'bulletin-management-accordion', text: 'Bülten Yönetimi', icon: 'fas fa-book', category: 'Araçlar', subItems: [
+        { id: 'bulletin-upload', text: 'Bülten Yükleme', link: 'bulletin-upload.html' },
+        { id: 'bulletin-search', text: 'Bülten Sorgulama', link: 'bulletin-search.html' }
+    ]
+    },
     { id: 'reports', text: 'Raporlar', link: '#', icon: 'fas fa-chart-line', category: 'Araçlar', disabled: true },
     { id: 'settings', text: 'Ayarlar', link: '#', icon: 'fas fa-cog', category: 'Araçlar', disabled: true }
 ];
