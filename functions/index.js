@@ -707,6 +707,17 @@ exports.processTrademarkBulletinUpload = functions
 
  // tmbulletin dosyasını bul
 console.log("[ADIM 2] tmbulletin dosyası aranıyor...");
+// Buraya allFiles'ın içeriğini görmek için ekleyin:
+    console.log("------------------------------------------");
+    console.log("allFiles'ın İçeriği (arama öncesi):", allFiles);
+    console.log("------------------------------------------");
+
+    // Her bir dosyanın işlenişini ve temel adını görmek için buraya ekleyin:
+    allFiles.forEach(p => {
+        // 'path' modülünün tanımlı olduğundan emin olun (örneğin: const path = require('path');)
+        console.log(`İşlenen Dosya Yolu: '${p}', Temel Ad (küçük harf): '${path.basename(p).toLowerCase()}'`);
+    });
+    console.log("------------------------------------------");
 const scriptFilePath = allFiles.find((p) =>
   path.basename(p).toLowerCase() === "tmbulletin"
 );
@@ -800,15 +811,20 @@ function listAllFilesRecursive(dir) {
 }
 
 function parseScriptContent(content) {
-  const lines = content.split("\n");
   const recordsMap = {};
 
-  lines.forEach((line) => {
-    if (line.trim() === "") return;
+  // Bütün INSERT INTO komutlarını yakala
+  const regex = /INSERT INTO (\w+) VALUES\s*\((.*?)\)/gms;
+  let match;
 
-    if (line.startsWith("INSERT INTO TRADEMARK VALUES")) {
-      const values = parseValues(line);
-      const appNo = values[0];
+  while ((match = regex.exec(content)) !== null) {
+    const table = match[1].toUpperCase();
+    const rawValues = match[2];
+    const values = rawValues.split("','").map((s) => s.replace(/^'/, "").replace(/'$/, "").replace(/''/g, "'"));
+
+    const appNo = values[0];
+
+    if (table === "TRADEMARK") {
       recordsMap[appNo] = {
         applicationNo: appNo,
         applicationDate: values[1],
@@ -820,46 +836,27 @@ function parseScriptContent(content) {
         attorneys: [],
       };
     }
-
-    if (line.startsWith("INSERT INTO HOLDER VALUES")) {
-      const values = parseValues(line);
-      const appNo = values[0];
-      if (recordsMap[appNo]) {
-        recordsMap[appNo].holders.push({
-          name: values[2],
-          address: [values[3], values[4], values[5], values[6]].filter(Boolean).join(", "),
-          country: values[7],
-        });
-      }
+    if (table === "HOLDER" && recordsMap[appNo]) {
+      recordsMap[appNo].holders.push({
+        name: values[2],
+        address: [values[3], values[4], values[5], values[6]].filter(Boolean).join(", "),
+        country: values[7],
+      });
     }
-
-    if (line.startsWith("INSERT INTO GOODS VALUES")) {
-      const values = parseValues(line);
-      const appNo = values[0];
-      if (recordsMap[appNo]) {
-        recordsMap[appNo].goods.push(values[3]);
-      }
+    if (table === "GOODS" && recordsMap[appNo]) {
+      recordsMap[appNo].goods.push(values[3]);
     }
-
-    if (line.startsWith("INSERT INTO EXTRACTEDGOODS VALUES")) {
-      const values = parseValues(line);
-      const appNo = values[0];
-      if (recordsMap[appNo]) {
-        recordsMap[appNo].extractedGoods.push(values[3]);
-      }
+    if (table === "EXTRACTEDGOODS" && recordsMap[appNo]) {
+      recordsMap[appNo].extractedGoods.push(values[3]);
     }
-
-    if (line.startsWith("INSERT INTO ATTORNEY VALUES")) {
-      const values = parseValues(line);
-      const appNo = values[0];
-      if (recordsMap[appNo]) {
-        recordsMap[appNo].attorneys.push(values[2]);
-      }
+    if (table === "ATTORNEY" && recordsMap[appNo]) {
+      recordsMap[appNo].attorneys.push(values[2]);
     }
-  });
+  }
 
   return Object.values(recordsMap);
 }
+
 
 function parseValues(line) {
   const inside = line.substring(line.indexOf("(") + 1, line.lastIndexOf(")"));
