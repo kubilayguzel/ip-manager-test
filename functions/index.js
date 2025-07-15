@@ -676,17 +676,37 @@ exports.processTrademarkBulletinUpload = functions
       console.log("Extract result türü:", typeof extractResult);
       console.log("Extract result:", extractResult);
       
-      // node-unrar-js genellikle dosyaları doğrudan targetPath'e çıkarır
-      // Bu yüzden manuel dosya taraması yapalım
       const allFiles = listAllFilesRecursive(extractTargetDir);
       console.log(`RAR çıkarıldı. Toplam dosya: ${allFiles.length}`);
-      console.log("Çıkarılan dosyalar:");
-      allFiles.forEach(f => console.log(" -", f));
+      console.log("Çıkarılan dosyalar (detaylı):");
+      allFiles.forEach(f => {
+        const fileName = path.basename(f);
+        const fileNameLower = fileName.toLowerCase();
+        console.log(` - Dosya: ${fileName} | Küçük harf: ${fileNameLower} | Tam yol: ${f}`);
+      });
 
-      const scriptFilePath = allFiles.find(p =>
-        path.basename(p).toLowerCase() === "tmbulletin.script"
-      );
-      if (!scriptFilePath) throw new Error("tmbulletin.script bulunamadı.");
+      // Script dosyasını bul
+      const scriptFilePath = allFiles.find(p => {
+        const baseName = path.basename(p).toLowerCase();
+        console.log(`Kontrol ediliyor: ${baseName} === 'tmbulletin.script' ? ${baseName === 'tmbulletin.script'}`);
+        return baseName === "tmbulletin.script";
+      });
+
+      if (!scriptFilePath) {
+        console.error("tmbulletin.script bulunamadı!");
+        console.error("Alternatif script dosyaları aranıyor...");
+        
+        // Alternatif script dosyalarını ara
+        const alternativeScripts = allFiles.filter(p => 
+          path.basename(p).toLowerCase().includes("script") ||
+          path.extname(p).toLowerCase() === ".script"
+        );
+        
+        console.error("Bulunan script dosyaları:", alternativeScripts);
+        throw new Error("tmbulletin.script bulunamadı.");
+      }
+
+      console.log(`Script dosyası bulundu: ${scriptFilePath}`);
 
       const scriptContent = fs.readFileSync(scriptFilePath, "utf-8");
       console.log("tmbulletin.script okundu.");
