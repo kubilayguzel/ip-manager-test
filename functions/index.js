@@ -4,6 +4,7 @@ const cors = require('cors');
 const fetch = require('node-fetch');
 const admin = require('firebase-admin');
 const { Storage } = require("@google-cloud/storage");
+const storage = new Storage();
 const path = require("path");
 const os = require("os");
 const fs = require("fs");
@@ -637,6 +638,7 @@ exports.sendEmailNotification = functions.https.onCall(async (data, context) => 
   });
 
 exports.processTrademarkBulletinUpload = functions
+
   .runWith({
     timeoutSeconds: 300,
     memory: "1GB"
