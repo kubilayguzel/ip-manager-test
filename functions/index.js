@@ -643,16 +643,6 @@ exports.sendEmailNotification = functions.https.onCall(async (data, context) => 
   }
   });
 
-Package.json'da hem unrar-promise hem de node-unrar-js paketleri mevcut. Sorun büyük olasılıkla unrar-promise paketinin Cloud Functions ortamında düzgün çalışmamasından kaynaklanıyor.
-Çözüm: node-unrar-js Kullanın
-node-unrar-js paketi pure JavaScript olduğu için Cloud Functions ortamında daha güvenilir çalışır. Kodunuzu şu şekilde güncelleyin:
-javascriptconst functions = require("firebase-functions");
-const admin = require("firebase-admin");
-const { storage } = require("firebase-admin");
-const path = require("path");
-const os = require("os");
-const fs = require("fs");
-
 // node-unrar-js kullanın
 const { createExtractorFromFile } = require("node-unrar-js");
 
