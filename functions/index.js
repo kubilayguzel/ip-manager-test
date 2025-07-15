@@ -693,14 +693,11 @@ exports.processTrademarkBulletinUpload = functions
       
       // bulletin.inf dosyasını bul ve oku
       const bulletinFile = fileHeaders.find(f => 
-        f.name.toLowerCase().includes("bulletin.inf")
+        f.fileHeader.name.toLowerCase().includes("bulletin.inf")
       );
-      
-      if (!bulletinFile) {
-        throw new Error("bulletin.inf bulunamadı.");
-      }
-      
-      const bulletinContent = bulletinFile.extraction.toString('utf-8');
+      if (!bulletinFile) throw new Error("bulletin.inf bulunamadı.");
+
+      const bulletinContent = Buffer.from(bulletinFile.extraction).toString('utf-8');
       console.log("bulletin.inf içeriği:", bulletinContent);
       
       const noMatch = bulletinContent.match(/NO\s*=\s*(.*)/);
@@ -720,14 +717,11 @@ exports.processTrademarkBulletinUpload = functions
       
       // tmbulletin.script dosyasını bul ve oku
       const scriptFile = fileHeaders.find(f => 
-        f.name.toLowerCase().includes("tmbulletin.script")
+        f.fileHeader.name.toLowerCase().includes("tmbulletin.script")
       );
-      
-      if (!scriptFile) {
-        throw new Error("tmbulletin.script bulunamadı.");
-      }
-      
-      const scriptContent = scriptFile.extraction.toString('utf-8');
+      if (!scriptFile) throw new Error("tmbulletin.script bulunamadı.");
+
+      const scriptContent = Buffer.from(scriptFile.extraction).toString('utf-8');
       console.log("tmbulletin.script alındı.");
       
       const records = parseScriptContent(scriptContent);
