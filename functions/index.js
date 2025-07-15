@@ -665,49 +665,49 @@ exports.processTrademarkBulletinUpload = functions
 
       await bucket.file(filePath).download({ destination: tempFilePath });
       console.log(`RAR dosyası indirildi: ${tempFilePath}`);
-
-     const extractor = await createExtractorFromFile({
+      const extractor = await createExtractorFromFile({
         filepath: tempFilePath,
         targetPath: extractTargetDir
       });
 
-      // node-unrar-js için doğru kullanım
-      const extractResult = await extractor.extract();
+      // node-unrar-js için doğru kullanım - Generator'ı iterate et
+      const extractResult = extractor.extract();
       console.log("Extract result türü:", typeof extractResult);
       console.log("Extract result:", extractResult);
       
+      // Generator'dan dosyaları çıkar
+      let extractedFiles = [];
+      if (extractResult && typeof extractResult[Symbol.iterator] === 'function') {
+        // Generator'ı iterate et
+        for (const file of extractResult) {
+          extractedFiles.push(file);
+          console.log(`Extract edilen dosya: ${file.fileHeader?.name || 'unknown'}`);
+        }
+      }
+      
+      console.log(`RAR çıkarıldı. Extract edilen dosya sayısı: ${extractedFiles.length}`);
+      
+      // Dosyaları fiziksel olarak yaz
+      extractedFiles.forEach(file => {
+        if (file.fileHeader && file.extraction) {
+          const outPath = path.join(extractTargetDir, file.fileHeader.name);
+          const outDir = path.dirname(outPath);
+          if (!fs.existsSync(outDir)) {
+            fs.mkdirSync(outDir, { recursive: true });
+          }
+          fs.writeFileSync(outPath, Buffer.from(file.extraction));
+          console.log(`- Dosya yazıldı: ${outPath}`);
+        }
+      });
+      
+      // Şimdi fiziksel dosyaları tara
       const allFiles = listAllFilesRecursive(extractTargetDir);
-      console.log(`RAR çıkarıldı. Toplam dosya: ${allFiles.length}`);
+      console.log(`Fiziksel dosya sayısı: ${allFiles.length}`);
       console.log("Çıkarılan dosyalar (detaylı):");
       allFiles.forEach(f => {
         const fileName = path.basename(f);
-        const fileNameLower = fileName.toLowerCase();
-        console.log(` - Dosya: ${fileName} | Küçük harf: ${fileNameLower} | Tam yol: ${f}`);
-      });
-
-      // Script dosyasını bul
-      const scriptFilePath = allFiles.find(p => {
-        const baseName = path.basename(p).toLowerCase();
-        console.log(`Kontrol ediliyor: ${baseName} === 'tmbulletin.script' ? ${baseName === 'tmbulletin.script'}`);
-        return baseName === "tmbulletin.script";
-      });
-
-      if (!scriptFilePath) {
-        console.error("tmbulletin.script bulunamadı!");
-        console.error("Alternatif script dosyaları aranıyor...");
-        
-        // Alternatif script dosyalarını ara
-        const alternativeScripts = allFiles.filter(p => 
-          path.basename(p).toLowerCase().includes("script") ||
-          path.extname(p).toLowerCase() === ".script"
-        );
-        
-        console.error("Bulunan script dosyaları:", alternativeScripts);
-        throw new Error("tmbulletin.script bulunamadı.");
-      }
-
-      console.log(`Script dosyası bulundu: ${scriptFilePath}`);
-
+        console.log(` - ${fileName}`);
+      }); 
       const scriptContent = fs.readFileSync(scriptFilePath, "utf-8");
       console.log("tmbulletin.script okundu.");
 
