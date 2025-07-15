@@ -2,15 +2,16 @@
 const functions = require('firebase-functions');
 const cors = require('cors');
 const fetch = require('node-fetch');
-
 const admin = require('firebase-admin');
-// functions/index.js
 const { Storage } = require("@google-cloud/storage");
 const path = require("path");
 const os = require("os");
 const fs = require("fs");
-const Unrar = require("node-unrar-js");
-const storage = new Storage(); 
+const { createExtractorFromFile } = require("node-unrar-js");
+const { google } = require("googleapis");
+const { GoogleAuth } = require("google-auth-library");
+const nodemailer = require("nodemailer");
+
 if (!admin.apps.length) {
   admin.initializeApp();
 }
@@ -355,8 +356,6 @@ exports.createMailNotificationOnDocumentIndex = functions.firestore
   // --- YENİ EKLENEN ÇAĞRILABİLİR E-POSTA GÖNDERME FONKSİYONU ---
 
 
-const { google } = require("googleapis");
-const { GoogleAuth } = require("google-auth-library");
 
 // Gmail API için gerekli yetki kapsamı
 const GMAIL_SCOPES = ["https://www.googleapis.com/auth/gmail.send"];
@@ -644,9 +643,6 @@ exports.sendEmailNotification = functions.https.onCall(async (data, context) => 
   });
 
 
-const path = require("path");
-const os = require("os");
-const fs = require("fs");
 
 // node-unrar-js kullanın
 const { createExtractorFromFile } = require("node-unrar-js");
