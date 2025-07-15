@@ -669,6 +669,9 @@ exports.processTrademarkBulletinUpload = functions
       const zip = new AdmZip(tempFilePath);
       zip.extractAllTo(extractTargetDir, true);
       console.log("ZIP dosyası çıkarıldı.");
+      console.log("------------------------------------------");
+      console.log(`Çıkarılan Dizin İçeriği (${extractTargetDir}):`, fs.readdirSync(extractTargetDir));
+      console.log("------------------------------------------");
 
       const allFiles = listAllFilesRecursive(extractTargetDir);
       console.log(`Toplam çıkarılan dosya sayısı: ${allFiles.length}`);
