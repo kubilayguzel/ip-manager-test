@@ -667,28 +667,40 @@ exports.processTrademarkBulletinUpload = functions
       console.log(`RAR dosyası indirildi: ${tempFilePath}`);
 
       const extractor = await createExtractorFromFile({
-        filepath: tempFilePath,
-        targetPath: extractTargetDir
+        filepath: tempFilePath
       });
+
       const extracted = extractor.extract();
       console.log(`RAR çıkarıldı. Toplam dosya: ${extracted.files.length}`);
+
+      extracted.files.forEach(file => {
+        const outPath = path.join(extractTargetDir, file.fileHeader.name);
+        const outDir = path.dirname(outPath);
+        if (!fs.existsSync(outDir)) fs.mkdirSync(outDir, { recursive: true });
+        fs.writeFileSync(outPath, Buffer.from(file.extraction));
+        console.log(`- Dosya yazıldı: ${outPath}`);
+      });
 
       const allFiles = listAllFilesRecursive(extractTargetDir);
       console.log("Çıkarılan dosyalar:");
       allFiles.forEach(f => console.log(" -", f));
 
-      const bulletinInfPath = allFiles.find(p =>
-        path.basename(p).toLowerCase() === "bulletin.inf"
+      const scriptFilePath = allFiles.find(p =>
+        path.basename(p).toLowerCase() === "tmbulletin.script"
       );
-      if (!bulletinInfPath) throw new Error("bulletin.inf bulunamadı.");
+      if (!scriptFilePath) throw new Error("tmbulletin.script bulunamadı.");
 
-      const bulletinContent = fs.readFileSync(bulletinInfPath, "utf-8");
-      console.log("bulletin.inf içeriği:", bulletinContent);
+      const scriptContent = fs.readFileSync(scriptFilePath, "utf-8");
+      console.log("tmbulletin.script okundu.");
 
-      const noMatch = bulletinContent.match(/NO\s*=\s*(.*)/);
-      const dateMatch = bulletinContent.match(/DATE\s*=\s*(.*)/);
+      // Bülten metadata parse
+      const noMatch = scriptContent.match(/INSERT INTO PROPERTIES VALUES\('NO','(.*?)'\)/);
+      const dateMatch = scriptContent.match(/INSERT INTO PROPERTIES VALUES\('DATE','(.*?)'\)/);
+
       const bulletinNo = noMatch ? noMatch[1].trim() : "Unknown";
       const bulletinDate = dateMatch ? dateMatch[1].trim() : "Unknown";
+
+      console.log(`Bülten No: ${bulletinNo}, Tarih: ${bulletinDate}`);
 
       const bulletinRef = await admin.firestore().collection("trademarkBulletins").add({
         bulletinNo,
@@ -698,14 +710,6 @@ exports.processTrademarkBulletinUpload = functions
       });
       const bulletinId = bulletinRef.id;
       console.log(`Bülten Firestore'a kaydedildi. ID: ${bulletinId}`);
-
-      const scriptFilePath = allFiles.find(p =>
-        path.basename(p).toLowerCase() === "tmbulletin.script"
-      );
-      if (!scriptFilePath) throw new Error("tmbulletin.script bulunamadı.");
-
-      const scriptContent = fs.readFileSync(scriptFilePath, "utf-8");
-      console.log("tmbulletin.script okundu.");
 
       const records = parseScriptContent(scriptContent);
       console.log(`Toplam ${records.length} marka kaydı bulundu.`);
