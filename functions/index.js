@@ -643,10 +643,7 @@ exports.sendEmailNotification = functions.https.onCall(async (data, context) => 
   }
   });
 
-// node-unrar-js kullanın
-const functions = require("firebase-functions");
-const admin = require("firebase-admin");
-const { storage } = require("firebase-admin");
+
 const path = require("path");
 const os = require("os");
 const fs = require("fs");
