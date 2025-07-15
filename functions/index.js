@@ -644,6 +644,14 @@ exports.sendEmailNotification = functions.https.onCall(async (data, context) => 
   });
 
 // node-unrar-js kullanın
+const functions = require("firebase-functions");
+const admin = require("firebase-admin");
+const { storage } = require("firebase-admin");
+const path = require("path");
+const os = require("os");
+const fs = require("fs");
+
+// node-unrar-js kullanın
 const { createExtractorFromFile } = require("node-unrar-js");
 
 exports.processTrademarkBulletinUpload = functions
@@ -666,39 +674,26 @@ exports.processTrademarkBulletinUpload = functions
     }
     
     const tempFilePath = path.join(os.tmpdir(), fileName);
-    const extractDir = path.join(os.tmpdir(), "extracted_" + Date.now());
-    
-    await bucket.file(filePath).download({ destination: tempFilePath });
-    console.log(`RAR dosyası indirildi: ${tempFilePath}`);
     
     try {
-      // node-unrar-js ile RAR dosyasını çıkar
+      // RAR dosyasını local temp dizinine indir
+      await bucket.file(filePath).download({ destination: tempFilePath });
+      console.log(`RAR dosyası indirildi: ${tempFilePath}`);
+      
+      // node-unrar-js ile RAR dosyasını çıkar (targetPath kullanmadan)
       const extractor = await createExtractorFromFile({
-        filepath: tempFilePath,
-        targetPath: extractDir
+        filepath: tempFilePath
       });
       
-      // Tüm dosyaları çıkar
       const extracted = extractor.extract();
       const fileHeaders = [...extracted.files];
       
-      console.log(`RAR dosyası çıkarıldı: ${extractDir}`);
+      console.log(`RAR dosyası çıkarıldı. Dosya sayısı: ${fileHeaders.length}`);
       console.log(`Çıkarılan dosyalar: ${fileHeaders.map(f => f.name).join(", ")}`);
-      
-      // Extract edilen dosyaları kaydet
-      for (const file of fileHeaders) {
-        const outputPath = path.join(extractDir, file.name);
-        // Dizin yapısını oluştur
-        const dir = path.dirname(outputPath);
-        if (!fs.existsSync(dir)) {
-          fs.mkdirSync(dir, { recursive: true });
-        }
-        fs.writeFileSync(outputPath, file.extraction);
-      }
       
       // bulletin.inf dosyasını bul ve oku
       const bulletinFile = fileHeaders.find(f => 
-        f.name.toLowerCase().endsWith("bulletin.inf")
+        f.name.toLowerCase().includes("bulletin.inf")
       );
       
       if (!bulletinFile) {
@@ -706,7 +701,7 @@ exports.processTrademarkBulletinUpload = functions
       }
       
       const bulletinContent = bulletinFile.extraction.toString('utf-8');
-      console.log("bulletin.inf:", bulletinContent);
+      console.log("bulletin.inf içeriği:", bulletinContent);
       
       const noMatch = bulletinContent.match(/NO\s*=\s*(.*)/);
       const dateMatch = bulletinContent.match(/DATE\s*=\s*(.*)/);
@@ -725,7 +720,7 @@ exports.processTrademarkBulletinUpload = functions
       
       // tmbulletin.script dosyasını bul ve oku
       const scriptFile = fileHeaders.find(f => 
-        f.name.toLowerCase().endsWith("tmbulletin.script")
+        f.name.toLowerCase().includes("tmbulletin.script")
       );
       
       if (!scriptFile) {
@@ -738,6 +733,7 @@ exports.processTrademarkBulletinUpload = functions
       const records = parseScriptContent(scriptContent);
       console.log(`Toplam ${records.length} kayıt.`);
       
+      // Firestore'a kaydet
       const batch = admin.firestore().batch();
       records.forEach((record) => {
         const docRef = admin.firestore().collection("trademarkBulletinRecords").doc();
@@ -749,15 +745,19 @@ exports.processTrademarkBulletinUpload = functions
       await batch.commit();
       console.log("Kayıtlar Firestore'a kaydedildi.");
       
-      // Geçici dosyaları temizle
-      fs.unlinkSync(tempFilePath);
-      // Extract klasörünü temizle
-      fs.rmSync(extractDir, { recursive: true, force: true });
-      console.log("Geçici dosyalar temizlendi.");
-      
     } catch (error) {
-      console.error("RAR çıkarma hatası:", error);
+      console.error("İşlem hatası:", error);
       throw error;
+    } finally {
+      // Geçici dosyayı temizle
+      try {
+        if (fs.existsSync(tempFilePath)) {
+          fs.unlinkSync(tempFilePath);
+          console.log("Geçici dosya temizlendi.");
+        }
+      } catch (cleanupError) {
+        console.error("Dosya temizleme hatası:", cleanupError);
+      }
     }
     
     return null;
@@ -780,6 +780,3 @@ function parseScriptContent(content) {
   
   return records;
 }
-
-
-
