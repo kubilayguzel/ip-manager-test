@@ -644,6 +644,10 @@ exports.sendEmailNotification = functions.https.onCall(async (data, context) => 
   });
 
   exports.processTrademarkBulletinUpload = functions
+    .runWith({
+    timeoutSeconds: 540, // Büyük dosyalar için süreyi de artır
+    memory: '1GB'        // Belleği 1GB yap
+  })
   .storage
   .object()
   .onFinalize(async (object) => {
