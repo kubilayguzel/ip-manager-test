@@ -652,7 +652,7 @@ exports.processTrademarkBulletinUpload = functions
   .object()
   .onFinalize(async (object) => {
     // ⚠️ DİNAMİK IMPORT
-    const extract = (await import("unrar-promise")).default;
+    const { extract } = require("unrar-promise");
     const bucket = storage.bucket(object.bucket);
     const filePath = object.name;
     const fileName = path.basename(filePath);
