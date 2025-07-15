@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Bülten Yükleme</title>
+  <link rel="stylesheet" href="css/shared-styles.css" />
+  <style>
+    .bulletin-section {
+      background: white;
+      padding: 25px;
+      border-radius: 12px;
+      margin-bottom: 30px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    }
+    .bulletin-section h2 {
+      margin-bottom: 10px;
+      color: #1e3c72;
+    }
+    .bulletin-section p {
+      margin-bottom: 15px;
+      color: #555;
+    }
+  </style>
+</head>
+<body>
+  <div class="main-container">
+    <h1>Bülten Yükleme</h1>
+    <p>Marka, patent ve tasarım bültenlerini ayrı ayrı yükleyebilirsiniz.</p>
+
+    <!-- Marka Bülteni -->
+    <div class="bulletin-section">
+      <h2>Marka Bülteni Yükleme</h2>
+      <p>RAR formatındaki marka bülten arşivinizi yükleyin. Sistem içeriği analiz edecek.</p>
+      <form id="bulletinUploadFormTrademark">
+        <div class="file-upload-area" id="dropAreaTrademark">
+          <div class="upload-icon">📂</div>
+          <p>RAR dosyanızı buraya sürükleyin veya tıklayın.</p>
+          <input type="file" id="bulletinFileTrademark" accept=".rar" style="display: none;" required />
+        </div>
+        <div id="selectedFileNameTrademark" style="margin-top:10px; font-weight:500; color:#333;"></div>
+        <button type="submit" class="btn btn-primary" style="margin-top:20px;">Marka Bülteni Yükle</button>
+      </form>
+      <div id="uploadStatusTrademark" style="margin-top:20px;"></div>
+    </div>
+
+    <!-- Patent Bülteni -->
+    <div class="bulletin-section">
+      <h2>Patent Bülteni Yükleme</h2>
+      <p>Bu alan yakında aktif olacaktır.</p>
+      <button class="btn btn-secondary" disabled>Yakında</button>
+    </div>
+
+    <!-- Tasarım Bülteni -->
+    <div class="bulletin-section">
+      <h2>Tasarım Bülteni Yükleme</h2>
+      <p>Bu alan yakında aktif olacaktır.</p>
+      <button class="btn btn-secondary" disabled>Yakında</button>
+    </div>
+
+  </div>
+
+  <script src="js/bulletin-upload.js"></script>
+</body>
+</html>
