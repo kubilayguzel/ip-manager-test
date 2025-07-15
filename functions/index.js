@@ -643,10 +643,10 @@ exports.sendEmailNotification = functions.https.onCall(async (data, context) => 
   }
   });
 
-  exports.processTrademarkBulletinUpload = functions
+exports.processTrademarkBulletinUpload = functions
   .runWith({
-    timeoutSeconds: 300, // Uzun süreli işlem için 5 dakika
-    memory: "1GB" // Büyük dosya açmak için artırıldı
+    timeoutSeconds: 300, // Uzun işlem için 5 dk
+    memory: "1GB"        // Büyük dosya için artırıldı
   })
   .storage
   .object()
@@ -662,38 +662,39 @@ exports.sendEmailNotification = functions.https.onCall(async (data, context) => 
       return null;
     }
 
-    // Geçici dizine indir
     const tempFilePath = path.join(os.tmpdir(), fileName);
     await bucket.file(filePath).download({ destination: tempFilePath });
-    console.log(`Dosya indirildi: ${tempFilePath}`);
+    console.log(`RAR dosyası indirildi: ${tempFilePath}`);
 
-    // RAR içeriğini oku
+    // RAR dosyasını oku
     const data = fs.readFileSync(tempFilePath);
     const extractor = Unrar.createExtractorFromData({ data });
 
-    // Tüm dosyaları çıkart
-    const extractionResult = extractor.extractAll();
-    if (extractionResult[0].state !== "SUCCESS") {
-      throw new Error("RAR çıkarma başarısız.");
+    // RAR içeriği listele
+    const listResult = extractor.getFileList();
+    if (listResult[0].state !== "SUCCESS") {
+      throw new Error("RAR içeriği listelenemedi.");
     }
+    const entries = listResult[1].fileHeaders;
 
-    const entries = extractionResult[1].files;
-
-    // bulletin.inf dosyasını bul
-    const bulletinEntry = entries.find(e => e.fileHeader.name.toLowerCase().endsWith("bulletin.inf"));
+    // bulletin.inf çıkar
+    const bulletinEntry = entries.find(e => e.name.toLowerCase().endsWith("bulletin.inf"));
     if (!bulletinEntry) {
       throw new Error("bulletin.inf bulunamadı.");
     }
-    const bulletinContent = Buffer.from(bulletinEntry.extraction).toString("utf-8");
+    const bulletinResult = extractor.extract({ files: [bulletinEntry.name] });
+    if (bulletinResult[0].state !== "SUCCESS") {
+      throw new Error("bulletin.inf çıkarılamadı.");
+    }
+    const bulletinContent = Buffer.from(bulletinResult[1][0].extraction).toString("utf-8");
     console.log("bulletin.inf içeriği:", bulletinContent);
 
-    // bulletin.inf içinden No ve Date al
+    // Bilgileri parse et
     const noMatch = bulletinContent.match(/NO\s*=\s*(.*)/);
     const dateMatch = bulletinContent.match(/DATE\s*=\s*(.*)/);
     const bulletinNo = noMatch ? noMatch[1].trim() : "Unknown";
     const bulletinDate = dateMatch ? dateMatch[1].trim() : "Unknown";
 
-    // Firestore'da bülten kaydı oluştur
     const bulletinRef = await db.collection("trademarkBulletins").add({
       bulletinNo,
       bulletinDate,
@@ -701,21 +702,23 @@ exports.sendEmailNotification = functions.https.onCall(async (data, context) => 
       createdAt: admin.firestore.FieldValue.serverTimestamp()
     });
     const bulletinId = bulletinRef.id;
-    console.log(`Bülten Firestore'a kaydedildi. ID: ${bulletinId}`);
+    console.log(`Bülten kaydedildi. ID: ${bulletinId}`);
 
-    // tmbulletin.script dosyasını bul
-    const scriptEntry = entries.find(e => e.fileHeader.name.toLowerCase().endsWith("tmbulletin.script"));
+    // tmbulletin.script çıkar
+    const scriptEntry = entries.find(e => e.name.toLowerCase().endsWith("tmbulletin.script"));
     if (!scriptEntry) {
       throw new Error("tmbulletin.script bulunamadı.");
     }
-    const scriptContent = Buffer.from(scriptEntry.extraction).toString("utf-8");
-    console.log("tmbulletin.script alındı.");
+    const scriptResult = extractor.extract({ files: [scriptEntry.name] });
+    if (scriptResult[0].state !== "SUCCESS") {
+      throw new Error("tmbulletin.script çıkarılamadı.");
+    }
+    const scriptContent = Buffer.from(scriptResult[1][0].extraction).toString("utf-8");
+    console.log("tmbulletin.script içeriği alındı.");
 
-    // script içeriğini parse et
     const records = parseScriptContent(scriptContent);
-    console.log(`Toplam kayıt: ${records.length}`);
+    console.log(`Toplam ${records.length} kayıt bulundu.`);
 
-    // Firestore'a batch kayıt
     const batch = db.batch();
     records.forEach((record) => {
       const docRef = db.collection("trademarkBulletinRecords").doc();
@@ -725,32 +728,12 @@ exports.sendEmailNotification = functions.https.onCall(async (data, context) => 
       });
     });
     await batch.commit();
-    console.log(`Başvuru kayıtları Firestore'a kaydedildi.`);
+    console.log(`Kayıtlar Firestore'a kaydedildi.`);
 
-    // Geçici dosyayı sil
     fs.unlinkSync(tempFilePath);
-
-    console.log("İşlem tamamlandı.");
+    console.log("Geçici dosya temizlendi.");
     return null;
   });
-
-function parseScriptContent(content) {
-  const lines = content.split("\n");
-  const records = [];
-
-  lines.forEach(line => {
-    if (line.trim() === "") return;
-    const parts = line.split(";");
-    records.push({
-      applicationNo: parts[0]?.trim(),
-      holder: parts[1]?.trim(),
-      niceClasses: parts[2]?.trim(),
-      // Diğer alanları ihtiyacına göre ekle
-    });
-  });
-
-  return records;
-}
 
   function parseScriptContent(content) {
   const lines = content.split("\n");
