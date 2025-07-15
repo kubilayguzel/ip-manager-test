@@ -666,39 +666,20 @@ exports.processTrademarkBulletinUpload = functions
       await bucket.file(filePath).download({ destination: tempFilePath });
       console.log(`RAR dosyası indirildi: ${tempFilePath}`);
 
-      const extractor = await createExtractorFromFile({
-        filepath: tempFilePath
+     const extractor = await createExtractorFromFile({
+        filepath: tempFilePath,
+        targetPath: extractTargetDir
       });
 
-      const extractResult = extractor.extract();
+      // node-unrar-js için doğru kullanım
+      const extractResult = await extractor.extract();
       console.log("Extract result türü:", typeof extractResult);
       console.log("Extract result:", extractResult);
       
-      // Extract sonucunu array'e dönüştür
-      let extracted = [];
-      if (Array.isArray(extractResult)) {
-        extracted = extractResult;
-      } else if (extractResult && Array.isArray(extractResult.files)) {
-        extracted = extractResult.files;
-      } else if (extractResult && Array.isArray(extractResult.extracted)) {
-        extracted = extractResult.extracted;
-      }
-      
-      console.log(`RAR çıkarıldı. Toplam dosya: ${extracted.length}`);
-
-      // Güvenli forEach kullanımı
-      if (Array.isArray(extracted) && extracted.length > 0) {
-        extracted.forEach(file => {
-          const outPath = path.join(extractTargetDir, file.fileHeader.name);
-          const outDir = path.dirname(outPath);
-          if (!fs.existsSync(outDir)) fs.mkdirSync(outDir, { recursive: true });
-          fs.writeFileSync(outPath, Buffer.from(file.extraction));
-          console.log(`- Dosya yazıldı: ${outPath}`);
-        });
-      } else {
-        console.log("Extract edilen dosya bulunamadı veya extract başarısız oldu.");
-      }
+      // node-unrar-js genellikle dosyaları doğrudan targetPath'e çıkarır
+      // Bu yüzden manuel dosya taraması yapalım
       const allFiles = listAllFilesRecursive(extractTargetDir);
+      console.log(`RAR çıkarıldı. Toplam dosya: ${allFiles.length}`);
       console.log("Çıkarılan dosyalar:");
       allFiles.forEach(f => console.log(" -", f));
 
