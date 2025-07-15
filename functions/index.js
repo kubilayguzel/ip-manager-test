@@ -671,26 +671,33 @@ exports.processTrademarkBulletinUpload = functions
       });
 
       const extractResult = extractor.extract();
+      console.log("Extract result türü:", typeof extractResult);
+      console.log("Extract result:", extractResult);
       
       // Extract sonucunu array'e dönüştür
-      let extracted;
+      let extracted = [];
       if (Array.isArray(extractResult)) {
         extracted = extractResult;
-      } else if (extractResult && extractResult.files) {
+      } else if (extractResult && Array.isArray(extractResult.files)) {
         extracted = extractResult.files;
-      } else {
-        extracted = [];
+      } else if (extractResult && Array.isArray(extractResult.extracted)) {
+        extracted = extractResult.extracted;
       }
       
       console.log(`RAR çıkarıldı. Toplam dosya: ${extracted.length}`);
 
-      extracted.forEach(file => {
-        const outPath = path.join(extractTargetDir, file.fileHeader.name);
-        const outDir = path.dirname(outPath);
-        if (!fs.existsSync(outDir)) fs.mkdirSync(outDir, { recursive: true });
-        fs.writeFileSync(outPath, Buffer.from(file.extraction));
-        console.log(`- Dosya yazıldı: ${outPath}`);
-      });
+      // Güvenli forEach kullanımı
+      if (Array.isArray(extracted) && extracted.length > 0) {
+        extracted.forEach(file => {
+          const outPath = path.join(extractTargetDir, file.fileHeader.name);
+          const outDir = path.dirname(outPath);
+          if (!fs.existsSync(outDir)) fs.mkdirSync(outDir, { recursive: true });
+          fs.writeFileSync(outPath, Buffer.from(file.extraction));
+          console.log(`- Dosya yazıldı: ${outPath}`);
+        });
+      } else {
+        console.log("Extract edilen dosya bulunamadı veya extract başarısız oldu.");
+      }
       const allFiles = listAllFilesRecursive(extractTargetDir);
       console.log("Çıkarılan dosyalar:");
       allFiles.forEach(f => console.log(" -", f));
