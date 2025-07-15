@@ -665,51 +665,88 @@ exports.processTrademarkBulletinUpload = functions
 
       await bucket.file(filePath).download({ destination: tempFilePath });
       console.log(`RAR dosyası indirildi: ${tempFilePath}`);
-      const extractor = await createExtractorFromFile({
+ const extractor = await createExtractorFromFile({
         filepath: tempFilePath,
         targetPath: extractTargetDir
       });
 
-      // node-unrar-js için doğru kullanım - Generator'ı iterate et
-      const extractResult = extractor.extract();
-      console.log("Extract result türü:", typeof extractResult);
-      console.log("Extract result:", extractResult);
+      // node-unrar-js için farklı extract yöntemlerini dene
+      console.log("Extractor objesi:", extractor);
+      console.log("Extractor methodları:", Object.getOwnPropertyNames(extractor));
       
-      // Generator'dan dosyaları çıkar
+      let extractResult;
+      try {
+        extractResult = extractor.extract();
+        console.log("Extract result türü:", typeof extractResult);
+        console.log("Extract result constructor:", extractResult?.constructor?.name);
+        console.log("Extract result:", extractResult);
+      } catch (err) {
+        console.error("Extract hatası:", err);
+      }
+      
+      // Farklı iterate yöntemlerini dene
       let extractedFiles = [];
+      
+      // Yöntem 1: Generator iterate
       if (extractResult && typeof extractResult[Symbol.iterator] === 'function') {
-        // Generator'ı iterate et
-        for (const file of extractResult) {
-          extractedFiles.push(file);
-          console.log(`Extract edilen dosya: ${file.fileHeader?.name || 'unknown'}`);
+        console.log("Generator olarak iterate ediliyor...");
+        try {
+          for (const file of extractResult) {
+            console.log("Generator'dan dosya:", file);
+            extractedFiles.push(file);
+          }
+        } catch (err) {
+          console.error("Generator iterate hatası:", err);
         }
       }
       
-      console.log(`RAR çıkarıldı. Extract edilen dosya sayısı: ${extractedFiles.length}`);
+      // Yöntem 2: Array kontrolü
+      if (Array.isArray(extractResult)) {
+        console.log("Array olarak işleniyor...");
+        extractedFiles = extractResult;
+      }
       
-      // Dosyaları fiziksel olarak yaz
-      extractedFiles.forEach(file => {
-        if (file.fileHeader && file.extraction) {
-          const outPath = path.join(extractTargetDir, file.fileHeader.name);
-          const outDir = path.dirname(outPath);
-          if (!fs.existsSync(outDir)) {
-            fs.mkdirSync(outDir, { recursive: true });
-          }
-          fs.writeFileSync(outPath, Buffer.from(file.extraction));
-          console.log(`- Dosya yazıldı: ${outPath}`);
+      // Yöntem 3: files property kontrolü
+      if (extractResult?.files) {
+        console.log("Files property bulundu...");
+        extractedFiles = extractResult.files;
+      }
+      
+      console.log(`Extract edilen dosya sayısı: ${extractedFiles.length}`);
+      
+      // Eğer hiç dosya extract edilmediyse, targetPath'i kontrol et
+      if (extractedFiles.length === 0) {
+        console.log("Extract edilen dosya yok, targetPath kontrol ediliyor...");
+        try {
+          const existingFiles = fs.readdirSync(extractTargetDir);
+          console.log("TargetPath'teki mevcut dosyalar:", existingFiles);
+        } catch (err) {
+          console.error("TargetPath okuma hatası:", err);
         }
-      });
+      }
       
-      // Şimdi fiziksel dosyaları tara
+      // Fiziksel dosya taraması
       const allFiles = listAllFilesRecursive(extractTargetDir);
       console.log(`Fiziksel dosya sayısı: ${allFiles.length}`);
-      console.log("Çıkarılan dosyalar (detaylı):");
-      allFiles.forEach(f => {
-        const fileName = path.basename(f);
-        console.log(` - ${fileName}`);
-      }); 
-      const scriptContent = fs.readFileSync(scriptFilePath, "utf-8");
-      console.log("tmbulletin.script okundu.");
+      
+      let scriptFilePath = null;
+      if (allFiles.length > 0) {
+        console.log("Fiziksel dosyalar:");
+        allFiles.forEach(f => {
+          const fileName = path.basename(f);
+          console.log(` - ${fileName}`);
+        });
+        
+        // Script dosyasını ara
+        scriptFilePath = allFiles.find(p =>
+          path.basename(p).toLowerCase() === "tmbulletin.script"
+        );
+      }
+      
+      if (!scriptFilePath) {
+        console.error("Script dosyası bulunamadı veya hiç dosya extract edilmedi!");
+        throw new Error("RAR dosyası extract edilemedi veya tmbulletin.script bulunamadı.");
+      }
 
       // Bülten metadata parse
       const noMatch = scriptContent.match(/INSERT INTO PROPERTIES VALUES\('NO','(.*?)'\)/);
