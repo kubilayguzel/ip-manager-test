@@ -13,8 +13,6 @@ const { createExtractorFromFile } = require("node-unrar-js");
 const { google } = require("googleapis");
 const { GoogleAuth } = require("google-auth-library");
 const nodemailer = require("nodemailer");
-const decompress = require("decompress");
-
 
 if (!admin.apps.length) {
   admin.initializeApp();
