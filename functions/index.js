@@ -705,19 +705,19 @@ exports.processTrademarkBulletinUpload = functions
       const bulletinId = bulletinRef.id;
       console.log(`Firestore bülten kaydı oluşturuldu: ${bulletinId}`);
 
-      // tmbulletin.script dosyasını bul
-      console.log("[ADIM 2] tmbulletin.script dosyası aranıyor...");
-      const scriptFilePath = allFiles.find((p) =>
-        path.basename(p).toLowerCase() === "tmbulletin.script"
-      );
+ // tmbulletin dosyasını bul
+console.log("[ADIM 2] tmbulletin dosyası aranıyor...");
+const scriptFilePath = allFiles.find((p) =>
+  path.basename(p).toLowerCase() === "tmbulletin"
+);
 
-      if (!scriptFilePath) {
-        console.error("tmbulletin.script bulunamadı.");
-        throw new Error("tmbulletin.script bulunamadı.");
-      }
+if (!scriptFilePath) {
+  console.error("tmbulletin bulunamadı.");
+  throw new Error("tmbulletin dosyası bulunamadı.");
+}
 
-      console.log(`[ADIM 2 BAŞARILI] tmbulletin.script bulundu: ${scriptFilePath}`);
-      const scriptContent = fs.readFileSync(scriptFilePath, "utf8");
+console.log(`[ADIM 2 BAŞARILI] tmbulletin bulundu: ${scriptFilePath}`);
+const scriptContent = fs.readFileSync(scriptFilePath, "utf8");
 
       const records = parseScriptContent(scriptContent);
       console.log(`Toplam ${records.length} kayıt parse edildi.`);
