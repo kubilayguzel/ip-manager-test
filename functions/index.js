@@ -674,9 +674,12 @@ exports.processTrademarkBulletinUpload = functions
       console.log(`RAR çıkarıldı. Toplam dosya: ${extracted.files.length}`);
 
       const allFiles = listAllFilesRecursive(extractTargetDir);
-      console.log(`Çıkarılan dosyalar: ${allFiles.join(", ")}`);
+      console.log("Çıkarılan dosyalar:");
+      allFiles.forEach(f => console.log(" -", f));
 
-      const bulletinInfPath = allFiles.find(p => p.toLowerCase().endsWith("bulletin.inf"));
+      const bulletinInfPath = allFiles.find(p =>
+        path.basename(p).toLowerCase() === "bulletin.inf"
+      );
       if (!bulletinInfPath) throw new Error("bulletin.inf bulunamadı.");
 
       const bulletinContent = fs.readFileSync(bulletinInfPath, "utf-8");
@@ -696,7 +699,9 @@ exports.processTrademarkBulletinUpload = functions
       const bulletinId = bulletinRef.id;
       console.log(`Bülten Firestore'a kaydedildi. ID: ${bulletinId}`);
 
-      const scriptFilePath = allFiles.find(p => p.toLowerCase().endsWith("tmbulletin.script"));
+      const scriptFilePath = allFiles.find(p =>
+        path.basename(p).toLowerCase() === "tmbulletin.script"
+      );
       if (!scriptFilePath) throw new Error("tmbulletin.script bulunamadı.");
 
       const scriptContent = fs.readFileSync(scriptFilePath, "utf-8");
@@ -712,24 +717,25 @@ exports.processTrademarkBulletinUpload = functions
       const batch = admin.firestore().batch();
 
       for (const record of records) {
-        // Görseli bul
-        const imageFile = imageFiles.find(f =>
-          f.toLowerCase().includes(record.applicationNo.replace("/", "_"))
-        );
-
         let imagePath = null;
-        if (imageFile) {
-          const destFileName = `bulletins/${bulletinId}/${path.basename(imageFile)}`;
-          await bucket.upload(imageFile, {
-            destination: destFileName,
-            metadata: {
-              contentType: getContentType(imageFile)
-            }
-          });
-          imagePath = destFileName;
+
+        if (record.applicationNo) {
+          const imageFile = imageFiles.find(f =>
+            f.toLowerCase().includes(record.applicationNo.replace("/", "_"))
+          );
+
+          if (imageFile) {
+            const destFileName = `bulletins/${bulletinId}/${path.basename(imageFile)}`;
+            await bucket.upload(imageFile, {
+              destination: destFileName,
+              metadata: {
+                contentType: getContentType(imageFile)
+              }
+            });
+            imagePath = destFileName;
+          }
         }
 
-        // Firestore dokümanı hazırla
         const docRef = admin.firestore().collection("trademarkBulletinRecords").doc();
         batch.set(docRef, {
           bulletinId,
@@ -764,9 +770,6 @@ exports.processTrademarkBulletinUpload = functions
     return null;
   });
 
-/**
- * Alt klasörlerde dosya arar.
- */
 function listAllFilesRecursive(dir) {
   let results = [];
   const entries = fs.readdirSync(dir, { withFileTypes: true });
@@ -781,16 +784,19 @@ function listAllFilesRecursive(dir) {
   return results;
 }
 
-/**
- * Dosya içeriğini parse eder.
- */
 function parseScriptContent(content) {
   const lines = content.split("\n");
   const recordsMap = {};
 
   lines.forEach(line => {
+    if (line.trim() === "") return;
+
     if (line.startsWith("INSERT INTO TRADEMARK VALUES")) {
       const values = parseValues(line);
+      if (values.length < 7) {
+        console.warn("TRADEMARK satırı eksik:", line);
+        return;
+      }
       const appNo = values[0];
       recordsMap[appNo] = {
         applicationNo: appNo,
@@ -806,6 +812,10 @@ function parseScriptContent(content) {
 
     if (line.startsWith("INSERT INTO HOLDER VALUES")) {
       const values = parseValues(line);
+      if (values.length < 8) {
+        console.warn("HOLDER satırı eksik:", line);
+        return;
+      }
       const appNo = values[0];
       if (recordsMap[appNo]) {
         recordsMap[appNo].holders.push({
@@ -818,6 +828,10 @@ function parseScriptContent(content) {
 
     if (line.startsWith("INSERT INTO GOODS VALUES")) {
       const values = parseValues(line);
+      if (values.length < 4) {
+        console.warn("GOODS satırı eksik:", line);
+        return;
+      }
       const appNo = values[0];
       if (recordsMap[appNo]) {
         recordsMap[appNo].goods.push(values[3]);
@@ -826,6 +840,10 @@ function parseScriptContent(content) {
 
     if (line.startsWith("INSERT INTO EXTRACTEDGOODS VALUES")) {
       const values = parseValues(line);
+      if (values.length < 4) {
+        console.warn("EXTRACTEDGOODS satırı eksik:", line);
+        return;
+      }
       const appNo = values[0];
       if (recordsMap[appNo]) {
         recordsMap[appNo].extractedGoods.push(values[3]);
@@ -834,6 +852,10 @@ function parseScriptContent(content) {
 
     if (line.startsWith("INSERT INTO ATTORNEY VALUES")) {
       const values = parseValues(line);
+      if (values.length < 3) {
+        console.warn("ATTORNEY satırı eksik:", line);
+        return;
+      }
       const appNo = values[0];
       if (recordsMap[appNo]) {
         recordsMap[appNo].attorneys.push(values[2]);
