@@ -21,6 +21,7 @@
     "google-auth-library": "^10.1.0",
     "googleapis": "^150.0.1",
     "node-fetch": "^2.6.7",
+    "node-unrar-js": "^2.0.2",
     "nodemailer": "^7.0.5"
   },
   "devDependencies": {
