@@ -715,10 +715,17 @@ exports.processTrademarkBulletinUpload = functions
       // Firestore'a kayıt et
       const batch = admin.firestore().batch();
       records.forEach((record) => {
+        // undefined değerleri null yap
+        const normalizedRecord = {
+          applicationNo: record.applicationNo ?? null,
+          holder: record.holder ?? null,
+          niceClasses: record.niceClasses ?? null
+        };
+
         const docRef = admin.firestore().collection("trademarkBulletinRecords").doc();
         batch.set(docRef, {
           bulletinId,
-          ...record
+          ...normalizedRecord
         });
       });
       await batch.commit();
@@ -777,9 +784,10 @@ function parseScriptContent(content) {
       applicationNo: parts[0]?.trim(),
       holder: parts[1]?.trim(),
       niceClasses: parts[2]?.trim()
-      // Gerekirse diğer alanları ekle
+      // İhtiyacına göre diğer alanları ekleyebilirsin
     });
   });
 
   return records;
 }
+
