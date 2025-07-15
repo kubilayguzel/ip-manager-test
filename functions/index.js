@@ -793,11 +793,16 @@ function parseScriptContent(content) {
   const lines = content.split("\n");
   const recordsMap = {};
 
-  lines.forEach(line => {
-    if (line.trim() === "") return;
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
 
-    if (line.startsWith("INSERT INTO TRADEMARK VALUES")) {
-      const values = parseValues(line);
+    if (trimmed.startsWith("INSERT INTO TRADEMARK VALUES")) {
+      const values = parseValues(trimmed);
+      if (values.length < 7) {
+        console.warn("Eksik TRADEMARK satırı:", trimmed);
+        continue;
+      }
       const appNo = values[0];
       recordsMap[appNo] = {
         applicationNo: appNo,
@@ -811,8 +816,12 @@ function parseScriptContent(content) {
       };
     }
 
-    if (line.startsWith("INSERT INTO HOLDER VALUES")) {
-      const values = parseValues(line);
+    else if (trimmed.startsWith("INSERT INTO HOLDER VALUES")) {
+      const values = parseValues(trimmed);
+      if (values.length < 8) {
+        console.warn("Eksik HOLDER satırı:", trimmed);
+        continue;
+      }
       const appNo = values[0];
       if (recordsMap[appNo]) {
         recordsMap[appNo].holders.push({
@@ -823,30 +832,42 @@ function parseScriptContent(content) {
       }
     }
 
-    if (line.startsWith("INSERT INTO GOODS VALUES")) {
-      const values = parseValues(line);
+    else if (trimmed.startsWith("INSERT INTO GOODS VALUES")) {
+      const values = parseValues(trimmed);
+      if (values.length < 4) {
+        console.warn("Eksik GOODS satırı:", trimmed);
+        continue;
+      }
       const appNo = values[0];
       if (recordsMap[appNo]) {
         recordsMap[appNo].goods.push(values[3]);
       }
     }
 
-    if (line.startsWith("INSERT INTO EXTRACTEDGOODS VALUES")) {
-      const values = parseValues(line);
+    else if (trimmed.startsWith("INSERT INTO EXTRACTEDGOODS VALUES")) {
+      const values = parseValues(trimmed);
+      if (values.length < 4) {
+        console.warn("Eksik EXTRACTEDGOODS satırı:", trimmed);
+        continue;
+      }
       const appNo = values[0];
       if (recordsMap[appNo]) {
         recordsMap[appNo].extractedGoods.push(values[3]);
       }
     }
 
-    if (line.startsWith("INSERT INTO ATTORNEY VALUES")) {
-      const values = parseValues(line);
+    else if (trimmed.startsWith("INSERT INTO ATTORNEY VALUES")) {
+      const values = parseValues(trimmed);
+      if (values.length < 3) {
+        console.warn("Eksik ATTORNEY satırı:", trimmed);
+        continue;
+      }
       const appNo = values[0];
       if (recordsMap[appNo]) {
         recordsMap[appNo].attorneys.push(values[2]);
       }
     }
-  });
+  }
 
   return Object.values(recordsMap);
 }
