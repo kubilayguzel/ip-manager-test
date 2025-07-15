@@ -641,10 +641,9 @@ exports.sendEmailNotification = functions.https.onCall(async (data, context) => 
 exports.processTrademarkBulletinUpload = functions
   .runWith({
     timeoutSeconds: 300,
-    memory: "1GB"
+    memory: "1GB",
   })
-  .storage
-  .object()
+  .storage.object()
   .onFinalize(async (object) => {
     const bucket = storage.bucket(object.bucket);
     const filePath = object.name;
@@ -667,34 +666,30 @@ exports.processTrademarkBulletinUpload = functions
       await bucket.file(filePath).download({ destination: tempFilePath });
       console.log(`ZIP dosyası indirildi: ${tempFilePath}`);
 
-      console.log("ZIP extract işlemi başlıyor...");
-      await decompress(tempFilePath, extractTargetDir);
-      console.log("ZIP extract işlemi tamamlandı.");
+      const zip = new AdmZip(tempFilePath);
+      zip.extractAllTo(extractTargetDir, true);
+      console.log("ZIP dosyası çıkarıldı.");
 
       const allFiles = listAllFilesRecursive(extractTargetDir);
       console.log(`Toplam çıkarılan dosya sayısı: ${allFiles.length}`);
 
-      // tmbulletin veya tmbulletin.script dosyasını bul
-      let scriptFilePath = allFiles.find(p =>
-        path.basename(p).toLowerCase() === "tmbulletin"
+      // bulletin.inf veya bulletin dosyasını bul
+      console.log("[ADIM 1] bulletin.inf veya bulletin dosyası aranıyor...");
+      const bulletinInfPath = allFiles.find((p) =>
+        ["bulletin.inf", "bulletin"].includes(path.basename(p).toLowerCase())
       );
-      if (!scriptFilePath) {
-        scriptFilePath = allFiles.find(p =>
-          path.basename(p).toLowerCase() === "tmbulletin.script"
-        );
-      }
-      if (!scriptFilePath) {
-        console.error("tmbulletin dosyası bulunamadı.");
-        throw new Error("Veri dosyası bulunamadı: tmbulletin veya tmbulletin.script");
-      }
-      console.log(`Script dosyası bulundu: ${scriptFilePath}`);
 
-      const scriptContent = fs.readFileSync(scriptFilePath, "utf8");
-      console.log(`Script dosyası okundu. Boyut: ${scriptContent.length} karakter.`);
+      if (!bulletinInfPath) {
+        console.error("bulletin.inf veya bulletin bulunamadı. Dosyalar:", allFiles);
+        throw new Error("bulletin.inf veya bulletin dosyası bulunamadı.");
+      }
 
-      // Bülten metadata parse
-      const noMatch = scriptContent.match(/INSERT INTO PROPERTIES VALUES\('NO','(.*?)'\)/);
-      const dateMatch = scriptContent.match(/INSERT INTO PROPERTIES VALUES\('DATE','(.*?)'\)/);
+      console.log(`[ADIM 1 BAŞARILI] Bülten dosyası bulundu: ${bulletinInfPath}`);
+
+      const bulletinContent = fs.readFileSync(bulletinInfPath, "utf8");
+
+      const noMatch = bulletinContent.match(/NO\s*=\s*(.*)/);
+      const dateMatch = bulletinContent.match(/DATE\s*=\s*(.*)/);
 
       const bulletinNo = noMatch ? noMatch[1].trim() : "Unknown";
       const bulletinDate = dateMatch ? dateMatch[1].trim() : "Unknown";
@@ -705,15 +700,29 @@ exports.processTrademarkBulletinUpload = functions
         bulletinNo,
         bulletinDate,
         type: "marka",
-        createdAt: admin.firestore.FieldValue.serverTimestamp()
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
       });
       const bulletinId = bulletinRef.id;
-      console.log(`Bülten Firestore'a kaydedildi. ID: ${bulletinId}`);
+      console.log(`Firestore bülten kaydı oluşturuldu: ${bulletinId}`);
+
+      // tmbulletin.script dosyasını bul
+      console.log("[ADIM 2] tmbulletin.script dosyası aranıyor...");
+      const scriptFilePath = allFiles.find((p) =>
+        path.basename(p).toLowerCase() === "tmbulletin.script"
+      );
+
+      if (!scriptFilePath) {
+        console.error("tmbulletin.script bulunamadı.");
+        throw new Error("tmbulletin.script bulunamadı.");
+      }
+
+      console.log(`[ADIM 2 BAŞARILI] tmbulletin.script bulundu: ${scriptFilePath}`);
+      const scriptContent = fs.readFileSync(scriptFilePath, "utf8");
 
       const records = parseScriptContent(scriptContent);
-      console.log(`Toplam ${records.length} marka kaydı bulundu.`);
+      console.log(`Toplam ${records.length} kayıt parse edildi.`);
 
-      const imageFiles = allFiles.filter(p =>
+      const imageFiles = allFiles.filter((p) =>
         /\.(jpg|jpeg|png)$/i.test(p)
       );
 
@@ -724,16 +733,18 @@ exports.processTrademarkBulletinUpload = functions
         let imagePath = null;
 
         if (record.applicationNo) {
-          const imageFile = imageFiles.find(f =>
+          const imageFile = imageFiles.find((f) =>
             f.toLowerCase().includes(record.applicationNo.replace("/", "_"))
           );
+
           if (imageFile) {
             const destFileName = `bulletins/${bulletinId}/${path.basename(imageFile)}`;
+            console.log(`Resim yükleniyor: ${destFileName}`);
             await bucket.upload(imageFile, {
               destination: destFileName,
               metadata: {
-                contentType: getContentType(imageFile)
-              }
+                contentType: getContentType(imageFile),
+              },
             });
             imagePath = destFileName;
             uploadedImageCount++;
@@ -751,12 +762,12 @@ exports.processTrademarkBulletinUpload = functions
           goods: record.goods ?? [],
           extractedGoods: record.extractedGoods ?? [],
           attorneys: record.attorneys ?? [],
-          imagePath
+          imagePath,
         });
       }
 
       await batch.commit();
-      console.log(`Kayıtlar Firestore'a kaydedildi. Yüklenen resim sayısı: ${uploadedImageCount}`);
+      console.log(`Firestore'a kayıtlar eklendi. ${uploadedImageCount} resim yüklendi.`);
 
     } catch (error) {
       console.error("İşlem hatası:", error);
@@ -774,9 +785,6 @@ exports.processTrademarkBulletinUpload = functions
     return null;
   });
 
-/**
- * Recursive olarak dosya listesini döner.
- */
 function listAllFilesRecursive(dir) {
   let results = [];
   const entries = fs.readdirSync(dir, { withFileTypes: true });
@@ -791,23 +799,15 @@ function listAllFilesRecursive(dir) {
   return results;
 }
 
-/**
- * tmbulletin.script içeriğini parse eder.
- */
 function parseScriptContent(content) {
   const lines = content.split("\n");
   const recordsMap = {};
 
-  for (const line of lines) {
-    const trimmed = line.trim();
-    if (!trimmed) continue;
+  lines.forEach((line) => {
+    if (line.trim() === "") return;
 
-    if (trimmed.startsWith("INSERT INTO TRADEMARK VALUES")) {
-      const values = parseValues(trimmed);
-      if (values.length < 7) {
-        console.warn("Eksik TRADEMARK satırı:", trimmed);
-        continue;
-      }
+    if (line.startsWith("INSERT INTO TRADEMARK VALUES")) {
+      const values = parseValues(line);
       const appNo = values[0];
       recordsMap[appNo] = {
         applicationNo: appNo,
@@ -817,78 +817,56 @@ function parseScriptContent(content) {
         holders: [],
         goods: [],
         extractedGoods: [],
-        attorneys: []
+        attorneys: [],
       };
     }
 
-    else if (trimmed.startsWith("INSERT INTO HOLDER VALUES")) {
-      const values = parseValues(trimmed);
-      if (values.length < 8) {
-        console.warn("Eksik HOLDER satırı:", trimmed);
-        continue;
-      }
+    if (line.startsWith("INSERT INTO HOLDER VALUES")) {
+      const values = parseValues(line);
       const appNo = values[0];
       if (recordsMap[appNo]) {
         recordsMap[appNo].holders.push({
           name: values[2],
           address: [values[3], values[4], values[5], values[6]].filter(Boolean).join(", "),
-          country: values[7]
+          country: values[7],
         });
       }
     }
 
-    else if (trimmed.startsWith("INSERT INTO GOODS VALUES")) {
-      const values = parseValues(trimmed);
-      if (values.length < 4) {
-        console.warn("Eksik GOODS satırı:", trimmed);
-        continue;
-      }
+    if (line.startsWith("INSERT INTO GOODS VALUES")) {
+      const values = parseValues(line);
       const appNo = values[0];
       if (recordsMap[appNo]) {
         recordsMap[appNo].goods.push(values[3]);
       }
     }
 
-    else if (trimmed.startsWith("INSERT INTO EXTRACTEDGOODS VALUES")) {
-      const values = parseValues(trimmed);
-      if (values.length < 4) {
-        console.warn("Eksik EXTRACTEDGOODS satırı:", trimmed);
-        continue;
-      }
+    if (line.startsWith("INSERT INTO EXTRACTEDGOODS VALUES")) {
+      const values = parseValues(line);
       const appNo = values[0];
       if (recordsMap[appNo]) {
         recordsMap[appNo].extractedGoods.push(values[3]);
       }
     }
 
-    else if (trimmed.startsWith("INSERT INTO ATTORNEY VALUES")) {
-      const values = parseValues(trimmed);
-      if (values.length < 3) {
-        console.warn("Eksik ATTORNEY satırı:", trimmed);
-        continue;
-      }
+    if (line.startsWith("INSERT INTO ATTORNEY VALUES")) {
+      const values = parseValues(line);
       const appNo = values[0];
       if (recordsMap[appNo]) {
         recordsMap[appNo].attorneys.push(values[2]);
       }
     }
-  }
+  });
 
   return Object.values(recordsMap);
 }
 
-/**
- * SQL Insert satırlarını parse eder.
- */
 function parseValues(line) {
   const inside = line.substring(line.indexOf("(") + 1, line.lastIndexOf(")"));
-  const raw = inside.split("','").map(s => s.replace(/^'/, "").replace(/'$/, ""));
-  return raw.map(s => s.replace(/''/g, "'"));
+  const raw = inside.split("','").map((s) => s.replace(/^'/, "").replace(/'$/, ""));
+  return raw.map((s) => s.replace(/''/g, "'"));
 }
 
-/**
- * İçerik tipi tespiti.
- */
 function getContentType(filePath) {
   if (/\.png$/i.test(filePath)) return "image/png";
   if (/\.jpe?g$/i.test(filePath)) return "image/jpeg";
