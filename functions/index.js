@@ -671,12 +671,11 @@ exports.sendEmailNotification = functions.https.onCall(async (data, context) => 
     const data = fs.readFileSync(tempFilePath);
     const extractor = Unrar.createExtractorFromData({ data });
 
-    const list = extractor.getFileList();
-    if (list[0].state !== "SUCCESS") {
+    const listResult = extractor.extract({ files: [] });
+    if (listResult[0].state !== "SUCCESS") {
       throw new Error("RAR listesi okunamadı.");
     }
-
-    const entries = list[1].fileHeaders;
+    const entries = listResult[1].fileHeaders;
 
     // bulletin.inf dosyasını bul
     const bulletinEntry = entries.find(e => e.name.toLowerCase().endsWith("bulletin.inf"));
