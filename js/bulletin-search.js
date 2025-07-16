@@ -1,13 +1,12 @@
-import { loadSharedLayout } from "./js/layout-loader.js";
-loadSharedLayout({ activeMenuLink: "bulletin-search.html" });
 import { getFirestore, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { getStorage, ref, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 import { db } from "../firebase-config.js";
-import { loadSharedLayout } from "./layout-loader.js";
+import { loadSharedLayout } from "./js/layout-loader.js";
 
 console.log("✅ bulletin-search.js yüklendi!");
 
-loadSharedLayout();
+// Sayfa açılışında layout yükle
+loadSharedLayout({ activeMenuLink: "bulletin-search.html" });
 
 document.getElementById("searchButton").addEventListener("click", async () => {
     const type = document.getElementById("bulletinType").value;
@@ -35,13 +34,10 @@ document.getElementById("searchButton").addEventListener("click", async () => {
 
         if (bulletinSnapshot.empty) {
             recordsContainer.innerHTML = "<p>Belirtilen kriterlerde bülten bulunamadı.</p>";
-            console.log("Bülten bulunamadı.");
             return;
         }
 
-        const bulletinDoc = bulletinSnapshot.docs[0];
-        const bulletinId = bulletinDoc.id;
-        console.log("Bulunan bülten ID:", bulletinId);
+        const bulletinId = bulletinSnapshot.docs[0].id;
 
         // Bu bültene ait kayıtları al
         const recordsQuery = query(
@@ -88,9 +84,9 @@ document.getElementById("searchButton").addEventListener("click", async () => {
             html += `
             <tr>
                 <td>${r.applicationNo || "-"}</td>
-                <td>${imageUrl ? `<img src="${imageUrl}" style="height:50px;">` : "-"}</td>
+                <td>${imageUrl ? `<img src="${imageUrl}" class="marka-image">` : "-"}</td>
                 <td>${r.markName || "-"}</td>
-                <td>${r.holders?.[0]?.name || "-"}</td>
+                <td>${r.holder || "-"}</td>
                 <td>${r.applicationDate || "-"}</td>
                 <td>${r.niceClasses || "-"}</td>
                 <td><button class="action-btn" onclick='showGoods(${JSON.stringify(r.goods || [])})'>Eşyalar</button></td>
@@ -108,14 +104,14 @@ document.getElementById("searchButton").addEventListener("click", async () => {
 
 // Modal açma fonksiyonu
 window.showGoods = (goods) => {
-    const modal = document.getElementById("goods-modal");
-    const body = document.getElementById("goods-modal-body");
-    body.innerHTML = goods.length
-        ? `<ul>${goods.map(g => `<li>${g}</li>`).join("")}</ul>`
-        : "<p>Tanımlı eşya yok.</p>";
+    const modal = document.getElementById("goodsModal");
+    const list = document.getElementById("goodsList");
+    list.innerHTML = goods.length
+        ? goods.map(g => `<li>${g}</li>`).join("")
+        : "<li>Tanımlı eşya yok.</li>";
     modal.style.display = "flex";
 };
 
-document.getElementById("close-goods-modal").addEventListener("click", () => {
-    document.getElementById("goods-modal").style.display = "none";
+document.getElementById("closeGoodsModal").addEventListener("click", () => {
+    document.getElementById("goodsModal").style.display = "none";
 });
