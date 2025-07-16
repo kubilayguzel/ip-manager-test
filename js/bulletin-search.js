@@ -1,5 +1,5 @@
 import { getFirestore, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-import { db } from './firebase-config.js';
+import { db } from '..firebase-config.js';
 
 document.getElementById("searchButton").addEventListener("click", async () => {
     const type = document.getElementById("bulletinType").value;
