@@ -674,6 +674,8 @@
                         return;
                     }
 
+                    const allRecordIds = this.allRecords.map(r => r.id);
+                    console.log("✅ Tüm kayıt ID'leri:", allRecordIds);
                     const auth = getAuth();
                     const user = auth.currentUser;
 
@@ -687,8 +689,9 @@
                     console.log('✅ Kullanıcı UID:', uid);
 
                     for (const id of selectedIds) {
+                        console.log(`➡️ Kayıt aranıyor: ${id}`);
                         const record = this.allRecords.find(r => r.id === id);
-                        console.log('🔍 İncelenen kayıt:', record);
+                        console.log('🔍 Bulunan kayıt:', record);
 
                         if (!record) {
                         console.log('⛔ Kayıt bulunamadı:', id);
