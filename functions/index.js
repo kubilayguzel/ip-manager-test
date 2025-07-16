@@ -858,29 +858,16 @@ function parseScriptContent(content) {
 
   while ((match = insertRegex.exec(content)) !== null) {
     const table = match[1].toUpperCase();
-    let raw = match[2];
+    const raw = match[2];
 
+    // Yeni: tüm tırnaklı değerleri güvenli yakala
     const values = [];
-    let current = '';
-    let inString = false;
-
-    for (let i = 0; i < raw.length; i++) {
-      const char = raw[i];
-      if (char === "'") {
-        if (inString && raw[i + 1] === "'") {
-          current += "'";
-          i++;
-        } else {
-          inString = !inString;
-        }
-      } else if (char === ',' && !inString) {
-        values.push(decodeValue(current.trim()));
-        current = '';
-      } else {
-        current += char;
-      }
+    const regex = /'(.*?)'(?:,|$)/gs;
+    let valMatch;
+    while ((valMatch = regex.exec(raw)) !== null) {
+      const v = valMatch[1].replace(/''/g, "'").trim();
+      values.push(v === "" ? null : decodeUnicode(v));
     }
-    values.push(decodeValue(current.trim()));
 
     const appNo = values[0];
     if (!appNo) continue;
@@ -904,8 +891,7 @@ function parseScriptContent(content) {
       recordsMap[appNo].niceClasses = values[6] ?? null;
     } else if (table === "HOLDER") {
       const holderName = extractHolderName(values[2]);
-      let addressParts = [values[3], values[4], values[5], values[6]].filter(Boolean).join(", ");
-      if (addressParts.trim() === "") addressParts = null;
+      const addressParts = [values[3], values[4], values[5], values[6]].filter(Boolean).join(", ") || null;
       recordsMap[appNo].holders.push({
         name: holderName,
         address: addressParts,
@@ -922,6 +908,14 @@ function parseScriptContent(content) {
 
   return Object.values(recordsMap);
 }
+
+function decodeUnicode(str) {
+  // \uXXXX unicode dönüşümü
+  return str.replace(/\\u([\dA-F]{4})/gi, (_, g1) =>
+    String.fromCharCode(parseInt(g1, 16))
+  );
+}
+
 
 function decodeValue(str) {
   if (str === null || str === undefined) return null;
