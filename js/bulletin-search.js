@@ -1,5 +1,6 @@
 import { getFirestore, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { db } from "../firebase-config.js";
+
 console.log("✅ bulletin-search.js yüklendi!");
 
 document.getElementById("searchButton").addEventListener("click", async () => {
@@ -54,6 +55,7 @@ document.getElementById("searchButton").addEventListener("click", async () => {
             <thead>
                 <tr>
                     <th>Başvuru No</th>
+                    <th>Marka Adı</th>
                     <th>Hak Sahibi</th>
                     <th>Sınıflar</th>
                 </tr>
@@ -62,11 +64,14 @@ document.getElementById("searchButton").addEventListener("click", async () => {
 
         recordsSnapshot.forEach((doc) => {
             const r = doc.data();
+            // holders dizisi varsa ilk elemanın adı veya adresi
+            const holderName = (r.holders && r.holders.length > 0) ? (r.holders[0].name || r.holders[0].address || "-") : "-";
             html += `
                 <tr>
-                    <td>${r.applicationNo}</td>
-                    <td>${r.holder}</td>
-                    <td>${r.niceClasses}</td>
+                    <td>${r.applicationNo || "-"}</td>
+                    <td>${r.markName || "-"}</td>
+                    <td>${holderName}</td>
+                    <td>${r.niceClasses || "-"}</td>
                 </tr>`;
         });
 
