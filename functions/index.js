@@ -904,9 +904,8 @@ function parseScriptContent(content) {
       recordsMap[appNo].niceClasses = values[6] ?? null;
     } else if (table === "HOLDER") {
       const holderName = extractHolderName(values[2]);
-      const addressParts = [values[3], values[4], values[5], values[6]]
-        .filter(Boolean)
-        .join(", ") || null;
+      let addressParts = [values[3], values[4], values[5], values[6]].filter(Boolean).join(", ");
+      if (addressParts.trim() === "") addressParts = null;
       recordsMap[appNo].holders.push({
         name: holderName,
         address: addressParts,
@@ -928,34 +927,15 @@ function decodeValue(str) {
   if (str === null || str === undefined) return null;
   if (str === "") return null;
   str = str.replace(/^'/, "").replace(/'$/, "").replace(/''/g, "'");
-  return JSON.parse('"' + str.replace(/\\/g, '\\\\') + '"');
+  // Unicode decode
+  return str.replace(/\\u([0-9a-fA-F]{4})/g, (m, g1) => String.fromCharCode(parseInt(g1, 16)));
 }
 
 function extractHolderName(str) {
   if (!str) return null;
-  // "(7883830) XYZ COMPANY" ise parantez içini at
   const match = str.match(/\)\s*(.*)$/);
   if (match) return match[1];
   return str;
-}
-
-// Yardımcı: Tek tırnaklı değeri decode eder
-function decodeValue(str) {
-  if (!str) return null;
-  if (str[0] === "'" && str[str.length - 1] === "'") {
-    str = str.substring(1, str.length - 1);
-  }
-  str = str.replace(/''/g, "'");
-  // Unicode escape çözümü
-  return JSON.parse('"' + str.replace(/\\/g, '\\\\') + '"');
-}
-
-function parseValues(line) {
-  // Bu fonksiyon parseScriptContent içinde kullanılmıyor gibi görünüyor.
-  // Eğer başka bir yerde kullanılıyorsa, burada da null/string dönüşümlerini gözden geçirmek faydalı olabilir.
-  const inside = line.substring(line.indexOf("(") + 1, line.lastIndexOf(")"));
-  const raw = inside.split("','").map((s) => s.replace(/^'/, "").replace(/'$/, ""));
-  return raw.map((s) => s.replace(/''/g, "'"));
 }
 
 function getContentType(filePath) {
