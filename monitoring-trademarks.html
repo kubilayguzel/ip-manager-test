@@ -1,52 +1,72 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>Marka İzleme</title>
-    <link rel="stylesheet" href="css/shared-styles.css"/>
-    <script type="module" src="js/layout-loader.js"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Marka İzleme</title>
+  <link rel="stylesheet" href="css/shared-styles.css"/>
 </head>
 <body>
-    <div id="layout-placeholder"></div>
-    
+  <div id="notification-container" style="position: fixed; top:20px; right:20px; z-index:9999;"></div>
+  <div id="layout-placeholder"></div>
+  <div class="page-wrapper">
     <main class="main-container">
-        <div class="page-header-section">
-            <h1 class="page-title">📊 Marka İzleme</h1>
-            <p class="page-subtitle">Portföyden seçilen markaların izleme kaydı burada listelenecek.</p>
-        </div>
-
-        <section>
-            <p>Bu sayfa şu anda test amaçlıdır. Portföyden seçilen marka kayıtlarını burada listeleyeceğiz.</p>
-            <!-- Buraya dinamik izleme tablosu eklenecek -->
-            <div id="monitoring-list" class="data-table">
-                <!-- JavaScript ile izleme kayıtları buraya gelecek -->
-            </div>
-        </section>
+      <section class="page-header">
+        <h1 class="page-title">📊 Marka İzleme</h1>
+        <p class="page-subtitle">Portföyden seçilen markaların izleme kaydı burada listelenecek.</p>
+      </section>
+      <section>
+        <div id="monitoring-list" class="data-table"></div>
+      </section>
     </main>
+  </div>
 
-    <script>
-        // Şimdilik basit bir test kaydı gösterelim
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
+    import { loadSharedLayout } from './js/layout-loader.js';
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDbdqfiVbobnl1BtyiWxhD4bfIcREw8ZRc",
+      authDomain: "ip-manager-production-aab4b.firebaseapp.com",
+      projectId: "ip-manager-production-aab4b",
+      storageBucket: "ip-manager-production-aab4b.appspot.com",
+      messagingSenderId: "594650169512",
+      appId: "1:594650169512:web:43496005e063a40511829d"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        loadSharedLayout({ activeMenuLink: 'monitoring-trademarks.html' });
+
+        // Örnek veri
         document.getElementById('monitoring-list').innerHTML = `
-            <table>
-                <thead>
-                    <tr>
-                        <th>Marka Adı</th>
-                        <th>Başvuru No</th>
-                        <th>Başvuru Tarihi</th>
-                        <th>Durum</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td>Örnek Marka</td>
-                        <td>2025/12345</td>
-                        <td>2025-07-15</td>
-                        <td>İzleniyor</td>
-                    </tr>
-                </tbody>
-            </table>
+          <table>
+            <thead>
+              <tr>
+                <th>Marka Adı</th>
+                <th>Başvuru No</th>
+                <th>Başvuru Tarihi</th>
+                <th>Durum</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Örnek Marka</td>
+                <td>2025/12345</td>
+                <td>2025-07-15</td>
+                <td>İzleniyor</td>
+              </tr>
+            </tbody>
+          </table>
         `;
-    </script>
+      } else {
+        document.getElementById('monitoring-list').innerHTML = "<p>Bu sayfayı görmek için giriş yapmalısınız.</p>";
+      }
+    });
+  </script>
 </body>
 </html>
