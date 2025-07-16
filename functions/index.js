@@ -933,12 +933,15 @@ function decodeValue(str) {
 
 function extractHolderName(str) {
   if (!str) return null;
-  const idx = str.indexOf(')');
-  if (idx !== -1) {
-    return str.substring(idx + 1).trim();
+  str = str.trim();
+  // Eğer "(123456) Şirket Adı" ise
+  const parenMatch = str.match(/^\(\d+\)\s*(.*)$/);
+  if (parenMatch) {
+    return parenMatch[1].trim();
   }
-  return str.trim();
+  return str;
 }
+
 
 function getContentType(filePath) {
   if (/\.png$/i.test(filePath)) return "image/png";
