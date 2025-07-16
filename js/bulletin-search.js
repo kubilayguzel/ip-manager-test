@@ -51,6 +51,7 @@ searchButton.addEventListener("click", async () => {
             <thead>
               <tr>
                 <th>Başvuru No</th>
+                <th>Marka Örneği</th>
                 <th>Marka Adı</th>
                 <th>Hak Sahibi</th>
                 <th>Başvuru Tarihi</th>
@@ -63,9 +64,14 @@ searchButton.addEventListener("click", async () => {
         recordsSnapshot.forEach((doc) => {
             const r = doc.data();
             const holderName = r.holders?.[0]?.name || r.holders?.[0]?.address || "-";
+            const imageUrl = r.imagePath
+              ? `https://firebasestorage.googleapis.com/v0/b/ip-manager-production-aab4b.appspot.com/o/${encodeURIComponent(r.imagePath)}?alt=media`
+              : "";
+
             html += `
               <tr>
                 <td>${r.applicationNo || "-"}</td>
+                <td>${imageUrl ? `<img src="${imageUrl}" alt="Marka Görseli" class="mark-image"/>` : "-"}</td>
                 <td>${r.markName || "-"}</td>
                 <td>${holderName}</td>
                 <td>${r.applicationDate || "-"}</td>
@@ -77,7 +83,6 @@ searchButton.addEventListener("click", async () => {
         html += "</tbody></table>";
         recordsContainer.innerHTML = html;
 
-        // Butonlara event bağla
         document.querySelectorAll(".action-btn[data-goods]").forEach(btn => {
             btn.addEventListener("click", () => {
                 const goodsArray = JSON.parse(btn.dataset.goods);
