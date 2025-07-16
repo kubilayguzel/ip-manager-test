@@ -7,211 +7,250 @@
   <link rel="stylesheet" href="css/shared-styles.css"/>
   <style>
     body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      color: #333;
-      display: flex;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        color: #333;
+        display: flex;
+        min-height: 100vh; /* Ekran yüksekliğini kaplasın */
+        margin: 0; /* Tarayıcı varsayılan marginlerini kaldır */
     }
     .page-wrapper {
-      flex-grow: 1;
-      display: flex;
-      flex-direction: column;
-      height: 100vh;
-      overflow-y: auto;
-      background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        flex-grow: 1;
+        display: flex;
+        flex-direction: column;
+        /* height: 100vh;  body'de min-height 100vh olduğu için burada çok kritik değil ama kalabilir */
+        overflow-y: auto; /* İçerik taşarsa dikey kaydırma çubuğu çıksın */
+        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        box-sizing: border-box; /* Padding ve border genişliğe dahil */
+        /* padding-top: 0;  Header'dan gelen boşluğu kontrol etmek için, genelde 0 kalır */
     }
     .main-container {
-      width: 100%;
-      padding: 30px;
-      margin: 0;
+        width: 100%;
+        padding: 30px;
+        margin: 0;
+        box-sizing: border-box;
+        flex-shrink: 0; /* Küçülmesini engelle */
     }
     .page-header {
-      background: rgba(255,255,255,0.95);
-      padding: 30px;
-      border-radius: 20px;
-      margin-bottom: 30px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        background: rgba(255,255,255,0.95);
+        padding: 30px;
+        border-radius: 20px;
+        margin-bottom: 20px; /* Eski 30px'ten 20px'e düşürüldü */
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        position: relative; /* z-index için */
+        z-index: 2; /* Diğer içeriklerin üstünde kalsın */
     }
     .page-title {
-      font-size: 2em;
-      color: #1e3c72;
-      margin-bottom: 10px;
+        font-size: 2em;
+        color: #1e3c72;
+        margin-bottom: 10px;
     }
     .page-subtitle {
-      color: #666;
-      font-size: 1.1em;
+        color: #666;
+        font-size: 1.1em;
     }
+
+    /* MONITORING CONTROLS (SEÇİM BUTONLARI İÇİN YENİ STİLLER) */
+    .monitoring-controls {
+        background: rgba(255, 255, 255, 0.95);
+        padding: 15px 30px; /* Dikey padding azaltıldı (eski 20px'den 15px'e) */
+        border-radius: 20px;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+        margin-bottom: 20px; /* Tablo ile arasında boşluk */
+        display: flex;
+        justify-content: flex-end; /* "Tümünü Seç" kaldırıldığı için sağa hizalandı */
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 15px;
+        position: relative; /* z-index için */
+        z-index: 2;
+    }
+    /* "Tümünü Seç" checkbox kaldırıldığı için bu group artık gereksiz, gizleniyor. */
+    .monitoring-controls .filter-group {
+        display: none;
+    }
+    .monitoring-controls .btn-selected-action {
+        background-color: #007bff;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 0.9em;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+    .monitoring-controls .btn-selected-action:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0, 123, 255, 0.2);
+    }
+    .monitoring-controls .btn-selected-action:disabled {
+        background-color: #cccccc;
+        cursor: not-allowed;
+        box-shadow: none;
+        transform: none;
+    }
+
+    /* TABLO STİLLERİ */
     .accruals-container {
-      background: rgba(255,255,255,0.95);
-      border-radius: 20px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-      overflow: hidden;
+        background: rgba(255,255,255,0.95);
+        border-radius: 20px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        overflow: hidden; /* İçerik taşarsa gizle, table-layout: fixed ile iyi gider */
     }
     .accruals-table {
-      width: 100%;
-      border-collapse: collapse;
+        width: 100%;
+        border-collapse: collapse;
+        table-layout: fixed; /* Kolon genişliklerinin sabitlenmesi için eklendi */
     }
     .accruals-table th,
     .accruals-table td {
-      padding: 15px;
-      text-align: left;
-      border-bottom: 1px solid #f0f0f0;
+        padding: 15px;
+        text-align: left;
+        border-bottom: 1px solid #f0f0f0;
+        white-space: nowrap; /* İçeriğin tek satırda kalmasını sağlar */
+        overflow: hidden;
+        text-overflow: ellipsis; /* Taşmayı üç nokta ile göster */
     }
     .accruals-table th {
-      background: #f8f9fa;
-      font-weight: 600;
+        background: #f8f9fa;
+        font-weight: 600;
     }
-    .action-btn {
-      background: #007bff;
-      color: white;
-      border: none;
-      padding: 8px 12px;
-      border-radius: 6px;
-      cursor: pointer;
-      margin-left: 5px;
-      transition: all 0.3s ease;
+
+    /* KOLON GENİŞLİKLERİ VE HİZALAMALAR */
+    /* Checkbox sütunu */
+    .accruals-table th:first-child,
+    .accruals-table td:first-child {
+        width: 40px;
+        text-align: center;
+        padding-left: 5px;
+        padding-right: 5px;
     }
-    .action-btn.delete-btn {
-      background-color: #dc3545;
+    /* Marka Görseli sütunu */
+    .accruals-table th:nth-child(2),
+    .accruals-table td:nth-child(2) {
+        width: 100px; /* Görsel için daha fazla alan */
+        text-align: center;
     }
+    /* Marka Adı */
+    .accruals-table th:nth-child(3),
+    .accruals-table td:nth-child(3) {
+        width: 200px;
+    }
+    /* Başvuru No */
+    .accruals-table th:nth-child(4),
+    .accruals-table td:nth-child(4) {
+        width: 120px;
+    }
+    /* Başvuru Tarihi */
+    .accruals-table th:nth-child(5),
+    .accruals-table td:nth-child(5) {
+        width: 100px;
+    }
+    /* Nice Sınıfı */
+    .accruals-table th:nth-child(6),
+    .accruals-table td:nth-child(6) {
+        width: 120px;
+    }
+    /* Durum */
+    .accruals-table th:nth-child(7),
+    .accruals-table td:nth-child(7) {
+        width: 120px;
+    }
+    /* İşlem kolonu kaldırıldığı için artık son sütun yoktur */
+
+
+    /* MARKALAR İÇİN GÖRSEL STİLLERİ */
+    .trademark-image-thumbnail {
+        width: 50px;
+        height: 50px;
+        object-fit: contain;
+        border-radius: 5px;
+        vertical-align: middle;
+        /* Ekran görüntüsündeki boş eksi işaretini kaldırmak için */
+        line-height: 0;
+        font-size: 0;
+    }
+
+    /* DURUM ETİKETLERİ İÇİN STİLLER (Türkçe durumlar için) */
+    .status-badge {
+        display: inline-block;
+        padding: 5px 10px;
+        border-radius: 5px;
+        font-size: 0.8em;
+        font-weight: 600;
+        color: white;
+        text-transform: uppercase;
+        line-height: 1; /* Metin yüksekliğini ayarla */
+    }
+    .status-badge.başvuru { background-color: #007bff; }
+    .status-badge.tescilli { background-color: #28a745; }
+    .status-badge.reddedildi { background-color: #dc3545; }
+    .status-badge.beklemede { background-color: #ffc107; color: #333; }
+    .status-badge.itiraz { background-color: #6f42c1; }
+    .status-badge.dava { background-color: #fd7e14; }
+    /* Yukarıdaki getStatusInTurkish fonksiyonunuzla uyumlu olmalı */
+
+    /* GENEL BUTON STİLLERİ (Eğer shared-styles.css'te yoksa ve burada tanımlamak isterseniz) */
+    /* .btn-primary, .btn-secondary {
+        background: linear-gradient(45deg, #1e3c72, #2a5298);
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 0.9em;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        margin-right: 10px;
+    }
+    .btn-primary:hover, .btn-secondary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(30, 60, 114, 0.2);
+    }
+    .btn-secondary {
+        background: #6c757d;
+    }
+    .btn-secondary:hover {
+        background: #5a6268;
+    } */
+
+    /* YÜKLEME VE KAYIT YOK MESAJLARI */
     .loading, .no-records {
-      text-align: center;
-      padding: 30px;
-      color: #666;
+        text-align: center;
+        padding: 30px;
+        color: #666;
     }
-    /* Mevcut stillerinizin sonuna ekleyin veya güncelleyin */
-.accruals-table th,
-.accruals-table td {
-  padding: 15px;
-  text-align: left;
-  border-bottom: 1px solid #f0f0f0;
-  white-space: nowrap; /* İçeriğin tek satırda kalmasını sağlar */
-  overflow: hidden;
-  text-overflow: ellipsis; /* Taşmayı üç nokta ile göster */
-}
-
-/* Checkbox sütunu için daha dar bir genişlik */
-.accruals-table th:first-child,
-.accruals-table td:first-child {
-  width: 40px; /* Checkbox için yeterli alan */
-  text-align: center;
-  padding-left: 5px;
-  padding-right: 5px;
-}
-
-/* Resim başparmak boyutu */
-.trademark-image-thumbnail {
-  width: 50px;
-  height: 50px;
-  object-fit: contain;
-  border-radius: 5px;
-  vertical-align: middle;
-}
-
-/* Genel buton stilleri için ekleme yapabilirsiniz, shared-styles.css dosyanızda da olabilir */
-.btn-primary, .btn-secondary {
-    background: linear-gradient(45deg, #1e3c72, #2a5298);
-    color: white;
-    border: none;
-    padding: 10px 20px;
-    border-radius: 8px;
-    cursor: pointer;
-    font-size: 0.9em;
-    font-weight: 600;
-    transition: all 0.3s ease;
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    margin-right: 10px; /* Butonlar arasına boşluk */
-}
-.btn-primary:hover, .btn-secondary:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(30, 60, 114, 0.2);
-}
-.btn-secondary {
-    background: #6c757d;
-}
-.btn-secondary:hover {
-    background: #5a6268;
-}
-
-/* Seçim butonları için yeni stiller */
-.monitoring-controls {
-    background: rgba(255, 255, 255, 0.95);
-    padding: 20px 30px;
-    border-radius: 20px;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.05);
-    margin-bottom: 20px; /* Tablo ile arasında boşluk */
-    display: flex;
-    justify-content: flex-end;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 15px;
-}
-.monitoring-controls .filter-group {
-    display: flex;
-    gap: 8px;
-    align-items: center;
-}
-.monitoring-controls .filter-label {
-    font-weight: 500;
-}
-.monitoring-controls .btn-selected-action {
-    background-color: #007bff;
-    color: white;
-    border: none;
-    padding: 10px 20px;
-    border-radius: 8px;
-    cursor: pointer;
-    font-size: 0.9em;
-    font-weight: 600;
-    transition: all 0.3s ease;
-}
-.monitoring-controls .btn-selected-action:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(0, 123, 255, 0.2);
-}
-.monitoring-controls .btn-selected-action:disabled {
-    background-color: #cccccc;
-    cursor: not-allowed;
-    box-shadow: none;
-    transform: none;
-}
-  </style>
+</style>
 </head>
 <body>
   <div id="layout-placeholder"></div>
-  <div id="sidebar-container"></div>
   <div class="page-wrapper">
-<main class="main-container">
-  <section class="page-header">
-    <h1 class="page-title">📊 Marka İzleme</h1>
-    <p class="page-subtitle">İzleme listenizdeki markalar burada listelenir.</p>
-  </section>
+    <main class="main-container">
+      <section class="page-header">
+        <h1 class="page-title">📊 Marka İzleme</h1>
+        <p class="page-subtitle">İzleme listenizdeki markalar burada listelenir.</p>
+      </section>
 
-  <div class="monitoring-controls">
-    <div class="filter-group">
-      <input type="checkbox" id="selectAllCheckbox">
-      <label for="selectAllCheckbox" class="filter-label">Tümünü Seç</label>
-    </div>
-    <button type="button" class="btn-selected-action" id="removeSelectedBtn" disabled>
-      Seçileni Kaldır (<span id="selectedCount">0</span>)
-    </button>
+      <div class="monitoring-controls">
+        <button type="button" class="btn-selected-action" id="removeSelectedBtn" disabled>
+          Seçileni Kaldır (<span id="selectedCount">0</span>)
+        </button>
+      </div>
+      <div class="accruals-container">
+        <div id="monitoringTableContainer">
+          <div class="loading">Yükleniyor...</div>
+        </div>
+      </div>
+    </main>
   </div>
-  <div class="accruals-container">
-    <div id="monitoringTableContainer">
-      <div class="loading">Yükleniyor...</div>
-    </div>
-  </div>
-</main>
-  </div>
-  
 <script type="module">
     import { loadSharedLayout } from './js/layout-loader.js';
     import { monitoringService } from './firebase-config.js';
-    // Firebase Auth'u ayrı bir import olarak bırakabiliriz, ancak showNotification'ı utils.js'den import ettiğinizden emin olun
     import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
-    // showNotification fonksiyonunun utils.js dosyasından doğru bir şekilde import edildiğinden emin olun
-    import { showNotification } from './utils.js'; // Varsayılan olarak ekliyorum
+    import { showNotification } from './utils.js'; // showNotification'ın doğru import edildiğinden emin olun
 
     const auth = getAuth();
     let selectedMonitoringItems = new Set(); // Seçili izleme öğelerinin ID'lerini tutacak
@@ -220,9 +259,22 @@
         await loadSharedLayout({ activeMenuLink: 'monitoring-trademarks.html' });
 
         const container = document.getElementById('monitoringTableContainer');
-        const selectAllCheckbox = document.getElementById('selectAllCheckbox');
+        // const selectAllCheckbox = document.getElementById('selectAllCheckbox'); // Bu artık kullanılmıyor
         const removeSelectedBtn = document.getElementById('removeSelectedBtn');
         const selectedCountSpan = document.getElementById('selectedCount');
+
+        // Durumları Türkçeye çeviren fonksiyon
+        const getStatusInTurkish = (status) => {
+            switch (status) {
+                case 'application': return { text: 'Başvuru', class: 'application' };
+                case 'registered': return { text: 'Tescilli', class: 'registered' };
+                case 'rejected': return { text: 'Reddedildi', class: 'rejected' };
+                case 'pending': return { text: 'Beklemede', class: 'pending' };
+                case 'objection': return { text: 'İtiraz', class: 'objection' };
+                case 'litigation': return { text: 'Dava', class: 'litigation' };
+                default: return { text: status || 'Bilinmiyor', class: '' };
+            }
+        };
 
         // Tarih formatlama yardımcı fonksiyonu
         const formatTurkishDate = (dateString) => {
@@ -261,18 +313,20 @@
                             <th>Marka Adı</th>
                             <th>Başvuru No</th>
                             <th>Başvuru Tarihi</th>
-                            <th>Nice Sınıfı</th> <th>Durum</th>
-                            <th>İşlem</th>
-                        </tr>
+                            <th>Nice Sınıfı</th>
+                            <th>Durum</th>
+                            </tr>
                     </thead>
                     <tbody>
             `;
 
             data.forEach(r => {
                 const isSelected = selectedMonitoringItems.has(r.id) ? 'checked' : '';
-                const trademarkImageHtml = r.trademarkImage && r.trademarkImage.startsWith('data:image')
+                const trademarkImageHtml = r.trademarkImage && typeof r.trademarkImage === 'string' && r.trademarkImage.startsWith('data:image')
                     ? `<img src="${r.trademarkImage}" alt="Marka Görseli" class="trademark-image-thumbnail">`
                     : '-';
+                
+                const statusInfo = getStatusInTurkish(r.status);
 
                 html += `
                     <tr data-id="${r.id}">
@@ -281,11 +335,9 @@
                         <td>${r.title || '-'}</td>
                         <td>${r.applicationNumber || '-'}</td>
                         <td>${formatTurkishDate(r.applicationDate)}</td>
-                        <td>${r.niceClass || '-'}</td> <td>${r.status || '-'}</td>
-                        <td>
-                            <button class="action-btn delete-btn">Kaldır</button>
-                        </td>
-                    </tr>`;
+                        <td>${r.niceClass || '-'}</td>
+                        <td><span class="status-badge ${statusInfo.class}">${statusInfo.text}</span></td>
+                        </tr>`;
             });
             html += '</tbody></table>';
             container.innerHTML = html;
@@ -293,7 +345,10 @@
             // Header'daki "Tümünü Seç" checkbox'ını bağlama
             const headerSelectAllCheckbox = document.getElementById('headerSelectAllCheckbox');
             if (headerSelectAllCheckbox) {
-                headerSelectAllCheckbox.checked = selectedMonitoringItems.size === data.length && data.length > 0;
+                // Initial state check for header checkbox
+                const allRowCheckboxes = document.querySelectorAll('.row-checkbox');
+                headerSelectAllCheckbox.checked = allRowCheckboxes.length > 0 && Array.from(allRowCheckboxes).every(cb => selectedMonitoringItems.has(cb.dataset.id));
+
                 headerSelectAllCheckbox.addEventListener('change', (e) => {
                     const isChecked = e.target.checked;
                     document.querySelectorAll('.row-checkbox').forEach(checkbox => {
@@ -314,10 +369,11 @@
             removeSelectedBtn.disabled = selectedMonitoringItems.size === 0;
 
             // Eğer tüm görünen checkbox'lar seçiliyse, header'daki "Tümünü Seç"i de işaretle
-            const allCheckboxes = document.querySelectorAll('.row-checkbox');
-            const allChecked = allCheckboxes.length > 0 && Array.from(allCheckboxes).every(cb => selectedMonitoringItems.has(cb.dataset.id));
+            const allRowCheckboxes = document.querySelectorAll('.row-checkbox');
             const headerSelectAllCheckbox = document.getElementById('headerSelectAllCheckbox');
+
             if (headerSelectAllCheckbox) {
+                const allChecked = allRowCheckboxes.length > 0 && Array.from(allRowCheckboxes).every(cb => selectedMonitoringItems.has(cb.dataset.id));
                 headerSelectAllCheckbox.checked = allChecked;
             }
         };
@@ -335,7 +391,7 @@
                 renderMonitoringTable(data, user.uid);
             } else {
                 container.innerHTML = '<div class="no-records">İzleme listeniz yüklenirken bir hata oluştu.</div>';
-                console.error("Marka izleme öğeleri yüklenirken hata:", data); // data burada hata mesajıdır
+                console.error("Marka izleme öğeleri yüklenirken hata:", data);
             }
         });
 
@@ -352,12 +408,18 @@
             }
         });
 
-        // "Kaldır" ve "Seçileni Kaldır" butonları için olay dinleyici (event delegation ile)
+        // "Kaldır" butonlarına (eskiden bireysel olanlar) ve "Seçileni Kaldır" butonuna tıklama dinleyicisi
+        // Bireysel kaldır butonlarını kaldırdığımız için bu event listener sadece toplu kaldırma butonu için geçerli.
+        // Ancak bu event delegation yapısı, gelecekte bireysel buton eklenirse hala çalışır.
         container.addEventListener('click', async (e) => {
+            // Eğer bireysel 'delete-btn' yoksa, bu if bloğu çalışmayacaktır.
             if (e.target.classList.contains('delete-btn')) {
+                // Bu bölüm artık kullanılmayacaksa kaldırılabilir.
+                // Ancak ben yine de hata olması durumuna karşı bırakıyorum,
+                // gerçekte bu HTML'den silindiği için tıklanamayacak.
                 const row = e.target.closest('tr');
                 const idToRemove = row.dataset.id;
-                if (confirm('Bu kaydı izleme listesinden kaldırmak istediğinizden emin misiniz?')) {
+                if (confirm('Bu kaydı izleme listesinden kaldırmak istiyor musunuz?')) {
                     const user = auth.currentUser;
                     if (!user) {
                         showNotification('Kayıt kaldırmak için giriş yapmalısınız.', 'error');
@@ -396,13 +458,14 @@
 
             let successfulRemovals = 0;
             let failedRemovals = 0;
-            const itemsToRemove = Array.from(selectedMonitoringItems);
+            const itemsToRemove = Array.from(selectedMonitoringItems); // Set'ten bir kopyasını al
+
+            // Yükleniyor mesajını göster
+            container.innerHTML = '<div class="loading">Seçili kayıtlar kaldırılıyor...</div>';
 
             for (const id of itemsToRemove) {
                 const res = await monitoringService.removeMonitoringItem(user.uid, id);
                 if (res.success) {
-                    const row = document.querySelector(`tr[data-id="${id}"]`);
-                    if (row) row.remove();
                     successfulRemovals++;
                 } else {
                     console.error(`Kayıt (${id}) kaldırılamadı: ${res.error}`);
@@ -410,10 +473,19 @@
                 }
             }
 
+            // İşlem bittikten sonra tabloyu yeniden yükle
+            const { success, data } = await monitoringService.getMonitoringItems(user.uid);
+            if (success) {
+                renderMonitoringTable(data, user.uid);
+            } else {
+                // Tablo yeniden yüklenirken hata olursa
+                container.innerHTML = '<div class="no-records">İzleme listeniz güncellenirken bir hata oluştu.</div>';
+                console.error("Marka izleme öğeleri yüklenirken hata:", data);
+            }
+
+            // Bildirimleri göster
             if (successfulRemovals > 0) {
                 showNotification(`${successfulRemovals} kayıt başarıyla kaldırıldı.`, 'success');
-                selectedMonitoringItems.clear(); // Tüm seçimi temizle
-                updateSelectedButtonState();
             }
             if (failedRemovals > 0) {
                 showNotification(`${failedRemovals} kayıt kaldırılamadı. Konsolu kontrol edin.`, 'error');
