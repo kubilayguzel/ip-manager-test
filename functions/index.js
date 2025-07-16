@@ -645,6 +645,8 @@ exports.processTrademarkBulletinUpload = functions
   })
   .storage.object()
   .onFinalize(async (object) => {
+    // console.log("Fonksiyon başlangıcı, object:", JSON.stringify(object)); // Fonksiyon başlangıcını loglayın
+
     const bucket = admin.storage().bucket(object.bucket); // Firebase Admin SDK'dan bucket alınımı
     const filePath = object.name;
     const fileName = path.basename(filePath);
@@ -675,39 +677,31 @@ exports.processTrademarkBulletinUpload = functions
       zip.extractAllTo(extractTargetDir, true); // 'true' ile üzerine yazma izni verilir
       console.log("ZIP dosyası çıkarıldı.");
 
-      // !!! BURADA YENİ EKLENEN KRİTİK LOGLAR BAŞLIYOR !!!
-      console.log("------------------------------------------");
+      // --- Dizin İçeriği Kontrolü (Hala kritik) ---
+      console.log("--- Çıkarılan Dizin İçeriği Kontrolü ---");
       try {
-        // Çıkarılan dizinin doğrudan içeriğini listele (alt dizinlere inmeden)
         const extractedContents = fs.readdirSync(extractTargetDir);
-        console.log(`Çıkarılan Dizin (${extractTargetDir}) İçeriği (toplam ${extractedContents.length} öğe):`);
-        extractedContents.slice(0, 10).forEach(item => { // İlk 10 öğeyi göster
-            console.log(`  - ${item}`);
-        });
-        if (extractedContents.length > 10) {
-            console.log(`  ... ve ${extractedContents.length - 10} öğe daha.`);
+        console.log(`EXTRACT_DIR: ${extractTargetDir}`);
+        console.log(`DOSYA SİSTEMİNDEKİ ÇIKARILAN ÖĞE SAYISI: ${extractedContents.length}`);
+        if (extractedContents.length > 0) {
+          console.log("İLK 5 ÇIKARILAN ÖĞE:", extractedContents.slice(0, 5));
+        } else {
+          console.log("ÇIKARILAN DİZİN BOŞ. ZIP İŞLEMİNDE SORUN OLABİLİR.");
         }
       } catch (dirReadError) {
-        console.error(`Dizin içeriği okunurken hata oluştu: ${dirReadError.message}`);
+        console.error(`Dizin içeriği okunurken KRİTİK HATA: ${dirReadError.message}`);
       }
       console.log("------------------------------------------");
 
       // Tüm dosyaları ve alt dizinleri listeleyen yardımcı fonksiyonu kullan
       const allFiles = listAllFilesRecursive(extractTargetDir);
-      console.log(`Toplam çıkarılan dosya sayısı (listAllFilesRecursive tarafından): ${allFiles.length}`);
-
-      // allFiles dizisinin içeriğini kontrol et (ilk 10 öğe)
-      console.log("------------------------------------------");
-      console.log(`allFiles'ın İçeriği (ilk 10 öğe):`);
-      allFiles.slice(0, 10).forEach(file => {
-          console.log(`  - ${file}`);
-      });
-      if (allFiles.length > 10) {
-          console.log(`  ... ve ${allFiles.length - 10} öğe daha.`);
+      console.log(`listAllFilesRecursive TOPLAM DOSYA SAYISI: ${allFiles.length}`);
+      if (allFiles.length > 0) {
+          console.log("listAllFilesRecursive İLK 5 DOSYA YOLU:", allFiles.slice(0, 5));
+      } else {
+          console.log("allFiles dizisi listAllFilesRecursive tarafından BOŞ döndürüldü.");
       }
-      console.log("allFiles toplam öğe sayısı:", allFiles.length);
       console.log("------------------------------------------");
-      // !!! YENİ EKLENEN KRİTİK LOGLAR BURADA BİTİYOR !!!
 
 
       // ADIM 1: bulletin.inf veya bulletin dosyasını bul
@@ -717,7 +711,7 @@ exports.processTrademarkBulletinUpload = functions
       );
 
       if (!bulletinInfPath) {
-        console.error("bulletin.inf veya bulletin bulunamadı. Dosyalar:", allFiles);
+        console.error(`bulletin.inf veya bulletin bulunamadı. allFiles içeriği (basename): ${JSON.stringify(allFiles.map(f => path.basename(f)))}`);
         throw new Error("bulletin.inf veya bulletin dosyası bulunamadı.");
       }
 
@@ -745,20 +739,18 @@ exports.processTrademarkBulletinUpload = functions
       // ADIM 2: tmbulletin dosyasını bul
       console.log("[ADIM 2] tmbulletin dosyası aranıyor...");
       const scriptFilePath = allFiles.find((p) =>
-        // Olası uzantıları da içeren bir kontrol ekleyin
-        ["tmbulletin", "tmbulletin.log", "tmbulletin.script"].includes(path.basename(p).toLowerCase())
+        ["tmbulletin.log"].includes(path.basename(p).toLowerCase())
       );
 
       if (!scriptFilePath) {
-        // Hata mesajını daha da detaylandıralım
-        console.error(`tmbulletin bulunamadı. allFiles içeriği: ${JSON.stringify(allFiles.map(f => path.basename(f)))}`); // Sadece basename'leri loglayalım
+        console.error(`tmbulletin bulunamadı. allFiles içeriği (basename): ${JSON.stringify(allFiles.map(f => path.basename(f)))}`);
         throw new Error("tmbulletin dosyası bulunamadı.");
       }
 
       console.log(`[ADIM 2 BAŞARILI] tmbulletin bulundu: ${scriptFilePath}`);
       const scriptContent = fs.readFileSync(scriptFilePath, "utf8");
 
-      const records = parseScriptContent(scriptContent);
+      const records = parseScriptContent(scriptContent); // parseScriptContent fonksiyonu aşağıda güncellendi
       console.log(`Toplam ${records.length} kayıt parse edildi.`);
 
       const imageFiles = allFiles.filter((p) =>
@@ -772,10 +764,15 @@ exports.processTrademarkBulletinUpload = functions
         let imagePath = null;
 
         if (record.applicationNo) {
-          const imageFile = imageFiles.find((f) =>
-            f.toLowerCase().includes(record.applicationNo.replace("/", "_"))
-          );
+          // Resim dosyası arama mantığını güçlendiriyoruz: 2024/12345 -> 2024-12345 veya 2024_12345
+          const normalizedAppNo = record.applicationNo.replace(/\//g, "-"); // Hem "/" hem de "_" için deneyebiliriz
+          const alternativeAppNo = record.applicationNo.replace(/\//g, "_");
 
+          const imageFile = imageFiles.find((f) => {
+            const lowerF = f.toLowerCase();
+            return lowerF.includes(normalizedAppNo) || lowerF.includes(alternativeAppNo);
+          });
+          
           if (imageFile) {
             const destFileName = `bulletins/${bulletinId}/${path.basename(imageFile)}`;
             console.log(`Resim yükleniyor: ${destFileName}`);
@@ -787,11 +784,15 @@ exports.processTrademarkBulletinUpload = functions
             });
             imagePath = destFileName;
             uploadedImageCount++;
+          } else {
+              console.warn(`Resim dosyası bulunamadı for applicationNo: ${record.applicationNo} (arananlar: ${normalizedAppNo}, ${alternativeAppNo})`);
           }
         }
 
-        const docRef = admin.firestore().collection("trademarkBulletinRecords").doc();
-        batch.set(docRef, {
+        // !!! FIRESTORE'A GÖNDERİLECEK VERİNİN LOGLARI BAŞLANGICI !!!
+        console.log("------------------------------------------");
+        console.log("Firestore'a yazılacak Record (batch.set öncesi):");
+        const docData = {
           bulletinId,
           applicationNo: record.applicationNo ?? null,
           applicationDate: record.applicationDate ?? null,
@@ -801,8 +802,14 @@ exports.processTrademarkBulletinUpload = functions
           goods: record.goods ?? [],
           extractedGoods: record.extractedGoods ?? [],
           attorneys: record.attorneys ?? [],
-          imagePath,
-        });
+          imagePath: imagePath ?? null, // imagePath'in null veya string olduğundan emin ol
+        };
+        console.log(JSON.stringify(docData, null, 2)); // 2 boşluk bırakarak formatlı çıktı
+        console.log("------------------------------------------");
+        // !!! FIRESTORE'A GÖNDERİLECEK VERİNİN LOGLARI SONU !!!
+
+        const docRef = admin.firestore().collection("trademarkBulletinRecords").doc();
+        batch.set(docRef, docData); // Hazırladığımız docData nesnesini gönderiyoruz
       }
 
       await batch.commit();
@@ -813,7 +820,6 @@ exports.processTrademarkBulletinUpload = functions
       throw error;
     } finally {
       try {
-        // Geçici dosyaları ve dizinleri temizle
         if (fs.existsSync(tempFilePath)) fs.unlinkSync(tempFilePath);
         if (fs.existsSync(extractTargetDir)) fs.rmSync(extractTargetDir, { recursive: true, force: true });
         console.log("Geçici dosyalar temizlendi.");
@@ -829,14 +835,19 @@ exports.processTrademarkBulletinUpload = functions
 
 function listAllFilesRecursive(dir) {
   let results = [];
-  const entries = fs.readdirSync(dir, { withFileTypes: true });
-  for (const entry of entries) {
-    const entryPath = path.join(dir, entry.name);
-    if (entry.isDirectory()) {
-      results = results.concat(listAllFilesRecursive(entryPath));
-    } else {
-      results.push(entryPath);
+  try {
+    const entries = fs.readdirSync(dir, { withFileTypes: true });
+    for (const entry of entries) {
+      const entryPath = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        results = results.concat(listAllFilesRecursive(entryPath));
+      } else {
+        results.push(entryPath);
+      }
     }
+  } catch (e) {
+    console.error(`listAllFilesRecursive hata: Dizin okunamadı ${dir}: ${e.message}`);
+    // Hata durumunda boş dizi döndürerek uygulamanın çökmesini engelleriz.
   }
   return results;
 }
@@ -844,51 +855,80 @@ function listAllFilesRecursive(dir) {
 function parseScriptContent(content) {
   const recordsMap = {};
 
-  // Bütün INSERT INTO komutlarını yakala
   const regex = /INSERT INTO (\w+) VALUES\s*\((.*?)\)/gms;
   let match;
 
   while ((match = regex.exec(content)) !== null) {
     const table = match[1].toUpperCase();
     const rawValues = match[2];
-    const values = rawValues.split("','").map((s) => s.replace(/^'/, "").replace(/'$/, "").replace(/''/g, "'"));
+    // Değerleri ',' ile ayır, baş ve sondaki tırnakları ve çift tırnakları temizle.
+    // Her değeri trimle ve boş stringleri null yap.
+    const values = rawValues.split("','").map((s) => {
+        const cleaned = s.replace(/^'/, "").replace(/'$/, "").replace(/''/g, "'").trim();
+        return cleaned === "" ? null : cleaned; // Boş stringleri null'a çevir
+    });
 
     const appNo = values[0];
 
-    if (table === "TRADEMARK") {
+    // applicationNo boşsa bu kaydı atlayın.
+    if (!appNo) {
+        console.warn(`Boş veya null applicationNo değeri bulundu, bu INSERT ifadesi atlandı. Tablo: ${table}, Ham Değerler: ${rawValues}`);
+        continue;
+    }
+
+    // recordsMap'te kayıt yoksa yeni bir kayıt oluştur
+    if (!recordsMap[appNo]) {
       recordsMap[appNo] = {
         applicationNo: appNo,
-        applicationDate: values[1],
-        markName: values[5],
-        niceClasses: values[6],
+        applicationDate: null, // Varsayılan olarak null
+        markName: null,
+        niceClasses: null,
         holders: [],
         goods: [],
         extractedGoods: [],
         attorneys: [],
       };
     }
-    if (table === "HOLDER" && recordsMap[appNo]) {
+
+    // TRADEMARK tablosu verilerini işle
+    if (table === "TRADEMARK") {
+      // values dizisinin uzunluğunu kontrol ederek hataları önleyelim
+      recordsMap[appNo].applicationDate = values[1] ?? null;
+      recordsMap[appNo].markName = values[5] ?? null;
+      recordsMap[appNo].niceClasses = values[6] ?? null;
+    }
+    // HOLDER tablosu verilerini işle
+    else if (table === "HOLDER") {
       recordsMap[appNo].holders.push({
-        name: values[2],
-        address: [values[3], values[4], values[5], values[6]].filter(Boolean).join(", "),
-        country: values[7],
+        name: values[2] ?? null,
+        address: [values[3], values[4], values[5], values[6]].filter(Boolean).map(s => s.trim()).join(", ") || null, // Boşsa null yap
+        country: values[7] ?? null,
       });
     }
-    if (table === "GOODS" && recordsMap[appNo]) {
-      recordsMap[appNo].goods.push(values[3]);
+    // GOODS tablosu verilerini işle
+    else if (table === "GOODS") {
+      recordsMap[appNo].goods.push(values[3] ?? null);
     }
-    if (table === "EXTRACTEDGOODS" && recordsMap[appNo]) {
-      recordsMap[appNo].extractedGoods.push(values[3]);
+    // EXTRACTEDGOODS tablosu verilerini işle
+    else if (table === "EXTRACTEDGOODS") {
+      recordsMap[appNo].extractedGoods.push(values[3] ?? null);
     }
-    if (table === "ATTORNEY" && recordsMap[appNo]) {
-      recordsMap[appNo].attorneys.push(values[2]);
+    // ATTORNEY tablosu verilerini işle
+    else if (table === "ATTORNEY") {
+      recordsMap[appNo].attorneys.push(values[2] ?? null);
+    }
+    else {
+        console.warn(`Bilinmeyen tablo tipi bulundu: ${table}. Ham değerler: ${rawValues}`);
     }
   }
 
+  // recordsMap'teki tüm kayıtları bir dizi olarak döndür
   return Object.values(recordsMap);
 }
 
 function parseValues(line) {
+  // Bu fonksiyon parseScriptContent içinde kullanılmıyor gibi görünüyor.
+  // Eğer başka bir yerde kullanılıyorsa, burada da null/string dönüşümlerini gözden geçirmek faydalı olabilir.
   const inside = line.substring(line.indexOf("(") + 1, line.lastIndexOf(")"));
   const raw = inside.split("','").map((s) => s.replace(/^'/, "").replace(/'$/, ""));
   return raw.map((s) => s.replace(/''/g, "'"));
