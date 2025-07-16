@@ -3,42 +3,38 @@ import { db } from "../firebase-config.js";
 
 console.log("✅ bulletin-search.js yüklendi!");
 
-document.getElementById("searchButton").addEventListener("click", async () => {
+const searchButton = document.getElementById("searchButton");
+const recordsContainer = document.getElementById("recordsContainer");
+const goodsModal = document.getElementById("goodsModal");
+const closeModal = document.getElementById("closeModal");
+const goodsList = document.getElementById("goodsList");
+
+searchButton.addEventListener("click", async () => {
     const type = document.getElementById("bulletinType").value;
     const bulletinNo = document.getElementById("bulletinNo").value.trim();
-
-    console.log("Sorgu başladı:", { type, bulletinNo });
 
     if (!bulletinNo) {
         alert("Lütfen bülten numarası girin.");
         return;
     }
 
-    const recordsContainer = document.getElementById("recordsContainer");
-    recordsContainer.innerHTML = "<p>Aranıyor...</p>";
+    recordsContainer.innerHTML = "<p class='no-results'>Aranıyor...</p>";
 
     try {
-        // trademarkBulletins içinde belgeyi bul
         const bulletinQuery = query(
             collection(db, "trademarkBulletins"),
             where("type", "==", type.toLowerCase()),
             where("bulletinNo", "==", bulletinNo)
         );
-
         const bulletinSnapshot = await getDocs(bulletinQuery);
 
         if (bulletinSnapshot.empty) {
-            recordsContainer.innerHTML = "<p>Belirtilen kriterlerde bülten bulunamadı.</p>";
-            console.log("Bülten bulunamadı.");
+            recordsContainer.innerHTML = "<p class='no-results'>Belirtilen kriterlerde bülten bulunamadı.</p>";
             return;
         }
 
-        // Bülten kaydını al
-        const bulletinDoc = bulletinSnapshot.docs[0];
-        const bulletinId = bulletinDoc.id;
-        console.log("Bulunan bülten ID:", bulletinId);
+        const bulletinId = bulletinSnapshot.docs[0].id;
 
-        // Bu bültene ait kayıtları al
         const recordsQuery = query(
             collection(db, "trademarkBulletinRecords"),
             where("bulletinId", "==", bulletinId)
@@ -47,39 +43,57 @@ document.getElementById("searchButton").addEventListener("click", async () => {
         const recordsSnapshot = await getDocs(recordsQuery);
 
         if (recordsSnapshot.empty) {
-            recordsContainer.innerHTML = "<p>Bu bültene ait kayıt bulunamadı.</p>";
+            recordsContainer.innerHTML = "<p class='no-results'>Bu bültene ait kayıt bulunamadı.</p>";
             return;
         }
 
-        let html = `<table>
+        let html = `<table class="results-table">
             <thead>
-                <tr>
-                    <th>Başvuru No</th>
-                    <th>Marka Adı</th>
-                    <th>Hak Sahibi</th>
-                    <th>Sınıflar</th>
-                </tr>
+              <tr>
+                <th>Başvuru No</th>
+                <th>Marka Adı</th>
+                <th>Hak Sahibi</th>
+                <th>Başvuru Tarihi</th>
+                <th>Sınıflar</th>
+                <th>İşlem</th>
+              </tr>
             </thead>
             <tbody>`;
 
         recordsSnapshot.forEach((doc) => {
             const r = doc.data();
-            // holders dizisi varsa ilk elemanın adı veya adresi
-            const holderName = (r.holders && r.holders.length > 0) ? (r.holders[0].name || r.holders[0].address || "-") : "-";
+            const holderName = r.holders?.[0]?.name || r.holders?.[0]?.address || "-";
             html += `
-                <tr>
-                    <td>${r.applicationNo || "-"}</td>
-                    <td>${r.markName || "-"}</td>
-                    <td>${holderName}</td>
-                    <td>${r.niceClasses || "-"}</td>
-                </tr>`;
+              <tr>
+                <td>${r.applicationNo || "-"}</td>
+                <td>${r.markName || "-"}</td>
+                <td>${holderName}</td>
+                <td>${r.applicationDate || "-"}</td>
+                <td>${r.niceClasses || "-"}</td>
+                <td><button class="action-btn" data-goods='${JSON.stringify(r.goods || [])}'>Eşyalar</button></td>
+              </tr>`;
         });
 
         html += "</tbody></table>";
         recordsContainer.innerHTML = html;
 
+        // Butonlara event bağla
+        document.querySelectorAll(".action-btn[data-goods]").forEach(btn => {
+            btn.addEventListener("click", () => {
+                const goodsArray = JSON.parse(btn.dataset.goods);
+                goodsList.innerHTML = goodsArray.length
+                    ? `<ul>${goodsArray.map(g => `<li>${g}</li>`).join("")}</ul>`
+                    : "<p>Mal/hizmet listesi yok.</p>";
+                goodsModal.style.display = "flex";
+            });
+        });
+
     } catch (err) {
         console.error("Sorgulama hatası:", err);
-        recordsContainer.innerHTML = "<p>Bir hata oluştu. Konsolu kontrol edin.</p>";
+        recordsContainer.innerHTML = "<p class='no-results'>Bir hata oluştu. Konsolu kontrol edin.</p>";
     }
+});
+
+closeModal.addEventListener("click", () => {
+    goodsModal.style.display = "none";
 });
