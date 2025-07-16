@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Marka İzleme</title>
+    <link rel="stylesheet" href="css/shared-styles.css"/>
+    <script type="module" src="js/layout-loader.js"></script>
+</head>
+<body>
+    <div id="layout-placeholder"></div>
+    
+    <main class="main-container">
+        <div class="page-header-section">
+            <h1 class="page-title">📊 Marka İzleme</h1>
+            <p class="page-subtitle">Portföyden seçilen markaların izleme kaydı burada listelenecek.</p>
+        </div>
+
+        <section>
+            <p>Bu sayfa şu anda test amaçlıdır. Portföyden seçilen marka kayıtlarını burada listeleyeceğiz.</p>
+            <!-- Buraya dinamik izleme tablosu eklenecek -->
+            <div id="monitoring-list" class="data-table">
+                <!-- JavaScript ile izleme kayıtları buraya gelecek -->
+            </div>
+        </section>
+    </main>
+
+    <script>
+        // Şimdilik basit bir test kaydı gösterelim
+        document.getElementById('monitoring-list').innerHTML = `
+            <table>
+                <thead>
+                    <tr>
+                        <th>Marka Adı</th>
+                        <th>Başvuru No</th>
+                        <th>Başvuru Tarihi</th>
+                        <th>Durum</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Örnek Marka</td>
+                        <td>2025/12345</td>
+                        <td>2025-07-15</td>
+                        <td>İzleniyor</td>
+                    </tr>
+                </tbody>
+            </table>
+        `;
+    </script>
+</body>
+</html>
