@@ -933,9 +933,11 @@ function decodeValue(str) {
 
 function extractHolderName(str) {
   if (!str) return null;
-  const match = str.match(/\)\s*(.*)$/);
-  if (match) return match[1];
-  return str;
+  const idx = str.indexOf(')');
+  if (idx !== -1) {
+    return str.substring(idx + 1).trim();
+  }
+  return str.trim();
 }
 
 function getContentType(filePath) {
