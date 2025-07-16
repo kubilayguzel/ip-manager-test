@@ -703,16 +703,19 @@
                             // monitoringService'i doğru şekilde çağırın
                             // userId ve record datasını setDoc'a göndermek için bu format doğru.
                             const res = await monitoringService.addMonitoringItem(uid, {
-                                id: record.id, // Record ID'yi 'id' olarak saklamak önemli
-                                title: record.title,
-                                applicationNumber: record.applicationNumber,
-                                applicationDate: record.applicationDate,
-                                status: record.status,
-                                type: record.type,
-                                recordType: record.recordType || 'Portföy', // recordType bilgisini de ekleyin
-                                // Diğer eklemek istediğiniz alanlar (örn: trademarkImage, owners vb.)
-                                trademarkImage: record.trademarkImage || null,
-                                owners: record.owners || []
+                            id: record.id,
+                            title: record.title,
+                            applicationNumber: record.applicationNumber,
+                            applicationDate: record.applicationDate,
+                            status: record.status,
+                            type: record.type,
+                            recordType: record.recordType || 'Portföy',
+                            trademarkImage: record.trademarkImage || null, // Varsa resim verisini gönder
+                            niceClass: record.niceClass || null, // YENİ EKLENDİ: niceClass bilgisini gönder
+                            owners: record.owners || [],
+                            registrationNumber: record.registrationNumber || null,
+                            registrationDate: record.registrationDate || null,
+                            renewalDateTrademark: record.renewalDateTrademark || null
                             });
 
                             if (!res.success) {
