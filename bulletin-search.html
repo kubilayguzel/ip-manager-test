@@ -40,6 +40,7 @@
       padding: 12px 16px;
       border-bottom: 1px solid #eee;
       text-align: left;
+      vertical-align: middle;
     }
     .results-table th {
       background: #f0f0f0;
@@ -56,6 +57,11 @@
     }
     .action-btn:hover {
       opacity: 0.9;
+    }
+    .mark-image {
+      max-height: 50px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
     }
     .modal {
       position: fixed;
@@ -120,6 +126,10 @@
     <div id="goodsList"></div>
   </div>
 </div>
+<script type="module">
+  import { loadSharedLayout } from './js/layout-loader.js';
+  loadSharedLayout({ activeMenuLink: 'bulletin-search.html' });
+</script>
 <script type="module" src="./js/bulletin-search.js"></script>
 </body>
 </html>
