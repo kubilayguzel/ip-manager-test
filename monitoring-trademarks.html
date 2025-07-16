@@ -78,94 +78,348 @@
       padding: 30px;
       color: #666;
     }
+    /* Mevcut stillerinizin sonuna ekleyin veya güncelleyin */
+.accruals-table th,
+.accruals-table td {
+  padding: 15px;
+  text-align: left;
+  border-bottom: 1px solid #f0f0f0;
+  white-space: nowrap; /* İçeriğin tek satırda kalmasını sağlar */
+  overflow: hidden;
+  text-overflow: ellipsis; /* Taşmayı üç nokta ile göster */
+}
+
+/* Checkbox sütunu için daha dar bir genişlik */
+.accruals-table th:first-child,
+.accruals-table td:first-child {
+  width: 40px; /* Checkbox için yeterli alan */
+  text-align: center;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+/* Resim başparmak boyutu */
+.trademark-image-thumbnail {
+  width: 50px;
+  height: 50px;
+  object-fit: contain;
+  border-radius: 5px;
+  vertical-align: middle;
+}
+
+/* Genel buton stilleri için ekleme yapabilirsiniz, shared-styles.css dosyanızda da olabilir */
+.btn-primary, .btn-secondary {
+    background: linear-gradient(45deg, #1e3c72, #2a5298);
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.9em;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    margin-right: 10px; /* Butonlar arasına boşluk */
+}
+.btn-primary:hover, .btn-secondary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(30, 60, 114, 0.2);
+}
+.btn-secondary {
+    background: #6c757d;
+}
+.btn-secondary:hover {
+    background: #5a6268;
+}
+
+/* Seçim butonları için yeni stiller */
+.monitoring-controls {
+    background: rgba(255, 255, 255, 0.95);
+    padding: 20px 30px;
+    border-radius: 20px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+    margin-bottom: 20px; /* Tablo ile arasında boşluk */
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+.monitoring-controls .filter-group {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+.monitoring-controls .filter-label {
+    font-weight: 500;
+}
+.monitoring-controls .btn-selected-action {
+    background-color: #007bff;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.9em;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+.monitoring-controls .btn-selected-action:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0, 123, 255, 0.2);
+}
+.monitoring-controls .btn-selected-action:disabled {
+    background-color: #cccccc;
+    cursor: not-allowed;
+    box-shadow: none;
+    transform: none;
+}
   </style>
 </head>
 <body>
   <div id="layout-placeholder"></div>
   <div id="sidebar-container"></div>
   <div class="page-wrapper">
-    <main class="main-container">
-      <section class="page-header">
-        <h1 class="page-title">📊 Marka İzleme</h1>
-        <p class="page-subtitle">İzleme listenizdeki markalar burada listelenir.</p>
-      </section>
+<main class="main-container">
+  <section class="page-header">
+    <h1 class="page-title">📊 Marka İzleme</h1>
+    <p class="page-subtitle">İzleme listenizdeki markalar burada listelenir.</p>
+  </section>
 
-      <div class="accruals-container">
-        <div id="monitoringTableContainer">
-          <div class="loading">Yükleniyor...</div>
-        </div>
-      </div>
-    </main>
+  <div class="monitoring-controls">
+    <div class="filter-group">
+      <input type="checkbox" id="selectAllCheckbox">
+      <label for="selectAllCheckbox" class="filter-label">Tümünü Seç</label>
+    </div>
+    <button type="button" class="btn-selected-action" id="removeSelectedBtn" disabled>
+      Seçileni Kaldır (<span id="selectedCount">0</span>)
+    </button>
   </div>
-
-  <script type="module">
+  <div class="accruals-container">
+    <div id="monitoringTableContainer">
+      <div class="loading">Yükleniyor...</div>
+    </div>
+  </div>
+</main>
+  </div>
+  
+<script type="module">
     import { loadSharedLayout } from './js/layout-loader.js';
     import { monitoringService } from './firebase-config.js';
+    // Firebase Auth'u ayrı bir import olarak bırakabiliriz, ancak showNotification'ı utils.js'den import ettiğinizden emin olun
     import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+    // showNotification fonksiyonunun utils.js dosyasından doğru bir şekilde import edildiğinden emin olun
+    import { showNotification } from './utils.js'; // Varsayılan olarak ekliyorum
 
     const auth = getAuth();
+    let selectedMonitoringItems = new Set(); // Seçili izleme öğelerinin ID'lerini tutacak
 
     document.addEventListener('DOMContentLoaded', async () => {
-      await loadSharedLayout({ activeMenuLink: 'monitoring-trademarks.html' });
+        await loadSharedLayout({ activeMenuLink: 'monitoring-trademarks.html' });
 
-      onAuthStateChanged(auth, async (user) => {
         const container = document.getElementById('monitoringTableContainer');
-        if (!user) {
-          container.innerHTML = '<div class="no-records">Giriş yapmalısınız.</div>';
-          return;
-        }
+        const selectAllCheckbox = document.getElementById('selectAllCheckbox');
+        const removeSelectedBtn = document.getElementById('removeSelectedBtn');
+        const selectedCountSpan = document.getElementById('selectedCount');
 
-        const { success, data } = await monitoringService.getMonitoringItems(user.uid);
-        if (!success || data.length === 0) {
-          container.innerHTML = '<div class="no-records">İzleme listeniz boş.</div>';
-          return;
-        }
-
-        let html = `
-          <table class="accruals-table">
-            <thead>
-              <tr>
-                <th>Marka Adı</th>
-                <th>Başvuru No</th>
-                <th>Başvuru Tarihi</th>
-                <th>Durum</th>
-                <th>İşlem</th>
-              </tr>
-            </thead>
-            <tbody>
-        `;
-
-        data.forEach(r => {
-          html += `
-            <tr data-id="${r.id}">
-              <td>${r.title || '-'}</td>
-              <td>${r.applicationNumber || '-'}</td>
-              <td>${r.applicationDate || '-'}</td>
-              <td>${r.status || '-'}</td>
-              <td>
-                <button class="action-btn delete-btn">Kaldır</button>
-              </td>
-            </tr>`;
-        });
-        html += '</tbody></table>';
-        container.innerHTML = html;
-
-        container.addEventListener('click', async (e) => {
-          if (e.target.classList.contains('delete-btn')) {
-            const row = e.target.closest('tr');
-            const id = row.dataset.id;
-            if (confirm('Bu kaydı izleme listesinden kaldırmak istiyor musunuz?')) {
-              const res = await monitoringService.removeMonitoringItem(user.uid, id);
-              if (res.success) {
-                row.remove();
-              } else {
-                alert('Kaldırma başarısız: ' + res.error);
-              }
+        // Tarih formatlama yardımcı fonksiyonu
+        const formatTurkishDate = (dateString) => {
+            if (!dateString) return '-';
+            try {
+                const date = new Date(dateString);
+                // Eğer tarih geçerli değilse, orijinal stringi döndür
+                if (isNaN(date.getTime())) {
+                    return dateString;
+                }
+                const day = String(date.getDate()).padStart(2, '0');
+                const month = String(date.getMonth() + 1).padStart(2, '0'); // Ay 0'dan başlar
+                const year = date.getFullYear();
+                return `${day}.${month}.${year}`;
+            } catch (e) {
+                console.error("Tarih formatlama hatası:", e);
+                return dateString; // Hata durumunda orijinal stringi döndür
             }
-          }
+        };
+
+        const renderMonitoringTable = (data, userUid) => {
+            selectedMonitoringItems.clear(); // Tablo yenilendiğinde seçimi temizle
+            updateSelectedButtonState(); // Buton durumunu güncelle
+
+            if (!data || data.length === 0) {
+                container.innerHTML = '<div class="no-records">İzleme listeniz boş.</div>';
+                return;
+            }
+
+            let html = `
+                <table class="accruals-table">
+                    <thead>
+                        <tr>
+                            <th><input type="checkbox" id="headerSelectAllCheckbox" /></th>
+                            <th>Marka Görseli</th>
+                            <th>Marka Adı</th>
+                            <th>Başvuru No</th>
+                            <th>Başvuru Tarihi</th>
+                            <th>Nice Sınıfı</th> <th>Durum</th>
+                            <th>İşlem</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            data.forEach(r => {
+                const isSelected = selectedMonitoringItems.has(r.id) ? 'checked' : '';
+                const trademarkImageHtml = r.trademarkImage && r.trademarkImage.startsWith('data:image')
+                    ? `<img src="${r.trademarkImage}" alt="Marka Görseli" class="trademark-image-thumbnail">`
+                    : '-';
+
+                html += `
+                    <tr data-id="${r.id}">
+                        <td><input type="checkbox" class="row-checkbox" data-id="${r.id}" ${isSelected}></td>
+                        <td>${trademarkImageHtml}</td>
+                        <td>${r.title || '-'}</td>
+                        <td>${r.applicationNumber || '-'}</td>
+                        <td>${formatTurkishDate(r.applicationDate)}</td>
+                        <td>${r.niceClass || '-'}</td> <td>${r.status || '-'}</td>
+                        <td>
+                            <button class="action-btn delete-btn">Kaldır</button>
+                        </td>
+                    </tr>`;
+            });
+            html += '</tbody></table>';
+            container.innerHTML = html;
+
+            // Header'daki "Tümünü Seç" checkbox'ını bağlama
+            const headerSelectAllCheckbox = document.getElementById('headerSelectAllCheckbox');
+            if (headerSelectAllCheckbox) {
+                headerSelectAllCheckbox.checked = selectedMonitoringItems.size === data.length && data.length > 0;
+                headerSelectAllCheckbox.addEventListener('change', (e) => {
+                    const isChecked = e.target.checked;
+                    document.querySelectorAll('.row-checkbox').forEach(checkbox => {
+                        checkbox.checked = isChecked;
+                        if (isChecked) {
+                            selectedMonitoringItems.add(checkbox.dataset.id);
+                        } else {
+                            selectedMonitoringItems.delete(checkbox.dataset.id);
+                        }
+                    });
+                    updateSelectedButtonState();
+                });
+            }
+        };
+
+        const updateSelectedButtonState = () => {
+            selectedCountSpan.textContent = selectedMonitoringItems.size;
+            removeSelectedBtn.disabled = selectedMonitoringItems.size === 0;
+
+            // Eğer tüm görünen checkbox'lar seçiliyse, header'daki "Tümünü Seç"i de işaretle
+            const allCheckboxes = document.querySelectorAll('.row-checkbox');
+            const allChecked = allCheckboxes.length > 0 && Array.from(allCheckboxes).every(cb => selectedMonitoringItems.has(cb.dataset.id));
+            const headerSelectAllCheckbox = document.getElementById('headerSelectAllCheckbox');
+            if (headerSelectAllCheckbox) {
+                headerSelectAllCheckbox.checked = allChecked;
+            }
+        };
+
+        onAuthStateChanged(auth, async (user) => {
+            if (!user) {
+                container.innerHTML = '<div class="no-records">Giriş yapmalısınız.</div>';
+                return;
+            }
+
+            container.innerHTML = '<div class="loading">İzleme listeniz yükleniyor...</div>';
+            const { success, data } = await monitoringService.getMonitoringItems(user.uid);
+            
+            if (success) {
+                renderMonitoringTable(data, user.uid);
+            } else {
+                container.innerHTML = '<div class="no-records">İzleme listeniz yüklenirken bir hata oluştu.</div>';
+                console.error("Marka izleme öğeleri yüklenirken hata:", data); // data burada hata mesajıdır
+            }
         });
-      });
+
+        // Satır checkbox'larına olay dinleyici (event delegation ile)
+        container.addEventListener('change', (e) => {
+            if (e.target.classList.contains('row-checkbox')) {
+                const id = e.target.dataset.id;
+                if (e.target.checked) {
+                    selectedMonitoringItems.add(id);
+                } else {
+                    selectedMonitoringItems.delete(id);
+                }
+                updateSelectedButtonState();
+            }
+        });
+
+        // "Kaldır" ve "Seçileni Kaldır" butonları için olay dinleyici (event delegation ile)
+        container.addEventListener('click', async (e) => {
+            if (e.target.classList.contains('delete-btn')) {
+                const row = e.target.closest('tr');
+                const idToRemove = row.dataset.id;
+                if (confirm('Bu kaydı izleme listesinden kaldırmak istediğinizden emin misiniz?')) {
+                    const user = auth.currentUser;
+                    if (!user) {
+                        showNotification('Kayıt kaldırmak için giriş yapmalısınız.', 'error');
+                        return;
+                    }
+                    const res = await monitoringService.removeMonitoringItem(user.uid, idToRemove);
+                    if (res.success) {
+                        row.remove();
+                        selectedMonitoringItems.delete(idToRemove); // Seçimden de kaldır
+                        updateSelectedButtonState();
+                        showNotification('Kayıt başarıyla izleme listesinden kaldırıldı.', 'success');
+                    } else {
+                        showNotification('Kayıt kaldırma başarısız: ' + res.error, 'error');
+                        console.error('Kayıt kaldırma hatası:', res.error);
+                    }
+                }
+            }
+        });
+
+        // "Seçileni Kaldır" butonuna tıklama dinleyicisi
+        removeSelectedBtn.addEventListener('click', async () => {
+            if (selectedMonitoringItems.size === 0) {
+                showNotification('Lütfen kaldırmak istediğiniz kayıtları seçin.', 'info');
+                return;
+            }
+
+            if (!confirm(`Seçilen ${selectedMonitoringItems.size} adet kaydı izleme listesinden kaldırmak istediğinizden emin misiniz?`)) {
+                return;
+            }
+
+            const user = auth.currentUser;
+            if (!user) {
+                showNotification('Kayıtları kaldırmak için giriş yapmalısınız.', 'error');
+                return;
+            }
+
+            let successfulRemovals = 0;
+            let failedRemovals = 0;
+            const itemsToRemove = Array.from(selectedMonitoringItems);
+
+            for (const id of itemsToRemove) {
+                const res = await monitoringService.removeMonitoringItem(user.uid, id);
+                if (res.success) {
+                    const row = document.querySelector(`tr[data-id="${id}"]`);
+                    if (row) row.remove();
+                    successfulRemovals++;
+                } else {
+                    console.error(`Kayıt (${id}) kaldırılamadı: ${res.error}`);
+                    failedRemovals++;
+                }
+            }
+
+            if (successfulRemovals > 0) {
+                showNotification(`${successfulRemovals} kayıt başarıyla kaldırıldı.`, 'success');
+                selectedMonitoringItems.clear(); // Tüm seçimi temizle
+                updateSelectedButtonState();
+            }
+            if (failedRemovals > 0) {
+                showNotification(`${failedRemovals} kayıt kaldırılamadı. Konsolu kontrol edin.`, 'error');
+            }
+        });
     });
-  </script>
+</script>
 </body>
 </html>
