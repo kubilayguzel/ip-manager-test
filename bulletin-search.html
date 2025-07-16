@@ -4,84 +4,37 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Bülten Sorgulama</title>
-
-  <!-- Ortak stiller -->
   <link rel="stylesheet" href="css/shared-styles.css" />
-
-  <style>
-    .bulletin-section {
-      background: white;
-      padding: 25px;
-      border-radius: 12px;
-      margin-bottom: 30px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-    }
-    .bulletin-section h2 {
-      margin-bottom: 10px;
-      color: #1e3c72;
-    }
-    .bulletin-section p {
-      margin-bottom: 15px;
-      color: #555;
-    }
-    .search-form {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      flex-wrap: wrap;
-      margin-bottom: 20px;
-    }
-    .search-form label {
-      font-weight: 500;
-    }
-    #resultsContainer {
-      margin-top: 20px;
-    }
-    .result-item {
-      padding: 15px;
-      border-bottom: 1px solid #eee;
-    }
-    .result-item strong {
-      color: #1e3c72;
-    }
-  </style>
 </head>
 <body>
-  <div id="layout-placeholder"></div>
+<div id="layout-placeholder"></div>
+<div class="main-container">
+  <h1>Bülten Sorgulama</h1>
+  <p>Yüklenmiş bültenleri numara ve türe göre sorgulayabilirsiniz.</p>
 
-  <div class="main-container">
-    <h1>Bülten Sorgulama</h1>
-    <p>Yüklenmiş bültenleri numara ve türe göre sorgulayabilirsiniz.</p>
-
-    <div class="bulletin-section">
-      <h2>Bülten Filtreleme</h2>
-      <div class="search-form">
-        <label for="bulletinType">Bülten Türü:</label>
-        <select id="bulletinType">
-          <option value="marka">Marka</option>
-          <option value="patent">Patent</option>
-          <option value="tasarim">Tasarım</option>
-        </select>
-
-        <label for="bulletinNo">Bülten No:</label>
-        <input type="text" id="bulletinNo" placeholder="Örn: 2025/15">
-
-        <button id="searchBtn" class="btn btn-primary">Sorgula</button>
-      </div>
+  <div class="card">
+    <div class="form-row">
+      <label for="bulletinType">Bülten Türü:</label>
+      <select id="bulletinType">
+        <option value="marka">Marka</option>
+        <option value="patent">Patent</option>
+        <option value="tasarım">Tasarım</option>
+      </select>
     </div>
-
-    <div id="resultsContainer">
-      <!-- Sorgu sonuçları buraya listelenecek -->
+    <div class="form-row">
+      <label for="bulletinNo">Bülten No:</label>
+      <input type="text" id="bulletinNo" placeholder="Örn: 472">
     </div>
+    <button id="searchButton" class="btn btn-primary">Sorgula</button>
   </div>
 
-  <!-- Ortak layout yükleyici -->
-  <script type="module">
-    import { loadSharedLayout } from './js/layout-loader.js';
-    loadSharedLayout();
-  </script>
+  <div id="recordsContainer" style="margin-top:20px;"></div>
+</div>
 
-  <!-- Sayfa özel script -->
-  <script type="module" src="js/bulletin-search.js"></script>
+<script type="module">
+  import { loadSharedLayout } from './js/layout-loader.js';
+  loadSharedLayout();
+</script>
+<script type="module" src="./js/bulletin-search.js"></script>
 </body>
 </html>
