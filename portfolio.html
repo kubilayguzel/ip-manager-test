@@ -661,79 +661,45 @@
                         }
                     });
 
-                    document.getElementById('addToMonitoringBtn').addEventListener('click', async () => {
-                    console.log('✅ İzlemeye Ekle butonuna tıklandı.');
+document.getElementById('addToMonitoringBtn').addEventListener('click', async () => {
+  console.log('✅ İzlemeye Ekle butonuna tıklandı.');
 
-                    console.log('✅ allRecords:', this.allRecords);
+  console.log('✅ allRecords:', this.allRecords);
 
-                    const selectedIds = Array.from(this.selectedRecords);
-                    console.log('✅ Seçili kayıtlar:', selectedIds);
+  const selectedIds = Array.from(this.selectedRecords);
+  console.log('✅ Seçili kayıtlar:', selectedIds);
 
-                    if (selectedIds.length === 0) {
-                        alert('Hiçbir kayıt seçmediniz.');
-                        return;
-                    }
+  if (selectedIds.length === 0) {
+    alert('Hiçbir kayıt seçmediniz.');
+    return;
+  }
 
-                    const auth = getAuth();
-                    const user = auth.currentUser;
+  const auth = getAuth();
+  const user = auth.currentUser;
 
-                    if (!user) {
-                        alert('Lütfen önce oturum açın.');
-                        console.log('⛔ Kullanıcı oturum açmamış.');
-                        return;
-                    }
+  if (!user) {
+    alert('Lütfen önce oturum açın.');
+    console.log('⛔ Kullanıcı oturum açmamış.');
+    return;
+  }
 
-                    const uid = user.uid;
-                    console.log('✅ Kullanıcı UID:', uid);
+  const uid = user.uid;
+  console.log('✅ Kullanıcı UID:', uid);
 
-                    console.log('✅ Tüm kayıtların detayları:');
-                    this.allRecords.forEach((r, idx) => {
-                        console.log(`Kayıt #${idx}:`, r);
-                    });
+  for (const id of selectedIds) {
+    console.log(`➡️ Kayıt aranıyor: "${id}"`);
 
-                    for (const id of selectedIds) {
-                        console.log(`➡️ Kayıt aranıyor: "${id}" typeof = ${typeof id}`);
+    const record = this.allRecords.find(r => String(r.id).trim() === String(id).trim());
+    console.log('🔍 Bulunan kayıt:', record);
 
-                        // Şimdilik hiçbir filtreleme yapmadan, her kayıtta id ile karşılaştırma logu
-                        this.allRecords.forEach((r, idx) => {
-                        console.log(`🔍 Kayıt #${idx} id: [${r.id}] === "${id}" ? `, r.id === id);
-                        });
+    if (!record) {
+      console.log('⛔ Kayıt bulunamadı:', id);
+      continue;
+    }
 
-                        // Geçici: Sadece ilk kayıt dönen log
-                        const record = this.allRecords.find(r => String(r.id).trim() === String(id).trim());
-                        console.log('🔍 Bulunan kayıt:', record);
+    if (!record.type || record.type.toLowerCase() !== 'trademark') {
+      console.log('⛔ Kayıt trademark değil veya boş:', record.type);
 
-                        if (!record) {
-                        console.log('⛔ Kayıt bulunamadı:', id);
-                        continue;
-                        }
-
-                        if (record.type !== 'trademark') {
-                        console.log('⛔ Kayıt trademark değil:', record.type);
-                        continue;
-                        }
-
-                        alert(`Kayıt ekleniyor: ${record.title}`);
-
-                        const res = await monitoringService.addMonitoringItem(uid, {
-                        id: record.id,
-                        title: record.title,
-                        applicationNumber: record.applicationNumber,
-                        applicationDate: record.applicationDate,
-                        status: record.status
-                        });
-
-                        console.log('✅ Firestore cevabı:', res);
-
-                        if (!res.success) {
-                        console.error('⛔ Kayıt eklenemedi:', res.error);
-                        } else {
-                        console.log('✅ Firestore’a kayıt eklendi:', record.id);
-                        }
-                    }
-
-                    alert('İşlem tamamlandı.');
-                    });
 
                 }
                 toggleRecordSelection(recordId, isChecked) {
