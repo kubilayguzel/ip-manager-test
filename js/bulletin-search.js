@@ -1,65 +1,79 @@
-// bulletin-search.js
+import { getFirestore, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { db } from './firebase-config.js';
 
-const db = firebase.firestore();
+document.getElementById("searchButton").addEventListener("click", async () => {
+    const type = document.getElementById("bulletinType").value;
+    const bulletinNo = document.getElementById("bulletinNo").value.trim();
 
-document.getElementById("searchBtn").addEventListener("click", async () => {
-  const type = document.getElementById("bulletinType").value;
-  const no = document.getElementById("bulletinNo").value.trim();
-  const statusEl = document.getElementById("statusMessage");
-  const table = document.getElementById("resultsTable");
-  const tbody = document.getElementById("resultsBody");
+    console.log("Sorgu başladı:", { type, bulletinNo });
 
-  if (!no) {
-    statusEl.textContent = "Lütfen bülten numarasını giriniz.";
-    table.style.display = "none";
-    return;
-  }
-
-  statusEl.textContent = "Bülten aranıyor...";
-  table.style.display = "none";
-  tbody.innerHTML = "";
-
-  try {
-    // Bülten ID'sini bul
-    const bulletinSnap = await db.collection("trademarkBulletins")
-      .where("type", "==", type)
-      .where("bulletinNo", "==", no)
-      .limit(1)
-      .get();
-
-    if (bulletinSnap.empty) {
-      statusEl.textContent = "Bülten bulunamadı.";
-      return;
+    if (!bulletinNo) {
+        alert("Lütfen bülten numarası girin.");
+        return;
     }
 
-    const bulletinId = bulletinSnap.docs[0].id;
+    const recordsContainer = document.getElementById("recordsContainer");
+    recordsContainer.innerHTML = "<p>Aranıyor...</p>";
 
-    // Kayıtları getir
-    const recordsSnap = await db.collection("trademarkBulletinRecords")
-      .where("bulletinId", "==", bulletinId)
-      .get();
+    try {
+        // trademarkBulletins içinde belgeyi bul
+        const bulletinQuery = query(
+            collection(db, "trademarkBulletins"),
+            where("type", "==", type.toLowerCase()),
+            where("bulletinNo", "==", bulletinNo)
+        );
 
-    if (recordsSnap.empty) {
-      statusEl.textContent = "Bu bültende kayıt bulunmuyor.";
-      return;
+        const bulletinSnapshot = await getDocs(bulletinQuery);
+
+        if (bulletinSnapshot.empty) {
+            recordsContainer.innerHTML = "<p>Belirtilen kriterlerde bülten bulunamadı.</p>";
+            console.log("Bülten bulunamadı.");
+            return;
+        }
+
+        // Bülten kaydını al
+        const bulletinDoc = bulletinSnapshot.docs[0];
+        const bulletinId = bulletinDoc.id;
+        console.log("Bulunan bülten ID:", bulletinId);
+
+        // Bu bültene ait kayıtları al
+        const recordsQuery = query(
+            collection(db, "trademarkBulletinRecords"),
+            where("bulletinId", "==", bulletinId)
+        );
+
+        const recordsSnapshot = await getDocs(recordsQuery);
+
+        if (recordsSnapshot.empty) {
+            recordsContainer.innerHTML = "<p>Bu bültene ait kayıt bulunamadı.</p>";
+            return;
+        }
+
+        let html = `<table>
+            <thead>
+                <tr>
+                    <th>Başvuru No</th>
+                    <th>Hak Sahibi</th>
+                    <th>Sınıflar</th>
+                </tr>
+            </thead>
+            <tbody>`;
+
+        recordsSnapshot.forEach((doc) => {
+            const r = doc.data();
+            html += `
+                <tr>
+                    <td>${r.applicationNo}</td>
+                    <td>${r.holder}</td>
+                    <td>${r.niceClasses}</td>
+                </tr>`;
+        });
+
+        html += "</tbody></table>";
+        recordsContainer.innerHTML = html;
+
+    } catch (err) {
+        console.error("Sorgulama hatası:", err);
+        recordsContainer.innerHTML = "<p>Bir hata oluştu. Konsolu kontrol edin.</p>";
     }
-
-    // Sonuçları tabloya ekle
-    recordsSnap.forEach(doc => {
-      const data = doc.data();
-      const tr = document.createElement("tr");
-      tr.innerHTML = `
-        <td>${data.applicationNo || ""}</td>
-        <td>${data.holder || ""}</td>
-        <td>${data.niceClasses || ""}</td>
-      `;
-      tbody.appendChild(tr);
-    });
-
-    statusEl.textContent = `Toplam ${recordsSnap.size} kayıt listelendi.`;
-    table.style.display = "table";
-  } catch (error) {
-    console.error(error);
-    statusEl.textContent = "Bir hata oluştu. Konsolu kontrol edin.";
-  }
 });
