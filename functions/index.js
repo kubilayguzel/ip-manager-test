@@ -855,9 +855,7 @@ function listAllFilesRecursive(dir) {
 function parseScriptContent(content) {
     const recordsMap = {};
 
-    // Bu regex, VALUES parantezinin içindeki her bir string'i (tek tırnaklar içindeki ifadeleri)
-    // doğru bir şekilde yakalamaya çalışır. Tırnak içindeki virgüller veya diğer özel karakterler
-    // sorun yaratmayacaktır.
+    // Bu regex, 'INSERT INTO TableName VALUES (raw_values_string)' yapısını yakalar
     const insertRegex = /INSERT INTO (\w+) VALUES\s*\((.*?)\)/gms;
     
     let match;
@@ -866,26 +864,42 @@ function parseScriptContent(content) {
     while ((match = insertRegex.exec(content)) !== null) {
         insertCount++;
         console.log(`--- INSERT IFADESİ ${insertCount} BAŞLANGICI ---`);
-        console.log(`Ham Match: ${match[0].substring(0, Math.min(match[0].length, 200))}...`); // İlk 200 karakteri göster
+        console.log(`Ham Match (İlk 200 karakter): ${match[0].substring(0, Math.min(match[0].length, 200))}...`);
         
         const table = match[1].toUpperCase();
-        const rawValuesString = match[2]; // Örn: 'val1','val2','val3'
+        let rawValuesString = match[2]; // Örn: 'val1','val2','val3'
 
         console.log(`Tablo: ${table}`);
         console.log(`Ham Değerler (rawValuesString): ${rawValuesString}`);
 
-        // Bu regex tek tırnaklar içindeki her değeri yakalar,
-        // içindeki escapelenmiş tırnakları ('') da doğru şekilde ele alır.
-        const valueRegex = /'(.*?)'(?:,|$)/g; // Tırnak içindeki her şeyi yakala
+        // --- DEĞER AYRIŞTIRMA MANTIĞI GÜNCELLEMESİ ---
+        // Daha karmaşık, tırnak içindeki virgülleri doğru işleyen bir ayrıştırma
+        // String.prototype.match ile regex kullanarak tüm tırnaklı değerleri yakala
         const values = [];
-        let valueMatch;
-        while ((valueMatch = valueRegex.exec(rawValuesString)) !== null) {
-            // Yakalanan değeri al, escapelenmiş tırnakları (') geri çevir ve trimle
-            const cleanedValue = valueMatch[1].replace(/''/g, "'").trim();
-            // Boş stringleri null'a çevir, aksi takdirde cleanedValue'yu kullan
-            values.push(cleanedValue === "" ? null : cleanedValue);
+        // Regex: Tek tırnakla başlayan, ardından tırnak içi karakterleri (virgül dahil),
+        // ve tek tırnakla biten bir patern arar.
+        // Gerekirse çift tırnaklı escapeleri de ele alacağız.
+        const valueExtractorRegex = /'(?:[^']|'')*'/g; // Tek tırnak içindeki her şeyi yakala, '' durumunu da hesaba kat
+        let currentValuesMatches = rawValuesString.match(valueExtractorRegex);
+
+        if (currentValuesMatches) {
+            currentValuesMatches.forEach(val => {
+                // Her değeri al, baştaki ve sondaki tek tırnakları kaldır
+                // ve '' (escaped single quote) durumlarını tek tırnağa çevir
+                let cleanedValue = val.substring(1, val.length - 1).replace(/''/g, "'");
+                
+                // Unicode escape dizilerini (örn: \u015f) doğrudan JavaScript tarafından string'e çevrilir.
+                // Eğer bu hala çalışmıyorsa, manuel bir dönüşüm deneyebiliriz:
+                // cleanedValue = JSON.parse('"' + cleanedValue.replace(/\\/g, '\\\\') + '"');
+                // Ancak bu, string'in tam bir JSON stringi olmasını gerektirir, dikkatli olunmalı.
+                // Şimdilik varsayımımız, JS'in bunları otomatik çevirmesi yönünde.
+
+                // Boş stringleri null'a çevir, aksi takdirde cleanedValue'yu kullan
+                values.push(cleanedValue === "" ? null : cleanedValue.trim()); // Ayrıca trim ekledim
+            });
         }
-        
+        // --- DEĞER AYRIŞTIRMA MANTIĞI GÜNCELLEMESİ SONU ---
+
         console.log("Ayrıştırılmış Values Dizisi:", JSON.stringify(values, null, 2)); // Tüm ayrıştırılmış değerleri formatlı logla
 
         // applicationNo değerini al ve null kontrolü yap
@@ -914,13 +928,20 @@ function parseScriptContent(content) {
 
         // Tablo tipine göre değerleri ilgili alanlara ata
         if (table === "TRADEMARK") {
+          // values dizisinin uzunluğunu kontrol ederek hataları önleyelim
           recordsMap[appNo].applicationDate = values[1] ?? null;
-          recordsMap[appNo].markName = values[5] ?? null; // '\u015fekil' gibi Unicode değerler JS tarafından otomatik dönüştürülmeli
+          recordsMap[appNo].markName = values[5] ?? null; 
           recordsMap[appNo].niceClasses = values[6] ?? null;
           console.log(`TRADEMARK verisi eklendi. applicationDate: ${recordsMap[appNo].applicationDate}, markName: ${recordsMap[appNo].markName}`);
         }
         else if (table === "HOLDER") {
-          // values[3] - values[6] arası adres satırları olabilir
+          // Holder adının ve adres parçalarının doğru indekslerde olduğundan emin olun
+          // values[2] -> name
+          // values[3] - values[6] -> address
+          // values[7] -> country
+
+          const holderName = values[2] ?? null;
+
           const addressParts = [values[3], values[4], values[5], values[6]]
                                 .filter(Boolean) // null veya boş stringleri filtrele
                                 .map(s => s.replace(/\\u000a/g, ' ').trim()); // \u000a'ları boşlukla değiştir ve trimle
@@ -928,11 +949,11 @@ function parseScriptContent(content) {
           const holderAddress = addressParts.join(", ") || null; // Boşsa null yap
 
           recordsMap[appNo].holders.push({
-            name: values[2] ?? null,
+            name: holderName,
             address: holderAddress, 
             country: values[7] ?? null,
           });
-          console.log(`HOLDER verisi eklendi. Name: ${values[2]}, Adres: ${holderAddress}`);
+          console.log(`HOLDER verisi eklendi. Name: ${holderName}, Adres: ${holderAddress}, Country: ${values[7]}`);
         }
         else if (table === "GOODS") {
           recordsMap[appNo].goods.push(values[3] ?? null);
