@@ -1,71 +1,91 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Marka İzleme</title>
-  <link rel="stylesheet" href="css/shared-styles.css"/>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IP Manager - Marka İzleme</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      color: #333;
+      display: flex;
+    }
+    .page-wrapper {
+      flex-grow: 1;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow-y: auto;
+      background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    }
+    .main-container {
+      width: 100%;
+      padding: 30px;
+      margin: 0;
+    }
+    .page-header {
+      background: rgba(255,255,255,0.95);
+      padding: 30px;
+      border-radius: 20px;
+      margin-bottom: 30px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    }
+    .page-title {
+      font-size: 2em;
+      color: #1e3c72;
+      margin-bottom: 10px;
+    }
+    .page-subtitle {
+      color: #666;
+      font-size: 1.1em;
+    }
+  </style>
 </head>
 <body>
-  <div id="notification-container" style="position: fixed; top:20px; right:20px; z-index:9999;"></div>
   <div id="layout-placeholder"></div>
+  <div id="sidebar-container"></div>
   <div class="page-wrapper">
     <main class="main-container">
       <section class="page-header">
         <h1 class="page-title">📊 Marka İzleme</h1>
         <p class="page-subtitle">Portföyden seçilen markaların izleme kaydı burada listelenecek.</p>
       </section>
+
       <section>
-        <div id="monitoring-list" class="data-table"></div>
+        <div id="monitoring-list" class="data-table">
+          <p>Henüz bir kayıt yok.</p>
+        </div>
       </section>
     </main>
   </div>
 
   <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
-    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
     import { loadSharedLayout } from './js/layout-loader.js';
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyDbdqfiVbobnl1BtyiWxhD4bfIcREw8ZRc",
-      authDomain: "ip-manager-production-aab4b.firebaseapp.com",
-      projectId: "ip-manager-production-aab4b",
-      storageBucket: "ip-manager-production-aab4b.appspot.com",
-      messagingSenderId: "594650169512",
-      appId: "1:594650169512:web:43496005e063a40511829d"
-    };
+    document.addEventListener('DOMContentLoaded', async () => {
+      await loadSharedLayout({ activeMenuLink: 'monitoring-trademarks.html' });
 
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-
-    onAuthStateChanged(auth, (user) => {
-      if (user) {
-        loadSharedLayout({ activeMenuLink: 'monitoring-trademarks.html' });
-
-        // Örnek veri
-        document.getElementById('monitoring-list').innerHTML = `
-          <table>
-            <thead>
-              <tr>
-                <th>Marka Adı</th>
-                <th>Başvuru No</th>
-                <th>Başvuru Tarihi</th>
-                <th>Durum</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>Örnek Marka</td>
-                <td>2025/12345</td>
-                <td>2025-07-15</td>
-                <td>İzleniyor</td>
-              </tr>
-            </tbody>
-          </table>
-        `;
-      } else {
-        document.getElementById('monitoring-list').innerHTML = "<p>Bu sayfayı görmek için giriş yapmalısınız.</p>";
-      }
+      // İleride dinamik veri ekleyeceğimiz alan
+      document.getElementById('monitoring-list').innerHTML = `
+        <table>
+          <thead>
+            <tr>
+              <th>Marka Adı</th>
+              <th>Başvuru No</th>
+              <th>Başvuru Tarihi</th>
+              <th>Durum</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Örnek Marka</td>
+              <td>2025/12345</td>
+              <td>2025-07-15</td>
+              <td>İzleniyor</td>
+            </tr>
+          </tbody>
+        </table>
+      `;
     });
   </script>
 </body>
