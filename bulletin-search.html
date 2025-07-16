@@ -1,121 +1,141 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Bülten Sorgulama</title>
-<link rel="stylesheet" href="css/shared-styles.css">
-<style>
-.main-container {
-  padding: 30px;
-}
-.page-header {
-  background: rgba(255,255,255,0.95);
-  padding: 20px;
-  border-radius: 12px;
-  margin-bottom: 20px;
-  box-shadow: 0 0 10px rgba(0,0,0,0.1);
-}
-.table-container {
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 0 10px rgba(0,0,0,0.05);
-  overflow-x: auto;
-}
-.tasks-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-.tasks-table th, .tasks-table td {
-  padding: 12px;
-  text-align: left;
-  border-bottom: 1px solid #eee;
-}
-.tasks-table th {
-  background: #f7f7f7;
-}
-.action-btn {
-  background: #007bff;
-  color: white;
-  border: none;
-  padding: 6px 10px;
-  border-radius: 4px;
-  cursor: pointer;
-}
-.action-btn:hover {
-  opacity: 0.9;
-}
-.modal {
-  position: fixed;
-  top:0;
-  left:0;
-  width:100%;
-  height:100%;
-  background: rgba(0,0,0,0.6);
-  display:none;
-  align-items:center;
-  justify-content:center;
-  z-index:9999;
-}
-.modal-content {
-  background:white;
-  padding:20px;
-  border-radius:8px;
-  width:500px;
-  max-height:80vh;
-  overflow-y:auto;
-}
-.modal-content h3 {
-  margin-top:0;
-}
-.modal-content ul {
-  padding-left:20px;
-}
-.close-modal {
-  float:right;
-  font-size:20px;
-  cursor:pointer;
-}
-img.marka-image {
-  max-width:80px;
-  border:1px solid #ccc;
-  border-radius:6px;
-}
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Bülten Sorgulama</title>
+  <link rel="stylesheet" href="css/shared-styles.css" />
+  <style>
+    .page-wrapper {
+      flex-grow: 1;
+      display: flex;
+      flex-direction: column;
+      background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+      min-height: 100vh;
+    }
+    .main-container {
+      width: 100%;
+      padding: 30px;
+      box-sizing: border-box;
+    }
+    .page-header {
+      background: rgba(255,255,255,0.95);
+      padding: 30px;
+      border-radius: 20px;
+      margin-bottom: 30px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    }
+    .page-title {
+      font-size: 2em;
+      color: #1e3c72;
+      margin-bottom: 10px;
+    }
+    .page-subtitle {
+      color: #666;
+      font-size: 1.1em;
+    }
+    .tasks-container {
+      background: rgba(255,255,255,0.95);
+      border-radius: 20px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+      overflow-x: auto;
+    }
+    .tasks-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .tasks-table th,
+    .tasks-table td {
+      padding: 15px;
+      text-align: left;
+      border-bottom: 1px solid #f0f0f0;
+      vertical-align: middle;
+    }
+    .tasks-table th {
+      background: #f8f9fa;
+      font-weight: 600;
+    }
+    .action-btn {
+      background: #007bff;
+      color: white;
+      border: none;
+      padding: 8px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      margin: 0;
+      transition: all 0.3s ease;
+    }
+    .action-btn:hover {
+      opacity: 0.9;
+    }
+    .marka-image {
+      max-height: 60px;
+      max-width: 120px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      background: #fff;
+      object-fit: contain;
+    }
+    .modal {
+      position: fixed;
+      top:0;
+      left:0;
+      width:100%;
+      height:100%;
+      background: rgba(0,0,0,0.6);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+    }
+    .modal-content {
+      background:#fff;
+      padding:20px;
+      width:500px;
+      max-height:80vh;
+      overflow-y:auto;
+      border-radius:8px;
+      box-shadow:0 0 20px rgba(0,0,0,0.2);
+    }
+    .close {
+      float:right;
+      font-size:24px;
+      cursor:pointer;
+    }
+  </style>
 </head>
 <body>
 <div id="layout-placeholder"></div>
 <div class="page-wrapper">
   <main class="main-container">
     <section class="page-header">
-      <h1>Bülten Sorgulama</h1>
-      <p>Yüklenmiş bültenleri numara ve türe göre sorgulayabilirsiniz.</p>
-      <div>
-        Bülten Türü:
-        <select id="bulletinType">
-          <option value="marka">Marka</option>
-          <option value="patent">Patent</option>
-          <option value="tasarim">Tasarım</option>
-        </select>
-        Bülten No:
-        <input type="text" id="bulletinNo" placeholder="Örn: 2025/15">
-        <button id="searchButton" class="action-btn">Sorgula</button>
-      </div>
+      <h1 class="page-title">Bülten Sorgulama</h1>
+      <p class="page-subtitle">Marka, Patent ve Tasarım bültenlerini sorgulayabilirsiniz.</p>
     </section>
-    <div id="recordsContainer" class="table-container"></div>
+    <div class="tasks-container" style="padding:20px;">
+      <label for="bulletinType">Bülten Türü:</label>
+      <select id="bulletinType">
+        <option value="marka">Marka</option>
+        <option value="patent">Patent</option>
+        <option value="tasarim">Tasarım</option>
+      </select>
+      <label for="bulletinNo" style="margin-left:15px;">Bülten No:</label>
+      <input type="text" id="bulletinNo" placeholder="Örn: 2025/20">
+      <button id="searchButton" class="action-btn">Sorgula</button>
+    </div>
+    <div id="recordsContainer" style="margin-top:30px;"></div>
   </main>
 </div>
+
+<!-- Modal -->
 <div id="goodsModal" class="modal">
   <div class="modal-content">
-    <span class="close-modal" id="closeGoodsModal">&times;</span>
-    <h3>Mal/Hizmet Listesi</h3>
-    <ul id="goodsList"></ul>
+    <span id="closeGoodsModal" class="close">&times;</span>
+    <h2>Mal / Hizmet Listesi</h2>
+    <ul id="goodsList" style="margin-top:15px; line-height:1.5;"></ul>
   </div>
 </div>
-<script type="module">
-import { loadSharedLayout } from './js/layout-loader.js';
-loadSharedLayout({ activeMenuLink: 'bulletin-search.html' });
-</script>
+
 <script type="module" src="js/bulletin-search.js"></script>
 </body>
 </html>
