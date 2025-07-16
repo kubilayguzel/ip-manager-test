@@ -1,135 +1,121 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Bülten Sorgulama</title>
-  <link rel="stylesheet" href="css/shared-styles.css" />
-  <style>
-    .page-wrapper {
-      flex-grow: 1;
-      display: flex;
-      flex-direction: column;
-      min-height: 100vh;
-      background: #f5f7fa;
-    }
-    .main-container {
-      padding: 30px;
-      max-width: 1200px;
-      margin: auto;
-    }
-    .filter-section {
-      background: white;
-      border-radius: 12px;
-      padding: 20px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.05);
-      margin-bottom: 30px;
-    }
-    .results-container {
-      background: white;
-      border-radius: 12px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.05);
-      overflow-x: auto;
-    }
-    .results-table {
-      width: 100%;
-      border-collapse: collapse;
-    }
-    .results-table th,
-    .results-table td {
-      padding: 12px 16px;
-      border-bottom: 1px solid #eee;
-      text-align: left;
-      vertical-align: middle;
-    }
-    .results-table th {
-      background: #f0f0f0;
-      font-weight: 600;
-    }
-    .action-btn {
-      background: #007bff;
-      color: white;
-      border: none;
-      padding: 6px 12px;
-      border-radius: 6px;
-      cursor: pointer;
-      transition: all 0.3s ease;
-    }
-    .action-btn:hover {
-      opacity: 0.9;
-    }
-    .mark-image {
-      max-height: 50px;
-      border: 1px solid #ddd;
-      border-radius: 4px;
-    }
-    .modal {
-      position: fixed;
-      top:0;
-      left:0;
-      width:100%;
-      height:100%;
-      background: rgba(0,0,0,0.6);
-      display:none;
-      align-items:center;
-      justify-content:center;
-      z-index: 9999;
-    }
-    .modal-content {
-      background:#fff;
-      padding:20px;
-      max-width:500px;
-      border-radius:8px;
-      box-shadow:0 0 20px rgba(0,0,0,0.2);
-    }
-    .close {
-      float:right;
-      font-size:24px;
-      cursor:pointer;
-    }
-    .no-results {
-      padding: 30px;
-      text-align: center;
-      color: #666;
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bülten Sorgulama</title>
+<link rel="stylesheet" href="css/shared-styles.css">
+<style>
+.main-container {
+  padding: 30px;
+}
+.page-header {
+  background: rgba(255,255,255,0.95);
+  padding: 20px;
+  border-radius: 12px;
+  margin-bottom: 20px;
+  box-shadow: 0 0 10px rgba(0,0,0,0.1);
+}
+.table-container {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 0 10px rgba(0,0,0,0.05);
+  overflow-x: auto;
+}
+.tasks-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.tasks-table th, .tasks-table td {
+  padding: 12px;
+  text-align: left;
+  border-bottom: 1px solid #eee;
+}
+.tasks-table th {
+  background: #f7f7f7;
+}
+.action-btn {
+  background: #007bff;
+  color: white;
+  border: none;
+  padding: 6px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.action-btn:hover {
+  opacity: 0.9;
+}
+.modal {
+  position: fixed;
+  top:0;
+  left:0;
+  width:100%;
+  height:100%;
+  background: rgba(0,0,0,0.6);
+  display:none;
+  align-items:center;
+  justify-content:center;
+  z-index:9999;
+}
+.modal-content {
+  background:white;
+  padding:20px;
+  border-radius:8px;
+  width:500px;
+  max-height:80vh;
+  overflow-y:auto;
+}
+.modal-content h3 {
+  margin-top:0;
+}
+.modal-content ul {
+  padding-left:20px;
+}
+.close-modal {
+  float:right;
+  font-size:20px;
+  cursor:pointer;
+}
+img.marka-image {
+  max-width:80px;
+  border:1px solid #ccc;
+  border-radius:6px;
+}
+</style>
 </head>
 <body>
 <div id="layout-placeholder"></div>
 <div class="page-wrapper">
   <main class="main-container">
-    <section class="filter-section">
+    <section class="page-header">
       <h1>Bülten Sorgulama</h1>
       <p>Yüklenmiş bültenleri numara ve türe göre sorgulayabilirsiniz.</p>
       <div>
-        <label>Bülten Türü:
-          <select id="bulletinType">
-            <option value="Marka">Marka</option>
-            <option value="Patent">Patent</option>
-            <option value="Tasarım">Tasarım</option>
-          </select>
-        </label>
-        <label style="margin-left:10px;">
-          Bülten No:
-          <input type="text" id="bulletinNo" placeholder="Örn: 2025/15" />
-        </label>
-        <button id="searchButton" class="action-btn" style="margin-left:10px;">Sorgula</button>
+        Bülten Türü:
+        <select id="bulletinType">
+          <option value="marka">Marka</option>
+          <option value="patent">Patent</option>
+          <option value="tasarim">Tasarım</option>
+        </select>
+        Bülten No:
+        <input type="text" id="bulletinNo" placeholder="Örn: 2025/15">
+        <button id="searchButton" class="action-btn">Sorgula</button>
       </div>
     </section>
-    <div id="recordsContainer" class="results-container"></div>
+    <div id="recordsContainer" class="table-container"></div>
   </main>
 </div>
 <div id="goodsModal" class="modal">
   <div class="modal-content">
-    <span class="close" id="closeModal">&times;</span>
+    <span class="close-modal" id="closeGoodsModal">&times;</span>
     <h3>Mal/Hizmet Listesi</h3>
-    <div id="goodsList"></div>
+    <ul id="goodsList"></ul>
   </div>
 </div>
 <script type="module">
-  import { loadSharedLayout } from './js/layout-loader.js';
-  loadSharedLayout({ activeMenuLink: 'bulletin-search.html' });
+import { loadSharedLayout } from './js/layout-loader.js';
+loadSharedLayout({ activeMenuLink: 'bulletin-search.html' });
 </script>
-<script type="module" src="./js/bulletin-search.js"></script>
+<script type="module" src="js/bulletin-search.js"></script>
 </body>
 </html>
