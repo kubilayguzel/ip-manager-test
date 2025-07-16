@@ -744,18 +744,14 @@ exports.processTrademarkBulletinUpload = functions
 
       // ADIM 2: tmbulletin dosyasını bul
       console.log("[ADIM 2] tmbulletin dosyası aranıyor...");
-
-      // allFiles.forEach döngüsü kaldırıldı çünkü çok fazla log üretebiliyor ve Cloud Functions log limitlerini aşabilir.
-      // Zaten allFiles'ın ilk 10 öğesini yukarıda logladık.
-
       const scriptFilePath = allFiles.find((p) =>
-        path.basename(p).toLowerCase() === "tmbulletin"
+        // Olası uzantıları da içeren bir kontrol ekleyin
+        ["tmbulletin", "tmbulletin.log", "tmbulletin.script"].includes(path.basename(p).toLowerCase())
       );
 
       if (!scriptFilePath) {
-        console.error("tmbulletin bulunamadı.");
-        // Önemli: Buradaki hata mesajını daha açıklayıcı hale getirebiliriz:
-        // console.error(`tmbulletin bulunamadı. Aranan dizin: ${extractTargetDir}, allFiles listesi:`, allFiles);
+        // Hata mesajını daha da detaylandıralım
+        console.error(`tmbulletin bulunamadı. allFiles içeriği: ${JSON.stringify(allFiles.map(f => path.basename(f)))}`); // Sadece basename'leri loglayalım
         throw new Error("tmbulletin dosyası bulunamadı.");
       }
 
@@ -891,7 +887,6 @@ function parseScriptContent(content) {
 
   return Object.values(recordsMap);
 }
-
 
 function parseValues(line) {
   const inside = line.substring(line.indexOf("(") + 1, line.lastIndexOf(")"));
