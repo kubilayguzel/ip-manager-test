@@ -661,33 +661,37 @@
                         }
                     });
 
-                    document.getElementById('closeRecordDetailModal').addEventListener('click', () => this.closeModal('recordDetailModal'));
-
-                    document.getElementById('exportExcelBtn').addEventListener('click', () => {
-                        exportTableToExcel('portfolio-table', 'Portföy Raporu');
-                    });
-                    document.getElementById('exportPdfBtn').addEventListener('click', () => {
-                        exportTableToPdf('portfolio-table', 'Portföy Raporu');
-                    });
                     document.getElementById('addToMonitoringBtn').addEventListener('click', async () => {
                     const selectedIds = Array.from(this.selectedRecords);
                     if (selectedIds.length === 0) return;
 
                     if (!confirm(`Seçili ${selectedIds.length} kaydı izlemeye eklemek istediğinize emin misiniz?`)) return;
 
+                    const auth = getAuth();
+                    const user = auth.currentUser;
+
+                    if (!user) {
+                        alert('Lütfen önce oturum açın.');
+                        return;
+                    }
+
+                    const uid = user.uid;
+
                     for (const id of selectedIds) {
                         const record = this.allRecords.find(r => r.id === id);
                         if (record && record.type === 'trademark') {
-                            const res = await monitoringService.addMonitoringItem(this.currentUser.uid, {
-                                id: record.id,
-                                title: record.title,
-                                applicationNumber: record.applicationNumber,
-                                applicationDate: record.applicationDate,
-                                status: record.status
-                            });
-                            if (!res.success) {
-                                console.error('Kayıt eklenemedi:', res.error);
-                            }
+                        const res = await monitoringService.addMonitoringItem(uid, {
+                            id: record.id,
+                            title: record.title,
+                            applicationNumber: record.applicationNumber,
+                            applicationDate: record.applicationDate,
+                            status: record.status
+                        });
+                        if (!res.success) {
+                            console.error('Kayıt eklenemedi:', res.error);
+                        } else {
+                            console.log(`✅ Kayıt eklendi: ${record.title}`);
+                        }
                         }
                     }
 
