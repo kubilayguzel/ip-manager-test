@@ -853,21 +853,40 @@ function listAllFilesRecursive(dir) {
 }
 function parseScriptContent(content) {
   const recordsMap = {};
-  const insertRegex = /INSERT INTO (\w+) VALUES\s*\(([\s\S]*?)\)/g;
-  let match;
-
-  while ((match = insertRegex.exec(content)) !== null) {
+  
+  // Her INSERT statement'ı satır satır ayıralım
+  const lines = content.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+  
+  for (const line of lines) {
+    if (!line.startsWith('INSERT INTO')) continue;
+    
+    const match = line.match(/INSERT INTO (\w+) VALUES\s*\((.*)\)$/);
+    if (!match) continue;
+    
     const table = match[1].toUpperCase();
-    const raw = match[2];
+    let raw = match[2];
 
-    // Yeni: tüm tırnaklı değerleri güvenli yakala
     const values = [];
-    const regex = /'(.*?)'(?:,|$)/gs;
-    let valMatch;
-    while ((valMatch = regex.exec(raw)) !== null) {
-      const v = valMatch[1].replace(/''/g, "'").trim();
-      values.push(v === "" ? null : decodeUnicode(v));
+    let current = '';
+    let inString = false;
+
+    for (let i = 0; i < raw.length; i++) {
+      const char = raw[i];
+      if (char === "'") {
+        if (inString && raw[i + 1] === "'") {
+          current += "'";
+          i++;
+        } else {
+          inString = !inString;
+        }
+      } else if (char === ',' && !inString) {
+        values.push(decodeValue(current.trim()));
+        current = '';
+      } else {
+        current += char;
+      }
     }
+    values.push(decodeValue(current.trim()));
 
     const appNo = values[0];
     if (!appNo) continue;
@@ -891,7 +910,8 @@ function parseScriptContent(content) {
       recordsMap[appNo].niceClasses = values[6] ?? null;
     } else if (table === "HOLDER") {
       const holderName = extractHolderName(values[2]);
-      const addressParts = [values[3], values[4], values[5], values[6]].filter(Boolean).join(", ") || null;
+      let addressParts = [values[3], values[4], values[5], values[6]].filter(Boolean).join(", ");
+      if (addressParts.trim() === "") addressParts = null;
       recordsMap[appNo].holders.push({
         name: holderName,
         address: addressParts,
@@ -908,14 +928,6 @@ function parseScriptContent(content) {
 
   return Object.values(recordsMap);
 }
-
-function decodeUnicode(str) {
-  // \uXXXX unicode dönüşümü
-  return str.replace(/\\u([\dA-F]{4})/gi, (_, g1) =>
-    String.fromCharCode(parseInt(g1, 16))
-  );
-}
-
 
 function decodeValue(str) {
   if (str === null || str === undefined) return null;
@@ -935,7 +947,6 @@ function extractHolderName(str) {
   }
   return str;
 }
-
 
 function getContentType(filePath) {
   if (/\.png$/i.test(filePath)) return "image/png";
