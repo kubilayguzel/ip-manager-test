@@ -853,127 +853,90 @@ function listAllFilesRecursive(dir) {
 }
 
 function parseScriptContent(content) {
-    const recordsMap = {};
+  const recordsMap = {};
+  const insertRegex = /INSERT INTO (\w+) VALUES\s*\(([\s\S]*?)\)/g;
+  let match;
 
-    // Bu regex, 'INSERT INTO TableName VALUES (raw_values_string)' yapısını yakalar
-    const insertRegex = /INSERT INTO (\w+) VALUES\s*\((.*?)\)/gms;
-    
-    let match;
-    let insertCount = 0;
+  while ((match = insertRegex.exec(content)) !== null) {
+    const table = match[1].toUpperCase();
+    let raw = match[2];
 
-    while ((match = insertRegex.exec(content)) !== null) {
-        insertCount++;
-        console.log(`--- INSERT IFADESİ ${insertCount} BAŞLANGICI ---`);
-        console.log(`Ham Match (İlk 200 karakter): ${match[0].substring(0, Math.min(match[0].length, 200))}...`);
-        
-        const table = match[1].toUpperCase();
-        let rawValuesString = match[2]; // Örn: 'val1','val2','val3'
-
-        console.log(`Tablo: ${table}`);
-        console.log(`Ham Değerler (rawValuesString): ${rawValuesString}`);
-
-        // --- DEĞER AYRIŞTIRMA MANTIĞI GÜNCELLEMESİ ---
-        // Daha karmaşık, tırnak içindeki virgülleri doğru işleyen bir ayrıştırma
-        // String.prototype.match ile regex kullanarak tüm tırnaklı değerleri yakala
-        const values = [];
-        // Regex: Tek tırnakla başlayan, ardından tırnak içi karakterleri (virgül dahil),
-        // ve tek tırnakla biten bir patern arar.
-        // Gerekirse çift tırnaklı escapeleri de ele alacağız.
-        const valueExtractorRegex = /'(?:[^']|'')*'/g; // Tek tırnak içindeki her şeyi yakala, '' durumunu da hesaba kat
-        let currentValuesMatches = rawValuesString.match(valueExtractorRegex);
-
-        if (currentValuesMatches) {
-            currentValuesMatches.forEach(val => {
-                // Her değeri al, baştaki ve sondaki tek tırnakları kaldır
-                // ve '' (escaped single quote) durumlarını tek tırnağa çevir
-                let cleanedValue = val.substring(1, val.length - 1).replace(/''/g, "'");
-                
-                // Unicode escape dizilerini (örn: \u015f) doğrudan JavaScript tarafından string'e çevrilir.
-                // Eğer bu hala çalışmıyorsa, manuel bir dönüşüm deneyebiliriz:
-                // cleanedValue = JSON.parse('"' + cleanedValue.replace(/\\/g, '\\\\') + '"');
-                // Ancak bu, string'in tam bir JSON stringi olmasını gerektirir, dikkatli olunmalı.
-                // Şimdilik varsayımımız, JS'in bunları otomatik çevirmesi yönünde.
-
-                // Boş stringleri null'a çevir, aksi takdirde cleanedValue'yu kullan
-                values.push(cleanedValue === "" ? null : cleanedValue.trim()); // Ayrıca trim ekledim
-            });
+    // Virgüllere göre ayırıyoruz ama dikkat!
+    // Tırnak içindekilerdeki virgülleri korumalıyız.
+    const values = [];
+    let current = '';
+    let inString = false;
+    for (let i = 0; i < raw.length; i++) {
+      const char = raw[i];
+      if (char === "'") {
+        // Tırnak başlangıcı/bitişi
+        if (inString && raw[i + 1] === "'") {
+          current += "'";
+          i++; // Skip escaped quote
+        } else {
+          inString = !inString;
         }
-        // --- DEĞER AYRIŞTIRMA MANTIĞI GÜNCELLEMESİ SONU ---
-
-        console.log("Ayrıştırılmış Values Dizisi:", JSON.stringify(values, null, 2)); // Tüm ayrıştırılmış değerleri formatlı logla
-
-        // applicationNo değerini al ve null kontrolü yap
-        const appNo = values[0];
-
-        if (!appNo) {
-            console.warn(`Boş veya null applicationNo değeri bulundu, bu INSERT ifadesi atlandı. Tablo: ${table}, Ham Değerler: ${rawValuesString}`);
-            console.log(`--- INSERT IFADESİ ${insertCount} SONU ---`);
-            continue;
-        }
-
-        // Eğer kayıt recordsMap'te yoksa yeni bir kayıt oluştur
-        if (!recordsMap[appNo]) {
-          recordsMap[appNo] = {
-            applicationNo: appNo,
-            applicationDate: null,
-            markName: null,
-            niceClasses: null,
-            holders: [],
-            goods: [],
-            extractedGoods: [],
-            attorneys: [],
-          };
-          console.log(`Yeni kayıt oluşturuldu: applicationNo=${appNo}`);
-        }
-
-        // Tablo tipine göre değerleri ilgili alanlara ata
-        if (table === "TRADEMARK") {
-          // values dizisinin uzunluğunu kontrol ederek hataları önleyelim
-          recordsMap[appNo].applicationDate = values[1] ?? null;
-          recordsMap[appNo].markName = values[5] ?? null; 
-          recordsMap[appNo].niceClasses = values[6] ?? null;
-          console.log(`TRADEMARK verisi eklendi. applicationDate: ${recordsMap[appNo].applicationDate}, markName: ${recordsMap[appNo].markName}`);
-        }
-        else if (table === "HOLDER") {
-          // Holder adının ve adres parçalarının doğru indekslerde olduğundan emin olun
-          // values[2] -> name
-          // values[3] - values[6] -> address
-          // values[7] -> country
-
-          const holderName = values[2] ?? null;
-
-          const addressParts = [values[3], values[4], values[5], values[6]]
-                                .filter(Boolean) // null veya boş stringleri filtrele
-                                .map(s => s.replace(/\\u000a/g, ' ').trim()); // \u000a'ları boşlukla değiştir ve trimle
-          
-          const holderAddress = addressParts.join(", ") || null; // Boşsa null yap
-
-          recordsMap[appNo].holders.push({
-            name: holderName,
-            address: holderAddress, 
-            country: values[7] ?? null,
-          });
-          console.log(`HOLDER verisi eklendi. Name: ${holderName}, Adres: ${holderAddress}, Country: ${values[7]}`);
-        }
-        else if (table === "GOODS") {
-          recordsMap[appNo].goods.push(values[3] ?? null);
-          console.log(`GOODS verisi eklendi: ${values[3]}`);
-        }
-        else if (table === "EXTRACTEDGOODS") {
-          recordsMap[appNo].extractedGoods.push(values[3] ?? null);
-          console.log(`EXTRACTEDGOODS verisi eklendi: ${values[3]}`);
-        }
-        else if (table === "ATTORNEY") {
-          recordsMap[appNo].attorneys.push(values[2] ?? null);
-          console.log(`ATTORNEY verisi eklendi: ${values[2]}`);
-        }
-        else {
-            console.warn(`Bilinmeyen tablo tipi bulundu: ${table}. Ham değerler: ${rawValuesString}`);
-        }
-        console.log(`--- INSERT IFADESİ ${insertCount} SONU ---`);
+      } else if (char === ',' && !inString) {
+        // Virgül ama string dışındaysa
+        values.push(current.trim() === "" ? null : decodeValue(current.trim()));
+        current = '';
+      } else {
+        current += char;
       }
-      console.log("Parseleme tamamlandı. Oluşturulan kayıt sayısı:", Object.values(recordsMap).length);
-      return Object.values(recordsMap);
+    }
+    // Son değer
+    values.push(current.trim() === "" ? null : decodeValue(current.trim()));
+
+    const appNo = values[0];
+    if (!appNo) continue;
+
+    if (!recordsMap[appNo]) {
+      recordsMap[appNo] = {
+        applicationNo: appNo,
+        applicationDate: null,
+        markName: null,
+        niceClasses: null,
+        holders: [],
+        goods: [],
+        extractedGoods: [],
+        attorneys: [],
+      };
+    }
+
+    if (table === "TRADEMARK") {
+      recordsMap[appNo].applicationDate = values[1] ?? null;
+      recordsMap[appNo].markName = values[5] ?? null;
+      recordsMap[appNo].niceClasses = values[6] ?? null;
+    } else if (table === "HOLDER") {
+      const addressParts = [values[3], values[4], values[5], values[6]]
+        .filter(Boolean)
+        .join(', ') || null;
+      recordsMap[appNo].holders.push({
+        name: values[2] ?? null,
+        address: addressParts,
+        country: values[7] ?? null,
+      });
+    } else if (table === "GOODS") {
+      recordsMap[appNo].goods.push(values[3] ?? null);
+    } else if (table === "EXTRACTEDGOODS") {
+      recordsMap[appNo].extractedGoods.push(values[3] ?? null);
+    } else if (table === "ATTORNEY") {
+      recordsMap[appNo].attorneys.push(values[2] ?? null);
+    }
+  }
+
+  return Object.values(recordsMap);
+}
+
+// Yardımcı: Tek tırnaklı değeri decode eder
+function decodeValue(str) {
+  if (!str) return null;
+  if (str[0] === "'" && str[str.length - 1] === "'") {
+    str = str.substring(1, str.length - 1);
+  }
+  str = str.replace(/''/g, "'");
+  // Unicode escape çözümü
+  return JSON.parse('"' + str.replace(/\\/g, '\\\\') + '"');
 }
 
 function parseValues(line) {
