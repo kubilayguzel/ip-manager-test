@@ -1,103 +1,121 @@
+import { loadSharedLayout } from "./js/layout-loader.js";
+loadSharedLayout({ activeMenuLink: "bulletin-search.html" });
 import { getFirestore, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getStorage, ref, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 import { db } from "../firebase-config.js";
+import { loadSharedLayout } from "./layout-loader.js";
 
 console.log("✅ bulletin-search.js yüklendi!");
 
-const searchBtn = document.getElementById("searchButton");
-const recordsContainer = document.getElementById("recordsContainer");
-const goodsModal = document.getElementById("goodsModal");
-const goodsList = document.getElementById("goodsList");
-const closeGoodsModal = document.getElementById("closeGoodsModal");
+loadSharedLayout();
 
-searchBtn.addEventListener("click", async () => {
-  const type = document.getElementById("bulletinType").value;
-  const bulletinNo = document.getElementById("bulletinNo").value.trim();
+document.getElementById("searchButton").addEventListener("click", async () => {
+    const type = document.getElementById("bulletinType").value;
+    const bulletinNo = document.getElementById("bulletinNo").value.trim();
 
-  if (!bulletinNo) {
-    alert("Lütfen bülten numarası girin.");
-    return;
-  }
+    console.log("Sorgu başladı:", { type, bulletinNo });
 
-  recordsContainer.innerHTML = "<p>Aranıyor...</p>";
-
-  try {
-    const bulletinQuery = query(
-      collection(db, "trademarkBulletins"),
-      where("type", "==", type.toLowerCase()),
-      where("bulletinNo", "==", bulletinNo)
-    );
-    const bulletinSnap = await getDocs(bulletinQuery);
-
-    if (bulletinSnap.empty) {
-      recordsContainer.innerHTML = "<p>Bülten bulunamadı.</p>";
-      return;
+    if (!bulletinNo) {
+        alert("Lütfen bülten numarası girin.");
+        return;
     }
 
-    const bulletinId = bulletinSnap.docs[0].id;
+    const recordsContainer = document.getElementById("recordsContainer");
+    recordsContainer.innerHTML = "<p>Aranıyor...</p>";
 
-    const recordsQuery = query(
-      collection(db, "trademarkBulletinRecords"),
-      where("bulletinId", "==", bulletinId)
-    );
-    const recordsSnap = await getDocs(recordsQuery);
+    try {
+        // trademarkBulletins içinde belgeyi bul
+        const bulletinQuery = query(
+            collection(db, "trademarkBulletins"),
+            where("type", "==", type.toLowerCase()),
+            where("bulletinNo", "==", bulletinNo)
+        );
 
-    if (recordsSnap.empty) {
-      recordsContainer.innerHTML = "<p>Bu bültene ait kayıt bulunamadı.</p>";
-      return;
+        const bulletinSnapshot = await getDocs(bulletinQuery);
+
+        if (bulletinSnapshot.empty) {
+            recordsContainer.innerHTML = "<p>Belirtilen kriterlerde bülten bulunamadı.</p>";
+            console.log("Bülten bulunamadı.");
+            return;
+        }
+
+        const bulletinDoc = bulletinSnapshot.docs[0];
+        const bulletinId = bulletinDoc.id;
+        console.log("Bulunan bülten ID:", bulletinId);
+
+        // Bu bültene ait kayıtları al
+        const recordsQuery = query(
+            collection(db, "trademarkBulletinRecords"),
+            where("bulletinId", "==", bulletinId)
+        );
+
+        const recordsSnapshot = await getDocs(recordsQuery);
+
+        if (recordsSnapshot.empty) {
+            recordsContainer.innerHTML = "<p>Bu bültene ait kayıt bulunamadı.</p>";
+            return;
+        }
+
+        let html = `
+        <div class="tasks-container">
+        <table class="tasks-table">
+            <thead>
+                <tr>
+                    <th>Başvuru No</th>
+                    <th>Marka Örneği</th>
+                    <th>Marka Adı</th>
+                    <th>Hak Sahibi</th>
+                    <th>Başvuru Tarihi</th>
+                    <th>Sınıflar</th>
+                    <th>İşlem</th>
+                </tr>
+            </thead>
+            <tbody>`;
+
+        const storage = getStorage();
+        for (const doc of recordsSnapshot.docs) {
+            const r = doc.data();
+            let imageUrl = "";
+            if (r.imagePath) {
+                try {
+                    const fileRef = ref(storage, r.imagePath);
+                    imageUrl = await getDownloadURL(fileRef);
+                } catch (err) {
+                    console.warn("Görsel URL alınamadı:", err);
+                }
+            }
+
+            html += `
+            <tr>
+                <td>${r.applicationNo || "-"}</td>
+                <td>${imageUrl ? `<img src="${imageUrl}" style="height:50px;">` : "-"}</td>
+                <td>${r.markName || "-"}</td>
+                <td>${r.holders?.[0]?.name || "-"}</td>
+                <td>${r.applicationDate || "-"}</td>
+                <td>${r.niceClasses || "-"}</td>
+                <td><button class="action-btn" onclick='showGoods(${JSON.stringify(r.goods || [])})'>Eşyalar</button></td>
+            </tr>`;
+        }
+
+        html += "</tbody></table></div>";
+        recordsContainer.innerHTML = html;
+
+    } catch (err) {
+        console.error("Sorgulama hatası:", err);
+        recordsContainer.innerHTML = "<p>Bir hata oluştu. Konsolu kontrol edin.</p>";
     }
-
-    let html = `
-    <table class="tasks-table">
-      <thead>
-        <tr>
-          <th>Başvuru No</th>
-          <th>Marka Örneği</th>
-          <th>Marka Adı</th>
-          <th>Hak Sahibi</th>
-          <th>Başvuru Tarihi</th>
-          <th>Sınıflar</th>
-          <th>İşlem</th>
-        </tr>
-      </thead>
-      <tbody>
-    `;
-
-    recordsSnap.forEach(doc => {
-      const r = doc.data();
-      const imageTag = r.imagePath
-        ? `<img class="marka-image" src="https://firebasestorage.googleapis.com/v0/b/ip-manager-production-aab4b.appspot.com/o/${encodeURIComponent(r.imagePath)}?alt=media"/>`
-        : "-";
-
-      html += `
-        <tr>
-          <td>${r.applicationNo || "-"}</td>
-          <td>${imageTag}</td>
-          <td>${r.markName || "-"}</td>
-          <td>${r.holders?.[0]?.name || "-"}</td>
-          <td>${r.applicationDate || "-"}</td>
-          <td>${r.niceClasses || "-"}</td>
-          <td><button class="action-btn" data-goods='${JSON.stringify(r.goods || [])}'>Eşyalar</button></td>
-        </tr>`;
-    });
-
-    html += "</tbody></table>";
-    recordsContainer.innerHTML = html;
-
-    document.querySelectorAll(".action-btn[data-goods]").forEach(btn => {
-      btn.addEventListener("click", () => {
-        const goods = JSON.parse(btn.dataset.goods);
-        goodsList.innerHTML = goods.length
-          ? goods.map(g => `<li>${g}</li>`).join("")
-          : "<li>Veri yok.</li>";
-        goodsModal.style.display = "flex";
-      });
-    });
-  } catch (err) {
-    console.error(err);
-    recordsContainer.innerHTML = "<p>Bir hata oluştu.</p>";
-  }
 });
 
-closeGoodsModal.onclick = () => {
-  goodsModal.style.display = "none";
+// Modal açma fonksiyonu
+window.showGoods = (goods) => {
+    const modal = document.getElementById("goods-modal");
+    const body = document.getElementById("goods-modal-body");
+    body.innerHTML = goods.length
+        ? `<ul>${goods.map(g => `<li>${g}</li>`).join("")}</ul>`
+        : "<p>Tanımlı eşya yok.</p>";
+    modal.style.display = "flex";
 };
+
+document.getElementById("close-goods-modal").addEventListener("click", () => {
+    document.getElementById("goods-modal").style.display = "none";
+});
