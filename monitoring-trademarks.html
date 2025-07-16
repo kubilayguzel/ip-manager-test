@@ -3,8 +3,82 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Marka İzleme</title>
+  <title>IP Manager - Marka İzleme</title>
   <link rel="stylesheet" href="css/shared-styles.css"/>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      color: #333;
+      display: flex;
+    }
+    .page-wrapper {
+      flex-grow: 1;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow-y: auto;
+      background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    }
+    .main-container {
+      width: 100%;
+      padding: 30px;
+      margin: 0;
+    }
+    .page-header {
+      background: rgba(255,255,255,0.95);
+      padding: 30px;
+      border-radius: 20px;
+      margin-bottom: 30px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    }
+    .page-title {
+      font-size: 2em;
+      color: #1e3c72;
+      margin-bottom: 10px;
+    }
+    .page-subtitle {
+      color: #666;
+      font-size: 1.1em;
+    }
+    .accruals-container {
+      background: rgba(255,255,255,0.95);
+      border-radius: 20px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+      overflow: hidden;
+    }
+    .accruals-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .accruals-table th,
+    .accruals-table td {
+      padding: 15px;
+      text-align: left;
+      border-bottom: 1px solid #f0f0f0;
+    }
+    .accruals-table th {
+      background: #f8f9fa;
+      font-weight: 600;
+    }
+    .action-btn {
+      background: #007bff;
+      color: white;
+      border: none;
+      padding: 8px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      margin-left: 5px;
+      transition: all 0.3s ease;
+    }
+    .action-btn.delete-btn {
+      background-color: #dc3545;
+    }
+    .loading, .no-records {
+      text-align: center;
+      padding: 30px;
+      color: #666;
+    }
+  </style>
 </head>
 <body>
   <div id="layout-placeholder"></div>
@@ -15,11 +89,12 @@
         <h1 class="page-title">📊 Marka İzleme</h1>
         <p class="page-subtitle">İzleme listenizdeki markalar burada listelenir.</p>
       </section>
-      <section>
-        <div id="monitoring-list" class="data-table">
-          <p>Yükleniyor...</p>
+
+      <div class="accruals-container">
+        <div id="monitoringTableContainer">
+          <div class="loading">Yükleniyor...</div>
         </div>
-      </section>
+      </div>
     </main>
   </div>
 
@@ -30,55 +105,56 @@
 
     const auth = getAuth();
 
-    document.addEventListener('DOMContentLoaded', () => {
-      loadSharedLayout({ activeMenuLink: 'monitoring-trademarks.html' });
+    document.addEventListener('DOMContentLoaded', async () => {
+      await loadSharedLayout({ activeMenuLink: 'monitoring-trademarks.html' });
 
       onAuthStateChanged(auth, async (user) => {
-        if (user) {
-          const { success, data } = await monitoringService.getMonitoringItems(user.uid);
-          if (!success) {
-            document.getElementById('monitoring-list').innerHTML = '<p>Veriler yüklenirken hata oluştu.</p>';
-            return;
-          }
-          if (data.length === 0) {
-            document.getElementById('monitoring-list').innerHTML = '<p>İzleme listeniz boş.</p>';
-            return;
-          }
+        const container = document.getElementById('monitoringTableContainer');
+        if (!user) {
+          container.innerHTML = '<div class="no-records">Giriş yapmalısınız.</div>';
+          return;
+        }
 
-          let html = `
-            <table>
-              <thead>
-                <tr>
-                  <th>Marka Adı</th>
-                  <th>Başvuru No</th>
-                  <th>Başvuru Tarihi</th>
-                  <th>Durum</th>
-                  <th>İşlem</th>
-                </tr>
-              </thead>
-              <tbody>
-          `;
-          data.forEach(r => {
-            html += `
-              <tr data-id="${r.id}">
-                <td>${r.title || '-'}</td>
-                <td>${r.applicationNumber || '-'}</td>
-                <td>${r.applicationDate || '-'}</td>
-                <td>${r.status || '-'}</td>
-                <td>
-                  <button class="remove-monitoring-btn">İzlemeden Kaldır</button>
-                </td>
+        const { success, data } = await monitoringService.getMonitoringItems(user.uid);
+        if (!success || data.length === 0) {
+          container.innerHTML = '<div class="no-records">İzleme listeniz boş.</div>';
+          return;
+        }
+
+        let html = `
+          <table class="accruals-table">
+            <thead>
+              <tr>
+                <th>Marka Adı</th>
+                <th>Başvuru No</th>
+                <th>Başvuru Tarihi</th>
+                <th>Durum</th>
+                <th>İşlem</th>
               </tr>
-            `;
-          });
-          html += '</tbody></table>';
-          document.getElementById('monitoring-list').innerHTML = html;
+            </thead>
+            <tbody>
+        `;
 
-          document.getElementById('monitoring-list').addEventListener('click', async (e) => {
-            if (e.target.classList.contains('remove-monitoring-btn')) {
-              const row = e.target.closest('tr');
-              const id = row.dataset.id;
-              if (!confirm('Bu kaydı izleme listesinden kaldırmak istiyor musunuz?')) return;
+        data.forEach(r => {
+          html += `
+            <tr data-id="${r.id}">
+              <td>${r.title || '-'}</td>
+              <td>${r.applicationNumber || '-'}</td>
+              <td>${r.applicationDate || '-'}</td>
+              <td>${r.status || '-'}</td>
+              <td>
+                <button class="action-btn delete-btn">Kaldır</button>
+              </td>
+            </tr>`;
+        });
+        html += '</tbody></table>';
+        container.innerHTML = html;
+
+        container.addEventListener('click', async (e) => {
+          if (e.target.classList.contains('delete-btn')) {
+            const row = e.target.closest('tr');
+            const id = row.dataset.id;
+            if (confirm('Bu kaydı izleme listesinden kaldırmak istiyor musunuz?')) {
               const res = await monitoringService.removeMonitoringItem(user.uid, id);
               if (res.success) {
                 row.remove();
@@ -86,13 +162,10 @@
                 alert('Kaldırma başarısız: ' + res.error);
               }
             }
-          });
-        } else {
-          document.getElementById('monitoring-list').innerHTML = '<p>Bu sayfayı görüntülemek için giriş yapmalısınız.</p>';
-        }
+          }
+        });
       });
     });
   </script>
 </body>
 </html>
-
