@@ -390,6 +390,41 @@ export const personService = {
         }
     }
 };
+// --- YENİ EKLENDİ: Monitoring Service ---
+export const monitoringService = {
+    async addMonitoringItem(userId, record) {
+        if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor." };
+        try {
+            const ref = doc(db, 'monitoringTrademarks', userId, 'items', record.id);
+            await setDoc(ref, record);
+            return { success: true };
+        } catch (error) {
+            console.error("İzleme kaydı eklenirken hata:", error);
+            return { success: false, error: error.message };
+        }
+    },
+    async removeMonitoringItem(userId, recordId) {
+        if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor." };
+        try {
+            const ref = doc(db, 'monitoringTrademarks', userId, 'items', recordId);
+            await deleteDoc(ref);
+            return { success: true };
+        } catch (error) {
+            console.error("İzleme kaydı silinirken hata:", error);
+            return { success: false, error: error.message };
+        }
+    },
+    async getMonitoringItems(userId) {
+        if (!isFirebaseAvailable) return { success: true, data: [] };
+        try {
+            const snapshot = await getDocs(collection(db, 'monitoringTrademarks', userId, 'items'));
+            return { success: true, data: snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) };
+        } catch (error) {
+            console.error("İzleme kayıtları alınırken hata:", error);
+            return { success: false, error: error.message, data: [] };
+        }
+    }
+};
 
 // --- YENİ EKLENDİ: Task Service ---
 export const taskService = {
