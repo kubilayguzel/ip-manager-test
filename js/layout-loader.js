@@ -64,9 +64,14 @@ const menuItems = [
         { id: 'bulletin-search', text: 'Bülten Sorgulama', link: 'bulletin-search.html' }
     ]
     },
+    {id: 'monitoring-accordion', text: 'İzleme', icon: 'fas fa-eye', category: 'Araçlar', subItems: [
+        { id: 'monitoring-trademarks', text: 'Marka İzleme', link: 'monitoring-trademarks.html' },
+        { id: 'monitoring-designs', text: 'Tasarım İzleme', link: 'monitoring-designs.html' }
+    ]
+    },
     { id: 'reports', text: 'Raporlar', link: '#', icon: 'fas fa-chart-line', category: 'Araçlar', disabled: true },
     { id: 'settings', text: 'Ayarlar', link: '#', icon: 'fas fa-cog', category: 'Araçlar', disabled: true }
-];
+    ];
 
 export async function loadSharedLayout(options = {}) {
     const { activeMenuLink } = options;
