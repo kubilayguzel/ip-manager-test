@@ -689,9 +689,9 @@
                     console.log('✅ Kullanıcı UID:', uid);
 
                     for (const id of selectedIds) {
-                    console.log(`➡️ Kayıt aranıyor: ${id}`);
+                    console.log(`➡️ Kayıt aranıyor: "${id}" typeof = ${typeof id}`);
 
-                    const record = this.allRecords.find(r => String(r.id) === String(id));
+                    const record = this.allRecords.find(r => String(r.id).trim() === String(id).trim());
                     console.log('🔍 Bulunan kayıt:', record);
 
                     if (!record) {
@@ -722,7 +722,6 @@
                         console.log('✅ Firestore’a kayıt eklendi:', record.id);
                     }
                     }
-
                     alert('İşlem tamamlandı.');
                     });
                 }
