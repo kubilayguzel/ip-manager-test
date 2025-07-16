@@ -474,7 +474,9 @@
                     <button type="button" class="btn-status-toggle" id="toggleRecordStatusBtn" disabled>
                         Aktif/Pasif
                     </button>
-
+                    <button type="button" class="btn-status-toggle" id="addToMonitoringBtn" disabled>
+                        İzlemeye Ekle
+                    </button>
                     <button class="btn-add-record" onclick="window.location.href='data-entry.html'">
                         <span>&#x2795;</span> Yeni Kayıt Ekle
                     </button>
@@ -625,6 +627,7 @@
                         if (e.target.classList.contains('record-checkbox')) {
                             const recordId = e.target.dataset.id;
                             this.toggleRecordSelection(recordId, e.target.checked);
+                            this.updateAddToMonitoringButtonState();
                         }
                     });
 
@@ -636,6 +639,7 @@
                                 this.toggleRecordSelection(checkbox.dataset.id, isChecked);
                             }
                         });
+                        this.updateAddToMonitoringButtonState();
                     });
                     
                     document.getElementById('toggleRecordStatusBtn').addEventListener('click', () => {
@@ -713,7 +717,16 @@
                         toggleButton.classList.add('btn-status-toggle');
                     }
                 }
-
+                updateAddToMonitoringButtonState() {
+                const btn = document.getElementById('addToMonitoringBtn');
+                if (this.selectedRecords.size === 0) {
+                    btn.disabled = true;
+                    btn.textContent = 'İzlemeye Ekle';
+                } else {
+                    btn.disabled = false;
+                    btn.textContent = `İzlemeye Ekle (${this.selectedRecords.size})`;
+                }
+                }
                 async toggleSelectedRecordsStatus() {
                     if (this.selectedRecords.size === 0) {
                         showNotification('Lütfen işlem yapmak için en az bir kayıt seçin.', 'info');
