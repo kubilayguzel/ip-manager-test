@@ -851,7 +851,6 @@ function listAllFilesRecursive(dir) {
   }
   return results;
 }
-
 function parseScriptContent(content) {
   const recordsMap = {};
   const insertRegex = /INSERT INTO (\w+) VALUES\s*\(([\s\S]*?)\)/g;
@@ -861,31 +860,27 @@ function parseScriptContent(content) {
     const table = match[1].toUpperCase();
     let raw = match[2];
 
-    // Virgüllere göre ayırıyoruz ama dikkat!
-    // Tırnak içindekilerdeki virgülleri korumalıyız.
     const values = [];
     let current = '';
     let inString = false;
+
     for (let i = 0; i < raw.length; i++) {
       const char = raw[i];
       if (char === "'") {
-        // Tırnak başlangıcı/bitişi
         if (inString && raw[i + 1] === "'") {
           current += "'";
-          i++; // Skip escaped quote
+          i++;
         } else {
           inString = !inString;
         }
       } else if (char === ',' && !inString) {
-        // Virgül ama string dışındaysa
-        values.push(current.trim() === "" ? null : decodeValue(current.trim()));
+        values.push(decodeValue(current.trim()));
         current = '';
       } else {
         current += char;
       }
     }
-    // Son değer
-    values.push(current.trim() === "" ? null : decodeValue(current.trim()));
+    values.push(decodeValue(current.trim()));
 
     const appNo = values[0];
     if (!appNo) continue;
@@ -908,11 +903,12 @@ function parseScriptContent(content) {
       recordsMap[appNo].markName = values[5] ?? null;
       recordsMap[appNo].niceClasses = values[6] ?? null;
     } else if (table === "HOLDER") {
+      const holderName = extractHolderName(values[2]);
       const addressParts = [values[3], values[4], values[5], values[6]]
         .filter(Boolean)
-        .join(', ') || null;
+        .join(", ") || null;
       recordsMap[appNo].holders.push({
-        name: values[2] ?? null,
+        name: holderName,
         address: addressParts,
         country: values[7] ?? null,
       });
@@ -926,6 +922,21 @@ function parseScriptContent(content) {
   }
 
   return Object.values(recordsMap);
+}
+
+function decodeValue(str) {
+  if (str === null || str === undefined) return null;
+  if (str === "") return null;
+  str = str.replace(/^'/, "").replace(/'$/, "").replace(/''/g, "'");
+  return JSON.parse('"' + str.replace(/\\/g, '\\\\') + '"');
+}
+
+function extractHolderName(str) {
+  if (!str) return null;
+  // "(7883830) XYZ COMPANY" ise parantez içini at
+  const match = str.match(/\)\s*(.*)$/);
+  if (match) return match[1];
+  return str;
 }
 
 // Yardımcı: Tek tırnaklı değeri decode eder
