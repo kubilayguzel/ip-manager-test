@@ -663,10 +663,12 @@
 
                     document.getElementById('addToMonitoringBtn').addEventListener('click', async () => {
                     console.log('✅ İzlemeye Ekle butonuna tıklandı.');
-                    
+
+                    console.log('✅ allRecords:', this.allRecords);
+
                     const selectedIds = Array.from(this.selectedRecords);
                     console.log('✅ Seçili kayıtlar:', selectedIds);
-                    
+
                     if (selectedIds.length === 0) {
                         alert('Hiçbir kayıt seçmediniz.');
                         return;
@@ -719,7 +721,6 @@
 
                     alert('İşlem tamamlandı.');
                     });
-
 
                 }
                 toggleRecordSelection(recordId, isChecked) {
