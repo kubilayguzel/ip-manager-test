@@ -516,7 +516,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
     <script type="module">
-        import { authService, ipRecordsService, personService, transactionTypeService } from './firebase-config.js';
+        import { authService, ipRecordsService, personService, transactionTypeService, auth, monitoringService } from './firebase-config.js';
         import { showNotification, formatFileSize, exportTableToExcel, exportTableToPdf } from './utils.js';
         import { loadSharedLayout } from './js/layout-loader.js';
 
@@ -543,7 +543,7 @@
                 }
 
                 async init() {
-                    this.currentUser = authService.getCurrentUser();
+                    this.currentUser = auth.currentUser; // auth objesini doğrudan kullanıyoruz
                     if (!this.currentUser) {
                         window.location.href = 'index.html';
                         return;
@@ -662,77 +662,82 @@
                     });
 
                     document.getElementById('addToMonitoringBtn').addEventListener('click', async () => {
-                    console.log('✅ İzlemeye Ekle butonuna tıklandı.');
+                        const selectedIds = Array.from(this.selectedRecords);
 
-                    console.log('✅ allRecords:', this.allRecords);
-
-                    const selectedIds = Array.from(this.selectedRecords);
-                    console.log('✅ Seçili kayıtlar:', selectedIds);
-
-                    if (selectedIds.length === 0) {
-                        alert('Hiçbir kayıt seçmediniz.');
-                        return;
-                    }
-
-                    const auth = getAuth();
-                    const user = auth.currentUser;
-
-                    if (!user) {
-                        alert('Lütfen önce oturum açın.');
-                        console.log('⛔ Kullanıcı oturum açmamış.');
-                        return;
-                    }
-
-                    const uid = user.uid;
-                    console.log('✅ Kullanıcı UID:', uid);
-
-                    console.log('✅ Tüm kayıtların detayları:');
-                    this.allRecords.forEach((r, idx) => {
-                        console.log(`Kayıt #${idx}:`, r);
-                    });
-
-                    for (const id of selectedIds) {
-                        console.log(`➡️ Kayıt aranıyor: "${id}" typeof = ${typeof id}`);
-
-                        // Şimdilik hiçbir filtreleme yapmadan, her kayıtta id ile karşılaştırma logu
-                        this.allRecords.forEach((r, idx) => {
-                        console.log(`🔍 Kayıt #${idx} id: [${r.id}] === "${id}" ? `, r.id === id);
-                        });
-
-                        // Geçici: Sadece ilk kayıt dönen log
-                        const record = this.allRecords.find(r => String(r.id).trim() === String(id).trim());
-                        console.log('🔍 Bulunan kayıt:', record);
-
-                        if (!record) {
-                        console.log('⛔ Kayıt bulunamadı:', id);
-                        continue;
+                        if (selectedIds.length === 0) {
+                            showNotification('İzlemeye eklemek için lütfen en az bir kayıt seçin.', 'info');
+                            return;
                         }
 
-                        if (record.type !== 'trademark') {
-                        console.log('⛔ Kayıt trademark değil:', record.type);
-                        continue;
+                        // Firebase auth objesini doğrudan kullanın
+                        const user = auth.currentUser;
+
+                        if (!user) {
+                            showNotification('İzlemeye kayıt eklemek için lütfen önce oturum açın.', 'warning');
+                            return;
                         }
 
-                        alert(`Kayıt ekleniyor: ${record.title}`);
+                        const uid = user.uid;
+                        let successfulAdditions = 0;
+                        let failedAdditions = 0;
+                        let skippedNonTrademark = 0;
 
-                        const res = await monitoringService.addMonitoringItem(uid, {
-                        id: record.id,
-                        title: record.title,
-                        applicationNumber: record.applicationNumber,
-                        applicationDate: record.applicationDate,
-                        status: record.status
-                        });
+                        for (const id of selectedIds) {
+                            const record = this.allRecords.find(r => String(r.id).trim() === String(id).trim());
 
-                        console.log('✅ Firestore cevabı:', res);
+                            if (!record) {
+                                console.error('İzlemeye eklenemedi: Kayıt bulunamadı, ID:', id);
+                                failedAdditions++;
+                                continue;
+                            }
 
-                        if (!res.success) {
-                        console.error('⛔ Kayıt eklenemedi:', res.error);
-                        } else {
-                        console.log('✅ Firestore’a kayıt eklendi:', record.id);
+                            // DİKKAT: Eğer sadece 'trademark' tipindeki kayıtları izlemek istiyorsanız bu bloğu tutun.
+                            // Diğer tipleri (patent, tasarım vb.) de izleme listesine eklemek isterseniz,
+                            // alttaki if bloğunu ve içindeki 'continue' ifadesini tamamen KALDIRIN.
+                            if (record.type !== 'trademark') {
+                                console.warn('İzlemeye eklenemedi: Kayıt marka (trademark) tipi değil, atlanıyor.', record.title, '(ID:', record.id, ')');
+                                skippedNonTrademark++;
+                                continue;
+                            }
+
+                            // monitoringService'i doğru şekilde çağırın
+                            // userId ve record datasını setDoc'a göndermek için bu format doğru.
+                            const res = await monitoringService.addMonitoringItem(uid, {
+                                id: record.id, // Record ID'yi 'id' olarak saklamak önemli
+                                title: record.title,
+                                applicationNumber: record.applicationNumber,
+                                applicationDate: record.applicationDate,
+                                status: record.status,
+                                type: record.type,
+                                recordType: record.recordType || 'Portföy', // recordType bilgisini de ekleyin
+                                // Diğer eklemek istediğiniz alanlar (örn: trademarkImage, owners vb.)
+                                trademarkImage: record.trademarkImage || null,
+                                owners: record.owners || []
+                            });
+
+                            if (!res.success) {
+                                console.error('İzlemeye eklenirken hata oluştu:', record.title, '(ID:', record.id, ')', res.error);
+                                failedAdditions++;
+                            } else {
+                                successfulAdditions++;
+                            }
                         }
-                    }
 
-                    alert('İşlem tamamlandı.');
+                        // İşlem sonunda kullanıcıya bilgi verin
+                        if (successfulAdditions > 0) {
+                            showNotification(`${successfulAdditions} kayıt başarıyla izlemeye eklendi.`, 'success');
+                        }
+                        if (skippedNonTrademark > 0) {
+                            showNotification(`${skippedNonTrademark} marka olmayan kayıt atlandı.`, 'info');
+                        }
+                        if (failedAdditions > 0) {
+                            showNotification(`${failedAdditions} kayıt izlemeye eklenirken hata oluştu.`, 'error');
+                        }
+
+                        // Seçimi temizle ve buton durumunu güncelle
+                        this.selectedRecords.clear();
+                        document.getElementById('selectAllCheckbox').checked = false;
+                        this.updateAddToMonitoringButtonState();
                     });
 
                 }
@@ -743,6 +748,7 @@
                         this.selectedRecords.delete(recordId);
                     }
                     this.updateRecordStatusToggleButtonState();
+                    this.updateAddToMonitoringButtonState(); // Burası yeni eklendi
                 }
 
                 updateRecordStatusToggleButtonState() {
