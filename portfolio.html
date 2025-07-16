@@ -674,8 +674,6 @@
                         return;
                     }
 
-                    const allRecordIds = this.allRecords.map(r => r.id);
-                    console.log("✅ Tüm kayıt ID'leri:", allRecordIds);
                     const auth = getAuth();
                     const user = auth.currentUser;
 
@@ -688,42 +686,55 @@
                     const uid = user.uid;
                     console.log('✅ Kullanıcı UID:', uid);
 
+                    console.log('✅ Tüm kayıtların detayları:');
+                    this.allRecords.forEach((r, idx) => {
+                        console.log(`Kayıt #${idx}:`, r);
+                    });
+
                     for (const id of selectedIds) {
-                    console.log(`➡️ Kayıt aranıyor: "${id}" typeof = ${typeof id}`);
+                        console.log(`➡️ Kayıt aranıyor: "${id}" typeof = ${typeof id}`);
 
-                    const record = this.allRecords.find(r => String(r.id).trim() === String(id).trim());
-                    console.log('🔍 Bulunan kayıt:', record);
+                        // Şimdilik hiçbir filtreleme yapmadan, her kayıtta id ile karşılaştırma logu
+                        this.allRecords.forEach((r, idx) => {
+                        console.log(`🔍 Kayıt #${idx} id: [${r.id}] === "${id}" ? `, r.id === id);
+                        });
 
-                    if (!record) {
+                        // Geçici: Sadece ilk kayıt dönen log
+                        const record = this.allRecords.find(r => String(r.id).trim() === String(id).trim());
+                        console.log('🔍 Bulunan kayıt:', record);
+
+                        if (!record) {
                         console.log('⛔ Kayıt bulunamadı:', id);
                         continue;
-                    }
+                        }
 
-                    if (record.type !== 'trademark') {
+                        if (record.type !== 'trademark') {
                         console.log('⛔ Kayıt trademark değil:', record.type);
                         continue;
-                    }
+                        }
 
-                    alert(`Kayıt ekleniyor: ${record.title}`);
+                        alert(`Kayıt ekleniyor: ${record.title}`);
 
-                    const res = await monitoringService.addMonitoringItem(uid, {
+                        const res = await monitoringService.addMonitoringItem(uid, {
                         id: record.id,
                         title: record.title,
                         applicationNumber: record.applicationNumber,
                         applicationDate: record.applicationDate,
                         status: record.status
-                    });
+                        });
 
-                    console.log('✅ Firestore cevabı:', res);
+                        console.log('✅ Firestore cevabı:', res);
 
-                    if (!res.success) {
+                        if (!res.success) {
                         console.error('⛔ Kayıt eklenemedi:', res.error);
-                    } else {
+                        } else {
                         console.log('✅ Firestore’a kayıt eklendi:', record.id);
+                        }
                     }
-                    }
+
                     alert('İşlem tamamlandı.');
                     });
+
                 }
                 toggleRecordSelection(recordId, isChecked) {
                     if (isChecked) {
