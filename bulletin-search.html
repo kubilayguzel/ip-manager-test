@@ -5,36 +5,121 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Bülten Sorgulama</title>
   <link rel="stylesheet" href="css/shared-styles.css" />
+  <style>
+    .page-wrapper {
+      flex-grow: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      background: #f5f7fa;
+    }
+    .main-container {
+      padding: 30px;
+      max-width: 1200px;
+      margin: auto;
+    }
+    .filter-section {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.05);
+      margin-bottom: 30px;
+    }
+    .results-container {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.05);
+      overflow-x: auto;
+    }
+    .results-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .results-table th,
+    .results-table td {
+      padding: 12px 16px;
+      border-bottom: 1px solid #eee;
+      text-align: left;
+    }
+    .results-table th {
+      background: #f0f0f0;
+      font-weight: 600;
+    }
+    .action-btn {
+      background: #007bff;
+      color: white;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    .action-btn:hover {
+      opacity: 0.9;
+    }
+    .modal {
+      position: fixed;
+      top:0;
+      left:0;
+      width:100%;
+      height:100%;
+      background: rgba(0,0,0,0.6);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      z-index: 9999;
+    }
+    .modal-content {
+      background:#fff;
+      padding:20px;
+      max-width:500px;
+      border-radius:8px;
+      box-shadow:0 0 20px rgba(0,0,0,0.2);
+    }
+    .close {
+      float:right;
+      font-size:24px;
+      cursor:pointer;
+    }
+    .no-results {
+      padding: 30px;
+      text-align: center;
+      color: #666;
+    }
+  </style>
 </head>
 <body>
 <div id="layout-placeholder"></div>
-<div class="main-container">
-  <h1>Bülten Sorgulama</h1>
-  <p>Yüklenmiş bültenleri numara ve türe göre sorgulayabilirsiniz.</p>
-
-  <div class="card">
-    <div class="form-row">
-      <label for="bulletinType">Bülten Türü:</label>
-      <select id="bulletinType">
-        <option value="marka">Marka</option>
-        <option value="patent">Patent</option>
-        <option value="tasarım">Tasarım</option>
-      </select>
-    </div>
-    <div class="form-row">
-      <label for="bulletinNo">Bülten No:</label>
-      <input type="text" id="bulletinNo" placeholder="Örn: 472">
-    </div>
-    <button id="searchButton" class="btn btn-primary">Sorgula</button>
-  </div>
-
-  <div id="recordsContainer" style="margin-top:20px;"></div>
+<div class="page-wrapper">
+  <main class="main-container">
+    <section class="filter-section">
+      <h1>Bülten Sorgulama</h1>
+      <p>Yüklenmiş bültenleri numara ve türe göre sorgulayabilirsiniz.</p>
+      <div>
+        <label>Bülten Türü:
+          <select id="bulletinType">
+            <option value="Marka">Marka</option>
+            <option value="Patent">Patent</option>
+            <option value="Tasarım">Tasarım</option>
+          </select>
+        </label>
+        <label style="margin-left:10px;">
+          Bülten No:
+          <input type="text" id="bulletinNo" placeholder="Örn: 2025/15" />
+        </label>
+        <button id="searchButton" class="action-btn" style="margin-left:10px;">Sorgula</button>
+      </div>
+    </section>
+    <div id="recordsContainer" class="results-container"></div>
+  </main>
 </div>
-
-<script type="module">
-  import { loadSharedLayout } from './js/layout-loader.js';
-  loadSharedLayout();
-</script>
+<div id="goodsModal" class="modal">
+  <div class="modal-content">
+    <span class="close" id="closeModal">&times;</span>
+    <h3>Mal/Hizmet Listesi</h3>
+    <div id="goodsList"></div>
+  </div>
+</div>
 <script type="module" src="./js/bulletin-search.js"></script>
 </body>
 </html>
