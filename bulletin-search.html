@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bülten Sorgulama</title>
+  <link rel="stylesheet" href="styles.css"> <!-- İsteğe bağlı -->
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      background: #f6f6f6;
+    }
+    h1 {
+      color: #333;
+    }
+    select, input, button {
+      padding: 8px;
+      margin: 5px;
+      font-size: 16px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+      background: white;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 8px;
+      text-align: left;
+    }
+    th {
+      background: #eee;
+    }
+    #statusMessage {
+      margin-top: 10px;
+      font-weight: bold;
+      color: #555;
+    }
+  </style>
+</head>
+<body>
+  <h1>Bülten Sorgulama</h1>
+  <div>
+    <label for="bulletinType">Bülten Türü:</label>
+    <select id="bulletinType">
+      <option value="marka">Marka</option>
+      <option value="patent">Patent</option>
+      <option value="tasarim">Tasarım</option>
+    </select>
+
+    <label for="bulletinNo">Bülten No:</label>
+    <input type="text" id="bulletinNo" placeholder="Örn: 2025/15">
+
+    <button id="searchBtn">Sorgula</button>
+  </div>
+
+  <div id="statusMessage"></div>
+
+  <table id="resultsTable" style="display:none;">
+    <thead>
+      <tr>
+        <th>Başvuru No</th>
+        <th>Hak Sahibi</th>
+        <th>Sınıflar</th>
+      </tr>
+    </thead>
+    <tbody id="resultsBody"></tbody>
+  </table>
+
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js"></script>
+  <script src="firebase-config.js"></script> <!-- Burada Firebase konfigürasyonun olsun -->
+  <script src="bulletin-search.js"></script>
+</body>
+</html>
