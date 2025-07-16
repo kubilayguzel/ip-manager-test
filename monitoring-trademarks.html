@@ -1,45 +1,10 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>IP Manager - Marka İzleme</title>
-  <style>
-    body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      color: #333;
-      display: flex;
-    }
-    .page-wrapper {
-      flex-grow: 1;
-      display: flex;
-      flex-direction: column;
-      height: 100vh;
-      overflow-y: auto;
-      background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-    }
-    .main-container {
-      width: 100%;
-      padding: 30px;
-      margin: 0;
-    }
-    .page-header {
-      background: rgba(255,255,255,0.95);
-      padding: 30px;
-      border-radius: 20px;
-      margin-bottom: 30px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-    }
-    .page-title {
-      font-size: 2em;
-      color: #1e3c72;
-      margin-bottom: 10px;
-    }
-    .page-subtitle {
-      color: #666;
-      font-size: 1.1em;
-    }
-  </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Marka İzleme</title>
+  <link rel="stylesheet" href="css/shared-styles.css"/>
 </head>
 <body>
   <div id="layout-placeholder"></div>
@@ -48,12 +13,11 @@
     <main class="main-container">
       <section class="page-header">
         <h1 class="page-title">📊 Marka İzleme</h1>
-        <p class="page-subtitle">Portföyden seçilen markaların izleme kaydı burada listelenecek.</p>
+        <p class="page-subtitle">İzleme listenizdeki markalar burada listelenir.</p>
       </section>
-
       <section>
         <div id="monitoring-list" class="data-table">
-          <p>Henüz bir kayıt yok.</p>
+          <p>Yükleniyor...</p>
         </div>
       </section>
     </main>
@@ -61,32 +25,74 @@
 
   <script type="module">
     import { loadSharedLayout } from './js/layout-loader.js';
+    import { monitoringService } from './firebase-config.js';
+    import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
 
-    document.addEventListener('DOMContentLoaded', async () => {
-      await loadSharedLayout({ activeMenuLink: 'monitoring-trademarks.html' });
+    const auth = getAuth();
 
-      // İleride dinamik veri ekleyeceğimiz alan
-      document.getElementById('monitoring-list').innerHTML = `
-        <table>
-          <thead>
-            <tr>
-              <th>Marka Adı</th>
-              <th>Başvuru No</th>
-              <th>Başvuru Tarihi</th>
-              <th>Durum</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>Örnek Marka</td>
-              <td>2025/12345</td>
-              <td>2025-07-15</td>
-              <td>İzleniyor</td>
-            </tr>
-          </tbody>
-        </table>
-      `;
+    document.addEventListener('DOMContentLoaded', () => {
+      loadSharedLayout({ activeMenuLink: 'monitoring-trademarks.html' });
+
+      onAuthStateChanged(auth, async (user) => {
+        if (user) {
+          const { success, data } = await monitoringService.getMonitoringItems(user.uid);
+          if (!success) {
+            document.getElementById('monitoring-list').innerHTML = '<p>Veriler yüklenirken hata oluştu.</p>';
+            return;
+          }
+          if (data.length === 0) {
+            document.getElementById('monitoring-list').innerHTML = '<p>İzleme listeniz boş.</p>';
+            return;
+          }
+
+          let html = `
+            <table>
+              <thead>
+                <tr>
+                  <th>Marka Adı</th>
+                  <th>Başvuru No</th>
+                  <th>Başvuru Tarihi</th>
+                  <th>Durum</th>
+                  <th>İşlem</th>
+                </tr>
+              </thead>
+              <tbody>
+          `;
+          data.forEach(r => {
+            html += `
+              <tr data-id="${r.id}">
+                <td>${r.title || '-'}</td>
+                <td>${r.applicationNumber || '-'}</td>
+                <td>${r.applicationDate || '-'}</td>
+                <td>${r.status || '-'}</td>
+                <td>
+                  <button class="remove-monitoring-btn">İzlemeden Kaldır</button>
+                </td>
+              </tr>
+            `;
+          });
+          html += '</tbody></table>';
+          document.getElementById('monitoring-list').innerHTML = html;
+
+          document.getElementById('monitoring-list').addEventListener('click', async (e) => {
+            if (e.target.classList.contains('remove-monitoring-btn')) {
+              const row = e.target.closest('tr');
+              const id = row.dataset.id;
+              if (!confirm('Bu kaydı izleme listesinden kaldırmak istiyor musunuz?')) return;
+              const res = await monitoringService.removeMonitoringItem(user.uid, id);
+              if (res.success) {
+                row.remove();
+              } else {
+                alert('Kaldırma başarısız: ' + res.error);
+              }
+            }
+          });
+        } else {
+          document.getElementById('monitoring-list').innerHTML = '<p>Bu sayfayı görüntülemek için giriş yapmalısınız.</p>';
+        }
+      });
     });
   </script>
 </body>
 </html>
+
