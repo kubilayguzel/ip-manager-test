@@ -757,17 +757,25 @@ exports.uploadImageWorker = functions
     }
   });
 
-function parseScriptContent(content, imagePathsMap = {}) {
-  const records = [];
-  const insertRegex = /INSERT INTO (\w+) VALUES\s*\(([\s\S]*?)\)/g;
-  let match;
-  while ((match = insertRegex.exec(content)) !== null) {
+function parseScriptContent(content) {
+  const recordsMap = {};
+  
+  // Her INSERT statement'ı satır satır ayıralım
+  const lines = content.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+  
+  for (const line of lines) {
+    if (!line.startsWith('INSERT INTO')) continue;
+    
+    const match = line.match(/INSERT INTO (\w+) VALUES\s*\((.*)\)$/);
+    if (!match) continue;
+    
     const table = match[1].toUpperCase();
     let raw = match[2];
 
     const values = [];
-    let current = "";
+    let current = '';
     let inString = false;
+
     for (let i = 0; i < raw.length; i++) {
       const char = raw[i];
       if (char === "'") {
@@ -777,33 +785,55 @@ function parseScriptContent(content, imagePathsMap = {}) {
         } else {
           inString = !inString;
         }
-      } else if (char === "," && !inString) {
+      } else if (char === ',' && !inString) {
         values.push(decodeValue(current.trim()));
-        current = "";
+        current = '';
       } else {
         current += char;
       }
     }
     values.push(decodeValue(current.trim()));
 
-    if (table === "TRADEMARK") {
-      const applicationNo = decodeValue(values[1]) ?? "UNKNOWN";
-      const imagePath = imagePathsMap[applicationNo] || null;
-      records.push({
-        applicationNo,
-        applicationDate: decodeValue(values[2]) || null,
-        markName: decodeValue(values[3]) || null,
-        niceClasses: decodeValue(values[7])?.split(",") || [],
+    const appNo = values[0];
+    if (!appNo) continue;
+
+    if (!recordsMap[appNo]) {
+      recordsMap[appNo] = {
+        applicationNo: appNo,
+        applicationDate: null,
+        markName: null,
+        niceClasses: null,
         holders: [],
         goods: [],
         extractedGoods: [],
         attorneys: [],
-        imagePath,
-      });
+      };
     }
 
+    if (table === "TRADEMARK") {
+      recordsMap[appNo].applicationDate = values[1] ?? null;
+      recordsMap[appNo].markName = values[5] ?? null;
+      recordsMap[appNo].niceClasses = values[6] ?? null;
+      recordsMap[appNo].imagePath = imagePathsMap?.[appNo] ?? null;
+    } else if (table === "HOLDER") {
+      const holderName = extractHolderName(values[2]);
+      let addressParts = [values[3], values[4], values[5], values[6]].filter(Boolean).join(", ");
+      if (addressParts.trim() === "") addressParts = null;
+      recordsMap[appNo].holders.push({
+        name: holderName,
+        address: addressParts,
+        country: values[7] ?? null,
+      });
+    } else if (table === "GOODS") {
+      recordsMap[appNo].goods.push(values[3] ?? null);
+    } else if (table === "EXTRACTEDGOODS") {
+      recordsMap[appNo].extractedGoods.push(values[3] ?? null);
+    } else if (table === "ATTORNEY") {
+      recordsMap[appNo].attorneys.push(values[2] ?? null);
+    }
   }
-  return records;
+
+  return Object.values(recordsMap);
 }
 
 
