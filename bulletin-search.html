@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Bülten Sorgulama</title>
   <link rel="stylesheet" href="css/shared-styles.css" />
+  <link rel="stylesheet" href="css/selectbox.css" /> <!-- Ortak selectbox stil dosyası -->
   <style>
     .page-wrapper {
       flex-grow: 1;
@@ -12,6 +13,7 @@
       flex-direction: column;
       background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
       min-height: 100vh;
+      padding-top: 80px; /* Topbar kapatmasın diye */
     }
     .main-container {
       width: 100%;
@@ -30,43 +32,30 @@
       color: #1e3c72;
       margin-bottom: 10px;
     }
-    .page-subtitle {
-      color: #666;
-      font-size: 1.1em;
-    }
     .tasks-container {
       background: rgba(255,255,255,0.95);
       border-radius: 20px;
       box-shadow: 0 10px 30px rgba(0,0,0,0.1);
       overflow-x: auto;
     }
-    .tasks-table {
-      width: 100%;
-      border-collapse: collapse;
-    }
-    .tasks-table th,
-    .tasks-table td {
-      padding: 15px;
-      text-align: left;
-      border-bottom: 1px solid #f0f0f0;
-      vertical-align: middle;
-    }
-    .tasks-table th {
-      background: #f8f9fa;
-      font-weight: 600;
+    .search-section {
+      display: flex;
+      gap: 15px;
+      align-items: center;
+      padding: 20px;
+      flex-wrap: wrap;
     }
     .action-btn {
       background: #007bff;
       color: white;
       border: none;
-      padding: 8px 12px;
+      padding: 8px 14px;
       border-radius: 6px;
       cursor: pointer;
-      margin: 0;
       transition: all 0.3s ease;
     }
     .action-btn:hover {
-      opacity: 0.9;
+      background-color: #0056b3;
     }
     .marka-image {
       max-height: 60px;
@@ -105,37 +94,48 @@
   </style>
 </head>
 <body>
-<div id="layout-placeholder"></div>
-<div class="page-wrapper">
-  <main class="main-container">
-    <section class="page-header">
-      <h1 class="page-title">Bülten Sorgulama</h1>
-      <p class="page-subtitle">Marka, Patent ve Tasarım bültenlerini sorgulayabilirsiniz.</p>
-    </section>
-    <div class="tasks-container" style="padding:20px;">
-      <label for="bulletinType">Bülten Türü:</label>
-      <select id="bulletinType">
-        <option value="marka">Marka</option>
-        <option value="patent">Patent</option>
-        <option value="tasarim">Tasarım</option>
-      </select>
-      <label for="bulletinNo" style="margin-left:15px;">Bülten No:</label>
-      <input type="text" id="bulletinNo" placeholder="Örn: 2025/20">
-      <button id="searchButton" class="action-btn">Sorgula</button>
-    </div>
-    <div id="recordsContainer" style="margin-top:30px;"></div>
-  </main>
-</div>
+  <div id="layout-placeholder"></div>
+  <div class="page-wrapper">
+    <main class="main-container">
+      <section class="page-header">
+        <h1 class="page-title">Bülten Sorgulama</h1>
+        <p class="page-subtitle">Marka, Patent ve Tasarım bültenlerini sorgulayabilirsiniz.</p>
+      </section>
 
-<!-- Modal -->
-<div id="goodsModal" class="modal">
-  <div class="modal-content">
-    <span id="closeGoodsModal" class="close">&times;</span>
-    <h2>Mal / Hizmet Listesi</h2>
-    <ul id="goodsList" style="margin-top:15px; line-height:1.5;"></ul>
+      <div class="tasks-container">
+        <div class="search-section">
+          <div class="custom-select-container">
+            <label for="bulletinType">Bülten Türü:</label>
+            <select id="bulletinType" class="custom-select">
+              <option value="marka">Marka</option>
+              <option value="patent">Patent</option>
+              <option value="tasarim">Tasarım</option>
+            </select>
+          </div>
+
+          <div>
+            <label for="bulletinNo">Bülten No:</label><br/>
+            <input type="text" id="bulletinNo" placeholder="Örn: 2025/20" />
+          </div>
+
+          <button id="searchButton" class="action-btn">Sorgula</button>
+        </div>
+      </div>
+
+      <div id="recordsContainer" style="margin-top:30px;"></div>
+    </main>
   </div>
-</div>
 
-<script type="module" src="js/bulletin-search.js"></script>
+  <!-- Modal -->
+  <div id="goodsModal" class="modal">
+    <div class="modal-content">
+      <span id="closeGoodsModal" class="close">&times;</span>
+      <h2>Mal / Hizmet Listesi</h2>
+      <ul id="goodsList" style="margin-top:15px; line-height:1.5;"></ul>
+    </div>
+  </div>
+
+  <script type="module" src="js/bulletin-search.js"></script>
+  <script src="js/selectbox.js"></script> <!-- Ortak select kutusu JS -->
 </body>
 </html>
