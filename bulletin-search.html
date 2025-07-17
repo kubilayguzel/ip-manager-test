@@ -102,29 +102,20 @@
         <p class="page-subtitle">Marka, Patent ve Tasarım bültenlerini sorgulayabilirsiniz.</p>
       </section>
 
-      <div class="tasks-container">
-        <div class="search-section">
-          <div class="custom-select-container">
-            <label for="bulletinType">Bülten Türü:</label>
-            <select id="bulletinType" class="custom-select">
-              <option value="marka">Marka</option>
-              <option value="patent">Patent</option>
-              <option value="tasarim">Tasarım</option>
-            </select>
-          </div>
+      <div class="tasks-container" style="padding: 20px;">
+  <label for="bulletinType">Bülten Türü:</label>
+  <select id="bulletinType" class="custom-select">
+    <option value="marka">Marka</option>
+    <option value="patent">Patent</option>
+    <option value="tasarim">Tasarım</option>
+  </select>
+</div>
 
-          <div>
-            <label for="bulletinNo">Bülten No:</label><br/>
-            <input type="text" id="bulletinNo" placeholder="Örn: 2025/20" />
-          </div>
-
-          <button id="searchButton" class="action-btn">Sorgula</button>
-        </div>
-      </div>
-
-      <div id="recordsContainer" style="margin-top:30px;"></div>
-    </main>
-  </div>
+<div id="tabContainer" class="tabs-container" style="margin: 20px;"></div>
+<div id="recordsContainer" class="tasks-container" style="margin-top: 10px;"></div>
+<div id="paginationContainer" class="pagination-container" style="margin: 20px; text-align:center;"></div>
+</main>
+</div>
 
   <!-- Modal -->
   <div id="goodsModal" class="modal">
