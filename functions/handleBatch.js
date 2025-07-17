@@ -37,29 +37,37 @@ exports.handleBatch = functions
         const normalizedAppNo = record.applicationNo.replace(/\//g, "-");
         const alternativeAppNo = record.applicationNo.replace(/\//g, "_");
 
-        const imageFile = imageFiles.find((f) => {
-          const lowerF = f.toLowerCase();
-          return lowerF.includes(normalizedAppNo) || lowerF.includes(alternativeAppNo);
-        });
+        function findMatchingImage(applicationNo, imageFiles) {
+        const cleanNo = applicationNo.replace(/\D/g, ""); // Sadece rakamlar
+        for (const file of imageFiles) {
+            const fileDigits = file.replace(/\D/g, "");
+            if (fileDigits.includes(cleanNo.slice(-5))) {
+            return file;
+            }
+        }
+        return null;
+        }
+
+        // 🔽 BURAYI EKLE 🔽
+        const imageFile = findMatchingImage(record.applicationNo, imageFiles);
 
         if (imageFile && fs.existsSync(imageFile)) {
-          const destFileName = `bulletins/${bulletinId}/${path.basename(imageFile)}`;
-          console.log(`📦 Resim yükleniyor: ${destFileName}`);
+        const destFileName = `bulletins/${bulletinId}/${path.basename(imageFile)}`;
+        console.log(`📦 Resim yükleniyor: ${destFileName}`);
 
-          await bucket.upload(imageFile, {
+        await bucket.upload(imageFile, {
             destination: destFileName,
             metadata: {
-              contentType: getContentType(imageFile),
+            contentType: getContentType(imageFile),
             },
-          });
+        });
 
-          imagePath = destFileName;
-          uploadedImageCount++;
+        imagePath = destFileName;
+        uploadedImageCount++;
         } else {
-          console.warn(`⚠️ Resim dosyası bulunamadı: ${record.applicationNo}`);
+        console.warn(`⚠️ Resim dosyası bulunamadı: ${record.applicationNo}`);
         }
       }
-
       const docData = {
         bulletinId,
         applicationNo: record.applicationNo ?? null,
