@@ -658,6 +658,26 @@ exports.processTrademarkBulletinUpload = functions
     zip.extractAllTo(extractTargetDir, true);
 
     const allFiles = listAllFilesRecursive(extractTargetDir);
+    // 🔽 GÖRSELLERİ STORAGE'A YÜKLE (BİR KEREYE MAHSUS)
+    const imageFiles = allFiles.filter((p) => /\.(jpg|jpeg|png)$/i.test(p));
+    const uploadPromises = [];
+
+    for (const localPath of imageFiles) {
+      const filename = path.basename(localPath);
+      const destination = `bulletin-assets/raw/${filename}`;
+
+      console.log(`📤 Görsel yükleniyor: ${destination}`);
+      uploadPromises.push(
+        bucket.upload(localPath, {
+          destination,
+          metadata: { contentType: getContentType(filename) },
+        })
+      );
+    }
+
+    await Promise.all(uploadPromises);
+    console.log(`✅ ${imageFiles.length} görsel Storage'a yüklendi.`);
+
 
     const imagePaths = allFiles
       .filter((p) => /\.(jpg|jpeg|png)$/i.test(p))
