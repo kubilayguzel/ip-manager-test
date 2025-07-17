@@ -9,6 +9,8 @@ const fileInput = document.getElementById("bulletinFileTrademark");
 const form = document.getElementById("bulletinUploadFormTrademark");
 const selectedFileName = document.getElementById("selectedFileNameTrademark");
 const uploadStatus = document.getElementById("uploadStatusTrademark");
+const progressContainer = document.getElementById("progressContainer");
+const progressBar = document.getElementById("progressBar");
 
 let selectedFile = null;
 
@@ -36,7 +38,6 @@ fileInput.addEventListener("change", (e) => {
   selectedFileName.textContent = selectedFile.name;
 });
 
-// Form submit
 form.addEventListener("submit", async (e) => {
   e.preventDefault();
 
@@ -49,32 +50,36 @@ form.addEventListener("submit", async (e) => {
   try {
     uploadStatus.textContent = "Yükleniyor...";
     uploadStatus.style.color = "#333";
+    progressContainer.style.display = "block";
+    progressBar.style.width = "0%";
+    progressBar.textContent = "0%";
 
-    // Depolama yolu
     const storagePath = `bulletins/${Date.now()}_${selectedFile.name}`;
     const fileRef = ref(storage, storagePath);
-
     const uploadTask = uploadBytesResumable(fileRef, selectedFile);
 
-    // Progress takibi
     uploadTask.on(
       "state_changed",
       (snapshot) => {
         const percent = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
         uploadStatus.textContent = `Yükleniyor: %${percent}`;
+        progressBar.style.width = `${percent}%`;
+        progressBar.textContent = `${percent}%`;
       },
       (error) => {
         console.error("Yükleme hatası:", error);
         uploadStatus.textContent = "Hata: " + error.message;
         uploadStatus.style.color = "red";
+        progressBar.style.background = "crimson";
+        progressBar.textContent = "HATA";
       },
       () => {
         uploadStatus.textContent = "✅ Yükleme tamamlandı! İşlem başlatıldı.";
         uploadStatus.style.color = "green";
-        // İsteğe bağlı: dosya yolunu veya URL'yi saklayabilirsin
+        progressBar.style.width = "100%";
+        progressBar.textContent = "100%";
       }
     );
-
   } catch (error) {
     console.error("Hata:", error);
     uploadStatus.textContent = "Hata: " + error.message;
