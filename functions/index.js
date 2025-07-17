@@ -778,7 +778,7 @@ function parseScriptContent(content, imagePathsMap = {}) {
           inString = !inString;
         }
       } else if (char === "," && !inString) {
-        values.push(current.trim());
+        values.push(decodeValue(current.trim()));
         current = "";
       } else {
         current += char;
@@ -789,7 +789,13 @@ function parseScriptContent(content, imagePathsMap = {}) {
     if (table === "TRADEMARK") {
       const applicationNo = decodeValue(values[1]) ?? "UNKNOWN";
       const imagePath = imagePathsMap[applicationNo] || null;
-
+      console.log("📦 Trademark kaydı:", {
+        applicationNo,
+        applicationDate: decodeValue(values[2]),
+        markName: decodeValue(values[3]),
+        niceClasses: decodeValue(values[7])?.split(","),
+        imagePath,
+      });
       records.push({
         applicationNo,
         applicationDate: decodeValue(values[2]) || null,
