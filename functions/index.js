@@ -752,7 +752,11 @@ exports.processTrademarkBulletinUpload = functions
       console.log(`[ADIM 2 BAŞARILI] tmbulletin bulundu: ${scriptFilePath}`);
       const scriptContent = fs.readFileSync(scriptFilePath, "utf8");
 
-      const records = parseScriptContent(scriptContent); // parseScriptContent fonksiyonu aşağıda güncellendi
+      const imageFiles = allFiles.filter((p) =>
+        /\.(jpg|jpeg|png)$/i.test(p)
+      );
+
+      const records = parseScriptContent(scriptContent, imageFiles, bucket, bulletinId);
       console.log(`Toplam ${records.length} kayıt parse edildi.`);
       const { PubSub } = require("@google-cloud/pubsub");
       const pubsub = new PubSub();
@@ -770,10 +774,6 @@ exports.processTrademarkBulletinUpload = functions
         await pubsub.topic(topicName).publishMessage({ data: dataBuffer });
         console.log(`📤 Chunk ${i / batchSize + 1} kuyruğa gönderildi (adet: ${batch.length})`);
       }
-
-      const imageFiles = allFiles.filter((p) =>
-        /\.(jpg|jpeg|png)$/i.test(p)
-      );
 
     } catch (error) {
       console.error("İşlem hatası:", error);
