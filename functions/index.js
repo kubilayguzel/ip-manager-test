@@ -660,12 +660,12 @@ exports.processTrademarkBulletinUpload = functions
     const allFiles = listAllFilesRecursive(extractTargetDir);
     // 🔽 GÖRSELLERİ STORAGE'A YÜKLE (BİR KEREYE MAHSUS)
     const imageFiles = allFiles.filter((p) => /\.(jpg|jpeg|png)$/i.test(p));
+    console.log(`📤 Toplam ${imageFiles.length} görsel yükleniyor...`);
     const uploadPromises = [];
 
     for (const localPath of imageFiles) {
       const filename = path.basename(localPath);
       const destination = `trademarkBulletinImages/${filename}`;
-      console.log(`📤 Görsel yükleniyor: ${destination}`);
       uploadPromises.push(
         bucket.upload(localPath, {
           destination,
@@ -673,10 +673,9 @@ exports.processTrademarkBulletinUpload = functions
         })
       );
     }
-
+    console.log(`🔁 ${imageFiles.length} dosya yükleme kuyruğuna alındı.`);
     await Promise.all(uploadPromises);
-    console.log(`✅ ${imageFiles.length} görsel Storage'a yüklendi.`);
-
+    console.log(`✅ Tüm dosyalar yüklendi.`);
 
     const imagePaths = allFiles
       .filter((p) => /\.(jpg|jpeg|png)$/i.test(p))
