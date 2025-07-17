@@ -667,6 +667,7 @@ exports.processTrademarkBulletinUpload = functions
   .onFinalize(async (object) => {
     const filePath = object.name;
     const fileName = path.basename(filePath);
+    const bucket = admin.storage().bucket();
     if (!fileName.endsWith(".zip")) return null;
 
     const tempFilePath = path.join(os.tmpdir(), fileName);
@@ -743,7 +744,6 @@ exports.uploadImageWorker = functions
   .pubsub.topic("trademark-image-upload")
   .onPublish(async (message) => {
     const { localPath, destinationPath } = message.json;
-    const bucket = admin.storage().bucket();
     try {
       const contentType = getContentType(destinationPath);
       await bucket.upload(localPath, {
