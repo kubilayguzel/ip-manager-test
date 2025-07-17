@@ -641,155 +641,79 @@ exports.sendEmailNotification = functions.https.onCall(async (data, context) => 
   });
 
 exports.processTrademarkBulletinUpload = functions
-  .runWith({
-    timeoutSeconds: 300, // 5 dakika zaman aşımı
-    memory: "1GB", // 1GB bellek
-  })
+  .runWith({ timeoutSeconds: 300, memory: "1GB" })
   .storage.object()
   .onFinalize(async (object) => {
-    // console.log("Fonksiyon başlangıcı, object:", JSON.stringify(object)); // Fonksiyon başlangıcını loglayın
-
-    const bucket = admin.storage().bucket(object.bucket); // Firebase Admin SDK'dan bucket alınımı
+    const bucket = admin.storage().bucket(object.bucket);
     const filePath = object.name;
     const fileName = path.basename(filePath);
+    if (!fileName.endsWith(".zip")) return null;
 
-    console.log(`Yeni dosya yüklendi: ${fileName}`);
-
-    // Sadece ZIP dosyalarını işle
-    if (!fileName.endsWith(".zip")) {
-      console.log("ZIP dosyası değil, işlem yapılmadı.");
-      return null;
-    }
-
-    // Geçici dosya ve dizin yolları
     const tempFilePath = path.join(os.tmpdir(), fileName);
     const extractTargetDir = path.join(os.tmpdir(), `extract_${Date.now()}`);
+    fs.mkdirSync(extractTargetDir, { recursive: true });
+    await bucket.file(filePath).download({ destination: tempFilePath });
 
-    try {
-      // Çıkarma klasörünü oluştur
-      fs.mkdirSync(extractTargetDir, { recursive: true });
-      console.log(`Çıkarma klasörü oluşturuldu: ${extractTargetDir}`);
+    const zip = new AdmZip(tempFilePath);
+    zip.extractAllTo(extractTargetDir, true);
 
-      // ZIP dosyasını Cloud Storage'dan geçici dizine indir
-      await bucket.file(filePath).download({ destination: tempFilePath });
-      console.log(`ZIP dosyası indirildi: ${tempFilePath}`);
+    const allFiles = listAllFilesRecursive(extractTargetDir);
 
-      // ZIP dosyasını çıkar
-      const zip = new AdmZip(tempFilePath);
-      zip.extractAllTo(extractTargetDir, true); // 'true' ile üzerine yazma izni verilir
-      console.log("ZIP dosyası çıkarıldı.");
-
-      // --- Dizin İçeriği Kontrolü (Hala kritik) ---
-      console.log("--- Çıkarılan Dizin İçeriği Kontrolü ---");
-      try {
-        const extractedContents = fs.readdirSync(extractTargetDir);
-        console.log(`EXTRACT_DIR: ${extractTargetDir}`);
-        console.log(`DOSYA SİSTEMİNDEKİ ÇIKARILAN ÖĞE SAYISI: ${extractedContents.length}`);
-        if (extractedContents.length > 0) {
-          console.log("İLK 5 ÇIKARILAN ÖĞE:", extractedContents.slice(0, 5));
-        } else {
-          console.log("ÇIKARILAN DİZİN BOŞ. ZIP İŞLEMİNDE SORUN OLABİLİR.");
-        }
-      } catch (dirReadError) {
-        console.error(`Dizin içeriği okunurken KRİTİK HATA: ${dirReadError.message}`);
-      }
-      console.log("------------------------------------------");
-
-      // Tüm dosyaları ve alt dizinleri listeleyen yardımcı fonksiyonu kullan
-      const allFiles = listAllFilesRecursive(extractTargetDir);
-      console.log(`listAllFilesRecursive TOPLAM DOSYA SAYISI: ${allFiles.length}`);
-      if (allFiles.length > 0) {
-          console.log("listAllFilesRecursive İLK 5 DOSYA YOLU:", allFiles.slice(0, 5));
-      } else {
-          console.log("allFiles dizisi listAllFilesRecursive tarafından BOŞ döndürüldü.");
-      }
-      console.log("------------------------------------------");
-
-
-      // ADIM 1: bulletin.inf veya bulletin dosyasını bul
-      console.log("[ADIM 1] bulletin.inf veya bulletin dosyası aranıyor...");
-      const bulletinInfPath = allFiles.find((p) =>
-        ["bulletin.inf", "bulletin"].includes(path.basename(p).toLowerCase())
-      );
-
-      if (!bulletinInfPath) {
-        console.error(`bulletin.inf veya bulletin bulunamadı. allFiles içeriği (basename): ${JSON.stringify(allFiles.map(f => path.basename(f)))}`);
-        throw new Error("bulletin.inf veya bulletin dosyası bulunamadı.");
-      }
-
-      console.log(`[ADIM 1 BAŞARILI] Bülten dosyası bulundu: ${bulletinInfPath}`);
-
-      const bulletinContent = fs.readFileSync(bulletinInfPath, "utf8");
-
-      const noMatch = bulletinContent.match(/NO\s*=\s*(.*)/);
-      const dateMatch = bulletinContent.match(/DATE\s*=\s*(.*)/);
-
-      const bulletinNo = noMatch ? noMatch[1].trim() : "Unknown";
-      const bulletinDate = dateMatch ? dateMatch[1].trim() : "Unknown";
-
-      console.log(`Bülten No: ${bulletinNo}, Tarih: ${bulletinDate}`);
-
-      const bulletinRef = await admin.firestore().collection("trademarkBulletins").add({
-        bulletinNo,
-        bulletinDate,
-        type: "marka",
-        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    const imagePaths = allFiles
+      .filter((p) => /\.(jpg|jpeg|png)$/i.test(p))
+      .map((p) => {
+        const filename = path.basename(p);
+        return `bulletin-assets/raw/${filename}`;
       });
-      const bulletinId = bulletinRef.id;
-      console.log(`Firestore bülten kaydı oluşturuldu: ${bulletinId}`);
 
-      // ADIM 2: tmbulletin dosyasını bul
-      console.log("[ADIM 2] tmbulletin dosyası aranıyor...");
-      const scriptFilePath = allFiles.find((p) =>
-        ["tmbulletin.log"].includes(path.basename(p).toLowerCase())
-      );
+    const bulletinInfPath = allFiles.find((p) =>
+      ["bulletin.inf", "bulletin"].includes(path.basename(p).toLowerCase())
+    );
+    if (!bulletinInfPath) throw new Error("bulletin.inf veya bulletin dosyası bulunamadı.");
+    const bulletinContent = fs.readFileSync(bulletinInfPath, "utf8");
 
-      if (!scriptFilePath) {
-        console.error(`tmbulletin bulunamadı. allFiles içeriği (basename): ${JSON.stringify(allFiles.map(f => path.basename(f)))}`);
-        throw new Error("tmbulletin dosyası bulunamadı.");
-      }
+    const noMatch = bulletinContent.match(/NO\s*=\s*(.*)/);
+    const dateMatch = bulletinContent.match(/DATE\s*=\s*(.*)/);
+    const bulletinNo = noMatch ? noMatch[1].trim() : "Unknown";
+    const bulletinDate = dateMatch ? dateMatch[1].trim() : "Unknown";
 
-      console.log(`[ADIM 2 BAŞARILI] tmbulletin bulundu: ${scriptFilePath}`);
-      const scriptContent = fs.readFileSync(scriptFilePath, "utf8");
+    const bulletinRef = await db.collection("trademarkBulletins").add({
+      bulletinNo,
+      bulletinDate,
+      type: "marka",
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+    const bulletinId = bulletinRef.id;
 
-      const imageFiles = allFiles.filter((p) =>
-        /\.(jpg|jpeg|png)$/i.test(p)
-      );
+    const scriptFilePath = allFiles.find((p) =>
+      ["tmbulletin.log"].includes(path.basename(p).toLowerCase())
+    );
+    if (!scriptFilePath) throw new Error("tmbulletin.log dosyası bulunamadı.");
+    const scriptContent = fs.readFileSync(scriptFilePath, "utf8");
 
-      const records = parseScriptContent(scriptContent, imageFiles, bucket, bulletinId);
-      console.log(`Toplam ${records.length} kayıt parse edildi.`);
-      const { PubSub } = require("@google-cloud/pubsub");
-      const pubsub = new PubSub();
-      const topicName = "trademark-batch-processing";
-      const batchSize = 100;
+    const records = parseScriptContent(scriptContent); // sadece veri
 
-      for (let i = 0; i < records.length; i += batchSize) {
-        const batch = records.slice(i, i + batchSize);
-        const message = {
-          bulletinId,
-          records: batch,
-        };
+    const { PubSub } = require("@google-cloud/pubsub");
+    const pubsub = new PubSub();
+    const topicName = "trademark-batch-processing";
+    const batchSize = 100;
 
-        const dataBuffer = Buffer.from(JSON.stringify(message));
-        await pubsub.topic(topicName).publishMessage({ data: dataBuffer });
-        console.log(`📤 Chunk ${i / batchSize + 1} kuyruğa gönderildi (adet: ${batch.length})`);
-      }
-
-    } catch (error) {
-      console.error("İşlem hatası:", error);
-      throw error;
-    } finally {
-      try {
-        if (fs.existsSync(tempFilePath)) fs.unlinkSync(tempFilePath);
-        if (fs.existsSync(extractTargetDir)) fs.rmSync(extractTargetDir, { recursive: true, force: true });
-        console.log("Geçici dosyalar temizlendi.");
-      } catch (cleanupError) {
-        console.error("Temizlik hatası:", cleanupError);
-      }
+    for (let i = 0; i < records.length; i += batchSize) {
+      const batch = records.slice(i, i + batchSize);
+      const message = {
+        bulletinId,
+        records: batch,
+        imagePaths, // sadece string path
+      };
+      const dataBuffer = Buffer.from(JSON.stringify(message));
+      await pubsub.topic(topicName).publishMessage({ data: dataBuffer });
     }
 
+    fs.unlinkSync(tempFilePath);
+    fs.rmSync(extractTargetDir, { recursive: true, force: true });
     return null;
   });
+
 
 // Yardımcı Fonksiyonlar
 
