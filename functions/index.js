@@ -913,6 +913,18 @@ function parseScriptContent(content, imageFiles, bucket, bulletinId) {
 
   return Object.values(recordsMap);
 }
+// Yardımcı Fonksiyonlar
+
+function findMatchingImage(applicationNo, imageFiles) {
+  const cleanNo = applicationNo.replace(/\D/g, "");
+  for (const file of imageFiles) {
+    const fileDigits = file.replace(/\D/g, "");
+    if (fileDigits.includes(cleanNo.slice(-5))) {
+      return file;
+    }
+  }
+  return null;
+}
 
 function decodeValue(str) {
   if (str === null || str === undefined) return null;
