@@ -752,6 +752,23 @@ exports.processTrademarkBulletinUpload = functions
 
       const records = parseScriptContent(scriptContent); // parseScriptContent fonksiyonu aşağıda güncellendi
       console.log(`Toplam ${records.length} kayıt parse edildi.`);
+      const { PubSub } = require("@google-cloud/pubsub");
+      const pubsub = new PubSub();
+      const topicName = "trademark-batch-processing";
+      const batchSize = 100;
+
+      for (let i = 0; i < records.length; i += batchSize) {
+        const batch = records.slice(i, i + batchSize);
+        const message = {
+          bulletinId,
+          records: batch,
+        };
+
+        const dataBuffer = Buffer.from(JSON.stringify(message));
+        await pubsub.topic(topicName).publishMessage({ data: dataBuffer });
+        console.log(`📤 ${i + 1}. kayıttan başlayan batch gönderildi (adet: ${batch.length})`);
+      }
+
 
       const imageFiles = allFiles.filter((p) =>
         /\.(jpg|jpeg|png)$/i.test(p)
