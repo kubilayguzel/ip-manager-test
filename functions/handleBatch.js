@@ -15,59 +15,30 @@ function getContentType(filePath) {
 }
 
 exports.handleBatch = functions
-  .runWith({ timeoutSeconds: 540, memory: "2GB" }) // maksimum süre
-  .pubsub.topic("trademark-bulletin-queue")
+  .runWith({ timeoutSeconds: 540, memory: "1GB" })
+  .pubsub.topic("trademark-batch-processing")
   .onPublish(async (message) => {
     const data = message.json;
+    const { records, bulletinId, imagePaths } = data;
+    if (!records || !Array.isArray(records)) return;
 
-    const { records, bulletinId, imageFiles } = data;
-
-    if (!records || !Array.isArray(records)) {
-      console.error("Geçersiz veya eksik kayıt dizisi.");
-      return;
-    }
-
+    const db = admin.firestore();
     const batch = db.batch();
-    let uploadedImageCount = 0;
 
-    for (const record of records) {
-      let imagePath = null;
-
-      if (record.applicationNo) {
-        const normalizedAppNo = record.applicationNo.replace(/\//g, "-");
-        const alternativeAppNo = record.applicationNo.replace(/\//g, "_");
-
-        function findMatchingImage(applicationNo, imageFiles) {
-        const cleanNo = applicationNo.replace(/\D/g, ""); // Sadece rakamlar
-        for (const file of imageFiles) {
-            const fileDigits = file.replace(/\D/g, "");
-            if (fileDigits.includes(cleanNo.slice(-5))) {
-            return file;
-            }
-        }
-        return null;
-        }
-
-        // 🔽 BURAYI EKLE 🔽
-        const imageFile = findMatchingImage(record.applicationNo, imageFiles);
-
-        if (imageFile && fs.existsSync(imageFile)) {
-        const destFileName = `bulletins/${bulletinId}/${path.basename(imageFile)}`;
-        console.log(`📦 Resim yükleniyor: ${destFileName}`);
-
-        await bucket.upload(imageFile, {
-            destination: destFileName,
-            metadata: {
-            contentType: getContentType(imageFile),
-            },
-        });
-
-        imagePath = destFileName;
-        uploadedImageCount++;
-        } else {
-        console.warn(`⚠️ Resim dosyası bulunamadı: ${record.applicationNo}`);
+    function findMatchingImage(applicationNo, imagePaths) {
+      const cleanNo = applicationNo.replace(/\D/g, "");
+      for (const path of imagePaths) {
+        const digits = path.replace(/\D/g, "");
+        if (digits.includes(cleanNo.slice(-5))) {
+          return path;
         }
       }
+      return null;
+    }
+
+    for (const record of records) {
+      const matchedImagePath = findMatchingImage(record.applicationNo, imagePaths);
+
       const docData = {
         bulletinId,
         applicationNo: record.applicationNo ?? null,
@@ -78,7 +49,8 @@ exports.handleBatch = functions
         goods: record.goods ?? [],
         extractedGoods: record.extractedGoods ?? [],
         attorneys: record.attorneys ?? [],
-        imagePath: imagePath ?? null,
+        imagePath: matchedImagePath ?? null, // sadece yol
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
       };
 
       const docRef = db.collection("trademarkBulletinRecords").doc();
@@ -86,5 +58,5 @@ exports.handleBatch = functions
     }
 
     await batch.commit();
-    console.log(`✅ Batch işlem tamamlandı. Yüklenen görsel sayısı: ${uploadedImageCount}`);
+    console.log(`✅ ${records.length} kayıt işlendi (görsel path eşleştirme ile).`);
   });
