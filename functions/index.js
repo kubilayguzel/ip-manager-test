@@ -15,6 +15,7 @@ const { GoogleAuth } = require("google-auth-library");
 const nodemailer = require("nodemailer");
 const { handleBatch } = require("./handleBatch");
 const { PubSub } = require("@google-cloud/pubsub");
+const pubsub = new PubSub();  
 
 
 if (!admin.apps.length) {
