@@ -757,7 +757,7 @@ exports.uploadImageWorker = functions
     }
   });
 
-function parseScriptContent(content) {
+function parseScriptContent(content, imagePathsMap = {}) {
   const recordsMap = {};
   
   // Her INSERT statement'ı satır satır ayıralım
