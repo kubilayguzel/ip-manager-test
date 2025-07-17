@@ -784,17 +784,17 @@ function parseScriptContent(content, imagePathsMap = {}) {
         current += char;
       }
     }
-    values.push(current.trim());
+    values.push(decodeValue(current.trim()));
 
     if (table === "TRADEMARK") {
-      const applicationNo = values[1]?.replace(/'/g, "") ?? "UNKNOWN";
+      const applicationNo = decodeValue(values[1]) ?? "UNKNOWN";
       const imagePath = imagePathsMap[applicationNo] || null;
 
       records.push({
         applicationNo,
-        applicationDate: values[2]?.replace(/'/g, "") || null,
-        markName: values[3]?.replace(/'/g, "") || null,
-        niceClasses: values[7]?.replace(/'/g, "").split(",") || [],
+        applicationDate: decodeValue(values[2]) || null,
+        markName: decodeValue(values[3]) || null,
+        niceClasses: decodeValue(values[7])?.split(",") || [],
         holders: [],
         goods: [],
         extractedGoods: [],
@@ -802,6 +802,7 @@ function parseScriptContent(content, imagePathsMap = {}) {
         imagePath,
       });
     }
+
   }
   return records;
 }
