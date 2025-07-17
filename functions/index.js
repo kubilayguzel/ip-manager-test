@@ -14,6 +14,7 @@ const { google } = require("googleapis");
 const { GoogleAuth } = require("google-auth-library");
 const nodemailer = require("nodemailer");
 const { handleBatch } = require("./handleBatch");
+const { PubSub } = require("@google-cloud/pubsub");
 
 
 if (!admin.apps.length) {
@@ -640,137 +641,131 @@ exports.sendEmailNotification = functions.https.onCall(async (data, context) => 
   }
   });
 
+function listAllFilesRecursive(dir) {
+  let results = [];
+  const list = fs.readdirSync(dir);
+  list.forEach((file) => {
+    const fullPath = path.join(dir, file);
+    const stat = fs.statSync(fullPath);
+    if (stat && stat.isDirectory()) {
+      results = results.concat(listAllFilesRecursive(fullPath));
+    } else {
+      results.push(fullPath);
+    }
+  });
+  return results;
+}
+
+function extractAppNoFromFilename(filename) {
+  const match = filename.match(/(\d{4,})/);
+  return match ? match[1] : null;
+}
+
 exports.processTrademarkBulletinUpload = functions
   .runWith({ timeoutSeconds: 300, memory: "1GB" })
   .storage.object()
   .onFinalize(async (object) => {
-    const bucket = admin.storage().bucket(object.bucket);
     const filePath = object.name;
     const fileName = path.basename(filePath);
     if (!fileName.endsWith(".zip")) return null;
 
     const tempFilePath = path.join(os.tmpdir(), fileName);
-    const extractTargetDir = path.join(os.tmpdir(), `extract_${Date.now()}`);
-    fs.mkdirSync(extractTargetDir, { recursive: true });
-    await bucket.file(filePath).download({ destination: tempFilePath });
+    const extractDir = path.join(os.tmpdir(), `extract_${Date.now()}`);
 
-    const zip = new AdmZip(tempFilePath);
-    zip.extractAllTo(extractTargetDir, true);
+    try {
+      fs.mkdirSync(extractDir, { recursive: true });
+      await bucket.file(filePath).download({ destination: tempFilePath });
 
-    const allFiles = listAllFilesRecursive(extractTargetDir);
-    // 🔽 GÖRSELLERİ STORAGE'A YÜKLE (BİR KEREYE MAHSUS)
-    const imageFiles = allFiles.filter((p) => /\.(jpg|jpeg|png)$/i.test(p));
-    console.log(`📤 Toplam ${imageFiles.length} görsel yükleniyor...`);
-    const uploadPromises = [];
+      const zip = new AdmZip(tempFilePath);
+      zip.extractAllTo(extractDir, true);
 
-    for (const localPath of imageFiles) {
-      const filename = path.basename(localPath);
-      const destination = `trademarkBulletinImages/${filename}`;
-      uploadPromises.push(
-        bucket.upload(localPath, {
-          destination,
-          metadata: { contentType: getContentType(filename) },
-        })
+      const allFiles = listAllFilesRecursive(extractDir);
+      const bulletinPath = allFiles.find((p) =>
+        ["bulletin.inf", "bulletin"].includes(path.basename(p).toLowerCase())
       );
-    }
-    console.log(`🔁 ${imageFiles.length} dosya yükleme kuyruğuna alındı.`);
-    await Promise.all(uploadPromises);
-    console.log(`✅ Tüm dosyalar yüklendi.`);
+      if (!bulletinPath) throw new Error("bulletin.inf bulunamadı.");
 
-    const imagePaths = allFiles
-      .filter((p) => /\.(jpg|jpeg|png)$/i.test(p))
-      .map((p) => {
-        const filename = path.basename(p);
-        return `bulletin-assets/raw/${filename}`;
+      const content = fs.readFileSync(bulletinPath, "utf8");
+      const bulletinNo = (content.match(/NO\s*=\s*(.*)/) || [])[1]?.trim() || "Unknown";
+      const bulletinDate = (content.match(/DATE\s*=\s*(.*)/) || [])[1]?.trim() || "Unknown";
+
+      const bulletinRef = await db.collection("trademarkBulletins").add({
+        bulletinNo,
+        bulletinDate,
+        type: "marka",
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
       });
+      const bulletinId = bulletinRef.id;
 
-    const bulletinInfPath = allFiles.find((p) =>
-      ["bulletin.inf", "bulletin"].includes(path.basename(p).toLowerCase())
-    );
-    if (!bulletinInfPath) throw new Error("bulletin.inf veya bulletin dosyası bulunamadı.");
-    const bulletinContent = fs.readFileSync(bulletinInfPath, "utf8");
+      const scriptPath = allFiles.find((p) => path.basename(p).toLowerCase() === "tmbulletin.log");
+      if (!scriptPath) throw new Error("tmbulletin.log bulunamadı.");
+      const scriptContent = fs.readFileSync(scriptPath, "utf8");
 
-    const noMatch = bulletinContent.match(/NO\s*=\s*(.*)/);
-    const dateMatch = bulletinContent.match(/DATE\s*=\s*(.*)/);
-    const bulletinNo = noMatch ? noMatch[1].trim() : "Unknown";
-    const bulletinDate = dateMatch ? dateMatch[1].trim() : "Unknown";
+      const imageFiles = allFiles.filter((p) => /\.(jpg|jpeg|png)$/i.test(p));
+      console.log(`📤 ${imageFiles.length} görsel Pub/Sub kuyruğuna gönderiliyor...`);
 
-    const bulletinRef = await db.collection("trademarkBulletins").add({
-      bulletinNo,
-      bulletinDate,
-      type: "marka",
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
-    });
-    const bulletinId = bulletinRef.id;
+      const imagePathsMap = {};
+      for (const localPath of imageFiles) {
+        const filename = path.basename(localPath);
+        const appNo = extractAppNoFromFilename(filename);
+        const destinationPath = `bulletins/${bulletinId}/${filename}`;
+        if (appNo) imagePathsMap[appNo] = destinationPath;
 
-    const scriptFilePath = allFiles.find((p) =>
-      ["tmbulletin.log"].includes(path.basename(p).toLowerCase())
-    );
-    if (!scriptFilePath) throw new Error("tmbulletin.log dosyası bulunamadı.");
-    const scriptContent = fs.readFileSync(scriptFilePath, "utf8");
+        await pubsub.topic("trademark-image-upload").publishMessage({
+          data: Buffer.from(JSON.stringify({ localPath, destinationPath })),
+        });
+      }
 
-    const records = parseScriptContent(scriptContent); // sadece veri
+      const records = parseScriptContent(scriptContent, imagePathsMap);
+      const batchSize = 100;
 
-    const { PubSub } = require("@google-cloud/pubsub");
-    const pubsub = new PubSub();
-    const topicName = "trademark-batch-processing";
-    const batchSize = 100;
+      for (let i = 0; i < records.length; i += batchSize) {
+        const batch = records.slice(i, i + batchSize);
+        await pubsub.topic("trademark-batch-processing").publishMessage({
+          data: Buffer.from(JSON.stringify({ bulletinId, records: batch })),
+        });
+      }
 
-    for (let i = 0; i < records.length; i += batchSize) {
-      const batch = records.slice(i, i + batchSize);
-      const message = {
-        bulletinId,
-        records: batch,
-        imagePaths, // sadece string path
-      };
-      const dataBuffer = Buffer.from(JSON.stringify(message));
-      await pubsub.topic(topicName).publishMessage({ data: dataBuffer });
+      console.log(`✅ ${records.length} kayıt ve ${imageFiles.length} görsel işleme alındı.`);
+    } catch (e) {
+      console.error("İşlem hatası:", e);
+      throw e;
+    } finally {
+      if (fs.existsSync(tempFilePath)) fs.unlinkSync(tempFilePath);
+      if (fs.existsSync(extractDir)) fs.rmSync(extractDir, { recursive: true, force: true });
     }
 
-    fs.unlinkSync(tempFilePath);
-    fs.rmSync(extractTargetDir, { recursive: true, force: true });
     return null;
   });
 
-
-// Yardımcı Fonksiyonlar
-
-function listAllFilesRecursive(dir) {
-  let results = [];
-  try {
-    const entries = fs.readdirSync(dir, { withFileTypes: true });
-    for (const entry of entries) {
-      const entryPath = path.join(dir, entry.name);
-      if (entry.isDirectory()) {
-        results = results.concat(listAllFilesRecursive(entryPath));
-      } else {
-        results.push(entryPath);
-      }
+exports.uploadImageWorker = functions
+  .runWith({ timeoutSeconds: 300, memory: "512MB" })
+  .pubsub.topic("trademark-image-upload")
+  .onPublish(async (message) => {
+    const { localPath, destinationPath } = message.json;
+    try {
+      const contentType = getContentType(destinationPath);
+      await bucket.upload(localPath, {
+        destination: destinationPath,
+        metadata: { contentType },
+      });
+      console.log(`✅ Yüklendi: ${destinationPath}`);
+    } catch (err) {
+      console.error(`❌ Hata (${destinationPath}):`, err);
     }
-  } catch (e) {
-    console.error(`listAllFilesRecursive hata: Dizin okunamadı ${dir}: ${e.message}`);
-    // Hata durumunda boş dizi döndürerek uygulamanın çökmesini engelleriz.
-  }
-  return results;
-}
-function parseScriptContent(content, imageFiles, bucket, bulletinId) {
-  const recordsMap = {};
+  });
 
-  const lines = content.split('\n').map(line => line.trim()).filter(line => line.length > 0);
-
-  for (const line of lines) {
-    if (!line.startsWith('INSERT INTO')) continue;
-
-    const match = line.match(/INSERT INTO (\w+) VALUES\s*\((.*)\)$/);
-    if (!match) continue;
-
+function parseScriptContent(content, imagePathsMap = {}) {
+  const records = [];
+  const insertRegex = /INSERT INTO (\w+) VALUES\s*\(([\s\S]*?)\)/g;
+  let match;
+  while ((match = insertRegex.exec(content)) !== null) {
     const table = match[1].toUpperCase();
     let raw = match[2];
 
     const values = [];
-    let current = '';
+    let current = "";
     let inString = false;
-
     for (let i = 0; i < raw.length; i++) {
       const char = raw[i];
       if (char === "'") {
@@ -780,81 +775,36 @@ function parseScriptContent(content, imageFiles, bucket, bulletinId) {
         } else {
           inString = !inString;
         }
-      } else if (char === ',' && !inString) {
-        values.push(decodeValue(current.trim()));
-        current = '';
+      } else if (char === "," && !inString) {
+        values.push(current.trim());
+        current = "";
       } else {
         current += char;
       }
     }
-    values.push(decodeValue(current.trim()));
+    values.push(current.trim());
 
-    const appNo = values[0];
-    if (!appNo) continue;
+    if (table === "TRADEMARK") {
+      const applicationNo = values[1]?.replace(/'/g, "") ?? "UNKNOWN";
+      const imagePath = imagePathsMap[applicationNo] || null;
 
-    // Eğer yeni kayıt ise oluştur
-    if (!recordsMap[appNo]) {
-      // Görseli bul ve yükle
-      let imagePath = null;
-      const matchedImage = findMatchingImage(appNo, imageFiles);
-      if (matchedImage && fs.existsSync(matchedImage)) {
-        const destFileName = `bulletins/${bulletinId}/${path.basename(matchedImage)}`;
-        console.log(`📦 Resim yükleniyor: ${destFileName}`);
-
-        try {
-          bucket.upload(matchedImage, {
-            destination: destFileName,
-            metadata: {
-              contentType: getContentType(matchedImage),
-            },
-          });
-          imagePath = destFileName;
-        } catch (e) {
-          console.warn(`⚠️ Resim yüklenemedi: ${matchedImage}`, e.message);
-        }
-      } else {
-        console.warn(`⚠️ Resim dosyası bulunamadı: ${appNo}`);
-      }
-
-      // Yeni kayıt oluştur
-      recordsMap[appNo] = {
-        applicationNo: appNo,
-        applicationDate: null,
-        markName: null,
-        niceClasses: null,
+      records.push({
+        applicationNo,
+        applicationDate: values[2]?.replace(/'/g, "") || null,
+        markName: values[3]?.replace(/'/g, "") || null,
+        niceClasses: values[7]?.replace(/'/g, "").split(",") || [],
         holders: [],
         goods: [],
         extractedGoods: [],
         attorneys: [],
-        imagePath, // 🆕 eklendi
-      };
-    }
-
-    // Diğer tabloları doldur
-    if (table === "TRADEMARK") {
-      recordsMap[appNo].applicationDate = values[1] ?? null;
-      recordsMap[appNo].markName = values[5] ?? null;
-      recordsMap[appNo].niceClasses = values[6] ?? null;
-    } else if (table === "HOLDER") {
-      const holderName = extractHolderName(values[2]);
-      let addressParts = [values[3], values[4], values[5], values[6]].filter(Boolean).join(", ");
-      if (addressParts.trim() === "") addressParts = null;
-      recordsMap[appNo].holders.push({
-        name: holderName,
-        address: addressParts,
-        country: values[7] ?? null,
+        imagePath,
       });
-    } else if (table === "GOODS") {
-      recordsMap[appNo].goods.push(values[3] ?? null);
-    } else if (table === "EXTRACTEDGOODS") {
-      recordsMap[appNo].extractedGoods.push(values[3] ?? null);
-    } else if (table === "ATTORNEY") {
-      recordsMap[appNo].attorneys.push(values[2] ?? null);
     }
   }
-
-  return Object.values(recordsMap);
+  return records;
 }
+
+
 // Yardımcı Fonksiyonlar
 
 function findMatchingImage(applicationNo, imageFiles) {
