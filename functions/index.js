@@ -743,6 +743,7 @@ exports.uploadImageWorker = functions
   .pubsub.topic("trademark-image-upload")
   .onPublish(async (message) => {
     const { localPath, destinationPath } = message.json;
+    const bucket = admin.storage().bucket();
     try {
       const contentType = getContentType(destinationPath);
       await bucket.upload(localPath, {
