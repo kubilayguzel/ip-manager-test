@@ -13,6 +13,8 @@ const { createExtractorFromFile } = require("node-unrar-js");
 const { google } = require("googleapis");
 const { GoogleAuth } = require("google-auth-library");
 const nodemailer = require("nodemailer");
+const { handleBatch } = require("./handleBatch");
+
 
 if (!admin.apps.length) {
   admin.initializeApp();
@@ -766,9 +768,8 @@ exports.processTrademarkBulletinUpload = functions
 
         const dataBuffer = Buffer.from(JSON.stringify(message));
         await pubsub.topic(topicName).publishMessage({ data: dataBuffer });
-        console.log(`📤 ${i + 1}. kayıttan başlayan batch gönderildi (adet: ${batch.length})`);
+        console.log(`📤 Chunk ${i / batchSize + 1} kuyruğa gönderildi (adet: ${batch.length})`);
       }
-
 
       const imageFiles = allFiles.filter((p) =>
         /\.(jpg|jpeg|png)$/i.test(p)
