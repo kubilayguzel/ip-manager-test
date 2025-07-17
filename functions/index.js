@@ -664,8 +664,7 @@ exports.processTrademarkBulletinUpload = functions
 
     for (const localPath of imageFiles) {
       const filename = path.basename(localPath);
-      const destination = `bulletin-assets/raw/${filename}`;
-
+      const destination = `trademarkBulletinImages/${filename}`;
       console.log(`📤 Görsel yükleniyor: ${destination}`);
       uploadPromises.push(
         bucket.upload(localPath, {
