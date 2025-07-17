@@ -811,18 +811,17 @@ function listAllFilesRecursive(dir) {
   }
   return results;
 }
-function parseScriptContent(content) {
+function parseScriptContent(content, imageFiles, bucket, bulletinId) {
   const recordsMap = {};
-  
-  // Her INSERT statement'ı satır satır ayıralım
+
   const lines = content.split('\n').map(line => line.trim()).filter(line => line.length > 0);
-  
+
   for (const line of lines) {
     if (!line.startsWith('INSERT INTO')) continue;
-    
+
     const match = line.match(/INSERT INTO (\w+) VALUES\s*\((.*)\)$/);
     if (!match) continue;
-    
+
     const table = match[1].toUpperCase();
     let raw = match[2];
 
@@ -851,7 +850,31 @@ function parseScriptContent(content) {
     const appNo = values[0];
     if (!appNo) continue;
 
+    // Eğer yeni kayıt ise oluştur
     if (!recordsMap[appNo]) {
+      // Görseli bul ve yükle
+      let imagePath = null;
+      const matchedImage = findMatchingImage(appNo, imageFiles);
+      if (matchedImage && fs.existsSync(matchedImage)) {
+        const destFileName = `bulletins/${bulletinId}/${path.basename(matchedImage)}`;
+        console.log(`📦 Resim yükleniyor: ${destFileName}`);
+
+        try {
+          bucket.upload(matchedImage, {
+            destination: destFileName,
+            metadata: {
+              contentType: getContentType(matchedImage),
+            },
+          });
+          imagePath = destFileName;
+        } catch (e) {
+          console.warn(`⚠️ Resim yüklenemedi: ${matchedImage}`, e.message);
+        }
+      } else {
+        console.warn(`⚠️ Resim dosyası bulunamadı: ${appNo}`);
+      }
+
+      // Yeni kayıt oluştur
       recordsMap[appNo] = {
         applicationNo: appNo,
         applicationDate: null,
@@ -861,9 +884,11 @@ function parseScriptContent(content) {
         goods: [],
         extractedGoods: [],
         attorneys: [],
+        imagePath, // 🆕 eklendi
       };
     }
 
+    // Diğer tabloları doldur
     if (table === "TRADEMARK") {
       recordsMap[appNo].applicationDate = values[1] ?? null;
       recordsMap[appNo].markName = values[5] ?? null;
