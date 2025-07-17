@@ -774,64 +774,6 @@ exports.processTrademarkBulletinUpload = functions
         /\.(jpg|jpeg|png)$/i.test(p)
       );
 
-      const batch = admin.firestore().batch();
-      let uploadedImageCount = 0;
-
-      for (const record of records) {
-        let imagePath = null;
-
-        if (record.applicationNo) {
-          // Resim dosyası arama mantığını güçlendiriyoruz: 2024/12345 -> 2024-12345 veya 2024_12345
-          const normalizedAppNo = record.applicationNo.replace(/\//g, "-"); // Hem "/" hem de "_" için deneyebiliriz
-          const alternativeAppNo = record.applicationNo.replace(/\//g, "_");
-
-          const imageFile = imageFiles.find((f) => {
-            const lowerF = f.toLowerCase();
-            return lowerF.includes(normalizedAppNo) || lowerF.includes(alternativeAppNo);
-          });
-          
-          if (imageFile) {
-            const destFileName = `bulletins/${bulletinId}/${path.basename(imageFile)}`;
-            console.log(`Resim yükleniyor: ${destFileName}`);
-            await bucket.upload(imageFile, {
-              destination: destFileName,
-              metadata: {
-                contentType: getContentType(imageFile),
-              },
-            });
-            imagePath = destFileName;
-            uploadedImageCount++;
-          } else {
-              console.warn(`Resim dosyası bulunamadı for applicationNo: ${record.applicationNo} (arananlar: ${normalizedAppNo}, ${alternativeAppNo})`);
-          }
-        }
-
-        // !!! FIRESTORE'A GÖNDERİLECEK VERİNİN LOGLARI BAŞLANGICI !!!
-        console.log("------------------------------------------");
-        console.log("Firestore'a yazılacak Record (batch.set öncesi):");
-        const docData = {
-          bulletinId,
-          applicationNo: record.applicationNo ?? null,
-          applicationDate: record.applicationDate ?? null,
-          markName: record.markName ?? null,
-          niceClasses: record.niceClasses ?? null,
-          holders: record.holders ?? [],
-          goods: record.goods ?? [],
-          extractedGoods: record.extractedGoods ?? [],
-          attorneys: record.attorneys ?? [],
-          imagePath: imagePath ?? null, // imagePath'in null veya string olduğundan emin ol
-        };
-        console.log(JSON.stringify(docData, null, 2)); // 2 boşluk bırakarak formatlı çıktı
-        console.log("------------------------------------------");
-        // !!! FIRESTORE'A GÖNDERİLECEK VERİNİN LOGLARI SONU !!!
-
-        const docRef = admin.firestore().collection("trademarkBulletinRecords").doc();
-        batch.set(docRef, docData); // Hazırladığımız docData nesnesini gönderiyoruz
-      }
-
-      await batch.commit();
-      console.log(`Firestore'a kayıtlar eklendi. ${uploadedImageCount} resim yüklendi.`);
-
     } catch (error) {
       console.error("İşlem hatası:", error);
       throw error;
@@ -970,3 +912,36 @@ function getContentType(filePath) {
   if (/\.jpe?g$/i.test(filePath)) return "image/jpeg";
   return "application/octet-stream";
 }
+exports.handleBatch = functions
+  .region("europe-west1")
+  .pubsub
+  .topic("trademark-batch-processing")
+  .onPublish(async (message) => {
+    const data = message.json;
+    if (!data || !data.bulletinId || !Array.isArray(data.records)) {
+      console.error("Geçersiz mesaj verisi:", data);
+      return null;
+    }
+
+    const { bulletinId, records } = data;
+    const db = admin.firestore();
+    const batch = db.batch();
+
+    try {
+      for (const record of records) {
+        const docRef = db.collection("trademarkRecords").doc(); // Otomatik ID
+        batch.set(docRef, {
+          bulletinId,
+          ...record,
+          createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+      }
+
+      await batch.commit();
+      console.log(`✅ ${records.length} kayıt Firestore'a eklendi (bulletinId: ${bulletinId})`);
+    } catch (error) {
+      console.error("🔥 Batch kayıt hatası:", error);
+    }
+
+    return null;
+  });
