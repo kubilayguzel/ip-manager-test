@@ -802,11 +802,10 @@ exports.uploadImageWorker = functions
   .onPublish(async (message) => {
     console.log('🔥 uploadImageWorker tetiklendi (Batch)...');
 
-    const batchData = message.data.toString();
+    // ← BU SATIRLARI DEĞİŞTİR:
     let images;
-
     try {
-      images = JSON.parse(batchData);
+      images = message.json; // Direkt JSON al
       if (!Array.isArray(images)) throw new Error("Geçersiz batch verisi.");
     } catch (err) {
       console.error("❌ JSON parse hatası:", err);
