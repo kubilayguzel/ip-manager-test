@@ -668,16 +668,7 @@ exports.processTrademarkBulletinUpload = functions
   .onFinalize(async (object) => {
     const filePath = object.name;
     const fileName = path.basename(filePath);
-    const isZipFile = fileName?.endsWith(".zip");
-    const isInRoot = !filePath.includes("/");
-
-    if (!isZipFile || !isInRoot) {
-      console.log(`⛔ Yoksayıldı: ${filePath}`);
-      return null;
-    }
-
     const bucket = admin.storage().bucket();
-
     if (!fileName.endsWith(".zip")) return null;
 
     const tempFilePath = path.join(os.tmpdir(), fileName);
@@ -713,30 +704,23 @@ exports.processTrademarkBulletinUpload = functions
       const scriptContent = fs.readFileSync(scriptPath, "utf8");
 
       const imageFiles = allFiles.filter((p) => /\.(jpg|jpeg|png)$/i.test(p));
+      console.log(`📤 ${imageFiles.length} görsel Pub/Sub kuyruğuna gönderiliyor...`);
+
       const imagePathsMap = {};
       for (const localPath of imageFiles) {
         const filename = path.basename(localPath);
         const appNo = extractAppNoFromFilename(filename);
-        const tempDest = `temp-upload/${bulletinId}/${filename}`;
-
-        if (appNo) imagePathsMap[appNo] = tempDest;
-
-        // Geçici klasöre yükleyelim
-        await bucket.upload(localPath, {
-          destination: tempDest,
-          metadata: { contentType: getContentType(filename) },
-        });
+        const destinationPath = `bulletins/${bulletinId}/${filename}`;
+        if (appNo) imagePathsMap[appNo] = destinationPath;
 
         await pubsub.topic("trademark-image-upload").publishMessage({
-          data: Buffer.from(JSON.stringify({
-            tempPath: tempDest,
-            appNo
-          })),
+          data: Buffer.from(JSON.stringify({ localPath, destinationPath })),
         });
       }
 
       const records = parseScriptContent(scriptContent, imagePathsMap);
       const batchSize = 100;
+
       for (let i = 0; i < records.length; i += batchSize) {
         const batch = records.slice(i, i + batchSize);
         await pubsub.topic("trademark-batch-processing").publishMessage({
@@ -756,46 +740,22 @@ exports.processTrademarkBulletinUpload = functions
     return null;
   });
 
-
 exports.uploadImageWorker = functions
   .runWith({ timeoutSeconds: 300, memory: "512MB" })
   .pubsub.topic("trademark-image-upload")
   .onPublish(async (message) => {
-    const { tempPath, appNo } = message.json;
-    if (!tempPath || !appNo) {
-      console.warn("Eksik veri:", message.json);
-      return;
-    }
-
-    const bucket = admin.storage().bucket();
-    const tempFile = bucket.file(tempPath);
-    const destPath = tempPath.replace("temp-upload", "bulletins");
-
+    const { localPath, destinationPath } = message.json;
     try {
-      // Geçici klasörden kalıcı klasöre kopyala
-      await tempFile.copy(bucket.file(destPath));
-      await tempFile.delete(); // geçici dosyayı sil
-
-      console.log(`✅ Taşındı: ${tempPath} → ${destPath}`);
-
-      const snapshot = await db.collection("trademarkRecords")
-        .where("applicationNo", "==", appNo)
-        .limit(1)
-        .get();
-
-      if (snapshot.empty) {
-        console.warn(`Firestore'da applicationNo ${appNo} için kayıt bulunamadı.`);
-        return;
-      }
-
-      const docRef = snapshot.docs[0].ref;
-      await docRef.update({ imagePath: destPath });
-      console.log(`🖼️ imagePath güncellendi: ${appNo}`);
+      const contentType = getContentType(destinationPath);
+      await bucket.upload(localPath, {
+        destination: destinationPath,
+        metadata: { contentType },
+      });
+      console.log(`✅ Yüklendi: ${destinationPath}`);
     } catch (err) {
-      console.error(`❌ Hata (${tempPath}):`, err);
+      console.error(`❌ Hata (${destinationPath}):`, err);
     }
   });
-
 
 function parseScriptContent(content, imagePathsMap = {}) {
   const recordsMap = {};
