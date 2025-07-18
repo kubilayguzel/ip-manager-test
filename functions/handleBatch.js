@@ -62,8 +62,8 @@ exports.handleBatch = functions
       }
       
       // **HAFIZA OPTİMİZASYONU: Sadece gerektiğinde image matching yap**
-      const matchedImagePath = (imagePaths && imagePaths.length > 0) 
-        ? findMatchingImage(record.applicationNo, imagePaths) 
+      const matchedImagePath = (record.imagePaths && record.imagePaths.length > 0) 
+        ? record.imagePaths[0]  // Her record'un kendi imagePaths array'inden ilkini al
         : null;
 
       const docData = {
