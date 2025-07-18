@@ -63,7 +63,7 @@ exports.handleBatch = functions
       
       // **HAFIZA OPTİMİZASYONU: Sadece gerektiğinde image matching yap**
       const matchedImagePath = (record.imagePaths && record.imagePaths.length > 0) 
-        ? record.imagePaths[0]  // Her record'un kendi imagePaths array'inden ilkini al
+        ? record.imagePaths[0]  // Global imagePaths yerine record.imagePaths kullan
         : null;
 
       const docData = {
