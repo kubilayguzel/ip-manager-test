@@ -693,7 +693,26 @@ exports.processTrademarkBulletinUpload = functions
       const imagePathsForPubSub = [];
       // Script content'i hafızadan temizle
       delete scriptContent;
-      
+
+      // Görselleri applicationNo'ya göre eşle
+      const imagePathMap = {};
+      for (const localPath of imageFiles) {
+        const filename = path.basename(localPath);
+        const destinationPath = `bulletins/${bulletinId}/${filename}`;
+
+        const match = filename.match(/^(\d{4}\/\d+)/); // Örn: 2024/175199_logo.jpg
+        if (match) {
+          const appNo = match[1];
+          if (!imagePathMap[appNo]) imagePathMap[appNo] = [];
+          imagePathMap[appNo].push(destinationPath);
+        }
+      }
+      // Her kayda görsel yolunu ekle
+      for (const record of records) {
+        record.bulletinId = bulletinId;
+        record.imagePaths = imagePathMap[record.applicationNo] || [];
+      }
+   
      // Görsel işlemleri (yeni hafifletilmiş base64 yöntemi)
       const imageFiles = allFiles.filter((p) => /\.(jpg|jpeg|png)$/i.test(p));
       console.log(`📤 ${imageFiles.length} görsel base64 ile 20’lik Pub/Sub batch’lerinde gönderiliyor...`);
