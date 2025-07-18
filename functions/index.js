@@ -695,6 +695,7 @@ exports.processTrademarkBulletinUpload = functions
       delete scriptContent;
 
       // Görselleri applicationNo'ya göre eşle
+      const imageFiles = allFiles.filter((p) => /\.(jpg|jpeg|png)$/i.test(p));
       const imagePathMap = {};
       for (const localPath of imageFiles) {
         const filename = path.basename(localPath);
@@ -714,10 +715,9 @@ exports.processTrademarkBulletinUpload = functions
       }
    
      // Görsel işlemleri (yeni hafifletilmiş base64 yöntemi)
-      const imageFiles = allFiles.filter((p) => /\.(jpg|jpeg|png)$/i.test(p));
-      console.log(`📤 ${imageFiles.length} görsel base64 ile 20’lik Pub/Sub batch’lerinde gönderiliyor...`);
+     console.log(`📤 ${imageFiles.length} görsel base64 ile 20’lik Pub/Sub batch’lerinde gönderiliyor...`);
 
-      const imageBatchSize = 20;
+     const imageBatchSize = 20;
       for (let i = 0; i < imageFiles.length; i += imageBatchSize) {
         const batch = imageFiles.slice(i, i + imageBatchSize);
         const encodedImages = [];
