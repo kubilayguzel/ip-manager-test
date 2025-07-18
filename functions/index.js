@@ -694,67 +694,42 @@ exports.processTrademarkBulletinUpload = functions
       // Script content'i hafızadan temizle
       delete scriptContent;
       
-      // **HAFIZA OPTİMİZASYONU: Görselleri tek tek işle**
-      const imageFiles = allFiles.filter((p) => /\.(jpg|jpeg|png)$/i.test(p));
-      console.log(`📤 ${imageFiles.length} görsel tek tek işleniyor...`);
+     // Görsel işlemleri (yeni hafifletilmiş base64 yöntemi)
+const imageFiles = allFiles.filter((p) => /\.(jpg|jpeg|png)$/i.test(p));
+console.log(`📤 ${imageFiles.length} görsel base64 ile Pub/Sub’a gönderiliyor...`);
 
-      // Görsel path'leri sadece string olarak sakla, buffer'ları hafızada tutma
-      const imagePathsForPubSub = [];
-      
-      // **BATCH HALİNDE GÖRSEL UPLOAD**
-      const imageBatchSize = 5; // Aynı anda sadece 5 görsel işle
-      for (let i = 0; i < imageFiles.length; i += imageBatchSize) {
-        const batch = imageFiles.slice(i, i + imageBatchSize);
-        
-        await Promise.all(batch.map(async (localPath) => {
-          const filename = path.basename(localPath);
-          const destinationPath = `bulletins/${bulletinId}/${filename}`;
-          imagePathsForPubSub.push(destinationPath);
-          
-          // **HAFIZA OPTİMİZASYONU: Stream kullan**
-          const imageStream = fs.createReadStream(localPath);
-          const bufferChunks = [];
-          
-          for await (const chunk of imageStream) {
-            bufferChunks.push(chunk);
-          }
-          
-          const imageBuffer = Buffer.concat(bufferChunks);
-          
-          await pubsub.topic("trademark-image-upload").publishMessage({
-            data: imageBuffer,
-            attributes: {
-              destinationPath: destinationPath,
-              bulletinId: bulletinId,
-              contentType: getContentType(filename)
-            }
-          });
-          
-          // Buffer'ı hemen temizle
-          imageBuffer.fill(0);
-        }));
-        
-        // Her batch'ten sonra kısa bir bekleme (hafıza temizlenmesi için)
-        await new Promise(resolve => setTimeout(resolve, 100));
-      }
+const imagePathsForPubSub = [];
+const imageBatchSize = 5;
 
-      // **HAFIZA OPTİMİZASYONU: Records'ları küçük batch'lerde işle**
-      const recordBatchSize = 50; // Batch boyutunu küçült
-      
-      for (let i = 0; i < records.length; i += recordBatchSize) {
-        const batchRecords = records.slice(i, i + recordBatchSize);
-        
-        await pubsub.topic("trademark-batch-processing").publishMessage({
-          data: Buffer.from(JSON.stringify({ 
-            bulletinId, 
-            records: batchRecords, 
-            imagePaths: imagePathsForPubSub 
-          })),
-        });
-        
-        // Her batch'ten sonra kısa bekleme
-        await new Promise(resolve => setTimeout(resolve, 50));
+for (let i = 0; i < imageFiles.length; i += imageBatchSize) {
+  const batch = imageFiles.slice(i, i + imageBatchSize);
+
+  await Promise.all(batch.map(async (localPath) => {
+    const filename = path.basename(localPath);
+    const destinationPath = `bulletins/${bulletinId}/${filename}`;
+    imagePathsForPubSub.push(destinationPath);
+
+    const imageStream = fs.createReadStream(localPath);
+    let base64 = '';
+
+    for await (const chunk of imageStream) {
+      base64 += chunk.toString('base64');
+    }
+
+    await pubsub.topic("trademark-image-upload").publishMessage({
+      data: Buffer.from(base64),
+      attributes: {
+        destinationPath,
+        bulletinId,
+        contentType: getContentType(filename)
       }
+    });
+
+    base64 = ''; // Hafızayı boşalt
+  }));
+
+  await new Promise(resolve => setTimeout(resolve, 150)); // Hafıza için bekleme
+}
 
       console.log(`✅ ${records.length} kayıt ve ${imageFiles.length} görsel işleme alındı.`);
       
@@ -785,56 +760,41 @@ exports.processTrademarkBulletinUpload = functions
   });
 
 exports.uploadImageWorker = functions
-  .region('europe-west1')  // ← EN ÖNEMLİ EKSIK - BU SATIRI EKLEYİN
+  .region('europe-west1')
   .runWith({ timeoutSeconds: 300, memory: "512MB" })
   .pubsub.topic("trademark-image-upload")
   .onPublish(async (message) => {
-    // ← DEBUG LOG'LARI EKLEYİN
-    console.log('🔥 uploadImageWorker fonksiyonu tetiklendi!');
-    console.log('📨 Message attributes:', message.attributes);
-    
-    const imageBuffer = message.data; 
-    const { destinationPath, contentType } = message.attributes; 
+    console.log('🔥 uploadImageWorker tetiklendi!');
+    const { destinationPath, contentType } = message.attributes;
 
-    // ← VALİDASYON KONTROLLERI EKLEYİN
     if (!destinationPath) {
       console.error('❌ destinationPath attribute eksik!');
-      return; // Fonksiyonu sonlandır
-    }
-    
-    if (!imageBuffer || imageBuffer.length === 0) {
-      console.error('❌ Image buffer boş veya geçersiz!');
       return;
     }
-    
-    console.log(`📤 Upload başlıyor: ${destinationPath}`);
-    console.log(`📊 Buffer boyutu: ${imageBuffer.length} bytes`);
+
+    const imageBase64 = message.data.toString();
+    if (!imageBase64) {
+      console.error('❌ Base64 veri boş!');
+      return;
+    }
+
+    const imageBuffer = Buffer.from(imageBase64, 'base64');
+    console.log(`📤 Görsel yükleniyor: ${destinationPath} (${imageBuffer.length} bytes)`);
 
     try {
-      const file = bucket.file(destinationPath);
+      const file = admin.storage().bucket().file(destinationPath);
       await file.save(imageBuffer, {
-        contentType: contentType || 'image/jpeg', // ← Default değer ekleyin
-        resumable: false, 
+        contentType: contentType || 'image/jpeg',
+        resumable: false,
       });
-      
-      // ← UPLOAD DOĞRULAMA EKLEYİN
-      const [exists] = await file.exists();
-      if (exists) {
-        console.log(`✅ Upload başarılı ve doğrulandı: ${destinationPath}`);
-      } else {
-        console.error(`❌ Upload sonrası dosya bulunamadı: ${destinationPath}`);
-      }
-      
+
+      console.log(`✅ Yükleme başarılı: ${destinationPath}`);
     } catch (err) {
-      console.error(`❌ Upload hatası (${destinationPath}):`, err);
-      console.error('Hata detayları:', err.message);
-      console.error('Hata kodu:', err.code);
-      
-      // ← HATAYI YENİDEN FIRLATARAK RETRY TETİKLEYİN
+      console.error(`❌ Yükleme hatası: ${destinationPath}`, err);
       throw err;
     }
   });
-  
+
 function parseScriptContent(content) {
   const recordsMap = {};
   
