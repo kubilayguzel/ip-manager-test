@@ -664,6 +664,7 @@ function extractAppNoFromFilename(filename) {
   return match ? match[1] : null;
 }
 
+
 exports.processTrademarkBulletinUpload = functions
   .runWith({ timeoutSeconds: 540, memory: "1GB" })
   .storage.object()
@@ -671,7 +672,7 @@ exports.processTrademarkBulletinUpload = functions
     const filePath = object.name;
     const fileName = path.basename(filePath);
     const bucket = admin.storage().bucket();
-    if (!fileName.endsWith(".zip") && !fileName.endsWith(".rar")) return null;
+    if (!fileName.endsWith(".zip") && !fileName.endsWith(".rar")) return null; // hem zip hem rar kontrolü
 
     const tempFilePath = path.join(os.tmpdir(), fileName);
     const extractDir = path.join(os.tmpdir(), `extract_${Date.now()}`);
@@ -680,10 +681,12 @@ exports.processTrademarkBulletinUpload = functions
       fs.mkdirSync(extractDir, { recursive: true });
       await bucket.file(filePath).download({ destination: tempFilePath });
 
+      // Handle both .zip and .rar extensions
       if (fileName.endsWith(".zip")) {
         const zip = new AdmZip(tempFilePath);
         zip.extractAllTo(extractDir, true);
       } else if (fileName.endsWith(".rar")) {
+        // RAR dosyalarını işlemek için node-unrar-js kullanıyoruz
         const extractor = await createExtractorFromFile({ path: tempFilePath });
         const list = extractor.getFileList();
         if (list.files.length === 0) {
@@ -788,10 +791,9 @@ exports.uploadImageWorker = functions
     }
   });
 
-function parseScriptContent(content) { // imagePathsMap parametresi kaldırıldı
+function parseScriptContent(content) { 
   const recordsMap = {};
   
-  // Her INSERT statement'ı satır satır ayıralım
   const lines = content.split('\n').map(line => line.trim()).filter(line => line.length > 0);
   
   for (const line of lines) {
@@ -845,7 +847,6 @@ function parseScriptContent(content) { // imagePathsMap parametresi kaldırıld�
       recordsMap[appNo].applicationDate = values[1] ?? null;
       recordsMap[appNo].markName = values[5] ?? null;
       recordsMap[appNo].niceClasses = values[6] ?? null;
-      // recordsMap[appNo].imagePath = imagePathsMap?.[appNo] ?? null; // Bu satır kaldırıldı
     } else if (table === "HOLDER") {
       const holderName = extractHolderName(values[2]);
       let addressParts = [values[3], values[4], values[5], values[6]].filter(Boolean).join(", ");
@@ -868,23 +869,16 @@ function parseScriptContent(content) { // imagePathsMap parametresi kaldırıld�
 }
 
 
-// Yardımcı Fonksiyonlar
-
-// findMatchingImage fonksiyonu handleBatch.js'e taşındı
-// function findMatchingImage(applicationNo, imageFiles) { ... }
-
 function decodeValue(str) {
   if (str === null || str === undefined) return null;
   if (str === "") return null;
   str = str.replace(/^'/, "").replace(/'$/, "").replace(/''/g, "'");
-  // Unicode decode
   return str.replace(/\\u([0-9a-fA-F]{4})/g, (m, g1) => String.fromCharCode(parseInt(g1, 16)));
 }
 
 function extractHolderName(str) {
   if (!str) return null;
   str = str.trim();
-  // Eğer "(123456) Şirket Adı" ise
   const parenMatch = str.match(/^\(\d+\)\s*(.*)$/);
   if (parenMatch) {
     return parenMatch[1].trim();
@@ -897,6 +891,5 @@ function getContentType(filePath) {
   if (/\.jpe?g$/i.test(filePath)) return "image/jpeg";
   return "application/octet-stream";
 }
-// handleBatch fonksiyonu handleBatch.js dosyasından import ediliyor
-// exports.handleBatch = functions.pubsub.topic("trademark-batch-processing").onPublish(...)
+
 exports.handleBatch = handleBatch;
