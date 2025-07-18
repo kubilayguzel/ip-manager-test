@@ -927,27 +927,4 @@ function getContentType(filePath) {
   if (/\.jpe?g$/i.test(filePath)) return "image/jpeg";
   return "application/octet-stream";
 }
-
-exports.deleteMultipleFolders = functions.https.onCall(async (data, context) => {
-  const bucket = admin.storage().bucket();
-
-  // Silinecek klasör yolları
-  const foldersToDelete = [
-    'bulletins/469_images/',
-    'bulletins/r1okCfFhOVXdLBCelKaV/',
-    'bulletins/trademark_469_images/' // Önceki klasörü de burada tutalım istersen
-  ];
-
-  try {
-    for (const prefix of foldersToDelete) {
-      console.log(`Siliniyor: ${prefix}`);
-      await bucket.deleteFiles({ prefix });
-    }
-    return { success: true, message: 'Tüm klasörler başarıyla silindi.' };
-  } catch (error) {
-    console.error('Silme hatası:', error);
-    throw new functions.https.HttpsError('internal', 'Klasör(ler) silinemedi.');
-  }
-});
-
 exports.handleBatch = handleBatch;
