@@ -603,7 +603,37 @@ function extractAppNoFromFilename(filename) {
   const match = filename.match(/(\d{4,})/); 
   return match ? match[1] : null;
 }
+function parseValues(raw) {
+  const values = [];
+  let current = '';
+  let inString = false;
+  let i = 0;
 
+  while (i < raw.length) {
+    const char = raw[i];
+    
+    if (char === "'") {
+      if (inString && raw[i + 1] === "'") {
+        current += "'";
+        i += 2;
+        continue;
+      } else {
+        inString = !inString;
+      }
+    } else if (char === ',' && !inString) {
+      values.push(decodeValue(current.trim()));
+      current = '';
+      i++;
+      continue;
+    } else {
+      current += char;
+    }
+    i++;
+  }
+  
+  values.push(decodeValue(current.trim()));
+  return values;
+}
 exports.processTrademarkBulletinUpload = functions
   .runWith({ timeoutSeconds: 540, memory: "1GB" })
   .storage.object()
@@ -772,37 +802,6 @@ exports.uploadImageWorker = functions
       console.error(`❌ Hata (${destinationPath}):`, err);
     }
   });
-function parseValues(raw) {
-  const values = [];
-  let current = '';
-  let inString = false;
-  let i = 0;
-
-  while (i < raw.length) {
-    const char = raw[i];
-    
-    if (char === "'") {
-      if (inString && raw[i + 1] === "'") {
-        current += "'";
-        i += 2;
-        continue;
-      } else {
-        inString = !inString;
-      }
-    } else if (char === ',' && !inString) {
-      values.push(decodeValue(current.trim()));
-      current = '';
-      i++;
-      continue;
-    } else {
-      current += char;
-    }
-    i++;
-  }
-  
-  values.push(decodeValue(current.trim()));
-  return values;
-}
 
 function parseScriptContent(content) {
   const recordsMap = {};
