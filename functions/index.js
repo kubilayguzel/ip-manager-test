@@ -696,41 +696,39 @@ exports.processTrademarkBulletinUpload = functions
       
      // Görsel işlemleri (yeni hafifletilmiş base64 yöntemi)
 const imageFiles = allFiles.filter((p) => /\.(jpg|jpeg|png)$/i.test(p));
-console.log(`📤 ${imageFiles.length} görsel base64 ile Pub/Sub’a gönderiliyor...`);
+console.log(`📤 ${imageFiles.length} görsel base64 ile 100’lük Pub/Sub batch’lerinde gönderiliyor...`);
 
-const imagePathsForPubSub = [];
-const imageBatchSize = 5;
-
+const imageBatchSize = 100;
 for (let i = 0; i < imageFiles.length; i += imageBatchSize) {
   const batch = imageFiles.slice(i, i + imageBatchSize);
+  const encodedImages = [];
 
-  await Promise.all(batch.map(async (localPath) => {
+  for (const localPath of batch) {
     const filename = path.basename(localPath);
     const destinationPath = `bulletins/${bulletinId}/${filename}`;
     imagePathsForPubSub.push(destinationPath);
 
     const imageStream = fs.createReadStream(localPath);
     let base64 = '';
-
     for await (const chunk of imageStream) {
       base64 += chunk.toString('base64');
     }
 
-    await pubsub.topic("trademark-image-upload").publishMessage({
-      data: Buffer.from(base64),
-      attributes: {
-        destinationPath,
-        bulletinId,
-        contentType: getContentType(filename)
-      }
+    encodedImages.push({
+      destinationPath,
+      base64,
+      contentType: getContentType(filename)
     });
+  }
 
-    base64 = ''; // Hafızayı boşalt
-  }));
+  // Tek mesajda 100 görsel gönder
+  await pubsub.topic("trademark-image-upload").publishMessage({
+    data: Buffer.from(JSON.stringify(encodedImages)),
+    attributes: { batchSize: batch.length.toString() }
+  });
 
-  await new Promise(resolve => setTimeout(resolve, 150)); // Hafıza için bekleme
+  await new Promise(resolve => setTimeout(resolve, 200)); // Hafıza toparlansın
 }
-
       console.log(`✅ ${records.length} kayıt ve ${imageFiles.length} görsel işleme alındı.`);
       
       // **HAFIZA TEMİZLİĞİ**
@@ -764,35 +762,40 @@ exports.uploadImageWorker = functions
   .runWith({ timeoutSeconds: 300, memory: "512MB" })
   .pubsub.topic("trademark-image-upload")
   .onPublish(async (message) => {
-    console.log('🔥 uploadImageWorker tetiklendi!');
-    const { destinationPath, contentType } = message.attributes;
+    console.log('🔥 uploadImageWorker tetiklendi (Batch)...');
 
-    if (!destinationPath) {
-      console.error('❌ destinationPath attribute eksik!');
-      return;
-    }
-
-    const imageBase64 = message.data.toString();
-    if (!imageBase64) {
-      console.error('❌ Base64 veri boş!');
-      return;
-    }
-
-    const imageBuffer = Buffer.from(imageBase64, 'base64');
-    console.log(`📤 Görsel yükleniyor: ${destinationPath} (${imageBuffer.length} bytes)`);
+    const batchData = message.data.toString();
+    let images;
 
     try {
-      const file = admin.storage().bucket().file(destinationPath);
-      await file.save(imageBuffer, {
-        contentType: contentType || 'image/jpeg',
-        resumable: false,
-      });
-
-      console.log(`✅ Yükleme başarılı: ${destinationPath}`);
+      images = JSON.parse(batchData);
+      if (!Array.isArray(images)) throw new Error("Geçersiz batch verisi.");
     } catch (err) {
-      console.error(`❌ Yükleme hatası: ${destinationPath}`, err);
-      throw err;
+      console.error("❌ JSON parse hatası:", err);
+      return;
     }
+
+    await Promise.all(images.map(async (img) => {
+      const { destinationPath, base64, contentType } = img;
+
+      if (!destinationPath || !base64) {
+        console.warn('❌ Eksik veri, işlem atlandı:', img);
+        return;
+      }
+
+      const imageBuffer = Buffer.from(base64, 'base64');
+      const file = admin.storage().bucket().file(destinationPath);
+
+      try {
+        await file.save(imageBuffer, {
+          contentType: contentType || 'image/jpeg',
+          resumable: false,
+        });
+        console.log(`✅ Yüklendi: ${destinationPath}`);
+      } catch (err) {
+        console.error(`❌ Hata: ${destinationPath}`, err);
+      }
+    }));
   });
 
 function parseScriptContent(content) {
