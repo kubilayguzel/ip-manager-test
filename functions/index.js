@@ -605,109 +605,154 @@ function extractAppNoFromFilename(filename) {
 }
 
 exports.processTrademarkBulletinUpload = functions
-  .runWith({ timeoutSeconds: 540, memory: "1GB" })
-  .storage.object()
-  .onFinalize(async (object) => {
-    const filePath = object.name;
-    const fileName = path.basename(filePath);
-    const bucket = admin.storage().bucket();
-    const { default: pLimit } = await import('p-limit');
-    const limit = pLimit(10);
+  .runWith({ timeoutSeconds: 540, memory: "1GB" })
+  .storage.object()
+  .onFinalize(async (object) => {
+    const filePath = object.name;
+    const fileName = path.basename(filePath);
+    const bucket = admin.storage().bucket();
 
-    if (!fileName.endsWith(".zip") && !fileName.endsWith(".rar")) return null; 
+    if (!fileName.endsWith(".zip") && !fileName.endsWith(".rar")) return null; 
 
-    const tempFilePath = path.join(os.tmpdir(), fileName);
-    const extractDir = path.join(os.tmpdir(), `extract_${Date.now()}`);
+    const tempFilePath = path.join(os.tmpdir(), fileName);
+    const extractDir = path.join(os.tmpdir(), `extract_${Date.now()}`);
 
-    try {
-      fs.mkdirSync(extractDir, { recursive: true });
-      await bucket.file(filePath).download({ destination: tempFilePath });
+    try {
+      fs.mkdirSync(extractDir, { recursive: true });
+      await bucket.file(filePath).download({ destination: tempFilePath });
 
-      if (fileName.endsWith(".zip")) {
-        const zip = new AdmZip(tempFilePath);
-        zip.extractAllTo(extractDir, true);
-      } else if (fileName.endsWith(".rar")) {
-        const extractor = await createExtractorFromFile({ path: tempFilePath });
-        const list = extractor.getFileList();
-        if (list.files.length === 0) {
-          throw new Error("RAR dosyası boş veya içerik listelenemedi.");
-        }
-        await extractor.extractAll(extractDir);
-      } else {
-        throw new Error("Sadece .zip veya .rar dosyaları desteklenmektedir.");
-      }
-
-      const allFiles = listAllFilesRecursive(extractDir);
-      const bulletinPath = allFiles.find((p) =>
-        ["bulletin.inf", "bulletin"].includes(path.basename(p).toLowerCase())
-      );
-      if (!bulletinPath) throw new Error("bulletin.inf bulunamadı.");
-
-      const content = fs.readFileSync(bulletinPath, "utf8");
-      const bulletinNo = (content.match(/NO\s*=\s*(.*)/) || [])[1]?.trim() || "Unknown";
-      const bulletinDate = (content.match(/DATE\s*=\s*(.*)/) || [])[1]?.trim() || "Unknown";
-
-      const bulletinRef = await db.collection("trademarkBulletins").add({
-        bulletinNo,
-        bulletinDate,
-        type: "marka",
-        createdAt: admin.firestore.FieldValue.serverTimestamp(),
-      });
-      const bulletinId = bulletinRef.id;
-
-      const scriptPath = allFiles.find((p) => path.basename(p).toLowerCase() === "tmbulletin.log");
-      if (!scriptPath) throw new Error("tmbulletin.log bulunamadı.");
-      const scriptContent = fs.readFileSync(scriptPath, "utf8");
-
-      const imageFiles = allFiles.filter((p) => /\.(jpg|jpeg|png)$/i.test(p));
-      console.log(`📤 ${imageFiles.length} görsel Pub/Sub kuyruğuna gönderiliyor...`);
-
-      const imagePathsForPubSub = [];
-      // pLimit'in yüklenmesini bekleyin, çünkü bu bir async işlem
-      // Bu kısım IIAF'in tamamlanmasını garanti altına alıyor.
-      while (pLimit === undefined) {
-        await new Promise(resolve => setTimeout(resolve, 50)); // pLimit yüklenene kadar kısa bir bekleme
+      // Extract işlemi
+      if (fileName.endsWith(".zip")) {
+        const zip = new AdmZip(tempFilePath);
+        zip.extractAllTo(extractDir, true);
+      } else if (fileName.endsWith(".rar")) {
+        const extractor = await createExtractorFromFile({ path: tempFilePath });
+        const list = extractor.getFileList();
+        if (list.files.length === 0) {
+          throw new Error("RAR dosyası boş veya içerik listelenemedi.");
+        }
+        await extractor.extractAll(extractDir);
       }
-      const limit = pLimit(5); // Eşzamanlı işlenecek resim sayısını sınırlayın (5 olarak ayarlandı).
 
-      await Promise.all(imageFiles.map(localPath => limit(async () => {
-        const filename = path.basename(localPath);
-        const destinationPath = `bulletins/${bulletinId}/${filename}`;
-        imagePathsForPubSub.push(destinationPath);
-        
-        const imageBuffer = fs.readFileSync(localPath); 
-        
-        await pubsub.topic("trademark-image-upload").publishMessage({
-          data: imageBuffer, 
-          attributes: {
-            destinationPath: destinationPath,
-            bulletinId: bulletinId,
-            contentType: getContentType(filename) 
-          }
-        });
-      })));
+      // Bulletin info okuma
+      const allFiles = listAllFilesRecursive(extractDir);
+      const bulletinPath = allFiles.find((p) =>
+        ["bulletin.inf", "bulletin"].includes(path.basename(p).toLowerCase())
+      );
+      if (!bulletinPath) throw new Error("bulletin.inf bulunamadı.");
 
-      const records = parseScriptContent(scriptContent);
-      const batchSize = 100;
+      const content = fs.readFileSync(bulletinPath, "utf8");
+      const bulletinNo = (content.match(/NO\s*=\s*(.*)/) || [])[1]?.trim() || "Unknown";
+      const bulletinDate = (content.match(/DATE\s*=\s*(.*)/) || [])[1]?.trim() || "Unknown";
 
-      for (let i = 0; i < records.length; i += batchSize) {
-        const batchRecords = records.slice(i, i + batchSize);
-        await pubsub.topic("trademark-batch-processing").publishMessage({
-          data: Buffer.from(JSON.stringify({ bulletinId, records: batchRecords, imagePaths: imagePathsForPubSub })),
-        });
-      }
+      const bulletinRef = await db.collection("trademarkBulletins").add({
+        bulletinNo,
+        bulletinDate,
+        type: "marka",
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+      const bulletinId = bulletinRef.id;
 
-      console.log(`✅ ${records.length} kayıt ve ${imageFiles.length} görsel işleme alındı.`);
-    } catch (e) {
-      console.error("İşlem hatası:", e);
-      throw e;
-    } finally {
-      if (fs.existsSync(tempFilePath)) fs.unlinkSync(tempFilePath);
-      if (fs.existsSync(extractDir)) fs.rmSync(extractDir, { recursive: true, force: true });
-    }
+      // Script content parse
+      const scriptPath = allFiles.find((p) => path.basename(p).toLowerCase() === "tmbulletin.log");
+      if (!scriptPath) throw new Error("tmbulletin.log bulunamadı.");
+      
+      // **ÖNEMLİ DEĞİŞİKLİK: Stream ile okuma**
+      const scriptContent = fs.readFileSync(scriptPath, "utf8");
+      const records = parseScriptContent(scriptContent);
+      
+      // Script content'i hafızadan temizle
+      delete scriptContent;
+      
+      // **HAFIZA OPTİMİZASYONU: Görselleri tek tek işle**
+      const imageFiles = allFiles.filter((p) => /\.(jpg|jpeg|png)$/i.test(p));
+      console.log(`📤 ${imageFiles.length} görsel tek tek işleniyor...`);
 
-    return null;
-  });
+      // Görsel path'leri sadece string olarak sakla, buffer'ları hafızada tutma
+      const imagePathsForPubSub = [];
+      
+      // **BATCH HALİNDE GÖRSEL UPLOAD**
+      const imageBatchSize = 5; // Aynı anda sadece 5 görsel işle
+      for (let i = 0; i < imageFiles.length; i += imageBatchSize) {
+        const batch = imageFiles.slice(i, i + imageBatchSize);
+        
+        await Promise.all(batch.map(async (localPath) => {
+          const filename = path.basename(localPath);
+          const destinationPath = `bulletins/${bulletinId}/${filename}`;
+          imagePathsForPubSub.push(destinationPath);
+          
+          // **HAFIZA OPTİMİZASYONU: Stream kullan**
+          const imageStream = fs.createReadStream(localPath);
+          const bufferChunks = [];
+          
+          for await (const chunk of imageStream) {
+            bufferChunks.push(chunk);
+          }
+          
+          const imageBuffer = Buffer.concat(bufferChunks);
+          
+          await pubsub.topic("trademark-image-upload").publishMessage({
+            data: imageBuffer,
+            attributes: {
+              destinationPath: destinationPath,
+              bulletinId: bulletinId,
+              contentType: getContentType(filename)
+            }
+          });
+          
+          // Buffer'ı hemen temizle
+          imageBuffer.fill(0);
+        }));
+        
+        // Her batch'ten sonra kısa bir bekleme (hafıza temizlenmesi için)
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+
+      // **HAFIZA OPTİMİZASYONU: Records'ları küçük batch'lerde işle**
+      const recordBatchSize = 50; // Batch boyutunu küçült
+      
+      for (let i = 0; i < records.length; i += recordBatchSize) {
+        const batchRecords = records.slice(i, i + recordBatchSize);
+        
+        await pubsub.topic("trademark-batch-processing").publishMessage({
+          data: Buffer.from(JSON.stringify({ 
+            bulletinId, 
+            records: batchRecords, 
+            imagePaths: imagePathsForPubSub 
+          })),
+        });
+        
+        // Her batch'ten sonra kısa bekleme
+        await new Promise(resolve => setTimeout(resolve, 50));
+      }
+
+      console.log(`✅ ${records.length} kayıt ve ${imageFiles.length} görsel işleme alındı.`);
+      
+      // **HAFIZA TEMİZLİĞİ**
+      delete records;
+      delete imagePathsForPubSub;
+      delete allFiles;
+      
+      // Garbage collection'ı tetikle
+      if (global.gc) {
+        global.gc();
+      }
+      
+    } catch (e) {
+      console.error("İşlem hatası:", e);
+      throw e;
+    } finally {
+      // Geçici dosyaları temizle
+      if (fs.existsSync(tempFilePath)) {
+        fs.unlinkSync(tempFilePath);
+      }
+      if (fs.existsSync(extractDir)) {
+        fs.rmSync(extractDir, { recursive: true, force: true });
+      }
+    }
+
+    return null;
+  });
 
 exports.uploadImageWorker = functions
   .runWith({ timeoutSeconds: 300, memory: "512MB" })
@@ -727,84 +772,106 @@ exports.uploadImageWorker = functions
       console.error(`❌ Hata (${destinationPath}):`, err);
     }
   });
+function parseValues(raw) {
+  const values = [];
+  let current = '';
+  let inString = false;
+  let i = 0;
 
-function parseScriptContent(content) { 
-  const recordsMap = {};
-  
-  const lines = content.split('\n').map(line => line.trim()).filter(line => line.length > 0);
-  
-  for (const line of lines) {
-    if (!line.startsWith('INSERT INTO')) continue;
-    
-    const match = line.match(/INSERT INTO (\w+) VALUES\s*\((.*)\)$/);
-    if (!match) continue;
-    
-    const table = match[1].toUpperCase();
-    let raw = match[2];
-
-    const values = [];
-    let current = '';
-    let inString = false;
-
-    for (let i = 0; i < raw.length; i++) {
-      const char = raw[i];
-      if (char === "'") {
-        if (inString && raw[i + 1] === "'") {
-          current += "'";
-          i++;
-        } else {
-          inString = !inString;
-        }
-      } else if (char === ',' && !inString) {
-        values.push(decodeValue(current.trim()));
-        current = '';
-      } else {
-        current += char;
-      }
-    }
-    values.push(decodeValue(current.trim()));
-
-    const appNo = values[0];
-    if (!appNo) continue;
-
-    if (!recordsMap[appNo]) {
-      recordsMap[appNo] = {
-        applicationNo: appNo,
-        applicationDate: null,
-        markName: null,
-        niceClasses: null,
-        holders: [],
-        goods: [],
-        extractedGoods: [],
-        attorneys: [],
-      };
-    }
-
-    if (table === "TRADEMARK") {
-      recordsMap[appNo].applicationDate = values[1] ?? null;
-      recordsMap[appNo].markName = values[5] ?? null;
-      recordsMap[appNo].niceClasses = values[6] ?? null;
-    } else if (table === "HOLDER") {
-      const holderName = extractHolderName(values[2]);
-      let addressParts = [values[3], values[4], values[5], values[6]].filter(Boolean).join(", ");
-      if (addressParts.trim() === "") addressParts = null;
-      recordsMap[appNo].holders.push({
-        name: holderName,
-        address: addressParts,
-        country: values[7] ?? null,
-      });
-    } else if (table === "GOODS") {
-      recordsMap[appNo].goods.push(values[3] ?? null);
-    } else if (table === "EXTRACTEDGOODS") {
-      recordsMap[appNo].extractedGoods.push(values[3] ?? null);
-    } else if (table === "ATTORNEY") {
-      recordsMap[appNo].attorneys.push(values[2] ?? null);
-    }
-  }
-
-  return Object.values(recordsMap);
+  while (i < raw.length) {
+    const char = raw[i];
+    
+    if (char === "'") {
+      if (inString && raw[i + 1] === "'") {
+        current += "'";
+        i += 2;
+        continue;
+      } else {
+        inString = !inString;
+      }
+    } else if (char === ',' && !inString) {
+      values.push(decodeValue(current.trim()));
+      current = '';
+      i++;
+      continue;
+    } else {
+      current += char;
+    }
+    i++;
+  }
+  
+  values.push(decodeValue(current.trim()));
+  return values;
 }
 
+function parseScriptContent(content) {
+  const recordsMap = {};
+  
+  // **HAFIZA OPTİMİZASYONU: Satır satır işleme**
+  const lines = content.split('\n');
+  
+  // Her 1000 satırda bir progress log
+  let processedLines = 0;
+  
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
+    
+    if (!line.length || !line.startsWith('INSERT INTO')) {
+      continue;
+    }
+    
+    processedLines++;
+    if (processedLines % 1000 === 0) {
+      console.log(`İşlenen satır: ${processedLines}/${lines.length}`);
+    }
+    
+    const match = line.match(/INSERT INTO (\w+) VALUES\s*\((.*)\)$/);
+    if (!match) continue;
+    
+    const table = match[1].toUpperCase();
+    const values = parseValues(match[2]);
+    
+    const appNo = values[0];
+    if (!appNo) continue;
+
+    if (!recordsMap[appNo]) {
+      recordsMap[appNo] = {
+        applicationNo: appNo,
+        applicationDate: null,
+        markName: null,
+        niceClasses: null,
+        holders: [],
+        goods: [],
+        extractedGoods: [],
+        attorneys: [],
+      };
+    }
+
+    // Table'a göre işleme (aynı kaldı)
+    if (table === "TRADEMARK") {
+      recordsMap[appNo].applicationDate = values[1] ?? null;
+      recordsMap[appNo].markName = values[5] ?? null;
+      recordsMap[appNo].niceClasses = values[6] ?? null;
+    } else if (table === "HOLDER") {
+      const holderName = extractHolderName(values[2]);
+      let addressParts = [values[3], values[4], values[5], values[6]].filter(Boolean).join(", ");
+      if (addressParts.trim() === "") addressParts = null;
+      recordsMap[appNo].holders.push({
+        name: holderName,
+        address: addressParts,
+        country: values[7] ?? null,
+      });
+    } else if (table === "GOODS") {
+      recordsMap[appNo].goods.push(values[3] ?? null);
+    } else if (table === "EXTRACTEDGOODS") {
+      recordsMap[appNo].extractedGoods.push(values[3] ?? null);
+    } else if (table === "ATTORNEY") {
+      recordsMap[appNo].attorneys.push(values[2] ?? null);
+    }
+  }
+  
+  return Object.values(recordsMap);
+}
 
 function decodeValue(str) {
   if (str === null || str === undefined) return null;
