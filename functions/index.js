@@ -668,6 +668,14 @@ exports.processTrademarkBulletinUpload = functions
   .onFinalize(async (object) => {
     const filePath = object.name;
     const fileName = path.basename(filePath);
+    const isZipFile = fileName?.endsWith(".zip");
+    const isInRoot = !filePath.includes("/");
+
+    if (!isZipFile || !isInRoot) {
+      console.log(`⛔ Yoksayıldı: ${filePath}`);
+      return null;
+    }
+
     const bucket = admin.storage().bucket();
 
     if (!fileName.endsWith(".zip")) return null;
