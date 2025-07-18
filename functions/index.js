@@ -892,3 +892,4 @@ function getContentType(filePath) {
 }
 // handleBatch fonksiyonu handleBatch.js dosyasından import ediliyor
 // exports.handleBatch = functions.pubsub.topic("trademark-batch-processing").onPublish(...)
+exports.handleBatch = handleBatch;
