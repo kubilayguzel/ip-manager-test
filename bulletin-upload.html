@@ -10,8 +10,8 @@
     .main-container {
       max-width: 100%;
       padding: 30px;
+      padding-top: 100px; /* Topbar için boşluk */
     }
-
     .bulletin-section {
       background: white;
       padding: 25px;
@@ -27,8 +27,6 @@
       margin-bottom: 15px;
       color: #555;
     }
-    
-    /* Tablo stilleri */
     .bulletin-table {
       width: 100%;
       border-collapse: collapse;
@@ -42,9 +40,6 @@
     .bulletin-table th {
       background-color: #f2f2f2;
       color: #333;
-    }
-    .bulletin-table tr:nth-child(even) {
-      background-color: #f9f9f9;
     }
     .bulletin-table .delete-btn {
         background-color: #dc3545;
@@ -61,8 +56,9 @@
 </head>
 <body>
 <div id="layout-placeholder"></div>
+
 <div class="page-wrapper">
-    <div class="main-container">
+    <main class="main-container">
         <h1>Bülten Yükleme</h1>
         <p>Marka, patent ve tasarım bültenlerini ayrı ayrı yükleyebilirsiniz.</p>
 
@@ -113,21 +109,23 @@
             <p>Bu alan yakında aktif olacaktır.</p>
             <button class="btn btn-secondary" disabled>Yakında</button>
         </div>
-    </div>
+    </main>
 </div>
 
 <script type="module">
     import { loadSharedLayout } from './js/layout-loader.js';
+    // Bu script'in tek görevi layout'u yüklemek.
+    // async/await ve DOMContentLoaded olmadan, orijinal dosyadaki gibi doğrudan çağırıyoruz.
+    // Modül script'leri zaten DOM hazır olunca çalışır.
+    loadSharedLayout({ activeMenuLink: 'bulletin-upload.html' });
+</script>
+
+<script type="module">
     import { db, storage } from './firebase-config.js';
     import { collection, getDocs, doc, deleteDoc, query, where, writeBatch } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
     import { ref, deleteObject, listAll } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 
-    // *** DÜZELTME: DOMContentLoaded listener'ı async yapıldı ve loadSharedLayout await ile çağrıldı ***
-    document.addEventListener('DOMContentLoaded', async () => {
-        await loadSharedLayout({ activeMenuLink: 'bulletin-upload.html' });
-        await loadTrademarkBulletins(); // Arayüz yüklendikten sonra bültenleri yükle
-    });
-
+    // Fonksiyonlar global scope'ta değil, bu modül içinde tanımlı
     async function loadTrademarkBulletins() {
         const tableBody = document.querySelector("#trademarkBulletinTable tbody");
         tableBody.innerHTML = '<tr><td colspan="5">Yükleniyor...</td></tr>';
@@ -136,17 +134,15 @@
             const bulletinsSnapshot = await getDocs(collection(db, "trademarkBulletins"));
             const bulletinPromises = bulletinsSnapshot.docs.map(async (docSnapshot) => {
                 const bulletinData = { id: docSnapshot.id, ...docSnapshot.data() };
-                
                 const recordsQuery = query(collection(db, "trademarkBulletinRecords"), where("bulletinId", "==", docSnapshot.id));
                 const recordsSnapshot = await getDocs(recordsQuery);
                 bulletinData.recordCount = recordsSnapshot.size;
-
                 return bulletinData;
             });
 
             const bulletins = await Promise.all(bulletinPromises);
+            
             tableBody.innerHTML = ''; 
-
             if (bulletins.length === 0) {
                  tableBody.innerHTML = '<tr><td colspan="5">Henüz yüklenmiş bir bülten bulunmuyor.</td></tr>';
                  return;
@@ -154,7 +150,7 @@
 
             bulletins.forEach(b => {
                 const tr = document.createElement('tr');
-                const uploadDate = b.createdAt && b.createdAt.toDate ? b.createdAt.toDate().toLocaleDateString('tr-TR') : 'Bilinmiyor';
+                const uploadDate = b.createdAt?.toDate ? b.createdAt.toDate().toLocaleDateString('tr-TR') : 'Bilinmiyor';
                 tr.innerHTML = `
                     <td>${b.bulletinNo || 'N/A'}</td>
                     <td>${b.bulletinDate || 'N/A'}</td>
@@ -164,68 +160,59 @@
                 `;
                 tableBody.appendChild(tr);
             });
-
         } catch (error) {
             console.error("Bültenler yüklenirken hata:", error);
             tableBody.innerHTML = '<tr><td colspan="5">Bültenler yüklenirken bir hata oluştu. Lütfen konsolu kontrol edin.</td></tr>';
         }
     }
-    
-    document.querySelector("#trademarkBulletinTable").addEventListener('click', async (e) => {
-        if (e.target.classList.contains('delete-btn')) {
-            const bulletinId = e.target.dataset.id;
-            const bulletinNo = e.target.dataset.no;
-            
-            if (confirm(`'${bulletinNo}' numaralı bülteni ve tüm ilişkili verileri silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.`)) {
-                e.target.disabled = true;
-                e.target.textContent = "Siliniyor...";
-                await deleteBulletin(bulletinId, bulletinNo);
-            }
-        }
-    });
 
     async function deleteBulletin(bulletinId, bulletinNo) {
-        console.log(`Silme işlemi başlatıldı: Bülten ID ${bulletinId}, No ${bulletinNo}`);
-        
         try {
-            // 1. İlgili kayıtları Firestore'dan toplu olarak sil
             const recordsQuery = query(collection(db, "trademarkBulletinRecords"), where("bulletinId", "==", bulletinId));
             const recordsSnapshot = await getDocs(recordsQuery);
             if (recordsSnapshot.size > 0) {
                 const batch = writeBatch(db);
-                recordsSnapshot.forEach(doc => {
-                    batch.delete(doc.ref);
-                });
+                recordsSnapshot.forEach(doc => batch.delete(doc.ref));
                 await batch.commit();
-                console.log(`${recordsSnapshot.size} adet bülten kaydı silindi.`);
             }
 
-            // 2. Storage'daki ilgili bülten klasörünü ve içindeki görselleri sil
             const imagesFolderRef = ref(storage, `bulletins/trademark_${bulletinNo}_images`);
             const res = await listAll(imagesFolderRef);
             await Promise.all(res.items.map(itemRef => deleteObject(itemRef)));
-            console.log(`Storage'dan ${res.items.length} adet görsel silindi.`);
 
-            // 3. Ana bülten dökümanını Firestore'dan sil
             await deleteDoc(doc(db, "trademarkBulletins", bulletinId));
-            console.log("Ana bülten belgesi başarıyla silindi.");
 
             alert("Bülten ve tüm verileri başarıyla silindi.");
-            await loadTrademarkBulletins(); // Silme sonrası tabloyu yenile
-
+            await loadTrademarkBulletins();
         } catch (error) {
             console.error("Bülten silinirken hata:", error);
             alert("Bülten silinirken bir hata oluştu. Lütfen konsolu kontrol edin.");
-            // Hata durumunda butonu tekrar aktif et
-            const failedButton = document.querySelector(`button[data-id="${bulletinId}"]`);
-            if(failedButton) {
-                failedButton.disabled = false;
-                failedButton.textContent = "Sil";
-            }
         }
     }
 
+    // Event Listeners
+    document.addEventListener('DOMContentLoaded', () => {
+        loadTrademarkBulletins();
+
+        const table = document.querySelector("#trademarkBulletinTable");
+        if (table) {
+            table.addEventListener('click', async (e) => {
+                if (e.target.classList.contains('delete-btn')) {
+                    const bulletinId = e.target.dataset.id;
+                    const bulletinNo = e.target.dataset.no;
+                    
+                    if (confirm(`'${bulletinNo}' numaralı bülteni silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.`)) {
+                        e.target.disabled = true;
+                        e.target.textContent = "Siliniyor...";
+                        await deleteBulletin(bulletinId, bulletinNo);
+                    }
+                }
+            });
+        }
+    });
 </script>
+
 <script type="module" src="js/bulletin-upload.js"></script>
+
 </body>
 </html>
