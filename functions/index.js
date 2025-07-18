@@ -701,12 +701,13 @@ exports.processTrademarkBulletinUpload = functions
         const filename = path.basename(localPath);
         const destinationPath = `bulletins/trademark_${bulletinNo}_images/${filename}`;// ← DEĞİŞTİR (bulletinId yerine bulletinNo)
 
-        const match = filename.match(/^(\d{4}\/\d+)/);
-        if (match) {
-          const appNo = match[1];
-          if (!imagePathMap[appNo]) imagePathMap[appNo] = [];
-          imagePathMap[appNo].push(destinationPath);
-        }
+      const match = filename.match(/^(\d{4})[_\-]?(\d{5,})/);
+      if (match) {
+        const appNo = `${match[1]}/${match[2]}`; // 2024/12345 formatında
+        if (!imagePathMap[appNo]) imagePathMap[appNo] = [];
+        imagePathMap[appNo].push(destinationPath);
+      }
+
       }
       // Her kayda görsel yolunu ekle
       for (const record of records) {
@@ -926,5 +927,31 @@ function getContentType(filePath) {
   if (/\.jpe?g$/i.test(filePath)) return "image/jpeg";
   return "application/octet-stream";
 }
+const functions = require("firebase-functions");
+const admin = require("firebase-admin");
+
+admin.initializeApp();
+
+exports.deleteMultipleFolders = functions.https.onCall(async (data, context) => {
+  const bucket = admin.storage().bucket();
+
+  // Silinecek klasör yolları
+  const foldersToDelete = [
+    'bulletins/469_images/',
+    'bulletins/r1okCfFhOVXdLBCelKaV/',
+    'bulletins/trademark_469_images/' // Önceki klasörü de burada tutalım istersen
+  ];
+
+  try {
+    for (const prefix of foldersToDelete) {
+      console.log(`Siliniyor: ${prefix}`);
+      await bucket.deleteFiles({ prefix });
+    }
+    return { success: true, message: 'Tüm klasörler başarıyla silindi.' };
+  } catch (error) {
+    console.error('Silme hatası:', error);
+    throw new functions.https.HttpsError('internal', 'Klasör(ler) silinemedi.');
+  }
+});
 
 exports.handleBatch = handleBatch;
