@@ -664,7 +664,6 @@ function extractAppNoFromFilename(filename) {
   return match ? match[1] : null;
 }
 
-
 exports.processTrademarkBulletinUpload = functions
   .runWith({ timeoutSeconds: 540, memory: "1GB" })
   .storage.object()
@@ -672,7 +671,7 @@ exports.processTrademarkBulletinUpload = functions
     const filePath = object.name;
     const fileName = path.basename(filePath);
     const bucket = admin.storage().bucket();
-    if (!fileName.endsWith(".zip") && !fileName.endsWith(".rar")) return null; // hem zip hem rar kontrolü
+    if (!fileName.endsWith(".zip") && !fileName.endsWith(".rar")) return null;
 
     const tempFilePath = path.join(os.tmpdir(), fileName);
     const extractDir = path.join(os.tmpdir(), `extract_${Date.now()}`);
@@ -681,12 +680,10 @@ exports.processTrademarkBulletinUpload = functions
       fs.mkdirSync(extractDir, { recursive: true });
       await bucket.file(filePath).download({ destination: tempFilePath });
 
-      // Handle both .zip and .rar extensions
       if (fileName.endsWith(".zip")) {
         const zip = new AdmZip(tempFilePath);
         zip.extractAllTo(extractDir, true);
       } else if (fileName.endsWith(".rar")) {
-        // RAR dosyalarını işlemek için node-unrar-js kullanıyoruz
         const extractor = await createExtractorFromFile({ path: tempFilePath });
         const list = extractor.getFileList();
         if (list.files.length === 0) {
@@ -722,28 +719,35 @@ exports.processTrademarkBulletinUpload = functions
       const imageFiles = allFiles.filter((p) => /\.(jpg|jpeg|png)$/i.test(p));
       console.log(`📤 ${imageFiles.length} görsel Pub/Sub kuyruğuna gönderiliyor...`);
 
-      // Store only the destination paths of images for batch processing.
       const imagePathsForPubSub = [];
       for (const localPath of imageFiles) {
         const filename = path.basename(localPath);
         const destinationPath = `bulletins/${bulletinId}/${filename}`;
-        imagePathsForPubSub.push(destinationPath); // Collect all image destination paths
+        imagePathsForPubSub.push(destinationPath);
         
-        // Publish message for each image to be uploaded by uploadImageWorker
+        // --- ÖNEMLİ DEĞİŞİKLİK BURADA: localPath yerine dosya içeriğini Buffer olarak oku ---
+        // Resim dosyasını senkron olarak oku (küçük dosyalar için uygun)
+        const imageBuffer = fs.readFileSync(localPath); 
+        
         await pubsub.topic("trademark-image-upload").publishMessage({
-          data: Buffer.from(JSON.stringify({ localPath, destinationPath, bulletinId })),
+          // Pub/Sub'a gönderilecek ana veri (Buffer olarak)
+          data: imageBuffer, 
+          // Diğer meta verileri attributes olarak ekle
+          attributes: {
+            destinationPath: destinationPath,
+            bulletinId: bulletinId,
+            contentType: getContentType(filename) // content type'ı burada belirleyelim
+          }
         });
       }
 
-      // Parse records without setting imagePath directly from parseScriptContent.
-      // Image matching will be handled in handleBatch with the actual uploaded paths.
-      const records = parseScriptContent(scriptContent); 
+      const records = parseScriptContent(scriptContent);
       const batchSize = 100;
 
       for (let i = 0; i < records.length; i += batchSize) {
         const batchRecords = records.slice(i, i + batchSize);
         await pubsub.topic("trademark-batch-processing").publishMessage({
-          data: Buffer.from(JSON.stringify({ bulletinId, records: batchRecords, imagePaths: imagePathsForPubSub })), // Pass imagePathsForPubSub
+          data: Buffer.from(JSON.stringify({ bulletinId, records: batchRecords, imagePaths: imagePathsForPubSub })),
         });
       }
 
@@ -752,6 +756,7 @@ exports.processTrademarkBulletinUpload = functions
       console.error("İşlem hatası:", e);
       throw e;
     } finally {
+      // Artık temporary dosyalar okunduktan sonra siliniyor, bu da yarış koşulunu engeller.
       if (fs.existsSync(tempFilePath)) fs.unlinkSync(tempFilePath);
       if (fs.existsSync(extractDir)) fs.rmSync(extractDir, { recursive: true, force: true });
     }
@@ -763,17 +768,19 @@ exports.uploadImageWorker = functions
   .runWith({ timeoutSeconds: 300, memory: "512MB" })
   .pubsub.topic("trademark-image-upload")
   .onPublish(async (message) => {
-    const { localPath, destinationPath } = message.json;
+    // Pub/Sub mesajının `data` alanı zaten `Buffer` formatındadır.
+    const imageBuffer = message.data; 
+    // `attributes` alanından `destinationPath` ve `contentType` gibi bilgileri alıyoruz.
+    const { destinationPath, contentType } = message.attributes; 
+
     try {
-      const contentType = getContentType(destinationPath);
-      // Ensure the file exists at localPath before attempting to upload
-      if (!fs.existsSync(localPath)) {
-        console.error(`❌ Hata: Yerel dosya bulunamadı: ${localPath}`);
-        return; // Exit if file doesn't exist
-      }
-      await bucket.upload(localPath, {
-        destination: destinationPath,
-        metadata: { contentType },
+      // Storage referansını al
+      const file = bucket.file(destinationPath);
+      
+      // Buffer'ı doğrudan Storage'a kaydetmek için `save` metodunu kullan
+      await file.save(imageBuffer, {
+        contentType: contentType, // İçerik tipini belirtmek önemli
+        resumable: false, // Küçük dosyalar için gerekmez, performansı artırabilir
       });
       console.log(`✅ Yüklendi: ${destinationPath}`);
     } catch (err) {
