@@ -149,13 +149,13 @@
             console.log(`DEBUG: ${querySnapshot.size} adet bülten dokümanı bulundu.`);
             tableBody.innerHTML = ''; // Tabloyu temizle
 
-            const allBulletins = [];
             querySnapshot.forEach(doc => {
                 const bulletin = doc.data();
+                console.log("📦 Bülten bulundu:", bulletin); // DEBUG
                 allBulletins.push({ id: doc.id, ...bulletin });
             });
 
-            // Bültenleri yüklenme tarihine göre azalan sırada sırala (en yeni en üstte)
+     // Bültenleri yüklenme tarihine göre azalan sırada sırala (en yeni en üstte)
             allBulletins.sort((a, b) => {
                 const dateA = a.createdAt?.toDate ? a.createdAt.toDate() : new Date(0); // Tarih yoksa epoch başlangıcı
                 const dateB = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(0); // Tarih yoksa epoch başlangıcı
