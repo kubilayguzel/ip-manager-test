@@ -108,7 +108,7 @@
     import { collection, getDocs, doc, deleteDoc, query, where, writeBatch } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
     import { ref, deleteObject, listAll } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 
-    // Hata ayıklama için global fonksiyon
+    // Hata ayıklama için global fonksiyon (Sayfada hata mesajlarını göstermek için)
     function logToScreen(message) {
         const tableBody = document.querySelector("#trademarkBulletinTable tbody");
         if(tableBody) {
@@ -155,17 +155,17 @@
                 allBulletins.push({ id: doc.id, ...bulletin });
             });
 
-            // Yüklenme tarihine göre azalan sırada sırala (en yeni en üstte)
+            // Bültenleri yüklenme tarihine göre azalan sırada sırala (en yeni en üstte)
             allBulletins.sort((a, b) => {
-                const dateA = a.createdAt?.toDate ? a.createdAt.toDate() : new Date(0);
-                const dateB = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(0);
-                return dateB - dateA;
+                const dateA = a.createdAt?.toDate ? a.createdAt.toDate() : new Date(0); // Tarih yoksa epoch başlangıcı
+                const dateB = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(0); // Tarih yoksa epoch başlangıcı
+                return dateB - dateA; // En yeniden eskiye
             });
 
             for (const bulletin of allBulletins) {
                 const uploadDate = bulletin.createdAt?.toDate ? bulletin.createdAt.toDate().toLocaleDateString('tr-TR') : 'Tarih Yok';
                 
-                // Bülten kayıt sayısını al
+                // Bültenin ilişkili kayıt sayısını al
                 let recordCount = 0;
                 try {
                     const recordsQuery = query(collection(db, "trademarkBulletinRecords"), where("bulletinId", "==", bulletin.id));
@@ -182,23 +182,24 @@
                     <td>${bulletin.bulletinDate || 'Tarih Yok'}</td>
                     <td>${uploadDate}</td>
                     <td>${recordCount}</td>
-                    <td><button class="delete-btn" data-id="${bulletin.id}" data-no="${bulletin.bulletinNo}">Sil</button></td>
+                    <td><button class="delete-btn" data-id="${bulletin.id}" data-no="${bulletin.bulletenNo}">Sil</button></td>
                 `;
                 tableBody.appendChild(tr);
             }
             console.log("DEBUG: Tüm bültenler tabloya eklendi.");
 
-            // Sil butonlarına event listener ekle (event delegation)
+            // "Sil" butonlarına olay dinleyici ekle (event delegation kullanarak)
             tableBody.addEventListener('click', async (e) => {
                 if (e.target.classList.contains('delete-btn')) {
                     const bulletinId = e.target.dataset.id;
-                    const bulletinNo = e.target.dataset.no;
-                    await deleteTrademarkBulletin(bulletinId, bulletinNo);
+                    const bulletinNo = e.target.dataset.no; // bülten numarasını da alıyoruz
+                    await deleteTrademarkBulletin(bulletenId, bulletinNo);
                 }
             });
 
         } catch (error) {
             console.error("DEBUG: KRİTİK HATA!", error);
+            // Hata mesajını tabloya yazdır
             tableBody.innerHTML = `
                 <tr><td colspan="5" style="color:red; font-weight:bold;">
                     HATA OLUŞTU! Lütfen Geliştirici Konsolu'nu (F12) açıp Console sekmesindeki kırmızı renkli hatayı bizimle paylaşın. Hata Mesajı: ${error.message}
@@ -206,7 +207,7 @@
         }
     }
 
-    // Marka bültenini, kayıtlarını ve görsellerini silen fonksiyon
+    // Marka bültenini, ilgili tüm kayıtlarını ve Storage'daki görsellerini silen fonksiyon
     async function deleteTrademarkBulletin(bulletinId, bulletinNo) {
         if (!confirm(`Bülten No: ${bulletinNo} olan bülteni, tüm kayıtlarını ve bağlı görselleri SİLMEK istediğinizden emin misiniz? Bu işlem geri alınamaz!`)) {
             return;
@@ -220,7 +221,8 @@
             batch.delete(bulletinRef);
             console.log(`DEBUG: Bülten dokümanı silme için eklendi: ${bulletinId}`);
 
-            // 2. İlgili tüm kayıtları (trademarkBulletinRecords) sil
+            // 2. İlgili tüm kayıtları (trademarkBulletinRecords koleksiyonundan) sil
+            // NOT: Firestore batch işlemi 500'den fazla silme desteklemez. Çok fazla kayıt varsa birden fazla batch gerekebilir.
             const recordsQuery = query(collection(db, "trademarkBulletinRecords"), where("bulletinId", "==", bulletinId));
             const recordsSnapshot = await getDocs(recordsQuery);
             recordsSnapshot.forEach((recordDoc) => {
@@ -228,15 +230,20 @@
             });
             console.log(`DEBUG: ${recordsSnapshot.size} adet bülten kaydı silme için eklendi.`);
 
-            await batch.commit();
+            await batch.commit(); // Batch işlemlerini onayla
             console.log("DEBUG: Firestore işlemleri (bülten ve kayıtlar) başarıyla tamamlandı.");
 
             // 3. Firebase Storage'daki ilgili görselleri sil
-            const imagesRef = ref(storage, `bulletins/trademark_${bulletinNo}_images/`);
+            // Görsel yolu formatı: bulletins/trademark_${bulletinNo}_images/
+            const imagesFolderPath = `bulletins/trademark_${bulletinNo}_images/`;
+            const imagesRef = ref(storage, imagesFolderPath);
+            
+            // Klasördeki tüm görselleri listele
             const imageList = await listAll(imagesRef);
             
             if (imageList.items.length > 0) {
                 console.log(`DEBUG: ${imageList.items.length} adet görsel siliniyor...`);
+                // Tüm görselleri paralel olarak sil
                 await Promise.all(imageList.items.map(itemRef => deleteObject(itemRef)));
                 console.log("DEBUG: Tüm ilgili görseller Storage'dan başarıyla silindi.");
             } else {
@@ -253,9 +260,8 @@
         }
     }
 
+    // Sayfa yüklendiğinde bültenleri otomatik olarak yükle
     document.addEventListener('DOMContentLoaded', loadTrademarkBulletins);
-    
-</script>
     
 </script>
 <script type="module" src="js/bulletin-upload.js"></script>
