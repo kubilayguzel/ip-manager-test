@@ -885,5 +885,4 @@ function getContentType(filePath) {
 }
 
 // handleBatch fonksiyonunu dışa aktarıyoruz
-const { handleBatch } = require("./handleBatch");
 exports.handleBatch = handleBatch;
