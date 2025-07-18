@@ -698,7 +698,7 @@ exports.processTrademarkBulletinUpload = functions
       const imageFiles = allFiles.filter((p) => /\.(jpg|jpeg|png)$/i.test(p));
       console.log(`📤 ${imageFiles.length} görsel base64 ile 100’lük Pub/Sub batch’lerinde gönderiliyor...`);
 
-      const imageBatchSize = 100;
+      const imageBatchSize = 20;
       for (let i = 0; i < imageFiles.length; i += imageBatchSize) {
         const batch = imageFiles.slice(i, i + imageBatchSize);
         const encodedImages = [];
