@@ -6,11 +6,10 @@
   <title>Bülten Yükleme</title>
   <link rel="stylesheet" href="css/shared-styles.css" />
   <style>
-    /* Sayfanın tamamını kaplaması için container genişletildi */
     .main-container {
       max-width: 100%;
       padding: 30px;
-      padding-top: 100px; /* Topbar için boşluk */
+      padding-top: 100px;
     }
     .bulletin-section {
       background: white;
@@ -18,14 +17,6 @@
       border-radius: 12px;
       margin-bottom: 30px;
       box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-    }
-    .bulletin-section h2 {
-      margin-bottom: 10px;
-      color: #1e3c72;
-    }
-    .bulletin-section p {
-      margin-bottom: 15px;
-      color: #555;
     }
     .bulletin-table {
       width: 100%;
@@ -39,18 +30,21 @@
     }
     .bulletin-table th {
       background-color: #f2f2f2;
-      color: #333;
     }
     .bulletin-table .delete-btn {
-        background-color: #dc3545;
-        color: white;
-        border: none;
-        padding: 8px 12px;
-        border-radius: 5px;
-        cursor: pointer;
+      background-color: #dc3545;
+      color: white;
+      border: none;
+      padding: 8px 12px;
+      border-radius: 5px;
+      cursor: pointer;
     }
     .bulletin-table .delete-btn:hover {
         background-color: #c82333;
+    }
+    .record-count-cell {
+        font-style: italic;
+        color: #666;
     }
   </style>
 </head>
@@ -64,21 +58,18 @@
 
         <div class="bulletin-section">
             <h2>Marka Bülteni Yükleme</h2>
-            <p>ZIP veya RAR formatındaki marka bülten arşivinizi yükleyin. Sistem içeriği analiz edecek.</p>
             <form id="bulletinUploadFormTrademark">
                 <div class="file-upload-area" id="dropAreaTrademark">
                     <div class="upload-icon">📂</div>
                     <p>Dosyanızı buraya sürükleyin veya tıklayın.</p>
                     <input type="file" id="bulletinFileTrademark" accept=".zip,.rar" style="display: none;" required />
                 </div>
-                <div id="selectedFileNameTrademark" style="margin-top:10px; font-weight:500; color:#333;"></div>
+                <div id="selectedFileNameTrademark" style="margin-top:10px;"></div>
                 <button type="submit" class="btn btn-primary" style="margin-top:20px;">Marka Bülteni Yükle</button>
             </form>
             <div id="uploadStatusTrademark" style="margin-top:20px;"></div>
-            <div id="progressContainer" style="margin-top:10px; display:none;">
-                <div style="background:#eee; border-radius:8px; overflow:hidden; height:20px;">
-                    <div id="progressBar" style="height:100%; width:0%; background:#1e3c72; color:white; text-align:center; line-height:20px; font-size:12px;"></div>
-                </div>
+            <div id="progressContainer" style="display:none; margin-top:10px;">
+                <div id="progressBar" style="height:20px; width:0%; background:#1e3c72;"></div>
             </div>
             
             <div class="bulletin-table-container">
@@ -104,19 +95,11 @@
             <p>Bu alan yakında aktif olacaktır.</p>
             <button class="btn btn-secondary" disabled>Yakında</button>
         </div>
-        <div class="bulletin-section">
-            <h2>Tasarım Bülteni Yükleme</h2>
-            <p>Bu alan yakında aktif olacaktır.</p>
-            <button class="btn btn-secondary" disabled>Yakında</button>
-        </div>
     </main>
 </div>
 
 <script type="module">
     import { loadSharedLayout } from './js/layout-loader.js';
-    // Bu script'in tek görevi layout'u yüklemek.
-    // async/await ve DOMContentLoaded olmadan, orijinal dosyadaki gibi doğrudan çağırıyoruz.
-    // Modül script'leri zaten DOM hazır olunca çalışır.
     loadSharedLayout({ activeMenuLink: 'bulletin-upload.html' });
 </script>
 
@@ -125,48 +108,65 @@
     import { collection, getDocs, doc, deleteDoc, query, where, writeBatch } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
     import { ref, deleteObject, listAll } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 
-    // Fonksiyonlar global scope'ta değil, bu modül içinde tanımlı
     async function loadTrademarkBulletins() {
         const tableBody = document.querySelector("#trademarkBulletinTable tbody");
-        tableBody.innerHTML = '<tr><td colspan="5">Yükleniyor...</td></tr>';
+        if (!tableBody) return;
+        tableBody.innerHTML = '<tr><td colspan="5">Bültenler yükleniyor...</td></tr>';
 
         try {
+            // 1. ADIM: Ana bülten verilerini çek ve tabloyu hemen oluştur
             const bulletinsSnapshot = await getDocs(collection(db, "trademarkBulletins"));
-            const bulletinPromises = bulletinsSnapshot.docs.map(async (docSnapshot) => {
-                const bulletinData = { id: docSnapshot.id, ...docSnapshot.data() };
-                const recordsQuery = query(collection(db, "trademarkBulletinRecords"), where("bulletinId", "==", docSnapshot.id));
-                const recordsSnapshot = await getDocs(recordsQuery);
-                bulletinData.recordCount = recordsSnapshot.size;
-                return bulletinData;
-            });
-
-            const bulletins = await Promise.all(bulletinPromises);
-            
-            tableBody.innerHTML = ''; 
-            if (bulletins.length === 0) {
-                 tableBody.innerHTML = '<tr><td colspan="5">Henüz yüklenmiş bir bülten bulunmuyor.</td></tr>';
-                 return;
+            if (bulletinsSnapshot.empty) {
+                tableBody.innerHTML = '<tr><td colspan="5">Yüklü marka bülteni bulunamadı.</td></tr>';
+                return;
             }
 
-            bulletins.forEach(b => {
+            tableBody.innerHTML = ''; // Tabloyu temizle
+            const bulletinDocs = bulletinsSnapshot.docs;
+
+            bulletinDocs.forEach(docSnapshot => {
+                const b = { id: docSnapshot.id, ...docSnapshot.data() };
                 const tr = document.createElement('tr');
+                tr.setAttribute('data-bulletin-id', b.id); // Satırı ID ile işaretle
+
                 const uploadDate = b.createdAt?.toDate ? b.createdAt.toDate().toLocaleDateString('tr-TR') : 'Bilinmiyor';
+                
                 tr.innerHTML = `
                     <td>${b.bulletinNo || 'N/A'}</td>
                     <td>${b.bulletinDate || 'N/A'}</td>
                     <td>${uploadDate}</td>
-                    <td>${b.recordCount}</td>
+                    <td class="record-count-cell" data-bulletin-id="${b.id}">Yükleniyor...</td>
                     <td><button class="delete-btn" data-id="${b.id}" data-no="${b.bulletinNo}">Sil</button></td>
                 `;
                 tableBody.appendChild(tr);
             });
+
+            // 2. ADIM: Oluşturulan her satır için kayıt sayısını arka planda çek ve güncelle
+            bulletinDocs.forEach(async (docSnapshot) => {
+                const bulletinId = docSnapshot.id;
+                const recordCountCell = tableBody.querySelector(`.record-count-cell[data-bulletin-id="${bulletinId}"]`);
+                
+                try {
+                    const recordsQuery = query(collection(db, "trademarkBulletinRecords"), where("bulletinId", "==", bulletinId));
+                    const recordsSnapshot = await getDocs(recordsQuery);
+                    recordCountCell.textContent = recordsSnapshot.size;
+                    recordCountCell.style.fontStyle = 'normal';
+                    recordCountCell.style.color = 'inherit';
+                } catch (e) {
+                    console.error(`Kayıt sayısı alınırken hata (Bülten ID: ${bulletinId}):`, e);
+                    recordCountCell.textContent = "Hata";
+                    recordCountCell.style.color = 'red';
+                }
+            });
+
         } catch (error) {
-            console.error("Bültenler yüklenirken hata:", error);
-            tableBody.innerHTML = '<tr><td colspan="5">Bültenler yüklenirken bir hata oluştu. Lütfen konsolu kontrol edin.</td></tr>';
+            console.error("Bültenler yüklenirken ana bir hata oluştu:", error);
+            tableBody.innerHTML = '<tr><td colspan="5">Bültenler yüklenirken bir hata oluştu. Konsolu (F12) kontrol edin.</td></tr>';
         }
     }
-
+    
     async function deleteBulletin(bulletinId, bulletinNo) {
+        // ... (Silme fonksiyonu değişmedi, önceki kodlarla aynı)
         try {
             const recordsQuery = query(collection(db, "trademarkBulletinRecords"), where("bulletinId", "==", bulletinId));
             const recordsSnapshot = await getDocs(recordsQuery);
@@ -186,29 +186,24 @@
             await loadTrademarkBulletins();
         } catch (error) {
             console.error("Bülten silinirken hata:", error);
-            alert("Bülten silinirken bir hata oluştu. Lütfen konsolu kontrol edin.");
+            alert("Bülten silinirken bir hata oluştu.");
         }
     }
 
-    // Event Listeners
     document.addEventListener('DOMContentLoaded', () => {
         loadTrademarkBulletins();
-
-        const table = document.querySelector("#trademarkBulletinTable");
-        if (table) {
-            table.addEventListener('click', async (e) => {
-                if (e.target.classList.contains('delete-btn')) {
-                    const bulletinId = e.target.dataset.id;
-                    const bulletinNo = e.target.dataset.no;
-                    
-                    if (confirm(`'${bulletinNo}' numaralı bülteni silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.`)) {
-                        e.target.disabled = true;
-                        e.target.textContent = "Siliniyor...";
-                        await deleteBulletin(bulletinId, bulletinNo);
-                    }
+        
+        document.querySelector("#trademarkBulletinTable")?.addEventListener('click', async (e) => {
+            if (e.target.classList.contains('delete-btn')) {
+                const bulletinId = e.target.dataset.id;
+                const bulletinNo = e.target.dataset.no;
+                if (confirm(`'${bulletinNo}' numaralı bülteni silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.`)) {
+                    e.target.disabled = true;
+                    e.target.textContent = "Siliniyor...";
+                    await deleteBulletin(bulletinId, bulletinNo);
                 }
-            });
-        }
+            }
+        });
     });
 </script>
 
