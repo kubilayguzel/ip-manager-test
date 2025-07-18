@@ -711,7 +711,8 @@ exports.processTrademarkBulletinUpload = functions
       // Her kayda görsel yolunu ekle
       for (const record of records) {
         record.bulletinId = bulletinId;
-        record.imagePaths = imagePathMap[record.applicationNo] || [];
+        const matchingImages = imagePathMap[record.applicationNo] || [];
+        record.imagePath = matchingImages.length > 0 ? matchingImages[0] : null; // İlk (ve tek) imajı al
       }
    
      // Görsel işlemleri (yeni hafifletilmiş base64 yöntemi)
