@@ -108,105 +108,79 @@
     import { collection, getDocs, doc, deleteDoc, query, where, writeBatch } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
     import { ref, deleteObject, listAll } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 
+    // Hata ayıklama için global fonksiyon
+    function logToScreen(message) {
+        const tableBody = document.querySelector("#trademarkBulletinTable tbody");
+        if(tableBody) {
+            const tr = document.createElement('tr');
+            const td = document.createElement('td');
+            td.colSpan = 5;
+            td.textContent = message;
+            td.style.color = "red";
+            td.style.fontWeight = "bold";
+            tableBody.prepend(tr); // Mesajı en üste ekle
+        }
+    }
+
     async function loadTrademarkBulletins() {
         const tableBody = document.querySelector("#trademarkBulletinTable tbody");
-        if (!tableBody) return;
-        tableBody.innerHTML = '<tr><td colspan="5">Bültenler yükleniyor...</td></tr>';
+        if (!tableBody) {
+            console.error("DEBUG: Tablo gövdesi (tbody) HTML'de bulunamadı!");
+            return;
+        }
+        
+        tableBody.innerHTML = '<tr><td colspan="5">DEBUG: Fonksiyon başladı. Veriler çekiliyor...</td></tr>';
+        console.log("DEBUG: loadTrademarkBulletins fonksiyonu çalıştı.");
 
         try {
-            // 1. ADIM: Ana bülten verilerini çek ve tabloyu hemen oluştur
-            const bulletinsSnapshot = await getDocs(collection(db, "trademarkBulletins"));
-            if (bulletinsSnapshot.empty) {
-                tableBody.innerHTML = '<tr><td colspan="5">Yüklü marka bülteni bulunamadı.</td></tr>';
+            // SADECE ANA BÜLTENLERİ ÇEK
+            const bulletinsCollectionRef = collection(db, "trademarkBulletins");
+            console.log("DEBUG: 'trademarkBulletins' koleksiyonu için sorgu oluşturuldu.");
+
+            const querySnapshot = await getDocs(bulletinsCollectionRef);
+            console.log("DEBUG: getDocs sorgusu tamamlandı.");
+
+            if (querySnapshot.empty) {
+                console.log("DEBUG: Sorgu sonucu boş. Hiç doküman bulunamadı.");
+                tableBody.innerHTML = '<tr><td colspan="5">Firebase veritabanında "trademarkBulletins" koleksiyonunda hiç bülten bulunamadı.</td></tr>';
                 return;
             }
 
+            console.log(`DEBUG: ${querySnapshot.size} adet bülten dokümanı bulundu.`);
             tableBody.innerHTML = ''; // Tabloyu temizle
-            const bulletinDocs = bulletinsSnapshot.docs;
 
-            bulletinDocs.forEach(docSnapshot => {
-                const b = { id: docSnapshot.id, ...docSnapshot.data() };
+            querySnapshot.forEach(doc => {
+                const bulletin = doc.data();
+                const bulletinId = doc.id;
+                console.log(`DEBUG: Doküman işleniyor: ID=${bulletinId}, Veri=`, bulletin);
+
                 const tr = document.createElement('tr');
-                tr.setAttribute('data-bulletin-id', b.id); // Satırı ID ile işaretle
+                const uploadDate = bulletin.createdAt?.toDate ? bulletin.createdAt.toDate().toLocaleDateString('tr-TR') : 'Tarih Yok';
 
-                const uploadDate = b.createdAt?.toDate ? b.createdAt.toDate().toLocaleDateString('tr-TR') : 'Bilinmiyor';
-                
                 tr.innerHTML = `
-                    <td>${b.bulletinNo || 'N/A'}</td>
-                    <td>${b.bulletinDate || 'N/A'}</td>
+                    <td>${bulletin.bulletinNo || 'No Yok'}</td>
+                    <td>${bulletin.bulletinDate || 'Tarih Yok'}</td>
                     <td>${uploadDate}</td>
-                    <td class="record-count-cell" data-bulletin-id="${b.id}">Yükleniyor...</td>
-                    <td><button class="delete-btn" data-id="${b.id}" data-no="${b.bulletinNo}">Sil</button></td>
+                    <td>-</td>
+                    <td><button class="delete-btn" data-id="${bulletinId}" data-no="${bulletin.bulletinNo}">Sil</button></td>
                 `;
                 tableBody.appendChild(tr);
             });
-
-            // 2. ADIM: Oluşturulan her satır için kayıt sayısını arka planda çek ve güncelle
-            bulletinDocs.forEach(async (docSnapshot) => {
-                const bulletinId = docSnapshot.id;
-                const recordCountCell = tableBody.querySelector(`.record-count-cell[data-bulletin-id="${bulletinId}"]`);
-                
-                try {
-                    const recordsQuery = query(collection(db, "trademarkBulletinRecords"), where("bulletinId", "==", bulletinId));
-                    const recordsSnapshot = await getDocs(recordsQuery);
-                    recordCountCell.textContent = recordsSnapshot.size;
-                    recordCountCell.style.fontStyle = 'normal';
-                    recordCountCell.style.color = 'inherit';
-                } catch (e) {
-                    console.error(`Kayıt sayısı alınırken hata (Bülten ID: ${bulletinId}):`, e);
-                    recordCountCell.textContent = "Hata";
-                    recordCountCell.style.color = 'red';
-                }
-            });
+            console.log("DEBUG: Tüm bültenler tabloya eklendi.");
 
         } catch (error) {
-            console.error("Bültenler yüklenirken ana bir hata oluştu:", error);
-            tableBody.innerHTML = '<tr><td colspan="5">Bültenler yüklenirken bir hata oluştu. Konsolu (F12) kontrol edin.</td></tr>';
+            console.error("DEBUG: KRİTİK HATA!", error);
+            // HATAYI EKRANA YAZDIR
+            tableBody.innerHTML = `
+                <tr><td colspan="5" style="color:red; font-weight:bold;">
+                    HATA OLUŞTU! Lütfen Geliştirici Konsolu'nu (F12) açıp Console sekmesindeki kırmızı renkli hatayı bizimle paylaşın. Hata Mesajı: ${error.message}
+                </td></tr>`;
         }
     }
+
+   document.addEventListener('DOMContentLoaded', loadTrademarkBulletins);
     
-    async function deleteBulletin(bulletinId, bulletinNo) {
-        // ... (Silme fonksiyonu değişmedi, önceki kodlarla aynı)
-        try {
-            const recordsQuery = query(collection(db, "trademarkBulletinRecords"), where("bulletinId", "==", bulletinId));
-            const recordsSnapshot = await getDocs(recordsQuery);
-            if (recordsSnapshot.size > 0) {
-                const batch = writeBatch(db);
-                recordsSnapshot.forEach(doc => batch.delete(doc.ref));
-                await batch.commit();
-            }
-
-            const imagesFolderRef = ref(storage, `bulletins/trademark_${bulletinNo}_images`);
-            const res = await listAll(imagesFolderRef);
-            await Promise.all(res.items.map(itemRef => deleteObject(itemRef)));
-
-            await deleteDoc(doc(db, "trademarkBulletins", bulletinId));
-
-            alert("Bülten ve tüm verileri başarıyla silindi.");
-            await loadTrademarkBulletins();
-        } catch (error) {
-            console.error("Bülten silinirken hata:", error);
-            alert("Bülten silinirken bir hata oluştu.");
-        }
-    }
-
-    document.addEventListener('DOMContentLoaded', () => {
-        loadTrademarkBulletins();
-        
-        document.querySelector("#trademarkBulletinTable")?.addEventListener('click', async (e) => {
-            if (e.target.classList.contains('delete-btn')) {
-                const bulletinId = e.target.dataset.id;
-                const bulletinNo = e.target.dataset.no;
-                if (confirm(`'${bulletinNo}' numaralı bülteni silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.`)) {
-                    e.target.disabled = true;
-                    e.target.textContent = "Siliniyor...";
-                    await deleteBulletin(bulletinId, bulletinNo);
-                }
-            }
-        });
-    });
 </script>
-
 <script type="module" src="js/bulletin-upload.js"></script>
 
 </body>
