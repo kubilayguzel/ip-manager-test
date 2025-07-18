@@ -927,10 +927,6 @@ function getContentType(filePath) {
   if (/\.jpe?g$/i.test(filePath)) return "image/jpeg";
   return "application/octet-stream";
 }
-const functions = require("firebase-functions");
-const admin = require("firebase-admin");
-
-admin.initializeApp();
 
 exports.deleteMultipleFolders = functions.https.onCall(async (data, context) => {
   const bucket = admin.storage().bucket();
