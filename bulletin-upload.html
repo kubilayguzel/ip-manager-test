@@ -108,7 +108,7 @@
     import { collection, getDocs, doc, deleteDoc, query, where, writeBatch } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
     import { ref, deleteObject, listAll } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 
-    // Hata ayıklama için global fonksiyon
+    // Hata ayıklama için global fonksiyon (Sayfada hata mesajlarını göstermek için)
     function logToScreen(message) {
         const tableBody = document.querySelector("#trademarkBulletinTable tbody");
         if(tableBody) {
@@ -118,8 +118,7 @@
             td.textContent = message;
             td.style.color = "red";
             td.style.fontWeight = "bold";
-            tr.appendChild(td);
-            tableBody.prepend(tr);
+            tableBody.prepend(tr); // Mesajı en üste ekle
         }
     }
 
@@ -156,10 +155,10 @@
                 allBulletins.push({ id: doc.id, ...bulletin });
             });
 
-            // Bültenleri yüklenme tarihine göre azalan sırada sırala
+            // Bültenleri yüklenme tarihine göre azalan sırada sırala (en yeni en üstte)
             allBulletins.sort((a, b) => {
-                const dateA = a.createdAt?.toDate ? a.createdAt.toDate() : new Date(0);
-                const dateB = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(0);
+                const dateA = a.createdAt?.toDate ? a.createdAt.toDate() : new Date(0); // Tarih yoksa epoch başlangıcı
+                const dateB = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(0); // Tarih yoksa epoch başlangıcı
                 return dateB - dateA; // En yeniden eskiye
             });
 
@@ -189,74 +188,81 @@
             }
             console.log("DEBUG: Tüm bültenler tabloya eklendi.");
 
-            // "Sil" butonlarına olay dinleyici ekle
+            // "Sil" butonlarına olay dinleyici ekle (event delegation kullanarak)
             tableBody.addEventListener('click', async (e) => {
                 if (e.target.classList.contains('delete-btn')) {
                     const bulletinId = e.target.dataset.id;
-                    const bulletinNo = e.target.dataset.no;
+                    const bulletinNo = e.target.dataset.no; // bülten numarasını da alıyoruz
                     await deleteTrademarkBulletin(bulletinId, bulletinNo);
                 }
             });
 
         } catch (error) {
             console.error("DEBUG: KRİTİK HATA!", error);
+            // Hata mesajını tabloya yazdır
             tableBody.innerHTML = `
                 <tr><td colspan="5" style="color:red; font-weight:bold;">
-                    HATA OLUŞTU! Hata Mesajı: ${error.message}
+                    HATA OLUŞTU! Lütfen Geliştirici Konsolu'nu (F12) açıp Console sekmesindeki kırmızı renkli hatayı bizimle paylaşın. Hata Mesajı: ${error.message}
                 </td></tr>`;
         }
     }
 
-    // Marka bültenini silen fonksiyon
+    // Marka bültenini, ilgili tüm kayıtlarını ve Storage'daki görsellerini silen fonksiyon
     async function deleteTrademarkBulletin(bulletinId, bulletinNo) {
-        if (!confirm(`Bülten No: ${bulletinNo} olan bülteni SİLMEK istediğinizden emin misiniz?`)) {
+        if (!confirm(`Bülten No: ${bulletinNo} olan bülteni, tüm kayıtlarını ve bağlı görselleri SİLMEK istediğinizden emin misiniz? Bu işlem geri alınamaz!`)) {
             return;
         }
 
         try {
             const batch = writeBatch(db);
 
-            // Ana bülten dokümanını sil
+            // 1. Ana bülten dokümanını sil
             const bulletinRef = doc(db, "trademarkBulletins", bulletinId);
             batch.delete(bulletinRef);
+            console.log(`DEBUG: Bülten dokümanı silme için eklendi: ${bulletinId}`);
 
-            // İlgili kayıtları sil
+            // 2. İlgili tüm kayıtları (trademarkBulletinRecords koleksiyonundan) sil
+            // NOT: Firestore batch işlemi 500'den fazla silme desteklemez. Çok fazla kayıt varsa birden fazla batch gerekebilir.
             const recordsQuery = query(collection(db, "trademarkBulletinRecords"), where("bulletinId", "==", bulletinId));
             const recordsSnapshot = await getDocs(recordsQuery);
             recordsSnapshot.forEach((recordDoc) => {
                 batch.delete(recordDoc.ref);
             });
+            console.log(`DEBUG: ${recordsSnapshot.size} adet bülten kaydı silme için eklendi.`);
 
-            await batch.commit();
+            await batch.commit(); // Batch işlemlerini onayla
+            console.log("DEBUG: Firestore işlemleri (bülten ve kayıtlar) başarıyla tamamlandı.");
 
-            // Storage'daki görselleri sil
+            // 3. Firebase Storage'daki ilgili görselleri sil
+            // Görsel yolu formatı: bulletins/trademark_${bulletinNo}_images/
             const imagesFolderPath = `bulletins/trademark_${bulletinNo}_images/`;
             const imagesRef = ref(storage, imagesFolderPath);
             
-            try {
-                const imageList = await listAll(imagesRef);
-                if (imageList.items.length > 0) {
-                    await Promise.all(imageList.items.map(itemRef => deleteObject(itemRef)));
-                }
-            } catch (storageError) {
-                console.log("DEBUG: Storage silme hatası (normal olabilir):", storageError);
+            // Klasördeki tüm görselleri listele
+            const imageList = await listAll(imagesRef);
+            
+            if (imageList.items.length > 0) {
+                console.log(`DEBUG: ${imageList.items.length} adet görsel siliniyor...`);
+                // Tüm görselleri paralel olarak sil
+                await Promise.all(imageList.items.map(itemRef => deleteObject(itemRef)));
+                console.log("DEBUG: Tüm ilgili görseller Storage'dan başarıyla silindi.");
+            } else {
+                console.log("DEBUG: Bu bültene ait görsel bulunamadı veya klasör boş.");
             }
 
             alert(`Bülten No: ${bulletinNo} başarıyla silindi!`);
             loadTrademarkBulletins(); // Tabloyu yeniden yükle
 
         } catch (error) {
-            console.error("DEBUG: Bülten silinirken hata:", error);
-            alert(`Bülten silinirken hata: ${error.message}`);
+            console.error("DEBUG: Bülten silinirken kritik hata oluştu:", error);
+            alert(`Bülten silinirken bir hata oluştu: ${error.message}. Konsolu kontrol edin.`);
+            logToScreen(`Bülten silme hatası: ${error.message}`);
         }
     }
 
-    // *** GLOBAL ERİŞİM İÇİN EKLENDİ ***
-    window.loadTrademarkBulletins = loadTrademarkBulletins;
-    window.deleteTrademarkBulletin = deleteTrademarkBulletin;
-
-    // Sayfa yüklendiğinde bültenleri otomatik yükle
+    // Sayfa yüklendiğinde bültenleri otomatik olarak yükle
     document.addEventListener('DOMContentLoaded', loadTrademarkBulletins);
+    
 </script>
 <script type="module" src="js/bulletin-upload.js"></script>
 
