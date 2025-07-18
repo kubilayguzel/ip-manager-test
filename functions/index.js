@@ -752,10 +752,37 @@ exports.uploadImageWorker = functions
         metadata: { contentType },
       });
       console.log(`✅ Yüklendi: ${destinationPath}`);
+
+      // 🔍 Application number'ı dosya adından ayıkla
+      const fileName = path.basename(destinationPath);
+      const appNo = extractAppNoFromFilename(fileName);
+      if (!appNo) {
+        console.warn("Application number çıkarılamadı:", fileName);
+        return;
+      }
+
+      // 🔎 İlgili Firestore kaydını bul
+      const snapshot = await db.collection("trademarkRecords")
+        .where("applicationNo", "==", appNo)
+        .limit(1)
+        .get();
+
+      if (snapshot.empty) {
+        console.warn(`Firestore'da applicationNo ${appNo} için kayıt bulunamadı.`);
+        return;
+      }
+
+      const docRef = snapshot.docs[0].ref;
+
+      // 🔄 imagePath alanını güncelle
+      await docRef.update({ imagePath: destinationPath });
+      console.log(`🖼️ Firestore güncellendi: ${appNo} → ${destinationPath}`);
+
     } catch (err) {
-      console.error(`❌ Hata (${destinationPath}):`, err);
+      console.error(`❌ Görsel yükleme hatası (${destinationPath}):`, err);
     }
   });
+
 
 function parseScriptContent(content, imagePathsMap = {}) {
   const recordsMap = {};
