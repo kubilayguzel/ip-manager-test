@@ -658,18 +658,21 @@ function listAllFilesRecursive(dir) {
 }
 
 function extractAppNoFromFilename(filename) {
-  const match = filename.match(/(\d{4,})/);
+  // Filename examples: '12345.jpg', 'TR2023_12345.png', '2023_12345.jpeg'
+  // Try to match patterns like YYYY_NNNNN or just NNNNN (at least 4 digits)
+  const match = filename.match(/(\d{4,})/); // Matches 4 or more consecutive digits
   return match ? match[1] : null;
 }
 
+
 exports.processTrademarkBulletinUpload = functions
-  .runWith({ timeoutSeconds: 300, memory: "1GB" })
+  .runWith({ timeoutSeconds: 540, memory: "1GB" })
   .storage.object()
   .onFinalize(async (object) => {
     const filePath = object.name;
     const fileName = path.basename(filePath);
     const bucket = admin.storage().bucket();
-    if (!fileName.endsWith(".zip")) return null;
+    if (!fileName.endsWith(".zip") && !fileName.endsWith(".rar")) return null; // hem zip hem rar kontrolü
 
     const tempFilePath = path.join(os.tmpdir(), fileName);
     const extractDir = path.join(os.tmpdir(), `extract_${Date.now()}`);
@@ -678,8 +681,21 @@ exports.processTrademarkBulletinUpload = functions
       fs.mkdirSync(extractDir, { recursive: true });
       await bucket.file(filePath).download({ destination: tempFilePath });
 
-      const zip = new AdmZip(tempFilePath);
-      zip.extractAllTo(extractDir, true);
+      // Handle both .zip and .rar extensions
+      if (fileName.endsWith(".zip")) {
+        const zip = new AdmZip(tempFilePath);
+        zip.extractAllTo(extractDir, true);
+      } else if (fileName.endsWith(".rar")) {
+        // RAR dosyalarını işlemek için node-unrar-js kullanıyoruz
+        const extractor = await createExtractorFromFile({ path: tempFilePath });
+        const list = extractor.getFileList();
+        if (list.files.length === 0) {
+          throw new Error("RAR dosyası boş veya içerik listelenemedi.");
+        }
+        await extractor.extractAll(extractDir);
+      } else {
+        throw new Error("Sadece .zip veya .rar dosyaları desteklenmektedir.");
+      }
 
       const allFiles = listAllFilesRecursive(extractDir);
       const bulletinPath = allFiles.find((p) =>
@@ -706,25 +722,28 @@ exports.processTrademarkBulletinUpload = functions
       const imageFiles = allFiles.filter((p) => /\.(jpg|jpeg|png)$/i.test(p));
       console.log(`📤 ${imageFiles.length} görsel Pub/Sub kuyruğuna gönderiliyor...`);
 
-      const imagePathsMap = {};
+      // Store only the destination paths of images for batch processing.
+      const imagePathsForPubSub = [];
       for (const localPath of imageFiles) {
         const filename = path.basename(localPath);
-        const appNo = extractAppNoFromFilename(filename);
         const destinationPath = `bulletins/${bulletinId}/${filename}`;
-        if (appNo) imagePathsMap[appNo] = destinationPath;
-
+        imagePathsForPubSub.push(destinationPath); // Collect all image destination paths
+        
+        // Publish message for each image to be uploaded by uploadImageWorker
         await pubsub.topic("trademark-image-upload").publishMessage({
-          data: Buffer.from(JSON.stringify({ localPath, destinationPath })),
+          data: Buffer.from(JSON.stringify({ localPath, destinationPath, bulletinId })),
         });
       }
 
-      const records = parseScriptContent(scriptContent, imagePathsMap);
+      // Parse records without setting imagePath directly from parseScriptContent.
+      // Image matching will be handled in handleBatch with the actual uploaded paths.
+      const records = parseScriptContent(scriptContent); 
       const batchSize = 100;
 
       for (let i = 0; i < records.length; i += batchSize) {
-        const batch = records.slice(i, i + batchSize);
+        const batchRecords = records.slice(i, i + batchSize);
         await pubsub.topic("trademark-batch-processing").publishMessage({
-          data: Buffer.from(JSON.stringify({ bulletinId, records: batch })),
+          data: Buffer.from(JSON.stringify({ bulletinId, records: batchRecords, imagePaths: imagePathsForPubSub })), // Pass imagePathsForPubSub
         });
       }
 
@@ -747,6 +766,11 @@ exports.uploadImageWorker = functions
     const { localPath, destinationPath } = message.json;
     try {
       const contentType = getContentType(destinationPath);
+      // Ensure the file exists at localPath before attempting to upload
+      if (!fs.existsSync(localPath)) {
+        console.error(`❌ Hata: Yerel dosya bulunamadı: ${localPath}`);
+        return; // Exit if file doesn't exist
+      }
       await bucket.upload(localPath, {
         destination: destinationPath,
         metadata: { contentType },
@@ -757,7 +781,7 @@ exports.uploadImageWorker = functions
     }
   });
 
-function parseScriptContent(content, imagePathsMap = {}) {
+function parseScriptContent(content) { // imagePathsMap parametresi kaldırıldı
   const recordsMap = {};
   
   // Her INSERT statement'ı satır satır ayıralım
@@ -814,7 +838,7 @@ function parseScriptContent(content, imagePathsMap = {}) {
       recordsMap[appNo].applicationDate = values[1] ?? null;
       recordsMap[appNo].markName = values[5] ?? null;
       recordsMap[appNo].niceClasses = values[6] ?? null;
-      recordsMap[appNo].imagePath = imagePathsMap?.[appNo] ?? null;
+      // recordsMap[appNo].imagePath = imagePathsMap?.[appNo] ?? null; // Bu satır kaldırıldı
     } else if (table === "HOLDER") {
       const holderName = extractHolderName(values[2]);
       let addressParts = [values[3], values[4], values[5], values[6]].filter(Boolean).join(", ");
@@ -839,16 +863,8 @@ function parseScriptContent(content, imagePathsMap = {}) {
 
 // Yardımcı Fonksiyonlar
 
-function findMatchingImage(applicationNo, imageFiles) {
-  const cleanNo = applicationNo.replace(/\D/g, "");
-  for (const file of imageFiles) {
-    const fileDigits = file.replace(/\D/g, "");
-    if (fileDigits.includes(cleanNo.slice(-5))) {
-      return file;
-    }
-  }
-  return null;
-}
+// findMatchingImage fonksiyonu handleBatch.js'e taşındı
+// function findMatchingImage(applicationNo, imageFiles) { ... }
 
 function decodeValue(str) {
   if (str === null || str === undefined) return null;
@@ -874,36 +890,5 @@ function getContentType(filePath) {
   if (/\.jpe?g$/i.test(filePath)) return "image/jpeg";
   return "application/octet-stream";
 }
-exports.handleBatch = functions
-  .region("europe-west1")
-  .pubsub
-  .topic("trademark-batch-processing")
-  .onPublish(async (message) => {
-    const data = message.json;
-    if (!data || !data.bulletinId || !Array.isArray(data.records)) {
-      console.error("Geçersiz mesaj verisi:", data);
-      return null;
-    }
-
-    const { bulletinId, records } = data;
-    const db = admin.firestore();
-    const batch = db.batch();
-
-    try {
-      for (const record of records) {
-        const docRef = db.collection("trademarkRecords").doc(); // Otomatik ID
-        batch.set(docRef, {
-          bulletinId,
-          ...record,
-          createdAt: admin.firestore.FieldValue.serverTimestamp(),
-        });
-      }
-
-      await batch.commit();
-      console.log(`✅ ${records.length} kayıt Firestore'a eklendi (bulletinId: ${bulletinId})`);
-    } catch (error) {
-      console.error("🔥 Batch kayıt hatası:", error);
-    }
-
-    return null;
-  });
+// handleBatch fonksiyonu handleBatch.js dosyasından import ediliyor
+// exports.handleBatch = functions.pubsub.topic("trademark-batch-processing").onPublish(...)
