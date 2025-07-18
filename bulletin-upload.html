@@ -6,6 +6,12 @@
   <title>Bülten Yükleme</title>
   <link rel="stylesheet" href="css/shared-styles.css" />
   <style>
+    /* Sayfanın tamamını kaplaması için container genişletildi */
+    .main-container {
+      max-width: 100%;
+      padding: 30px;
+    }
+
     .bulletin-section {
       background: white;
       padding: 25px;
@@ -21,54 +27,216 @@
       margin-bottom: 15px;
       color: #555;
     }
+    
+    /* Tablo stilleri */
+    .bulletin-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+    .bulletin-table th, .bulletin-table td {
+      border: 1px solid #ddd;
+      padding: 12px;
+      text-align: left;
+    }
+    .bulletin-table th {
+      background-color: #f2f2f2;
+      color: #333;
+    }
+    .bulletin-table tr:nth-child(even) {
+      background-color: #f9f9f9;
+    }
+    .bulletin-table .delete-btn {
+        background-color: #dc3545;
+        color: white;
+        border: none;
+        padding: 8px 12px;
+        border-radius: 5px;
+        cursor: pointer;
+    }
+    .bulletin-table .delete-btn:hover {
+        background-color: #c82333;
+    }
   </style>
 </head>
 <body>
 <div id="layout-placeholder"></div>
-  <div class="main-container">
-    <h1>Bülten Yükleme</h1>
-    <p>Marka, patent ve tasarım bültenlerini ayrı ayrı yükleyebilirsiniz.</p>
+<div class="page-wrapper">
+    <div class="main-container">
+        <h1>Bülten Yükleme</h1>
+        <p>Marka, patent ve tasarım bültenlerini ayrı ayrı yükleyebilirsiniz.</p>
 
-    <!-- Marka Bülteni -->
-    <div class="bulletin-section">
-      <h2>Marka Bülteni Yükleme</h2>
-      <p>ZIP formatındaki marka bülten arşivinizi yükleyin. Sistem içeriği analiz edecek.</p>
-      <form id="bulletinUploadFormTrademark">
-        <div class="file-upload-area" id="dropAreaTrademark">
-          <div class="upload-icon">📂</div>
-          <p>ZIP dosyanızı buraya sürükleyin veya tıklayın.</p>
-          <input type="file" id="bulletinFileTrademark" accept=".zip,.rar" style="display: none;" required />
+        <div class="bulletin-section">
+            <h2>Marka Bülteni Yükleme</h2>
+            <p>ZIP veya RAR formatındaki marka bülten arşivinizi yükleyin. Sistem içeriği analiz edecek.</p>
+            <form id="bulletinUploadFormTrademark">
+                <div class="file-upload-area" id="dropAreaTrademark">
+                    <div class="upload-icon">📂</div>
+                    <p>Dosyanızı buraya sürükleyin veya tıklayın.</p>
+                    <input type="file" id="bulletinFileTrademark" accept=".zip,.rar" style="display: none;" required />
+                </div>
+                <div id="selectedFileNameTrademark" style="margin-top:10px; font-weight:500; color:#333;"></div>
+                <button type="submit" class="btn btn-primary" style="margin-top:20px;">Marka Bülteni Yükle</button>
+            </form>
+            <div id="uploadStatusTrademark" style="margin-top:20px;"></div>
+            <div id="progressContainer" style="margin-top:10px; display:none;">
+                <div style="background:#eee; border-radius:8px; overflow:hidden; height:20px;">
+                    <div id="progressBar" style="height:100%; width:0%; background:#1e3c72; color:white; text-align:center; line-height:20px; font-size:12px;"></div>
+                </div>
+            </div>
+            
+            <div class="bulletin-table-container">
+                <h3 style="margin-top: 30px; color: #1e3c72;">Yüklü Marka Bültenleri</h3>
+                <table class="bulletin-table" id="trademarkBulletinTable">
+                    <thead>
+                        <tr>
+                            <th>Bülten No</th>
+                            <th>Bülten Tarihi</th>
+                            <th>Yüklenme Tarihi</th>
+                            <th>Kayıt Sayısı</th>
+                            <th>İşlemler</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        </tbody>
+                </table>
+            </div>
         </div>
-        <div id="selectedFileNameTrademark" style="margin-top:10px; font-weight:500; color:#333;"></div>
-        <button type="submit" class="btn btn-primary" style="margin-top:20px;">Marka Bülteni Yükle</button>
-      </form>
-      <div id="uploadStatusTrademark" style="margin-top:20px;"></div>
-      <div id="progressContainer" style="margin-top:10px; display:none;">
-      <div style="background:#eee; border-radius:8px; overflow:hidden; height:20px;">
-        <div id="progressBar" style="height:100%; width:0%; background:#1e3c72; color:white; text-align:center; line-height:20px; font-size:12px;"></div>
-      </div>
-      </div>
-    </div>
 
-    <!-- Patent Bülteni -->
-    <div class="bulletin-section">
-      <h2>Patent Bülteni Yükleme</h2>
-      <p>Bu alan yakında aktif olacaktır.</p>
-      <button class="btn btn-secondary" disabled>Yakında</button>
+        <div class="bulletin-section">
+            <h2>Patent Bülteni Yükleme</h2>
+            <p>Bu alan yakında aktif olacaktır.</p>
+            <button class="btn btn-secondary" disabled>Yakında</button>
+        </div>
+        <div class="bulletin-section">
+            <h2>Tasarım Bülteni Yükleme</h2>
+            <p>Bu alan yakında aktif olacaktır.</p>
+            <button class="btn btn-secondary" disabled>Yakında</button>
+        </div>
     </div>
+</div>
 
-    <!-- Tasarım Bülteni -->
-    <div class="bulletin-section">
-      <h2>Tasarım Bülteni Yükleme</h2>
-      <p>Bu alan yakında aktif olacaktır.</p>
-      <button class="btn btn-secondary" disabled>Yakında</button>
-    </div>
-
-  </div>
-  <script type="module">
+<script type="module">
     import { loadSharedLayout } from './js/layout-loader.js';
-    loadSharedLayout();
-  </script>
+    import { db, storage } from './firebase-config.js';
+    // *** DÜZELTME: writeBatch import edildi ***
+    import { collection, getDocs, doc, deleteDoc, query, where, writeBatch } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { ref, deleteObject, listAll } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
+
+    // DOM yüklendiğinde layout'u ve bültenleri yükle
+    document.addEventListener('DOMContentLoaded', () => {
+        loadSharedLayout({ activeMenuLink: 'bulletin-upload.html' });
+        loadTrademarkBulletins();
+    });
+
+    // Firestore'dan marka bültenlerini çeker ve tabloya ekler
+    async function loadTrademarkBulletins() {
+        const tableBody = document.querySelector("#trademarkBulletinTable tbody");
+        tableBody.innerHTML = '<tr><td colspan="5">Yükleniyor...</td></tr>';
+
+        try {
+            const bulletinsSnapshot = await getDocs(collection(db, "trademarkBulletins"));
+            const bulletins = [];
+            for (const docSnapshot of bulletinsSnapshot.docs) {
+                const bulletinData = { id: docSnapshot.id, ...docSnapshot.data() };
+                
+                // Bültene ait kayıt sayısını bul
+                const recordsQuery = query(collection(db, "trademarkBulletinRecords"), where("bulletinId", "==", docSnapshot.id));
+                const recordsSnapshot = await getDocs(recordsQuery);
+                bulletinData.recordCount = recordsSnapshot.size;
+
+                bulletins.push(bulletinData);
+            }
+
+            tableBody.innerHTML = ''; // Tabloyu temizle
+            if (bulletins.length === 0) {
+                 tableBody.innerHTML = '<tr><td colspan="5">Henüz yüklenmiş bir bülten bulunmuyor.</td></tr>';
+                 return;
+            }
+
+            bulletins.forEach(b => {
+                const tr = document.createElement('tr');
+                const uploadDate = b.createdAt && b.createdAt.toDate ? b.createdAt.toDate().toLocaleDateString('tr-TR') : 'Bilinmiyor';
+                tr.innerHTML = `
+                    <td>${b.bulletinNo || 'N/A'}</td>
+                    <td>${b.bulletinDate || 'N/A'}</td>
+                    <td>${uploadDate}</td>
+                    <td>${b.recordCount}</td>
+                    <td><button class="delete-btn" data-id="${b.id}" data-no="${b.bulletinNo}">Sil</button></td>
+                `;
+                tableBody.appendChild(tr);
+            });
+
+        } catch (error) {
+            console.error("Bültenler yüklenirken hata:", error);
+            tableBody.innerHTML = '<tr><td colspan="5">Bültenler yüklenirken bir hata oluştu. Lütfen konsolu kontrol edin.</td></tr>';
+        }
+    }
+    
+    // Tablodaki "Sil" butonlarına tıklama olayını dinle
+    document.querySelector("#trademarkBulletinTable").addEventListener('click', async (e) => {
+        if (e.target.classList.contains('delete-btn')) {
+            const bulletinId = e.target.dataset.id;
+            const bulletinNo = e.target.dataset.no;
+            
+            if (confirm(`'${bulletinNo}' numaralı bülteni ve tüm ilişkili verileri silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.`)) {
+                e.target.disabled = true;
+                e.target.textContent = "Siliniyor...";
+                await deleteBulletin(bulletinId, bulletinNo);
+            }
+        }
+    });
+
+    // Bülteni, kayıtlarını ve Storage'daki dosyalarını silen ana fonksiyon
+    async function deleteBulletin(bulletinId, bulletinNo) {
+        console.log(`Silme işlemi başlatıldı: Bülten ID ${bulletinId}, No ${bulletinNo}`);
+        
+        // 1. İlgili kayıtları Firestore'dan toplu olarak sil
+        try {
+            const recordsQuery = query(collection(db, "trademarkBulletinRecords"), where("bulletinId", "==", bulletinId));
+            const recordsSnapshot = await getDocs(recordsQuery);
+            if (recordsSnapshot.size > 0) {
+                const batch = writeBatch(db);
+                recordsSnapshot.forEach(doc => {
+                    batch.delete(doc.ref);
+                });
+                await batch.commit();
+                console.log(`${recordsSnapshot.size} adet bülten kaydı silindi.`);
+            } else {
+                console.log("Silinecek bülten kaydı bulunamadı.");
+            }
+        } catch (error) {
+            console.error("Bülten kayıtları silinirken hata:", error);
+            alert("Hata: Bülten kayıtları silinemedi.");
+            return; // Hata durumunda işlemi durdur
+        }
+
+        // 2. Storage'daki ilgili bülten klasörünü ve içindeki görselleri sil
+        try {
+            const imagesFolderRef = ref(storage, `bulletins/trademark_${bulletinNo}_images`);
+            const res = await listAll(imagesFolderRef);
+            await Promise.all(res.items.map(itemRef => deleteObject(itemRef)));
+            console.log(`Storage'dan ${res.items.length} adet görsel silindi.`);
+        } catch (error) {
+            console.error("Storage'daki görseller silinirken hata:", error);
+            // Bu hata kritik olmayabilir, ana bülten kaydının silinmesine engel olmamalı.
+        }
+
+        // 3. Ana bülten dökümanını Firestore'dan sil
+        try {
+            await deleteDoc(doc(db, "trademarkBulletins", bulletinId));
+            console.log("Ana bülten belgesi başarıyla silindi.");
+        } catch (error) {
+            console.error("Ana bülten belgesi silinirken hata:", error);
+            alert("Hata: Ana bülten belgesi silinemedi.");
+            return;
+        }
+
+        alert("Bülten ve tüm verileri başarıyla silindi.");
+        loadTrademarkBulletins(); // Silme sonrası tabloyu yenile
+    }
+
+</script>
 <script type="module" src="js/bulletin-upload.js"></script>
 </body>
 </html>
