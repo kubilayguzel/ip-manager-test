@@ -16,7 +16,6 @@ const nodemailer = require("nodemailer");
 const { handleBatch } = require("./handleBatch");
 const { PubSub } = require("@google-cloud/pubsub");
 const pubsub = new PubSub(); 
-const pLimit = require('p-limit'); // p-limit burada doğru şekilde require edildi
 
 if (!admin.apps.length) {
   admin.initializeApp();
@@ -612,6 +611,9 @@ exports.processTrademarkBulletinUpload = functions
     const filePath = object.name;
     const fileName = path.basename(filePath);
     const bucket = admin.storage().bucket();
+    const { default: pLimit } = await import('p-limit');
+    const limit = pLimit(10);
+
     if (!fileName.endsWith(".zip") && !fileName.endsWith(".rar")) return null; 
 
     const tempFilePath = path.join(os.tmpdir(), fileName);
