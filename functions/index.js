@@ -699,7 +699,7 @@ exports.processTrademarkBulletinUpload = functions
       const imagePathMap = {};
       for (const localPath of imageFiles) {
         const filename = path.basename(localPath);
-        const destinationPath = `bulletins/${bulletinNo}_images/${filename}`; // ← DEĞİŞTİR (bulletinId yerine bulletinNo)
+        const destinationPath = `bulletins/trademark_${bulletinNo}_images/${filename}`;// ← DEĞİŞTİR (bulletinId yerine bulletinNo)
 
         const match = filename.match(/^(\d{4}\/\d+)/);
         if (match) {
@@ -716,16 +716,16 @@ exports.processTrademarkBulletinUpload = functions
       }
    
      // Görsel işlemleri (yeni hafifletilmiş base64 yöntemi)
-     console.log(`📤 ${imageFiles.length} görsel base64 ile 20’lik Pub/Sub batch’lerinde gönderiliyor...`);
+     console.log(`📤 ${imageFiles.length} görsel base64 ile 200’lük Pub/Sub batch’lerinde gönderiliyor...`);
 
-     const imageBatchSize = 20;
+     const imageBatchSize = 200;
       for (let i = 0; i < imageFiles.length; i += imageBatchSize) {
         const batch = imageFiles.slice(i, i + imageBatchSize);
         const encodedImages = [];
 
     for (const localPath of batch) {
       const filename = path.basename(localPath);
-      const destinationPath = `bulletins/${bulletinNo}_images/${filename}`; // ← DEĞİŞTİR (bulletinId yerine bulletinNo)
+      const destinationPath = `bulletins/trademark_${bulletinNo}_images/${filename}`; // ← DEĞİŞTİR (bulletinId yerine bulletinNo)
       imagePathsForPubSub.push(destinationPath);
 
           const imageStream = fs.createReadStream(localPath);
@@ -802,10 +802,10 @@ exports.uploadImageWorker = functions
   .onPublish(async (message) => {
     console.log('🔥 uploadImageWorker tetiklendi (Batch)...');
 
-    // ← BU SATIRLARI DEĞİŞTİR:
     let images;
     try {
-      images = message.json; // Direkt JSON al
+      const batchData = Buffer.from(message.data, 'base64').toString(); // 🔥 decode base64
+      images = JSON.parse(batchData); // 🔥 parse string
       if (!Array.isArray(images)) throw new Error("Geçersiz batch verisi.");
     } catch (err) {
       console.error("❌ JSON parse hatası:", err);
