@@ -785,24 +785,56 @@ exports.processTrademarkBulletinUpload = functions
   });
 
 exports.uploadImageWorker = functions
-  .runWith({ timeoutSeconds: 300, memory: "512MB" })
-  .pubsub.topic("trademark-image-upload")
-  .onPublish(async (message) => {
-    const imageBuffer = message.data; 
-    const { destinationPath, contentType } = message.attributes; 
+  .region('europe-west1')  // ← EN ÖNEMLİ EKSIK - BU SATIRI EKLEYİN
+  .runWith({ timeoutSeconds: 300, memory: "512MB" })
+  .pubsub.topic("trademark-image-upload")
+  .onPublish(async (message) => {
+    // ← DEBUG LOG'LARI EKLEYİN
+    console.log('🔥 uploadImageWorker fonksiyonu tetiklendi!');
+    console.log('📨 Message attributes:', message.attributes);
+    
+    const imageBuffer = message.data; 
+    const { destinationPath, contentType } = message.attributes; 
 
-    try {
-      const file = bucket.file(destinationPath);
-      await file.save(imageBuffer, {
-        contentType: contentType, 
-        resumable: false, 
-      });
-      console.log(`✅ Yüklendi: ${destinationPath}`);
-    } catch (err) {
-      console.error(`❌ Hata (${destinationPath}):`, err);
-    }
-  });
+    // ← VALİDASYON KONTROLLERI EKLEYİN
+    if (!destinationPath) {
+      console.error('❌ destinationPath attribute eksik!');
+      return; // Fonksiyonu sonlandır
+    }
+    
+    if (!imageBuffer || imageBuffer.length === 0) {
+      console.error('❌ Image buffer boş veya geçersiz!');
+      return;
+    }
+    
+    console.log(`📤 Upload başlıyor: ${destinationPath}`);
+    console.log(`📊 Buffer boyutu: ${imageBuffer.length} bytes`);
 
+    try {
+      const file = bucket.file(destinationPath);
+      await file.save(imageBuffer, {
+        contentType: contentType || 'image/jpeg', // ← Default değer ekleyin
+        resumable: false, 
+      });
+      
+      // ← UPLOAD DOĞRULAMA EKLEYİN
+      const [exists] = await file.exists();
+      if (exists) {
+        console.log(`✅ Upload başarılı ve doğrulandı: ${destinationPath}`);
+      } else {
+        console.error(`❌ Upload sonrası dosya bulunamadı: ${destinationPath}`);
+      }
+      
+    } catch (err) {
+      console.error(`❌ Upload hatası (${destinationPath}):`, err);
+      console.error('Hata detayları:', err.message);
+      console.error('Hata kodu:', err.code);
+      
+      // ← HATAYI YENİDEN FIRLATARAK RETRY TETİKLEYİN
+      throw err;
+    }
+  });
+  
 function parseScriptContent(content) {
   const recordsMap = {};
   
