@@ -669,6 +669,7 @@ exports.processTrademarkBulletinUpload = functions
     const filePath = object.name;
     const fileName = path.basename(filePath);
     const bucket = admin.storage().bucket();
+
     if (!fileName.endsWith(".zip")) return null;
 
     const tempFilePath = path.join(os.tmpdir(), fileName);
@@ -704,23 +705,30 @@ exports.processTrademarkBulletinUpload = functions
       const scriptContent = fs.readFileSync(scriptPath, "utf8");
 
       const imageFiles = allFiles.filter((p) => /\.(jpg|jpeg|png)$/i.test(p));
-      console.log(`📤 ${imageFiles.length} görsel Pub/Sub kuyruğuna gönderiliyor...`);
-
       const imagePathsMap = {};
       for (const localPath of imageFiles) {
         const filename = path.basename(localPath);
         const appNo = extractAppNoFromFilename(filename);
-        const destinationPath = `bulletins/${bulletinId}/${filename}`;
-        if (appNo) imagePathsMap[appNo] = destinationPath;
+        const tempDest = `temp-upload/${bulletinId}/${filename}`;
+
+        if (appNo) imagePathsMap[appNo] = tempDest;
+
+        // Geçici klasöre yükleyelim
+        await bucket.upload(localPath, {
+          destination: tempDest,
+          metadata: { contentType: getContentType(filename) },
+        });
 
         await pubsub.topic("trademark-image-upload").publishMessage({
-          data: Buffer.from(JSON.stringify({ localPath, destinationPath })),
+          data: Buffer.from(JSON.stringify({
+            tempPath: tempDest,
+            appNo
+          })),
         });
       }
 
       const records = parseScriptContent(scriptContent, imagePathsMap);
       const batchSize = 100;
-
       for (let i = 0; i < records.length; i += batchSize) {
         const batch = records.slice(i, i + batchSize);
         await pubsub.topic("trademark-batch-processing").publishMessage({
@@ -740,28 +748,28 @@ exports.processTrademarkBulletinUpload = functions
     return null;
   });
 
+
 exports.uploadImageWorker = functions
   .runWith({ timeoutSeconds: 300, memory: "512MB" })
   .pubsub.topic("trademark-image-upload")
   .onPublish(async (message) => {
-    const { localPath, destinationPath } = message.json;
+    const { tempPath, appNo } = message.json;
+    if (!tempPath || !appNo) {
+      console.warn("Eksik veri:", message.json);
+      return;
+    }
+
+    const bucket = admin.storage().bucket();
+    const tempFile = bucket.file(tempPath);
+    const destPath = tempPath.replace("temp-upload", "bulletins");
+
     try {
-      const contentType = getContentType(destinationPath);
-      await bucket.upload(localPath, {
-        destination: destinationPath,
-        metadata: { contentType },
-      });
-      console.log(`✅ Yüklendi: ${destinationPath}`);
+      // Geçici klasörden kalıcı klasöre kopyala
+      await tempFile.copy(bucket.file(destPath));
+      await tempFile.delete(); // geçici dosyayı sil
 
-      // 🔍 Application number'ı dosya adından ayıkla
-      const fileName = path.basename(destinationPath);
-      const appNo = extractAppNoFromFilename(fileName);
-      if (!appNo) {
-        console.warn("Application number çıkarılamadı:", fileName);
-        return;
-      }
+      console.log(`✅ Taşındı: ${tempPath} → ${destPath}`);
 
-      // 🔎 İlgili Firestore kaydını bul
       const snapshot = await db.collection("trademarkRecords")
         .where("applicationNo", "==", appNo)
         .limit(1)
@@ -773,13 +781,10 @@ exports.uploadImageWorker = functions
       }
 
       const docRef = snapshot.docs[0].ref;
-
-      // 🔄 imagePath alanını güncelle
-      await docRef.update({ imagePath: destinationPath });
-      console.log(`🖼️ Firestore güncellendi: ${appNo} → ${destinationPath}`);
-
+      await docRef.update({ imagePath: destPath });
+      console.log(`🖼️ imagePath güncellendi: ${appNo}`);
     } catch (err) {
-      console.error(`❌ Görsel yükleme hatası (${destinationPath}):`, err);
+      console.error(`❌ Hata (${tempPath}):`, err);
     }
   });
 
