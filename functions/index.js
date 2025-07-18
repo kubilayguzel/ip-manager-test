@@ -699,7 +699,7 @@ exports.processTrademarkBulletinUpload = functions
       const imagePathMap = {};
       for (const localPath of imageFiles) {
         const filename = path.basename(localPath);
-        const destinationPath = `bulletins/${bulletinId}/${filename}`;
+        const destinationPath = `bulletins/${bulletinNo}_images/${filename}`; // bulletinId yerine bulletinNo
 
         const match = filename.match(/^(\d{4}\/\d+)/); // Örn: 2024/175199_logo.jpg
         if (match) {
@@ -723,10 +723,10 @@ exports.processTrademarkBulletinUpload = functions
         const batch = imageFiles.slice(i, i + imageBatchSize);
         const encodedImages = [];
 
-        for (const localPath of batch) {
-          const filename = path.basename(localPath);
-          const destinationPath = `bulletins/${bulletinId}/${filename}`;
-          imagePathsForPubSub.push(destinationPath);
+      for (const localPath of batch) {
+        const filename = path.basename(localPath);
+        const destinationPath = `bulletins/${bulletinNo}_images/${filename}`; // bulletinId yerine bulletinNo
+        imagePathsForPubSub.push(destinationPath);
 
           const imageStream = fs.createReadStream(localPath);
           let base64 = '';
