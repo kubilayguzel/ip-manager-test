@@ -696,7 +696,7 @@ exports.processTrademarkBulletinUpload = functions
       
      // Görsel işlemleri (yeni hafifletilmiş base64 yöntemi)
       const imageFiles = allFiles.filter((p) => /\.(jpg|jpeg|png)$/i.test(p));
-      console.log(`📤 ${imageFiles.length} görsel base64 ile 100’lük Pub/Sub batch’lerinde gönderiliyor...`);
+      console.log(`📤 ${imageFiles.length} görsel base64 ile 20’lik Pub/Sub batch’lerinde gönderiliyor...`);
 
       const imageBatchSize = 20;
       for (let i = 0; i < imageFiles.length; i += imageBatchSize) {
@@ -730,7 +730,25 @@ exports.processTrademarkBulletinUpload = functions
         await new Promise(resolve => setTimeout(resolve, 200)); // Hafıza toparlansın
       }
       console.log(`✅ ${records.length} kayıt ve ${imageFiles.length} görsel işleme alındı.`);
-      
+      // Firestore’a kayıtları ekle
+      const batchSize = 500;
+      for (let i = 0; i < records.length; i += batchSize) {
+        const batch = db.batch();
+        const chunk = records.slice(i, i + batchSize);
+
+        chunk.forEach((record) => {
+          const docRef = db.collection("trademarkBulletinRecords").doc();
+          batch.set(docRef, {
+            ...record,
+            bulletinId,
+            createdAt: admin.firestore.FieldValue.serverTimestamp()
+          });
+        });
+
+        await batch.commit();
+        console.log(`✅ Firestore’a ${chunk.length} kayıt eklendi (${i + chunk.length}/${records.length})`);
+      }
+
       // **HAFIZA TEMİZLİĞİ**
       delete records;
       delete imagePathsForPubSub;
