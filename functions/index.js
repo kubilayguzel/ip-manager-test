@@ -690,45 +690,45 @@ exports.processTrademarkBulletinUpload = functions
       // **ÖNEMLİ DEĞİŞİKLİK: Stream ile okuma**
       const scriptContent = fs.readFileSync(scriptPath, "utf8");
       const records = parseScriptContent(scriptContent);
-      
+      const imagePathsForPubSub = [];
       // Script content'i hafızadan temizle
       delete scriptContent;
       
      // Görsel işlemleri (yeni hafifletilmiş base64 yöntemi)
-const imageFiles = allFiles.filter((p) => /\.(jpg|jpeg|png)$/i.test(p));
-console.log(`📤 ${imageFiles.length} görsel base64 ile 100’lük Pub/Sub batch’lerinde gönderiliyor...`);
+      const imageFiles = allFiles.filter((p) => /\.(jpg|jpeg|png)$/i.test(p));
+      console.log(`📤 ${imageFiles.length} görsel base64 ile 100’lük Pub/Sub batch’lerinde gönderiliyor...`);
 
-const imageBatchSize = 100;
-for (let i = 0; i < imageFiles.length; i += imageBatchSize) {
-  const batch = imageFiles.slice(i, i + imageBatchSize);
-  const encodedImages = [];
+      const imageBatchSize = 100;
+      for (let i = 0; i < imageFiles.length; i += imageBatchSize) {
+        const batch = imageFiles.slice(i, i + imageBatchSize);
+        const encodedImages = [];
 
-  for (const localPath of batch) {
-    const filename = path.basename(localPath);
-    const destinationPath = `bulletins/${bulletinId}/${filename}`;
-    imagePathsForPubSub.push(destinationPath);
+        for (const localPath of batch) {
+          const filename = path.basename(localPath);
+          const destinationPath = `bulletins/${bulletinId}/${filename}`;
+          imagePathsForPubSub.push(destinationPath);
 
-    const imageStream = fs.createReadStream(localPath);
-    let base64 = '';
-    for await (const chunk of imageStream) {
-      base64 += chunk.toString('base64');
-    }
+          const imageStream = fs.createReadStream(localPath);
+          let base64 = '';
+          for await (const chunk of imageStream) {
+            base64 += chunk.toString('base64');
+          }
 
-    encodedImages.push({
-      destinationPath,
-      base64,
-      contentType: getContentType(filename)
-    });
-  }
+          encodedImages.push({
+            destinationPath,
+            base64,
+            contentType: getContentType(filename)
+          });
+        }
 
-  // Tek mesajda 100 görsel gönder
-  await pubsub.topic("trademark-image-upload").publishMessage({
-    data: Buffer.from(JSON.stringify(encodedImages)),
-    attributes: { batchSize: batch.length.toString() }
-  });
+        // Tek mesajda 100 görsel gönder
+        await pubsub.topic("trademark-image-upload").publishMessage({
+          data: Buffer.from(JSON.stringify(encodedImages)),
+          attributes: { batchSize: batch.length.toString() }
+        });
 
-  await new Promise(resolve => setTimeout(resolve, 200)); // Hafıza toparlansın
-}
+        await new Promise(resolve => setTimeout(resolve, 200)); // Hafıza toparlansın
+      }
       console.log(`✅ ${records.length} kayıt ve ${imageFiles.length} görsel işleme alındı.`);
       
       // **HAFIZA TEMİZLİĞİ**
