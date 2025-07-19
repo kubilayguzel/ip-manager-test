@@ -124,8 +124,11 @@
 
     // Marka bültenlerini Firebase'den çekip tabloya dolduran fonksiyon
     async function loadTrademarkBulletins() {
+        console.log("🧪 Fonksiyon çalıştı, tbody aranıyor...");
         const tableBody = document.querySelector("#trademarkBulletinTable tbody");
-        if (!tableBody) {
+        console.log("📌 tableBody:", tableBody);
+
+           if (!tableBody) {
             console.error("DEBUG: Tablo gövdesi (tbody) HTML'de bulunamadı!");
             return;
         }
