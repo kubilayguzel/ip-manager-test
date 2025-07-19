@@ -116,6 +116,7 @@ setTimeout(async () => {
         const firebaseModule = await import('./firebase-config.js');
         const { collection, getDocs, query, where, doc, deleteDoc, writeBatch, getCountFromServer } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
         const { ref, deleteObject, listAll } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js');
+        const { showNotification } = await import('./js/utils.js');
         
         console.log('✅ Firebase modülleri yüklendi');
         
@@ -192,72 +193,150 @@ setTimeout(async () => {
             } catch (error) {
                 console.error('❌ Tablo doldurma hatası:', error);
                 tableBody.innerHTML = '<tr><td colspan="5" style="color:red;">Hata: ' + error.message + '</td></tr>';
+                showNotification('Tablo yükleme hatası: ' + error.message, 'error', 8000);
             }
         }
         
-        // Bülten silme fonksiyonu (global) - TAM SİLME
+        // Bülten silme fonksiyonu (global) - PROGRESS NOTIFICATION İLE
         window.deleteBulletin = async function(bulletinId, bulletinNo) {
             if (!confirm('Bülten No: ' + bulletinNo + ' olan bülteni, TÜM KAYITLARI ve GÖRSELLERİ ile birlikte silmek istediğinizden emin misiniz? Bu işlem geri alınamaz!')) {
                 return;
             }
             
+            // Progress tracking için değişkenler
+            let progressNotificationId = null;
+            let totalSteps = 0;
+            let currentStep = 0;
+            
+            // Progress notification gösterme fonksiyonu
+            function updateProgress(message, isComplete = false) {
+                currentStep++;
+                const progressText = isComplete ? 
+                    `✅ ${message}` : 
+                    `🔄 ${message} (${currentStep}/${totalSteps})`;
+                
+                if (isComplete) {
+                    showNotification(progressText, 'success', 8000);
+                } else {
+                    showNotification(progressText, 'info', 3000);
+                }
+            }
+            
             try {
                 console.log('🗑️ ' + bulletinNo + ' bülteni siliniyor...');
                 
-                // 1. İlişkili kayıtları say ve sil
-                console.log('📊 İlişkili kayıtlar kontrol ediliyor...');
+                // Başlangıç bildirimi
+                showNotification(`🚀 Bülten ${bulletinNo} silme işlemi başlatıldı...`, 'info', 3000);
+                
+                // 1. İlişkili kayıtları kontrol et
+                updateProgress('Kayıtlar kontrol ediliyor...');
                 const recordsQuery = query(collection(db, "trademarkBulletinRecords"), where("bulletinId", "==", bulletinId));
                 const recordsSnapshot = await getDocs(recordsQuery);
-                console.log('📋 ' + recordsSnapshot.size + ' adet ilişkili kayıt bulundu');
+                const totalRecords = recordsSnapshot.size;
+                console.log('📋 ' + totalRecords + ' adet ilişkili kayıt bulundu');
                 
-                const batch = writeBatch(db);
+                // Toplam adım sayısını hesapla
+                const BATCH_SIZE = 500;
+                const recordBatches = Math.ceil(totalRecords / BATCH_SIZE);
+                totalSteps = 2 + recordBatches + 1; // Ana bülten + kayıt batch'leri + görseller
+                currentStep = 0;
                 
-                // Ana bülten dokümanını batch'e ekle
+                // 2. Ana bülteni sil
+                updateProgress('Ana bülten siliniyor...');
                 const bulletinRef = doc(db, "trademarkBulletins", bulletinId);
-                batch.delete(bulletinRef);
-                console.log('✅ Ana bülten silme için batch\'e eklendi');
+                await deleteDoc(bulletinRef);
+                console.log('✅ Ana bülten silindi');
                 
-                // Tüm ilişkili kayıtları batch'e ekle
-                recordsSnapshot.forEach((recordDoc) => {
-                    batch.delete(recordDoc.ref);
-                });
-                console.log('✅ ' + recordsSnapshot.size + ' kayıt silme için batch\'e eklendi');
+                // 3. Kayıtları batch'lerde sil
+                let deletedCount = 0;
+                if (totalRecords > 0) {
+                    const allDocs = recordsSnapshot.docs;
+                    
+                    for (let i = 0; i < allDocs.length; i += BATCH_SIZE) {
+                        const batchNumber = Math.ceil((i + 1) / BATCH_SIZE);
+                        updateProgress(`Kayıtlar siliniyor (Batch ${batchNumber}/${recordBatches})`);
+                        
+                        const batch = writeBatch(db);
+                        const batchDocs = allDocs.slice(i, i + BATCH_SIZE);
+                        
+                        batchDocs.forEach(docSnapshot => {
+                            batch.delete(docSnapshot.ref);
+                        });
+                        
+                        await batch.commit();
+                        deletedCount += batchDocs.length;
+                        
+                        // Progress notification
+                        const progressPercent = Math.round((deletedCount / totalRecords) * 100);
+                        showNotification(
+                            `📦 Kayıtlar siliniyor: ${deletedCount}/${totalRecords} (${progressPercent}%)`,
+                            'info',
+                            2000
+                        );
+                        
+                        console.log('✅ Batch ' + batchNumber + ' tamamlandı. Silinen: ' + deletedCount + '/' + totalRecords);
+                    }
+                    
+                    console.log('✅ Tüm kayıtlar silindi (' + deletedCount + ' kayıt)');
+                } else {
+                    // Kayıt yoksa step'i atla
+                    currentStep = totalSteps - 1;
+                }
                 
-                // Batch işlemini gerçekleştir
-                await batch.commit();
-                console.log('✅ Firestore batch işlemi tamamlandı');
-                
-                // 2. Storage'daki görselleri sil
-                console.log('🖼️ Storage\'daki görseller kontrol ediliyor...');
+                // 4. Storage'daki görselleri sil
+                updateProgress('Görseller kontrol ediliyor...');
                 const imagesFolderPath = 'bulletins/trademark_' + bulletinNo + '_images/';
                 const imagesRef = ref(storage, imagesFolderPath);
                 
                 try {
                     const imageList = await listAll(imagesRef);
-                    console.log('📷 ' + imageList.items.length + ' adet görsel bulundu');
+                    const totalImages = imageList.items.length;
+                    console.log('📷 ' + totalImages + ' adet görsel bulundu');
                     
-                    if (imageList.items.length > 0) {
-                        await Promise.all(imageList.items.map(itemRef => deleteObject(itemRef)));
-                        console.log('✅ ' + imageList.items.length + ' görsel başarıyla silindi');
+                    if (totalImages > 0) {
+                        showNotification(`🖼️ ${totalImages} görsel siliniyor...`, 'info', 3000);
+                        
+                        // Görselleri batch'lerde sil
+                        const imageBatchSize = 100;
+                        let deletedImages = 0;
+                        
+                        for (let i = 0; i < imageList.items.length; i += imageBatchSize) {
+                            const imageBatch = imageList.items.slice(i, i + imageBatchSize);
+                            await Promise.all(imageBatch.map(itemRef => deleteObject(itemRef)));
+                            deletedImages += imageBatch.length;
+                            
+                            // Görsel progress
+                            const imageProgressPercent = Math.round((deletedImages / totalImages) * 100);
+                            showNotification(
+                                `🖼️ Görseller siliniyor: ${deletedImages}/${totalImages} (${imageProgressPercent}%)`,
+                                'info',
+                                2000
+                            );
+                            
+                            console.log('🖼️ Görsel batch tamamlandı. Silinen: ' + deletedImages + '/' + totalImages);
+                        }
+                        
+                        console.log('✅ ' + deletedImages + ' görsel başarıyla silindi');
                     } else {
-                        console.log('ℹ️ Silinecek görsel bulunamadı');
+                        showNotification('ℹ️ Silinecek görsel bulunamadı', 'info', 2000);
                     }
                 } catch (storageError) {
                     console.error('❌ Storage silme hatası:', storageError);
-                    alert('Uyarı: Görseller silinemedi. Hata: ' + storageError.message);
+                    showNotification('⚠️ Görseller silinemedi: ' + storageError.message, 'warning', 8000);
                 }
                 
-                alert('✅ Bülten No: ' + bulletinNo + ' başarıyla silindi!\n' + 
-                      '• Ana bülten silindi\n' + 
-                      '• ' + recordsSnapshot.size + ' kayıt silindi\n' +
-                      '• Görseller silindi');
+                // Final success mesajı
+                updateProgress(
+                    `Bülten ${bulletinNo} tamamen silindi! (${totalRecords} kayıt + görseller)`,
+                    true
+                );
                       
                 console.log('🔄 Tablo yenileniyor...');
                 loadTrademarkBulletins(); // Tabloyu yenile
                 
             } catch (error) {
                 console.error('❌ Bülten silme hatası:', error);
-                alert('Hata: ' + error.message + '\nKonsolu kontrol edin.');
+                showNotification('❌ Silme hatası: ' + error.message, 'error', 10000);
             }
         };
         
@@ -267,10 +346,16 @@ setTimeout(async () => {
     } catch (error) {
         console.error('❌ Script hatası:', error);
         
-        // Hata durumunda tabloya mesaj yazdır
-        const tableBody = document.querySelector("#trademarkBulletinTable tbody");
-        if (tableBody) {
-            tableBody.innerHTML = '<tr><td colspan="5" style="color:red;">Script hatası: ' + error.message + '</td></tr>';
+        // showNotification ile hata göster
+        try {
+            const { showNotification } = await import('./js/utils.js');
+            showNotification('Script hatası: ' + error.message, 'error', 10000);
+        } catch (importError) {
+            // Fallback: tabloya hata yazdır
+            const tableBody = document.querySelector("#trademarkBulletinTable tbody");
+            if (tableBody) {
+                tableBody.innerHTML = '<tr><td colspan="5" style="color:red;">Script hatası: ' + error.message + '</td></tr>';
+            }
         }
     }
 }, 1500); // 1.5 saniye bekle
