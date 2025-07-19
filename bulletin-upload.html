@@ -195,47 +195,69 @@ setTimeout(async () => {
             }
         }
         
-        // Bülten silme fonksiyonu (global)
+        // Bülten silme fonksiyonu (global) - TAM SİLME
         window.deleteBulletin = async function(bulletinId, bulletinNo) {
-            if (!confirm('Bülten No: ' + bulletinNo + ' olan bülteni silmek istediğinizden emin misiniz?')) {
+            if (!confirm('Bülten No: ' + bulletinNo + ' olan bülteni, TÜM KAYITLARI ve GÖRSELLERİ ile birlikte silmek istediğinizden emin misiniz? Bu işlem geri alınamaz!')) {
                 return;
             }
             
             try {
-                const batch = writeBatch(db);
+                console.log('🗑️ ' + bulletinNo + ' bülteni siliniyor...');
                 
-                // Ana bülten dokümanını sil
-                const bulletinRef = doc(db, "trademarkBulletins", bulletinId);
-                batch.delete(bulletinRef);
-                
-                // İlgili kayıtları sil
+                // 1. İlişkili kayıtları say ve sil
+                console.log('📊 İlişkili kayıtlar kontrol ediliyor...');
                 const recordsQuery = query(collection(db, "trademarkBulletinRecords"), where("bulletinId", "==", bulletinId));
                 const recordsSnapshot = await getDocs(recordsQuery);
+                console.log('📋 ' + recordsSnapshot.size + ' adet ilişkili kayıt bulundu');
+                
+                const batch = writeBatch(db);
+                
+                // Ana bülten dokümanını batch'e ekle
+                const bulletinRef = doc(db, "trademarkBulletins", bulletinId);
+                batch.delete(bulletinRef);
+                console.log('✅ Ana bülten silme için batch\'e eklendi');
+                
+                // Tüm ilişkili kayıtları batch'e ekle
                 recordsSnapshot.forEach((recordDoc) => {
                     batch.delete(recordDoc.ref);
                 });
+                console.log('✅ ' + recordsSnapshot.size + ' kayıt silme için batch\'e eklendi');
                 
+                // Batch işlemini gerçekleştir
                 await batch.commit();
+                console.log('✅ Firestore batch işlemi tamamlandı');
                 
-                // Storage'daki görselleri sil
+                // 2. Storage'daki görselleri sil
+                console.log('🖼️ Storage\'daki görseller kontrol ediliyor...');
+                const imagesFolderPath = 'bulletins/trademark_' + bulletinNo + '_images/';
+                const imagesRef = ref(storage, imagesFolderPath);
+                
                 try {
-                    const imagesFolderPath = 'bulletins/trademark_' + bulletinNo + '_images/';
-                    const imagesRef = ref(storage, imagesFolderPath);
                     const imageList = await listAll(imagesRef);
+                    console.log('📷 ' + imageList.items.length + ' adet görsel bulundu');
                     
                     if (imageList.items.length > 0) {
                         await Promise.all(imageList.items.map(itemRef => deleteObject(itemRef)));
+                        console.log('✅ ' + imageList.items.length + ' görsel başarıyla silindi');
+                    } else {
+                        console.log('ℹ️ Silinecek görsel bulunamadı');
                     }
                 } catch (storageError) {
-                    console.warn('Storage silme hatası:', storageError);
+                    console.error('❌ Storage silme hatası:', storageError);
+                    alert('Uyarı: Görseller silinemedi. Hata: ' + storageError.message);
                 }
                 
-                alert('Bülten başarıyla silindi!');
+                alert('✅ Bülten No: ' + bulletinNo + ' başarıyla silindi!\n' + 
+                      '• Ana bülten silindi\n' + 
+                      '• ' + recordsSnapshot.size + ' kayıt silindi\n' +
+                      '• Görseller silindi');
+                      
+                console.log('🔄 Tablo yenileniyor...');
                 loadTrademarkBulletins(); // Tabloyu yenile
                 
             } catch (error) {
-                console.error('Silme hatası:', error);
-                alert('Hata: ' + error.message);
+                console.error('❌ Bülten silme hatası:', error);
+                alert('Hata: ' + error.message + '\nKonsolu kontrol edin.');
             }
         };
         
