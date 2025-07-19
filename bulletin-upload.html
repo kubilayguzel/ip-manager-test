@@ -167,12 +167,14 @@ setTimeout(async () => {
                     // Kayıt sayısını al
                     let recordCount = 0;
                     try {
+                        console.log(`🔍 ${bulletin.bulletinNo} için kayıt sayısı hesaplanıyor, bulletinId: ${bulletin.id}`);
                         const recordsQuery = query(collection(db, "trademarkBulletinRecords"), where("bulletinId", "==", bulletin.id));
                         const recordsSnapshot = await getDocs(recordsQuery);
                         recordCount = recordsSnapshot.size;
+                        console.log(`📊 ${bulletin.bulletinNo} kayıt sayısı: ${recordCount}`);
                     } catch (recordError) {
-                        console.warn('Kayıt sayısı alınamadı:', recordError);
-                        recordCount = '-';
+                        console.error(`❌ ${bulletin.bulletinNo} kayıt sayısı hatası:`, recordError);
+                        recordCount = 'Hata';
                     }
                     
                     const tr = document.createElement('tr');
