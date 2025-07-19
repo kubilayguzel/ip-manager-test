@@ -263,12 +263,16 @@
         }
     }
 
-    // Sayfa yüklendiğinde bültenleri otomatik olarak yükle
-// Sayfa tamamen yüklendiğinde çalışacak:
-window.addEventListener('load', () => {
-  console.log("🟢 window.load çalıştı");
-  loadTrademarkBulletins(); // ✅ garanti çağrı
-});
+// DOM hazır olduğunda veya hemen çalıştır
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', loadTrademarkBulletins);
+} else {
+    // DOM zaten hazır, hemen çalıştır
+    setTimeout(loadTrademarkBulletins, 100);
+}
+
+// Ek güvenlik için load event'i de dinle
+window.addEventListener('load', loadTrademarkBulletins);
 
 </script>
 <script type="module" src="js/bulletin-upload.js"></script>
