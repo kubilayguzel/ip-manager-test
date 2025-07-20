@@ -1,12 +1,8 @@
-const { onMessagePublished } = require("firebase-functions/v2/pubsub");
-const { setGlobalOptions } = require("firebase-functions/v2");
+const functions = require("firebase-functions");
 const admin = require("firebase-admin");
 const path = require("path");
 
-// Global ayarlar (opsiyonel)
-setGlobalOptions({ region: "us-central1" });
-
-// Initialize admin if not already done
+// Initialize admin only if not already initialized
 if (!admin.apps.length) {
   admin.initializeApp();
 }
@@ -34,18 +30,18 @@ function findMatchingImage(applicationNo, imagePaths) {
   return null;
 }
 
-// V2 Functions - %100 çalışır
-exports.handleBatch = onMessagePublished(
-  {
-    topic: "trademark-batch-processing",
-    memory: "2GiB",
-    timeoutSeconds: 540,
-    region: "us-central1"
-  },
-  async (event) => {
-    console.log("🚀 handleBatch V2 fonksiyonu çalıştırılıyor...");
+// ❌ PROBLEM: Conditional check kaldırıldı
+// ✅ ÇÖZÜM: Direkt functions.pubsub.topic kullan
+exports.handleBatch = functions
+  .runWith({
+    memory: '2GB',
+    timeoutSeconds: 540
+  })
+  .pubsub
+  .topic("trademark-batch-processing")
+  .onPublish(async (message) => {
+    console.log("🚀 handleBatch fonksiyonu çalıştırılıyor...");
     
-    const message = event.data.message;
     const data = message.json;
     const { records, bulletinId, imagePaths } = data;
 
@@ -107,5 +103,20 @@ exports.handleBatch = onMessagePublished(
 
     console.log(`🎉 Toplam ${records.length} kayıt başarıyla işlendi`);
     return null;
-  }
-);
+  });
+  // handleBatch.js dosyasının sonuna ekle:
+
+// Debug fonksiyonu - Firebase Functions'ın çalışıp çalışmadığını test et
+exports.debugTest = functions.https.onRequest((req, res) => {
+  console.log("✅ Firebase Functions çalışıyor!");
+  console.log("🔥 Functions object keys:", Object.keys(functions));
+  console.log("📡 Pubsub available?", !!functions.pubsub);
+  console.log("🌐 HTTPS available?", !!functions.https);
+  
+  res.status(200).json({
+    message: "Firebase Functions çalışıyor!",
+    functionsKeys: Object.keys(functions),
+    pubsubAvailable: !!functions.pubsub,
+    httpsAvailable: !!functions.https
+  });
+});
