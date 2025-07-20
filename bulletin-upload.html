@@ -116,7 +116,7 @@ setTimeout(async () => {
         const firebaseModule = await import('./firebase-config.js');
         const { collection, getDocs, query, where, doc, deleteDoc, writeBatch, getCountFromServer } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
         const { ref, deleteObject, listAll } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js');
-        const { showNotification } = await import('./js/utils.js');
+        const { showNotification } = await import('./utils.js'); // ✅ Doğru path
         
         console.log('✅ Firebase modülleri yüklendi');
         
@@ -203,25 +203,6 @@ setTimeout(async () => {
                 return;
             }
             
-            // Progress tracking için değişkenler
-            let progressNotificationId = null;
-            let totalSteps = 0;
-            let currentStep = 0;
-            
-            // Progress notification gösterme fonksiyonu
-            function updateProgress(message, isComplete = false) {
-                currentStep++;
-                const progressText = isComplete ? 
-                    `✅ ${message}` : 
-                    `🔄 ${message} (${currentStep}/${totalSteps})`;
-                
-                if (isComplete) {
-                    showNotification(progressText, 'success', 8000);
-                } else {
-                    showNotification(progressText, 'info', 3000);
-                }
-            }
-            
             try {
                 console.log('🗑️ ' + bulletinNo + ' bülteni siliniyor...');
                 
@@ -229,32 +210,30 @@ setTimeout(async () => {
                 showNotification(`🚀 Bülten ${bulletinNo} silme işlemi başlatıldı...`, 'info', 3000);
                 
                 // 1. İlişkili kayıtları kontrol et
-                updateProgress('Kayıtlar kontrol ediliyor...');
+                showNotification('🔍 Kayıtlar kontrol ediliyor...', 'info', 3000);
                 const recordsQuery = query(collection(db, "trademarkBulletinRecords"), where("bulletinId", "==", bulletinId));
                 const recordsSnapshot = await getDocs(recordsQuery);
                 const totalRecords = recordsSnapshot.size;
                 console.log('📋 ' + totalRecords + ' adet ilişkili kayıt bulundu');
                 
-                // Toplam adım sayısını hesapla
-                const BATCH_SIZE = 500;
-                const recordBatches = Math.ceil(totalRecords / BATCH_SIZE);
-                totalSteps = 2 + recordBatches + 1; // Ana bülten + kayıt batch'leri + görseller
-                currentStep = 0;
-                
                 // 2. Ana bülteni sil
-                updateProgress('Ana bülten siliniyor...');
+                showNotification('🗂️ Ana bülten siliniyor...', 'info', 3000);
                 const bulletinRef = doc(db, "trademarkBulletins", bulletinId);
                 await deleteDoc(bulletinRef);
                 console.log('✅ Ana bülten silindi');
                 
                 // 3. Kayıtları batch'lerde sil
+                const BATCH_SIZE = 500;
                 let deletedCount = 0;
                 if (totalRecords > 0) {
+                    const recordBatches = Math.ceil(totalRecords / BATCH_SIZE);
+                    showNotification(`📦 ${totalRecords} kayıt ${recordBatches} batch'te silinecek...`, 'info', 4000);
+                    
                     const allDocs = recordsSnapshot.docs;
                     
                     for (let i = 0; i < allDocs.length; i += BATCH_SIZE) {
                         const batchNumber = Math.ceil((i + 1) / BATCH_SIZE);
-                        updateProgress(`Kayıtlar siliniyor (Batch ${batchNumber}/${recordBatches})`);
+                        showNotification(`📦 Kayıt batch ${batchNumber}/${recordBatches} siliniyor...`, 'info', 2000);
                         
                         const batch = writeBatch(db);
                         const batchDocs = allDocs.slice(i, i + BATCH_SIZE);
@@ -269,7 +248,7 @@ setTimeout(async () => {
                         // Progress notification
                         const progressPercent = Math.round((deletedCount / totalRecords) * 100);
                         showNotification(
-                            `📦 Kayıtlar siliniyor: ${deletedCount}/${totalRecords} (${progressPercent}%)`,
+                            `📊 İlerleme: ${deletedCount}/${totalRecords} kayıt silindi (${progressPercent}%)`,
                             'info',
                             2000
                         );
@@ -279,12 +258,11 @@ setTimeout(async () => {
                     
                     console.log('✅ Tüm kayıtlar silindi (' + deletedCount + ' kayıt)');
                 } else {
-                    // Kayıt yoksa step'i atla
-                    currentStep = totalSteps - 1;
+                    showNotification('ℹ️ Silinecek kayıt bulunamadı', 'info', 2000);
                 }
                 
                 // 4. Storage'daki görselleri sil
-                updateProgress('Görseller kontrol ediliyor...');
+                showNotification('🖼️ Görseller kontrol ediliyor...', 'info', 3000);
                 const imagesFolderPath = 'bulletins/trademark_' + bulletinNo + '_images/';
                 const imagesRef = ref(storage, imagesFolderPath);
                 
@@ -308,7 +286,7 @@ setTimeout(async () => {
                             // Görsel progress
                             const imageProgressPercent = Math.round((deletedImages / totalImages) * 100);
                             showNotification(
-                                `🖼️ Görseller siliniyor: ${deletedImages}/${totalImages} (${imageProgressPercent}%)`,
+                                `🎨 Görseller: ${deletedImages}/${totalImages} silindi (${imageProgressPercent}%)`,
                                 'info',
                                 2000
                             );
@@ -326,9 +304,10 @@ setTimeout(async () => {
                 }
                 
                 // Final success mesajı
-                updateProgress(
-                    `Bülten ${bulletinNo} tamamen silindi! (${totalRecords} kayıt + görseller)`,
-                    true
+                showNotification(
+                    `✅ Başarılı! Bülten ${bulletinNo} tamamen silindi!\n• Ana bülten: ✓\n• ${totalRecords} kayıt: ✓\n• Görseller: ✓`,
+                    'success',
+                    8000
                 );
                       
                 console.log('🔄 Tablo yenileniyor...');
@@ -348,7 +327,7 @@ setTimeout(async () => {
         
         // showNotification ile hata göster
         try {
-            const { showNotification } = await import('./js/utils.js');
+            const { showNotification } = await import('./utils.js'); // ✅ Doğru path
             showNotification('Script hatası: ' + error.message, 'error', 10000);
         } catch (importError) {
             // Fallback: tabloya hata yazdır
