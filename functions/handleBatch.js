@@ -1,5 +1,5 @@
-console.log("🔥 Firebase Functions nesnesi:", Object.keys(functions));
 const functions = require("firebase-functions");
+console.log("🔥 Firebase Functions nesnesi:", Object.keys(functions));
 const admin = require("firebase-admin");
 const path = require("path");
 
