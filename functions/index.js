@@ -13,7 +13,7 @@ const { createExtractorFromFile } = require("node-unrar-js");
 const { google } = require("googleapis");
 const { GoogleAuth } = require("google-auth-library");
 const nodemailer = require("nodemailer");
-const { handleBatch } = require("./handleBatch");
+//const { handleBatch } = require("./handleBatch");
 const { PubSub } = require("@google-cloud/pubsub");
 const pubsub = new PubSub(); 
 const algoliasearch = require('algoliasearch');
@@ -1014,4 +1014,4 @@ exports.indexTrademarkBulletinRecords = functions
             throw new functions.https.HttpsError('internal', 'Algolia indeksleme sırasında bir hata oluştu.', error.message);
         }
     });
-exports.handleBatch = handleBatch;
+//exports.handleBatch = handleBatch;
