@@ -1,9 +1,11 @@
-const functions = require("firebase-functions");
-console.log("🔥 Firebase Functions nesnesi:", Object.keys(functions));
+const { pubsub } = require("firebase-functions");
 const admin = require("firebase-admin");
 const path = require("path");
 
-admin.initializeApp();
+// Initialize admin if not already done
+if (!admin.apps.length) {
+  admin.initializeApp();
+}
 const db = admin.firestore();
 
 function getContentType(filePath) {
@@ -16,7 +18,6 @@ function findMatchingImage(applicationNo, imagePaths) {
   const cleanNo = applicationNo.replace(/\D/g, "");
   const lastFiveDigits = cleanNo.slice(-5);
   
-  // **HAFIZA OPTİMİZASYONU: Early return ile arama optimizasyonu**
   for (let i = 0; i < imagePaths.length; i++) {
     const imgPath = imagePaths[i];
     const filename = path.basename(imgPath);
@@ -29,84 +30,71 @@ function findMatchingImage(applicationNo, imagePaths) {
   return null;
 }
 
-exports.handleBatch = functions.pubsub
-  ? functions.pubsub
-      .topic("trademark-batch-processing")
-      .onPublish(async (message) => {
-        const data = message.json;
-        const { records, bulletinId, imagePaths } = data;
+// Destructuring ile direkt pubsub kullan
+exports.handleBatch = pubsub
+  .topic("trademark-batch-processing")
+  .onPublish(async (message) => {
+    console.log("🚀 handleBatch fonksiyonu çalıştırılıyor...");
+    
+    const data = message.json;
+    const { records, bulletinId, imagePaths } = data;
 
-        if (!records || !Array.isArray(records)) {
-          console.error("Geçersiz mesaj verisi: 'records' bulunamadı veya dizi değil.", data);
-          return null;
-        }
+    if (!records || !Array.isArray(records)) {
+      console.error("Geçersiz mesaj verisi: 'records' bulunamadı veya dizi değil.", data);
+      return null;
+    }
 
-        if (!imagePaths || !Array.isArray(imagePaths)) {
-          console.warn("Uyarı: 'imagePaths' bulunamadı veya dizi değil. Görsel eşleşmesi yapılamayacak.", data);
-        }
+    if (!imagePaths || !Array.isArray(imagePaths)) {
+      console.warn("Uyarı: 'imagePaths' bulunamadı veya dizi değil. Görsel eşleşmesi yapılamayacak.");
+    }
 
-        const db = admin.firestore();
-        let batch = db.batch();
+    let batch = db.batch();
+    console.log(`📊 ${records.length} kayıt işlenmeye başlanıyor...`);
 
-        console.log(`📊 ${records.length} kayıt işlenmeye başlanıyor...`);
+    for (let i = 0; i < records.length; i++) {
+      const record = records[i];
 
-        for (let i = 0; i < records.length; i++) {
-          const record = records[i];
+      if (i % 50 === 0) {
+        console.log(`İşlenen: ${i}/${records.length} kayıt`);
+      }
 
-          if (i % 50 === 0) {
-            console.log(`İşlenen: ${i}/${records.length} kayıt`);
-          }
+      const matchedImagePath = (record.imagePaths && record.imagePaths.length > 0)
+        ? record.imagePaths[0]
+        : null;
 
-          const matchedImagePath = (record.imagePaths && record.imagePaths.length > 0)
-            ? record.imagePaths[0]
-            : null;
+      const docData = {
+        bulletinId,
+        applicationNo: record.applicationNo ?? null,
+        applicationDate: record.applicationDate ?? null,
+        markName: record.markName ?? null,
+        niceClasses: record.niceClasses ?? null,
+        holders: record.holders ?? [],
+        goods: record.goods ?? [],
+        extractedGoods: record.extractedGoods ?? [],
+        attorneys: record.attorneys ?? [],
+        imagePath: matchedImagePath ?? null,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp()
+      };
 
-          const docData = {
-            bulletinId,
-            applicationNo: record.applicationNo ?? null,
-            applicationDate: record.applicationDate ?? null,
-            markName: record.markName ?? null,
-            niceClasses: record.niceClasses ?? null,
-            holders: record.holders ?? [],
-            goods: record.goods ?? [],
-            extractedGoods: record.extractedGoods ?? [],
-            attorneys: record.attorneys ?? [],
-            imagePath: matchedImagePath ?? null,
-            createdAt: admin.firestore.FieldValue.serverTimestamp(),
-          };
+      // Create document reference and add to batch
+      const docRef = db.collection("trademarkRecords").doc();
+      batch.set(docRef, docData);
 
-          const docRef = db.collection("trademarkBulletinRecords").doc();
-          batch.set(docRef, docData);
+      // Commit batch every 500 operations (Firestore limit)
+      if ((i + 1) % 500 === 0) {
+        await batch.commit();
+        batch = db.batch();
+        console.log(`✅ ${i + 1} kayıt Firestore'a yazıldı`);
+      }
+    }
 
-          if ((i + 1) % 100 === 0) {
-            try {
-              await batch.commit();
-              console.log(`✅ ${i + 1} kayıt commit edildi`);
-              batch = db.batch();
-              await new Promise(resolve => setTimeout(resolve, 100));
-            } catch (error) {
-              console.error(`🔥 Batch commit hatası (${i + 1}. kayıt):`, error);
-              throw error;
-            }
-          }
-        }
+    // Commit remaining records
+    if (records.length % 500 !== 0) {
+      await batch.commit();
+      console.log(`✅ Kalan kayıtlar Firestore'a yazıldı`);
+    }
 
-        try {
-          if (batch._writes && batch._writes.length > 0) {
-            await batch.commit();
-            console.log(`✅ Kalan kayıtlar commit edildi`);
-          }
-          console.log(`✅ Toplam ${records.length} kayıt işlendi (görsel path eşleştirme ile).`);
-        } catch (error) {
-          console.error("🔥 Final batch kayıt hatası:", error);
-          throw error;
-        }
-
-        delete records;
-        delete imagePaths;
-
-        if (global.gc) global.gc();
-
-        return null;
-      })
-  : console.error("❌ UYARI: functions.pubsub tanımsız!");
+    console.log(`🎉 Toplam ${records.length} kayıt başarıyla işlendi`);
+    return null;
+  });
