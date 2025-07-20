@@ -13,11 +13,9 @@ const { createExtractorFromFile } = require("node-unrar-js");
 const { google } = require("googleapis");
 const { GoogleAuth } = require("google-auth-library");
 const nodemailer = require("nodemailer");
-//const { handleBatch } = require("./handleBatch");
+const { handleBatch } = require("./handleBatch");
 const { PubSub } = require("@google-cloud/pubsub");
 const pubsub = new PubSub(); 
-const algoliasearch = require('algoliasearch');
-
 
 if (!admin.apps.length) {
   admin.initializeApp();
@@ -35,16 +33,6 @@ const corsOptions = {
     credentials: true,
     optionsSuccessStatus: 200
 };
-
-// **************************** ALGOLIA YAPILANDIRMASI ****************************
-// Kendi Algolia Uygulama ID'niz ve Yönetici API Anahtarınız ile güncelleyin
-const ALGOLIA_APP_ID = functions.config().algolia.app_id; // functions.config() kullanarak daha güvenli
-const ALGOLIA_ADMIN_API_KEY = functions.config().algolia.api_key; // functions.config() kullanarak daha güvenli
-const ALGOLIA_INDEX_NAME = 'trademark_bulletin_records_live'; // Indeks adını belirleyin
-
-const algoliaClient = algoliasearch(ALGOLIA_APP_ID, ALGOLIA_ADMIN_API_KEY);
-const algoliaIndex = algoliaClient.initIndex(ALGOLIA_INDEX_NAME);
-// ********************************************************************************
 
 const corsHandler = cors(corsOptions);
 
@@ -939,79 +927,4 @@ function getContentType(filePath) {
   if (/\.jpe?g$/i.test(filePath)) return "image/jpeg";
   return "application/octet-stream";
 }
-/**
- * Mevcut trademarkBulletinRecords koleksiyonundaki tüm belgeleri Algolia'ya yükler.
- * Bu fonksiyon tek seferlik çalıştırılmak üzere tasarlanmıştır.
- * Firebase CLI'dan çağrılabilir: firebase functions:call indexTrademarkBulletinRecords
- */
-exports.indexTrademarkBulletinRecords = functions
-    .region('europe-west1') // Fonksiyonu konuşlandırdığınız bölgeyi seçin
-    .runWith({
-        timeoutSeconds: 540, // 9 dakika (büyük veri setleri için)
-        memory: '2GB' // Yüksek bellek (büyük veri setleri için)
-    })
-    .https.onCall(async (data, context) => {
-        if (!context.auth) {
-            throw new functions.https.HttpsError('unauthenticated', 'Bu fonksiyonu çalıştırmak için kimlik doğrulaması gereklidir.');
-        }
-
-        console.log('Algolia: trademarkBulletinRecords için toplu indeksleme başlatıldı.');
-        let recordsToIndex = [];
-        let lastDoc = null;
-        const batchSize = 500; // Her turda işlenecek belge sayısı
-
-        try {
-            while (true) {
-                let query = db.collection('trademarkBulletinRecords').orderBy(admin.firestore.FieldPath.documentId()).limit(batchSize);
-                if (lastDoc) {
-                    query = query.startAfter(lastDoc);
-                }
-
-                const snapshot = await query.get();
-
-                if (snapshot.empty) {
-                    break;
-                }
-
-                const currentBatch = snapshot.docs.map(doc => {
-                    const data = doc.data();
-                    // Algolia'ya göndermek için veriyi dönüştürün
-                    return {
-                        objectID: doc.id, // Algolia için benzersiz ID
-                        markName: data.markName || null,
-                        applicationNo: data.applicationNo || null,
-                        applicationDate: data.applicationDate || null,
-                        niceClasses: data.niceClasses || null,
-                        bulletinId: data.bulletinId || null,
-                        // Dizi veya karmaşık objeleri stringe çevirerek aranabilir yapın
-                        holders: Array.isArray(data.holders) ? data.holders.map(h => h.name).join(', ') : '',
-                        goods: Array.isArray(data.goods) ? data.goods.join(', ') : '',
-                        extractedGoods: Array.isArray(data.extractedGoods) ? data.extractedGoods.join(', ') : '',
-                        attorneys: Array.isArray(data.attorneys) ? data.attorneys.map(a => a.name).join(', ') : '', // Eğer avukatların name alanı varsa
-                        imagePath: data.imagePath || null, // Görsel yolu
-                        createdAt: data.createdAt ? data.createdAt.toDate().getTime() : null // FIFO için zaman damgası (milisaniye)
-                    };
-                });
-
-                recordsToIndex = recordsToIndex.concat(currentBatch);
-                lastDoc = snapshot.docs[snapshot.docs.length - 1];
-
-                console.log(`Firestore'dan ${recordsToIndex.length} belge okundu.`);
-
-                if (snapshot.docs.length < batchSize) {
-                    break; // Tüm belgeler okundu
-                }
-            }
-
-            console(`Algolia'ya toplam ${recordsToIndex.length} belge gönderiliyor.`);
-            const { objectIDs } = await algoliaIndex.saveObjects(recordsToIndex);
-            console.log(`Algolia'ya ${objectIDs.length} belge başarıyla eklendi/güncellendi.`);
-
-            return { status: 'success', message: `${objectIDs.length} belge Algolia'ya eklendi/güncellendi.` };
-
-        } catch (error) {
-            console.error('Algolia indeksleme hatası:', error);
-            throw new functions.https.HttpsError('internal', 'Algolia indeksleme sırasında bir hata oluştu.', error.message);
-        }
-    });
-//exports.handleBatch = handleBatch;
+exports.handleBatch = handleBatch;
