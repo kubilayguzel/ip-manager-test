@@ -1,8 +1,11 @@
-const functions = require("firebase-functions");
+// functions/handleBatch.js
+const { onPublish } = require("firebase-functions/v2/pubsub");
 const admin = require("firebase-admin");
 const path = require("path");
 
-admin.initializeApp();
+if (!admin.apps.length) {
+  admin.initializeApp();
+}
 const db = admin.firestore();
 
 function getContentType(filePath) {
@@ -14,13 +17,12 @@ function getContentType(filePath) {
 function findMatchingImage(applicationNo, imagePaths) {
   const cleanNo = applicationNo.replace(/\D/g, "");
   const lastFiveDigits = cleanNo.slice(-5);
-  
-  // **HAFIZA OPTİMİZASYONU: Early return ile arama optimizasyonu**
+
   for (let i = 0; i < imagePaths.length; i++) {
     const imgPath = imagePaths[i];
     const filename = path.basename(imgPath);
     const fileDigits = filename.replace(/\D/g, "");
-    
+
     if (fileDigits.includes(lastFiveDigits)) {
       return imgPath;
     }
@@ -28,42 +30,40 @@ function findMatchingImage(applicationNo, imagePaths) {
   return null;
 }
 
-exports.handleBatch = functions
-  .region('europe-west1')
-  .runWith({ timeoutSeconds: 540, memory: "1GB" })
-  .pubsub.topic("trademark-batch-processing")
-  .onPublish(async (message) => {
-    const data = message.json;
+exports.handleBatch = onPublish(
+  {
+    region: "europe-west1",
+    timeoutSeconds: 540,
+    memory: "1GiB",
+    topic: "trademark-batch-processing"
+  },
+  async (event) => {
+    const data = event.data;
+
     const { records, bulletinId, imagePaths } = data;
-    
-    // **HATA KONTROL OPTİMİZASYONU**
+
     if (!records || !Array.isArray(records)) {
       console.error("Geçersiz mesaj verisi: 'records' bulunamadı veya dizi değil.", data);
-      return null;
-    }
-    
-    if (!imagePaths || !Array.isArray(imagePaths)) {
-      console.warn("Uyarı: 'imagePaths' bulunamadı veya dizi değil. Görsel eşleşmesi yapılamayacak.", data);
+      return;
     }
 
-    const db = admin.firestore();
-    const batch = db.batch();
-    
-    // **HAFIZA OPTİMİZASYONU: Progress tracking**
+    if (!imagePaths || !Array.isArray(imagePaths)) {
+      console.warn("Uyarı: 'imagePaths' bulunamadı veya dizi değil.", data);
+    }
+
+    let batch = db.batch();
+
     console.log(`📊 ${records.length} kayıt işlenmeye başlanıyor...`);
-    
-    // **HAFIZA OPTİMİZASYONU: Tek tek işleme**
+
     for (let i = 0; i < records.length; i++) {
       const record = records[i];
-      
-      // Progress log her 50 kayıtta bir
+
       if (i % 50 === 0) {
         console.log(`İşlenen: ${i}/${records.length} kayıt`);
       }
-      
-      // **HAFIZA OPTİMİZASYONU: Sadece gerektiğinde image matching yap**
-      const matchedImagePath = (record.imagePaths && record.imagePaths.length > 0) 
-        ? record.imagePaths[0]  // Global imagePaths yerine record.imagePaths kullan
+
+      const matchedImagePath = (record.imagePaths && record.imagePaths.length > 0)
+        ? record.imagePaths[0]
         : null;
 
       const docData = {
@@ -82,19 +82,12 @@ exports.handleBatch = functions
 
       const docRef = db.collection("trademarkBulletinRecords").doc();
       batch.set(docRef, docData);
-      
-      // **HAFIZA OPTİMİZASYONU: Batch boyutu kontrolü**
-      // Firestore batch limiti 500, ama hafıza için 100'de commit yapalım
+
       if ((i + 1) % 100 === 0) {
         try {
           await batch.commit();
           console.log(`✅ ${i + 1} kayıt commit edildi`);
-          
-          // Yeni batch başlat
-          const newBatch = db.batch();
-          batch = newBatch;
-          
-          // Kısa bekleme (hafıza temizlenmesi için)
+          batch = db.batch();
           await new Promise(resolve => setTimeout(resolve, 100));
         } catch (error) {
           console.error(`🔥 Batch commit hatası (${i + 1}. kayıt):`, error);
@@ -103,7 +96,6 @@ exports.handleBatch = functions
       }
     }
 
-    // **KALAN KAYITLARI COMMIT ET**
     try {
       if (batch._writes && batch._writes.length > 0) {
         await batch.commit();
@@ -115,14 +107,13 @@ exports.handleBatch = functions
       throw error;
     }
 
-    // **HAFIZA TEMİZLİĞİ**
     delete records;
     delete imagePaths;
-    
-    // Garbage collection tetikle
+
     if (global.gc) {
       global.gc();
     }
 
     return null;
-  });
+  }
+);
