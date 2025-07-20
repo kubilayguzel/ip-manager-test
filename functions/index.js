@@ -10,12 +10,12 @@ const { createExtractorFromFile } = require('node-unrar-js');
 const nodemailer = require('nodemailer');
 
 // Firebase Functions v2 SDK importları
-const { onRequest, onCall } = require('firebase-functions/v2/https'); // HTTPS fonksiyonları için v2 importu
+const { onRequest, onCall, HttpsError } = require('firebase-functions/v2/https'); // HTTPS fonksiyonları ve HttpsError için v2 importu
 const { onSchedule } = require('firebase-functions/v2/scheduler'); // Scheduler triggerları için v2 importu
 const { onDocumentCreated, onDocumentUpdated } = require('firebase-functions/v2/firestore'); // Firestore triggerları için v2 importu
 const { onPublish } = require('firebase-functions/v2/pubsub'); // Pub/Sub fonksiyonları için v2 importu
 const { onObjectFinalized } = require('firebase-functions/v2/storage'); // Storage triggerları için v2 importu
-const { config } = require('firebase-functions/v2'); // config'i import ediyoruz
+const { defineSecret } = require('firebase-functions/v2/params'); // Secret parameters için
 
 // Dış modüller (npm install ile yüklenmiş)
 const cors = require('cors');
@@ -31,14 +31,11 @@ const db = admin.firestore();
 const pubsubClient = new PubSub(); // pubsubClient'ı burada tanımlayın
 
 // **************************** ALGOLIA YAPILANDIRMASI ****************************
-// Kendi Algolia Uygulama ID'niz ve Yönetici API Anahtarınız ile güncelleyin
-// Bu değerler functions:config:set ile ayarlanmalıdır.
-const ALGOLIA_APP_ID = config().algolia.app_id;
-const ALGOLIA_ADMIN_API_KEY = config().algolia.api_key;
+// Secrets kullanarak Algolia konfigürasyonu
+const ALGOLIA_APP_ID = defineSecret('ALGOLIA_APP_ID');
+const ALGOLIA_ADMIN_API_KEY = defineSecret('ALGOLIA_ADMIN_API_KEY');
 const ALGOLIA_INDEX_NAME = 'trademark_bulletin_records_live';
 
-const algoliaClient = algoliasearch(ALGOLIA_APP_ID, ALGOLIA_ADMIN_API_KEY);
-const algoliaIndex = algoliaClient.initIndex(ALGOLIA_INDEX_NAME);
 // ********************************************************************************
 
 // CORS ayarları
@@ -53,6 +50,15 @@ const corsOptions = {
     optionsSuccessStatus: 200
 };
 const corsHandler = cors(corsOptions);
+
+// SMTP transporter configuration
+const transporter = nodemailer.createTransporter({
+  service: "gmail",
+  auth: {
+    user: "kubilayguzel@evrekapatent.com",
+    pass: "rqvl tpbm vkmu lmxi" 
+  }
+});
 
 // =========================================================
 //              HTTPS FONKSİYONLARI (v2)
@@ -221,54 +227,57 @@ exports.validateEtebsToken = onRequest(
 );
 
 // Send Email Notification (v2 Callable Function)
+exports.sendEmailNotification = onCall(
+    {
+        region: 'europe-west1'
+    },
+    async (request) => {
+        const { notificationId } = request.data;
 
-exports.sendEmailNotification = onCall(async (data, context) => {
-    const { notificationId } = data;
+        if (!notificationId) {
+            throw new HttpsError("invalid-argument", "notificationId parametresi zorunludur.");
+        }
 
-    if (!notificationId) {
-        throw new functions.https.HttpsError("invalid-argument", "notificationId parametresi zorunludur.");
+        const notificationRef = db.collection("mail_notifications").doc(notificationId);
+        const notificationDoc = await notificationRef.get();
+
+        if (!notificationDoc.exists) {
+            throw new HttpsError("not-found", "Bildirim bulunamadı.");
+        }
+
+        const notificationData = notificationDoc.data();
+
+        const mailOptions = {
+            from: `"IP Manager" <kubilayguzel@evrekapatent.com>`,
+            to: notificationData.recipientEmail,
+            subject: notificationData.subject,
+            html: notificationData.body
+        };
+
+        try {
+            console.log("SMTP üzerinden gönderim başlıyor...");
+            await transporter.sendMail(mailOptions);
+
+            console.log(`E-posta başarıyla gönderildi: ${notificationData.recipientEmail}`);
+            await notificationRef.update({
+                status: "sent",
+                sentAt: admin.firestore.FieldValue.serverTimestamp(),
+                updatedAt: admin.firestore.FieldValue.serverTimestamp()
+            });
+
+            return { success: true, message: "E-posta başarıyla gönderildi." };
+        } catch (error) {
+            console.error("SMTP gönderim hatası:", error);
+            await notificationRef.update({
+                status: "failed",
+                updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+                errorInfo: error.message
+            });
+
+            throw new HttpsError("internal", "E-posta gönderilirken bir hata oluştu.", error.message);
+        }
     }
-
-    const notificationRef = db.collection("mail_notifications").doc(notificationId);
-    const notificationDoc = await notificationRef.get();
-
-    if (!notificationDoc.exists) {
-        throw new functions.https.HttpsError("not-found", "Bildirim bulunamadı.");
-    }
-
-    const notificationData = notificationDoc.data();
-
-    const mailOptions = {
-        from: `"IP Manager" <kubilayguzel@evrekapatent.com>`,
-        to: notificationData.recipientEmail,
-        subject: notificationData.subject,
-        html: notificationData.body
-    };
-
-    try {
-        console.log("SMTP üzerinden gönderim başlıyor...");
-        await transporter.sendMail(mailOptions);
-
-        console.log(`E-posta başarıyla gönderildi: ${notificationData.recipientEmail}`);
-        await notificationRef.update({
-            status: "sent",
-            sentAt: admin.firestore.FieldValue.serverTimestamp(),
-            updatedAt: admin.firestore.FieldValue.serverTimestamp()
-        });
-
-        return { success: true, message: "E-posta başarıyla gönderildi." };
-    } catch (error) {
-        console.error("SMTP gönderim hatası:", error);
-        await notificationRef.update({
-            status: "failed",
-            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-            errorInfo: error.message
-        });
-
-        throw new functions.https.HttpsError("internal", "E-posta gönderilirken bir hata oluştu.", error.message);
-    }
-});
-
+);
 
 // =========================================================
 //              SCHEDULER FONKSİYONLARI (v2)
@@ -280,7 +289,7 @@ exports.cleanupEtebsLogs = onSchedule(
         schedule: 'every 24 hours',
         region: 'europe-west1'
     },
-    async (context) => {
+    async (event) => {
         console.log('🧹 ETEBS logs cleanup started');
 
         const db = admin.firestore();
@@ -318,9 +327,12 @@ exports.createMailNotificationOnDocumentIndex = onDocumentCreated(
         document: "indexed_documents/{docId}",
         region: 'europe-west1'
     },
-    async (snap, context) => {
+    async (event) => {
+        const snap = event.data;
         const newDocument = snap.data();
-        console.log(`Yeni belge algılandı: ${context.params.docId}`, newDocument);
+        const docId = event.params.docId;
+        
+        console.log(`Yeni belge algılandı: ${docId}`, newDocument);
 
         const db = admin.firestore();
         let missingFields = [];
@@ -357,7 +369,7 @@ exports.createMailNotificationOnDocumentIndex = onDocumentCreated(
             }
 
             if (newDocument.clientId) {
-                const clientSnapshot = await db.collection("clients").doc(newDocument.clientId).get(); // 'clients' koleksiyonu var mı? 'persons' olmalı
+                const clientSnapshot = await db.collection("persons").doc(newDocument.clientId).get();
                 if (!clientSnapshot.exists) {
                     console.warn(`Müvekkil bulunamadı: ${newDocument.clientId}`);
                     missingFields.push("client");
@@ -406,7 +418,7 @@ exports.createMailNotificationOnDocumentIndex = onDocumentCreated(
                 body: body,
                 status: status,
                 missingFields: missingFields,
-                sourceDocumentId: context.params.docId,
+                sourceDocumentId: docId,
                 createdAt: admin.firestore.FieldValue.serverTimestamp(),
                 updatedAt: admin.firestore.FieldValue.serverTimestamp(),
             };
@@ -428,12 +440,14 @@ exports.createMailNotificationOnDocumentStatusChange = onDocumentUpdated(
         document: "unindexed_pdfs/{docId}",
         region: 'europe-west1'
     },
-    async (change, context) => {
+    async (event) => {
+        const change = event.data;
         const before = change.before.data();
         const after = change.after.data();
+        const docId = event.params.docId;
 
         if (before.status !== 'indexed' && after.status === 'indexed') {
-            console.log(`Belge indexlendi: ${context.params.docId}`, after);
+            console.log(`Belge indexlendi: ${docId}`, after);
 
             const db = admin.firestore();
 
@@ -508,7 +522,7 @@ exports.createMailNotificationOnDocumentStatusChange = onDocumentUpdated(
                     body: body,
                     status: status,
                     missingFields: missingFields,
-                    sourceDocumentId: context.params.docId,
+                    sourceDocumentId: docId,
                     createdAt: admin.firestore.FieldValue.serverTimestamp(),
                     updatedAt: admin.firestore.FieldValue.serverTimestamp(),
                 };
@@ -533,8 +547,9 @@ exports.createUniversalNotificationOnTaskComplete = onDocumentUpdated(
         document: "tasks/{taskId}",
         region: 'europe-west1'
     },
-    async (change, context) => {
-        const taskId = context.params.taskId;
+    async (event) => {
+        const change = event.data;
+        const taskId = event.params.taskId;
         console.log(`--- FONKSİYON TETİKLENDİ: tasks/${taskId} ---`);
 
         const taskDataBefore = change.before.data();
@@ -623,402 +638,365 @@ exports.createUniversalNotificationOnTaskComplete = onDocumentUpdated(
     }
 );
 
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: "kubilayguzel@evrekapatent.com",
-    pass: "rqvl tpbm vkmu lmxi" 
-  }
-});
+// =========================================================
+//              STORAGE TRIGGER FONKSİYONLARI (v2)
+// =========================================================
 
-exports.sendEmailNotification = onCall(async (data, context) => {
-  const { notificationId } = data;
+// Trademark Bulletin Upload Processing (v2 Storage Trigger)
+exports.processTrademarkBulletinUpload = onObjectFinalized(
+    {
+        region: 'europe-west1',
+        timeoutSeconds: 540,
+        memory: '1GiB'
+    },
+    async (event) => {
+        const object = event.data;
+        const filePath = object.name;
+        const fileName = path.basename(filePath);
+        const bucket = admin.storage().bucket();
 
-  if (!notificationId) {
-    throw new functions.https.HttpsError("invalid-argument", "notificationId parametresi zorunludur.");
-  }
+        if (!fileName.endsWith(".zip") && !fileName.endsWith(".rar")) return null; 
 
-  const notificationRef = db.collection("mail_notifications").doc(notificationId);
-  const notificationDoc = await notificationRef.get();
+        const tempFilePath = path.join(os.tmpdir(), fileName);
+        const extractDir = path.join(os.tmpdir(), `extract_${Date.now()}`);
 
-  if (!notificationDoc.exists) {
-    throw new functions.https.HttpsError("not-found", "Bildirim bulunamadı.");
-  }
+        try {
+            fs.mkdirSync(extractDir, { recursive: true });
+            await bucket.file(filePath).download({ destination: tempFilePath });
 
-  const notificationData = notificationDoc.data();
+            // Extract işlemi
+            if (fileName.endsWith(".zip")) {
+                const zip = new AdmZip(tempFilePath);
+                zip.extractAllTo(extractDir, true);
+            } else if (fileName.endsWith(".rar")) {
+                const extractor = await createExtractorFromFile({ path: tempFilePath });
+                const list = extractor.getFileList();
+                if (list.files.length === 0) {
+                    throw new Error("RAR dosyası boş veya içerik listelenemedi.");
+                }
+                await extractor.extractAll(extractDir);
+            }
 
-  const mailOptions = {
-    from: `"IP Manager" <kubilayguzel@evrekapatent.com>`,
-    to: notificationData.recipientEmail,
-    subject: notificationData.subject,
-    html: notificationData.body
-  };
+            // Bulletin info okuma
+            const allFiles = listAllFilesRecursive(extractDir);
+            const bulletinPath = allFiles.find((p) =>
+                ["bulletin.inf", "bulletin"].includes(path.basename(p).toLowerCase())
+            );
+            if (!bulletinPath) throw new Error("bulletin.inf bulunamadı.");
 
-  try {
-    console.log("SMTP üzerinden gönderim başlıyor...");
-    await transporter.sendMail(mailOptions);
+            const content = fs.readFileSync(bulletinPath, "utf8");
+            const bulletinNo = (content.match(/NO\s*=\s*(.*)/) || [])[1]?.trim() || "Unknown";
+            const bulletinDate = (content.match(/DATE\s*=\s*(.*)/) || [])[1]?.trim() || "Unknown";
 
-    console.log(`E-posta başarıyla gönderildi: ${notificationData.recipientEmail}`);
-    await notificationRef.update({
-      status: "sent",
-      sentAt: admin.firestore.FieldValue.serverTimestamp(),
-      updatedAt: admin.firestore.FieldValue.serverTimestamp()
-    });
+            const bulletinRef = await db.collection("trademarkBulletins").add({
+                bulletinNo,
+                bulletinDate,
+                type: "marka",
+                createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            });
+            const bulletinId = bulletinRef.id;
 
-    return { success: true, message: "E-posta başarıyla gönderildi." };
-  } catch (error) {
-    console.error("SMTP gönderim hatası:", error);
-    await notificationRef.update({
-      status: "failed",
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-      errorInfo: error.message
-    });
+            // Script content parse
+            const scriptPath = allFiles.find((p) => path.basename(p).toLowerCase() === "tmbulletin.log");
+            if (!scriptPath) throw new Error("tmbulletin.log bulunamadı.");
+            
+            const scriptContent = fs.readFileSync(scriptPath, "utf8");
+            const records = parseScriptContent(scriptContent);
+            const imagePathsForPubSub = [];
 
-    throw new functions.https.HttpsError("internal", "E-posta gönderilirken bir hata oluştu.", error.message);
-  }
-  });
+            // Görselleri applicationNo'ya göre eşle
+            const imageFiles = allFiles.filter((p) => /\.(jpg|jpeg|png)$/i.test(p));
+            const imagePathMap = {};
+            for (const localPath of imageFiles) {
+                const filename = path.basename(localPath);
+                const destinationPath = `bulletins/trademark_${bulletinNo}_images/${filename}`;
+
+                const match = filename.match(/^(\d{4})[_\-]?(\d{5,})/);
+                if (match) {
+                    const appNo = `${match[1]}/${match[2]}`;
+                    if (!imagePathMap[appNo]) imagePathMap[appNo] = [];
+                    imagePathMap[appNo].push(destinationPath);
+                }
+            }
+
+            // Her kayda görsel yolunu ekle
+            for (const record of records) {
+                record.bulletinId = bulletinId;
+                const matchingImages = imagePathMap[record.applicationNo] || [];
+                record.imagePath = matchingImages.length > 0 ? matchingImages[0] : null;
+            }
+     
+            // Görsel işlemleri (yeni hafifletilmiş base64 yöntemi)
+            console.log(`📤 ${imageFiles.length} görsel base64 ile 200'lük Pub/Sub batch'lerinde gönderiliyor...`);
+
+            const imageBatchSize = 200;
+            for (let i = 0; i < imageFiles.length; i += imageBatchSize) {
+                const batch = imageFiles.slice(i, i + imageBatchSize);
+                const encodedImages = [];
+
+                for (const localPath of batch) {
+                    const filename = path.basename(localPath);
+                    const destinationPath = `bulletins/trademark_${bulletinNo}_images/${filename}`;
+                    imagePathsForPubSub.push(destinationPath);
+
+                    const imageStream = fs.createReadStream(localPath);
+                    let base64 = '';
+                    for await (const chunk of imageStream) {
+                        base64 += chunk.toString('base64');
+                    }
+
+                    encodedImages.push({
+                        destinationPath,
+                        base64,
+                        contentType: getContentType(filename)
+                    });
+                }
+
+                // Tek mesajda 200 görsel gönder
+                await pubsubClient.topic("trademark-image-upload").publishMessage({
+                    data: Buffer.from(JSON.stringify(encodedImages)),
+                    attributes: { batchSize: batch.length.toString() }
+                });
+
+                await new Promise(resolve => setTimeout(resolve, 200));
+            }
+            console.log(`✅ ${records.length} kayıt ve ${imageFiles.length} görsel işleme alındı.`);
+
+            // Firestore'a kayıtları ekle
+            const batchSize = 500;
+            for (let i = 0; i < records.length; i += batchSize) {
+                const batch = db.batch();
+                const chunk = records.slice(i, i + batchSize);
+
+                chunk.forEach((record) => {
+                    const docRef = db.collection("trademarkBulletinRecords").doc();
+                    batch.set(docRef, {
+                        ...record,
+                        bulletinId,
+                        createdAt: admin.firestore.FieldValue.serverTimestamp()
+                    });
+                });
+
+                await batch.commit();
+                console.log(`✅ Firestore'a ${chunk.length} kayıt eklendi (${i + chunk.length}/${records.length})`);
+            }
+
+            // Hafıza temizliği
+            delete records;
+            delete imagePathsForPubSub;
+            delete allFiles;
+            
+            if (global.gc) {
+                global.gc();
+            }
+            
+        } catch (e) {
+            console.error("İşlem hatası:", e);
+            throw e;
+        } finally {
+            // Geçici dosyaları temizle
+            if (fs.existsSync(tempFilePath)) {
+                fs.unlinkSync(tempFilePath);
+            }
+            if (fs.existsSync(extractDir)) {
+                fs.rmSync(extractDir, { recursive: true, force: true });
+            }
+        }
+
+        return null;
+    }
+);
+
+// =========================================================
+//              PUB/SUB TRIGGER FONKSİYONLARI (v2)
+// =========================================================
+
+// Upload Image Worker (v2 Pub/Sub Trigger)
+exports.uploadImageWorker = onPublish(
+    {
+        topic: "trademark-image-upload",
+        region: 'europe-west1',
+        timeoutSeconds: 300,
+        memory: '512MiB'
+    },
+    async (event) => {
+        console.log('🔥 uploadImageWorker tetiklendi (Batch)...');
+
+        let images;
+        try {
+            const batchData = Buffer.from(event.data.message.data, 'base64').toString();
+            images = JSON.parse(batchData);
+            if (!Array.isArray(images)) throw new Error("Geçersiz batch verisi.");
+        } catch (err) {
+            console.error("❌ JSON parse hatası:", err);
+            return;
+        }
+
+        await Promise.all(images.map(async (img) => {
+            const { destinationPath, base64, contentType } = img;
+
+            if (!destinationPath || !base64) {
+                console.warn('❌ Eksik veri, işlem atlandı:', img);
+                return;
+            }
+
+            const imageBuffer = Buffer.from(base64, 'base64');
+            const file = admin.storage().bucket().file(destinationPath);
+
+            try {
+                await file.save(imageBuffer, {
+                    contentType: contentType || 'image/jpeg',
+                    resumable: false,
+                });
+                console.log(`✅ Yüklendi: ${destinationPath}`);
+            } catch (err) {
+                console.error(`❌ Hata: ${destinationPath}`, err);
+            }
+        }));
+    }
+);
+
+// =========================================================
+//              HELPER FONKSİYONLARI
+// =========================================================
 
 function listAllFilesRecursive(dir) {
-  let results = [];
-  const list = fs.readdirSync(dir);
-  list.forEach((file) => {
-    const fullPath = path.join(dir, file);
-    const stat = fs.statSync(fullPath);
-    if (stat && stat.isDirectory()) {
-      results = results.concat(listAllFilesRecursive(fullPath));
-    } else {
-      results.push(fullPath);
-    }
-  });
-  return results;
+    let results = [];
+    const list = fs.readdirSync(dir);
+    list.forEach((file) => {
+        const fullPath = path.join(dir, file);
+        const stat = fs.statSync(fullPath);
+        if (stat && stat.isDirectory()) {
+            results = results.concat(listAllFilesRecursive(fullPath));
+        } else {
+            results.push(fullPath);
+        }
+    });
+    return results;
 }
 
 function extractAppNoFromFilename(filename) {
-  const match = filename.match(/(\d{4,})/); 
-  return match ? match[1] : null;
+    const match = filename.match(/(\d{4,})/); 
+    return match ? match[1] : null;
 }
+
 function parseValues(raw) {
-  const values = [];
-  let current = '';
-  let inString = false;
-  let i = 0;
+    const values = [];
+    let current = '';
+    let inString = false;
+    let i = 0;
 
-  while (i < raw.length) {
-    const char = raw[i];
+    while (i < raw.length) {
+        const char = raw[i];
+        
+        if (char === "'") {
+            if (inString && raw[i + 1] === "'") {
+                current += "'";
+                i += 2;
+                continue;
+            } else {
+                inString = !inString;
+            }
+        } else if (char === ',' && !inString) {
+            values.push(decodeValue(current.trim()));
+            current = '';
+            i++;
+            continue;
+        } else {
+            current += char;
+        }
+        i++;
+    }
     
-    if (char === "'") {
-      if (inString && raw[i + 1] === "'") {
-        current += "'";
-        i += 2;
-        continue;
-      } else {
-        inString = !inString;
-      }
-    } else if (char === ',' && !inString) {
-      values.push(decodeValue(current.trim()));
-      current = '';
-      i++;
-      continue;
-    } else {
-      current += char;
-    }
-    i++;
-  }
-  
-  values.push(decodeValue(current.trim()));
-  return values;
+    values.push(decodeValue(current.trim()));
+    return values;
 }
-exports.processTrademarkBulletinUpload = functions
-  .runWith({ timeoutSeconds: 540, memory: "1GB" })
-  .storage.object()
-  .onFinalize(async (object) => {
-    const filePath = object.name;
-    const fileName = path.basename(filePath);
-    const bucket = admin.storage().bucket();
-
-    if (!fileName.endsWith(".zip") && !fileName.endsWith(".rar")) return null; 
-
-    const tempFilePath = path.join(os.tmpdir(), fileName);
-    const extractDir = path.join(os.tmpdir(), `extract_${Date.now()}`);
-
-    try {
-      fs.mkdirSync(extractDir, { recursive: true });
-      await bucket.file(filePath).download({ destination: tempFilePath });
-
-      // Extract işlemi
-      if (fileName.endsWith(".zip")) {
-        const zip = new AdmZip(tempFilePath);
-        zip.extractAllTo(extractDir, true);
-      } else if (fileName.endsWith(".rar")) {
-        const extractor = await createExtractorFromFile({ path: tempFilePath });
-        const list = extractor.getFileList();
-        if (list.files.length === 0) {
-          throw new Error("RAR dosyası boş veya içerik listelenemedi.");
-        }
-        await extractor.extractAll(extractDir);
-      }
-
-      // Bulletin info okuma
-      const allFiles = listAllFilesRecursive(extractDir);
-      const bulletinPath = allFiles.find((p) =>
-        ["bulletin.inf", "bulletin"].includes(path.basename(p).toLowerCase())
-      );
-      if (!bulletinPath) throw new Error("bulletin.inf bulunamadı.");
-
-      const content = fs.readFileSync(bulletinPath, "utf8");
-      const bulletinNo = (content.match(/NO\s*=\s*(.*)/) || [])[1]?.trim() || "Unknown";
-      const bulletinDate = (content.match(/DATE\s*=\s*(.*)/) || [])[1]?.trim() || "Unknown";
-
-      const bulletinRef = await db.collection("trademarkBulletins").add({
-        bulletinNo,
-        bulletinDate,
-        type: "marka",
-        createdAt: admin.firestore.FieldValue.serverTimestamp(),
-      });
-      const bulletinId = bulletinRef.id;
-
-      // Script content parse
-      const scriptPath = allFiles.find((p) => path.basename(p).toLowerCase() === "tmbulletin.log");
-      if (!scriptPath) throw new Error("tmbulletin.log bulunamadı.");
-      
-      // **ÖNEMLİ DEĞİŞİKLİK: Stream ile okuma**
-      const scriptContent = fs.readFileSync(scriptPath, "utf8");
-      const records = parseScriptContent(scriptContent);
-      const imagePathsForPubSub = [];
-      // Script content'i hafızadan temizle
-      delete scriptContent;
-
-      // Görselleri applicationNo'ya göre eşle
-      const imageFiles = allFiles.filter((p) => /\.(jpg|jpeg|png)$/i.test(p));
-      const imagePathMap = {};
-      for (const localPath of imageFiles) {
-        const filename = path.basename(localPath);
-        const destinationPath = `bulletins/trademark_${bulletinNo}_images/${filename}`;// ← DEĞİŞTİR (bulletinId yerine bulletinNo)
-
-      const match = filename.match(/^(\d{4})[_\-]?(\d{5,})/);
-      if (match) {
-        const appNo = `${match[1]}/${match[2]}`; // 2024/12345 formatında
-        if (!imagePathMap[appNo]) imagePathMap[appNo] = [];
-        imagePathMap[appNo].push(destinationPath);
-      }
-
-      }
-      // Her kayda görsel yolunu ekle
-      for (const record of records) {
-        record.bulletinId = bulletinId;
-        const matchingImages = imagePathMap[record.applicationNo] || [];
-        record.imagePath = matchingImages.length > 0 ? matchingImages[0] : null; // İlk (ve tek) imajı al
-      }
-   
-     // Görsel işlemleri (yeni hafifletilmiş base64 yöntemi)
-     console.log(`📤 ${imageFiles.length} görsel base64 ile 200’lük Pub/Sub batch’lerinde gönderiliyor...`);
-
-     const imageBatchSize = 200;
-      for (let i = 0; i < imageFiles.length; i += imageBatchSize) {
-        const batch = imageFiles.slice(i, i + imageBatchSize);
-        const encodedImages = [];
-
-    for (const localPath of batch) {
-      const filename = path.basename(localPath);
-      const destinationPath = `bulletins/trademark_${bulletinNo}_images/${filename}`; // ← DEĞİŞTİR (bulletinId yerine bulletinNo)
-      imagePathsForPubSub.push(destinationPath);
-
-          const imageStream = fs.createReadStream(localPath);
-          let base64 = '';
-          for await (const chunk of imageStream) {
-            base64 += chunk.toString('base64');
-          }
-
-          encodedImages.push({
-            destinationPath,
-            base64,
-            contentType: getContentType(filename)
-          });
-        }
-
-        // Tek mesajda 100 görsel gönder
-        await pubsub.topic("trademark-image-upload").publishMessage({
-          data: Buffer.from(JSON.stringify(encodedImages)),
-          attributes: { batchSize: batch.length.toString() }
-        });
-
-        await new Promise(resolve => setTimeout(resolve, 200)); // Hafıza toparlansın
-      }
-      console.log(`✅ ${records.length} kayıt ve ${imageFiles.length} görsel işleme alındı.`);
-      // Firestore’a kayıtları ekle
-      const batchSize = 500;
-      for (let i = 0; i < records.length; i += batchSize) {
-        const batch = db.batch();
-        const chunk = records.slice(i, i + batchSize);
-
-        chunk.forEach((record) => {
-          const docRef = db.collection("trademarkBulletinRecords").doc();
-          batch.set(docRef, {
-            ...record,
-            bulletinId,
-            createdAt: admin.firestore.FieldValue.serverTimestamp()
-          });
-        });
-
-        await batch.commit();
-        console.log(`✅ Firestore’a ${chunk.length} kayıt eklendi (${i + chunk.length}/${records.length})`);
-      }
-
-      // **HAFIZA TEMİZLİĞİ**
-      delete records;
-      delete imagePathsForPubSub;
-      delete allFiles;
-      
-      // Garbage collection'ı tetikle
-      if (global.gc) {
-        global.gc();
-      }
-      
-    } catch (e) {
-      console.error("İşlem hatası:", e);
-      throw e;
-    } finally {
-      // Geçici dosyaları temizle
-      if (fs.existsSync(tempFilePath)) {
-        fs.unlinkSync(tempFilePath);
-      }
-      if (fs.existsSync(extractDir)) {
-        fs.rmSync(extractDir, { recursive: true, force: true });
-      }
-    }
-
-    return null;
-  });
-
-exports.uploadImageWorker = functions
-  .region('europe-west1')
-  .runWith({ timeoutSeconds: 300, memory: "512MB" })
-  .pubsub.topic("trademark-image-upload")
-  .onPublish(async (message) => {
-    console.log('🔥 uploadImageWorker tetiklendi (Batch)...');
-
-    let images;
-    try {
-      const batchData = Buffer.from(message.data, 'base64').toString(); // 🔥 decode base64
-      images = JSON.parse(batchData); // 🔥 parse string
-      if (!Array.isArray(images)) throw new Error("Geçersiz batch verisi.");
-    } catch (err) {
-      console.error("❌ JSON parse hatası:", err);
-      return;
-    }
-
-    await Promise.all(images.map(async (img) => {
-      const { destinationPath, base64, contentType } = img;
-
-      if (!destinationPath || !base64) {
-        console.warn('❌ Eksik veri, işlem atlandı:', img);
-        return;
-      }
-
-      const imageBuffer = Buffer.from(base64, 'base64');
-      const file = admin.storage().bucket().file(destinationPath);
-
-      try {
-        await file.save(imageBuffer, {
-          contentType: contentType || 'image/jpeg',
-          resumable: false,
-        });
-        console.log(`✅ Yüklendi: ${destinationPath}`);
-      } catch (err) {
-        console.error(`❌ Hata: ${destinationPath}`, err);
-      }
-    }));
-  });
 
 function parseScriptContent(content) {
-  const recordsMap = {};
-  
-  // **HAFIZA OPTİMİZASYONU: Satır satır işleme**
-  const lines = content.split('\n');
-  
-  // Her 1000 satırda bir progress log
-  let processedLines = 0;
-  
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i].trim();
+    const recordsMap = {};
     
-    if (!line.length || !line.startsWith('INSERT INTO')) {
-      continue;
-    }
+    const lines = content.split('\n');
     
-    processedLines++;
-    if (processedLines % 1000 === 0) {
-      console.log(`İşlenen satır: ${processedLines}/${lines.length}`);
-    }
+    let processedLines = 0;
     
-    const match = line.match(/INSERT INTO (\w+) VALUES\s*\((.*)\)$/);
-    if (!match) continue;
-    
-    const table = match[1].toUpperCase();
-    const values = parseValues(match[2]);
-    
-    const appNo = values[0];
-    if (!appNo) continue;
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim();
+        
+        if (!line.length || !line.startsWith('INSERT INTO')) {
+            continue;
+        }
+        
+        processedLines++;
+        if (processedLines % 1000 === 0) {
+            console.log(`İşlenen satır: ${processedLines}/${lines.length}`);
+        }
+        
+        const match = line.match(/INSERT INTO (\w+) VALUES\s*\((.*)\)$/);
+        if (!match) continue;
+        
+        const table = match[1].toUpperCase();
+        const values = parseValues(match[2]);
+        
+        const appNo = values[0];
+        if (!appNo) continue;
 
-    if (!recordsMap[appNo]) {
-      recordsMap[appNo] = {
-        applicationNo: appNo,
-        applicationDate: null,
-        markName: null,
-        niceClasses: null,
-        holders: [],
-        goods: [],
-        extractedGoods: [],
-        attorneys: [],
-      };
-    }
+        if (!recordsMap[appNo]) {
+            recordsMap[appNo] = {
+                applicationNo: appNo,
+                applicationDate: null,
+                markName: null,
+                niceClasses: null,
+                holders: [],
+                goods: [],
+                extractedGoods: [],
+                attorneys: [],
+            };
+        }
 
-    // Table'a göre işleme (aynı kaldı)
-    if (table === "TRADEMARK") {
-      recordsMap[appNo].applicationDate = values[1] ?? null;
-      recordsMap[appNo].markName = values[5] ?? null;
-      recordsMap[appNo].niceClasses = values[6] ?? null;
-    } else if (table === "HOLDER") {
-      const holderName = extractHolderName(values[2]);
-      let addressParts = [values[3], values[4], values[5], values[6]].filter(Boolean).join(", ");
-      if (addressParts.trim() === "") addressParts = null;
-      recordsMap[appNo].holders.push({
-        name: holderName,
-        address: addressParts,
-        country: values[7] ?? null,
-      });
-    } else if (table === "GOODS") {
-      recordsMap[appNo].goods.push(values[3] ?? null);
-    } else if (table === "EXTRACTEDGOODS") {
-      recordsMap[appNo].extractedGoods.push(values[3] ?? null);
-    } else if (table === "ATTORNEY") {
-      recordsMap[appNo].attorneys.push(values[2] ?? null);
+        if (table === "TRADEMARK") {
+            recordsMap[appNo].applicationDate = values[1] ?? null;
+            recordsMap[appNo].markName = values[5] ?? null;
+            recordsMap[appNo].niceClasses = values[6] ?? null;
+        } else if (table === "HOLDER") {
+            const holderName = extractHolderName(values[2]);
+            let addressParts = [values[3], values[4], values[5], values[6]].filter(Boolean).join(", ");
+            if (addressParts.trim() === "") addressParts = null;
+            recordsMap[appNo].holders.push({
+                name: holderName,
+                address: addressParts,
+                country: values[7] ?? null,
+            });
+        } else if (table === "GOODS") {
+            recordsMap[appNo].goods.push(values[3] ?? null);
+        } else if (table === "EXTRACTEDGOODS") {
+            recordsMap[appNo].extractedGoods.push(values[3] ?? null);
+        } else if (table === "ATTORNEY") {
+            recordsMap[appNo].attorneys.push(values[2] ?? null);
+        }
     }
-  }
-  
-  return Object.values(recordsMap);
+    
+    return Object.values(recordsMap);
 }
 
 function decodeValue(str) {
-  if (str === null || str === undefined) return null;
-  if (str === "") return null;
-  str = str.replace(/^'/, "").replace(/'$/, "").replace(/''/g, "'");
-  return str.replace(/\\u([0-9a-fA-F]{4})/g, (m, g1) => String.fromCharCode(parseInt(g1, 16)));
+    if (str === null || str === undefined) return null;
+    if (str === "") return null;
+    str = str.replace(/^'/, "").replace(/'$/, "").replace(/''/g, "'");
+    return str.replace(/\\u([0-9a-fA-F]{4})/g, (m, g1) => String.fromCharCode(parseInt(g1, 16)));
 }
 
 function extractHolderName(str) {
-  if (!str) return null;
-  str = str.trim();
-  const parenMatch = str.match(/^\(\d+\)\s*(.*)$/);
-  if (parenMatch) {
-    return parenMatch[1].trim();
-  }
-  return str;
+    if (!str) return null;
+    str = str.trim();
+    const parenMatch = str.match(/^\(\d+\)\s*(.*)$/);
+    if (parenMatch) {
+        return parenMatch[1].trim();
+    }
+    return str;
 }
 
 function getContentType(filePath) {
-  if (/\.png$/i.test(filePath)) return "image/png";
-  if (/\.jpe?g$/i.test(filePath)) return "image/jpeg";
-  return "application/octet-stream";
+    if (/\.png$/i.test(filePath)) return "image/png";
+    if (/\.jpe?g$/i.test(filePath)) return "image/jpeg";
+    return "application/octet-stream";
 }
-exports.handleBatch = handleBatch;
