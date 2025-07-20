@@ -1,4 +1,5 @@
-const functions = require("firebase-functions");
+// functions/handleBatch.js
+const { onPublish } = require("firebase-functions/v2/pubsub");
 const admin = require("firebase-admin");
 const path = require("path");
 
@@ -29,12 +30,15 @@ function findMatchingImage(applicationNo, imagePaths) {
   return null;
 }
 
-exports.handleBatch = functions
-  .region("europe-west1")
-  .pubsub
-  .topic("trademark-batch-processing")
-  .onPublish(async (message) => {
-    const data = message.json;
+exports.handleBatch = onPublish(
+  {
+    region: "europe-west1",
+    timeoutSeconds: 540,
+    memory: "1GiB",
+    topic: "trademark-batch-processing"
+  },
+  async (event) => {
+    const data = event.data;
 
     const { records, bulletinId, imagePaths } = data;
 
@@ -103,9 +107,13 @@ exports.handleBatch = functions
       throw error;
     }
 
-    delete data.records;
-    delete data.imagePaths;
+    delete records;
+    delete imagePaths;
 
-    if (global.gc) global.gc();
+    if (global.gc) {
+      global.gc();
+    }
+
     return null;
-  });
+  }
+);
