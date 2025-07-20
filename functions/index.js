@@ -72,7 +72,7 @@ const transporter = nodemailer.createTransport({
 // =========================================================
 
 // ETEBS API Proxy Function (v2 sözdizimi)
-exports.etebsProxy = onRequest(
+exports.etebsProxyV2 = onRequest(
     {
         region: 'europe-west1',
         timeoutSeconds: 120,
@@ -179,7 +179,7 @@ exports.etebsProxy = onRequest(
 );
 
 // Health Check Function (v2 sözdizimi)
-exports.etebsProxyHealth = onRequest(
+exports.etebsProxyHealthV2 = onRequest(
     {
         region: 'europe-west1'
     },
@@ -196,7 +196,7 @@ exports.etebsProxyHealth = onRequest(
 );
 
 // ETEBS Token Validation Function (v2 sözdizimi)
-exports.validateEtebsToken = onRequest(
+exports.validateEtebsTokenV2 = onRequest(
     {
         region: 'europe-west1'
     },
@@ -234,7 +234,7 @@ exports.validateEtebsToken = onRequest(
 );
 
 // Send Email Notification (v2 Callable Function)
-exports.sendEmailNotification = onCall(
+exports.sendEmailNotificationV2 = onCall(
     {
         region: 'europe-west1'
     },
@@ -291,7 +291,7 @@ exports.sendEmailNotification = onCall(
 // =========================================================
 
 // Rate Limiting Function (Scheduled) (v2 sözdizimi)
-exports.cleanupEtebsLogs = onSchedule(
+exports.cleanupEtebsLogsV2 = onSchedule(
     {
         schedule: 'every 24 hours',
         region: 'europe-west1'
@@ -329,7 +329,7 @@ exports.cleanupEtebsLogs = onSchedule(
 //              FIRESTORE TRIGGER FONKSİYONLARI (v2)
 // =========================================================
 
-exports.createMailNotificationOnDocumentIndex = onDocumentCreated(
+exports.createMailNotificationOnDocumentIndexV2 = onDocumentCreated(
     {
         document: "indexed_documents/{docId}",
         region: 'europe-west1'
@@ -442,7 +442,7 @@ exports.createMailNotificationOnDocumentIndex = onDocumentCreated(
     }
 );
 
-exports.createMailNotificationOnDocumentStatusChange = onDocumentUpdated(
+exports.createMailNotificationOnDocumentStatusChangeV2 = onDocumentUpdated(
     {
         document: "unindexed_pdfs/{docId}",
         region: 'europe-west1'
@@ -549,7 +549,7 @@ exports.createMailNotificationOnDocumentStatusChange = onDocumentUpdated(
     }
 );
 
-exports.createUniversalNotificationOnTaskComplete = onDocumentUpdated(
+exports.createUniversalNotificationOnTaskCompleteV2 = onDocumentUpdated(
     {
         document: "tasks/{taskId}",
         region: 'europe-west1'
@@ -650,7 +650,7 @@ exports.createUniversalNotificationOnTaskComplete = onDocumentUpdated(
 // =========================================================
 
 // Trademark Bulletin Upload Processing (v2 Storage Trigger)
-exports.processTrademarkBulletinUpload = onObjectFinalized(
+exports.processTrademarkBulletinUploadV2 = onObjectFinalized(
     {
         region: 'europe-west1',
         timeoutSeconds: 540,
@@ -819,7 +819,7 @@ exports.processTrademarkBulletinUpload = onObjectFinalized(
 // =========================================================
 
 // Upload Image Worker (v2 Pub/Sub Trigger)
-exports.uploadImageWorker = onMessagePublished(
+exports.uploadImageWorkerV2 = onMessagePublished(
     {
         topic: "trademark-image-upload",
         region: 'europe-west1',
