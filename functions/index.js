@@ -221,13 +221,6 @@ exports.validateEtebsToken = onRequest(
 );
 
 // Send Email Notification (v2 Callable Function)
-const transporter = nodemailer.createTransport({
-    service: "gmail",
-    auth: {
-      user: "kubilayguzel@evrekapatent.com",
-      pass: "rqvl tpbm vkmu lmxi" // Uygulama şifresi
-    }
-});
 
 exports.sendEmailNotification = onCall(async (data, context) => {
     const { notificationId } = data;
