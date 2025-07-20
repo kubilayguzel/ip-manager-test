@@ -46,6 +46,65 @@
         font-style: italic;
         color: #666;
     }
+    
+    /* Progress Bar Stilleri */
+    .delete-progress-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.7);
+        z-index: 9999;
+        display: none;
+        justify-content: center;
+        align-items: center;
+    }
+    
+    .delete-progress-container {
+        background: white;
+        padding: 30px;
+        border-radius: 15px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        min-width: 400px;
+        text-align: center;
+    }
+    
+    .delete-progress-title {
+        font-size: 1.2em;
+        color: #1e3c72;
+        margin-bottom: 20px;
+        font-weight: 600;
+    }
+    
+    .delete-progress-bar {
+        width: 100%;
+        height: 20px;
+        background: #e1e8ed;
+        border-radius: 10px;
+        overflow: hidden;
+        margin-bottom: 15px;
+    }
+    
+    .delete-progress-fill {
+        height: 100%;
+        background: linear-gradient(45deg, #1e3c72, #2a5298);
+        border-radius: 10px;
+        width: 0%;
+        transition: width 0.3s ease;
+        position: relative;
+    }
+    
+    .delete-progress-text {
+        color: #666;
+        font-size: 0.9em;
+        margin-bottom: 10px;
+    }
+    
+    .delete-progress-details {
+        color: #888;
+        font-size: 0.8em;
+    }
   </style>
 </head>
 <body>
@@ -96,6 +155,18 @@
             <button class="btn btn-secondary" disabled>Yakında</button>
         </div>
     </main>
+</div>
+
+<!-- Progress Bar Overlay -->
+<div id="deleteProgressOverlay" class="delete-progress-overlay">
+    <div class="delete-progress-container">
+        <div class="delete-progress-title">Bülten Siliniyor...</div>
+        <div class="delete-progress-bar">
+            <div id="deleteProgressFill" class="delete-progress-fill"></div>
+        </div>
+        <div id="deleteProgressText" class="delete-progress-text">Başlatılıyor...</div>
+        <div id="deleteProgressDetails" class="delete-progress-details"></div>
+    </div>
 </div>
 
 <script type="module">
@@ -197,30 +268,43 @@ setTimeout(async () => {
             }
         }
         
-        // Bülten silme fonksiyonu (global) - PROGRESS NOTIFICATION İLE
+        // Progress bar fonksiyonları
+        function showDeleteProgress() {
+            document.getElementById('deleteProgressOverlay').style.display = 'flex';
+        }
+        
+        function hideDeleteProgress() {
+            document.getElementById('deleteProgressOverlay').style.display = 'none';
+        }
+        
+        function updateDeleteProgress(percent, text, details = '') {
+            document.getElementById('deleteProgressFill').style.width = percent + '%';
+            document.getElementById('deleteProgressText').textContent = text;
+            document.getElementById('deleteProgressDetails').textContent = details;
+        }
+
+        // Bülten silme fonksiyonu (global) - PROGRESS BAR İLE
         window.deleteBulletin = async function(bulletinId, bulletinNo) {
-            // Confirm modal yerine showNotification ile onay isteme
             const userConfirmed = confirm('Bülten No: ' + bulletinNo + ' olan bülteni, TÜM KAYITLARI ve GÖRSELLERİ ile birlikte silmek istediğinizden emin misiniz? Bu işlem geri alınamaz!');
             if (!userConfirmed) {
-                showNotification('❌ Silme işlemi iptal edildi', 'info', 3000);
                 return;
             }
             
             try {
+                showDeleteProgress();
+                updateDeleteProgress(5, 'Silme işlemi başlatılıyor...', `Bülten ${bulletinNo}`);
+                
                 console.log('🗑️ ' + bulletinNo + ' bülteni siliniyor...');
                 
-                // Başlangıç bildirimi
-                showNotification(`🚀 Bülten ${bulletinNo} silme işlemi başlatıldı...`, 'info', 3000);
-                
                 // 1. İlişkili kayıtları kontrol et
-                showNotification('🔍 Kayıtlar kontrol ediliyor...', 'info', 3000);
+                updateDeleteProgress(10, 'Kayıtlar kontrol ediliyor...', 'İlişkili veriler analiz ediliyor');
                 const recordsQuery = query(collection(db, "trademarkBulletinRecords"), where("bulletinId", "==", bulletinId));
                 const recordsSnapshot = await getDocs(recordsQuery);
                 const totalRecords = recordsSnapshot.size;
                 console.log('📋 ' + totalRecords + ' adet ilişkili kayıt bulundu');
                 
                 // 2. Ana bülteni sil
-                showNotification('🗂️ Ana bülten siliniyor...', 'info', 3000);
+                updateDeleteProgress(15, 'Ana bülten siliniyor...', 'Ana kayıt temizleniyor');
                 const bulletinRef = doc(db, "trademarkBulletins", bulletinId);
                 await deleteDoc(bulletinRef);
                 console.log('✅ Ana bülten silindi');
@@ -228,16 +312,13 @@ setTimeout(async () => {
                 // 3. Kayıtları batch'lerde sil
                 const BATCH_SIZE = 500;
                 let deletedCount = 0;
+                
                 if (totalRecords > 0) {
                     const recordBatches = Math.ceil(totalRecords / BATCH_SIZE);
-                    showNotification(`📦 ${totalRecords} kayıt ${recordBatches} batch'te silinecek...`, 'info', 4000);
-                    
                     const allDocs = recordsSnapshot.docs;
                     
                     for (let i = 0; i < allDocs.length; i += BATCH_SIZE) {
                         const batchNumber = Math.ceil((i + 1) / BATCH_SIZE);
-                        showNotification(`📦 Kayıt batch ${batchNumber}/${recordBatches} siliniyor...`, 'info', 2000);
-                        
                         const batch = writeBatch(db);
                         const batchDocs = allDocs.slice(i, i + BATCH_SIZE);
                         
@@ -248,85 +329,93 @@ setTimeout(async () => {
                         await batch.commit();
                         deletedCount += batchDocs.length;
                         
-                        // Progress notification
-                        const progressPercent = Math.round((deletedCount / totalRecords) * 100);
-                        showNotification(
-                            `📊 İlerleme: ${deletedCount}/${totalRecords} kayıt silindi (${progressPercent}%)`,
-                            'info',
-                            2000
+                        // Progress güncelle (15% -> 70% arası)
+                        const recordProgress = 15 + ((deletedCount / totalRecords) * 55);
+                        updateDeleteProgress(
+                            recordProgress, 
+                            'Kayıtlar siliniyor...', 
+                            `${deletedCount}/${totalRecords} kayıt (Batch ${batchNumber}/${recordBatches})`
                         );
                         
                         console.log('✅ Batch ' + batchNumber + ' tamamlandı. Silinen: ' + deletedCount + '/' + totalRecords);
                     }
-                    
-                    console.log('✅ Tüm kayıtlar silindi (' + deletedCount + ' kayıt)');
                 } else {
-                    showNotification('ℹ️ Silinecek kayıt bulunamadı', 'info', 2000);
+                    updateDeleteProgress(70, 'Kayıt silme tamamlandı', 'Silinecek kayıt bulunamadı');
                 }
                 
-                // 4. Storage'daki görselleri sil
-                showNotification('🖼️ Görseller kontrol ediliyor...', 'info', 3000);
+                // 4. Storage'daki görselleri sil - DÜZELTİLMİŞ
+                updateDeleteProgress(75, 'Görseller kontrol ediliyor...', 'Storage klasörü analiz ediliyor');
                 
                 try {
-                    const imagesFolderPath = 'bulletins/trademark_' + bulletinNo + '_images/';
-                    console.log('📁 Storage path:', imagesFolderPath);
-                    
-                    const imagesRef = ref(storage, imagesFolderPath);
-                    const imageList = await listAll(imagesRef);
-                    const totalImages = imageList.items.length;
-                    console.log('📷 ' + totalImages + ' adet görsel bulundu');
-                    
-                    if (totalImages > 0) {
-                        showNotification(`🖼️ ${totalImages} görsel siliniyor...`, 'info', 3000);
-                        
-                        // Görselleri tek tek sil (batch değil, _location hatası olmasın)
-                        let deletedImages = 0;
-                        
-                        for (const imageItem of imageList.items) {
-                            try {
-                                await deleteObject(imageItem);
-                                deletedImages++;
-                                
-                                // Her 10 görselde progress göster
-                                if (deletedImages % 10 === 0 || deletedImages === totalImages) {
-                                    const imageProgressPercent = Math.round((deletedImages / totalImages) * 100);
-                                    showNotification(
-                                        `🎨 Görseller: ${deletedImages}/${totalImages} silindi (${imageProgressPercent}%)`,
-                                        'info',
-                                        2000
-                                    );
-                                }
-                                
-                                console.log(`🖼️ Görsel silindi: ${deletedImages}/${totalImages}`);
-                            } catch (imageError) {
-                                console.error('❌ Tek görsel silme hatası:', imageError);
-                                // Tek görsel hatası tüm işlemi durdurmasın
-                            }
-                        }
-                        
-                        console.log('✅ ' + deletedImages + ' görsel başarıyla silindi');
-                        showNotification(`✅ ${deletedImages} görsel başarıyla silindi`, 'success', 3000);
+                    // Storage objesi kontrolü
+                    if (!storage) {
+                        console.error('❌ Storage objesi bulunamadı');
+                        updateDeleteProgress(95, 'Görseller atlanamıyor', 'Storage hatası - devam ediliyor');
                     } else {
-                        showNotification('ℹ️ Silinecek görsel bulunamadı', 'info', 2000);
+                        const imagesFolderPath = `bulletins/trademark_${bulletinNo}_images/`;
+                        console.log('📁 Storage path:', imagesFolderPath);
+                        
+                        // ref() fonksiyonunu doğru kullan
+                        const folderRef = ref(storage, imagesFolderPath);
+                        const imageList = await listAll(folderRef);
+                        const totalImages = imageList.items.length;
+                        
+                        console.log('📷 ' + totalImages + ' adet görsel bulundu');
+                        
+                        if (totalImages > 0) {
+                            updateDeleteProgress(80, 'Görseller siliniyor...', `${totalImages} görsel bulundu`);
+                            
+                            let deletedImages = 0;
+                            
+                            for (const imageItem of imageList.items) {
+                                try {
+                                    await deleteObject(imageItem);
+                                    deletedImages++;
+                                    
+                                    // Progress güncelle (80% -> 95% arası)
+                                    const imageProgress = 80 + ((deletedImages / totalImages) * 15);
+                                    updateDeleteProgress(
+                                        imageProgress, 
+                                        'Görseller siliniyor...', 
+                                        `${deletedImages}/${totalImages} görsel silindi`
+                                    );
+                                    
+                                    console.log(`🖼️ Görsel silindi: ${deletedImages}/${totalImages}`);
+                                } catch (imageError) {
+                                    console.error('❌ Tek görsel silme hatası:', imageError);
+                                    // Tek görsel hatası işlemi durdurmasın
+                                }
+                            }
+                            
+                            console.log('✅ ' + deletedImages + ' görsel başarıyla silindi');
+                        } else {
+                            updateDeleteProgress(95, 'Görseller kontrol edildi', 'Silinecek görsel bulunamadı');
+                        }
                     }
                 } catch (storageError) {
-                    console.error('❌ Storage silme hatası:', storageError);
-                    showNotification('⚠️ Görseller silinemedi: ' + storageError.message, 'warning', 8000);
+                    console.error('❌ Storage işlem hatası:', storageError);
+                    updateDeleteProgress(95, 'Görsel silme hatası', 'Storage erişim sorunu - devam ediliyor');
                 }
                 
-                // Final success mesajı
-                showNotification(
-                    `✅ Başarılı! Bülten ${bulletinNo} tamamen silindi!\n• Ana bülten: ✓\n• ${totalRecords} kayıt: ✓\n• Görseller: ✓`,
-                    'success',
-                    8000
-                );
-                      
-                console.log('🔄 Tablo yenileniyor...');
-                loadTrademarkBulletins(); // Tabloyu yenile
+                // Final
+                updateDeleteProgress(100, 'Silme işlemi tamamlandı!', `Bülten ${bulletinNo} başarıyla silindi`);
+                
+                setTimeout(() => {
+                    hideDeleteProgress();
+                    showNotification(
+                        `✅ Bülten ${bulletinNo} başarıyla silindi!\n• Ana bülten: ✓\n• ${totalRecords} kayıt: ✓\n• Görseller: ✓`,
+                        'success',
+                        6000
+                    );
+                    
+                    console.log('🔄 Tablo yenileniyor...');
+                    loadTrademarkBulletins(); // Tabloyu yenile
+                }, 1500);
                 
             } catch (error) {
                 console.error('❌ Bülten silme hatası:', error);
-                showNotification('❌ Silme hatası: ' + error.message, 'error', 10000);
+                hideDeleteProgress();
+                showNotification('❌ Silme hatası: ' + error.message, 'error', 8000);
             }
         };
         
