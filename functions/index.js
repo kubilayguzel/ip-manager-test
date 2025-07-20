@@ -15,7 +15,7 @@ const { onSchedule } = require('firebase-functions/v2/scheduler');
 const { onDocumentCreated, onDocumentUpdated } = require('firebase-functions/v2/firestore');
 const { onPublish } = require('firebase-functions/v2/pubsub');
 const { onObjectFinalized } = require('firebase-functions/v2/storage');
-const { config } = require('firebase-functions/v2'); // <<< BU SATIRI EKLEYİN
+const { config } = require('firebase-functions/v2'); // config'i bir obje olarak import ediyoruz
 
 // Dış modüller (npm install ile yüklenmiş)
 const cors = require('cors');
@@ -30,11 +30,11 @@ if (!admin.apps.length) {
 const db = admin.firestore();
 const pubsubClient = new PubSub();
 
-// **************************** ALGOLIA YAPILANDIRMASI ****************************
+/// **************************** ALGOLIA YAPILANDIRMASI ****************************
 // Kendi Algolia Uygulama ID'niz ve Yönetici API Anahtarınız ile güncelleyin
 // Bu değerler functions:config:set ile ayarlanmalıdır.
-const ALGOLIA_APP_ID = config().algolia.app_id; // << functions yerine config() kullanıldı
-const ALGOLIA_ADMIN_API_KEY = config().algolia.api_key; // << functions yerine config() kullanıldı
+const ALGOLIA_APP_ID = config.algolia.app_id;     // << BURADA config() yerine SADECE config kullanıldı
+const ALGOLIA_ADMIN_API_KEY = config.algolia.api_key; // << BURADA config() yerine SADECE config kullanıldı
 const ALGOLIA_INDEX_NAME = 'trademark_bulletin_records_live';
 
 const algoliaClient = algoliasearch(ALGOLIA_APP_ID, ALGOLIA_ADMIN_API_KEY);
