@@ -199,7 +199,10 @@ setTimeout(async () => {
         
         // Bülten silme fonksiyonu (global) - PROGRESS NOTIFICATION İLE
         window.deleteBulletin = async function(bulletinId, bulletinNo) {
-            if (!confirm('Bülten No: ' + bulletinNo + ' olan bülteni, TÜM KAYITLARI ve GÖRSELLERİ ile birlikte silmek istediğinizden emin misiniz? Bu işlem geri alınamaz!')) {
+            // Confirm modal yerine showNotification ile onay isteme
+            const userConfirmed = confirm('Bülten No: ' + bulletinNo + ' olan bülteni, TÜM KAYITLARI ve GÖRSELLERİ ile birlikte silmek istediğinizden emin misiniz? Bu işlem geri alınamaz!');
+            if (!userConfirmed) {
+                showNotification('❌ Silme işlemi iptal edildi', 'info', 3000);
                 return;
             }
             
@@ -263,10 +266,12 @@ setTimeout(async () => {
                 
                 // 4. Storage'daki görselleri sil
                 showNotification('🖼️ Görseller kontrol ediliyor...', 'info', 3000);
-                const imagesFolderPath = 'bulletins/trademark_' + bulletinNo + '_images/';
-                const imagesRef = ref(storage, imagesFolderPath);
                 
                 try {
+                    const imagesFolderPath = 'bulletins/trademark_' + bulletinNo + '_images/';
+                    console.log('📁 Storage path:', imagesFolderPath);
+                    
+                    const imagesRef = ref(storage, imagesFolderPath);
                     const imageList = await listAll(imagesRef);
                     const totalImages = imageList.items.length;
                     console.log('📷 ' + totalImages + ' adet görsel bulundu');
@@ -274,27 +279,33 @@ setTimeout(async () => {
                     if (totalImages > 0) {
                         showNotification(`🖼️ ${totalImages} görsel siliniyor...`, 'info', 3000);
                         
-                        // Görselleri batch'lerde sil
-                        const imageBatchSize = 100;
+                        // Görselleri tek tek sil (batch değil, _location hatası olmasın)
                         let deletedImages = 0;
                         
-                        for (let i = 0; i < imageList.items.length; i += imageBatchSize) {
-                            const imageBatch = imageList.items.slice(i, i + imageBatchSize);
-                            await Promise.all(imageBatch.map(itemRef => deleteObject(itemRef)));
-                            deletedImages += imageBatch.length;
-                            
-                            // Görsel progress
-                            const imageProgressPercent = Math.round((deletedImages / totalImages) * 100);
-                            showNotification(
-                                `🎨 Görseller: ${deletedImages}/${totalImages} silindi (${imageProgressPercent}%)`,
-                                'info',
-                                2000
-                            );
-                            
-                            console.log('🖼️ Görsel batch tamamlandı. Silinen: ' + deletedImages + '/' + totalImages);
+                        for (const imageItem of imageList.items) {
+                            try {
+                                await deleteObject(imageItem);
+                                deletedImages++;
+                                
+                                // Her 10 görselde progress göster
+                                if (deletedImages % 10 === 0 || deletedImages === totalImages) {
+                                    const imageProgressPercent = Math.round((deletedImages / totalImages) * 100);
+                                    showNotification(
+                                        `🎨 Görseller: ${deletedImages}/${totalImages} silindi (${imageProgressPercent}%)`,
+                                        'info',
+                                        2000
+                                    );
+                                }
+                                
+                                console.log(`🖼️ Görsel silindi: ${deletedImages}/${totalImages}`);
+                            } catch (imageError) {
+                                console.error('❌ Tek görsel silme hatası:', imageError);
+                                // Tek görsel hatası tüm işlemi durdurmasın
+                            }
                         }
                         
                         console.log('✅ ' + deletedImages + ' görsel başarıyla silindi');
+                        showNotification(`✅ ${deletedImages} görsel başarıyla silindi`, 'success', 3000);
                     } else {
                         showNotification('ℹ️ Silinecek görsel bulunamadı', 'info', 2000);
                     }
