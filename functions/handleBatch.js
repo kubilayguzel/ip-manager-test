@@ -1,5 +1,4 @@
 // functions/handleBatch.js
-const functions = require("firebase-functions/v2");
 const { onPublish } = require("firebase-functions/v2/pubsub");
 const admin = require("firebase-admin");
 const path = require("path");
