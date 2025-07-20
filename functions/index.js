@@ -13,7 +13,7 @@ const nodemailer = require('nodemailer');
 const { onRequest, onCall, HttpsError } = require('firebase-functions/v2/https'); // HTTPS fonksiyonları ve HttpsError için v2 importu
 const { onSchedule } = require('firebase-functions/v2/scheduler'); // Scheduler triggerları için v2 importu
 const { onDocumentCreated, onDocumentUpdated } = require('firebase-functions/v2/firestore'); // Firestore triggerları için v2 importu
-const { onPublish } = require('firebase-functions/v2/pubsub'); // Pub/Sub fonksiyonları için v2 importu
+const { onMessagePublished } = require('firebase-functions/v2/pubsub'); // Pub/Sub mesaj trigger'ları için v2 importu
 const { onObjectFinalized } = require('firebase-functions/v2/storage'); // Storage triggerları için v2 importu
 const logger = require('firebase-functions/logger'); // Logger için
 
@@ -59,7 +59,7 @@ const corsOptions = {
 const corsHandler = cors(corsOptions);
 
 // SMTP transporter configuration
-const transporter = nodemailer.createTransporter({
+const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
     user: "kubilayguzel@evrekapatent.com",
@@ -819,7 +819,7 @@ exports.processTrademarkBulletinUpload = onObjectFinalized(
 // =========================================================
 
 // Upload Image Worker (v2 Pub/Sub Trigger)
-exports.uploadImageWorker = onPublish(
+exports.uploadImageWorker = onMessagePublished(
     {
         topic: "trademark-image-upload",
         region: 'europe-west1',
