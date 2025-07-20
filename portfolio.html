@@ -669,15 +669,6 @@
                             return;
                         }
 
-                        // Firebase auth objesini doğrudan kullanın
-                        const user = auth.currentUser;
-
-                        if (!user) {
-                            showNotification('İzlemeye kayıt eklemek için lütfen önce oturum açın.', 'warning');
-                            return;
-                        }
-
-                        const uid = user.uid;
                         let successfulAdditions = 0;
                         let failedAdditions = 0;
                         let skippedNonTrademark = 0;
@@ -691,31 +682,29 @@
                                 continue;
                             }
 
-                            // DİKKAT: Eğer sadece 'trademark' tipindeki kayıtları izlemek istiyorsanız bu bloğu tutun.
-                            // Diğer tipleri (patent, tasarım vb.) de izleme listesine eklemek isterseniz,
-                            // alttaki if bloğunu ve içindeki 'continue' ifadesini tamamen KALDIRIN.
+                            // Sadece trademark tipindeki kayıtları izlemek istiyorsanız bu bloğu tutun
+                            // Diğer tipleri de izlemek isterseniz bu if bloğunu kaldırın
                             if (record.type !== 'trademark') {
                                 console.warn('İzlemeye eklenemedi: Kayıt marka (trademark) tipi değil, atlanıyor.', record.title, '(ID:', record.id, ')');
                                 skippedNonTrademark++;
                                 continue;
                             }
 
-                            // monitoringService'i doğru şekilde çağırın
-                            // userId ve record datasını setDoc'a göndermek için bu format doğru.
-                            const res = await monitoringService.addMonitoringItem(uid, {
-                            id: record.id,
-                            title: record.title,
-                            applicationNumber: record.applicationNumber,
-                            applicationDate: record.applicationDate,
-                            status: record.status,
-                            type: record.type,
-                            recordType: record.recordType || 'Portföy',
-                            trademarkImage: record.trademarkImage || null, // Varsa resim verisini gönder
-                            niceClass: record.niceClass || null, // YENİ EKLENDİ: niceClass bilgisini gönder
-                            owners: record.owners || [],
-                            registrationNumber: record.registrationNumber || null,
-                            registrationDate: record.registrationDate || null,
-                            renewalDateTrademark: record.renewalDateTrademark || null
+                            // UserID parametresi kaldırıldı - sadece record bilgisi gönderiliyor
+                            const res = await monitoringService.addMonitoringItem({
+                                id: record.id,
+                                title: record.title,
+                                applicationNumber: record.applicationNumber,
+                                applicationDate: record.applicationDate,
+                                status: record.status,
+                                type: record.type,
+                                recordType: record.recordType || 'Portföy',
+                                trademarkImage: record.trademarkImage || null,
+                                niceClass: record.niceClass || null,
+                                owners: record.owners || [],
+                                registrationNumber: record.registrationNumber || null,
+                                registrationDate: record.registrationDate || null,
+                                renewalDateTrademark: record.renewalDateTrademark || null
                             });
 
                             if (!res.success) {
@@ -726,7 +715,7 @@
                             }
                         }
 
-                        // İşlem sonunda kullanıcıya bilgi verin
+                        // İşlem sonunda kullanıcıya bilgi ver
                         if (successfulAdditions > 0) {
                             showNotification(`${successfulAdditions} kayıt başarıyla izlemeye eklendi.`, 'success');
                         }
@@ -742,7 +731,6 @@
                         document.getElementById('selectAllCheckbox').checked = false;
                         this.updateAddToMonitoringButtonState();
                     });
-
                 }
                 toggleRecordSelection(recordId, isChecked) {
                     if (isChecked) {
