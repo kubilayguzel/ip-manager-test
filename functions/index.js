@@ -476,7 +476,7 @@ exports.createMailNotificationOnDocumentStatusChange = onDocumentUpdated(
                 }
 
                 if (after.clientId) {
-                    const clientSnapshot = await db.collection("persons").doc(after.clientId).get(); // 'clients' koleksiyonu var mı? 'persons' olmalı
+                    const clientSnapshot = await db.collection("persons").doc(after.clientId).get();
                     if (!clientSnapshot.exists) {
                         console.warn(`Müvekkil bulunamadı: ${after.clientId}`);
                         status = "missing_info";
@@ -630,7 +630,15 @@ exports.createUniversalNotificationOnTaskComplete = onDocumentUpdated(
     }
 );
 
-exports.sendEmailNotification = functions.https.onCall(async (data, context) => {
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: "kubilayguzel@evrekapatent.com",
+    pass: "rqvl tpbm vkmu lmxi" 
+  }
+});
+
+exports.sendEmailNotification = onCall(async (data, context) => {
   const { notificationId } = data;
 
   if (!notificationId) {
