@@ -10,29 +10,31 @@ const { createExtractorFromFile } = require('node-unrar-js');
 const nodemailer = require('nodemailer');
 
 // Firebase Functions v2 SDK importları
-const { onRequest } = require('firebase-functions/v2/https');
+const { onRequest, onCall } = require('firebase-functions/v2/https');
 const { onSchedule } = require('firebase-functions/v2/scheduler');
 const { onDocumentCreated, onDocumentUpdated } = require('firebase-functions/v2/firestore');
-const { onPublish } = require('firebase-functions/v2/pubsub'); // Pub/Sub fonksiyonları için v2 importu
-const { onObjectFinalized } = require('firebase-functions/v2/storage'); // Storage triggerları için v2 importu
-const { PubSub } = require('@google-cloud/pubsub'); // Pub/Sub mesajı yayınlamak için
-const pubsubClient = new PubSub();
+const { onPublish } = require('firebase-functions/v2/pubsub');
+const { onObjectFinalized } = require('firebase-functions/v2/storage');
+const { config } = require('firebase-functions/v2'); // <<< BU SATIRI EKLEYİN
 
 // Dış modüller (npm install ile yüklenmiş)
 const cors = require('cors');
-const fetch = require('node-fetch'); // node-fetch hala v2 ise gerekli
-const algoliasearch = require('algoliasearch'); // Algolia SDK'sı
+const fetch = require('node-fetch');
+const algoliasearch = require('algoliasearch');
+const { PubSub } = require('@google-cloud/pubsub');
 
 // Firebase Admin SDK'sını başlatın
 if (!admin.apps.length) {
   admin.initializeApp();
 }
 const db = admin.firestore();
+const pubsubClient = new PubSub();
 
 // **************************** ALGOLIA YAPILANDIRMASI ****************************
 // Kendi Algolia Uygulama ID'niz ve Yönetici API Anahtarınız ile güncelleyin
-const ALGOLIA_APP_ID = functions.config().algolia.app_id;
-const ALGOLIA_ADMIN_API_KEY = functions.config().algolia.api_key;
+// Bu değerler functions:config:set ile ayarlanmalıdır.
+const ALGOLIA_APP_ID = config().algolia.app_id; // << functions yerine config() kullanıldı
+const ALGOLIA_ADMIN_API_KEY = config().algolia.api_key; // << functions yerine config() kullanıldı
 const ALGOLIA_INDEX_NAME = 'trademark_bulletin_records_live';
 
 const algoliaClient = algoliasearch(ALGOLIA_APP_ID, ALGOLIA_ADMIN_API_KEY);
