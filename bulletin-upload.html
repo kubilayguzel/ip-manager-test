@@ -343,34 +343,47 @@ setTimeout(async () => {
                     updateDeleteProgress(70, 'Kayıt silme tamamlandı', 'Silinecek kayıt bulunamadı');
                 }
                 
-                // 4. Storage'daki görselleri sil - DÜZELTİLMİŞ
+                // 4. Storage'daki görselleri sil - DETAYLI DEBUG
                 updateDeleteProgress(75, 'Görseller kontrol ediliyor...', 'Storage klasörü analiz ediliyor');
+                let storageResult = { success: false, deletedCount: 0, totalCount: 0, error: null };
                 
                 try {
                     // Storage objesi kontrolü
                     if (!storage) {
                         console.error('❌ Storage objesi bulunamadı');
+                        storageResult.error = 'Storage objesi bulunamadı';
                         updateDeleteProgress(95, 'Görseller atlanamıyor', 'Storage hatası - devam ediliyor');
                     } else {
                         const imagesFolderPath = `bulletins/trademark_${bulletinNo}_images/`;
-                        console.log('📁 Storage path:', imagesFolderPath);
+                        console.log('📁 Kontrol edilen Storage path:', imagesFolderPath);
                         
                         // ref() fonksiyonunu doğru kullan
                         const folderRef = ref(storage, imagesFolderPath);
+                        console.log('📁 FolderRef oluşturuldu:', folderRef);
+                        
+                        updateDeleteProgress(78, 'Storage klasörü listeleniyor...', 'Görsel dosyaları aranıyor');
+                        
                         const imageList = await listAll(folderRef);
                         const totalImages = imageList.items.length;
+                        storageResult.totalCount = totalImages;
                         
-                        console.log('📷 ' + totalImages + ' adet görsel bulundu');
+                        console.log('📷 Bulunan görsel sayısı:', totalImages);
+                        console.log('📷 İlk 3 görsel dosyası:', imageList.items.slice(0, 3).map(item => item.name));
                         
                         if (totalImages > 0) {
                             updateDeleteProgress(80, 'Görseller siliniyor...', `${totalImages} görsel bulundu`);
                             
                             let deletedImages = 0;
+                            let deletionErrors = [];
                             
-                            for (const imageItem of imageList.items) {
+                            for (let i = 0; i < imageList.items.length; i++) {
+                                const imageItem = imageList.items[i];
+                                
                                 try {
+                                    console.log(`🔄 Siliniyor: ${imageItem.name}`);
                                     await deleteObject(imageItem);
                                     deletedImages++;
+                                    console.log(`✅ Silindi: ${imageItem.name}`);
                                     
                                     // Progress güncelle (80% -> 95% arası)
                                     const imageProgress = 80 + ((deletedImages / totalImages) * 15);
@@ -380,33 +393,59 @@ setTimeout(async () => {
                                         `${deletedImages}/${totalImages} görsel silindi`
                                     );
                                     
-                                    console.log(`🖼️ Görsel silindi: ${deletedImages}/${totalImages}`);
                                 } catch (imageError) {
-                                    console.error('❌ Tek görsel silme hatası:', imageError);
-                                    // Tek görsel hatası işlemi durdurmasın
+                                    console.error(`❌ ${imageItem.name} silinemedi:`, imageError);
+                                    deletionErrors.push(`${imageItem.name}: ${imageError.message}`);
                                 }
                             }
                             
-                            console.log('✅ ' + deletedImages + ' görsel başarıyla silindi');
+                            storageResult.success = deletedImages > 0;
+                            storageResult.deletedCount = deletedImages;
+                            
+                            console.log(`📊 Storage sonuç: ${deletedImages}/${totalImages} silindi`);
+                            if (deletionErrors.length > 0) {
+                                console.log('❌ Silme hataları:', deletionErrors);
+                                storageResult.error = `${deletionErrors.length} dosya silinemedi`;
+                            }
+                            
                         } else {
+                            console.log('ℹ️ Storage klasöründe görsel bulunamadı');
+                            storageResult.success = true; // Boş klasör = başarılı
                             updateDeleteProgress(95, 'Görseller kontrol edildi', 'Silinecek görsel bulunamadı');
                         }
                     }
                 } catch (storageError) {
-                    console.error('❌ Storage işlem hatası:', storageError);
+                    console.error('❌ Storage genel hatası:', storageError);
+                    console.error('❌ Storage hata detayı:', storageError.message);
+                    console.error('❌ Storage hata stack:', storageError.stack);
+                    storageResult.error = storageError.message;
                     updateDeleteProgress(95, 'Görsel silme hatası', 'Storage erişim sorunu - devam ediliyor');
                 }
                 
-                // Final
-                updateDeleteProgress(100, 'Silme işlemi tamamlandı!', `Bülten ${bulletinNo} başarıyla silindi`);
+                // Final - gerçek sonucu göster
+                const finalMessage = storageResult.success 
+                    ? `Bülten ${bulletinNo} başarıyla silindi`
+                    : `Bülten ${bulletinNo} silindi (⚠️ ${storageResult.error})`;
+                    
+                updateDeleteProgress(100, 'Silme işlemi tamamlandı!', finalMessage);
                 
                 setTimeout(() => {
                     hideDeleteProgress();
-                    showNotification(
-                        `✅ Bülten ${bulletinNo} başarıyla silindi!\n• Ana bülten: ✓\n• ${totalRecords} kayıt: ✓\n• Görseller: ✓`,
-                        'success',
-                        6000
-                    );
+                    
+                    // Gerçek durumu bildiren notification
+                    if (storageResult.error) {
+                        showNotification(
+                            `⚠️ Bülten ${bulletinNo} silindi!\n• Ana bülten: ✓\n• ${totalRecords} kayıt: ✓\n• Görseller: ❌ ${storageResult.error}\n(${storageResult.deletedCount}/${storageResult.totalCount} görsel silindi)`,
+                            'warning',
+                            8000
+                        );
+                    } else {
+                        showNotification(
+                            `✅ Bülten ${bulletinNo} tamamen silindi!\n• Ana bülten: ✓\n• ${totalRecords} kayıt: ✓\n• ${storageResult.deletedCount} görsel: ✓`,
+                            'success',
+                            6000
+                        );
+                    }
                     
                     console.log('🔄 Tablo yenileniyor...');
                     loadTrademarkBulletins(); // Tabloyu yenile
