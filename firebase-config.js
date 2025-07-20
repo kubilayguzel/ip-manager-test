@@ -392,21 +392,26 @@ export const personService = {
 };
 // --- YENİ EKLENDİ: Monitoring Service ---
 export const monitoringService = {
-    async addMonitoringItem(userId, record) {
+    async addMonitoringItem(record) {
         if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor." };
         try {
-            const ref = doc(db, 'monitoringTrademarks', userId, 'items', record.id);
-            await setDoc(ref, record);
+            const ref = doc(db, 'monitoringTrademarks', record.id);
+            await setDoc(ref, {
+                ...record,
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString()
+            });
             return { success: true };
         } catch (error) {
             console.error("İzleme kaydı eklenirken hata:", error);
             return { success: false, error: error.message };
         }
     },
-    async removeMonitoringItem(userId, recordId) {
+
+    async removeMonitoringItem(recordId) {
         if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor." };
         try {
-            const ref = doc(db, 'monitoringTrademarks', userId, 'items', recordId);
+            const ref = doc(db, 'monitoringTrademarks', recordId);
             await deleteDoc(ref);
             return { success: true };
         } catch (error) {
@@ -414,18 +419,41 @@ export const monitoringService = {
             return { success: false, error: error.message };
         }
     },
-    async getMonitoringItems(userId) {
+
+    async getMonitoringItems() {
         if (!isFirebaseAvailable) return { success: true, data: [] };
         try {
-            const snapshot = await getDocs(collection(db, 'monitoringTrademarks', userId, 'items'));
-            return { success: true, data: snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) };
+            const q = query(
+                collection(db, 'monitoringTrademarks'),
+                orderBy('updatedAt', 'desc')
+            );
+            const snapshot = await getDocs(q);
+            
+            return { 
+                success: true, 
+                data: snapshot.docs.map(doc => ({ 
+                    id: doc.id, 
+                    ...doc.data() 
+                })) 
+            };
         } catch (error) {
             console.error("İzleme kayıtları alınırken hata:", error);
             return { success: false, error: error.message, data: [] };
         }
+    },
+
+    // Bonus: Bir kaydın izlenip izlenmediğini kontrol etmek için
+    async isMonitored(recordId) {
+        if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor." };
+        try {
+            const docSnap = await getDoc(doc(db, 'monitoringTrademarks', recordId));
+            return { success: true, isMonitored: docSnap.exists() };
+        } catch (error) {
+            console.error("İzleme durumu kontrol edilirken hata:", error);
+            return { success: false, error: error.message };
+        }
     }
 };
-
 // --- YENİ EKLENDİ: Task Service ---
 export const taskService = {
     async createTask(taskData) { 
