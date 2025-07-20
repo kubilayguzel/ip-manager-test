@@ -1,5 +1,5 @@
 // functions/index.js
-const functions = require('firebase-functions');
+const functions = require('firebase-functions/v2');
 const cors = require('cors');
 const fetch = require('node-fetch');
 const admin = require('firebase-admin');
@@ -14,7 +14,7 @@ const { google } = require("googleapis");
 const { GoogleAuth } = require("google-auth-library");
 const nodemailer = require("nodemailer");
 const { handleBatch } = require("./handleBatch");
-const { PubSub } = require("@google-cloud/pubsub");
+const pubsub = require('firebase-functions/v2/pubsub');
 const pubsub = new PubSub(); 
 
 if (!admin.apps.length) {
