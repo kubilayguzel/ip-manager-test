@@ -1689,7 +1689,7 @@ export const etebsAutoProcessor = {
 console.log('🔐 ETEBS Service Layer loaded successfully');
 
 // --- Exports ---
-export {auth, db}; 
+export {auth, storage, db}; 
 export const firebaseServices = { 
     auth: auth,
     db: db,
