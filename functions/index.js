@@ -20,7 +20,7 @@ const { config } = require('firebase-functions/v2'); // config'i bir obje olarak
 // Dış modüller (npm install ile yüklenmiş)
 const cors = require('cors');
 const fetch = require('node-fetch');
-const algoliasearch = require('algoliasearch');
+const algoliasearch = require('algoliasearch'); // Bu satır aynı kalıyor
 const { PubSub } = require('@google-cloud/pubsub');
 
 // Firebase Admin SDK'sını başlatın
@@ -30,14 +30,15 @@ if (!admin.apps.length) {
 const db = admin.firestore();
 const pubsubClient = new PubSub();
 
-/// **************************** ALGOLIA YAPILANDIRMASI ****************************
+// **************************** ALGOLIA YAPILANDIRMASI ****************************
 // Kendi Algolia Uygulama ID'niz ve Yönetici API Anahtarınız ile güncelleyin
 // Bu değerler functions:config:set ile ayarlanmalıdır.
-const ALGOLIA_APP_ID = config.algolia.app_id;     // << BURADA config() yerine SADECE config kullanıldı
-const ALGOLIA_ADMIN_API_KEY = config.algolia.api_key; // << BURADA config() yerine SADECE config kullanıldı
+const ALGOLIA_APP_ID = config().algolia.app_id;
+const ALGOLIA_ADMIN_API_KEY = config().algolia.api_key;
 const ALGOLIA_INDEX_NAME = 'trademark_bulletin_records_live';
 
-const algoliaClient = algoliasearch(ALGOLIA_APP_ID, ALGOLIA_ADMIN_API_KEY);
+// Algolia istemcisini doğru şekilde başlatma: algoliasearch.default kullanın
+const algoliaClient = algoliasearch.default(ALGOLIA_APP_ID, ALGOLIA_ADMIN_API_KEY); // <<< BURAYI DÜZELTTİK
 const algoliaIndex = algoliaClient.initIndex(ALGOLIA_INDEX_NAME);
 // ********************************************************************************
 
