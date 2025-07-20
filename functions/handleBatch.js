@@ -1,6 +1,6 @@
 // functions/handleBatch.js
 const functions = require("firebase-functions/v2");
-const pubsub = require("firebase-functions/v2/pubsub");
+const { onPublish } = require("firebase-functions/v2/pubsub");
 const admin = require("firebase-admin");
 const path = require("path");
 
@@ -31,7 +31,7 @@ function findMatchingImage(applicationNo, imagePaths) {
   return null;
 }
 
-exports.handleBatch = pubsub.onPublish(
+exports.handleBatch = onPublish(
   {
     region: "europe-west1",
     timeoutSeconds: 540,
