@@ -38,7 +38,7 @@ const ALGOLIA_ADMIN_API_KEY = config().algolia.api_key;
 const ALGOLIA_INDEX_NAME = 'trademark_bulletin_records_live';
 
 // Algolia istemcisini doğru şekilde başlatma: algoliasearch.default kullanın
-const algoliaClient = algoliasearch.default(ALGOLIA_APP_ID, ALGOLIA_ADMIN_API_KEY); // <<< BURAYI DÜZELTTİK
+const algoliaClient = algoliasearch(ALGOLIA_APP_ID, ALGOLIA_ADMIN_API_KEY); // <<< BURAYI DÜZELTTİK
 const algoliaIndex = algoliaClient.initIndex(ALGOLIA_INDEX_NAME);
 // ********************************************************************************
 
