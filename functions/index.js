@@ -14,8 +14,9 @@ const { google } = require("googleapis");
 const { GoogleAuth } = require("google-auth-library");
 const nodemailer = require("nodemailer");
 const { handleBatch } = require("./handleBatch");
-const pubsub = require('firebase-functions/v2/pubsub');
-const pubsub = new PubSub(); 
+const pubsub = require('firebase-functions/v2/pubsub'); // onPublish için
+const { PubSub } = require('@google-cloud/pubsub'); // mesaj yayınlamak için
+const pubsubClient = new PubSub(); // yayınlama için kullanılacak
 
 if (!admin.apps.length) {
   admin.initializeApp();
