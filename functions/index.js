@@ -630,14 +630,6 @@ exports.createUniversalNotificationOnTaskComplete = onDocumentUpdated(
     }
 );
 
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: "kubilayguzel@evrekapatent.com",
-    pass: "rqvl tpbm vkmu lmxi" 
-  }
-});
-
 exports.sendEmailNotification = functions.https.onCall(async (data, context) => {
   const { notificationId } = data;
 
