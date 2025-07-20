@@ -29,8 +29,7 @@ function findMatchingImage(applicationNo, imagePaths) {
 }
 
 exports.handleBatch = functions
- .region("europe-west1")
-  .runWith({ timeoutSeconds: 540, memory: "1GB" })
+
   .pubsub.topic("trademark-batch-processing")
   .onPublish(async (message) => {
     const data = message.json;
