@@ -1,3 +1,4 @@
+console.log("🔥 Firebase Functions nesnesi:", Object.keys(functions));
 const functions = require("firebase-functions");
 const admin = require("firebase-admin");
 const path = require("path");
@@ -29,7 +30,8 @@ function findMatchingImage(applicationNo, imagePaths) {
 }
 
 exports.handleBatch = functions
-
+ .region("europe-west1")
+  .runWith({ timeoutSeconds: 540, memory: "1GB" })
   .pubsub.topic("trademark-batch-processing")
   .onPublish(async (message) => {
     const data = message.json;
