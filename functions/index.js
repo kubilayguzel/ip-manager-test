@@ -1008,3 +1008,84 @@ function getContentType(filePath) {
     if (/\.jpe?g$/i.test(filePath)) return "image/jpeg";
     return "application/octet-stream";
 }
+//              ALGOLIA İLK İNDEKSLEME FONKSİYONU (v2 onRequest)
+// =========================================================
+
+exports.indexTrademarkBulletinRecords = onRequest(
+    {
+      region: 'europe-west1', // Fonksiyonu konuşlandırdığınız bölgeyi seçin
+      timeoutSeconds: 540, // 9 dakika (büyük veri setleri için)
+      memory: '2GiB' // Yüksek bellek (büyük veri setleri için)
+    },
+    async (req, res) => {
+      // Bu kısım onRequest olduğu için req.body.data üzerinden kontrol yaparız
+      // Eğer bu fonksiyonu sadece CLI'dan test için tetikleyecekseniz veya özel bir kimlik doğrulama mekanizması yoksa
+      // bu bloğu daha basit bir şeye çevirebilirsiniz.
+      // CLI'dan test için curl veya Postman kullanın.
+      // Örnek: curl -X POST -H "Content-Type: application/json" --data '{"data":{"auth":{"uid":"YOUR_ADMIN_UID"}}}' https://YOUR_REGION-YOUR_PROJECT_ID.cloudfunctions.net/indexTrademarkBulletinRecords
+            
+      if (!isAdminCall && process.env.NODE_ENV !== 'development') { // Sadece production'da bu kontrolü yapın
+        console.warn('Kimlik doğrulaması yapılmamış çağrı veya yetkisiz kullanıcıdan çağrı girişimi.');
+        return res.status(403).send('Yasaklı');
+      }
+
+      console.log('Algolia: trademarkBulletinRecords için toplu indeksleme başlatıldı.');
+      let recordsToIndex = [];
+      let lastDoc = null;
+      const batchSize = 500; // Her turda işlenecek belge sayısı
+  
+      try {
+        while (true) {
+          let query = db.collection('trademarkBulletinRecords').orderBy(admin.firestore.FieldPath.documentId()).limit(batchSize);
+          if (lastDoc) {
+            query = query.startAfter(lastDoc);
+          }
+  
+          const snapshot = await query.get();
+  
+          if (snapshot.empty) {
+            break;
+          }
+  
+          const currentBatch = snapshot.docs.map(doc => {
+            const data = doc.data();
+            // Algolia'ya göndermek için veriyi dönüştürün
+            return {
+              objectID: doc.id, // Algolia için benzersiz ID
+              markName: data.markName || null,
+              applicationNo: data.applicationNo || null,
+              applicationDate: data.applicationDate || null, // Firebase Timestamp objesi olabilir
+              niceClasses: data.niceClasses || null,
+              bulletinId: data.bulletinId || null,
+              // Dizi veya karmaşık objeleri stringe çevirerek aranabilir yapın
+              holders: Array.isArray(data.holders) ? data.holders.map(h => h.name).join(', ') : '',
+              goods: Array.isArray(data.goods) ? data.goods.join(', ') : '',
+              extractedGoods: Array.isArray(data.extractedGoods) ? data.extractedGoods.join(', ') : '',
+              attorneys: Array.isArray(data.attorneys) ? data.attorneys.map(a => a.name).join(', ') : '', // Eğer avukatların name alanı varsa
+              imagePath: data.imagePath || null, // Görsel yolu
+              createdAt: data.createdAt ? data.createdAt.toDate().getTime() : null // FIFO için zaman damgası (milisaniye)
+            };
+          });
+  
+          recordsToIndex = recordsToIndex.concat(currentBatch);
+          lastDoc = snapshot.docs[snapshot.docs.length - 1];
+  
+          console.log(`Firestore'dan ${recordsToIndex.length} belge okundu.`);
+  
+          if (snapshot.docs.length < batchSize) {
+            break; // Tüm belgeler okundu
+          }
+        }
+  
+        console.log(`Algolia'ya toplam ${recordsToIndex.length} belge gönderiliyor.`);
+        const { objectIDs } = await algoliaIndex.saveObjects(recordsToIndex);
+        console.log(`Algolia'ya ${objectIDs.length} belge başarıyla eklendi/güncellendi.`);
+  
+        return res.status(200).send({ status: 'success', message: `${objectIDs.length} belge Algolia'ya eklendi/güncellendi.` });
+  
+      } catch (error) {
+        console.error('Algolia indeksleme hatası:', error);
+        return res.status(500).send({ status: 'error', message: 'Algolia indeksleme sırasında bir hata oluştu.', error: error.message });
+      }
+    }
+);
