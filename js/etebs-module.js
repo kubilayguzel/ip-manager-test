@@ -48,9 +48,8 @@ export class ETEBSManager {
     this.notifications = [];
     this.filteredNotifications = [];
     this.isInitialized = false;
-
-    // 🎯 Event binding burada başlıyor
     this.bindEvents();
+    this.bindTabEvents();
 }
 
 async uploadDocumentsToFirebase(documents, userId, evrakNo) {
@@ -302,37 +301,40 @@ async init() {
 }
 
     // 2. YENİ: Tab event binding fonksiyonu ekleyin
-    bindTabEvents() {
-        try {
-            // Notifications tab switching
-            document.querySelectorAll('.notifications-tab-btn').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    this.switchNotificationsTab(btn.getAttribute('data-notifications-tab'));
-                });
+bindTabEvents() {
+    try {
+        // Notifications tab switching
+        document.querySelectorAll('.notifications-tab-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.switchNotificationsTab(btn.getAttribute('data-notifications-tab'));
             });
-        } catch (error) {
-            console.error('Error binding tab events:', error);
-        }
+        });
+        console.log("✅ Tab events bound successfully");
+    } catch (error) {
+        console.error('❌ Error binding tab events:', error);
     }
+}
 
     // 3. YENİ: Tab switching fonksiyonu ekleyin
-    switchNotificationsTab(tabName) {
-        try {
-            // Update tab buttons
-            document.querySelectorAll('.notifications-tab-btn').forEach(btn => {
-                btn.classList.toggle('active', btn.getAttribute('data-notifications-tab') === tabName);
-            });
+switchNotificationsTab(tabName) {
+    try {
+        // Update tab buttons
+        document.querySelectorAll('.notifications-tab-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.getAttribute('data-notifications-tab') === tabName);
+        });
 
-            // Update tab content
-            document.querySelectorAll('.notifications-tab-pane').forEach(pane => {
-                pane.classList.toggle('active', pane.id === `${tabName}-notifications-tab`);
-            });
-        } catch (error) {
-            console.error('Error switching notifications tab:', error);
-        }
+        // Update tab content
+        document.querySelectorAll('.notifications-tab-pane').forEach(pane => {
+            pane.classList.toggle('active', pane.id === `${tabName}-notifications-tab`);
+        });
+        
+        console.log(`✅ Switched to ${tabName} tab`);
+    } catch (error) {
+        console.error('❌ Error switching notifications tab:', error);
     }
-    bindEvents() {
+}
+bindEvents() {
         try {
             // Mode switching
             document.querySelectorAll('.mode-btn').forEach(btn => {
@@ -489,22 +491,29 @@ deactivateUploadMode() {
         console.error('Upload mode deaktif edilirken hata:', error);
     }
 }
-    updateTabBadge() {
-        try {
-            const badge = document.querySelector('.tab-badge');
-            if (!badge) return;
-
-            if (this.currentMode === 'etebs') {
-                badge.textContent = this.notifications.length || '0';
-            } else {
-                // Get uploaded files count from existing bulk upload logic
-                const uploadedFiles = document.querySelectorAll('#allFilesList .pdf-list-item');
-                badge.textContent = uploadedFiles.length || '0';
-            }
-        } catch (error) {
-            console.error('Error updating tab badge:', error);
+updateTabBadge() {
+    try {
+        console.log("🔄 updateTabBadge başladı");
+        
+        const badge = document.querySelector('.tab-badge');
+        if (!badge) {
+            console.log("⚠️ Tab badge elementi bulunamadı");
+            return;
         }
+
+        if (this.currentMode === 'etebs') {
+            badge.textContent = this.notifications.length || '0';
+            console.log(`✅ ETEBS badge güncellendi: ${this.notifications.length}`);
+        } else {
+            // Get uploaded files count from existing bulk upload logic
+            const uploadedFiles = document.querySelectorAll('#allFilesList .pdf-list-item');
+            badge.textContent = uploadedFiles.length || '0';
+            console.log(`✅ Upload badge güncellendi: ${uploadedFiles.length}`);
+        }
+    } catch (error) {
+        console.error('❌ Error updating tab badge:', error);
     }
+}
 
     async loadSavedToken() {
         try {
@@ -573,12 +582,6 @@ deactivateUploadMode() {
         const result = await etebsService.getDailyNotifications(token);
         console.log("📡 getDailyNotifications sonucu:", result);
         console.log("📋 Gelen Data Array:", result.data);
-        console.log("🧪 DEBUG | result.success:", result.success);        
-        console.log("🧪 DEBUG | typeof result.data:", typeof result.data);
-        console.log("🧪 DEBUG | result.data.length:", result.data?.length);
-        console.log("🧪 DEBUG | result.error:", result.error);
-        console.log("🧪 DEBUG | window.indexingModule:", window.indexingModule);
-        console.log("🧪 DEBUG | allRecords:", records);
 
         const records = window.indexingModule && Array.isArray(window.indexingModule.allRecords)
             ? window.indexingModule.allRecords
@@ -596,22 +599,69 @@ deactivateUploadMode() {
         this.filteredNotifications = [...this.notifications];
 
         if (result.success) {
-            const currentUser = authService.getCurrentUser();
-            if (currentUser) {
-                await etebsService.saveToken(token, currentUser.uid);
+            console.log("📊 İşleme başlanıyor...");
+            
+            // 1. Token kaydetme
+            try {
+                const currentUser = authService.getCurrentUser();
+                if (currentUser) {
+                    await etebsService.saveToken(token, currentUser.uid);
+                    console.log("✅ Token kaydedildi");
+                }
+            } catch (tokenError) {
+                console.error("❌ Token kaydetme hatası:", tokenError);
             }
             
-            this.showTokenStatus(
-                'success',
-                `${result.totalCount} tebligat alındı (${result.matchedCount} eşleşen, ${result.unmatchedCount} eşleşmeyen)`
-            );
+            // 2. Status gösterme
+            try {
+                this.showTokenStatus(
+                    'success',
+                    `${result.totalCount} tebligat alındı (${result.matchedCount} eşleşen, ${result.unmatchedCount} eşleşmeyen)`
+                );
+                console.log("✅ Token status gösterildi");
+            } catch (statusError) {
+                console.error("❌ Token status hatası:", statusError);
+            }
 
-            this.displayNotifications();
-            this.updateStatistics();
-            this.showNotificationsSection();
-            this.updateTabBadge();
+            // 3. Notifications gösterme
+            try {
+                this.displayNotifications();
+                console.log("✅ Notifications gösterildi");
+            } catch (displayError) {
+                console.error("❌ Display notifications hatası:", displayError);
+            }
 
-            showNotification(`${result.totalCount} ETEBS tebligatı başarıyla alındı`, 'success');
+            // 4. İstatistikleri güncelleme
+            try {
+                this.updateStatistics();
+                console.log("✅ İstatistikler güncellendi");
+            } catch (statsError) {
+                console.error("❌ İstatistik güncelleme hatası:", statsError);
+            }
+
+            // 5. Section'ı gösterme
+            try {
+                this.showNotificationsSection();
+                console.log("✅ Notifications section gösterildi");
+            } catch (sectionError) {
+                console.error("❌ Show section hatası:", sectionError);
+            }
+
+            // 6. Tab badge güncelleme
+            try {
+                this.updateTabBadge();
+                console.log("✅ Tab badge güncellendi");
+            } catch (badgeError) {
+                console.error("❌ Tab badge hatası:", badgeError);
+            }
+
+            // 7. Başarı notifikasyonu
+            try {
+                showNotification(`${result.totalCount} ETEBS tebligatı başarıyla alındı`, 'success');
+                console.log("✅ Başarı notifikasyonu gösterildi");
+            } catch (notifError) {
+                console.error("❌ Notification hatası:", notifError);
+            }
 
         } else {
             this.showTokenStatus('error', result.error);
@@ -619,7 +669,8 @@ deactivateUploadMode() {
         }
 
     } catch (error) {
-        console.error('Fetch notifications error:', error);
+        console.error('❌ Fetch notifications error:', error);
+        console.error('❌ Error stack:', error.stack);
         this.showTokenStatus('error', 'Beklenmeyen bir hata oluştu');
         showNotification('ETEBS bağlantısında hata oluştu', 'error');
     } finally {
@@ -652,23 +703,33 @@ deactivateUploadMode() {
         }
     }
     // 5. YENİ: Otomatik tab switching fonksiyonu
-    autoSwitchTab(matchedCount, unmatchedCount) {
-        try {
-            const activeTab = document.querySelector('.notifications-tab-btn.active');
-            if (!activeTab) return;
-
-            const currentTab = activeTab.getAttribute('data-notifications-tab');
-            
-            // If current tab is empty but other tab has items, switch automatically
-            if (currentTab === 'matched' && matchedCount === 0 && unmatchedCount > 0) {
-                this.switchNotificationsTab('unmatched');
-            } else if (currentTab === 'unmatched' && unmatchedCount === 0 && matchedCount > 0) {
-                this.switchNotificationsTab('matched');
-            }
-        } catch (error) {
-            console.error('Error in auto tab switch:', error);
+autoSwitchTab(matchedCount, unmatchedCount) {
+    try {
+        console.log(`🔄 autoSwitchTab başladı: matched=${matchedCount}, unmatched=${unmatchedCount}`);
+        
+        const activeTab = document.querySelector('.notifications-tab-btn.active');
+        if (!activeTab) {
+            console.log("⚠️ Aktif tab bulunamadı");
+            return;
         }
+
+        const currentTab = activeTab.getAttribute('data-notifications-tab');
+        console.log(`📋 Şu anki tab: ${currentTab}`);
+        
+        // If current tab is empty but other tab has items, switch automatically
+        if (currentTab === 'matched' && matchedCount === 0 && unmatchedCount > 0) {
+            console.log("🔄 Matched tab boş, unmatched'e geçiliyor");
+            this.switchNotificationsTab('unmatched');
+        } else if (currentTab === 'unmatched' && unmatchedCount === 0 && matchedCount > 0) {
+            console.log("🔄 Unmatched tab boş, matched'e geçiliyor");
+            this.switchNotificationsTab('matched');
+        }
+        
+        console.log("✅ autoSwitchTab tamamlandı");
+    } catch (error) {
+        console.error('❌ Error in auto tab switch:', error);
     }
+}
 
  displayNotifications() {
     try {
@@ -1033,39 +1094,64 @@ ${notification.tebellugeden ? `📨 Tebellüğ Eden: ${notification.tebellugeden
         }
     }
 
-    updateStatistics() {
-        try {
-            const total = this.filteredNotifications.length;
-            const matched = this.filteredNotifications.filter(n => n.matched).length;
-            const unmatched = total - matched;
+updateStatistics() {
+    try {
+        console.log("📊 updateStatistics başladı");
+        
+        const total = this.filteredNotifications.length;
+        const matched = this.filteredNotifications.filter(n => n.matched).length;
+        const unmatched = total - matched;
 
-            const totalCountEl = document.getElementById('totalCount');
-            const matchedCountEl = document.getElementById('matchedCount');
-            const unmatchedCountEl = document.getElementById('unmatchedCount');
+        const totalCountEl = document.getElementById('totalCount');
+        const matchedCountEl = document.getElementById('matchedCount');
+        const unmatchedCountEl = document.getElementById('unmatchedCount');
 
-            if (totalCountEl) totalCountEl.textContent = total;
-            if (matchedCountEl) matchedCountEl.textContent = matched;
-            if (unmatchedCountEl) unmatchedCountEl.textContent = unmatched;
-
-            // Update tab badge
-            this.updateTabBadge();
-            
-        } catch (error) {
-            console.error('Error updating statistics:', error);
+        if (totalCountEl) {
+            totalCountEl.textContent = total;
+            console.log(`✅ Total count güncellendi: ${total}`);
+        } else {
+            console.log("⚠️ totalCountEl bulunamadı");
         }
-    }
-
-    showNotificationsSection() {
-        try {
-            const section = document.getElementById('notificationsSection');
-            if (section) {
-                section.style.display = 'block';
-            }
-        } catch (error) {
-            console.error('Error showing notifications section:', error);
+        
+        if (matchedCountEl) {
+            matchedCountEl.textContent = matched;
+            console.log(`✅ Matched count güncellendi: ${matched}`);
+        } else {
+            console.log("⚠️ matchedCountEl bulunamadı");
         }
-    }
+        
+        if (unmatchedCountEl) {
+            unmatchedCountEl.textContent = unmatched;
+            console.log(`✅ Unmatched count güncellendi: ${unmatched}`);
+        } else {
+            console.log("⚠️ unmatchedCountEl bulunamadı");
+        }
 
+        // Update tab badge
+        this.updateTabBadge();
+        
+        console.log("✅ updateStatistics tamamlandı");
+        
+    } catch (error) {
+        console.error('❌ Error updating statistics:', error);
+    }
+}
+
+showNotificationsSection() {
+    try {
+        console.log("👁️ showNotificationsSection başladı");
+        
+        const section = document.getElementById('notificationsSection');
+        if (section) {
+            section.style.display = 'block';
+            console.log("✅ Notifications section gösterildi");
+        } else {
+            console.log("⚠️ notificationsSection elementi bulunamadı");
+        }
+    } catch (error) {
+        console.error('❌ Error showing notifications section:', error);
+    }
+}
     showTokenStatus(type, message) {
         try {
             const statusEl = document.getElementById('tokenStatus');
