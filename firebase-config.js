@@ -1024,14 +1024,14 @@ export const etebsService = {
 
     // Get daily notifications from ETEBS
     // Updated getDailyNotifications using Firebase Functions proxy
-        getDailyNotifications: async function(token) {
+    getDailyNotifications: async function(token) {
     try {
         const response = await fetch(ETEBS_CONFIG.proxyUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-            action: 'daily-notifications',
-            token: token
+                action: 'daily-notifications',
+                token: token
             })
         });
 
@@ -1052,33 +1052,36 @@ export const etebsService = {
 
         console.log("📥 [ETEBŞ] API yanıtı:", result);
 
-        console.log("📥 [ETEBŞ] API yanıtı:", etebsData);
-        console.log("✅ Tebligatlar türü:", typeof etebsData.Tebligatlar);
-        console.log("✅ Tebligatlar Array mi?:", Array.isArray(etebsData.Tebligatlar));
-        console.log("📦 Tebligat örneği:", etebsData.Tebligatlar?.[0]);
+        const etebsData = result.data;
 
-        if (!etebsData || !Array.isArray(etebsData)) {
-        return { success: true, data: [], totalCount: 0, matchedCount: 0, unmatchedCount: 0 };
+        if (!Array.isArray(etebsData)) {
+            console.warn("⚠️ Beklenen veri dizisi değil:", etebsData);
+            return { success: true, data: [], totalCount: 0, matchedCount: 0, unmatchedCount: 0 };
         }
+
+        const currentUser = authService.getCurrentUser();
+        if (!currentUser) {
+            return { success: false, error: 'Kullanıcı kimliği doğrulanamadı.' };
+        }
+
         const processedNotifications = await this.processNotifications(etebsData, currentUser.uid);
 
         const matchedCount = processedNotifications.filter(n => n.matched).length;
         const unmatchedCount = processedNotifications.length - matchedCount;
 
         return {
-        success: true,
-        data: processedNotifications,
-        totalCount: processedNotifications.length,
-        matchedCount,
-        unmatchedCount
+            success: true,
+            data: processedNotifications,
+            totalCount: processedNotifications.length,
+            matchedCount,
+            unmatchedCount
         };
 
     } catch (error) {
         console.error("🔥 getDailyNotifications hata:", error);
         return { success: false, error: 'ETEBS servisine bağlanırken beklenmeyen bir hata oluştu.' };
     }
-    },
-
+},
 async downloadDocument(token, documentNo) {
     if (!isFirebaseAvailable) {
         return { success: false, error: "Firebase kullanılamıyor." };
