@@ -450,7 +450,7 @@ exports.createMailNotificationOnDocumentStatusChangeV2 = onDocumentUpdated(
     },
     async (event) => {
         const change = event.data;
-        const before = change.before.data();
+        const before = change.data.before.data();
         const after = change.after.data();
         const docId = event.params.docId;
 
@@ -1011,81 +1011,27 @@ function getContentType(filePath) {
 }
 //              ALGOLIA İLK İNDEKSLEME FONKSİYONU (v2 onRequest)
 // =========================================================
+const { onDocumentWritten } = require("firebase-functions/v2/firestore");
+const algoliasearch = require("algoliasearch");
 
-exports.indexTrademarkBulletinRecords = onRequest(
-  {
-    region: 'europe-west1',
-    timeoutSeconds: 540,
-    memory: '2GiB'
-  },
-  async (req, res) => {
-    console.log('Algolia: trademarkBulletinRecords için toplu indeksleme başlatıldı.');
-    let recordsToIndex = [];
-    let lastDoc = null;
-    const batchSize = 500;
-
-    try {
-      while (true) {
-        let query = db.collection('trademarkBulletinRecords')
-          .orderBy(admin.firestore.FieldPath.documentId())
-          .limit(batchSize);
-
-        if (lastDoc) query = query.startAfter(lastDoc);
-        const snapshot = await query.get();
-        if (snapshot.empty) break;
-
-        const currentBatch = snapshot.docs.map(doc => {
-          const data = doc.data();
-          return {
-            objectID: doc.id,
-            markName: data.markName || null,
-            applicationNo: data.applicationNo || null,
-            applicationDate: data.applicationDate || null,
-            niceClasses: data.niceClasses || null,
-            bulletinId: data.bulletinId || null,
-            holders: Array.isArray(data.holders) ? data.holders.map(h => h.name).join(', ') : '',
-            imagePath: data.imagePath || null,
-            createdAt: data.createdAt ? data.createdAt.toDate().getTime() : null
-          };
-        });
-
-        recordsToIndex = recordsToIndex.concat(currentBatch);
-        lastDoc = snapshot.docs[snapshot.docs.length - 1];
-        console.log(`Firestore'dan şu ana kadar ${recordsToIndex.length} belge okundu.`);
-
-        if (snapshot.docs.length < batchSize) break;
-      }
-
-      console.log(`Algolia'ya toplam ${recordsToIndex.length} belge gönderiliyor.`);
-      const { objectIDs } = await algoliaIndex.saveObjects(recordsToIndex);
-      console.log(`Algolia'ya ${objectIDs.length} belge başarıyla eklendi/güncellendi.`);
-
-      return res.status(200).send({
-        status: 'success',
-        message: `${objectIDs.length} belge Algolia'ya eklendi/güncellendi.`
-      });
-    } catch (error) {
-      console.error('Algolia indeksleme hatası:', error);
-      return res.status(500).send({
-        status: 'error',
-        message: 'Algolia indeksleme sırasında bir hata oluştu.',
-        error: error.message
-      });
-    }
-  }
-);
+// Algolia yapılandırması
+const ALGOLIA_APP_ID = process.env.ALGOLIA_APP_ID;
+const ALGOLIA_API_KEY = process.env.ALGOLIA_ADMIN_KEY;
+const ALGOLIA_INDEX_NAME = "trademark_bulletin_records_live"; // Algolia'daki gerçek index adı
+const algoliaClient = algoliasearch(ALGOLIA_APP_ID, ALGOLIA_API_KEY);
+const algoliaIndex = algoliaClient.initIndex(ALGOLIA_INDEX_NAME);
 
 exports.onTrademarkBulletinRecordWrite = onDocumentWritten(
   {
-    document: 'trademarkBulletinRecords/{recordId}',
-    region: 'europe-west1',
+    document: "trademarkBulletinRecords/{recordId}",
+    region: "europe-west1",
   },
   async (change) => {
     const recordId = change.params.recordId;
     const oldData = change.before.exists ? change.before.data() : null;
     const newData = change.after.exists ? change.after.data() : null;
 
-    // Silme durumu
+    // Silinmişse
     if (!change.after.exists) {
       console.log(`Algolia: Belge silindi, kaldırılıyor: ${recordId}`);
       try {
@@ -1097,7 +1043,7 @@ exports.onTrademarkBulletinRecordWrite = onDocumentWritten(
       return null;
     }
 
-    // Ekleme veya güncelleme durumu
+    // Eklenmiş/güncellenmişse
     if (newData) {
       console.log(`Algolia: Belge indeksleniyor/güncelleniyor: ${recordId}`);
       const record = {
@@ -1108,12 +1054,12 @@ exports.onTrademarkBulletinRecordWrite = onDocumentWritten(
         niceClasses: newData.niceClasses || null,
         bulletinId: newData.bulletinId || null,
         holders: Array.isArray(newData.holders)
-          ? newData.holders.map(h => h.name).join(', ')
-          : '',
+          ? newData.holders.map((h) => h.name).join(", ")
+          : "",
         imagePath: newData.imagePath || null,
         createdAt: newData.createdAt
           ? newData.createdAt.toDate().getTime()
-          : null
+          : null,
       };
 
       try {
