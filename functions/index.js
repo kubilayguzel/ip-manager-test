@@ -1078,10 +1078,10 @@ exports.indexTrademarkBulletinRecords = onRequest(
 exports.onTrademarkBulletinRecordWrite = onDocumentWritten(
   {
     document: 'trademarkBulletinRecords/{recordId}',
-    region: 'europe-west1'
+    region: 'europe-west1',
   },
-  async (change, context) => {
-    const recordId = context.params.recordId;
+  async (change) => {
+    const recordId = change.params.recordId;
     const oldData = change.before.exists ? change.before.data() : null;
     const newData = change.after.exists ? change.after.data() : null;
 
