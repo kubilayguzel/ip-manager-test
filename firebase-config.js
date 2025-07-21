@@ -1051,6 +1051,10 @@ export const etebsService = {
         const etebsData = result.data;
 
         console.log("📥 [ETEBŞ] API yanıtı:", etebsData);
+        console.log("✅ Tebligatlar türü:", typeof etebsData.Tebligatlar);
+        console.log("✅ Tebligatlar Array mi?:", Array.isArray(etebsData.Tebligatlar));
+        console.log("📦 Tebligat örneği:", etebsData.Tebligatlar?.[0]);
+
 
         if (!etebsData || !Array.isArray(etebsData.Tebligatlar)) {
         return { success: true, data: [], totalCount: 0, matchedCount: 0, unmatchedCount: 0 };
@@ -1219,6 +1223,9 @@ async downloadDocument(token, documentNo) {
 
             processedNotifications.push(processedNotification);
         }
+        console.log("✅ İşlenmiş tebligatlar sayısı:", processedNotifications.length);
+        console.log("🔄 Matched örneği:", processedNotifications.find(n => n.matched));
+        console.log("⚠️ Unmatched örneği:", processedNotifications.find(n => !n.matched));
 
         return processedNotifications;
     },
