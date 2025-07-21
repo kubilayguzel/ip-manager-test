@@ -1011,14 +1011,7 @@ function getContentType(filePath) {
 //              ALGOLIA İLK İNDEKSLEME FONKSİYONU (v2 onRequest)
 // =========================================================
 const { onDocumentWritten } = require("firebase-functions/v2/firestore");
-const algoliasearch = require("algoliasearch");
-
 // Algolia yapılandırması
-const ALGOLIA_APP_ID = process.env.ALGOLIA_APP_ID;
-const ALGOLIA_API_KEY = process.env.ALGOLIA_ADMIN_KEY;
-const ALGOLIA_INDEX_NAME = "trademark_bulletin_records_live"; // Algolia'daki gerçek index adı
-const algoliaClient = algoliasearch(ALGOLIA_APP_ID, ALGOLIA_API_KEY);
-const algoliaIndex = algoliaClient.initIndex(ALGOLIA_INDEX_NAME);
 
 exports.onTrademarkBulletinRecordWrite = onDocumentWritten(
   {
