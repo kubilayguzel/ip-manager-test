@@ -1048,19 +1048,17 @@ export const etebsService = {
         }
 
         const result = await response.json();
-        const etebsData = result.data;
+        const rawNotifications = result.data;
 
         console.log("📥 [ETEBŞ] API yanıtı:", etebsData);
         console.log("✅ Tebligatlar türü:", typeof etebsData.Tebligatlar);
         console.log("✅ Tebligatlar Array mi?:", Array.isArray(etebsData.Tebligatlar));
         console.log("📦 Tebligat örneği:", etebsData.Tebligatlar?.[0]);
 
-
-        if (!etebsData || !Array.isArray(etebsData.Tebligatlar)) {
+        if (!etebsData || !Array.isArray(etebsData)) {
         return { success: true, data: [], totalCount: 0, matchedCount: 0, unmatchedCount: 0 };
         }
-
-        const processedNotifications = await this.processNotifications(etebsData.Tebligatlar, currentUser.uid);
+        const processedNotifications = await this.processNotifications(etebsData, currentUser.uid);
 
         const matchedCount = processedNotifications.filter(n => n.matched).length;
         const unmatchedCount = processedNotifications.length - matchedCount;
