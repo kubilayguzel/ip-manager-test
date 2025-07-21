@@ -985,14 +985,13 @@ export const bulkIndexingService = {
 
 // ETEBS API Configuration - Firebase Functions Proxy kullanıyor
 const ETEBS_CONFIG = {
-    // Deploy'dan aldığınız gerçek URL'ler
-    proxyUrl: 'https://europe-west1-ip-manager-production-aab4b.cloudfunctions.net/etebsProxy',
-    healthUrl: 'https://europe-west1-ip-manager-production-aab4b.cloudfunctions.net/etebsProxyHealth',
-    validateUrl: 'https://europe-west1-ip-manager-production-aab4b.cloudfunctions.net/validateEtebsToken',
-    
-    timeout: 30000, // 30 saniye
-    retryAttempts: 3,
-    retryDelay: 1000 // 1 saniye
+  proxyUrl: 'https://etebsproxyv2-jzwp32xwma-ew.a.run.app',
+  healthUrl: 'https://etebsproxyhealthv2-jzwp32xwma-ew.a.run.app',
+  validateUrl: 'https://validateetebstokenv2-jzwp32xwma-ew.a.run.app',
+
+  timeout: 30000,
+  retryAttempts: 3,
+  retryDelay: 1000
 };
 
 // ETEBS Error Codes
