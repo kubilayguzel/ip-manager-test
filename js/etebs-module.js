@@ -575,6 +575,7 @@ deactivateUploadMode() {
         console.log("📋 Gelen Data Array:", result.data);
         console.log("🧪 DEBUG | result.success:", result.success);        
         console.log("🧪 DEBUG | typeof result.data:", typeof result.data);
+        
         console.log("🧪 DEBUG | result.data.length:", result.data?.length);
         console.log("🧪 DEBUG | result.error:", result.error);
         console.log("🧪 DEBUG | window.indexingModule:", window.indexingModule);
