@@ -573,8 +573,7 @@ deactivateUploadMode() {
         const result = await etebsService.getDailyNotifications(token);
         console.log("📡 getDailyNotifications sonucu:", result);
         console.log("📋 Gelen Data Array:", result.data);
-        console.log("🧪 DEBUG | result.success:", result.success);
-        
+        console.log("🧪 DEBUG | result.success:", result.success);        
         console.log("🧪 DEBUG | typeof result.data:", typeof result.data);
         console.log("🧪 DEBUG | result.data.length:", result.data?.length);
         console.log("🧪 DEBUG | result.error:", result.error);
