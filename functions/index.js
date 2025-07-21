@@ -16,6 +16,7 @@ const { onDocumentCreated, onDocumentUpdated } = require('firebase-functions/v2/
 const { onMessagePublished } = require('firebase-functions/v2/pubsub'); // Pub/Sub mesaj trigger'ları için v2 importu
 const { onObjectFinalized } = require('firebase-functions/v2/storage'); // Storage triggerları için v2 importu
 const logger = require('firebase-functions/logger'); // Logger için
+const { onDocumentWritten } = require("firebase-functions/v2/firestore");
 
 // Dış modüller (npm install ile yüklenmiş)
 const cors = require('cors');
@@ -1018,11 +1019,6 @@ exports.indexTrademarkBulletinRecords = onRequest(
     memory: '2GiB'
   },
   async (req, res) => {
-    if (!isAdminCall && process.env.NODE_ENV !== 'development') {
-      console.warn('Kimlik doğrulaması yapılmamış çağrı.');
-      return res.status(403).send('Yasaklı');
-    }
-
     console.log('Algolia: trademarkBulletinRecords için toplu indeksleme başlatıldı.');
     let recordsToIndex = [];
     let lastDoc = null;
@@ -1030,7 +1026,10 @@ exports.indexTrademarkBulletinRecords = onRequest(
 
     try {
       while (true) {
-        let query = db.collection('trademarkBulletinRecords').orderBy(admin.firestore.FieldPath.documentId()).limit(batchSize);
+        let query = db.collection('trademarkBulletinRecords')
+          .orderBy(admin.firestore.FieldPath.documentId())
+          .limit(batchSize);
+
         if (lastDoc) query = query.startAfter(lastDoc);
         const snapshot = await query.get();
         if (snapshot.empty) break;
@@ -1045,9 +1044,6 @@ exports.indexTrademarkBulletinRecords = onRequest(
             niceClasses: data.niceClasses || null,
             bulletinId: data.bulletinId || null,
             holders: Array.isArray(data.holders) ? data.holders.map(h => h.name).join(', ') : '',
-            goods: Array.isArray(data.goods) ? data.goods.join(', ') : '',
-            extractedGoods: Array.isArray(data.extractedGoods) ? data.extractedGoods.join(', ') : '',
-            attorneys: Array.isArray(data.attorneys) ? data.attorneys.map(a => a.name).join(', ') : '',
             imagePath: data.imagePath || null,
             createdAt: data.createdAt ? data.createdAt.toDate().getTime() : null
           };
@@ -1055,7 +1051,8 @@ exports.indexTrademarkBulletinRecords = onRequest(
 
         recordsToIndex = recordsToIndex.concat(currentBatch);
         lastDoc = snapshot.docs[snapshot.docs.length - 1];
-        console.log(`Firestore'dan ${recordsToIndex.length} belge okundu.`);
+        console.log(`Firestore'dan şu ana kadar ${recordsToIndex.length} belge okundu.`);
+
         if (snapshot.docs.length < batchSize) break;
       }
 
@@ -1063,62 +1060,70 @@ exports.indexTrademarkBulletinRecords = onRequest(
       const { objectIDs } = await algoliaIndex.saveObjects(recordsToIndex);
       console.log(`Algolia'ya ${objectIDs.length} belge başarıyla eklendi/güncellendi.`);
 
-      return res.status(200).send({ status: 'success', message: `${objectIDs.length} belge Algolia'ya eklendi/güncellendi.` });
+      return res.status(200).send({
+        status: 'success',
+        message: `${objectIDs.length} belge Algolia'ya eklendi/güncellendi.`
+      });
     } catch (error) {
       console.error('Algolia indeksleme hatası:', error);
-      return res.status(500).send({ status: 'error', message: 'Algolia indeksleme sırasında bir hata oluştu.', error: error.message });
+      return res.status(500).send({
+        status: 'error',
+        message: 'Algolia indeksleme sırasında bir hata oluştu.',
+        error: error.message
+      });
     }
   }
-); // ✅ burada eksik olan parantez kapanışı ve noktalı virgül düzeltildi
+);
 
-exports.onTrademarkBulletinRecordWrite = onDocumentUpdated( // onDocumentUpdated trigger'ı
-    {
-        document: 'trademarkBulletinRecords/{recordId}',
-        region: 'europe-west1'
-    },
-    async (change, context) => {
-        const recordId = context.params.recordId;
-        const oldData = change.before.exists ? change.before.data() : null;
-        const newData = change.after.exists ? change.after.data() : null;
+exports.onTrademarkBulletinRecordWrite = onDocumentWritten(
+  {
+    document: 'trademarkBulletinRecords/{recordId}',
+    region: 'europe-west1'
+  },
+  async (change, context) => {
+    const recordId = context.params.recordId;
+    const oldData = change.before.exists ? change.before.data() : null;
+    const newData = change.after.exists ? change.after.data() : null;
 
-        // Belgenin silinip silinmediğini kontrol et
-        if (!change.after.exists) {
-            console.log(`Algolia: Belge silindi, indekslenmiş kaydı kaldırılıyor: ${recordId}`);
-            try {
-                await algoliaIndex.deleteObject(recordId);
-                console.log(`Algolia: ${recordId} başarıyla kaldırıldı.`);
-            } catch (error) {
-                console.error(`Algolia: ${recordId} kaldırılırken hata oluştu:`, error);
-            }
-            return null;
-        }
-
-        // Belgenin oluşturulduğunu veya güncellendiğini kontrol et
-        if (newData) {
-            console.log(`Algolia: Belge oluşturuldu/güncellendi, indeksleniyor: ${recordId}`);
-            const record = {
-                objectID: recordId, // Algolia için benzersiz ID
-                markName: newData.markName || null,
-                applicationNo: newData.applicationNo || null,
-                applicationDate: newData.applicationDate || null, // Firebase Timestamp objesi olabilir
-                niceClasses: newData.niceClasses || null,
-                bulletinId: newData.bulletinId || null,
-                holders: Array.isArray(newData.holders) ? newData.holders.map(h => h.name).join(', ') : '',
-                goods: Array.isArray(newData.goods) ? data.goods.join(', ') : '', // data.goods yerine newData.goods olmalı
-                extractedGoods: Array.isArray(newData.extractedGoods) ? newData.extractedGoods.join(', ') : '',
-                attorneys: Array.isArray(newData.attorneys) ? newData.attorneys.map(a => a.name).join(', ') : '',
-                imagePath: newData.imagePath || null,
-                createdAt: newData.createdAt ? newData.createdAt.toDate().getTime() : null // FIFO için zaman damgası (milisaniye)
-            };
-
-            try {
-                await algoliaIndex.saveObject(record); // Belgeyi Algolia'ya ekle/güncelle
-                console.log(`Algolia: ${recordId} başarıyla indekslendi/güncellendi.`);
-            } catch (error) {
-                console.error(`Algolia: ${recordId} indekslenirken/güncellenirken hata oluştu:`, error);
-            }
-            return null;
-        }
-        return null;
+    // Silme durumu
+    if (!change.after.exists) {
+      console.log(`Algolia: Belge silindi, kaldırılıyor: ${recordId}`);
+      try {
+        await algoliaIndex.deleteObject(recordId);
+        console.log(`Algolia: ${recordId} başarıyla kaldırıldı.`);
+      } catch (error) {
+        console.error(`Algolia: Silme hatası: ${recordId}`, error);
+      }
+      return null;
     }
+
+    // Ekleme veya güncelleme durumu
+    if (newData) {
+      console.log(`Algolia: Belge indeksleniyor/güncelleniyor: ${recordId}`);
+      const record = {
+        objectID: recordId,
+        markName: newData.markName || null,
+        applicationNo: newData.applicationNo || null,
+        applicationDate: newData.applicationDate || null,
+        niceClasses: newData.niceClasses || null,
+        bulletinId: newData.bulletinId || null,
+        holders: Array.isArray(newData.holders)
+          ? newData.holders.map(h => h.name).join(', ')
+          : '',
+        imagePath: newData.imagePath || null,
+        createdAt: newData.createdAt
+          ? newData.createdAt.toDate().getTime()
+          : null
+      };
+
+      try {
+        await algoliaIndex.saveObject(record);
+        console.log(`Algolia: ${recordId} başarıyla indekslendi.`);
+      } catch (error) {
+        console.error(`Algolia: İndeksleme hatası: ${recordId}`, error);
+      }
+    }
+
+    return null;
+  }
 );
