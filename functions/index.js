@@ -16,7 +16,6 @@ const { onDocumentCreated, onDocumentUpdated } = require('firebase-functions/v2/
 const { onMessagePublished } = require('firebase-functions/v2/pubsub'); // Pub/Sub mesaj trigger'ları için v2 importu
 const { onObjectFinalized } = require('firebase-functions/v2/storage'); // Storage triggerları için v2 importu
 const logger = require('firebase-functions/logger'); // Logger için
-const { onDocumentWritten } = require("firebase-functions/v2/firestore");
 
 // Dış modüller (npm install ile yüklenmiş)
 const cors = require('cors');
