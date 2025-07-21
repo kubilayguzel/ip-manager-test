@@ -33,8 +33,8 @@ const pubsubClient = new PubSub(); // pubsubClient'ı burada tanımlayın
 
 // **************************** ALGOLIA YAPILANDIRMASI ****************************
 // Environment variables kullanarak Algolia konfigürasyonu
-const ALGOLIA_APP_ID = process.env.ALGOLIA_APP_ID;
-const ALGOLIA_ADMIN_API_KEY = process.env.ALGOLIA_ADMIN_API_KEY;
+const ALGOLIA_APP_ID = 'THCIEJJTZ9';
+const ALGOLIA_ADMIN_API_KEY = 'c48fd50edd0a398bbf6d75354b805494';
 const ALGOLIA_INDEX_NAME = 'trademark_bulletin_records_live';
 
 // Algolia client'ı sadece credentials varsa initialize et
@@ -1082,6 +1082,17 @@ exports.onTrademarkBulletinRecordWrite = onDocumentWritten(
   },
   async (change) => {
     const recordId = change.params.recordId;
+
+    // Algolia client'ını fonksiyon içinde initialize et
+    let algoliaClient, algoliaIndex;
+    try {
+      algoliaClient = algoliasearch(ALGOLIA_APP_ID, ALGOLIA_ADMIN_API_KEY);
+      algoliaIndex = algoliaClient.initIndex('trademark_bulletin_records_live');
+      console.log('Algolia client başarıyla initialize edildi.');
+    } catch (error) {
+      console.error('Algolia client initialize edilemedi:', error);
+      return null;
+    }
 
     const oldData = change.data.before.exists ? change.data.before.data() : null;
     const newData = change.data.after.exists ? change.data.after.data() : null;
