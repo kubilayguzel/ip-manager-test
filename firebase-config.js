@@ -1026,29 +1026,31 @@ export const etebsService = {
     // Updated getDailyNotifications using Firebase Functions proxy
         getDailyNotifications: async function(token) {
     try {
-        console.log("📡 [ETEBŞ] getDailyNotifications() tetiklendi");
-
-        const currentUser = authService.getCurrentUser();
-        if (!currentUser) {
-        return { success: false, error: 'Kullanıcı kimliği doğrulanamadı.' };
-        }
-
         const response = await fetch(ETEBS_CONFIG.proxyUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
             action: 'daily-notifications',
             token: token
-        })
+            })
         });
 
         if (!response.ok) {
-        console.error("❌ ETEBS API HTTP hatası:", response.status);
-        return { success: false, error: `ETEBS API bağlantısı başarısız: ${response.status}` };
+            console.error("❌ ETEBS API HTTP hatası:", response.status);
+            return { success: false, error: `ETEBS API bağlantısı başarısız: ${response.status}` };
         }
 
-        const result = await response.json();
-        const rawNotifications = result.data;
+        let result;
+        try {
+            result = await response.json();
+        } catch (jsonErr) {
+            console.error("🛑 Yanıt JSON'a çevrilemedi:", jsonErr);
+            const rawText = await response.text();
+            console.error("📄 Ham yanıt:", rawText);
+            return { success: false, error: 'ETEBS yanıtı bozuk ya da JSON değil.' };
+        }
+
+        console.log("📥 [ETEBŞ] API yanıtı:", result);
 
         console.log("📥 [ETEBŞ] API yanıtı:", etebsData);
         console.log("✅ Tebligatlar türü:", typeof etebsData.Tebligatlar);
