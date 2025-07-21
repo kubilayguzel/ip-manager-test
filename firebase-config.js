@@ -1024,104 +1024,56 @@ export const etebsService = {
     },
 
     // Get daily notifications from ETEBS
-// Updated getDailyNotifications using Firebase Functions proxy
-    async getDailyNotifications(token) {
-        if (!isFirebaseAvailable) {
-            return { success: false, error: "Firebase kullanılamıyor.", data: [] };
-        }
+    // Updated getDailyNotifications using Firebase Functions proxy
+        getDailyNotifications: async function(token) {
+    try {
+        console.log("📡 [ETEBŞ] getDailyNotifications() tetiklendi");
 
         const currentUser = authService.getCurrentUser();
         if (!currentUser) {
-            return { success: false, error: "Kullanıcı girişi yapılmamış.", data: [] };
+        return { success: false, error: 'Kullanıcı kimliği doğrulanamadı.' };
         }
 
-        // Validate token
-        const tokenValidation = this.validateToken(token);
-        if (!tokenValidation.valid) {
-            return { success: false, error: tokenValidation.error, data: [] };
+        const response = await fetch(ETEBS_CONFIG.proxyUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            action: 'daily-notifications',
+            token: token
+        })
+        });
+
+        if (!response.ok) {
+        console.error("❌ ETEBS API HTTP hatası:", response.status);
+        return { success: false, error: `ETEBS API bağlantısı başarısız: ${response.status}` };
         }
 
-        try {
-            console.log('🔥 ETEBS Daily Notifications via Firebase Functions');
+        const result = await response.json();
+        const etebsData = result.data;
 
-            const response = await fetch(ETEBS_CONFIG.proxyUrl, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    action: 'daily-notifications',
-                    token: token
-                })
-            });
+        console.log("📥 [ETEBŞ] API yanıtı:", etebsData);
 
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
-            }
-
-            const result = await response.json();
-
-            if (!result.success) {
-                throw new Error(result.error || 'Proxy error');
-            }
-
-            const etebsData = result.data;
-
-            // Handle ETEBS API errors
-            if (etebsData.IslemSonucKod && etebsData.IslemSonucKod !== '000') {
-                const errorMessage = ETEBS_ERROR_CODES[etebsData.IslemSonucKod] || 'Bilinmeyen hata';
-                
-                // Log token error if needed
-                if (etebsData.IslemSonucKod === '002') {
-                    await this.logTokenError(currentUser.uid, token, etebsData.IslemSonucAck);
-                }
-                
-                return { 
-                    success: false, 
-                    error: errorMessage,
-                    errorCode: etebsData.IslemSonucKod,
-                    data: [] 
-                };
-            }
-
-            // Process notifications and match with portfolio
-            const processedNotifications = await this.processNotifications(etebsData, currentUser.uid);
-
-            // Save to Firebase for tracking
-            await this.saveNotificationsToFirebase(processedNotifications, currentUser.uid, token);
-
-            return { 
-                success: true, 
-                data: processedNotifications,
-                totalCount: processedNotifications.length,
-                matchedCount: processedNotifications.filter(n => n.matched).length,
-                unmatchedCount: processedNotifications.filter(n => !n.matched).length
-            };
-
-        } catch (error) {
-            console.error('ETEBS Daily Notifications Error:', error);
-            
-            // Log error to Firebase
-            await this.logETEBSError(currentUser.uid, 'getDailyNotifications', error.message);
-            
-            // User-friendly error messages
-            let userError = 'Beklenmeyen bir hata oluştu';
-            
-            if (error.name === 'AbortError') {
-                userError = 'İstek zaman aşımına uğradı';
-            } else if (error.message.includes('Failed to fetch')) {
-                userError = 'Ağ bağlantısı hatası';
-            } else if (error.message.includes('SERVICE_UNAVAILABLE')) {
-                userError = 'ETEBS servisi şu anda kullanılamıyor';
-            }
-            
-            return { 
-                success: false, 
-                error: userError,
-                data: [] 
-            };
+        if (!etebsData || !Array.isArray(etebsData.Tebligatlar)) {
+        return { success: true, data: [], totalCount: 0, matchedCount: 0, unmatchedCount: 0 };
         }
+
+        const processedNotifications = await this.processNotifications(etebsData.Tebligatlar, currentUser.uid);
+
+        const matchedCount = processedNotifications.filter(n => n.matched).length;
+        const unmatchedCount = processedNotifications.length - matchedCount;
+
+        return {
+        success: true,
+        data: processedNotifications,
+        totalCount: processedNotifications.length,
+        matchedCount,
+        unmatchedCount
+        };
+
+    } catch (error) {
+        console.error("🔥 getDailyNotifications hata:", error);
+        return { success: false, error: 'ETEBS servisine bağlanırken beklenmeyen bir hata oluştu.' };
+    }
     },
 
 async downloadDocument(token, documentNo) {
