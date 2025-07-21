@@ -830,6 +830,7 @@ async indexNotification(token, notification) {
     }
 }
 
+
 async showNotificationPDF(token, notification) {
     try {
         showNotification('PDF açılıyor...', 'info');
