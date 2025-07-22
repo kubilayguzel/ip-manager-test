@@ -206,7 +206,7 @@
   </div>
 <script type="module">
     import { loadSharedLayout } from './js/layout-loader.js';
-    import { monitoringService } from './firebase-config.js';
+    import { monitoringService, personService  } from './firebase-config.js';
     import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
     import { showNotification } from './utils.js'; // showNotification'ın doğru import edildiğinden emin olun
 
@@ -269,6 +269,7 @@
                             <th><input type="checkbox" id="headerSelectAllCheckbox" /></th>
                             <th>Marka Görseli</th>
                             <th>Marka Adı</th>
+                            <th>Sahip</th>
                             <th>Başvuru No</th>
                             <th>Başvuru Tarihi</th>
                             <th>Nice Sınıfı</th>
@@ -295,6 +296,7 @@
                         <td>${formatTurkishDate(r.applicationDate)}</td>
                         <td>${r.niceClass || '-'}</td>
                         <td><span class="status-badge ${statusInfo.class}">${statusInfo.text}</span></td>
+                        <td>${(r.owners || []).map(o => o.name || 'Bilinmeyen').join(', ') || '-'}</td>
                         </tr>`;
             });
             html += '</tbody></table>';
