@@ -3,7 +3,7 @@ import { calculateSimilarityScore } from './scorer.js';
 import { isValidBasedOnDate, hasOverlappingNiceClasses } from './filters.js';
 
 const algoliasearch = window.algoliasearch;
-const client = algoliasearch('YourAppId', 'YourSearchApiKey');
+const client = algoliasearch('THCIEJJTZ9', 'b6c38850bfc00adcf0ecdd9a14638c27');
 const index = client.initIndex('trademark_bulletin_records_live');
 
 export async function runTrademarkSearch(monitoredMark, selectedBulletinNo) {
