@@ -1,76 +1,320 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Marka Bülten İzleme</title>
-  <link rel="stylesheet" href="css/shared-styles.css" />
-  <script src="https://cdn.jsdelivr.net/npm/algoliasearch@4.20.0/dist/algoliasearch-lite.umd.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IP Manager - Marka Bülten İzleme</title>
+    <style>
+        /* Shared styles matching the accruals page */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333; display: flex; }
+        
+        .page-wrapper { flex-grow: 1; display: flex; flex-direction: column; height: 100vh; overflow-y: auto; background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); }
+        .main-container { width: 100%; padding: 30px; margin: 0; }
+        
+        .page-header { background: rgba(255, 255, 255, 0.95); padding: 30px; border-radius: 20px; margin-bottom: 30px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1); }
+        .page-title { font-size: 2em; color: #1e3c72; margin-bottom: 10px; }
+        .page-subtitle { color: #666; font-size: 1.1em; }
+        
+        .monitoring-container { background: rgba(255, 255, 255, 0.95); border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); overflow: hidden; margin-bottom: 30px; }
+        .monitoring-header { padding: 20px 30px; border-bottom: 1px solid #e1e8ed; }
+        .monitoring-header h3 { color: #1e3c72; margin-bottom: 20px; font-size: 1.3em; }
+        
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px 25px; }
+        .form-group { margin-bottom: 15px; }
+        .form-label { display: block; margin-bottom: 8px; font-weight: 600; color: #333; }
+        .form-input, .form-select { 
+            width: 100%; 
+            padding: 12px 15px; 
+            border: 2px solid #e1e8ed; 
+            border-radius: 10px; 
+            font-size: 1em; 
+            transition: all 0.3s ease; 
+            background: white; 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+        }
+        .form-input:focus, .form-select:focus { 
+            border-color: #1e3c72; 
+            outline: none; 
+            box-shadow: 0 0 0 3px rgba(30, 60, 114, 0.1); 
+        }
+        
+        .btn { 
+            padding: 12px 24px; 
+            border: none; 
+            border-radius: 10px; 
+            cursor: pointer; 
+            font-size: 1em; 
+            font-weight: 600; 
+            transition: all 0.3s ease; 
+            text-decoration: none; 
+            display: inline-block; 
+            text-align: center; 
+        }
+        .btn-primary { background: #1e3c72; color: white; }
+        .btn-primary:hover { background: #2a5298; transform: translateY(-1px); }
+        .btn-secondary { background: #6c757d; color: white; }
+        .btn-secondary:hover { background: #5a6268; transform: translateY(-1px); }
+        
+        .results-container { background: rgba(255, 255, 255, 0.95); border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); overflow: hidden; }
+        .results-header { padding: 20px 30px; border-bottom: 1px solid #e1e8ed; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; }
+        .results-header h3 { color: #1e3c72; font-size: 1.3em; }
+        
+        .results-table { width: 100%; border-collapse: collapse; }
+        .results-table th, .results-table td { padding: 15px; text-align: left; border-bottom: 1px solid #f0f0f0; }
+        .results-table th { background: #f8f9fa; font-weight: 600; }
+        .results-table tbody tr:hover { background-color: #f8f9fa; }
+        
+        .status-badge { padding: 4px 10px; border-radius: 12px; font-size: 0.8em; font-weight: 500; color: white; text-align: center; }
+        .status-new { background-color: #28a745; }
+        .status-monitored { background-color: #007bff; }
+        .status-expired { background-color: #6c757d; }
+        
+        .action-btn { 
+            background: #007bff; 
+            color: white; 
+            border: none; 
+            padding: 8px 12px; 
+            border-radius: 6px; 
+            cursor: pointer; 
+            margin-left: 5px; 
+            transition: all 0.3s ease; 
+            font-size: 0.9em;
+        }
+        .action-btn:hover { background: #0056b3; transform: translateY(-1px); }
+        .action-btn.view-btn { background-color: #17a2b8; }
+        .action-btn.view-btn:hover { background-color: #138496; }
+        .action-btn.monitor-btn { background-color: #28a745; }
+        .action-btn.monitor-btn:hover { background-color: #218838; }
+        
+        .loading { text-align: center; padding: 50px; color: #666; }
+        .no-records { text-align: center; padding: 50px; color: #666; }
+        
+        .filter-group { display: flex; gap: 10px; align-items: center; }
+        .filter-label { font-weight: 500; }
+        .filter-select { padding: 8px 12px; border-radius: 8px; border: 1px solid #ccc; }
+        
+        .search-section { background: #f8f9fa; padding: 20px; border-radius: 15px; margin-bottom: 20px; }
+        
+        .form-actions { 
+            display: flex; 
+            gap: 15px; 
+            align-items: center; 
+            margin-top: 20px; 
+            flex-wrap: wrap; 
+        }
+        
+        .sidebar { 
+            width: 250px; 
+            background: #1e3c72; 
+            color: white; 
+            padding: 20px; 
+            height: 100vh; 
+            position: fixed; 
+            left: 0; 
+            top: 0; 
+        }
+        .sidebar h2 { margin-bottom: 20px; font-size: 1.4em; }
+        .sidebar ul { list-style: none; }
+        .sidebar li { margin-bottom: 10px; }
+        .sidebar a { 
+            color: white; 
+            text-decoration: none; 
+            padding: 10px; 
+            display: block; 
+            border-radius: 5px; 
+            transition: background 0.3s; 
+        }
+        .sidebar a:hover { background: rgba(255,255,255,0.1); }
+        .sidebar a.active { background: rgba(255,255,255,0.2); }
+        
+        .page-wrapper { margin-left: 250px; }
+        
+        @media (max-width: 768px) {
+            .sidebar { transform: translateX(-100%); }
+            .page-wrapper { margin-left: 0; }
+            .form-grid { grid-template-columns: 1fr; }
+            .form-actions { flex-direction: column; align-items: stretch; }
+        }
+    </style>
 </head>
 <body>
-  <div class="sidebar">
-    <div class="sidebar-logo">IP Manager</div>
-    <ul class="menu">
-      <li class="menu-category">Araçlar</li>
-      <li class="menu-item">
-        <span class="menu-icon fas fa-eye"></span>
-        <span class="menu-text">İzleme</span>
-        <ul class="submenu">
-          <li><a href="trademark-similarity-search.html">Marka Bülten İzleme</a></li>
-          <li><a href="monitoring-trademarks.html">Marka İzleme Listesi</a></li>
-          <li><a href="monitoring-designs.html">Tasarım İzleme</a></li>
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <h2>IP Manager</h2>
+        <ul>
+            <li><a href="#" class="active">Marka Bülten İzleme</a></li>
+            <li><a href="#">Patent İşlemleri</a></li>
+            <li><a href="#">Faydalı Model</a></li>
+            <li><a href="#">Endüstriyel Tasarım</a></li>
+            <li><a href="#">Tahakkuk Yönetimi</a></li>
+            <li><a href="#">Raporlar</a></li>
+            <li><a href="#">Ayarlar</a></li>
         </ul>
-      </li>
-      <li class="menu-item disabled">
-        <span class="menu-icon fas fa-chart-line"></span>
-        <span class="menu-text">Raporlar</span>
-      </li>
-      <li class="menu-item disabled">
-        <span class="menu-icon fas fa-cog"></span>
-        <span class="menu-text">Ayarlar</span>
-      </li>
-    </ul>
-  </div>
+    </div>
 
-  <div class="page-wrapper">
-    <header class="page-header">
-      <h1>Marka Bülten İzleme</h1>
-    </header>
+    <div class="page-wrapper">
+        <main class="main-container">
+            <section class="page-header">
+                <h1 class="page-title">Marka Bülten İzleme</h1>
+                <p class="page-subtitle">Marka bültenlerini takip edin ve yeni başvuruları izleyin.</p>
+            </section>
+    
+            <div class="monitoring-container">
+                <div class="monitoring-header">
+                    <h3>Arama Kriterleri</h3>
+                    <div class="search-section">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="ownerSearch" class="form-label">Sahip</label>
+                                <input type="text" id="ownerSearch" class="form-input" placeholder="Sahip adına göre filtrele">
+                            </div>
+                            <div class="form-group">
+                                <label for="niceClassSearch" class="form-label">Nice Sınıfı</label>
+                                <input type="text" id="niceClassSearch" class="form-input" placeholder="Nice sınıfına göre filtrele (örn: 35)">
+                            </div>
+                            <div class="form-group">
+                                <label for="bulletinSelect" class="form-label">Bülten Seç</label>
+                                <select id="bulletinSelect" class="form-select">
+                                    <option value="">Bülten seçiniz...</option>
+                                    <option value="2024-01">2024 - Ocak</option>
+                                    <option value="2024-02">2024 - Şubat</option>
+                                    <option value="2024-03">2024 - Mart</option>
+                                    <option value="2024-04">2024 - Nisan</option>
+                                    <option value="2024-05">2024 - Mayıs</option>
+                                    <option value="2024-06">2024 - Haziran</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-actions">
+                            <button type="button" class="btn btn-primary" id="startSearchBtn">🔍 Aramayı Başlat</button>
+                            <button type="button" class="btn btn-secondary" id="clearFiltersBtn">🗑️ Temizle</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-    <section class="filters-section">
-      <div class="form-row">
-        <label for="owner-filter">Sahip:</label>
-        <input type="text" id="owner-filter" placeholder="Sahip adına göre filtrele">
-      </div>
+            <div class="results-container">
+                <div class="results-header">
+                    <h3>Filtrelenmiş İzleme Listesi</h3>
+                    <div class="filter-group">
+                        <label class="filter-label" for="statusFilter">Duruma Göre Filtrele:</label>
+                        <select id="statusFilter" class="filter-select">
+                            <option value="all">Tümü</option>
+                            <option value="new">Yeni</option>
+                            <option value="monitored">İzleniyor</option>
+                            <option value="expired">Süresi Dolmuş</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="table-container">
+                    <table class="results-table">
+                        <thead>
+                            <tr>
+                                <th>Başvuru No</th>
+                                <th>Marka Adı</th>
+                                <th>Sahip</th>
+                                <th>Nice Sınıfı</th>
+                                <th>Bülten Tarihi</th>
+                                <th>Durum</th>
+                                <th>İşlemler</th>
+                            </tr>
+                        </thead>
+                        <tbody id="resultsTableBody">
+                            <tr>
+                                <td>2024/123456</td>
+                                <td>ÖRNEK MARKA</td>
+                                <td>ABC Şirketi Ltd. Şti.</td>
+                                <td>35</td>
+                                <td>15.06.2024</td>
+                                <td><span class="status-badge status-new">Yeni</span></td>
+                                <td>
+                                    <button class="action-btn view-btn">Görüntüle</button>
+                                    <button class="action-btn monitor-btn">İzlemeye Al</button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>2024/789012</td>
+                                <td>TEST MARKASI</td>
+                                <td>XYZ A.Ş.</td>
+                                <td>42</td>
+                                <td>15.06.2024</td>
+                                <td><span class="status-badge status-monitored">İzleniyor</span></td>
+                                <td>
+                                    <button class="action-btn view-btn">Görüntüle</button>
+                                    <button class="action-btn">İzlemeyi Durdur</button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <div id="loadingIndicator" class="loading" style="display: none;">
+                        <div>🔍 Arama yapılıyor...</div>
+                    </div>
+                    <div id="noRecordsMessage" class="no-records" style="display: none;">
+                        Arama kriterlerinize uygun sonuç bulunamadı.
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
 
-      <div class="form-row">
-        <label for="nice-filter">Nice Sınıfı:</label>
-        <input type="text" id="nice-filter" placeholder="Nice sınıfına göre filtrele (örn: 35)">
-      </div>
+    <script>
+        // Search functionality
+        document.getElementById('startSearchBtn').addEventListener('click', function() {
+            const loadingIndicator = document.getElementById('loadingIndicator');
+            const noRecordsMessage = document.getElementById('noRecordsMessage');
+            const tableBody = document.getElementById('resultsTableBody');
+            
+            // Show loading
+            loadingIndicator.style.display = 'block';
+            tableBody.style.display = 'none';
+            noRecordsMessage.style.display = 'none';
+            
+            // Simulate search (replace with actual API call)
+            setTimeout(() => {
+                loadingIndicator.style.display = 'none';
+                tableBody.style.display = '';
+                
+                // Add search logic here
+                console.log('Arama başlatıldı');
+                console.log('Sahip:', document.getElementById('ownerSearch').value);
+                console.log('Nice Sınıfı:', document.getElementById('niceClassSearch').value);
+                console.log('Bülten:', document.getElementById('bulletinSelect').value);
+            }, 2000);
+        });
 
-      <div class="form-row">
-        <label for="bulletin-select">Bülten Seç:</label>
-        <select id="bulletin-select">
-          <option value="">Yükleniyor...</option>
-        </select>
-      </div>
+        // Clear filters
+        document.getElementById('clearFiltersBtn').addEventListener('click', function() {
+            document.getElementById('ownerSearch').value = '';
+            document.getElementById('niceClassSearch').value = '';
+            document.getElementById('bulletinSelect').value = '';
+        });
 
-      <div class="form-row">
-        <button id="start-search">🔍 Aramayı Başlat</button>
-      </div>
-    </section>
+        // Status filter
+        document.getElementById('statusFilter').addEventListener('change', function() {
+            const filter = this.value;
+            const rows = document.querySelectorAll('#resultsTableBody tr');
+            
+            rows.forEach(row => {
+                if (filter === 'all') {
+                    row.style.display = '';
+                } else {
+                    const statusBadge = row.querySelector('.status-badge');
+                    const shouldShow = statusBadge.classList.contains(`status-${filter}`);
+                    row.style.display = shouldShow ? '' : 'none';
+                }
+            });
+        });
 
-    <section id="monitored-trademark-list">
-      <h2>Filtrelenmiş İzleme Listesi</h2>
-      <ul id="trademark-list" class="record-list"></ul>
-    </section>
-
-    <section id="search-results">
-      <h2>Sonuçlar</h2>
-      <!-- Arama sonuçları burada listelenecek -->
-    </section>
-  </div>
-
-  <script type="module" src="js/trademark-similarity-search.js"></script>
+        // Action buttons
+        document.addEventListener('click', function(e) {
+            if (e.target.classList.contains('view-btn')) {
+                alert('Detay görüntüleme özelliği geliştirilecek');
+            }
+            if (e.target.classList.contains('monitor-btn')) {
+                alert('İzlemeye alma özelliği geliştirilecek');
+            }
+        });
+    </script>
 </body>
 </html>
