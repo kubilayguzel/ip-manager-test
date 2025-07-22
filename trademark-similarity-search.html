@@ -624,6 +624,7 @@
                             filters: `bulletinId:"${bulletinId}"`,
                             hitsPerPage: 1000,
                         });
+                        console.log(`🔍 Algolia sorgusu tamamlandı - ${markName} için ${hits.length} sonuç`);
 
                         // Benzer sonuçları kategorize et
                         for (const hit of hits) {
@@ -639,7 +640,7 @@
                             });
                         }
                     } catch (searchError) {
-                        console.error(`${markName} için arama hatası:`, searchError);
+                    console.error(`❌ ${markName} için Algolia arama hatası:`, searchError?.message || searchError);
                     }
                 }
 
