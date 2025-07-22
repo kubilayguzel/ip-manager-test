@@ -104,55 +104,15 @@
             flex-wrap: wrap; 
         }
         
-        .sidebar { 
-            width: 250px; 
-            background: #1e3c72; 
-            color: white; 
-            padding: 20px; 
-            height: 100vh; 
-            position: fixed; 
-            left: 0; 
-            top: 0; 
-        }
-        .sidebar h2 { margin-bottom: 20px; font-size: 1.4em; }
-        .sidebar ul { list-style: none; }
-        .sidebar li { margin-bottom: 10px; }
-        .sidebar a { 
-            color: white; 
-            text-decoration: none; 
-            padding: 10px; 
-            display: block; 
-            border-radius: 5px; 
-            transition: background 0.3s; 
-        }
-        .sidebar a:hover { background: rgba(255,255,255,0.1); }
-        .sidebar a.active { background: rgba(255,255,255,0.2); }
-        
-        .page-wrapper { margin-left: 250px; }
-        
         @media (max-width: 768px) {
-            .sidebar { transform: translateX(-100%); }
-            .page-wrapper { margin-left: 0; }
             .form-grid { grid-template-columns: 1fr; }
             .form-actions { flex-direction: column; align-items: stretch; }
         }
     </style>
 </head>
 <body>
-    <!-- Sidebar -->
-    <div class="sidebar">
-        <h2>IP Manager</h2>
-        <ul>
-            <li><a href="#" class="active">Marka Bülten İzleme</a></li>
-            <li><a href="#">Patent İşlemleri</a></li>
-            <li><a href="#">Faydalı Model</a></li>
-            <li><a href="#">Endüstriyel Tasarım</a></li>
-            <li><a href="#">Tahakkuk Yönetimi</a></li>
-            <li><a href="#">Raporlar</a></li>
-            <li><a href="#">Ayarlar</a></li>
-        </ul>
-    </div>
-
+    <div id="layout-placeholder"></div>
+    <div id="sidebar-container"></div>
     <div class="page-wrapper">
         <main class="main-container">
             <section class="page-header">
@@ -221,30 +181,7 @@
                             </tr>
                         </thead>
                         <tbody id="resultsTableBody">
-                            <tr>
-                                <td>2024/123456</td>
-                                <td>ÖRNEK MARKA</td>
-                                <td>ABC Şirketi Ltd. Şti.</td>
-                                <td>35</td>
-                                <td>15.06.2024</td>
-                                <td><span class="status-badge status-new">Yeni</span></td>
-                                <td>
-                                    <button class="action-btn view-btn">Görüntüle</button>
-                                    <button class="action-btn monitor-btn">İzlemeye Al</button>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td>2024/789012</td>
-                                <td>TEST MARKASI</td>
-                                <td>XYZ A.Ş.</td>
-                                <td>42</td>
-                                <td>15.06.2024</td>
-                                <td><span class="status-badge status-monitored">İzleniyor</span></td>
-                                <td>
-                                    <button class="action-btn view-btn">Görüntüle</button>
-                                    <button class="action-btn">İzlemeyi Durdur</button>
-                                </td>
-                            </tr>
+                            <!-- Arama sonuçları buraya gelecek -->
                         </tbody>
                     </table>
                     <div id="loadingIndicator" class="loading" style="display: none;">
@@ -258,40 +195,195 @@
         </main>
     </div>
 
-    <script>
+    <!-- Firebase SDK -->
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getFirestore, collection, getDocs } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+        
+        // Firebase configuration - replace with your actual config
+        const firebaseConfig = {
+            apiKey: "AIzaSyBj5F3JRW_KzgQwLkZEZMhU8zKdKhKhKhY",
+            authDomain: "your-app.firebaseapp.com", 
+            projectId: "your-project-id",
+            storageBucket: "your-app.appspot.com",
+            messagingSenderId: "123456789",
+            appId: "1:123456789:web:abcd1234"
+        };
+
+        // If you have a separate firebase-config.js file, use this instead:
+        // import { firebaseConfig } from './firebase-config.js';
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // Initialize Algolia (using search API key)
+        const algoliaClient = algoliasearch('THCIEJJTZ9', 'b6c38850bfc00adcf0ecdd9a14638c27');
+        const index = algoliaClient.initIndex('trademark_bulletin_records_live');
+
+        // Global variables
+        let currentResults = [];
+        let currentFilters = {
+            owner: '',
+            niceClass: '',
+            bulletin: ''
+        };
+
+        // DOM elements
+        const startSearchBtn = document.getElementById('startSearchBtn');
+        const clearFiltersBtn = document.getElementById('clearFiltersBtn');
+        const ownerSearchInput = document.getElementById('ownerSearch');
+        const niceClassSearchInput = document.getElementById('niceClassSearch');
+        const bulletinSelect = document.getElementById('bulletinSelect');
+        const statusFilter = document.getElementById('statusFilter');
+        const resultsTableBody = document.getElementById('resultsTableBody');
+        const loadingIndicator = document.getElementById('loadingIndicator');
+        const noRecordsMessage = document.getElementById('noRecordsMessage');
+
+        // Load bulletin options on page load
+        loadBulletinOptions();
+
+        async function loadBulletinOptions() {
+            try {
+                const snapshot = await getDocs(collection(db, 'trademarkBulletins'));
+                const bulletins = [];
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    bulletins.push({ 
+                        id: doc.id, 
+                        bulletinNo: data.bulletinNo,
+                        bulletinDate: data.bulletinDate || data.createdAt
+                    });
+                });
+
+                // Sort bulletins by date (newest first)
+                bulletins.sort((a, b) => {
+                    const dateA = new Date(a.bulletinDate);
+                    const dateB = new Date(b.bulletinDate);
+                    return dateB - dateA;
+                });
+
+                // Populate select options
+                bulletinSelect.innerHTML = '<option value="">Tüm Bültenler</option>' +
+                    bulletins.map(b => 
+                        `<option value="${b.id}">${b.bulletinNo} - ${formatDate(b.bulletinDate)}</option>`
+                    ).join('');
+            } catch (error) {
+                console.error('Bülten listesi yüklenirken hata:', error);
+                bulletinSelect.innerHTML = '<option value="">Bülten yüklenirken hata oluştu</option>';
+            }
+        }
+
         // Search functionality
-        document.getElementById('startSearchBtn').addEventListener('click', function() {
-            const loadingIndicator = document.getElementById('loadingIndicator');
-            const noRecordsMessage = document.getElementById('noRecordsMessage');
-            const tableBody = document.getElementById('resultsTableBody');
-            
-            // Show loading
-            loadingIndicator.style.display = 'block';
-            tableBody.style.display = 'none';
-            noRecordsMessage.style.display = 'none';
-            
-            // Simulate search (replace with actual API call)
-            setTimeout(() => {
-                loadingIndicator.style.display = 'none';
-                tableBody.style.display = '';
-                
-                // Add search logic here
-                console.log('Arama başlatıldı');
-                console.log('Sahip:', document.getElementById('ownerSearch').value);
-                console.log('Nice Sınıfı:', document.getElementById('niceClassSearch').value);
-                console.log('Bülten:', document.getElementById('bulletinSelect').value);
-            }, 2000);
+        startSearchBtn.addEventListener('click', async function() {
+            const ownerFilter = ownerSearchInput.value.trim();
+            const niceFilter = niceClassSearchInput.value.trim();
+            const bulletinFilter = bulletinSelect.value;
+
+            // Update current filters
+            currentFilters = {
+                owner: ownerFilter,
+                niceClass: niceFilter,
+                bulletin: bulletinFilter
+            };
+
+            await performSearch();
         });
+
+        async function performSearch() {
+            showLoading(true);
+            
+            try {
+                // Build Algolia search query
+                let searchQuery = '';
+                let filters = [];
+
+                // Add owner filter to search query
+                if (currentFilters.owner) {
+                    searchQuery = currentFilters.owner;
+                }
+
+                // Add bulletin filter
+                if (currentFilters.bulletin) {
+                    filters.push(`bulletinId:"${currentFilters.bulletin}"`);
+                }
+
+                // Add nice class filter  
+                if (currentFilters.niceClass) {
+                    filters.push(`niceClasses:"${currentFilters.niceClass}"`);
+                }
+
+                // Perform Algolia search
+                const searchOptions = {
+                    hitsPerPage: 100,
+                    attributesToRetrieve: [
+                        'markName', 'applicationNo', 'holders', 'niceClasses', 
+                        'bulletinId', 'applicationDate', 'imagePath'
+                    ]
+                };
+
+                if (filters.length > 0) {
+                    searchOptions.filters = filters.join(' AND ');
+                }
+
+                const { hits } = await index.search(searchQuery, searchOptions);
+                currentResults = hits;
+                
+                renderResults(hits);
+                
+            } catch (error) {
+                console.error('Arama hatası:', error);
+                showError('Arama sırasında bir hata oluştu. Lütfen tekrar deneyiniz.');
+            }
+        }
+
+        function renderResults(results) {
+            showLoading(false);
+            
+            if (results.length === 0) {
+                showNoResults();
+                return;
+            }
+
+            const tableHTML = results.map(hit => {
+                const holders = Array.isArray(hit.holders) ? hit.holders.join(', ') : hit.holders || '';
+                const niceClasses = Array.isArray(hit.niceClasses) ? hit.niceClasses.join(', ') : hit.niceClasses || '';
+                const applicationDate = hit.applicationDate ? formatDate(hit.applicationDate) : '';
+                
+                return `
+                    <tr data-id="${hit.objectID}">
+                        <td>${hit.applicationNo || ''}</td>
+                        <td>${hit.markName || ''}</td>
+                        <td>${holders}</td>
+                        <td>${niceClasses}</td>
+                        <td>${applicationDate}</td>
+                        <td><span class="status-badge status-new">Yeni</span></td>
+                        <td>
+                            <button class="action-btn view-btn" onclick="viewDetails('${hit.objectID}')">Görüntüle</button>
+                            <button class="action-btn monitor-btn" onclick="addToMonitoring('${hit.objectID}')">İzlemeye Al</button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+
+            resultsTableBody.innerHTML = tableHTML;
+            resultsTableBody.style.display = '';
+        }
 
         // Clear filters
-        document.getElementById('clearFiltersBtn').addEventListener('click', function() {
-            document.getElementById('ownerSearch').value = '';
-            document.getElementById('niceClassSearch').value = '';
-            document.getElementById('bulletinSelect').value = '';
+        clearFiltersBtn.addEventListener('click', function() {
+            ownerSearchInput.value = '';
+            niceClassSearchInput.value = '';
+            bulletinSelect.value = '';
+            currentFilters = { owner: '', niceClass: '', bulletin: '' };
+            
+            // Clear results
+            resultsTableBody.innerHTML = '';
+            showNoResults(false);
         });
 
-        // Status filter
-        document.getElementById('statusFilter').addEventListener('change', function() {
+        // Status filter functionality
+        statusFilter.addEventListener('change', function() {
             const filter = this.value;
             const rows = document.querySelectorAll('#resultsTableBody tr');
             
@@ -300,21 +392,72 @@
                     row.style.display = '';
                 } else {
                     const statusBadge = row.querySelector('.status-badge');
-                    const shouldShow = statusBadge.classList.contains(`status-${filter}`);
+                    const shouldShow = statusBadge && statusBadge.classList.contains(`status-${filter}`);
                     row.style.display = shouldShow ? '' : 'none';
                 }
             });
         });
 
-        // Action buttons
-        document.addEventListener('click', function(e) {
-            if (e.target.classList.contains('view-btn')) {
-                alert('Detay görüntüleme özelliği geliştirilecek');
+        // Utility functions
+        function showLoading(show) {
+            if (show) {
+                loadingIndicator.style.display = 'block';
+                resultsTableBody.style.display = 'none';
+                noRecordsMessage.style.display = 'none';
+            } else {
+                loadingIndicator.style.display = 'none';
             }
-            if (e.target.classList.contains('monitor-btn')) {
-                alert('İzlemeye alma özelliği geliştirilecek');
+        }
+
+        function showNoResults(show = true) {
+            if (show) {
+                noRecordsMessage.style.display = 'block';
+                resultsTableBody.style.display = 'none';
+            } else {
+                noRecordsMessage.style.display = 'none';
             }
-        });
+            loadingIndicator.style.display = 'none';
+        }
+
+        function showError(message) {
+            showLoading(false);
+            noRecordsMessage.innerHTML = `<div style="color: #dc3545;">${message}</div>`;
+            noRecordsMessage.style.display = 'block';
+        }
+
+        function formatDate(dateString) {
+            if (!dateString) return '';
+            try {
+                const date = new Date(dateString);
+                return date.toLocaleDateString('tr-TR');
+            } catch (error) {
+                return dateString;
+            }
+        }
+
+        // Action functions (to be implemented)
+        window.viewDetails = function(recordId) {
+            console.log('Viewing details for:', recordId);
+            // TODO: Implement detail view modal
+            alert(`Detay görüntüleme özelliği geliştirilecek. ID: ${recordId}`);
+        };
+
+        window.addToMonitoring = function(recordId) {
+            console.log('Adding to monitoring:', recordId);
+            // TODO: Implement monitoring functionality
+            alert(`İzlemeye alma özelliği geliştirilecek. ID: ${recordId}`);
+        };
+
+        // Export functions for global access
+        window.trademarkSearch = {
+            performSearch,
+            currentResults: () => currentResults,
+            currentFilters: () => currentFilters
+        };
+
     </script>
+
+    <!-- Algolia Search CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/algoliasearch@4.20.0/dist/algoliasearch-lite.umd.js"></script>
 </body>
 </html>
