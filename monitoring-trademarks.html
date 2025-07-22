@@ -212,8 +212,10 @@
 
     const auth = getAuth();
     let selectedMonitoringItems = new Set(); // Seçili izleme öğelerinin ID'lerini tutacak
+    let allPersons = [];
 
     document.addEventListener('DOMContentLoaded', async () => {
+        allPersons = await personService.getAllPersons();
         await loadSharedLayout({ activeMenuLink: 'monitoring-trademarks.html' });
 
         const container = document.getElementById('monitoringTableContainer');
@@ -286,6 +288,11 @@
                     : '-';
                 
                 const statusInfo = getStatusInTurkish(r.status);
+                const ownerNames = (r.owners || []).map(o => {
+                const match = allPersons.find(p => p.id === o.id);
+                return match ? match.name : 'Bilinmeyen';
+                }).join(', ');
+
 
                 html += `
                     <tr data-id="${r.id}">
@@ -296,7 +303,7 @@
                         <td>${formatTurkishDate(r.applicationDate)}</td>
                         <td>${r.niceClass || '-'}</td>
                         <td><span class="status-badge ${statusInfo.class}">${statusInfo.text}</span></td>
-                        <td>${(r.owners || []).map(o => o.name || 'Bilinmeyen').join(', ') || '-'}</td>
+                        <td>${ownerNames || '-'}</td>
                         </tr>`;
             });
             html += '</tbody></table>';
