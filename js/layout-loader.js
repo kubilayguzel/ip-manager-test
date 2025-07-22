@@ -65,7 +65,8 @@ const menuItems = [
     ]
     },
     {id: 'monitoring-accordion', text: 'İzleme', icon: 'fas fa-eye', category: 'Araçlar', subItems: [
-        { id: 'monitoring-trademarks', text: 'Marka İzleme', link: 'monitoring-trademarks.html' },
+        {id: 'trademark-similarity-search', text: 'Marka İzleme', link: 'trademark-similarity-search.html' },
+        { id: 'monitoring-trademarks', text: 'Marka İzleme Listesi', link: 'monitoring-trademarks.html' },
         { id: 'monitoring-designs', text: 'Tasarım İzleme', link: 'monitoring-designs.html' }
     ]
     },
