@@ -3,21 +3,40 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Marka Benzerlik Arama</title>
+  <title>Marka Benzerlik Araması</title>
   <link rel="stylesheet" href="css/shared-styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/algoliasearch@4.20.0/dist/algoliasearch-lite.umd.js"></script>
 </head>
 <body>
   <div class="page-wrapper">
-    <h2>Marka Benzerlik Araştırması</h2>
+    <header><h1>Marka Benzerlik Araması</h1></header>
 
-    <!-- Bülten seçme alanı -->
-    <div id="bulletin-select-container" style="margin-bottom: 20px;"></div>
+    <section class="search-filters">
+      <label for="owner-filter">Sahip:</label>
+      <input type="text" id="owner-filter" placeholder="Sahip adına göre filtrele">
 
-    <!-- Arama sonuçları -->
-    <div id="search-results"></div>
+      <label for="nice-filter">Nice Sınıfı:</label>
+      <input type="text" id="nice-filter" placeholder="Nice sınıfına göre filtrele (örn: 35)">
+
+      <label for="bulletin-select">Bülten Seç:</label>
+      <select id="bulletin-select">
+        <option value="">Yükleniyor...</option>
+      </select>
+
+      <button id="start-search">🔍 Ara</button>
+    </section>
+
+    <section id="monitored-trademark-list">
+      <h2>İzlenen Markalar</h2>
+      <ul id="trademark-list"></ul>
+    </section>
+
+    <section id="search-results">
+      <h2>Sonuçlar</h2>
+      <!-- Burada arama sonuçları JS ile gösterilecek -->
+    </section>
+
+    <script type="module" src="js/trademark-similarity-search.js"></script>
   </div>
-
-  <script src="https://cdn.jsdelivr.net/npm/algoliasearch@4.17.2/dist/algoliasearch-lite.umd.js"></script>
-  <script type="module" src="js/trademark-similarity-search.js"></script>
 </body>
 </html>
