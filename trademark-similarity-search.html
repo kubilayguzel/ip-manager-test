@@ -3,48 +3,74 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Marka Benzerlik Araması</title>
+  <title>Marka Bülten İzleme</title>
   <link rel="stylesheet" href="css/shared-styles.css" />
   <script src="https://cdn.jsdelivr.net/npm/algoliasearch@4.20.0/dist/algoliasearch-lite.umd.js"></script>
 </head>
 <body>
-<div id="notification-container" style="position: fixed; top: 20px; right: 20px; z-index: 9999;"></div>
-<div id="layout-placeholder"></div>
+  <div class="sidebar">
+    <div class="sidebar-logo">IP Manager</div>
+    <ul class="menu">
+      <li class="menu-category">Araçlar</li>
+      <li class="menu-item">
+        <span class="menu-icon fas fa-eye"></span>
+        <span class="menu-text">İzleme</span>
+        <ul class="submenu">
+          <li><a href="trademark-similarity-search.html">Marka Bülten İzleme</a></li>
+          <li><a href="monitoring-trademarks.html">Marka İzleme Listesi</a></li>
+          <li><a href="monitoring-designs.html">Tasarım İzleme</a></li>
+        </ul>
+      </li>
+      <li class="menu-item disabled">
+        <span class="menu-icon fas fa-chart-line"></span>
+        <span class="menu-text">Raporlar</span>
+      </li>
+      <li class="menu-item disabled">
+        <span class="menu-icon fas fa-cog"></span>
+        <span class="menu-text">Ayarlar</span>
+      </li>
+    </ul>
+  </div>
+
   <div class="page-wrapper">
-    <header><h1>Marka Bülten İzleme</h1></header>
+    <header class="page-header">
+      <h1>Marka Bülten İzleme</h1>
+    </header>
 
-    <!-- 🔎 Filtreleme ve Bülten Seçimi -->
-    <section class="search-filters">
-      <label for="owner-filter">Sahip:</label>
-      <input type="text" id="owner-filter" placeholder="Sahip adına göre filtrele">
+    <section class="filters-section">
+      <div class="form-row">
+        <label for="owner-filter">Sahip:</label>
+        <input type="text" id="owner-filter" placeholder="Sahip adına göre filtrele">
+      </div>
 
-      <label for="nice-filter">Nice Sınıfı:</label>
-      <input type="text" id="nice-filter" placeholder="Nice sınıfına göre filtrele (örn: 35)">
+      <div class="form-row">
+        <label for="nice-filter">Nice Sınıfı:</label>
+        <input type="text" id="nice-filter" placeholder="Nice sınıfına göre filtrele (örn: 35)">
+      </div>
 
-      <label for="bulletin-select">Bültende Ara:</label>
-      <select id="bulletin-select">
-        <option value="">Yükleniyor...</option>
-      </select>
+      <div class="form-row">
+        <label for="bulletin-select">Bülten Seç:</label>
+        <select id="bulletin-select">
+          <option value="">Yükleniyor...</option>
+        </select>
+      </div>
 
-      <button id="start-search">🔍 Aramayı Başlat</button>
+      <div class="form-row">
+        <button id="start-search">🔍 Aramayı Başlat</button>
+      </div>
     </section>
 
-    <!-- 📋 Filtrelenmiş İzleme Listesi -->
     <section id="monitored-trademark-list">
       <h2>Filtrelenmiş İzleme Listesi</h2>
-      <ul id="trademark-list">
-        <!-- JS ile doldurulacak -->
-      </ul>
+      <ul id="trademark-list" class="record-list"></ul>
     </section>
 
-    <!-- 📌 Arama Sonuçları -->
-    <section id="search-results" style="margin-top: 40px;">
+    <section id="search-results">
       <h2>Sonuçlar</h2>
-      <!-- Sonuçlar JS ile oluşturulacak -->
+      <!-- Arama sonuçları burada listelenecek -->
     </section>
-
-    <!-- 📜 JavaScript -->
-    <script type="module" src="js/trademark-similarity-search.js"></script>
   </div>
+
+  <script type="module" src="js/trademark-similarity-search.js"></script>
 </body>
 </html>
