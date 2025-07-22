@@ -819,6 +819,23 @@
             currentFilters: () => currentFilters
         };
 
+        // Arama butonunu tetikle
+        startSearchBtn?.addEventListener('click', async (e) => {
+            e.preventDefault();
+            currentFilters.owner = ownerSearchInput.value.trim();
+            currentFilters.niceClass = niceClassSearchInput.value.trim();
+            currentFilters.bulletin = bulletinSelect.value;
+            await performSearch();
+        });
+
+        // Fonksiyonları global scope'tan erişilebilir hale getir
+        window.trademarkSearch = {
+            performSearch,
+            performMonitoringTrademarkSearch,
+            currentFilters: () => currentFilters,
+            currentResults: () => currentResults
+        };
+
     </script>
 
     <!-- Algolia Search CDN -->
