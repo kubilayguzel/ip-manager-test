@@ -224,7 +224,7 @@
 
     <script type="module">
         import { loadSharedLayout } from './js/layout-loader.js';
-        import { authService, monitoringService } from './firebase-config.js';
+        import { authService, monitoringService, personService } from './firebase-config.js'; // personService eklendi
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
         import { getFirestore, collection, getDocs } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
         
@@ -238,9 +238,6 @@
             appId: "1:594650169512:web:43496005e063a40511829d",
             measurementId: "G-QY1P3ZCMC4"
         };
-
-        // If you have a separate firebase-config.js file, use this instead:
-        // import { firebaseConfig } from './firebase-config.js';
 
         // Initialize Firebase
         const app = initializeApp(firebaseConfig);
@@ -259,6 +256,7 @@
         let currentResults = [];
         let monitoringTrademarks = []; // İzleme listesindeki markalar
         let filteredMonitoringTrademarks = []; // Filtrelenmiş izleme listesi
+        let allPersons = []; // Kişi bilgileri için eklendi
         let currentFilters = {
             owner: '',
             niceClass: '',
@@ -281,6 +279,31 @@
         const loadingMonitoringList = document.getElementById('loadingMonitoringList');
         const noMonitoringRecords = document.getElementById('noMonitoringRecords');
 
+        // Sahip bilgisini işleme fonksiyonu eklendi
+        function processOwnerInfo(owners) {
+            try {
+                if (owners && Array.isArray(owners)) {
+                    return owners.map(owner => {
+                        if (typeof owner === 'object' && owner.id) {
+                            const match = allPersons.find(p => p.id === owner.id);
+                            return match ? match.name : `ID:${owner.id}`;
+                        } else if (typeof owner === 'string') {
+                            return owner;
+                        } else if (typeof owner === 'object' && owner.name) {
+                            return owner.name;
+                        }
+                        return 'Bilinmeyen';
+                    }).join(', ');
+                } else if (typeof owners === 'string') {
+                    return owners;
+                }
+                return '-';
+            } catch (error) {
+                console.warn('Sahip bilgisi işlenirken hata:', error);
+                return '-';
+            }
+        }
+
         // Page initialization
         document.addEventListener('DOMContentLoaded', async () => {
             await loadSharedLayout({ activeMenuLink: 'trademark-similarity-search.html' });
@@ -291,6 +314,7 @@
             if (user) {
                 // User is logged in, initialize the app
                 initializeAlgolia();
+                await loadPersons(); // Kişileri yükle
                 await loadBulletinOptions();
                 await loadMonitoringTrademarks();
             } else {
@@ -298,6 +322,23 @@
                 window.location.href = 'index.html';
             }
         });
+
+        // Kişileri yükle fonksiyonu eklendi
+        async function loadPersons() {
+            try {
+                const personsResult = await personService.getPersons();
+                if (personsResult.success) {
+                    allPersons = personsResult.data || [];
+                    console.log('Kişiler yüklendi:', allPersons.length);
+                } else {
+                    console.warn('Kişiler yüklenirken hata:', personsResult.error);
+                    allPersons = [];
+                }
+            } catch (error) {
+                console.warn('Kişiler yüklenirken hata:', error);
+                allPersons = [];
+            }
+        }
 
         // Load monitoring trademarks from user's monitoring list
         async function loadMonitoringTrademarks() {
@@ -323,7 +364,7 @@
             }
         }
 
-        // Render monitoring trademarks list
+        // Render monitoring trademarks list - Sahip bilgisi işleme güncellendi
         function renderMonitoringList(trademarks) {
             showMonitoringLoading(false);
             
@@ -333,9 +374,7 @@
             }
 
             const tableHTML = trademarks.map(trademark => {
-                const owners = Array.isArray(trademark.owners) 
-                    ? trademark.owners.map(o => o.name || o).join(', ') 
-                    : trademark.owners || '';
+                const owners = processOwnerInfo(trademark.owners); // Güncellenen fonksiyon kullanılıyor
                 const niceClasses = Array.isArray(trademark.niceClass) 
                     ? trademark.niceClass.join(', ') 
                     : trademark.niceClass || '';
@@ -360,16 +399,14 @@
             monitoringListBody.style.display = '';
         }
 
-        // Filter monitoring trademarks based on input filters
+        // Filter monitoring trademarks based on input filters - Sahip filtresi güncellendi
         function filterMonitoringTrademarks() {
             const ownerFilter = ownerSearchInput.value.toLowerCase().trim();
             const niceFilter = niceClassSearchInput.value.trim();
 
             filteredMonitoringTrademarks = monitoringTrademarks.filter(trademark => {
-                // Owner filter
-                const owners = Array.isArray(trademark.owners) 
-                    ? trademark.owners.map(o => (o.name || o).toLowerCase()).join(' ') 
-                    : (trademark.owners || '').toLowerCase();
+                // Owner filter - güncellenen processOwnerInfo kullanılıyor
+                const owners = processOwnerInfo(trademark.owners).toLowerCase();
                 const ownerMatch = !ownerFilter || owners.includes(ownerFilter);
 
                 // Nice class filter
@@ -420,8 +457,6 @@
         }
 
         // Load bulletin options on page load
-        loadBulletinOptions();
-
         async function loadBulletinOptions() {
             try {
                 const snapshot = await getDocs(collection(db, 'trademarkBulletins'));
