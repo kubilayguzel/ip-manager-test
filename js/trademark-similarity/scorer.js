@@ -1,14 +1,23 @@
 export function calculateSimilarityScore(hit, searchMarkName) {
+  console.log("📊 Similarity score hesaplanıyor:", hit.markName, "vs", searchMarkName);
+  
   const hitMarkName = (hit.markName || '').toLowerCase().trim();
   const searchName = (searchMarkName || '').toLowerCase().trim();
   
-  if (!hitMarkName || !searchName) return 0;
+  if (!hitMarkName || !searchName) {
+    console.log("❌ Boş marka adı, skor: 0");
+    return 0;
+  }
   
   // Tam eşleşme
-  if (hitMarkName === searchName) return 1.0;
+  if (hitMarkName === searchName) {
+    console.log("✅ Tam eşleşme, skor: 1.0");
+    return 1.0;
+  }
   
   // Birinin diğerini içermesi
   if (hitMarkName.includes(searchName) || searchName.includes(hitMarkName)) {
+    console.log("🔄 Kısmi eşleşme, skor: 0.8");
     return 0.8;
   }
   
@@ -17,8 +26,10 @@ export function calculateSimilarityScore(hit, searchMarkName) {
   const maxLength = Math.max(hitMarkName.length, searchName.length);
   const similarity = 1 - (distance / maxLength);
   
-  // Minimum threshold
-  return similarity > 0.3 ? similarity : 0.1;
+  const finalScore = similarity > 0.3 ? similarity : 0.1;
+  console.log(`🔢 Levenshtein similarity: ${similarity.toFixed(2)}, final: ${finalScore.toFixed(2)}`);
+  
+  return finalScore;
 }
 
 function levenshteinDistance(str1, str2) {
