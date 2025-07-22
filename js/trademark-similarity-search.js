@@ -2,7 +2,7 @@
 
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
 import {
-  getFirestore, collection, getDocs, doc, getDoc
+  getFirestore, collection, getDocs, query, where
 } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 import { firebaseConfig } from '../firebase-config.js';
 
@@ -12,115 +12,118 @@ const db = getFirestore();
 const algoliaClient = algoliasearch('THCIEJJTZ9', 'b6c38850bfc00adcf0ecdd9a14638c27');
 const index = algoliaClient.initIndex('trademark_bulletin_records');
 
-const params = new URLSearchParams(window.location.search);
-const trademarkId = params.get('trademarkId');
-
+const trademarkListEl = document.getElementById('trademark-list');
+const searchButton = document.getElementById('start-search');
 const resultContainer = document.getElementById('search-results');
-const bulletinSelectContainer = document.getElementById('bulletin-select-container');
+const bulletinSelect = document.getElementById('bulletin-select');
 
-if (trademarkId) {
-  showBulletinSelector(trademarkId);
+// 📥 Bültenleri Firestore'dan yükle
+async function loadBulletins() {
+  const snapshot = await getDocs(collection(db, 'trademarkBulletins'));
+  const options = [];
+  snapshot.forEach(doc => {
+    const data = doc.data();
+    options.push({ id: doc.id, ...data });
+  });
+
+  options.sort((a, b) => b.bulletinDate?.seconds - a.bulletinDate?.seconds);
+
+  bulletinSelect.innerHTML = options.map(b => `
+    <option value="${b.id}">${b.bulletinNo} - ${new Date(b.bulletinDate.seconds * 1000).toLocaleDateString('tr-TR')}</option>
+  `).join('');
 }
 
-async function showBulletinSelector(trademarkId) {
-  const snapshot = await getDocs(collection(db, 'trademarkBulletins'));
-  if (snapshot.empty) {
-    resultContainer.innerHTML = '<p>Hiç bülten kaydı bulunamadı.</p>';
-    return;
-  }
+// 📥 İzlenen markaları yükle
+async function loadMonitoredTrademarks() {
+  const ownerFilter = document.getElementById('owner-filter').value.toLowerCase();
+  const niceFilter = document.getElementById('nice-filter').value;
 
-  let selectHTML = `<label for="bulletin-select">Bültende Ara:</label>
-    <select id="bulletin-select">
-      <option value="">Bülten Seçiniz</option>`;
+  const snapshot = await getDocs(collection(db, 'monitoringTrademarks'));
+  const trademarks = [];
 
   snapshot.forEach(doc => {
     const data = doc.data();
-    selectHTML += `<option value="${doc.id}">${data.bulletinNo} - ${data.bulletinDate}</option>`;
+    if (ownerFilter && !data.owners?.join(', ').toLowerCase().includes(ownerFilter)) return;
+    if (niceFilter && !data.niceClasses?.split(' ').includes(niceFilter)) return;
+    trademarks.push({ id: doc.id, ...data });
   });
 
-  selectHTML += `</select>
-    <button id="start-search">Ara</button>`;
+  trademarkListEl.innerHTML = trademarks.map(m => `
+    <li><strong>${m.markName}</strong> (${m.applicationNo}) - Sınıflar: ${m.niceClasses || '-'}</li>
+  `).join('');
 
-  bulletinSelectContainer.innerHTML = selectHTML;
-
-  document.getElementById('start-search').addEventListener('click', () => {
-    const selectedId = document.getElementById('bulletin-select').value;
-    if (!selectedId) {
-      alert("Lütfen bir bülten seçiniz.");
-      return;
-    }
-    runSimilaritySearch(trademarkId, selectedId);
-  });
+  return trademarks;
 }
 
-async function runSimilaritySearch(trademarkId, bulletinId) {
-  resultContainer.innerHTML = '<p>Arama yapılıyor...</p>';
-
-  const docRef = doc(db, 'monitoringTrademarks', trademarkId);
-  const docSnap = await getDoc(docRef);
-  if (!docSnap.exists()) {
-    resultContainer.innerHTML = '<p>Marka bulunamadı.</p>';
+// 🔍 Benzerlik araştırması
+async function performSearch() {
+  const bulletinId = bulletinSelect.value;
+  if (!bulletinId) {
+    alert('Lütfen bir bülten seçin.');
     return;
   }
 
-  const searchTarget = docSnap.data();
-  const query = searchTarget.markName;
-  const targetDate = new Date(searchTarget.priorityDate || searchTarget.applicationDate).getTime();
-  const targetNice = (searchTarget.niceClasses || '').split(' '); // ["32", "33", "07"]
+  const trademarks = await loadMonitoredTrademarks();
+  resultContainer.innerHTML = '';
 
-  const { hits } = await index.search(query, {
-    filters: `bulletinId:"${bulletinId}"`,
-    hitsPerPage: 1000,
-  });
+  for (const trademark of trademarks) {
+    const query = trademark.markName;
+    const targetDate = new Date(trademark.priorityDate || trademark.applicationDate).getTime();
+    const targetNice = trademark.niceClasses?.split(' ') || [];
 
-  const grouped = {
-    previous: [],
-    differentNice: [],
-    normal: []
-  };
+    const { hits } = await index.search(query, {
+      filters: `bulletinId:"${bulletinId}"`,
+      hitsPerPage: 1000,
+    });
 
-  for (const hit of hits) {
-    const hitDate = new Date(hit.priorityDate || hit.applicationDate).getTime();
-    const hitNice = (hit.niceClasses || '').split('/').map(cls => cls.trim()).filter(cls => cls); // ["07", "35"]
+    const grouped = {
+      previous: [],
+      differentNice: [],
+      normal: []
+    };
 
-    const hasCommonNice = targetNice.some(cls => hitNice.includes(cls));
-    const isPrevious = hitDate < targetDate;
+    for (const hit of hits) {
+      const hitDate = new Date(hit.priorityDate || hit.applicationDate).getTime();
+      const hitNice = hit.niceClasses?.split(' / ') || [];
+      const hasCommonNice = targetNice.some(nc => hitNice.includes(nc));
+      const isPrevious = hitDate < targetDate;
 
-    if (isPrevious) {
-      grouped.previous.push(hit);
-    } else if (!hasCommonNice) {
-      grouped.differentNice.push(hit);
-    } else {
-      grouped.normal.push(hit);
+      if (isPrevious) {
+        grouped.previous.push(hit);
+      } else if (!hasCommonNice) {
+        grouped.differentNice.push(hit);
+      } else {
+        grouped.normal.push(hit);
+      }
     }
-  }
 
-  renderResults(grouped);
+    renderResults(trademark.markName, grouped);
+  }
 }
 
-function renderResults(grouped) {
-  let html = '';
+function renderResults(markName, grouped) {
+  let html = `<h3>🔎 ${markName}</h3>`;
 
   if (grouped.previous.length > 0) {
-    html += `<h3>Önceki Tarihli Benzer Marka</h3>`;
+    html += `<h4>Önceki Tarihli Benzer Marka</h4>`;
     html += buildList(grouped.previous);
   }
 
   if (grouped.normal.length > 0) {
-    html += `<h3>Benzer Markalar</h3>`;
+    html += `<h4>Benzer Markalar</h4>`;
     html += buildList(grouped.normal);
   }
 
   if (grouped.differentNice.length > 0) {
-    html += `<h3>Farklı Nice Sınıfı</h3>`;
+    html += `<h4>Farklı Nice Sınıfı</h4>`;
     html += buildList(grouped.differentNice);
   }
 
-  if (html === '') {
-    html = '<p>Benzer marka bulunamadı.</p>';
+  if (!grouped.previous.length && !grouped.normal.length && !grouped.differentNice.length) {
+    html += `<p>Benzer marka bulunamadı.</p>`;
   }
 
-  resultContainer.innerHTML = html;
+  resultContainer.innerHTML += html;
 }
 
 function buildList(list) {
@@ -136,3 +139,8 @@ function buildList(list) {
     </ul>
   `;
 }
+
+// 🔄 Başlat
+searchButton.addEventListener('click', performSearch);
+loadBulletins();
+loadMonitoredTrademarks();
