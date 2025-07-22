@@ -227,6 +227,8 @@
         import { authService, monitoringService, personService } from './firebase-config.js'; // personService eklendi
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
         import { getFirestore, collection, getDocs } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+        import { runTrademarkSearch } from './js/trademark-similarity/run-search.js';
+
         
         // Firebase configuration - replace with your actual config
         const firebaseConfig = {
@@ -592,98 +594,46 @@
                 showError('Arama sırasında bir hata oluştu. Lütfen tekrar deneyiniz.');
             }
         }
-        function calculateSimilarityScore(hit) {
-            if (!hit._rankingInfo) return 0;
-
-            const {
-                nbTypos = 0,
-                firstMatchedWord = 0,
-                proximityDistance = 0,
-                words = 0
-            } = hit._rankingInfo;
-
-            // Skor: daha az typo, yakın eşleşme, ilk kelimede eşleşme, tam kelime sayısı
-            let score = 100;
-
-            score -= nbTypos * 10;             // Her typo 10 puan kırar
-            score -= firstMatchedWord * 5;     // İlk eşleşme uzaksa puan kır
-            score -= proximityDistance * 7;    // Kelimeler arası mesafe
-            score -= Math.max(0, 5 - words) * 4; // Çok kısa eşleşmeler kırpılır
-
-            return Math.max(0, Math.min(100, Math.round(score)));
-        }
-
+        
         // Monitoring trademarks'tan arama yapma fonksiyonu
         async function performMonitoringTrademarkSearch(bulletinId) {
             try {
-                console.log('Filtrelenmiş izleme listesi üzerinden arama başlatılıyor...');
-                
                 const trademarksToSearch = filteredMonitoringTrademarks.length > 0 
                     ? filteredMonitoringTrademarks 
                     : monitoringTrademarks;
 
-                console.log(`${trademarksToSearch.length} marka için arama yapılacak`);
-
                 if (trademarksToSearch.length === 0) {
-                    showError('Filtrelen izleme listesinde marka bulunamadı.');
+                    showError('Filtrelenmiş izleme listesinde marka bulunamadı.');
                     return;
                 }
 
                 const allSimilarResults = [];
-                let processedCount = 0;
 
                 for (const trademark of trademarksToSearch) {
-                    processedCount++;
-                    const markName = trademark.title || trademark.markName;
-                    console.log(`${processedCount}/${trademarksToSearch.length}: ${markName} araştırılıyor...`);
+                    const result = await runTrademarkSearch({
+                        markName: trademark.title || trademark.markName,
+                        applicationDate: trademark.applicationDate,
+                        niceClasses: Array.isArray(trademark.niceClass) ? trademark.niceClass : [trademark.niceClass]
+                    }, bulletinId);
 
-                    try {
-                        const { hits } = await index.search(markName, {
-                            //filters: `bulletinId:"${bulletinId}"`,
-                            hitsPerPage: 1000,
-                            getRankingInfo: true
+                    // Elde edilen sonuçlara izlenen marka bilgisi ekle
+                    result.forEach(hit => {
+                        allSimilarResults.push({
+                            ...hit,
+                            monitoredTrademark: trademark.title || trademark.markName,
+                            monitoredApplicationNo: trademark.applicationNumber || trademark.applicationNo
                         });
-                        console.log(`🔍 Algolia sorgusu tamamlandı - ${markName} için ${hits.length} sonuç`);
-
-                        for (const hit of hits) {
-                        const monitoredAppDate = parseDate(trademark.applicationDate);
-                        const hitAppDate = parseDate(hit.applicationDate);
-                        console.log(`📅 ${markName} → İzlenen: ${monitoredAppDate.toISOString()} | Hit: ${hitAppDate.toISOString()}`);
-
-                            // 1. Kendisiyle aynı başvuru numarasıysa atla
-                            if (hit.applicationNo === (trademark.applicationNumber || trademark.applicationNo)) {
-                                continue;
-                            }
-
-                            // 2. Sadece izlenen markadan sonra başvurulmuş benzer markaları al
-
-                            if (hitAppDate >= monitoredAppDate) {
-                                allSimilarResults.push({
-                                    ...hit,
-                                    monitoredTrademark: markName,
-                                    monitoredApplicationNo: trademark.applicationNumber || trademark.applicationNo,
-                                    similarityScore: calculateSimilarityScore(hit)
-                                });
-                            } else {
-                                console.log(`⏩ ${hit.markName} (${hit.applicationNo}) izlenen markadan sonra başvurulmuş. Atlanıyor.`);
-                                continue;
-                            }
-                        }
-
-                    } catch (searchError) {
-                        console.error(`❌ ${markName} için Algolia arama hatası:`, searchError?.message || searchError);
-                    }
+                    });
                 }
 
-                console.log(`✅ Toplam ${allSimilarResults.length} benzer sonuç bulundu`);
                 currentResults = allSimilarResults;
                 renderMonitoringResults(allSimilarResults);
-
-            } catch (error) {
-                console.error('Monitoring trademark arama hatası:', error);
-                showError('İzleme listesi araması sırasında bir hata oluştu.');
+            } catch (err) {
+                console.error("Monitoring arama hatası:", err);
+                showError("Marka izleme araştırması yapılırken bir hata oluştu.");
             }
         }
+
 
         function renderMonitoringResults(results) {
             showLoading(false);
