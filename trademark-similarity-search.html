@@ -457,6 +457,7 @@
         }
 
         // Load bulletin options on page load
+        // Düzeltilmiş bülten yükleme fonksiyonu
         async function loadBulletinOptions() {
             try {
                 const snapshot = await getDocs(collection(db, 'trademarkBulletins'));
@@ -470,17 +471,17 @@
                     });
                 });
 
-                // Sort bulletins by date (newest first)
+                // Sort bulletins by date (newest first) - DÜZELTİLMİŞ KISIM
                 bulletins.sort((a, b) => {
-                    const dateA = new Date(a.bulletinDate);
-                    const dateB = new Date(b.bulletinDate);
+                    const dateA = parseBulletinDate(a.bulletinDate);
+                    const dateB = parseBulletinDate(b.bulletinDate);
                     return dateB - dateA;
                 });
 
                 // Populate select options
                 bulletinSelect.innerHTML = '<option value="">Tüm Bültenler</option>' +
                     bulletins.map(b => 
-                        `<option value="${b.id}">${b.bulletinNo} - ${formatDate(b.bulletinDate)}</option>`
+                        `<option value="${b.id}">${b.bulletinNo} - ${formatBulletinDate(b.bulletinDate)}</option>`
                     ).join('');
             } catch (error) {
                 console.error('Bülten listesi yüklenirken hata:', error);
@@ -488,23 +489,54 @@
             }
         }
 
-        // Search functionality
-        startSearchBtn.addEventListener('click', async function() {
-            const ownerFilter = ownerSearchInput.value.trim();
-            const niceFilter = niceClassSearchInput.value.trim();
-            const bulletinFilter = bulletinSelect.value;
+        // YENİ FONKSİYON: DD/MM/YYYY formatını doğru şekilde parse eder
+        function parseBulletinDate(dateString) {
+            if (!dateString) return new Date(0);
+            
+            // Eğer Firebase Timestamp objesi ise
+            if (typeof dateString === 'object' && dateString.toDate) {
+                return dateString.toDate();
+            }
+            
+            // DD/MM/YYYY formatını kontrol et (27/05/2025 gibi)
+            const ddmmyyyy = dateString.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+            if (ddmmyyyy) {
+                const [, day, month, year] = ddmmyyyy;
+                return new Date(year, month - 1, day); // month - 1 çünkü JS ayları 0'dan başlatır
+            }
+            
+            // YYYY-MM-DD formatını kontrol et (2025-05-27 gibi)
+            const yyyymmdd = dateString.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+            if (yyyymmdd) {
+                const [, year, month, day] = yyyymmdd;
+                return new Date(year, month - 1, day);
+            }
+            
+            // MM/DD/YYYY formatını kontrol et (05/27/2025 gibi)
+            const mmddyyyy = dateString.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+            if (mmddyyyy) {
+                const [, month, day, year] = mmddyyyy;
+                return new Date(year, month - 1, day);
+            }
+            
+            // Diğer formatları dene
+            const date = new Date(dateString);
+            return isNaN(date.getTime()) ? new Date(0) : date;
+        }
 
-            // Update current filters
-            currentFilters = {
-                owner: ownerFilter,
-                niceClass: niceFilter,
-                bulletin: bulletinFilter
-            };
+        // YENİ FONKSİYON: Tarihi güzel formatta göster
+        function formatBulletinDate(dateString) {
+            if (!dateString) return 'Tarih Yok';
+            
+            const date = parseBulletinDate(dateString);
+            if (isNaN(date.getTime())) {
+                return dateString; // Parse edilemeyen tarihleri olduğu gibi göster
+            }
+            
+            return date.toLocaleDateString('tr-TR'); // 27.05.2025 formatında
+        }
 
-            await performSearch();
-        });
-
-        async function performSearch() {
+         async function performSearch() {
             showLoading(true);
             
             try {
@@ -759,12 +791,12 @@
 
         function formatDate(dateString) {
             if (!dateString) return '';
-            try {
-                const date = new Date(dateString);
-                return date.toLocaleDateString('tr-TR');
-            } catch (error) {
-                return dateString;
+            
+            const date = parseBulletinDate(dateString); // Yeni parse fonksiyonunu kullan
+            if (isNaN(date.getTime())) {
+                return dateString; // Parse edilemeyen tarihleri olduğu gibi döndür
             }
+            return date.toLocaleDateString('tr-TR');
         }
 
         // Action functions (to be implemented)
