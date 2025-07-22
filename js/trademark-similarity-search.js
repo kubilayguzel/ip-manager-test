@@ -9,10 +9,9 @@ import { firebaseConfig } from '../firebase-config.js';
 initializeApp(firebaseConfig);
 const db = getFirestore();
 
-const algoliaClient = algoliasearch('THCIEJJTZ9', 'YOUR_SEARCH_ONLY_API_KEY'); // 🔐
+const algoliaClient = algoliasearch('THCIEJJTZ9', 'b6c38850bfc00adcf0ecdd9a14638c27'); // 🔐
 const index = algoliaClient.initIndex('trademark_bulletin_records');
 
-// ✅ URL'den marka ID ve hedef bülteni al
 const params = new URLSearchParams(window.location.search);
 const trademarkId = params.get('trademarkId');
 const bulletinId = params.get('bulletinId');
@@ -23,8 +22,24 @@ if (trademarkId && bulletinId) {
   runSimilaritySearch(trademarkId, bulletinId);
 }
 
+function normalizeNiceClasses(input) {
+  if (!input) return [];
+  if (Array.isArray(input)) {
+    return input
+      .flatMap(str => str.split(/[^0-9]+/))
+      .map(s => s.trim())
+      .filter(Boolean);
+  } else if (typeof input === 'string') {
+    return input
+      .split(/[^0-9]+/)
+      .map(s => s.trim())
+      .filter(Boolean);
+  } else {
+    return [];
+  }
+}
+
 async function runSimilaritySearch(trademarkId, bulletinId) {
-  // 1. İzlenen markayı al
   const docRef = doc(db, 'monitoringTrademarks', trademarkId);
   const docSnap = await getDoc(docRef);
   if (!docSnap.exists()) {
@@ -33,18 +48,15 @@ async function runSimilaritySearch(trademarkId, bulletinId) {
   }
 
   const searchTarget = docSnap.data();
-
   const query = searchTarget.markName;
   const targetDate = new Date(searchTarget.priorityDate || searchTarget.applicationDate).getTime();
-  const targetNice = searchTarget.niceClasses || [];
+  const targetNice = normalizeNiceClasses(searchTarget.niceClasses);
 
-  // 2. Algolia araması
   const { hits } = await index.search(query, {
     filters: `bulletinId:"${bulletinId}"`,
     hitsPerPage: 1000,
   });
 
-  // 3. Sınıflandırma
   const grouped = {
     previous: [],
     differentNice: [],
@@ -53,7 +65,7 @@ async function runSimilaritySearch(trademarkId, bulletinId) {
 
   for (const hit of hits) {
     const hitDate = new Date(hit.priorityDate || hit.applicationDate).getTime();
-    const hitNice = hit.niceClasses || [];
+    const hitNice = normalizeNiceClasses(hit.niceClasses);
 
     const hasCommonNice = targetNice.some(cls => hitNice.includes(cls));
     const isPrevious = hitDate < targetDate;
@@ -101,8 +113,8 @@ function buildList(list) {
       ${list.map(item => `
         <li>
           <strong>${item.markName}</strong> (${item.applicationNo})<br/>
-          Sınıflar: ${item.niceClasses?.join(', ') || '-'}<br/>
-          Başvuru Tarihi: ${new Date(item.applicationDate).toLocaleDateString('tr-TR')}
+          Sınıflar: ${Array.isArray(item.niceClasses) ? item.niceClasses.join(', ') : item.niceClasses || '-'}<br/>
+          Başvuru Tarihi: ${item.applicationDate ? new Date(item.applicationDate).toLocaleDateString('tr-TR') : '-'}
         </li>
       `).join('')}
     </ul>
