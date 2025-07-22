@@ -260,6 +260,11 @@
                 runTrademarkSearch = async function(monitoredMark, selectedBulletinNo) {
                     console.log("🚀 Fallback arama başlatılıyor...");
                     
+                    // Algolia'nın yüklenip yüklenmediğini kontrol et
+                    if (!window.algoliasearch) {
+                        throw new Error("Algolia library not loaded");
+                    }
+                    
                     const testClient = window.algoliasearch('THCIEJJTZ9', 'b6c38850bfc00adcf0ecdd9a14638c27');
                     const testIndex = testClient.initIndex('trademark_bulletin_records_live');
                     
@@ -313,9 +318,48 @@
         let algoliaClient, index;
 
         function initializeAlgolia() {
-            algoliaClient = algoliasearch('THCIEJJTZ9', 'b6c38850bfc00adcf0ecdd9a14638c27');
-            index = algoliaClient.initIndex('trademark_bulletin_records_live');
-            console.log('Algolia initialized');
+            // Algolia'nın yüklenip yüklenmediğini kontrol et
+            if (!window.algoliasearch) {
+                console.error("❌ Algolia library not loaded yet");
+                return false;
+            }
+            
+            try {
+                algoliaClient = algoliasearch('THCIEJJTZ9', 'b6c38850bfc00adcf0ecdd9a14638c27');
+                index = algoliaClient.initIndex('trademark_bulletin_records_live');
+                console.log('✅ Algolia initialized successfully');
+                return true;
+            } catch (error) {
+                console.error('❌ Algolia initialization failed:', error);
+                return false;
+            }
+        }
+
+        // Algolia'nın yüklenmesini bekle
+        function waitForAlgolia() {
+            return new Promise((resolve) => {
+                if (window.algoliasearch) {
+                    resolve(true);
+                    return;
+                }
+                
+                console.log("⏳ Algolia yüklenmesi bekleniyor...");
+                
+                const checkAlgolia = setInterval(() => {
+                    if (window.algoliasearch) {
+                        clearInterval(checkAlgolia);
+                        console.log("✅ Algolia library yüklendi");
+                        resolve(true);
+                    }
+                }, 100);
+                
+                // 10 saniye timeout
+                setTimeout(() => {
+                    clearInterval(checkAlgolia);
+                    console.error("❌ Algolia library yüklenemedi (timeout)");
+                    resolve(false);
+                }, 10000);
+            });
         }
 
         // Global variables
@@ -503,7 +547,17 @@
                 
                 if (!index) {
                     console.log('Initializing Algolia...');
-                    initializeAlgolia();
+                    const algoliaReady = await waitForAlgolia();
+                    if (!algoliaReady) {
+                        showError('Algolia servisi yüklenemedi. Lütfen sayfayı yenileyin.');
+                        return;
+                    }
+                    
+                    const initSuccess = initializeAlgolia();
+                    if (!initSuccess) {
+                        showError('Arama servisi başlatılamadı. Lütfen sayfayı yenileyin.');
+                        return;
+                    }
                 }
 
                 let searchQuery = '';
@@ -741,8 +795,16 @@
                 // Load shared layout
                 await loadSharedLayout({ activeMenuLink: 'trademark-similarity-search' });
                 
-                // Initialize Algolia
-                initializeAlgolia();
+                // Algolia'nın yüklenmesini bekle
+                console.log("Waiting for Algolia to load...");
+                const algoliaReady = await waitForAlgolia();
+                
+                if (algoliaReady) {
+                    // Initialize Algolia
+                    initializeAlgolia();
+                } else {
+                    console.warn("⚠️ Algolia could not be loaded, some features may not work");
+                }
                 
                 // Load data
                 await Promise.all([
@@ -759,10 +821,10 @@
                     console.log("⚠️ Basic search algorithm active");
                 }
                 
-                console.log("Page ready!");
+                console.log("✅ Page ready!");
                 
             } catch (error) {
-                console.error("Initialization error:", error);
+                console.error("❌ Initialization error:", error);
             }
         });
 
