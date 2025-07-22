@@ -2,44 +2,60 @@
 
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
 import {
-  getFirestore, doc, getDoc
+  getFirestore, collection, getDocs, doc, getDoc
 } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 import { firebaseConfig } from '../firebase-config.js';
 
 initializeApp(firebaseConfig);
 const db = getFirestore();
 
-const algoliaClient = algoliasearch('THCIEJJTZ9', 'b6c38850bfc00adcf0ecdd9a14638c27'); // 🔐
+const algoliaClient = algoliasearch('THCIEJJTZ9', 'b6c38850bfc00adcf0ecdd9a14638c27');
 const index = algoliaClient.initIndex('trademark_bulletin_records');
 
 const params = new URLSearchParams(window.location.search);
 const trademarkId = params.get('trademarkId');
-const bulletinId = params.get('bulletinId');
 
 const resultContainer = document.getElementById('search-results');
+const bulletinSelectContainer = document.getElementById('bulletin-select-container');
 
-if (trademarkId && bulletinId) {
-  runSimilaritySearch(trademarkId, bulletinId);
+if (trademarkId) {
+  showBulletinSelector(trademarkId);
 }
 
-function normalizeNiceClasses(input) {
-  if (!input) return [];
-  if (Array.isArray(input)) {
-    return input
-      .flatMap(str => str.split(/[^0-9]+/))
-      .map(s => s.trim())
-      .filter(Boolean);
-  } else if (typeof input === 'string') {
-    return input
-      .split(/[^0-9]+/)
-      .map(s => s.trim())
-      .filter(Boolean);
-  } else {
-    return [];
+async function showBulletinSelector(trademarkId) {
+  const snapshot = await getDocs(collection(db, 'trademarkBulletins'));
+  if (snapshot.empty) {
+    resultContainer.innerHTML = '<p>Hiç bülten kaydı bulunamadı.</p>';
+    return;
   }
+
+  let selectHTML = `<label for="bulletin-select">Bültende Ara:</label>
+    <select id="bulletin-select">
+      <option value="">Bülten Seçiniz</option>`;
+
+  snapshot.forEach(doc => {
+    const data = doc.data();
+    selectHTML += `<option value="${doc.id}">${data.bulletinNo} - ${data.bulletinDate}</option>`;
+  });
+
+  selectHTML += `</select>
+    <button id="start-search">Ara</button>`;
+
+  bulletinSelectContainer.innerHTML = selectHTML;
+
+  document.getElementById('start-search').addEventListener('click', () => {
+    const selectedId = document.getElementById('bulletin-select').value;
+    if (!selectedId) {
+      alert("Lütfen bir bülten seçiniz.");
+      return;
+    }
+    runSimilaritySearch(trademarkId, selectedId);
+  });
 }
 
 async function runSimilaritySearch(trademarkId, bulletinId) {
+  resultContainer.innerHTML = '<p>Arama yapılıyor...</p>';
+
   const docRef = doc(db, 'monitoringTrademarks', trademarkId);
   const docSnap = await getDoc(docRef);
   if (!docSnap.exists()) {
@@ -50,7 +66,7 @@ async function runSimilaritySearch(trademarkId, bulletinId) {
   const searchTarget = docSnap.data();
   const query = searchTarget.markName;
   const targetDate = new Date(searchTarget.priorityDate || searchTarget.applicationDate).getTime();
-  const targetNice = normalizeNiceClasses(searchTarget.niceClasses);
+  const targetNice = (searchTarget.niceClasses || '').split(' '); // ["32", "33", "07"]
 
   const { hits } = await index.search(query, {
     filters: `bulletinId:"${bulletinId}"`,
@@ -65,7 +81,7 @@ async function runSimilaritySearch(trademarkId, bulletinId) {
 
   for (const hit of hits) {
     const hitDate = new Date(hit.priorityDate || hit.applicationDate).getTime();
-    const hitNice = normalizeNiceClasses(hit.niceClasses);
+    const hitNice = (hit.niceClasses || '').split('/').map(cls => cls.trim()).filter(cls => cls); // ["07", "35"]
 
     const hasCommonNice = targetNice.some(cls => hitNice.includes(cls));
     const isPrevious = hitDate < targetDate;
@@ -113,8 +129,8 @@ function buildList(list) {
       ${list.map(item => `
         <li>
           <strong>${item.markName}</strong> (${item.applicationNo})<br/>
-          Sınıflar: ${Array.isArray(item.niceClasses) ? item.niceClasses.join(', ') : item.niceClasses || '-'}<br/>
-          Başvuru Tarihi: ${item.applicationDate ? new Date(item.applicationDate).toLocaleDateString('tr-TR') : '-'}
+          Sınıflar: ${item.niceClasses || '-'}<br/>
+          Başvuru Tarihi: ${new Date(item.applicationDate).toLocaleDateString('tr-TR')}
         </li>
       `).join('')}
     </ul>
