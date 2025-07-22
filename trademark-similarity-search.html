@@ -1,17 +1,23 @@
-<!-- public/trademark-similarity-search.html -->
 <!DOCTYPE html>
 <html lang="tr">
 <head>
   <meta charset="UTF-8" />
-  <title>Benzer Marka Araştırması</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Marka Benzerlik Arama</title>
   <link rel="stylesheet" href="css/shared-styles.css" />
 </head>
 <body>
   <div class="page-wrapper">
-    <h2>Benzer Marka Araştırması</h2>
+    <h2>Marka Benzerlik Araştırması</h2>
+
+    <!-- Bülten seçme alanı -->
+    <div id="bulletin-select-container" style="margin-bottom: 20px;"></div>
+
+    <!-- Arama sonuçları -->
     <div id="search-results"></div>
   </div>
-  <script src="https://cdn.jsdelivr.net/npm/algoliasearch@4.20.0/dist/algoliasearch-lite.umd.js"></script>
+
+  <script src="https://cdn.jsdelivr.net/npm/algoliasearch@4.17.2/dist/algoliasearch-lite.umd.js"></script>
   <script type="module" src="js/trademark-similarity-search.js"></script>
 </body>
 </html>
