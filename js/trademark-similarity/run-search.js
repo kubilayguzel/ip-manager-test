@@ -19,7 +19,7 @@ export async function runTrademarkSearch(monitoredMark, selectedBulletinNo) {
     .map(hit => {
       const similarityScore = calculateSimilarityScore(hit, markName);
       const sameClass = hasOverlappingNiceClasses(hit.niceClasses || [], niceClasses);
-      return { ...hit, similarityScore, sameClass };
+      return { ...hit, similarityScore, sameClass, monitoredNiceClasses: niceClasses };
     })
     .sort((a, b) => b.similarityScore - a.similarityScore);
 
