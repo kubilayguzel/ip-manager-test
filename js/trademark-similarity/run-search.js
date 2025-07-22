@@ -1,7 +1,8 @@
-import algoliasearch from 'algoliasearch';
+
 import { calculateSimilarityScore } from './scorer.js';
 import { isValidBasedOnDate, hasOverlappingNiceClasses } from './filters.js';
 
+const algoliasearch = window.algoliasearch;
 const client = algoliasearch('YourAppId', 'YourSearchApiKey');
 const index = client.initIndex('trademark_bulletin_records_live');
 
