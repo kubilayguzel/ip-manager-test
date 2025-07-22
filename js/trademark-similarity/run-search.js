@@ -8,17 +8,15 @@ const client = algoliasearch('THCIEJJTZ9', 'b6c38850bfc00adcf0ecdd9a14638c27');
 const index = client.initIndex('trademark_bulletin_records_live');
 
 export async function runTrademarkSearch(monitoredMark, selectedBulletinNo) {
-  const { markName, applicationDate, niceClasses } = monitoredMark;
-  
   console.log("🚀 runTrademarkSearch başlatılıyor:", {
-    markName,
-    selectedBulletinNo,
-    applicationDate,
-    niceClasses
+    markName: monitoredMark.markName,
+    selectedBulletinNo
   });
 
+  const { markName, applicationDate, niceClasses } = monitoredMark;
+
   try {
-    // SORUN 1: Filter field adı yanlış - bulletinNo yerine bulletinId olmalı
+    // SORUN 1 DÜZELTİLDİ: bulletinNo yerine bulletinId ve console.log yanlış yerde
     const searchResult = await index.search(markName, {
       filters: `bulletinId:"${selectedBulletinNo}"`, // bulletinNo değil bulletinId
       getRankingInfo: true,
@@ -28,44 +26,12 @@ export async function runTrademarkSearch(monitoredMark, selectedBulletinNo) {
     console.log("🧾 Algolia sonuçları:", searchResult);
     console.log("📊 Bulunan kayıt sayısı:", searchResult.hits.length);
 
-    // SORUN 2: Eğer scorer.js ve filters.js dosyaları yoksa hata verecek
-    // Bu durumda basit filtreleme yapalım
+    // Sonuçları işle ve filtrele
     const enriched = searchResult.hits
-      .filter(hit => {
-        // Tarih filtresi - eğer isValidBasedOnDate fonksiyonu yoksa basit kontrol
-        if (typeof isValidBasedOnDate === 'function') {
-          return isValidBasedOnDate(hit.applicationDate, applicationDate);
-        }
-        return true; // Eğer fonksiyon yoksa tüm sonuçları kabul et
-      })
+      .filter(hit => isValidBasedOnDate(hit.applicationDate, applicationDate))
       .map(hit => {
-        let similarityScore = 0;
-        let sameClass = false;
-
-        // Similarity score hesaplama - eğer calculateSimilarityScore fonksiyonu yoksa basit hesaplama
-        if (typeof calculateSimilarityScore === 'function') {
-          similarityScore = calculateSimilarityScore(hit, markName);
-        } else {
-          // Basit benzerlik hesaplama
-          const hitMarkName = (hit.markName || '').toLowerCase();
-          const searchMarkName = (markName || '').toLowerCase();
-          if (hitMarkName.includes(searchMarkName) || searchMarkName.includes(hitMarkName)) {
-            similarityScore = 0.8;
-          } else {
-            similarityScore = 0.3;
-          }
-        }
-
-        // Nice class karşılaştırma
-        if (typeof hasOverlappingNiceClasses === 'function') {
-          sameClass = hasOverlappingNiceClasses(hit.niceClasses || [], niceClasses || []);
-        } else {
-          // Basit nice class karşılaştırma
-          const hitClasses = hit.niceClasses || [];
-          const monitoredClasses = niceClasses || [];
-          sameClass = hitClasses.some(cls => monitoredClasses.includes(cls));
-        }
-
+        const similarityScore = calculateSimilarityScore(hit, markName);
+        const sameClass = hasOverlappingNiceClasses(hit.niceClasses || [], niceClasses || []);
         return { 
           ...hit, 
           similarityScore, 
