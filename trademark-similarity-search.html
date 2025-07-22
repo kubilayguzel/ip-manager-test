@@ -634,8 +634,9 @@
                                 continue;
                             }
 
-                            // 2. Sadece izlenen markadan önce başvurulmuş benzer markaları al
-                            if (hitAppDate < monitoredAppDate) {
+                            // 2. Sadece izlenen markadan sonra başvurulmuş benzer markaları al
+
+                            if (hitAppDate >= monitoredAppDate) {
                                 allSimilarResults.push({
                                     ...hit,
                                     monitoredTrademark: markName,
