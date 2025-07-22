@@ -3,353 +3,232 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>IP Manager - Marka Benzerlik Araması</title>
-    <link rel="stylesheet" href="css/shared-styles.css">
+    <title>IP Manager - Marka Bülten İzleme</title>
     <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            margin: 0;
-            padding: 0;
-            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-            min-height: 100vh;
-            display: flex;
+        /* Shared styles matching the accruals page */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333; }
+        
+        .page-wrapper { flex-grow: 1; display: flex; flex-direction: column; height: 100vh; overflow-y: auto; background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); }
+        .main-container { width: 100%; padding: 30px; margin: 0; }
+        
+        .page-header { background: rgba(255, 255, 255, 0.95); padding: 30px; border-radius: 20px; margin-bottom: 30px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1); }
+        .page-title { font-size: 2em; color: #1e3c72; margin-bottom: 10px; }
+        .page-subtitle { color: #666; font-size: 1.1em; }
+        
+        .monitoring-container { background: rgba(255, 255, 255, 0.95); border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); overflow: hidden; margin-bottom: 30px; }
+        .monitoring-header { padding: 20px 30px; border-bottom: 1px solid #e1e8ed; }
+        .monitoring-header h3 { color: #1e3c72; margin-bottom: 20px; font-size: 1.3em; }
+        
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px 25px; }
+        .form-group { margin-bottom: 15px; }
+        .form-label { display: block; margin-bottom: 8px; font-weight: 600; color: #333; }
+        .form-input, .form-select { 
+            width: 100%; 
+            padding: 12px 15px; 
+            border: 2px solid #e1e8ed; 
+            border-radius: 10px; 
+            font-size: 1em; 
+            transition: all 0.3s ease; 
+            background: white; 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
         }
-
-        .page-wrapper {
-            flex-grow: 1;
-            display: flex;
-            flex-direction: column;
-            overflow-y: auto;
+        .form-input:focus, .form-select:focus { 
+            border-color: #1e3c72; 
+            outline: none; 
+            box-shadow: 0 0 0 3px rgba(30, 60, 114, 0.1); 
         }
-
-        .main-container {
-            flex: 1;
-            padding: 30px;
-            max-width: 1400px;
-            margin: 0 auto;
-            width: 100%;
-            box-sizing: border-box;
+        
+        .btn { 
+            padding: 12px 24px; 
+            border: none; 
+            border-radius: 10px; 
+            cursor: pointer; 
+            font-size: 1em; 
+            font-weight: 600; 
+            transition: all 0.3s ease; 
+            text-decoration: none; 
+            display: inline-block; 
+            text-align: center; 
         }
-
-        .page-header {
-            background: rgba(255, 255, 255, 0.95);
-            padding: 30px;
-            border-radius: 20px;
-            margin-bottom: 30px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        .btn-primary { background: #1e3c72; color: white; }
+        .btn-primary:hover { background: #2a5298; transform: translateY(-1px); }
+        .btn-secondary { background: #6c757d; color: white; }
+        .btn-secondary:hover { background: #5a6268; transform: translateY(-1px); }
+        
+        .results-container { background: rgba(255, 255, 255, 0.95); border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); overflow: hidden; }
+        .results-header { padding: 20px 30px; border-bottom: 1px solid #e1e8ed; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; }
+        .results-header h3 { color: #1e3c72; font-size: 1.3em; }
+        
+        .results-table { width: 100%; border-collapse: collapse; }
+        .results-table th, .results-table td { padding: 15px; text-align: left; border-bottom: 1px solid #f0f0f0; }
+        .results-table th { background: #f8f9fa; font-weight: 600; }
+        .results-table tbody tr:hover { background-color: #f8f9fa; }
+        
+        .status-badge { padding: 4px 10px; border-radius: 12px; font-size: 0.8em; font-weight: 500; color: white; text-align: center; }
+        .status-new { background-color: #28a745; }
+        .status-monitored { background-color: #007bff; }
+        .status-expired { background-color: #6c757d; }
+        
+        .action-btn { 
+            background: #007bff; 
+            color: white; 
+            border: none; 
+            padding: 8px 12px; 
+            border-radius: 6px; 
+            cursor: pointer; 
+            margin-left: 5px; 
+            transition: all 0.3s ease; 
+            font-size: 0.9em;
         }
-
-        .page-title {
-            font-size: 2em;
-            color: #1e3c72;
-            margin-bottom: 10px;
+        .action-btn:hover { background: #0056b3; transform: translateY(-1px); }
+        .action-btn.view-btn { background-color: #17a2b8; }
+        .action-btn.view-btn:hover { background-color: #138496; }
+        .action-btn.monitor-btn { background-color: #28a745; }
+        .action-btn.monitor-btn:hover { background-color: #218838; }
+        
+        .loading { text-align: center; padding: 50px; color: #666; }
+        .no-records { text-align: center; padding: 50px; color: #666; }
+        
+        .filter-group { display: flex; gap: 10px; align-items: center; }
+        .filter-label { font-weight: 500; }
+        .filter-select { padding: 8px 12px; border-radius: 8px; border: 1px solid #ccc; }
+        
+        .search-section { background: #f8f9fa; padding: 20px; border-radius: 15px; margin-bottom: 20px; }
+        
+        .form-actions { 
+            display: flex; 
+            gap: 15px; 
+            align-items: center; 
+            margin-top: 20px; 
+            flex-wrap: wrap; 
         }
-
-        .page-subtitle {
-            color: #666;
-            font-size: 1.1em;
-        }
-
-        .search-controls {
-            background: rgba(255, 255, 255, 0.95);
-            padding: 25px;
-            border-radius: 20px;
-            margin-bottom: 25px;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-        }
-
-        .control-row {
-            display: flex;
-            gap: 20px;
-            margin-bottom: 20px;
-            align-items: end;
-            flex-wrap: wrap;
-        }
-
-        .control-group {
-            flex: 1;
-            min-width: 200px;
-        }
-
-        .control-label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: 600;
-            color: #333;
-        }
-
-        .control-input, .control-select {
-            width: 100%;
-            padding: 12px;
-            border: 2px solid #e0e6ed;
-            border-radius: 8px;
-            font-size: 14px;
-            transition: border-color 0.3s ease;
-        }
-
-        .control-input:focus, .control-select:focus {
-            outline: none;
-            border-color: #007bff;
-        }
-
-        .search-button {
-            background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
-            color: white;
-            border: none;
-            padding: 12px 30px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 16px;
-            font-weight: 600;
-            transition: all 0.3s ease;
-            min-width: 120px;
-        }
-
-        .search-button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(0, 123, 255, 0.3);
-        }
-
-        .monitoring-section {
-            background: rgba(255, 255, 255, 0.95);
-            border-radius: 20px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-            margin-bottom: 25px;
-            overflow: hidden;
-        }
-
-        .monitoring-header {
-            background: #f8f9fa;
-            padding: 20px 25px;
-            border-bottom: 1px solid #e9ecef;
-        }
-
-        .monitoring-title {
-            font-size: 1.3em;
-            color: #1e3c72;
-            margin: 0;
-        }
-
-        .monitoring-filters {
-            padding: 20px 25px;
-            border-bottom: 1px solid #f0f0f0;
-        }
-
-        .filter-row {
-            display: flex;
-            gap: 15px;
-            align-items: end;
-            flex-wrap: wrap;
-        }
-
-        .filter-group {
-            flex: 1;
-            min-width: 150px;
-        }
-
-        .monitoring-content {
-            padding: 25px;
-        }
-
-        .monitoring-table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        .monitoring-table th,
-        .monitoring-table td {
-            padding: 12px;
-            text-align: left;
-            border-bottom: 1px solid #f0f0f0;
-        }
-
-        .monitoring-table th {
-            background: #f8f9fa;
-            font-weight: 600;
-            color: #333;
-        }
-
-        .monitoring-table tr:hover {
-            background: rgba(0, 123, 255, 0.02);
-        }
-
-        .status-badge {
-            display: inline-block;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 0.8em;
-            font-weight: 600;
-            text-transform: uppercase;
-        }
-
-        .status-new { background: #e3f2fd; color: #1976d2; }
-        .status-monitored { background: #e8f5e8; color: #388e3c; }
-        .status-expired { background: #ffebee; color: #d32f2f; }
-
-        .loading, .no-records, .error {
-            text-align: center;
-            padding: 40px;
-            color: #666;
-        }
-
-        .error {
-            color: #dc3545;
-            background: #f8d7da;
-            border: 1px solid #f5c6cb;
-            border-radius: 8px;
-            margin: 20px 0;
-        }
-
-        .results-section {
-            background: rgba(255, 255, 255, 0.95);
-            border-radius: 20px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-            overflow: hidden;
-        }
-
-        .results-header {
-            background: #f8f9fa;
-            padding: 20px 25px;
-            border-bottom: 1px solid #e9ecef;
-        }
-
-        .results-title {
-            font-size: 1.3em;
-            color: #1e3c72;
-            margin: 0;
-        }
-
-        .results-content {
-            padding: 25px;
-        }
-
-        .results-table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        .results-table th,
-        .results-table td {
-            padding: 12px;
-            text-align: left;
-            border-bottom: 1px solid #f0f0f0;
-            vertical-align: top;
-        }
-
-        .results-table th {
-            background: #f8f9fa;
-            font-weight: 600;
-            color: #333;
-            position: sticky;
-            top: 0;
-            z-index: 10;
-        }
-
-        .results-table tr:hover {
-            background: rgba(0, 123, 255, 0.02);
-        }
-
-        .trademark-name {
-            font-weight: 600;
-            color: #1e3c72;
-        }
-
-        .monitoring-badge {
-            background: #fff3cd;
-            color: #856404;
-            padding: 2px 6px;
-            border-radius: 3px;
-            font-size: 0.75em;
-            font-weight: 600;
+        
+        @media (max-width: 768px) {
+            .form-grid { grid-template-columns: 1fr; }
+            .form-actions { flex-direction: column; align-items: stretch; }
         }
     </style>
 </head>
 <body>
     <div id="layout-placeholder"></div>
+    <div id="sidebar-container"></div>
     <div class="page-wrapper">
         <main class="main-container">
             <section class="page-header">
-                <h1 class="page-title">🔍 Marka Benzerlik Araması</h1>
-                <p class="page-subtitle">İzleme listenizdeki markalara benzer yeni başvuruları bulun ve genel arama yapın.</p>
+                <h1 class="page-title">Marka Bülten İzleme</h1>
+                <p class="page-subtitle">Marka bültenlerini takip edin ve yeni başvuruları izleyin.</p>
             </section>
-
-            <div class="search-controls">
-                <div class="control-row">
-                    <div class="control-group">
-                        <label class="control-label" for="bulletin-select">Bülten Seçin:</label>
-                        <select id="bulletin-select" class="control-select">
-                            <option value="">Yükleniyor...</option>
-                        </select>
-                    </div>
-                    <div class="control-group">
-                        <label class="control-label" for="owner-filter">Sahip Filtresi (İsteğe Bağlı):</label>
-                        <input type="text" id="owner-filter" class="control-input" placeholder="Sahip adı girin...">
-                    </div>
-                    <div class="control-group">
-                        <label class="control-label" for="nice-class-filter">Nice Sınıfı (İsteğe Bağlı):</label>
-                        <input type="text" id="nice-class-filter" class="control-input" placeholder="Örn: 35, 9, 42">
-                    </div>
-                    <div class="control-group">
-                        <button id="search-button" class="search-button">🔍 Ara</button>
+    
+            <div class="monitoring-container">
+                <div class="monitoring-header">
+                    <h3>Arama Kriterleri</h3>
+                    <div class="search-section">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="ownerSearch" class="form-label">Sahip</label>
+                                <input type="text" id="ownerSearch" class="form-input" placeholder="Sahip adına göre filtrele">
+                            </div>
+                            <div class="form-group">
+                                <label for="niceClassSearch" class="form-label">Nice Sınıfı</label>
+                                <input type="text" id="niceClassSearch" class="form-input" placeholder="Nice sınıfına göre filtrele (örn: 35)">
+                            </div>
+                            <div class="form-group">
+                                <label for="bulletinSelect" class="form-label">Bülten Seç</label>
+                                <select id="bulletinSelect" class="form-select">
+                                    <option value="">Bülten seçiniz...</option>
+                                    <!-- Bültenler Firebase'dan dinamik olarak yüklenir -->
+                                </select>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <div class="monitoring-section">
-                <div class="monitoring-header">
-                    <h2 class="monitoring-title">📊 İzleme Listesi</h2>
-                </div>
-                <div class="monitoring-filters">
-                    <div class="filter-row">
-                        <div class="filter-group">
-                            <label class="control-label" for="owner-search">Sahip Ara:</label>
-                            <input type="text" id="owner-search" class="control-input" placeholder="Sahip adı...">
-                        </div>
-                        <div class="filter-group">
-                            <label class="control-label" for="nice-search">Nice Sınıfı:</label>
-                            <input type="text" id="nice-search" class="control-input" placeholder="Nice sınıfı...">
-                        </div>
+            <div class="results-container">
+                <div class="results-header">
+                    <h3>Filtrelenmiş İzleme Listesi</h3>
+                    <div class="filter-group">
+                        <button type="button" class="btn btn-secondary" id="clearFiltersBtn">🗑️ Temizle</button>
                     </div>
                 </div>
-                <div class="monitoring-content">
-                    <div id="loading-monitoring-list" class="loading">İzleme listesi yükleniyor...</div>
-                    <div id="no-monitoring-records" class="no-records" style="display: none;">İzleme listeniz boş.</div>
-                    <table id="monitoring-table" class="monitoring-table" style="display: none;">
+                <div class="table-container">
+                    <table class="results-table">
                         <thead>
                             <tr>
                                 <th>Marka Adı</th>
                                 <th>Başvuru No</th>
                                 <th>Sahip</th>
-                                <th>Nice Sınıfları</th>
+                                <th>Nice Sınıfı</th>
                                 <th>Başvuru Tarihi</th>
                                 <th>Durum</th>
                             </tr>
                         </thead>
-                        <tbody id="monitoring-list-body"></tbody>
+                        <tbody id="monitoringListBody">
+                            <!-- İzleme listesi dinamik olarak yüklenir -->
+                        </tbody>
                     </table>
+                    <div id="loadingMonitoringList" class="loading" style="display: none;">
+                        İzleme listesi yükleniyor...
+                    </div>
+                    <div id="noMonitoringRecords" class="no-records" style="display: none;">
+                        İzleme listenizde marka bulunamadı.
+                    </div>
+                </div>
+                
+                <div class="form-actions" style="margin-top: 20px;">
+                    <button type="button" class="btn btn-primary" id="startSearchBtn">🔍 Aramayı Başlat</button>
                 </div>
             </div>
 
-            <div class="results-section">
+            <div class="results-container" style="margin-top: 30px;">
                 <div class="results-header">
-                    <h2 class="results-title">📋 Arama Sonuçları</h2>
+                    <h3>Arama Sonuçları</h3>
+                    <div class="filter-group">
+                        <label class="filter-label" for="statusFilter">Duruma Göre Filtrele:</label>
+                        <select id="statusFilter" class="filter-select">
+                            <option value="all">Tümü</option>
+                            <option value="new">Yeni</option>
+                            <option value="monitored">İzleniyor</option>
+                            <option value="expired">Süresi Dolmuş</option>
+                        </select>
+                    </div>
                 </div>
-                <div class="results-content">
-                    <div id="loading-results" class="loading" style="display: none;">Arama yapılıyor...</div>
-                    <div id="no-results" class="no-records">Arama yapmak için yukarıdaki filtreleri kullanın.</div>
-                    <div id="search-results" style="display: none;"></div>
+                <div class="table-container">
+                    <table class="results-table">
+                        <thead>
+                            <tr>
+                                <th>Başvuru No</th>
+                                <th>Marka Adı</th>
+                                <th>Sahip</th>
+                                <th>Nice Sınıfı</th>
+                                <th>Bülten Tarihi</th>
+                                <th>Durum</th>
+                                <th>İşlemler</th>
+                            </tr>
+                        </thead>
+                        <tbody id="resultsTableBody">
+                            <!-- Arama sonuçları dinamik olarak yüklenir -->
+                        </tbody>
+                    </table>
+                    <div id="loadingIndicator" class="loading" style="display: none;">
+                        <div>🔍 Arama yapılıyor...</div>
+                    </div>
+                    <div id="noRecordsMessage" class="no-records" style="display: none;">
+                        Arama kriterlerinize uygun sonuç bulunamadı.
+                    </div>
                 </div>
             </div>
         </main>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/algoliasearch@4/dist/algoliasearch-lite.umd.js"></script>
     <script type="module">
         import { loadSharedLayout } from './js/layout-loader.js';
-        import { authService, monitoringService, personService } from './firebase-config.js';
+        import { authService, monitoringService } from './firebase-config.js';
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
         import { getFirestore, collection, getDocs } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
         
+        // Firebase configuration - replace with your actual config
         const firebaseConfig = {
             apiKey: "AIzaSyDbdqfiVbobnl1BtyiWxhD4bfIcREw8ZRc",
             authDomain: "ip-manager-production-aab4b.firebaseapp.com",
@@ -360,35 +239,49 @@
             measurementId: "G-QY1P3ZCMC4"
         };
 
+        // If you have a separate firebase-config.js file, use this instead:
+        // import { firebaseConfig } from './firebase-config.js';
+
+        // Initialize Firebase
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
+        // Initialize Algolia (using search API key) - Will be set after auth
         let algoliaClient, index;
-        let monitoringTrademarks = [];
-        let filteredMonitoringTrademarks = [];
-        let currentResults = [];
-        let allPersons = []; // Kişi bilgileri için
-
-        // DOM elements
-        const bulletinSelect = document.getElementById('bulletin-select');
-        const ownerFilter = document.getElementById('owner-filter');
-        const niceClassFilter = document.getElementById('nice-class-filter');
-        const searchButton = document.getElementById('search-button');
-        const loadingMonitoringList = document.getElementById('loading-monitoring-list');
-        const noMonitoringRecords = document.getElementById('no-monitoring-records');
-        const monitoringTable = document.getElementById('monitoring-table');
-        const monitoringListBody = document.getElementById('monitoring-list-body');
-        const ownerSearchInput = document.getElementById('owner-search');
-        const niceSearchInput = document.getElementById('nice-search');
-        const loadingResults = document.getElementById('loading-results');
-        const noResults = document.getElementById('no-results');
-        const searchResults = document.getElementById('search-results');
 
         function initializeAlgolia() {
             algoliaClient = algoliasearch('THCIEJJTZ9', 'b6c38850bfc00adcf0ecdd9a14638c27');
-            index = algoliaClient.initIndex('trademark_bulletin_records');
+            index = algoliaClient.initIndex('trademark_bulletin_records_live');
+            console.log('Algolia initialized');
         }
 
+        // Global variables
+        let currentResults = [];
+        let monitoringTrademarks = []; // İzleme listesindeki markalar
+        let filteredMonitoringTrademarks = []; // Filtrelenmiş izleme listesi
+        let currentFilters = {
+            owner: '',
+            niceClass: '',
+            bulletin: ''
+        };
+
+        // DOM elements
+        const startSearchBtn = document.getElementById('startSearchBtn');
+        const clearFiltersBtn = document.getElementById('clearFiltersBtn');
+        const ownerSearchInput = document.getElementById('ownerSearch');
+        const niceClassSearchInput = document.getElementById('niceClassSearch');
+        const bulletinSelect = document.getElementById('bulletinSelect');
+        const statusFilter = document.getElementById('statusFilter');
+        const resultsTableBody = document.getElementById('resultsTableBody');
+        const loadingIndicator = document.getElementById('loadingIndicator');
+        const noRecordsMessage = document.getElementById('noRecordsMessage');
+        
+        // İzleme listesi elemanları
+        const monitoringListBody = document.getElementById('monitoringListBody');
+        const loadingMonitoringList = document.getElementById('loadingMonitoringList');
+        const noMonitoringRecords = document.getElementById('noMonitoringRecords');
+
+        // Page initialization
         document.addEventListener('DOMContentLoaded', async () => {
             await loadSharedLayout({ activeMenuLink: 'trademark-similarity-search.html' });
         });
@@ -396,58 +289,17 @@
         // Auth state monitoring
         authService.auth.onAuthStateChanged(async (user) => {
             if (user) {
+                // User is logged in, initialize the app
                 initializeAlgolia();
-                await loadPersons(); // Kişileri yükle
                 await loadBulletinOptions();
                 await loadMonitoringTrademarks();
-                setupEventListeners();
             } else {
+                // User is not logged in, redirect to login
                 window.location.href = 'index.html';
             }
         });
 
-        // Kişileri yükle
-        async function loadPersons() {
-            try {
-                const personsResult = await personService.getPersons();
-                if (personsResult.success) {
-                    allPersons = personsResult.data || [];
-                    console.log('Kişiler yüklendi:', allPersons.length);
-                } else {
-                    console.warn('Kişiler yüklenirken hata:', personsResult.error);
-                    allPersons = [];
-                }
-            } catch (error) {
-                console.warn('Kişiler yüklenirken hata:', error);
-                allPersons = [];
-            }
-        }
-
-        // Sahip bilgisini işleme fonksiyonu
-        function processOwnerInfo(owners) {
-            try {
-                if (owners && Array.isArray(owners)) {
-                    return owners.map(owner => {
-                        if (typeof owner === 'object' && owner.id) {
-                            const match = allPersons.find(p => p.id === owner.id);
-                            return match ? match.name : `ID:${owner.id}`;
-                        } else if (typeof owner === 'string') {
-                            return owner;
-                        } else if (typeof owner === 'object' && owner.name) {
-                            return owner.name;
-                        }
-                        return 'Bilinmeyen';
-                    }).join(', ');
-                } else if (typeof owners === 'string') {
-                    return owners;
-                }
-                return '-';
-            } catch (error) {
-                console.warn('Sahip bilgisi işlenirken hata:', error);
-                return '-';
-            }
-        }
-
+        // Load monitoring trademarks from user's monitoring list
         async function loadMonitoringTrademarks() {
             const user = authService.getCurrentUser();
             if (!user) return;
@@ -471,6 +323,7 @@
             }
         }
 
+        // Render monitoring trademarks list
         function renderMonitoringList(trademarks) {
             showMonitoringLoading(false);
             
@@ -480,7 +333,9 @@
             }
 
             const tableHTML = trademarks.map(trademark => {
-                const owners = processOwnerInfo(trademark.owners); // Güncellenen fonksiyon
+                const owners = Array.isArray(trademark.owners) 
+                    ? trademark.owners.map(o => o.name || o).join(', ') 
+                    : trademark.owners || '';
                 const niceClasses = Array.isArray(trademark.niceClass) 
                     ? trademark.niceClass.join(', ') 
                     : trademark.niceClass || '';
@@ -502,17 +357,22 @@
             }).join('');
 
             monitoringListBody.innerHTML = tableHTML;
-            monitoringTable.style.display = '';
+            monitoringListBody.style.display = '';
         }
 
+        // Filter monitoring trademarks based on input filters
         function filterMonitoringTrademarks() {
             const ownerFilter = ownerSearchInput.value.toLowerCase().trim();
-            const niceFilter = niceSearchInput.value.trim();
+            const niceFilter = niceClassSearchInput.value.trim();
 
             filteredMonitoringTrademarks = monitoringTrademarks.filter(trademark => {
-                const owners = processOwnerInfo(trademark.owners).toLowerCase();
+                // Owner filter
+                const owners = Array.isArray(trademark.owners) 
+                    ? trademark.owners.map(o => (o.name || o).toLowerCase()).join(' ') 
+                    : (trademark.owners || '').toLowerCase();
                 const ownerMatch = !ownerFilter || owners.includes(ownerFilter);
 
+                // Nice class filter
                 const niceClasses = Array.isArray(trademark.niceClass) 
                     ? trademark.niceClass.join(',') 
                     : trademark.niceClass || '';
@@ -525,28 +385,101 @@
             console.log(`Filtre sonrası ${filteredMonitoringTrademarks.length} marka gösteriliyor`);
         }
 
-        function setupEventListeners() {
-            searchButton.addEventListener('click', performSearch);
-            ownerSearchInput.addEventListener('input', filterMonitoringTrademarks);
-            niceSearchInput.addEventListener('input', filterMonitoringTrademarks);
+        // Get trademark status info
+        function getTrademarkStatus(status) {
+            switch (status) {
+                case 'application': return { text: 'Başvuru', class: 'new' };
+                case 'registered': return { text: 'Tescilli', class: 'monitored' };
+                case 'rejected': return { text: 'Reddedildi', class: 'expired' };
+                case 'pending': return { text: 'Beklemede', class: 'new' };
+                default: return { text: 'İzleniyor', class: 'monitored' };
+            }
         }
 
-        async function performSearch() {
-            const bulletinId = bulletinSelect.value;
-            if (!bulletinId) {
-                alert('Lütfen bir bülten seçin.');
-                return;
+        // Monitoring list utility functions
+        function showMonitoringLoading(show) {
+            if (show) {
+                loadingMonitoringList.style.display = 'block';
+                monitoringListBody.style.display = 'none';
+                noMonitoringRecords.style.display = 'none';
+            } else {
+                loadingMonitoringList.style.display = 'none';
             }
+        }
 
-            showResultsLoading(true);
+        function showMonitoringNoRecords() {
+            noMonitoringRecords.style.display = 'block';
+            monitoringListBody.style.display = 'none';
+            loadingMonitoringList.style.display = 'none';
+        }
 
+        function showMonitoringError(message) {
+            showMonitoringLoading(false);
+            noMonitoringRecords.innerHTML = `<div style="color: #dc3545;">${message}</div>`;
+            noMonitoringRecords.style.display = 'block';
+        }
+
+        // Load bulletin options on page load
+        loadBulletinOptions();
+
+        async function loadBulletinOptions() {
             try {
-                const ownerFilterValue = ownerFilter.value.trim();
-                const niceFilterValue = niceClassFilter.value.trim();
+                const snapshot = await getDocs(collection(db, 'trademarkBulletins'));
+                const bulletins = [];
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    bulletins.push({ 
+                        id: doc.id, 
+                        bulletinNo: data.bulletinNo,
+                        bulletinDate: data.bulletinDate || data.createdAt
+                    });
+                });
+
+                // Sort bulletins by date (newest first)
+                bulletins.sort((a, b) => {
+                    const dateA = new Date(a.bulletinDate);
+                    const dateB = new Date(b.bulletinDate);
+                    return dateB - dateA;
+                });
+
+                // Populate select options
+                bulletinSelect.innerHTML = '<option value="">Tüm Bültenler</option>' +
+                    bulletins.map(b => 
+                        `<option value="${b.id}">${b.bulletinNo} - ${formatDate(b.bulletinDate)}</option>`
+                    ).join('');
+            } catch (error) {
+                console.error('Bülten listesi yüklenirken hata:', error);
+                bulletinSelect.innerHTML = '<option value="">Bülten yüklenirken hata oluştu</option>';
+            }
+        }
+
+        // Search functionality
+        startSearchBtn.addEventListener('click', async function() {
+            const ownerFilter = ownerSearchInput.value.trim();
+            const niceFilter = niceClassSearchInput.value.trim();
+            const bulletinFilter = bulletinSelect.value;
+
+            // Update current filters
+            currentFilters = {
+                owner: ownerFilter,
+                niceClass: niceFilter,
+                bulletin: bulletinFilter
+            };
+
+            await performSearch();
+        });
+
+        async function performSearch() {
+            showLoading(true);
+            
+            try {
+                const ownerFilter = currentFilters.owner.trim();
+                const niceFilter = currentFilters.niceClass.trim();
+                const bulletinFilter = currentFilters.bulletin;
 
                 // Eğer sadece bülten seçili ve diğer filtreler boşsa, monitoring trademarks'tan arama yap
-                if (!ownerFilterValue && !niceFilterValue) {
-                    await performMonitoringTrademarkSearch(bulletinId);
+                if (bulletinFilter && !ownerFilter && !niceFilter) {
+                    await performMonitoringTrademarkSearch(bulletinFilter);
                     return;
                 }
 
@@ -554,24 +487,33 @@
                 let searchQuery = '';
                 let filters = [];
 
-                if (ownerFilterValue) {
-                    searchQuery = ownerFilterValue;
+                // Add owner filter to search query
+                if (ownerFilter) {
+                    searchQuery = ownerFilter;
                 }
 
-                filters.push(`bulletinId:"${bulletinId}"`);
-
-                if (niceFilterValue) {
-                    filters.push(`niceClasses:"${niceFilterValue}"`);
+                // Add bulletin filter
+                if (bulletinFilter) {
+                    filters.push(`bulletinId:"${bulletinFilter}"`);
                 }
 
+                // Add nice class filter  
+                if (niceFilter) {
+                    filters.push(`niceClasses:"${niceFilter}"`);
+                }
+
+                // Perform Algolia search
                 const searchOptions = {
-                    hitsPerPage: 1000,
+                    hitsPerPage: 1000, // Maximum allowed by Algolia to get all results
                     attributesToRetrieve: [
                         'markName', 'applicationNo', 'holders', 'niceClasses', 
                         'bulletinId', 'applicationDate', 'imagePath'
-                    ],
-                    filters: filters.join(' AND ')
+                    ]
                 };
+
+                if (filters.length > 0) {
+                    searchOptions.filters = filters.join(' AND ');
+                }
 
                 const { hits } = await index.search(searchQuery, searchOptions);
                 currentResults = hits;
@@ -584,10 +526,12 @@
             }
         }
 
+        // Monitoring trademarks'tan arama yapma fonksiyonu
         async function performMonitoringTrademarkSearch(bulletinId) {
             try {
                 console.log('Filtrelenmiş izleme listesi üzerinden arama başlatılıyor...');
                 
+                // Filtrelenmiş izleme listesini kullan
                 const trademarksToSearch = filteredMonitoringTrademarks.length > 0 
                     ? filteredMonitoringTrademarks 
                     : monitoringTrademarks;
@@ -595,10 +539,11 @@
                 console.log(`${trademarksToSearch.length} marka için arama yapılacak`);
 
                 if (trademarksToSearch.length === 0) {
-                    showError('Filtrelenmiş izleme listesinde marka bulunamadı.');
+                    showError('Filtrelen izleme listesinde marka bulunamadı.');
                     return;
                 }
 
+                // Her monitored trademark için benzer olanları ara
                 const allSimilarResults = [];
                 let processedCount = 0;
 
@@ -613,7 +558,9 @@
                             hitsPerPage: 1000,
                         });
 
+                        // Benzer sonuçları kategorize et
                         for (const hit of hits) {
+                            // Kendi markasını sonuçlara dahil etme
                             if (hit.applicationNo === (trademark.applicationNumber || trademark.applicationNo)) {
                                 continue;
                             }
@@ -640,7 +587,7 @@
         }
 
         function renderMonitoringResults(results) {
-            showResultsLoading(false);
+            showLoading(false);
             
             if (results.length === 0) {
                 showError('İzlenen markalarınıza benzer yeni marka bulunamadı.');
@@ -651,43 +598,39 @@
                 const holders = Array.isArray(hit.holders) ? hit.holders.join(', ') : hit.holders || '';
                 const niceClasses = Array.isArray(hit.niceClasses) ? hit.niceClasses.join(', ') : hit.niceClasses || '';
                 const applicationDate = hit.applicationDate ? formatDate(hit.applicationDate) : '';
-
+                
                 return `
-                    <tr>
-                        <td><strong class="trademark-name">${hit.markName || ''}</strong></td>
+                    <tr data-id="${hit.objectID}">
                         <td>${hit.applicationNo || ''}</td>
+                        <td><strong>${hit.markName || ''}</strong><br/><small style="color: #666;">Benzer: ${hit.monitoredTrademark}</small></td>
                         <td>${holders}</td>
                         <td>${niceClasses}</td>
                         <td>${applicationDate}</td>
-                        <td><span class="monitoring-badge">Benzer: ${hit.monitoredTrademark}</span></td>
+                        <td><span class="status-badge status-new">Benzer</span></td>
+                        <td>
+                            <button class="action-btn view-btn" onclick="viewDetails('${hit.objectID}')">Görüntüle</button>
+                            <button class="action-btn monitor-btn" onclick="addToMonitoring('${hit.objectID}')">İzlemeye Al</button>
+                        </td>
                     </tr>
                 `;
             }).join('');
 
-            searchResults.innerHTML = `
-                <table class="results-table">
-                    <thead>
-                        <tr>
-                            <th>Marka Adı</th>
-                            <th>Başvuru No</th>
-                            <th>Sahip</th>
-                            <th>Nice Sınıfları</th>
-                            <th>Başvuru Tarihi</th>
-                            <th>İzlenen Marka</th>
-                        </tr>
-                    </thead>
-                    <tbody>${tableHTML}</tbody>
-                </table>
-            `;
-            searchResults.style.display = '';
-            noResults.style.display = 'none';
+            resultsTableBody.innerHTML = tableHTML;
+            resultsTableBody.style.display = '';
+
+            // Sonuç sayısını göster
+            const resultCountHtml = `<div style="padding: 15px; background: #e8f4f8; border-radius: 8px; margin-bottom: 20px;">
+                <strong>${results.length} benzer marka bulundu</strong> - İzleme listenizdeki markalara benzer yeni başvurular
+            </div>`;
+            
+            resultsTableBody.insertAdjacentHTML('beforebegin', resultCountHtml);
         }
 
         function renderResults(results) {
-            showResultsLoading(false);
+            showLoading(false);
             
             if (results.length === 0) {
-                showError('Arama kriterlerinize uygun sonuç bulunamadı.');
+                showNoResults();
                 return;
             }
 
@@ -695,108 +638,123 @@
                 const holders = Array.isArray(hit.holders) ? hit.holders.join(', ') : hit.holders || '';
                 const niceClasses = Array.isArray(hit.niceClasses) ? hit.niceClasses.join(', ') : hit.niceClasses || '';
                 const applicationDate = hit.applicationDate ? formatDate(hit.applicationDate) : '';
-
+                
                 return `
-                    <tr>
-                        <td><strong class="trademark-name">${hit.markName || ''}</strong></td>
+                    <tr data-id="${hit.objectID}">
                         <td>${hit.applicationNo || ''}</td>
+                        <td>${hit.markName || ''}</td>
                         <td>${holders}</td>
                         <td>${niceClasses}</td>
                         <td>${applicationDate}</td>
+                        <td><span class="status-badge status-new">Yeni</span></td>
+                        <td>
+                            <button class="action-btn view-btn" onclick="viewDetails('${hit.objectID}')">Görüntüle</button>
+                            <button class="action-btn monitor-btn" onclick="addToMonitoring('${hit.objectID}')">İzlemeye Al</button>
+                        </td>
                     </tr>
                 `;
             }).join('');
 
-            searchResults.innerHTML = `
-                <table class="results-table">
-                    <thead>
-                        <tr>
-                            <th>Marka Adı</th>
-                            <th>Başvuru No</th>
-                            <th>Sahip</th>
-                            <th>Nice Sınıfları</th>
-                            <th>Başvuru Tarihi</th>
-                        </tr>
-                    </thead>
-                    <tbody>${tableHTML}</tbody>
-                </table>
-            `;
-            searchResults.style.display = '';
-            noResults.style.display = 'none';
+            resultsTableBody.innerHTML = tableHTML;
+            resultsTableBody.style.display = '';
         }
 
+        // Filter event listeners
+        ownerSearchInput.addEventListener('input', filterMonitoringTrademarks);
+        niceClassSearchInput.addEventListener('input', filterMonitoringTrademarks);
+
+        // Clear filters
+        clearFiltersBtn.addEventListener('click', function() {
+            ownerSearchInput.value = '';
+            niceClassSearchInput.value = '';
+            bulletinSelect.value = '';
+            currentFilters = { owner: '', niceClass: '', bulletin: '' };
+            
+            // Reset monitoring list to show all
+            filteredMonitoringTrademarks = [...monitoringTrademarks];
+            renderMonitoringList(filteredMonitoringTrademarks);
+            
+            // Clear search results
+            resultsTableBody.innerHTML = '';
+            showNoResults(false);
+        });
+
+        // Status filter functionality
+        statusFilter.addEventListener('change', function() {
+            const filter = this.value;
+            const rows = document.querySelectorAll('#resultsTableBody tr');
+            
+            rows.forEach(row => {
+                if (filter === 'all') {
+                    row.style.display = '';
+                } else {
+                    const statusBadge = row.querySelector('.status-badge');
+                    const shouldShow = statusBadge && statusBadge.classList.contains(`status-${filter}`);
+                    row.style.display = shouldShow ? '' : 'none';
+                }
+            });
+        });
+
         // Utility functions
+        function showLoading(show) {
+            if (show) {
+                loadingIndicator.style.display = 'block';
+                resultsTableBody.style.display = 'none';
+                noRecordsMessage.style.display = 'none';
+            } else {
+                loadingIndicator.style.display = 'none';
+            }
+        }
+
+        function showNoResults(show = true) {
+            if (show) {
+                noRecordsMessage.style.display = 'block';
+                resultsTableBody.style.display = 'none';
+            } else {
+                noRecordsMessage.style.display = 'none';
+            }
+            loadingIndicator.style.display = 'none';
+        }
+
+        function showError(message) {
+            showLoading(false);
+            noRecordsMessage.innerHTML = `<div style="color: #dc3545;">${message}</div>`;
+            noRecordsMessage.style.display = 'block';
+        }
+
         function formatDate(dateString) {
+            if (!dateString) return '';
             try {
                 const date = new Date(dateString);
                 return date.toLocaleDateString('tr-TR');
-            } catch (e) {
+            } catch (error) {
                 return dateString;
             }
         }
 
-        function getTrademarkStatus(status) {
-            switch (status) {
-                case 'application': return { text: 'Başvuru', class: 'new' };
-                case 'registered': return { text: 'Tescilli', class: 'monitored' };
-                case 'rejected': return { text: 'Reddedildi', class: 'expired' };
-                case 'pending': return { text: 'Beklemede', class: 'new' };
-                default: return { text: 'İzleniyor', class: 'monitored' };
-            }
-        }
+        // Action functions (to be implemented)
+        window.viewDetails = function(recordId) {
+            console.log('Viewing details for:', recordId);
+            // TODO: Implement detail view modal
+            alert(`Detay görüntüleme özelliği geliştirilecek. ID: ${recordId}`);
+        };
 
-        function showMonitoringLoading(show) {
-            if (show) {
-                loadingMonitoringList.style.display = 'block';
-                monitoringTable.style.display = 'none';
-                noMonitoringRecords.style.display = 'none';
-            } else {
-                loadingMonitoringList.style.display = 'none';
-            }
-        }
+        window.addToMonitoring = function(recordId) {
+            console.log('Adding to monitoring:', recordId);
+            // TODO: Implement monitoring functionality
+            alert(`İzlemeye alma özelliği geliştirilecek. ID: ${recordId}`);
+        };
 
-        function showMonitoringNoRecords() {
-            noMonitoringRecords.style.display = 'block';
-            monitoringTable.style.display = 'none';
-            loadingMonitoringList.style.display = 'none';
-        }
+        // Export functions for global access
+        window.trademarkSearch = {
+            performSearch,
+            currentResults: () => currentResults,
+            currentFilters: () => currentFilters
+        };
 
-        function showMonitoringError(message) {
-            showMonitoringLoading(false);
-            noMonitoringRecords.innerHTML = `<div class="error">${message}</div>`;
-            noMonitoringRecords.style.display = 'block';
-        }
-
-        function showResultsLoading(show) {
-            if (show) {
-                loadingResults.style.display = 'block';
-                searchResults.style.display = 'none';
-                noResults.style.display = 'none';
-            } else {
-                loadingResults.style.display = 'none';
-            }
-        }
-
-        function showError(message) {
-            showResultsLoading(false);
-            noResults.innerHTML = `<div class="error">${message}</div>`;
-            noResults.style.display = 'block';
-            searchResults.style.display = 'none';
-        }
-
-        async function loadBulletinOptions() {
-            try {
-                const snapshot = await getDocs(collection(db, 'trademarkBulletins'));
-                const bulletins = [];
-                snapshot.forEach(doc => bulletins.push({ id: doc.id, ...doc.data() }));
-                
-                bulletinSelect.innerHTML = '<option value="">Bülten seçin...</option>' + 
-                    bulletins.map(b => `<option value="${b.id}">${b.bulletinNo} - ${b.bulletinDate}</option>`).join('');
-            } catch (error) {
-                console.error('Bülten seçenekleri yüklenirken hata:', error);
-                bulletinSelect.innerHTML = '<option value="">Bülten yüklenirken hata oluştu</option>';
-            }
-        }
     </script>
+
+    <!-- Algolia Search CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/algoliasearch@4.20.0/dist/algoliasearch-lite.umd.js"></script>
 </body>
 </html>
