@@ -12,12 +12,10 @@ export async function runTrademarkSearch(monitoredMark, selectedBulletinNo) {
   const { hits } = await index.search(markName, {
     filters: `bulletinNo:${selectedBulletinNo}`,
     getRankingInfo: true,
-    console.log("🧾 Algolia sonuçları:", results); // performMonitoringTrademarkSearch içinde
-    console.log("🔍 Normalize edilmiş sonuçlar:", normalizedResults); // normalizeAndFilterResults sonrası
-
     hitsPerPage: 1000
   });
-
+    console.log("🧾 Algolia sonuçları:", results); // performMonitoringTrademarkSearch içinde
+    console.log("🔍 Normalize edilmiş sonuçlar:", normalizedResults); // normalizeAndFilterResults sonrası
   const enriched = hits
     .filter(hit => isValidBasedOnDate(hit.applicationDate, applicationDate))
     .map(hit => {
