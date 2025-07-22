@@ -592,32 +592,25 @@
                 showError('Arama sırasında bir hata oluştu. Lütfen tekrar deneyiniz.');
             }
         }
-        function calculateSimilarityScore(rankingInfo) {
-            if (!rankingInfo) return 0;
+        function calculateSimilarityScore(hit) {
+            if (!hit._rankingInfo) return 0;
 
             const {
-                nbTypos = 2,
-                proximityDistance = 20,
-                exactMatch = 0,
-                words = 0,
-            } = rankingInfo;
+                nbTypos = 0,
+                firstMatchedWord = 0,
+                proximityDistance = 0,
+                words = 0
+            } = hit._rankingInfo;
 
-            // Temel ağırlıklandırma — senin isteğine göre değiştirilebilir
+            // Skor: daha az typo, yakın eşleşme, ilk kelimede eşleşme, tam kelime sayısı
             let score = 100;
 
-            // Tipolar skoru düşürür
-            score -= nbTypos * 15;
+            score -= nbTypos * 10;             // Her typo 10 puan kırar
+            score -= firstMatchedWord * 5;     // İlk eşleşme uzaksa puan kır
+            score -= proximityDistance * 7;    // Kelimeler arası mesafe
+            score -= Math.max(0, 5 - words) * 4; // Çok kısa eşleşmeler kırpılır
 
-            // Kelime uzaklığı skoru düşürür
-            score -= Math.min(proximityDistance * 2, 20);
-
-            // Tam eşleşme varsa puan artar
-            if (exactMatch >= 1) score += 10;
-
-            // Eşleşen kelime sayısı arttıkça skor artar (1 kelime: 0, 2+ kelime: +5)
-            if (words >= 2) score += 5;
-
-            return Math.max(0, Math.min(100, score)); // 0 ile 100 arasında sınırla
+            return Math.max(0, Math.min(100, Math.round(score)));
         }
 
         // Monitoring trademarks'tan arama yapma fonksiyonu
@@ -669,7 +662,7 @@
                                     ...hit,
                                     monitoredTrademark: markName,
                                     monitoredApplicationNo: trademark.applicationNumber || trademark.applicationNo,
-                                    similarityScore: calculateSimilarityScore(hit._rankingInfo)
+                                    similarityScore: calculateSimilarityScore(hit)
                                 });
                             } else {
                                 console.log(`⏩ ${hit.markName} (${hit.applicationNo}) izlenen markadan sonra başvurulmuş. Atlanıyor.`);
@@ -712,7 +705,7 @@
                         <td>${holders}</td>
                         <td>${niceClasses}</td>
                         <td>${applicationDate}</td>
-                        <td>${hit.similarityScore || 0} / 100</td>
+                        <td><span class="badge">${hit.similarityScore || 0} / 100</span></td>
                         <td><span class="status-badge status-new">Benzer</span></td>
                         <td>
                             <button class="action-btn view-btn" onclick="viewDetails('${hit.objectID}')">Görüntüle</button>
