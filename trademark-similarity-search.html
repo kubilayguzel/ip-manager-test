@@ -619,7 +619,7 @@
 
                     try {
                         const { hits } = await index.search(markName, {
-                            filters: `bulletinId:"${bulletinId}"`,
+                            //filters: `bulletinId:"${bulletinId}"`,
                             hitsPerPage: 1000,
                         });
                         console.log(`🔍 Algolia sorgusu tamamlandı - ${markName} için ${hits.length} sonuç`);
