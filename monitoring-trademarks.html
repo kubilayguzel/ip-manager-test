@@ -245,9 +245,6 @@
                 allPersons = []; // Boş array ile devam et
             }
 
-            // Debug için persons verisini konsola yazdır
-            console.log('Loaded persons:', allPersons);
-
             const container = document.getElementById('monitoringTableContainer');
             const removeSelectedBtn = document.getElementById('removeSelectedBtn');
             const selectedCountSpan = document.getElementById('selectedCount');
@@ -327,15 +324,10 @@
                     // Sahip bilgisini güvenli şekilde işle
                     let ownerNames = '-';
                     try {
-                        console.log('Processing owners for record:', r.id, 'owners:', r.owners);
-                        
                         if (r.owners && Array.isArray(r.owners)) {
                             ownerNames = r.owners.map(owner => {
-                                console.log('Processing owner:', owner, 'type:', typeof owner);
-                                
                                 if (typeof owner === 'object' && owner.id) {
                                     const match = allPersons.find(p => p.id === owner.id);
-                                    console.log('Found person match for id', owner.id, ':', match);
                                     return match ? match.name : `ID:${owner.id} (Bulunamadı)`;
                                 } else if (typeof owner === 'string') {
                                     return owner;
@@ -346,11 +338,7 @@
                             }).join(', ');
                         } else if (typeof r.owners === 'string') {
                             ownerNames = r.owners;
-                        } else if (r.owners) {
-                            console.log('Owners is not array or string:', typeof r.owners, r.owners);
                         }
-                        
-                        console.log('Final owner names:', ownerNames);
                     } catch (error) {
                         console.warn('Sahip bilgisi işlenirken hata:', error, r.owners);
                         ownerNames = 'Hata: ' + error.message;
@@ -419,11 +407,6 @@
                 try {
                     console.log('Monitoring verileri yükleniyor...');
                     const { success, data, error } = await monitoringService.getMonitoringItems(user.uid);
-                    
-                    console.log('Monitoring result:', { success, dataLength: data?.length, error });
-                    if (data && data.length > 0) {
-                        console.log('Sample monitoring record:', data[0]);
-                    }
                     
                     if (success) {
                         console.log('Monitoring verileri başarıyla yüklendi:', data?.length || 0);
