@@ -625,8 +625,8 @@
                         console.log(`🔍 Algolia sorgusu tamamlandı - ${markName} için ${hits.length} sonuç`);
 
                         for (const hit of hits) {
-                            const monitoredAppDate = parseDate(trademark.applicationDate);
-                            const hitAppDate = parseDate(hit.applicationDate);
+                        const monitoredAppDate = parseDate(trademark.applicationDate);
+                        const hitAppDate = parseDate(hit.applicationDate);
                             // 1. Kendisiyle aynı başvuru numarasıysa atla
                             if (hit.applicationNo === (trademark.applicationNumber || trademark.applicationNo)) {
                                 continue;
@@ -795,8 +795,14 @@
             noRecordsMessage.innerHTML = `<div style="color: #dc3545;">${message}</div>`;
             noRecordsMessage.style.display = 'block';
         }
+
         function parseDate(dateString) {
             if (!dateString) return new Date(0);
+
+            // Eğer Firestore Timestamp ise
+            if (typeof dateString === 'object' && dateString.toDate) {
+                return dateString.toDate();
+            }
 
             // DD/MM/YYYY formatı
             const ddmmyyyy = dateString.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
@@ -805,7 +811,7 @@
                 return new Date(`${year}-${month}-${day}`);
             }
 
-            // YYYY-MM-DD veya geçerli ISO tarih
+            // ISO / YYYY-MM-DD gibi diğer formatlar
             return new Date(dateString);
         }
 
