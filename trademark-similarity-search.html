@@ -598,7 +598,6 @@
             try {
                 console.log('Filtrelenmiş izleme listesi üzerinden arama başlatılıyor...');
                 
-                // Filtrelenmiş izleme listesini kullan
                 const trademarksToSearch = filteredMonitoringTrademarks.length > 0 
                     ? filteredMonitoringTrademarks 
                     : monitoringTrademarks;
@@ -610,7 +609,6 @@
                     return;
                 }
 
-                // Her monitored trademark için benzer olanları ara
                 const allSimilarResults = [];
                 let processedCount = 0;
 
@@ -618,7 +616,7 @@
                     processedCount++;
                     const markName = trademark.title || trademark.markName;
                     console.log(`${processedCount}/${trademarksToSearch.length}: ${markName} araştırılıyor...`);
-                    
+
                     try {
                         const { hits } = await index.search(markName, {
                             filters: `bulletinId:"${bulletinId}"`,
@@ -626,25 +624,34 @@
                         });
                         console.log(`🔍 Algolia sorgusu tamamlandı - ${markName} için ${hits.length} sonuç`);
 
-                        // Benzer sonuçları kategorize et
                         for (const hit of hits) {
-                            // Kendi markasını sonuçlara dahil etme
+                            const monitoredAppDate = new Date(trademark.applicationDate);
+                            const hitAppDate = new Date(hit.applicationDate);
+
+                            // 1. Kendisiyle aynı başvuru numarasıysa atla
                             if (hit.applicationNo === (trademark.applicationNumber || trademark.applicationNo)) {
                                 continue;
                             }
 
-                            allSimilarResults.push({
-                                ...hit,
-                                monitoredTrademark: markName,
-                                monitoredApplicationNo: trademark.applicationNumber || trademark.applicationNo
-                            });
+                            // 2. Sadece izlenen markadan önce başvurulmuş benzer markaları al
+                            if (hitAppDate < monitoredAppDate) {
+                                allSimilarResults.push({
+                                    ...hit,
+                                    monitoredTrademark: markName,
+                                    monitoredApplicationNo: trademark.applicationNumber || trademark.applicationNo
+                                });
+                            } else {
+                                console.log(`⏩ ${hit.markName} (${hit.applicationNo}) izlenen markadan sonra başvurulmuş. Atlanıyor.`);
+                                continue;
+                            }
                         }
+
                     } catch (searchError) {
-                    console.error(`❌ ${markName} için Algolia arama hatası:`, searchError?.message || searchError);
+                        console.error(`❌ ${markName} için Algolia arama hatası:`, searchError?.message || searchError);
                     }
                 }
 
-                console.log(`Toplam ${allSimilarResults.length} benzer sonuç bulundu`);
+                console.log(`✅ Toplam ${allSimilarResults.length} benzer sonuç bulundu`);
                 currentResults = allSimilarResults;
                 renderMonitoringResults(allSimilarResults);
 
