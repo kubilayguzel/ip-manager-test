@@ -7,7 +7,7 @@
     <style>
         /* Shared styles matching the accruals page */
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333; display: flex; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333; }
         
         .page-wrapper { flex-grow: 1; display: flex; flex-direction: column; height: 100vh; overflow-y: auto; background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); }
         .main-container { width: 100%; padding: 30px; margin: 0; }
@@ -195,19 +195,21 @@
         </main>
     </div>
 
-    <!-- Firebase SDK -->
     <script type="module">
+        import { loadSharedLayout } from './js/layout-loader.js';
+        import { authService } from './firebase-config.js';
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
         import { getFirestore, collection, getDocs } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
         
         // Firebase configuration - replace with your actual config
         const firebaseConfig = {
-            apiKey: "AIzaSyBj5F3JRW_KzgQwLkZEZMhU8zKdKhKhKhY",
-            authDomain: "your-app.firebaseapp.com", 
-            projectId: "your-project-id",
-            storageBucket: "your-app.appspot.com",
-            messagingSenderId: "123456789",
-            appId: "1:123456789:web:abcd1234"
+            apiKey: "AIzaSyDbdqfiVbobnl1BtyiWxhD4bfIcREw8ZRc",
+            authDomain: "ip-manager-production-aab4b.firebaseapp.com",
+            projectId: "ip-manager-production-aab4b",
+            storageBucket: "ip-manager-production-aab4b.firebasestorage.app",
+            messagingSenderId: "594650169512",
+            appId: "1:594650169512:web:43496005e063a40511829d",
+            measurementId: "G-QY1P3ZCMC4"
         };
 
         // If you have a separate firebase-config.js file, use this instead:
@@ -239,6 +241,22 @@
         const resultsTableBody = document.getElementById('resultsTableBody');
         const loadingIndicator = document.getElementById('loadingIndicator');
         const noRecordsMessage = document.getElementById('noRecordsMessage');
+
+        // Page initialization
+        document.addEventListener('DOMContentLoaded', async () => {
+            await loadSharedLayout({ activeMenuLink: 'trademark-similarity-search.html' });
+        });
+
+        // Auth state monitoring
+        authService.auth.onAuthStateChanged(async (user) => {
+            if (user) {
+                // User is logged in, initialize the app
+                loadBulletinOptions();
+            } else {
+                // User is not logged in, redirect to login
+                window.location.href = 'index.html';
+            }
+        });
 
         // Load bulletin options on page load
         loadBulletinOptions();
@@ -294,28 +312,38 @@
             showLoading(true);
             
             try {
-                // Build Algolia search query
+                const ownerFilter = currentFilters.owner.trim();
+                const niceFilter = currentFilters.niceClass.trim();
+                const bulletinFilter = currentFilters.bulletin;
+
+                // Eğer sadece bülten seçili ve diğer filtreler boşsa, monitoring trademarks'tan arama yap
+                if (bulletinFilter && !ownerFilter && !niceFilter) {
+                    await performMonitoringTrademarkSearch(bulletinFilter);
+                    return;
+                }
+
+                // Normal Algolia aramaya devam et
                 let searchQuery = '';
                 let filters = [];
 
                 // Add owner filter to search query
-                if (currentFilters.owner) {
-                    searchQuery = currentFilters.owner;
+                if (ownerFilter) {
+                    searchQuery = ownerFilter;
                 }
 
                 // Add bulletin filter
-                if (currentFilters.bulletin) {
-                    filters.push(`bulletinId:"${currentFilters.bulletin}"`);
+                if (bulletinFilter) {
+                    filters.push(`bulletinId:"${bulletinFilter}"`);
                 }
 
                 // Add nice class filter  
-                if (currentFilters.niceClass) {
-                    filters.push(`niceClasses:"${currentFilters.niceClass}"`);
+                if (niceFilter) {
+                    filters.push(`niceClasses:"${niceFilter}"`);
                 }
 
                 // Perform Algolia search
                 const searchOptions = {
-                    hitsPerPage: 100,
+                    hitsPerPage: 1000, // Maximum allowed by Algolia to get all results
                     attributesToRetrieve: [
                         'markName', 'applicationNo', 'holders', 'niceClasses', 
                         'bulletinId', 'applicationDate', 'imagePath'
@@ -335,6 +363,117 @@
                 console.error('Arama hatası:', error);
                 showError('Arama sırasında bir hata oluştu. Lütfen tekrar deneyiniz.');
             }
+        }
+
+        // Monitoring trademarks'tan arama yapma fonksiyonu
+        async function performMonitoringTrademarkSearch(bulletinId) {
+            try {
+                console.log('Monitoring trademarks üzerinden arama başlatılıyor...');
+                
+                // Monitoring trademarks'tan tüm kayıtları al
+                const snapshot = await getDocs(collection(db, 'monitoringTrademarks'));
+                const monitoredTrademarks = [];
+                
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    if (data.markName) {
+                        monitoredTrademarks.push({ 
+                            id: doc.id, 
+                            markName: data.markName,
+                            applicationNo: data.applicationNumber || data.applicationNo,
+                            niceClasses: data.niceClass || data.niceClasses,
+                            ...data 
+                        });
+                    }
+                });
+
+                console.log(`${monitoredTrademarks.length} monitoring trademark bulundu`);
+
+                if (monitoredTrademarks.length === 0) {
+                    showError('İzleme listesinde marka bulunamadı.');
+                    return;
+                }
+
+                // Her monitored trademark için benzer olanları ara
+                const allSimilarResults = [];
+                let processedCount = 0;
+
+                for (const trademark of monitoredTrademarks) {
+                    processedCount++;
+                    console.log(`${processedCount}/${monitoredTrademarks.length}: ${trademark.markName} araştırılıyor...`);
+                    
+                    try {
+                        const { hits } = await index.search(trademark.markName, {
+                            filters: `bulletinId:"${bulletinId}"`,
+                            hitsPerPage: 1000,
+                        });
+
+                        // Benzer sonuçları kategorize et
+                        for (const hit of hits) {
+                            // Kendi markasını sonuçlara dahil etme
+                            if (hit.applicationNo === trademark.applicationNo) {
+                                continue;
+                            }
+
+                            allSimilarResults.push({
+                                ...hit,
+                                monitoredTrademark: trademark.markName,
+                                monitoredApplicationNo: trademark.applicationNo
+                            });
+                        }
+                    } catch (searchError) {
+                        console.error(`${trademark.markName} için arama hatası:`, searchError);
+                    }
+                }
+
+                console.log(`Toplam ${allSimilarResults.length} benzer sonuç bulundu`);
+                currentResults = allSimilarResults;
+                renderMonitoringResults(allSimilarResults);
+
+            } catch (error) {
+                console.error('Monitoring trademark arama hatası:', error);
+                showError('İzleme listesi araması sırasında bir hata oluştu.');
+            }
+        }
+
+        function renderMonitoringResults(results) {
+            showLoading(false);
+            
+            if (results.length === 0) {
+                showError('İzlenen markalarınıza benzer yeni marka bulunamadı.');
+                return;
+            }
+
+            const tableHTML = results.map(hit => {
+                const holders = Array.isArray(hit.holders) ? hit.holders.join(', ') : hit.holders || '';
+                const niceClasses = Array.isArray(hit.niceClasses) ? hit.niceClasses.join(', ') : hit.niceClasses || '';
+                const applicationDate = hit.applicationDate ? formatDate(hit.applicationDate) : '';
+                
+                return `
+                    <tr data-id="${hit.objectID}">
+                        <td>${hit.applicationNo || ''}</td>
+                        <td><strong>${hit.markName || ''}</strong><br/><small style="color: #666;">Benzer: ${hit.monitoredTrademark}</small></td>
+                        <td>${holders}</td>
+                        <td>${niceClasses}</td>
+                        <td>${applicationDate}</td>
+                        <td><span class="status-badge status-new">Benzer</span></td>
+                        <td>
+                            <button class="action-btn view-btn" onclick="viewDetails('${hit.objectID}')">Görüntüle</button>
+                            <button class="action-btn monitor-btn" onclick="addToMonitoring('${hit.objectID}')">İzlemeye Al</button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+
+            resultsTableBody.innerHTML = tableHTML;
+            resultsTableBody.style.display = '';
+
+            // Sonuç sayısını göster
+            const resultCountHtml = `<div style="padding: 15px; background: #e8f4f8; border-radius: 8px; margin-bottom: 20px;">
+                <strong>${results.length} benzer marka bulundu</strong> - İzleme listenizdeki markalara benzer yeni başvurular
+            </div>`;
+            
+            resultsTableBody.insertAdjacentHTML('beforebegin', resultCountHtml);
         }
 
         function renderResults(results) {
