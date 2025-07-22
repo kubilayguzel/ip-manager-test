@@ -627,6 +627,8 @@
                         for (const hit of hits) {
                         const monitoredAppDate = parseDate(trademark.applicationDate);
                         const hitAppDate = parseDate(hit.applicationDate);
+                        console.log(`📅 ${markName} → İzlenen: ${monitoredAppDate.toISOString()} | Hit: ${hitAppDate.toISOString()}`);
+
                             // 1. Kendisiyle aynı başvuru numarasıysa atla
                             if (hit.applicationNo === (trademark.applicationNumber || trademark.applicationNo)) {
                                 continue;
