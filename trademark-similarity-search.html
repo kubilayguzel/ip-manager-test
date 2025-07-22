@@ -108,6 +108,21 @@
             .form-grid { grid-template-columns: 1fr; }
             .form-actions { flex-direction: column; align-items: stretch; }
         }
+        .nice-class-badge {
+        display: inline-block;
+        padding: 4px 8px;
+        border-radius: 8px;
+        font-size: 0.8em;
+        background-color: #e2e3e5;
+        color: #333;
+        margin-right: 4px;
+        }
+
+        .nice-class-badge.match {
+        background-color: #28a745;
+        color: white;
+        }
+
     </style>
 </head>
 <body>
@@ -645,7 +660,13 @@
 
             const tableHTML = results.map(hit => {
                 const holders = Array.isArray(hit.holders) ? hit.holders.join(', ') : hit.holders || '';
-                const niceClasses = Array.isArray(hit.niceClasses) ? hit.niceClasses.join(', ') : hit.niceClasses || '';
+                const monitoredNiceClasses = hit.monitoredNiceClasses || [];
+                const niceClassHtml = Array.isArray(hit.niceClasses)
+                ? hit.niceClasses.map(cls => {
+                    const isMatch = monitoredNiceClasses.includes(cls);
+                    return `<span class="nice-class-badge ${isMatch ? 'match' : ''}">${cls}</span>`;
+                    }).join('')
+                : hit.niceClasses || '';
                 const applicationDate = hit.applicationDate ? formatDate(hit.applicationDate) : '';
                 
                 return `
@@ -653,7 +674,7 @@
                         <td>${hit.applicationNo || ''}</td>
                         <td><strong>${hit.markName || ''}</strong><br/><small style="color: #666;">Benzer: ${hit.monitoredTrademark}</small></td>
                         <td>${holders}</td>
-                        <td>${niceClasses}</td>
+                        <td>${niceClassHtml}</td>
                         <td>${applicationDate}</td>
                         <td><span class="badge">${hit.similarityScore || 0} / 100</span></td>
                         <td><span class="status-badge status-new">Benzer</span></td>
