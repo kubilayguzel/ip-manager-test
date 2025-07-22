@@ -137,18 +137,9 @@
                                 <label for="bulletinSelect" class="form-label">Bülten Seç</label>
                                 <select id="bulletinSelect" class="form-select">
                                     <option value="">Bülten seçiniz...</option>
-                                    <option value="2024-01">2024 - Ocak</option>
-                                    <option value="2024-02">2024 - Şubat</option>
-                                    <option value="2024-03">2024 - Mart</option>
-                                    <option value="2024-04">2024 - Nisan</option>
-                                    <option value="2024-05">2024 - Mayıs</option>
-                                    <option value="2024-06">2024 - Haziran</option>
+                                    <!-- Bültenler Firebase'dan dinamik olarak yüklenir -->
                                 </select>
                             </div>
-                        </div>
-                        <div class="form-actions">
-                            <button type="button" class="btn btn-primary" id="startSearchBtn">🔍 Aramayı Başlat</button>
-                            <button type="button" class="btn btn-secondary" id="clearFiltersBtn">🗑️ Temizle</button>
                         </div>
                     </div>
                 </div>
@@ -157,6 +148,42 @@
             <div class="results-container">
                 <div class="results-header">
                     <h3>Filtrelenmiş İzleme Listesi</h3>
+                    <div class="filter-group">
+                        <button type="button" class="btn btn-secondary" id="clearFiltersBtn">🗑️ Temizle</button>
+                    </div>
+                </div>
+                <div class="table-container">
+                    <table class="results-table">
+                        <thead>
+                            <tr>
+                                <th>Marka Adı</th>
+                                <th>Başvuru No</th>
+                                <th>Sahip</th>
+                                <th>Nice Sınıfı</th>
+                                <th>Başvuru Tarihi</th>
+                                <th>Durum</th>
+                            </tr>
+                        </thead>
+                        <tbody id="monitoringListBody">
+                            <!-- İzleme listesi dinamik olarak yüklenir -->
+                        </tbody>
+                    </table>
+                    <div id="loadingMonitoringList" class="loading" style="display: none;">
+                        İzleme listesi yükleniyor...
+                    </div>
+                    <div id="noMonitoringRecords" class="no-records" style="display: none;">
+                        İzleme listenizde marka bulunamadı.
+                    </div>
+                </div>
+                
+                <div class="form-actions" style="margin-top: 20px;">
+                    <button type="button" class="btn btn-primary" id="startSearchBtn">🔍 Aramayı Başlat</button>
+                </div>
+            </div>
+
+            <div class="results-container" style="margin-top: 30px;">
+                <div class="results-header">
+                    <h3>Arama Sonuçları</h3>
                     <div class="filter-group">
                         <label class="filter-label" for="statusFilter">Duruma Göre Filtrele:</label>
                         <select id="statusFilter" class="filter-select">
@@ -181,7 +208,7 @@
                             </tr>
                         </thead>
                         <tbody id="resultsTableBody">
-                            <!-- Arama sonuçları buraya gelecek -->
+                            <!-- Arama sonuçları dinamik olarak yüklenir -->
                         </tbody>
                     </table>
                     <div id="loadingIndicator" class="loading" style="display: none;">
@@ -197,7 +224,7 @@
 
     <script type="module">
         import { loadSharedLayout } from './js/layout-loader.js';
-        import { authService } from './firebase-config.js';
+        import { authService, monitoringService } from './firebase-config.js';
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
         import { getFirestore, collection, getDocs } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
         
@@ -219,12 +246,19 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        // Initialize Algolia (using search API key)
-        const algoliaClient = algoliasearch('THCIEJJTZ9', 'b6c38850bfc00adcf0ecdd9a14638c27');
-        const index = algoliaClient.initIndex('trademark_bulletin_records_live');
+        // Initialize Algolia (using search API key) - Will be set after auth
+        let algoliaClient, index;
+
+        function initializeAlgolia() {
+            algoliaClient = algoliasearch('THCIEJJTZ9', 'b6c38850bfc00adcf0ecdd9a14638c27');
+            index = algoliaClient.initIndex('trademark_bulletin_records_live');
+            console.log('Algolia initialized');
+        }
 
         // Global variables
         let currentResults = [];
+        let monitoringTrademarks = []; // İzleme listesindeki markalar
+        let filteredMonitoringTrademarks = []; // Filtrelenmiş izleme listesi
         let currentFilters = {
             owner: '',
             niceClass: '',
@@ -241,6 +275,11 @@
         const resultsTableBody = document.getElementById('resultsTableBody');
         const loadingIndicator = document.getElementById('loadingIndicator');
         const noRecordsMessage = document.getElementById('noRecordsMessage');
+        
+        // İzleme listesi elemanları
+        const monitoringListBody = document.getElementById('monitoringListBody');
+        const loadingMonitoringList = document.getElementById('loadingMonitoringList');
+        const noMonitoringRecords = document.getElementById('noMonitoringRecords');
 
         // Page initialization
         document.addEventListener('DOMContentLoaded', async () => {
@@ -251,12 +290,134 @@
         authService.auth.onAuthStateChanged(async (user) => {
             if (user) {
                 // User is logged in, initialize the app
-                loadBulletinOptions();
+                initializeAlgolia();
+                await loadBulletinOptions();
+                await loadMonitoringTrademarks();
             } else {
                 // User is not logged in, redirect to login
                 window.location.href = 'index.html';
             }
         });
+
+        // Load monitoring trademarks from user's monitoring list
+        async function loadMonitoringTrademarks() {
+            const user = authService.getCurrentUser();
+            if (!user) return;
+
+            showMonitoringLoading(true);
+            
+            try {
+                const result = await monitoringService.getMonitoringItems(user.uid);
+                if (result.success) {
+                    monitoringTrademarks = result.data || [];
+                    filteredMonitoringTrademarks = [...monitoringTrademarks];
+                    renderMonitoringList(filteredMonitoringTrademarks);
+                    console.log(`${monitoringTrademarks.length} izleme markası yüklendi`);
+                } else {
+                    console.error('İzleme listesi yüklenirken hata:', result.error);
+                    showMonitoringError('İzleme listesi yüklenirken bir hata oluştu.');
+                }
+            } catch (error) {
+                console.error('İzleme listesi yükleme hatası:', error);
+                showMonitoringError('İzleme listesi yüklenirken bir hata oluştu.');
+            }
+        }
+
+        // Render monitoring trademarks list
+        function renderMonitoringList(trademarks) {
+            showMonitoringLoading(false);
+            
+            if (!trademarks || trademarks.length === 0) {
+                showMonitoringNoRecords();
+                return;
+            }
+
+            const tableHTML = trademarks.map(trademark => {
+                const owners = Array.isArray(trademark.owners) 
+                    ? trademark.owners.map(o => o.name || o).join(', ') 
+                    : trademark.owners || '';
+                const niceClasses = Array.isArray(trademark.niceClass) 
+                    ? trademark.niceClass.join(', ') 
+                    : trademark.niceClass || '';
+                const applicationDate = trademark.applicationDate 
+                    ? formatDate(trademark.applicationDate) 
+                    : '';
+                const status = getTrademarkStatus(trademark.status);
+
+                return `
+                    <tr data-id="${trademark.id}">
+                        <td><strong>${trademark.title || trademark.markName || ''}</strong></td>
+                        <td>${trademark.applicationNumber || trademark.applicationNo || ''}</td>
+                        <td>${owners}</td>
+                        <td>${niceClasses}</td>
+                        <td>${applicationDate}</td>
+                        <td><span class="status-badge status-${status.class}">${status.text}</span></td>
+                    </tr>
+                `;
+            }).join('');
+
+            monitoringListBody.innerHTML = tableHTML;
+            monitoringListBody.style.display = '';
+        }
+
+        // Filter monitoring trademarks based on input filters
+        function filterMonitoringTrademarks() {
+            const ownerFilter = ownerSearchInput.value.toLowerCase().trim();
+            const niceFilter = niceClassSearchInput.value.trim();
+
+            filteredMonitoringTrademarks = monitoringTrademarks.filter(trademark => {
+                // Owner filter
+                const owners = Array.isArray(trademark.owners) 
+                    ? trademark.owners.map(o => (o.name || o).toLowerCase()).join(' ') 
+                    : (trademark.owners || '').toLowerCase();
+                const ownerMatch = !ownerFilter || owners.includes(ownerFilter);
+
+                // Nice class filter
+                const niceClasses = Array.isArray(trademark.niceClass) 
+                    ? trademark.niceClass.join(',') 
+                    : trademark.niceClass || '';
+                const niceMatch = !niceFilter || niceClasses.includes(niceFilter);
+
+                return ownerMatch && niceMatch;
+            });
+
+            renderMonitoringList(filteredMonitoringTrademarks);
+            console.log(`Filtre sonrası ${filteredMonitoringTrademarks.length} marka gösteriliyor`);
+        }
+
+        // Get trademark status info
+        function getTrademarkStatus(status) {
+            switch (status) {
+                case 'application': return { text: 'Başvuru', class: 'new' };
+                case 'registered': return { text: 'Tescilli', class: 'monitored' };
+                case 'rejected': return { text: 'Reddedildi', class: 'expired' };
+                case 'pending': return { text: 'Beklemede', class: 'new' };
+                default: return { text: 'İzleniyor', class: 'monitored' };
+            }
+        }
+
+        // Monitoring list utility functions
+        function showMonitoringLoading(show) {
+            if (show) {
+                loadingMonitoringList.style.display = 'block';
+                monitoringListBody.style.display = 'none';
+                noMonitoringRecords.style.display = 'none';
+            } else {
+                loadingMonitoringList.style.display = 'none';
+            }
+        }
+
+        function showMonitoringNoRecords() {
+            noMonitoringRecords.style.display = 'block';
+            monitoringListBody.style.display = 'none';
+            loadingMonitoringList.style.display = 'none';
+        }
+
+        function showMonitoringError(message) {
+            showMonitoringLoading(false);
+            noMonitoringRecords.innerHTML = `<div style="color: #dc3545;">${message}</div>`;
+            noMonitoringRecords.style.display = 'block';
+        }
 
         // Load bulletin options on page load
         loadBulletinOptions();
@@ -368,29 +529,17 @@
         // Monitoring trademarks'tan arama yapma fonksiyonu
         async function performMonitoringTrademarkSearch(bulletinId) {
             try {
-                console.log('Monitoring trademarks üzerinden arama başlatılıyor...');
+                console.log('Filtrelenmiş izleme listesi üzerinden arama başlatılıyor...');
                 
-                // Monitoring trademarks'tan tüm kayıtları al
-                const snapshot = await getDocs(collection(db, 'monitoringTrademarks'));
-                const monitoredTrademarks = [];
-                
-                snapshot.forEach(doc => {
-                    const data = doc.data();
-                    if (data.markName) {
-                        monitoredTrademarks.push({ 
-                            id: doc.id, 
-                            markName: data.markName,
-                            applicationNo: data.applicationNumber || data.applicationNo,
-                            niceClasses: data.niceClass || data.niceClasses,
-                            ...data 
-                        });
-                    }
-                });
+                // Filtrelenmiş izleme listesini kullan
+                const trademarksToSearch = filteredMonitoringTrademarks.length > 0 
+                    ? filteredMonitoringTrademarks 
+                    : monitoringTrademarks;
 
-                console.log(`${monitoredTrademarks.length} monitoring trademark bulundu`);
+                console.log(`${trademarksToSearch.length} marka için arama yapılacak`);
 
-                if (monitoredTrademarks.length === 0) {
-                    showError('İzleme listesinde marka bulunamadı.');
+                if (trademarksToSearch.length === 0) {
+                    showError('Filtrelen izleme listesinde marka bulunamadı.');
                     return;
                 }
 
@@ -398,12 +547,13 @@
                 const allSimilarResults = [];
                 let processedCount = 0;
 
-                for (const trademark of monitoredTrademarks) {
+                for (const trademark of trademarksToSearch) {
                     processedCount++;
-                    console.log(`${processedCount}/${monitoredTrademarks.length}: ${trademark.markName} araştırılıyor...`);
+                    const markName = trademark.title || trademark.markName;
+                    console.log(`${processedCount}/${trademarksToSearch.length}: ${markName} araştırılıyor...`);
                     
                     try {
-                        const { hits } = await index.search(trademark.markName, {
+                        const { hits } = await index.search(markName, {
                             filters: `bulletinId:"${bulletinId}"`,
                             hitsPerPage: 1000,
                         });
@@ -411,18 +561,18 @@
                         // Benzer sonuçları kategorize et
                         for (const hit of hits) {
                             // Kendi markasını sonuçlara dahil etme
-                            if (hit.applicationNo === trademark.applicationNo) {
+                            if (hit.applicationNo === (trademark.applicationNumber || trademark.applicationNo)) {
                                 continue;
                             }
 
                             allSimilarResults.push({
                                 ...hit,
-                                monitoredTrademark: trademark.markName,
-                                monitoredApplicationNo: trademark.applicationNo
+                                monitoredTrademark: markName,
+                                monitoredApplicationNo: trademark.applicationNumber || trademark.applicationNo
                             });
                         }
                     } catch (searchError) {
-                        console.error(`${trademark.markName} için arama hatası:`, searchError);
+                        console.error(`${markName} için arama hatası:`, searchError);
                     }
                 }
 
@@ -509,6 +659,10 @@
             resultsTableBody.style.display = '';
         }
 
+        // Filter event listeners
+        ownerSearchInput.addEventListener('input', filterMonitoringTrademarks);
+        niceClassSearchInput.addEventListener('input', filterMonitoringTrademarks);
+
         // Clear filters
         clearFiltersBtn.addEventListener('click', function() {
             ownerSearchInput.value = '';
@@ -516,7 +670,11 @@
             bulletinSelect.value = '';
             currentFilters = { owner: '', niceClass: '', bulletin: '' };
             
-            // Clear results
+            // Reset monitoring list to show all
+            filteredMonitoringTrademarks = [...monitoringTrademarks];
+            renderMonitoringList(filteredMonitoringTrademarks);
+            
+            // Clear search results
             resultsTableBody.innerHTML = '';
             showNoResults(false);
         });
