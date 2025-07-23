@@ -1,3 +1,5 @@
+// js/trademark-similarity/scorer.js
+
 export function calculateSimilarityScore(hit, searchMarkName) {
   console.log("📊 Similarity score hesaplanıyor:", hit.markName, "vs", searchMarkName);
   
