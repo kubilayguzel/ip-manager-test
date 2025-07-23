@@ -837,14 +837,17 @@ function parseScriptContent(content) {
   const lines = content.split("\n");
   const records = {};
   let currentTable = null;
+
   for (const line of lines) {
     if (line.startsWith("INSERT INTO")) {
       const match = line.match(/INSERT INTO (\w+)/);
       currentTable = match ? match[1] : null;
+      continue;
     }
     if (currentTable && line.includes("VALUES")) {
       const values = parseValuesFromLine(line);
       if (!values || !values.length) continue;
+
       const appNo = values[0];
       if (!records[appNo]) {
         records[appNo] = {
@@ -858,31 +861,37 @@ function parseScriptContent(content) {
           attorneys: []
         };
       }
-    if (currentTable === "TRADEMARK") {
-        records[appNo].applicationDate = values[1] ?? null;
-        records[appNo].markName = values[5] ?? null;     // eski koddaki gibi
-        records[appNo].niceClasses = values[6] ?? null;
-    } else if (currentTable === "HOLDER") {
-        const holderName = extractHolderName(values[2]);
-        let addressParts = [values[3], values[4], values[5], values[6]]
-                            .filter(Boolean).join(", ");
-        if (addressParts.trim() === "") addressParts = null;
-        records[appNo].holders.push({
-            name: holderName,
-            address: addressParts,
-            country: values[7] ?? null,
-        });
-    }
-      } else if (currentTable === "GOODS") {
-        records[appNo].goods.push(values[3]);
-      } else if (currentTable === "EXTRACTEDGOODS") {
-        records[appNo].extractedGoods.push(values[3]);
-      } else if (currentTable === "ATTORNEY") {
-        records[appNo].attorneys.push(values[2]);
+
+      switch (currentTable) {
+        case "TRADEMARK":
+          records[appNo].applicationDate = values[1] ?? null;
+          records[appNo].markName = values[5] ?? null;
+          records[appNo].niceClasses = values[6] ?? null;
+          break;
+        case "HOLDER":
+          records[appNo].holders.push({
+            name: extractHolderName(values[2]),
+            address: [values[3], values[4], values[5], values[6]]
+                      .filter(Boolean).join(", ") || null,
+            country: values[7] ?? null
+          });
+          break;
+        case "GOODS":
+          records[appNo].goods.push(values[3]);
+          break;
+        case "EXTRACTEDGOODS":
+          records[appNo].extractedGoods.push(values[3]);
+          break;
+        case "ATTORNEY":
+          records[appNo].attorneys.push(values[2]);
+          break;
       }
     }
+  }
+
   return Object.values(records);
 }
+
 async function parseScriptInChunks(scriptPath) {
   const fd = fs.openSync(scriptPath, "r");
   const fileSize = fs.statSync(scriptPath).size;
