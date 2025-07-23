@@ -657,107 +657,66 @@ exports.createUniversalNotificationOnTaskCompleteV2 = onDocumentUpdated(
 // Debug edilmiş processTrademarkBulletinUploadV2 fonksiyonu
 exports.processTrademarkBulletinUploadV2 = onObjectFinalized(
   {
-    region: 'europe-west1',
+    region: "europe-west1",
     timeoutSeconds: 540,
-    memory: '1GiB'  // Memory'yi artırmadık
+    memory: "1GiB"
   },
   async (event) => {
-    console.log('🔥 Memory-Optimized Trademark Bulletin Upload V2 Başladı');
-    
+    console.log("🔥 Trademark Bulletin Upload V2 başladı");
+
     const object = event.data;
     const filePath = object.name;
     const fileName = path.basename(filePath);
-    const fileSize = parseInt(object.size);
     const bucket = admin.storage().bucket();
 
-    console.log(`📄 Dosya: ${fileName} (${(fileSize / 1024 / 1024).toFixed(2)} MB)`);
-
-    // 🚫 ERKEN FİLTRELEME - Sadece ZIP/RAR dosyalarını işle
-    if (!fileName.toLowerCase().endsWith(".zip") && !fileName.toLowerCase().endsWith(".rar")) {
-      console.log('⏭️ Desteklenmeyen dosya türü, atlanıyor:', fileName);
-      return null; // Sessizce çık
-    }
-    
-    // 🚫 ERKEN FİLTRELEME - Images klasöründeki dosyaları işleme
-    if (filePath.includes('/images/') || filePath.includes('_images/')) {
-      console.log('⏭️ Görsel dosyası, atlanıyor:', filePath);
-      return null; // Sessizce çık
-    }
-    
-    // 🚫 ERKEN FİLTRELEME - Sadece bulletins/ kök klasöründeki ZIP'leri işle
-    const pathParts = filePath.split('/');
-    if (pathParts.length !== 2 || pathParts[0] !== 'bulletins') {
-      console.log('⏭️ Yanlış path, atlanıyor:', filePath);
-      return null; // Sadece bulletins/dosya.zip formatını kabul et
+    if (!filePath.startsWith("bulletins/") || !fileName.toLowerCase().endsWith(".zip")) {
+      console.log("⏭️ Desteklenmeyen dosya:", filePath);
+      return null;
     }
 
     const tempFilePath = path.join(os.tmpdir(), fileName);
     const extractDir = path.join(os.tmpdir(), `extract_${Date.now()}`);
 
     try {
-      console.log('📊 Memory usage check - Start:', process.memoryUsage());
-      
-      // 1. STREAMING DOWNLOAD - Memory efficient
-      console.log('⬇️ Streaming download başlıyor...');
+      console.log("⬇️ Zip dosyası indiriliyor...");
       await downloadWithStream(bucket.file(filePath), tempFilePath);
-      console.log('✅ Streaming download tamamlandı');
-      console.log('📊 Memory after download:', process.memoryUsage());
 
-      // 2. EXTRACT - Memory efficient
-      console.log('📦 Extract işlemi başlıyor...');
+      console.log("📦 Zip açılıyor...");
       fs.mkdirSync(extractDir, { recursive: true });
-      
-      if (fileName.toLowerCase().endsWith(".zip")) {
-        await extractZipStreaming(tempFilePath, extractDir);
-      } else {
-        // RAR için normal yöntem (streaming zor)
-        const extractor = await createExtractorFromFile({ path: tempFilePath });
-        await extractor.extractAll(extractDir);
-      }
-      
-      console.log('✅ Extract tamamlandı');
-      console.log('📊 Memory after extract:', process.memoryUsage());
+      await extractZipStreaming(tempFilePath, extractDir);
 
-      // 3. METADATA PARSING - Lightweight
+      console.log("📂 İçerik taranıyor...");
       const allFiles = listAllFilesRecursive(extractDir);
-      console.log(`📋 ${allFiles.length} dosya bulundu`);
 
-      const bulletinPath = allFiles.find((p) =>
+      const bulletinFile = allFiles.find((p) =>
         ["bulletin.inf", "bulletin"].includes(path.basename(p).toLowerCase())
       );
-      if (!bulletinPath) throw new Error("bulletin.inf bulunamadı.");
+      if (!bulletinFile) throw new Error("bulletin.inf bulunamadı.");
 
-      const content = fs.readFileSync(bulletinPath, "utf8");
+      const content = fs.readFileSync(bulletinFile, "utf8");
       const bulletinNo = (content.match(/NO\s*=\s*(.*)/) || [])[1]?.trim() || "Unknown";
       const bulletinDate = (content.match(/DATE\s*=\s*(.*)/) || [])[1]?.trim() || "Unknown";
-      
-      console.log(`📊 Bülten: ${bulletinNo} (${bulletinDate})`);
 
-      // 4. FIRESTORE BULLETIN RECORD
       const bulletinRef = await db.collection("trademarkBulletins").add({
         bulletinNo,
         bulletinDate,
         type: "marka",
-        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        createdAt: admin.firestore.FieldValue.serverTimestamp()
       });
       const bulletinId = bulletinRef.id;
-      console.log(`✅ Bülten ID: ${bulletinId}`);
 
-      // 5. SCRIPT PARSING - Streaming approach
-      const scriptPath = allFiles.find((p) => path.basename(p).toLowerCase() === "tmbulletin.log");
+      console.log(`📊 Bülten kaydedildi: ${bulletinNo} (${bulletinDate}) → ${bulletinId}`);
+
+      const scriptPath = allFiles.find(
+        (p) => path.basename(p).toLowerCase() === "tmbulletin.log"
+      );
       if (!scriptPath) throw new Error("tmbulletin.log bulunamadı.");
-      
-      console.log('🔄 Script parsing başlıyor (memory-efficient)...');
+
+      console.log("🔍 Script parse ediliyor...");
       const records = await parseScriptContentStreaming(scriptPath);
-      console.log(`📊 ${records.length} kayıt parse edildi`);
-      console.log('📊 Memory after parsing:', process.memoryUsage());
+      console.log(`✅ ${records.length} kayıt bulundu`);
 
-      // 6. IMAGE PROCESSING - Memory efficient
-      console.log('🖼️ Görseller analiz ediliyor...');
-      const imageFiles = allFiles.filter((p) => /\.(jpg|jpeg|png)$/i.test(p));
-      console.log(`🖼️ ${imageFiles.length} görsel bulundu`);
-
-      // Image mapping - memory efficient
+      const imageFiles = allFiles.filter((p) => /\.(jpe?g|png)$/i.test(p));
       const imagePathMap = {};
       for (const localPath of imageFiles) {
         const filename = path.basename(localPath);
@@ -765,47 +724,24 @@ exports.processTrademarkBulletinUploadV2 = onObjectFinalized(
         if (match) {
           const appNo = `${match[1]}/${match[2]}`;
           if (!imagePathMap[appNo]) imagePathMap[appNo] = [];
-          imagePathMap[appNo].push(`bulletins/trademark_${bulletinNo}_images/${filename}`);
+          imagePathMap[appNo].push(
+            `bulletins/trademark_${bulletinNo}_images/${filename}`
+          );
         }
       }
 
-      // 7. FIRESTORE BATCH WRITE - Chunked approach
-      console.log('💾 Firestore batch write başlıyor...');
       await writeBatchesToFirestore(records, bulletinId, imagePathMap);
-      console.log('📊 Memory after Firestore writes:', process.memoryUsage());
-
-      // 8. IMAGE UPLOAD TO PUB/SUB - Streaming approach  
-      console.log('📤 Görseller Pub/Sub kuyruğuna gönderiliyor (streaming)...');
       await processImagesStreaming(imageFiles, bulletinNo);
-      console.log('📊 Memory after image processing:', process.memoryUsage());
 
-      console.log('🎉 İŞLEM TAMAMLANDI!');
-      console.log(`📊 Final memory usage:`, process.memoryUsage());
-
+      console.log("🎉 İşlem tamamlandı!");
     } catch (e) {
-      console.error("❌ HATA:", e.message);
-      console.error('📊 Memory at error:', process.memoryUsage());
+      console.error("❌ Hata:", e.message);
       throw e;
     } finally {
-      // Memory cleanup
-      console.log('🧹 Memory cleanup başlıyor...');
-      
-      if (fs.existsSync(tempFilePath)) {
-        fs.unlinkSync(tempFilePath);
-      }
-      if (fs.existsSync(extractDir)) {
-        fs.rmSync(extractDir, { recursive: true, force: true });
-      }
-      
-      // Force garbage collection if available
-      if (global.gc) {
-        console.log('🗑️ Garbage collection çalıştırılıyor...');
-        global.gc();
-      }
-      
-      console.log('📊 Memory after cleanup:', process.memoryUsage());
+      if (fs.existsSync(tempFilePath)) fs.unlinkSync(tempFilePath);
+      if (fs.existsSync(extractDir)) fs.rmSync(extractDir, { recursive: true, force: true });
     }
-    
+
     return null;
   }
 );
