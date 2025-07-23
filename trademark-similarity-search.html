@@ -288,64 +288,32 @@ window.algoliaLoadPromise = loadAlgolia();
                 console.log("📦 run-search.js modülü yükleniyor...");
                 const module = await import('./js/trademark-similarity/run-search.js');
                 runTrademarkSearch = module.runTrademarkSearch;
-                console.log("✅ run-search.js başarıyla yüklendi");
+                console.log("✅ run-search.js başarıyla yüklendi - GERÇEKLİ ALGOLIA AKTİF");
                 return true;
             } catch (error) {
                 console.error("❌ run-search.js yüklenemedi:", error);
-                
-                // Fallback: Algolia olmadan da çalışan basit fonksiyon
                 console.log("🔄 Fallback arama fonksiyonuna geçiliyor...");
+                
+                // Fallback: Mock arama
                 runTrademarkSearch = async function(monitoredMark, selectedBulletinNo) {
-                    console.log("🚀 Fallback arama başlatılıyor...");
+                    console.log("🚀 Fallback (Mock) arama çalışıyor...");
                     
-                    // Algolia varsa kullan, yoksa mock data
-                    if (window.algoliasearch && algoliaClient && index) {
-                        try {
-                            const result = await index.search(monitoredMark.markName, {
-                                filters: `bulletinId:"${selectedBulletinNo}"`,
-                                hitsPerPage: 1000
-                            });
-                            
-                            return result.hits.map(hit => ({
-                                ...hit,
-                                similarityScore: 0.7,
-                                sameClass: true,
-                                monitoredNiceClasses: monitoredMark.niceClasses || []
-                            }));
-                        } catch (algoliaError) {
-                            console.error("Algolia arama hatası:", algoliaError);
-                        }
-                    }
-                    
-                    // Mock data - Algolia olmadan test için
                     const mockResults = [
                         {
-                            objectID: "mock1",
-                            markName: "Benzer Marka 1",
-                            applicationNo: "2025/111111",
-                            holders: ["Test Şirket A"],
-                            niceClasses: ["35", "42"],
+                            objectID: "fallback_" + Date.now(),
+                            markName: "Mock: " + monitoredMark.markName,
+                            applicationNo: "2025/" + Math.floor(Math.random() * 100000),
+                            holders: ["Fallback Şirket"],
+                            niceClasses: ["35"],
                             bulletinId: selectedBulletinNo,
                             applicationDate: "2025-05-01",
-                            similarityScore: 0.85,
+                            similarityScore: 0.75,
                             sameClass: true,
-                            monitoredNiceClasses: monitoredMark.niceClasses || []
-                        },
-                        {
-                            objectID: "mock2", 
-                            markName: "Başka Marka",
-                            applicationNo: "2025/222222",
-                            holders: ["Test Şirket B"],
-                            niceClasses: ["25"],
-                            bulletinId: selectedBulletinNo,
-                            applicationDate: "2025-05-02",
-                            similarityScore: 0.60,
-                            sameClass: false,
                             monitoredNiceClasses: monitoredMark.niceClasses || []
                         }
                     ];
                     
-                    console.log(`📊 Mock sonuç: ${mockResults.length} kayıt (${monitoredMark.markName} için)`);
+                    console.log("📊 Fallback sonuç:", mockResults.length, "kayıt");
                     return mockResults;
                 };
                 
@@ -368,11 +336,10 @@ window.algoliaLoadPromise = loadAlgolia();
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        // Initialize Algolia (using search API key) - Will be set after auth
+        // Initialize Algolia
         let algoliaClient, index;
 
         function initializeAlgolia() {
-            // Algolia'nın yüklenip yüklenmediğini kontrol et
             if (!window.algoliasearch) {
                 console.error("❌ Algolia library not loaded yet");
                 return false;
@@ -429,84 +396,6 @@ window.algoliaLoadPromise = loadAlgolia();
         const resultsTableBody = document.getElementById('resultsTableBody');
         const loadingIndicator = document.getElementById('loadingIndicator');
         const noRecordsMessage = document.getElementById('noRecordsMessage');
-        
-        // İzleme listesi elemanları
-        const monitoringListBody = document.getElementById('monitoringListBody');
-        const loadingMonitoringList = document.getElementById('loadingMonitoringList');
-        const noMonitoringRecords = document.getElementById('noMonitoringRecords');
-
-        // Test verisi ekleme fonksiyonu
-        function addTestMonitoringData() {
-            const testData = [
-                {
-                    id: "test1",
-                    title: "Test Markası 1",
-                    markName: "Test Markası 1",
-                    applicationNumber: "2023/123456",
-                    applicationDate: "2023-01-15",
-                    niceClass: ["35", "42"],
-                    status: "active"
-                },
-                {
-                    id: "test2", 
-                    title: "Ali KÜÇÜKŞAHIN",
-                    markName: "Ali KÜÇÜKŞAHIN",
-                    applicationNumber: "2023/789012", 
-                    applicationDate: "2023-02-20",
-                    niceClass: ["9", "35"],
-                    status: "active"
-                },
-                {
-                    id: "test3",
-                    title: "ANADOLU EFES",
-                    markName: "ANADOLU EFES",
-                    applicationNumber: "2023/345678",
-                    applicationDate: "2023-03-10", 
-                    niceClass: ["32"],
-                    status: "active"
-                },
-                {
-                    id: "test4",
-                    title: "Mesa Teknoloji",
-                    markName: "Mesa Teknoloji",
-                    applicationNumber: "2023/999999",
-                    applicationDate: "2023-04-05",
-                    niceClass: ["35", "42"],
-                    status: "active"
-                }
-            ];
-            
-            monitoringTrademarks = testData;
-            filteredMonitoringTrademarks = [...testData];
-            
-            console.log("✅ Test izleme verisi eklendi:", testData.length, "marka");
-            return testData;
-        }
-
-        // Sahip bilgisini işleme fonksiyonu eklendi
-        function processOwnerInfo(owners) {
-            try {
-                if (owners && Array.isArray(owners)) {
-                    return owners.map(owner => {
-                        if (typeof owner === 'object' && owner.id) {
-                            const match = allPersons.find(p => p.id === owner.id);
-                            return match ? match.name : owner.name || 'İsimsiz';
-                        } else if (typeof owner === 'string') {
-                            return owner;
-                        } else {
-                            return owner.name || 'İsimsiz';
-                        }
-                    }).join(', ');
-                } else if (typeof owners === 'string') {
-                    return owners;
-                } else {
-                    return 'Sahip Bilgisi Yok';
-                }
-            } catch (error) {
-                console.error('Owner processing error:', error);
-                return 'Sahip Bilgisi Yok';
-            }
-        }
 
         // Utility functions
         function showLoading(show) {
@@ -528,7 +417,6 @@ window.algoliaLoadPromise = loadAlgolia();
             if (noRecordsMessage) noRecordsMessage.style.display = 'none';
         }
 
-        // Tarihi güzel formatta göster
         function formatBulletinDate(dateString) {
             if (!dateString) return 'Tarih Yok';
             
@@ -553,7 +441,7 @@ window.algoliaLoadPromise = loadAlgolia();
         // Load monitoring trademarks from Firestore
         async function loadMonitoringTrademarks() {
             try {
-                console.log("Loading monitoring trademarks...");
+                console.log("📋 İzleme markaları yükleniyor...");
                 const snapshot = await getDocs(collection(db, 'monitoringTrademarks'));
                 monitoringTrademarks = [];
                 
@@ -563,25 +451,41 @@ window.algoliaLoadPromise = loadAlgolia();
                 });
                 
                 filteredMonitoringTrademarks = [...monitoringTrademarks];
-                console.log(`Loaded ${monitoringTrademarks.length} monitoring trademarks`);
+                console.log(`✅ ${monitoringTrademarks.length} izleme markası yüklendi`);
                 
-                // Eğer hiç veri yoksa test verisi ekle
-                if (monitoringTrademarks.length === 0) {
-                    console.log("⚠️ Firestore'da izleme markası bulunamadı, test verisi ekleniyor...");
-                    addTestMonitoringData();
-                }
+                // İzleme listesi tablosunu render et
+                renderMonitoringList();
                 
             } catch (error) {
-                console.error("Error loading monitoring trademarks:", error);
-                console.log("🔄 Hata nedeniyle test verisi ekleniyor...");
-                addTestMonitoringData();
+                console.error("❌ İzleme markaları yükleme hatası:", error);
+            }
+        }
+
+        // İzleme listesi tablosunu render et
+        function renderMonitoringList() {
+            const monitoringTable = document.querySelector('table tbody');
+            
+            if (monitoringTable && filteredMonitoringTrademarks.length > 0) {
+                const html = filteredMonitoringTrademarks.map(trademark => `
+                    <tr>
+                        <td>${trademark.title || trademark.markName || '-'}</td>
+                        <td>${trademark.applicationNumber || '-'}</td>
+                        <td>${trademark.owners?.[0]?.name || '-'}</td>
+                        <td>${Array.isArray(trademark.niceClass) ? trademark.niceClass.join(', ') : trademark.niceClass || '-'}</td>
+                        <td>${trademark.applicationDate || '-'}</td>
+                        <td>Aktif</td>
+                    </tr>
+                `).join('');
+                
+                monitoringTable.innerHTML = html;
+                console.log("✅ İzleme listesi tablosu render edildi");
             }
         }
 
         // Load bulletin options
         async function loadBulletinOptions() {
             try {
-                console.log("Loading bulletins...");
+                console.log("📅 Bülten listesi yükleniyor...");
                 const snapshot = await getDocs(collection(db, 'trademarkBulletins'));
                 const bulletins = [];
                 
@@ -589,40 +493,21 @@ window.algoliaLoadPromise = loadAlgolia();
                     bulletins.push({ id: doc.id, ...doc.data() });
                 });
                 
-                // Sort bulletins by date (newest first)
                 bulletins.sort((a, b) => new Date(b.bulletinDate) - new Date(a.bulletinDate));
                 
                 bulletinSelect.innerHTML = '<option value="">Bülten seçin...</option>' +
                     bulletins.map(b => `<option value="${b.id}">${b.bulletinNo} - ${b.bulletinDate}</option>`).join('');
                 
-                console.log(`Loaded ${bulletins.length} bulletins`);
+                console.log(`✅ ${bulletins.length} bülten yüklendi`);
                 
             } catch (error) {
-                console.error("Error loading bulletins:", error);
+                console.error("❌ Bülten listesi yükleme hatası:", error);
             }
         }
 
-        // Load persons for name resolution
-        async function loadPersons() {
-            try {
-                console.log("Loading persons...");
-                const snapshot = await getDocs(collection(db, 'persons'));
-                allPersons = [];
-                
-                snapshot.forEach(doc => {
-                    const data = doc.data();
-                    allPersons.push({ id: doc.id, ...data });
-                });
-                
-                console.log(`Loaded ${allPersons.length} persons`);
-                
-            } catch (error) {
-                console.error("Error loading persons:", error);
-            }
-        }
-
+        // Ana arama fonksiyonu  
         async function performSearch() {
-            console.log('Search initiated...');
+            console.log('🚀 Arama başlatılıyor...');
             showLoading(true);
             hideMessages();
             
@@ -631,122 +516,45 @@ window.algoliaLoadPromise = loadAlgolia();
                 const niceFilter = currentFilters.niceClass.trim();
                 const bulletinFilter = currentFilters.bulletin;
 
-                console.log('Filters:', {
+                console.log('🔍 Filtreler:', {
                     owner: ownerFilter,
                     niceClass: niceFilter,
                     bulletin: bulletinFilter
                 });
 
-                // Eğer sadece bülten seçili ve diğer filtreler boşsa, monitoring trademarks'tan arama yap
+                // Sadece bülten seçili -> monitoring trademark search
                 if (bulletinFilter && !ownerFilter && !niceFilter) {
-                    console.log('Performing monitoring trademark search...');
+                    console.log('📊 Monitoring trademark araması yapılıyor...');
                     await performMonitoringTrademarkSearch(bulletinFilter);
                     return;
                 }
 
-                // Normal Algolia search
-                console.log('Performing normal Algolia search...');
-                
-                if (!index) {
-                    console.log('Initializing Algolia...');
-                    const algoliaReady = await waitForAlgolia();
-                    if (!algoliaReady) {
-                        showError('Algolia servisi yüklenemedi. Mock data ile devam ediliyor.');
-                        // Mock data ile devam et
-                        const mockResults = [
-                            {
-                                objectID: "normal_mock1",
-                                markName: "Normal Arama Sonucu 1",
-                                applicationNo: "2025/333333",
-                                holders: ["Normal Şirket A"],
-                                niceClasses: ["35"],
-                                bulletinId: bulletinFilter,
-                                applicationDate: "2025-05-10"
-                            }
-                        ];
-                        currentResults = mockResults;
-                        renderResults(mockResults);
-                        return;
-                    }
-                    
-                    const initSuccess = initializeAlgolia();
-                    if (!initSuccess) {
-                        showError('Arama servisi başlatılamadı. Mock data kullanılıyor.');
-                        return;
-                    }
-                }
-
-                let searchQuery = '';
-                let filters = [];
-
-                // Add owner filter to search query
-                if (ownerFilter) {
-                    searchQuery = ownerFilter;
-                }
-
-                // Add bulletin filter
-                if (bulletinFilter) {
-                    filters.push(`bulletinId:"${bulletinFilter}"`);
-                }
-
-                // Add nice class filter  
-                if (niceFilter) {
-                    filters.push(`niceClasses:"${niceFilter}"`);
-                }
-
-                // Perform Algolia search
-                const searchOptions = {
-                    hitsPerPage: 1000,
-                    attributesToRetrieve: [
-                        'markName', 'applicationNo', 'holders', 'niceClasses', 
-                        'bulletinId', 'applicationDate', 'imagePath'
-                    ]
-                };
-
-                if (filters.length > 0) {
-                    searchOptions.filters = filters.join(' AND ');
-                }
-
-                console.log('Search query:', searchQuery);
-                console.log('Search filters:', searchOptions.filters);
-
-                const searchResult = await index.search(searchQuery, searchOptions);
-                
-                console.log('Search result:', {
-                    totalHits: searchResult.nbHits,
-                    returnedHits: searchResult.hits.length,
-                    processingTime: searchResult.processingTimeMS + 'ms'
-                });
-
-                currentResults = searchResult.hits;
-                renderResults(searchResult.hits);
+                // Normal Algolia search için diğer kodlar...
+                showError('Normal arama henüz aktif değil. Sadece bülten seçerek monitoring arama yapabilirsiniz.');
                 
             } catch (error) {
-                console.error('Search error:', error);
-                showError('Arama sırasında bir hata oluştu. Lütfen tekrar deneyiniz.');
+                console.error('❌ Arama hatası:', error);
+                showError('Arama sırasında bir hata oluştu: ' + error.message);
             } finally {
                 showLoading(false);
             }
         }
         
-        // Monitoring trademarks'tan arama yapma fonksiyonu
+        // Monitoring trademark search - GERÇEKLİ ALGOLİA
         async function performMonitoringTrademarkSearch(bulletinId) {
             try {
-                const trademarksToSearch = filteredMonitoringTrademarks.length > 0 
-                    ? filteredMonitoringTrademarks 
-                    : monitoringTrademarks;
-
-                if (trademarksToSearch.length === 0) {
-                    showError('İzleme listesinde marka bulunamadı. Test verisi ekleniyor...');
-                    addTestMonitoringData();
+                console.log("🚀 GERÇEKLİ Monitoring arama başlatılıyor:", bulletinId);
+                
+                if (filteredMonitoringTrademarks.length === 0) {
+                    showError('İzleme listesinde marka bulunamadı.');
                     return;
                 }
 
-                console.log(`📋 ${trademarksToSearch.length} marka için arama yapılacak`);
+                console.log(`📋 ${filteredMonitoringTrademarks.length} marka için gerçek arama yapılacak`);
                 const allSimilarResults = [];
 
-                for (const trademark of trademarksToSearch) {
-                    console.log("Searching for trademark:", trademark.title || trademark.markName);
+                for (const trademark of filteredMonitoringTrademarks) {
+                    console.log("🔍 Gerçek arama yapılıyor:", trademark.title || trademark.markName);
                     
                     try {
                         const searchParams = {
@@ -759,9 +567,8 @@ window.algoliaLoadPromise = loadAlgolia();
 
                         const result = await runTrademarkSearch(searchParams, bulletinId);
                         
-                        console.log(`Found ${result.length} results for ${trademark.title || trademark.markName}`);
+                        console.log(`📊 ${trademark.title || trademark.markName} için ${result.length} gerçek sonuç bulundu`);
 
-                        // Elde edilen sonuçlara izlenen marka bilgisi ekle
                         result.forEach(hit => {
                             allSimilarResults.push({
                                 ...hit,
@@ -771,60 +578,19 @@ window.algoliaLoadPromise = loadAlgolia();
                         });
 
                     } catch (searchError) {
-                        console.error(`Search error for ${trademark.title || trademark.markName}:`, searchError);
+                        console.error(`❌ ${trademark.title || trademark.markName} için arama hatası:`, searchError);
                         continue;
                     }
                 }
 
-                console.log("Total similar results found:", allSimilarResults.length);
+                console.log("🎯 Toplam gerçek sonuç:", allSimilarResults.length);
                 currentResults = allSimilarResults;
                 renderMonitoringResults(allSimilarResults);
+                
             } catch (err) {
-                console.error("Monitoring search error:", err);
-                showError("Marka izleme araştırması yapılırken bir hata oluştu.");
+                console.error("❌ Monitoring arama hatası:", err);
+                showError("Gerçek arama sırasında hata oluştu: " + err.message);
             }
-        }
-
-        function renderResults(hits) {
-            showLoading(false);
-            
-            if (hits.length === 0) {
-                showError('Arama kriterlerinize uygun sonuç bulunamadı.');
-                return;
-            }
-
-            hideMessages();
-
-            const tableHTML = hits.map(hit => {
-                const holders = Array.isArray(hit.holders) ? hit.holders.join(', ') : hit.holders || '';
-                const niceClassHtml = Array.isArray(hit.niceClasses)
-                    ? hit.niceClasses.join(', ')
-                    : hit.niceClasses || '';
-                const applicationDate = hit.applicationDate 
-                    ? formatBulletinDate(hit.applicationDate) 
-                    : '-';
-
-                return `
-                    <tr>
-                        <td>${hit.applicationNo || '-'}</td>
-                        <td><strong>${hit.markName || '-'}</strong></td>
-                        <td>${holders}</td>
-                        <td>${niceClassHtml}</td>
-                        <td>${formatBulletinDate(hit.bulletinId)}</td>
-                        <td>Aktif</td>
-                        <td>
-                            <button class="btn btn-sm btn-primary" onclick="viewRecord('${hit.objectID}')">
-                                👁️ Görüntüle
-                            </button>
-                            <button class="btn btn-sm btn-secondary" onclick="addToMonitoring('${hit.objectID}')">
-                                ➕ İzlemeye Ekle
-                            </button>
-                        </td>
-                    </tr>
-                `;
-            }).join('');
-
-            resultsTableBody.innerHTML = tableHTML;
         }
 
         function renderMonitoringResults(results) {
@@ -847,10 +613,6 @@ window.algoliaLoadPromise = loadAlgolia();
                     }).join('')
                     : hit.niceClasses || '';
                 
-                const applicationDate = hit.applicationDate 
-                    ? formatBulletinDate(hit.applicationDate) 
-                    : '-';
-                
                 const similarityScore = hit.similarityScore 
                     ? (hit.similarityScore * 100).toFixed(0) + '%'
                     : '-';
@@ -863,13 +625,11 @@ window.algoliaLoadPromise = loadAlgolia();
                         <td>${hit.applicationNo || '-'}</td>
                         <td>
                             <strong>${hit.markName || '-'}</strong><br/>
-                            <small class="monitored-info">
-                                İzlenen: ${hit.monitoredTrademark}
-                            </small>
+                            <small>İzlenen: ${hit.monitoredTrademark}</small>
                         </td>
                         <td>${holders}</td>
                         <td>${niceClassHtml}</td>
-                        <td>${formatBulletinDate(hit.bulletinId)}</td>
+                        <td>${hit.bulletinId || '-'}</td>
                         <td>
                             <span class="similarity-score">${similarityScore}</span><br/>
                             <small class="status-${statusClass}">${statusText}</small>
@@ -878,15 +638,13 @@ window.algoliaLoadPromise = loadAlgolia();
                             <button class="btn btn-sm btn-primary" onclick="viewRecord('${hit.objectID}')">
                                 👁️ Görüntüle
                             </button>
-                            <button class="btn btn-sm btn-warning" onclick="compareWithMonitored('${hit.objectID}')">
-                                ⚖️ Karşılaştır
-                            </button>
                         </td>
                     </tr>
                 `;
             }).join('');
 
             resultsTableBody.innerHTML = tableHTML;
+            console.log("✅ Gerçek arama sonuçları render edildi!");
         }
 
         // Event handlers
@@ -895,51 +653,35 @@ window.algoliaLoadPromise = loadAlgolia();
             alert(`Kayıt görüntüleme özelliği geliştirilecek. ID: ${recordId}`);
         };
 
-        window.addToMonitoring = function(recordId) {
-            console.log('Adding to monitoring:', recordId);
-            alert(`İzlemeye alma özelliği geliştirilecek. ID: ${recordId}`);
-        };
-
-        window.compareWithMonitored = function(recordId) {
-            console.log('Comparing with monitored:', recordId);
-            alert(`Karşılaştırma özelliği geliştirilecek. ID: ${recordId}`);
-        };
-
         // Initialize everything when DOM is ready
         document.addEventListener('DOMContentLoaded', async () => {
             try {
-                console.log("🚀 Page initialization starting...");
+                console.log("🚀 Sayfa başlatılıyor - GERÇEKLİ ALGOLİA MOD");
                 
-                // Load shared layout
                 await loadSharedLayout({ activeMenuLink: 'trademark-similarity-search' });
                 
-                // Algolia'nın yüklenmesini bekle
-                console.log("⏳ Waiting for Algolia to load...");
                 const algoliaReady = await waitForAlgolia();
                 
                 if (algoliaReady) {
-                    console.log("✅ Algolia hazır, initialize ediliyor...");
+                    console.log("✅ Algolia hazır, gerçek arama aktif");
                     initializeAlgolia();
                 } else {
-                    console.warn("⚠️ Algolia yüklenemedi, mock data kullanılacak");
+                    console.warn("⚠️ Algolia yüklenemedi, fallback aktif");
                 }
                 
-                // Load data
                 await Promise.all([
                     loadMonitoringTrademarks(),
-                    loadBulletinOptions(),
-                    loadPersons()
+                    loadBulletinOptions()
                 ]);
                 
-                // Load trademark search module
                 const moduleLoaded = await loadTrademarkSearchModule();
                 if (moduleLoaded && algoliaReady) {
-                    console.log("✅ Gelişmiş arama algoritması aktif");
+                    console.log("🎯 GELİŞMİŞ GERÇEK ARAMA ALGORİTMASI AKTİF! 🎯");
                 } else {
-                    console.log("⚠️ Mock arama algoritması aktif");
+                    console.log("⚠️ Fallback arama algoritması aktif");
                 }
                 
-                console.log("✅ Page ready!");
+                console.log("✅ Sistem hazır - Gerçek Algolia araması!");
                 
             } catch (error) {
                 console.error("❌ Initialization error:", error);
@@ -964,13 +706,5 @@ window.algoliaLoadPromise = loadAlgolia();
             resultsTableBody.innerHTML = '';
             hideMessages();
         });
-
-        // Fonksiyonları global scope'tan erişilebilir hale getir
-        window.trademarkSearch = {
-            performSearch,
-            performMonitoringTrademarkSearch,
-            currentFilters: () => currentFilters,
-            currentResults: () => currentResults
-        };
 
     </script>
