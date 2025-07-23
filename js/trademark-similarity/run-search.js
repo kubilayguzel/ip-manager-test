@@ -17,62 +17,65 @@ export async function runTrademarkSearch(monitoredMark, selectedBulletinNo) {
     niceClasses: monitoredMark.niceClasses
   });
 
-  // ÖNEMLİ DEBUG: BulletinId detaylarını logla
-  console.log("🔍 BULLETIN ID DEBUG:");
-  console.log("  - Gelen bulletinId:", selectedBulletinNo);
-  console.log("  - Type:", typeof selectedBulletinNo);
-  console.log("  - Length:", selectedBulletinNo?.length);
-  console.log("  - First 10 chars:", selectedBulletinNo?.substring(0, 10));
-  console.log("  - Last 10 chars:", selectedBulletinNo?.substring(-10));
-  console.log("  - Full string split:", selectedBulletinNo?.split(''));
+  // BulletinId debug
+  console.log("🔍 BULLETIN ID DEBUG:", {
+    type: typeof selectedBulletinNo,
+    length: selectedBulletinNo?.length,
+    previewStart: selectedBulletinNo?.substring(0, 10),
+    previewEnd: selectedBulletinNo?.substring(-10)
+  });
 
   const { markName, applicationDate, niceClasses } = monitoredMark;
 
   try {
-    // Filter string'ini detaylı logla
+    // Filter string
     const filterString = `bulletinId:"${selectedBulletinNo}"`;
-    console.log("🎯 FILTER DEBUG:");
-    console.log("  - Filter string:", filterString);
-    console.log("  - Filter length:", filterString.length);
-    console.log("  - Encoded filter:", encodeURIComponent(filterString));
+    console.log("🎯 FILTER DEBUG:", {
+      filterString,
+      encoded: encodeURIComponent(filterString)
+    });
 
-    // Algolia search parametrelerini detaylı logla
+    // Algolia search params
     const searchParams = {
       filters: filterString,
       getRankingInfo: true,
       hitsPerPage: 1000
     };
-    
-    console.log("📡 ALGOLIA REQUEST DEBUG:");
-    console.log("  - Search term:", markName);
-    console.log("  - Search params:", JSON.stringify(searchParams, null, 2));
+
+    // Algolia final request log
+    console.log("🚀 Algolia final request:", {
+      indexName: index.indexName,
+      query: markName,
+      params: searchParams
+    });
 
     const searchResult = await index.search(markName, searchParams);
 
-    console.log("🧾 Algolia sonuçları:", {
+    // Sonuçları logla
+    console.log("🧾 Algolia sonuç özeti:", {
       nbHits: searchResult.nbHits,
       hitsLength: searchResult.hits.length,
       processingTime: searchResult.processingTimeMS + "ms"
     });
+    console.log("🔎 Algolia ham sonuçlar (ilk 5):", searchResult.hits.slice(0, 5));
 
     if (searchResult.hits.length === 0) {
       console.log("⚠️ Bu marka için hiç sonuç bulunamadı");
       return [];
     }
 
-    // Mevcut kod devam eder...
     const enriched = searchResult.hits
       .filter(hit => {
         const isValid = isValidBasedOnDate(hit.applicationDate, applicationDate);
         if (!isValid) {
-          console.log(`📅 Tarih filtresi: ${hit.markName} reddedildi`);
+          console.log(`📅 Tarih filtresi reddetti: ${hit.markName} (${hit.applicationDate})`);
         }
         return isValid;
       })
       .map(hit => {
         const similarityScore = calculateSimilarityScore(hit, markName);
         const sameClass = hasOverlappingNiceClasses(hit.niceClasses || [], niceClasses || []);
-        
+
         console.log(`📊 ${hit.markName}: score=${similarityScore.toFixed(2)}, sameClass=${sameClass}`);
         
         return { 
@@ -88,7 +91,7 @@ export async function runTrademarkSearch(monitoredMark, selectedBulletinNo) {
         return b.similarityScore - a.similarityScore;
       });
 
-    console.log("🔍 İşlenmiş sonuçlar:", {
+    console.log("🔍 İşlenmiş sonuçlar özeti:", {
       total: enriched.length,
       sameClass: enriched.filter(r => r.sameClass).length,
       highSimilarity: enriched.filter(r => r.similarityScore > 0.7).length
