@@ -655,26 +655,37 @@ exports.processTrademarkBulletinUploadV3 = onRequest(
     {
         region: 'europe-west1',
         timeoutSeconds: 540,
-        memory: '4GiB', // Memory artırıldı
+        memory: '1GiB', // Memory artırıldı
     },
-    async (req, res) => {
+    async (event) => {
+        const object = event.data;
+        const filePath = object.name;
+        const fileName = path.basename(filePath);
+        const bucket = admin.storage().bucket();
+
+        // Sadece ZIP ve RAR dosyalarını işle
+        if (!fileName.endsWith(".zip") && !fileName.endsWith(".rar")) {
+            console.log(`⏭️ Dosya atlandı (desteklenmeyen format): ${fileName}`);
+            return null;
+        }
+
+        console.log(`🚀 STORAGE TRIGGER ÇALIŞTI: ${fileName}`);
+        console.log(`📁 File path: ${filePath}`);
+        console.log(`🪣 Bucket: ${object.bucket}`);
+
         const tempDir = path.join(os.tmpdir(), `bulletin_${Date.now()}`);
         let extractDir = null;
 
         try {
             console.log('📁 Dosya işleme başlatıldı...');
             
-            // Multipart dosya okuma
-            const buffer = Buffer.concat(req.rawBody || []);
-            if (!buffer || buffer.length === 0) {
-                throw new Error("Dosya verisi bulunamadı.");
-            }
-
-            const tempFilePath = path.join(tempDir, "uploaded_file");
+            // Storage'dan dosyayı indir
+            const tempFilePath = path.join(tempDir, fileName);
             fs.mkdirSync(tempDir, { recursive: true });
-            fs.writeFileSync(tempFilePath, buffer);
-
-            console.log(`📦 Dosya kaydedildi: ${buffer.length} bytes`);
+            
+            console.log(`⬇️ Dosya indiriliyor: ${filePath}`);
+            await bucket.file(filePath).download({ destination: tempFilePath });
+            console.log(`✅ Dosya indirildi: ${tempFilePath}`);
 
             // Dosya tipini kontrol et ve extract işlemi
             extractDir = path.join(tempDir, "extracted");
@@ -682,11 +693,11 @@ exports.processTrademarkBulletinUploadV3 = onRequest(
 
             console.log('🔓 Dosya extract ediliyor...');
             
-            if (tempFilePath.toLowerCase().endsWith('.zip')) {
+            if (fileName.toLowerCase().endsWith('.zip')) {
                 const zip = new AdmZip(tempFilePath);
                 zip.extractAllTo(extractDir, true);
                 console.log('✅ ZIP dosyası extract edildi');
-            } else {
+            } else if (fileName.toLowerCase().endsWith('.rar')) {
                 // RAR dosyası
                 const extractor = await createExtractorFromFile({
                     filepath: tempFilePath,
@@ -816,20 +827,7 @@ exports.processTrademarkBulletinUploadV3 = onRequest(
 
             console.log('🎉 İşlem başarıyla tamamlandı!');
 
-            return res.status(200).send({
-                success: true,
-                message: `Bulletin başarıyla işlendi: ${savedCount} kayıt, ${uploadedImages} görsel yüklendi.`,
-                bulletinId,
-                bulletinNo,
-                bulletinDate,
-                totalRecords: savedCount,
-                totalImages: uploadedImages,
-                processingStats: {
-                    parsed: records.length,
-                    saved: savedCount,
-                    images: uploadedImages
-                }
-            });
+            return null; // Storage trigger için null return
 
         } catch (error) {
             console.error("❌ Processing hatası:", error);
@@ -842,11 +840,9 @@ exports.processTrademarkBulletinUploadV3 = onRequest(
                 fs.rmSync(tempDir, { recursive: true, force: true });
             }
 
-            return res.status(500).send({
-                success: false,
-                error: `Processing hatası: ${error.message}`,
-                stack: error.stack
-            });
+            // Storage trigger için error'ı log'la ama response dönme
+            console.error(`❌ Processing failed for file: ${fileName}`, error.message);
+            return null;
         }
     }
 );
