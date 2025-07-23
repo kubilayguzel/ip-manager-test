@@ -657,7 +657,6 @@ exports.createUniversalNotificationOnTaskCompleteV2 = onDocumentUpdated(
 // Trademark Bulletin Upload Processing (v2 Storage Trigger)
 // Debug edilmiş processTrademarkBulletinUploadV2 fonksiyonu
 // functions/index.js dosyasında mevcut fonksiyonu bu versiyonla değiştirin
-
 exports.processTrademarkBulletinUploadV2 = onObjectFinalized(
   {
     region: 'europe-west1',
@@ -672,8 +671,6 @@ exports.processTrademarkBulletinUploadV2 = onObjectFinalized(
     const fileName = path.basename(filePath);
     const fileSize = parseInt(object.size);
     const bucket = admin.storage().bucket();
-    
-
 
     console.log(`📄 Dosya: ${fileName} (${(fileSize / 1024 / 1024).toFixed(2)} MB)`);
 
@@ -854,9 +851,9 @@ exports.uploadImageWorkerV2 = onMessagePublished(
 );
 
 
-// =========================================================
-//              HELPER FONKSİYONLARI
-// =========================================================
+// ============== HELPER FUNCTIONS - MEMORY OPTIMIZED ==============
+
+// 1. Streaming download function
 async function downloadWithStream(file, destination) {
   const readStream = file.createReadStream();
   const writeStream = fs.createWriteStream(destination);
@@ -864,6 +861,7 @@ async function downloadWithStream(file, destination) {
   await pipeline(readStream, writeStream);
 }
 
+// 2. Streaming ZIP extraction
 async function extractZipStreaming(zipPath, extractDir) {
   return new Promise((resolve, reject) => {
     const zip = new AdmZip(zipPath);
@@ -904,6 +902,7 @@ async function extractZipStreaming(zipPath, extractDir) {
   });
 }
 
+// 3. Streaming script content parser
 async function parseScriptContentStreaming(scriptPath) {
   console.log('🔄 Streaming script parser başlıyor...');
   
@@ -988,6 +987,48 @@ async function parseScriptContentStreaming(scriptPath) {
     lineStream.on('error', reject);
   });
 }
+
+// Helper function to parse VALUES from SQL line
+function parseValuesFromLine(line) {
+  const valuesMatch = line.match(/VALUES\s*\((.*)\)/i);
+  if (!valuesMatch) return null;
+
+  const valuesStr = valuesMatch[1];
+  const values = [];
+  let current = '';
+  let inQuotes = false;
+  let quoteChar = null;
+
+  for (let i = 0; i < valuesStr.length; i++) {
+    const char = valuesStr[i];
+    
+    if (!inQuotes && (char === "'" || char === '"')) {
+      inQuotes = true;
+      quoteChar = char;
+    } else if (inQuotes && char === quoteChar) {
+      if (valuesStr[i + 1] === quoteChar) {
+        current += char;
+        i++;
+      } else {
+        inQuotes = false;
+        quoteChar = null;
+      }
+    } else if (!inQuotes && char === ',') {
+      values.push(decodeValue(current.trim()));
+      current = '';
+    } else {
+      current += char;
+    }
+  }
+  
+  if (current.trim()) {
+    values.push(decodeValue(current.trim()));
+  }
+  
+  return values;
+}
+
+// 4. Batched Firestore writes
 async function writeBatchesToFirestore(records, bulletinId, imagePathMap) {
   const batchSize = 250; // Reduced batch size for memory efficiency
   let totalWritten = 0;
@@ -1022,6 +1063,8 @@ async function writeBatchesToFirestore(records, bulletinId, imagePathMap) {
   
   console.log(`✅ ${totalWritten} records written to Firestore`);
 }
+
+// 5. Streaming image processing
 async function processImagesStreaming(imageFiles, bulletinNo) {
   const imageBatchSize = 50; // Smaller batches for memory efficiency
   let totalSent = 0;
@@ -1070,276 +1113,86 @@ async function processImagesStreaming(imageFiles, bulletinNo) {
   
   console.log(`✅ ${totalSent} images queued for upload`);
 }
-function listAllFilesRecursive(dir) {
-    let results = [];
-    const list = fs.readdirSync(dir);
-    list.forEach((file) => {
-        const fullPath = path.join(dir, file);
-        const stat = fs.statSync(fullPath);
-        if (stat && stat.isDirectory()) {
-            results = results.concat(listAllFilesRecursive(fullPath));
-        } else {
-            results.push(fullPath);
-        }
-    });
-    return results;
-}
 
-function extractAppNoFromFilename(filename) {
-    const match = filename.match(/(\d{4,})/); 
-    return match ? match[1] : null;
-}
+// Helper function - same as original
+function parseValuesFromLine(line) {
+  const valuesMatch = line.match(/VALUES\s*\((.*)\)/i);
+  if (!valuesMatch) return null;
 
-function parseValues(raw) {
-    const values = [];
-    let current = '';
-    let inString = false;
-    let i = 0;
+  const valuesStr = valuesMatch[1];
+  const values = [];
+  let current = '';
+  let inQuotes = false;
+  let quoteChar = null;
 
-    while (i < raw.length) {
-        const char = raw[i];
-        
-        if (char === "'") {
-            if (inString && raw[i + 1] === "'") {
-                current += "'";
-                i += 2;
-                continue;
-            } else {
-                inString = !inString;
-            }
-        } else if (char === ',' && !inString) {
-            values.push(decodeValue(current.trim()));
-            current = '';
-            i++;
-            continue;
-        } else {
-            current += char;
-        }
+  for (let i = 0; i < valuesStr.length; i++) {
+    const char = valuesStr[i];
+    
+    if (!inQuotes && (char === "'" || char === '"')) {
+      inQuotes = true;
+      quoteChar = char;
+    } else if (inQuotes && char === quoteChar) {
+      if (valuesStr[i + 1] === quoteChar) {
+        current += char;
         i++;
+      } else {
+        inQuotes = false;
+        quoteChar = null;
+      }
+    } else if (!inQuotes && char === ',') {
+      values.push(decodeValue(current.trim()));
+      current = '';
+    } else {
+      current += char;
     }
-    
+  }
+  
+  if (current.trim()) {
     values.push(decodeValue(current.trim()));
-    return values;
+  }
+  
+  return values;
 }
 
-function parseScriptContent(content) {
-    const recordsMap = {};
-    
-    const lines = content.split('\n');
-    
-    let processedLines = 0;
-    
-    for (let i = 0; i < lines.length; i++) {
-        const line = lines[i].trim();
-        
-        if (!line.length || !line.startsWith('INSERT INTO')) {
-            continue;
-        }
-        
-        processedLines++;
-        if (processedLines % 1000 === 0) {
-            console.log(`İşlenen satır: ${processedLines}/${lines.length}`);
-        }
-        
-        const match = line.match(/INSERT INTO (\w+) VALUES\s*\((.*)\)$/);
-        if (!match) continue;
-        
-        const table = match[1].toUpperCase();
-        const values = parseValues(match[2]);
-        
-        const appNo = values[0];
-        if (!appNo) continue;
-
-        if (!recordsMap[appNo]) {
-            recordsMap[appNo] = {
-                applicationNo: appNo,
-                applicationDate: null,
-                markName: null,
-                niceClasses: null,
-                holders: [],
-                goods: [],
-                extractedGoods: [],
-                attorneys: [],
-            };
-        }
-
-        if (table === "TRADEMARK") {
-            recordsMap[appNo].applicationDate = values[1] ?? null;
-            recordsMap[appNo].markName = values[5] ?? null;
-            recordsMap[appNo].niceClasses = values[6] ?? null;
-        } else if (table === "HOLDER") {
-            const holderName = extractHolderName(values[2]);
-            let addressParts = [values[3], values[4], values[5], values[6]].filter(Boolean).join(", ");
-            if (addressParts.trim() === "") addressParts = null;
-            recordsMap[appNo].holders.push({
-                name: holderName,
-                address: addressParts,
-                country: values[7] ?? null,
-            });
-        } else if (table === "GOODS") {
-            recordsMap[appNo].goods.push(values[3] ?? null);
-        } else if (table === "EXTRACTEDGOODS") {
-            recordsMap[appNo].extractedGoods.push(values[3] ?? null);
-        } else if (table === "ATTORNEY") {
-            recordsMap[appNo].attorneys.push(values[2] ?? null);
-        }
-    }
-    
-    return Object.values(recordsMap);
-}
-
+// Helper functions - same as original
 function decodeValue(str) {
-    if (str === null || str === undefined) return null;
-    if (str === "") return null;
-    str = str.replace(/^'/, "").replace(/'$/, "").replace(/''/g, "'");
-    return str.replace(/\\u([0-9a-fA-F]{4})/g, (m, g1) => String.fromCharCode(parseInt(g1, 16)));
+  if (str === null || str === undefined) return null;
+  if (str === "") return null;
+  str = str.replace(/^'/, "").replace(/'$/, "").replace(/''/g, "'");
+  return str.replace(/\\u([0-9a-fA-F]{4})/g, (m, g1) => String.fromCharCode(parseInt(g1, 16)));
 }
 
 function extractHolderName(str) {
-    if (!str) return null;
-    str = str.trim();
-    const parenMatch = str.match(/^\(\d+\)\s*(.*)$/);
-    if (parenMatch) {
-        return parenMatch[1].trim();
-    }
-    return str;
+  if (!str) return null;
+  str = str.trim();
+  const parenMatch = str.match(/^\(\d+\)\s*(.*)$/);
+  if (parenMatch) {
+    return parenMatch[1].trim();
+  }
+  return str;
 }
 
 function getContentType(filePath) {
-    if (/\.png$/i.test(filePath)) return "image/png";
-    if (/\.jpe?g$/i.test(filePath)) return "image/jpeg";
-    return "application/octet-stream";
+  if (/\.png$/i.test(filePath)) return "image/png";
+  if (/\.jpe?g$/i.test(filePath)) return "image/jpeg";
+  return "application/octet-stream";
 }
-//              ALGOLIA İLK İNDEKSLEME FONKSİYONU (v2 onRequest)
-// =========================================================
 
-exports.indexTrademarkBulletinRecords = onRequest(
-  {
-    region: 'europe-west1',
-    timeoutSeconds: 540,
-    memory: '2GiB'
-  },
-  async (req, res) => {
-    console.log('Algolia: trademarkBulletinRecords için toplu indeksleme başlatıldı.');
-    let recordsToIndex = [];
-    let lastDoc = null;
-    const batchSize = 500;
-
-    try {
-      while (true) {
-        let query = db.collection('trademarkBulletinRecords')
-          .orderBy(admin.firestore.FieldPath.documentId())
-          .limit(batchSize);
-
-        if (lastDoc) query = query.startAfter(lastDoc);
-        const snapshot = await query.get();
-        if (snapshot.empty) break;
-
-        const currentBatch = snapshot.docs.map(doc => {
-          const data = doc.data();
-          return {
-            objectID: doc.id,
-            markName: data.markName || null,
-            applicationNo: data.applicationNo || null,
-            applicationDate: data.applicationDate || null,
-            niceClasses: data.niceClasses || null,
-            bulletinId: data.bulletinId ? String(data.bulletinId) : null,
-            holders: Array.isArray(data.holders) ? data.holders.map(h => h.name).join(', ') : '',
-            imagePath: data.imagePath || null,
-            createdAt: data.createdAt ? data.createdAt.toDate().getTime() : null
-          };
-        });
-
-        recordsToIndex = recordsToIndex.concat(currentBatch);
-        lastDoc = snapshot.docs[snapshot.docs.length - 1];
-        console.log(`Firestore'dan şu ana kadar ${recordsToIndex.length} belge okundu.`);
-
-        if (snapshot.docs.length < batchSize) break;
-      }
-
-      console.log(`Algolia'ya toplam ${recordsToIndex.length} belge gönderiliyor.`);
-      const { objectIDs } = await algoliaIndex.saveObjects(recordsToIndex);
-      console.log(`Algolia'ya ${objectIDs.length} belge başarıyla eklendi/güncellendi.`);
-
-      return res.status(200).send({
-        status: 'success',
-        message: `${objectIDs.length} belge Algolia'ya eklendi/güncellendi.`
-      });
-    } catch (error) {
-      console.error('Algolia indeksleme hatası:', error);
-      return res.status(500).send({
-        status: 'error',
-        message: 'Algolia indeksleme sırasında bir hata oluştu.',
-        error: error.message
-      });
+function listAllFilesRecursive(dir) {
+  let results = [];
+  const list = fs.readdirSync(dir);
+  list.forEach((file) => {
+    const fullPath = path.join(dir, file);
+    const stat = fs.statSync(fullPath);
+    if (stat && stat.isDirectory()) {
+      results = results.concat(listAllFilesRecursive(fullPath));
+    } else {
+      results.push(fullPath);
     }
-  }
-);
+  });
+  return results;
+}
 
-exports.onTrademarkBulletinRecordWrite = onDocumentWritten(
-  {
-    document: 'trademarkBulletinRecords/{recordId}',
-    region: 'europe-west1',
-  },
-  async (change) => {
-    const recordId = change.params.recordId;
-
-    // Algolia client'ını fonksiyon içinde initialize et
-    let algoliaClient, algoliaIndex;
-    try {
-      algoliaClient = algoliasearch(ALGOLIA_APP_ID, ALGOLIA_ADMIN_API_KEY);
-      algoliaIndex = algoliaClient.initIndex('trademark_bulletin_records_live');
-      console.log('Algolia client başarıyla initialize edildi.');
-    } catch (error) {
-      console.error('Algolia client initialize edilemedi:', error);
-      return null;
-    }
-
-    const oldData = change.data.before.exists ? change.data.before.data() : null;
-    const newData = change.data.after.exists ? change.data.after.data() : null;
-
-    // Silme durumu
-    if (!change.data.after.exists) {
-      console.log(`Algolia: Belge silindi, kaldırılıyor: ${recordId}`);
-      try {
-        await algoliaIndex.deleteObject(recordId);
-        console.log(`Algolia: ${recordId} başarıyla kaldırıldı.`);
-      } catch (error) {
-        console.error(`Algolia: Silme hatası: ${recordId}`, error);
-      }
-      return null;
-    }
-
-    // Ekleme veya güncelleme durumu
-    if (newData) {
-      console.log(`Algolia: Belge indeksleniyor/güncelleniyor: ${recordId}`);
-      const record = {
-        objectID: recordId,
-        markName: newData.markName || null,
-        applicationNo: newData.applicationNo || null,
-        applicationDate: newData.applicationDate || null,
-        niceClasses: newData.niceClasses || null,
-        bulletinId: newData.bulletinId ? String(newData.bulletinId) : null,
-        holders: Array.isArray(newData.holders)
-          ? newData.holders.map(h => h.name).join(', ')
-          : '',
-        imagePath: newData.imagePath || null,
-        createdAt: newData.createdAt
-          ? newData.createdAt.toDate().getTime()
-          : null
-      };
-
-      try {
-        await algoliaIndex.saveObject(record);
-        console.log(`Algolia: ${recordId} başarıyla indekslendi.`);
-      } catch (error) {
-        console.error(`Algolia: İndeksleme hatası: ${recordId}`, error);
-      }
-    }
-
-    return null;
-  }
-);
 // functions/index.js dosyasına eklenecek deleteBulletinV2 fonksiyonu
 
 exports.deleteBulletinV2 = onCall(
