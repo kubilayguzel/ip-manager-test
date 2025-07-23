@@ -805,8 +805,16 @@ function listAllFilesRecursive(dir) {
 }
 async function parseScriptContentStreaming(scriptPath) {
   const stats = fs.statSync(scriptPath);
-  if (stats.size > 100 * 1024 * 1024) return parseScriptInChunks(scriptPath);
-  return parseScriptContent(fs.readFileSync(scriptPath, "utf8"));
+  console.log(`📏 Script dosya boyutu: ${stats.size} bytes`);
+  
+  if (stats.size > 100 * 1024 * 1024) {
+    console.log("🔄 Büyük dosya - chunk'lı parsing kullanılıyor");
+    return parseScriptInChunks(scriptPath);
+  }
+  
+  console.log("🔄 Normal parsing kullanılıyor");
+  const content = fs.readFileSync(scriptPath, "utf8");
+  return parseScriptContent(content);
 }
 function parseScriptContent(content) {
   console.log(`🔍 Parse başlıyor... Content length: ${content.length} karakter`);
@@ -814,14 +822,21 @@ function parseScriptContent(content) {
   const insertRegex = /INSERT INTO\s+(\w+)\s+VALUES\s*\(([\s\S]*?)\);/gi;
   const recordsMap = {};
   let insertCount = 0;
+  let valuesParsed = 0;
 
   let match;
   while ((match = insertRegex.exec(content)) !== null) {
     const tableName = match[1].toUpperCase();
     const valuesRaw = match[2];
-    const values = parseValues(valuesRaw);
+    
+    const values = parseValuesFromRaw(valuesRaw);
 
-    if (!values || values.length === 0) continue;
+    if (!values || values.length === 0) {
+      console.warn(`⚠️ VALUES parse edilemedi: ${tableName}`);
+      continue;
+    }
+    
+    valuesParsed++;
     const appNo = values[0];
 
     if (!recordsMap[appNo]) {
@@ -842,6 +857,15 @@ function parseScriptContent(content) {
         recordsMap[appNo].applicationDate = values[1] ?? null;
         recordsMap[appNo].markName = values[5] ?? null;
         recordsMap[appNo].niceClasses = values[6] ?? null;
+        
+        if (valuesParsed <= 3) { // İlk 3 kaydı logla
+          console.log(`📊 TRADEMARK parse edildi:`, {
+            appNo: appNo,
+            date: values[1],
+            markName: values[5],
+            classes: values[6]
+          });
+        }
         break;
       case "HOLDER":
         recordsMap[appNo].holders.push({
@@ -868,9 +892,47 @@ function parseScriptContent(content) {
 
   const result = Object.values(recordsMap);
   console.log(
-    `✅ Parse tamamlandı: ${insertCount} INSERT bulundu, ${result.length} başvuru işlendi`
+    `✅ Parse tamamlandı: ${insertCount} INSERT bulundu, ${valuesParsed} VALUES işlendi, ${result.length} benzersiz başvuru`
   );
+  
+  if (result.length > 0) {
+    console.log(`📋 İlk kayıt örneği:`, JSON.stringify(result[0], null, 2));
+  }
+  
   return result;
+}
+function parseValuesFromRaw(raw) {
+  const values = [];
+  let current = "";
+  let inString = false;
+  let i = 0;
+
+  while (i < raw.length) {
+    const char = raw[i];
+    if (char === "'") {
+      if (inString && raw[i + 1] === "'") {
+        current += "'";
+        i += 2;
+        continue;
+      } else {
+        inString = !inString;
+      }
+    } else if (char === "," && !inString) {
+      values.push(decodeValue(current.trim()));
+      current = "";
+      i++;
+      continue;
+    } else {
+      current += char;
+    }
+    i++;
+  }
+  
+  if (current.trim()) {
+    values.push(decodeValue(current.trim()));
+  }
+  
+  return values;
 }
 
 async function parseScriptInChunks(scriptPath) {
@@ -933,33 +995,10 @@ async function parseScriptInChunks(scriptPath) {
   return Object.values(records);
 }
 function parseValuesFromLine(line) {
-  const values = [];
-  let current = "";
-  let inString = false;
-  let i = 0;
-
-  while (i < raw.length) {
-    const char = raw[i];
-    if (char === "'") {
-      if (inString && raw[i + 1] === "'") {
-        current += "'";
-        i += 2;
-        continue;
-      } else {
-        inString = !inString;
-      }
-    } else if (char === "," && !inString) {
-      values.push(decodeValue(current.trim()));
-      current = "";
-      i++;
-      continue;
-    } else {
-      current += char;
-    }
-    i++;
-  }
-  values.push(decodeValue(current.trim()));
-  return values;
+  const valuesMatch = line.match(/VALUES\s*\((.*)\)/i);
+  if (!valuesMatch) return null;
+  
+  return parseValuesFromRaw(valuesMatch[1]);
 }
 function decodeValue(str) {
     if (str === null || str === undefined) return null;
