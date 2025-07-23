@@ -665,13 +665,18 @@ exports.processTrademarkBulletinUploadV2 = onObjectFinalized(
     const filePath = event.data.name || "";
     const fileName = path.basename(filePath);
 
-    // Yalnızca bulletins/ altında ve zip uzantılı dosyaları işle
-    if (!filePath.startsWith("bulletins/") || !fileName.toLowerCase().endsWith(".zip")) {
-      return null; // Sessiz çıkış (log yok)
-    }
+    // Yalnızca zip uzantılı dosyaları işle
+if (
+  !filePath.startsWith("bulletins/") ||
+  !fileName.toLowerCase().endsWith(".zip") ||
+  filePath.includes("_images/")
+) {
+  return null;
+}
 
+if (filePath.toLowerCase().endsWith(".zip")) {
     console.log("🔥 Trademark Bulletin Upload V2 başladı:", filePath);
-
+}
     const bucket = admin.storage().bucket();
     const tempFilePath = path.join(os.tmpdir(), fileName);
     const extractDir = path.join(os.tmpdir(), `extract_${Date.now()}`);
