@@ -34,11 +34,9 @@ export async function debugFilters(selectedBulletinNo, testQuery = "setcard") {
   console.log("🧪 Farklı filter formatları test ediliyor...");
   
   const filters = [
-    `bulletinId:"${selectedBulletinNo}"`,
-    `bulletinId='${selectedBulletinNo}'`,
-    `bulletinId:${selectedBulletinNo}`,
-    `bulletinId="${selectedBulletinNo}"`,
-    `bulletinId:\"${selectedBulletinNo}\"`
+    `bulletinId:${selectedBulletinNo}`,  // Numeric format - tırnak yok
+    `bulletinId:"${selectedBulletinNo}"`, // String format - tırnak var
+    `bulletinId='${selectedBulletinNo}'`  // String format - tek tırnak
   ];
 
   for (const filter of filters) {
@@ -57,6 +55,7 @@ export async function debugFilters(selectedBulletinNo, testQuery = "setcard") {
       }
     } catch (error) {
       console.log(`❌ Error with "${filter}":`, error.message);
+      console.log(`❌ Error details:`, error);
     }
   }
 }
@@ -117,12 +116,13 @@ export async function runTrademarkSearch(monitoredMark, selectedBulletinNo) {
   const { markName, applicationDate, niceClasses } = monitoredMark;
 
   try {
-    // Filter string debug
+    // Filter string - BULLETINID NUMERIC FORMAT (TRAK YOK!)
+    // Algolia 400 hatası veriyordu çünkü bulletinId numeric field
     const filterString = `bulletinId:${selectedBulletinNo}`;
-    console.log("🎯 FILTER DEBUG:", {
+    console.log("🎯 FILTER DEBUG - NUMERIC FORMAT:", {
       filterString,
-      encoded: encodeURIComponent(filterString),
-      decoded: decodeURIComponent(encodeURIComponent(filterString))
+      bulletinIdType: typeof selectedBulletinNo,
+      bulletinIdValue: selectedBulletinNo
     });
 
     // Debug functions çağır
@@ -204,6 +204,42 @@ export async function runTrademarkSearch(monitoredMark, selectedBulletinNo) {
   }
 }
 
+// Basit test fonksiyonu - sadece temel arama
+export async function simpleTest() {
+  console.log("🧪 Basit test başlatılıyor...");
+  
+  try {
+    // 1. Sadece index'e erişim testi
+    console.log("1️⃣ Index erişim testi...");
+    const testResult = await index.search("", { hitsPerPage: 1 });
+    console.log("✅ Index erişilebilir:", testResult.nbHits, "toplam kayıt");
+    
+    // 2. Basit kelime arama
+    console.log("2️⃣ 'setcard' kelime araması...");
+    const wordResult = await index.search("setcard", { hitsPerPage: 10 });
+    console.log("✅ 'setcard' arama sonucu:", wordResult.nbHits, "kayıt");
+    
+    if (wordResult.nbHits > 0) {
+      console.log("📄 Bulunan kayıtlar:");
+      wordResult.hits.forEach((hit, i) => {
+        console.log(`   ${i+1}. ${hit.markName} - BulletinId: "${hit.bulletinId}"`);
+      });
+    }
+    
+    // 3. BulletinId'leri kontrol et
+    console.log("3️⃣ BulletinId analizi...");
+    const allResults = await index.search("", { hitsPerPage: 20 });
+    const uniqueBulletinIds = [...new Set(allResults.hits.map(h => h.bulletinId))];
+    console.log("📊 Benzersiz bulletinId'ler:", uniqueBulletinIds);
+    
+    return { wordResult, uniqueBulletinIds };
+    
+  } catch (error) {
+    console.error("❌ Basit test hatası:", error);
+    return null;
+  }
+}
+
 // Yardımcı test fonksiyonu - Manuel test için
 export async function manualDebugTest(bulletinId = "ABa9mcv07R3bltQgs6N8", query = "setcard") {
   console.log("🧪 Manuel debug test başlatılıyor...");
@@ -241,6 +277,7 @@ if (typeof window !== 'undefined') {
     debugFilters,
     debugGeneralSearch,
     manualDebugTest,
-    runTrademarkSearch
+    runTrademarkSearch,
+    simpleTest  // Basit test eklendi
   };
 }
