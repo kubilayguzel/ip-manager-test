@@ -763,58 +763,64 @@ exports.uploadImageWorkerV2 = onMessagePublished(
     {
         topic: "trademark-image-upload",
         region: 'europe-west1',
-        timeoutSeconds: 300,
-        memory: '512MiB'
+        timeoutSeconds: 540, // 9 dakikaya çıkarıldı
+        memory: '2GiB', // Bellek 2GB'a çıkarıldı
+        maxInstances: 10 // Paralel işleme için instance sayısı artırıldı
     },
     async (event) => {
-        console.log('🔥 uploadImageWorker tetiklendi (Batch)...');
-        // Bellek başlangıcı
-        console.log('Memory usage at start:', process.memoryUsage());
+        console.log('🔥 uploadImageWorker tetiklendi (Batch optimized)...');
+        
+        // İşlem başlangıç bellek takibi
+        const startMemory = process.memoryUsage();
+        console.log('Memory usage at start:', {
+            rss: Math.round(startMemory.rss / 1024 / 1024) + 'MB',
+            heapUsed: Math.round(startMemory.heapUsed / 1024 / 1024) + 'MB',
+            heapTotal: Math.round(startMemory.heapTotal / 1024 / 1024) + 'MB'
+        });
 
         let images;
         try {
             const batchData = Buffer.from(event.data.message.data, 'base64').toString();
             images = JSON.parse(batchData);
-            if (!Array.isArray(images)) throw new Error("Geçersiz batch verisi.");
+            
+            if (!Array.isArray(images)) {
+                throw new Error("Geçersiz batch verisi");
+            }
+            
             console.log(`Received batch with ${images.length} images.`);
-            console.log('Memory usage after JSON parse:', process.memoryUsage());
+            
+            // Batch boyutu kontrolü - çok büyükse böl
+            const MAX_BATCH_SIZE = 50; // Batch boyutunu sınırla
+            if (images.length > MAX_BATCH_SIZE) {
+                console.log(`Large batch detected (${images.length}), processing in chunks...`);
+                
+                // Büyük batch'i küçük parçalara böl
+                for (let i = 0; i < images.length; i += MAX_BATCH_SIZE) {
+                    const chunk = images.slice(i, i + MAX_BATCH_SIZE);
+                    console.log(`Processing chunk ${Math.floor(i/MAX_BATCH_SIZE) + 1}/${Math.ceil(images.length/MAX_BATCH_SIZE)} (${chunk.length} images)`);
+                    
+                    await processImageChunk(chunk);
+                    
+                    // Chunk'lar arası bellek temizleme
+                    if (global.gc) {
+                        global.gc();
+                        console.log('Garbage collection triggered between chunks');
+                    }
+                }
+                
+                console.log('All chunks processed successfully');
+                return;
+            }
+            
         } catch (err) {
             console.error("❌ JSON parse hatası:", err);
-            return; // JSON parse hatasında fonksiyonu sonlandır
+            return;
         }
 
-        // Promise.all yerine for...of döngüsü kullanarak daha kontrollü ilerlemek
-        // ve her adımda bellek takibi yapmak
-        for (const img of images) {
-            const { destinationPath, base64, contentType } = img;
-
-            if (!destinationPath || !base64) {
-                console.warn('❌ Eksik veri, işlem atlandı:', img);
-                continue; // Bir sonraki görselle devam et
-            }
-
-            console.log(`Attempting to upload: ${destinationPath}`);
-            // Her görsel için bellek kullanımını takip edin
-            console.log('Memory usage before Buffer:', process.memoryUsage());
-
-            try {
-                const imageBuffer = Buffer.from(base64, 'base64');
-                console.log('Memory usage after Buffer:', process.memoryUsage()); // Buffer oluşturulduktan sonra
-
-                const file = admin.storage().bucket().file(destinationPath);
-
-                await file.save(imageBuffer, {
-                    contentType: contentType || 'image/jpeg',
-                    resumable: false,
-                });
-                console.log(`✅ Yüklendi: ${destinationPath}`);
-            } catch (err) {
-                console.error(`❌ Hata: ${destinationPath}`, err);
-                // Hatalı görselde durmak yerine devam etmek için catch içinde return yerine continue kullanın
-                // throw err; // Fonksiyonun tamamen başarısız olmasını istiyorsanız bu satırı aktif edin
-            }
-        }
-        console.log('Batch processing completed for uploadImageWorkerV2. Final memory usage:', process.memoryUsage());
+        // Normal boyuttaki batch'ler için direkt işleme
+        await processImageChunk(images);
+        
+        console.log('Batch processing completed for uploadImageWorkerV2');
     }
 );
 // =========================================================
@@ -1042,6 +1048,94 @@ async function processImagesStreaming(imageFiles, bulletinNo) {
     });
     console.log(`📤 ${i + batch.length}/${imageFiles.length} görsel kuyruğa eklendi`);
   }
+}
+async function processImageChunk(images) {
+    const processed = [];
+    const failed = [];
+    
+    // Sıralı işleme (paralel değil) - bellek kontrolü için
+    for (let i = 0; i < images.length; i++) {
+        const img = images[i];
+        const { destinationPath, base64, contentType } = img;
+
+        if (!destinationPath || !base64) {
+            console.warn(`❌ Eksik veri, işlem atlandı (${i + 1}/${images.length}):`, {
+                destinationPath: !!destinationPath,
+                base64: !!base64
+            });
+            failed.push(destinationPath || 'unknown');
+            continue;
+        }
+
+        console.log(`[${i + 1}/${images.length}] Processing: ${destinationPath}`);
+        
+        try {
+            // Bellek takibi
+            const beforeMemory = process.memoryUsage();
+            
+            // Base64'ü buffer'a çevir
+            const imageBuffer = Buffer.from(base64, 'base64');
+            console.log(`Buffer size: ${Math.round(imageBuffer.length / 1024)}KB`);
+            
+            const file = admin.storage().bucket().file(destinationPath);
+
+            await file.save(imageBuffer, {
+                contentType: contentType || 'image/jpeg',
+                resumable: false,
+                metadata: {
+                    cacheControl: 'public, max-age=31536000', // 1 yıl cache
+                }
+            });
+            
+            console.log(`✅ [${i + 1}/${images.length}] Uploaded: ${destinationPath}`);
+            processed.push(destinationPath);
+            
+            // Buffer'ı serbest bırak
+            imageBuffer.fill(0);
+            
+            // Her 10 görselde bir bellek durumunu kontrol et
+            if ((i + 1) % 10 === 0) {
+                const afterMemory = process.memoryUsage();
+                console.log(`Memory after ${i + 1} images:`, {
+                    rss: Math.round(afterMemory.rss / 1024 / 1024) + 'MB',
+                    heapUsed: Math.round(afterMemory.heapUsed / 1024 / 1024) + 'MB'
+                });
+                
+                // Bellek kullanımı çok yüksekse garbage collection tetikle
+                if (afterMemory.heapUsed > 1.5 * 1024 * 1024 * 1024) { // 1.5GB üzerindeyse
+                    if (global.gc) {
+                        global.gc();
+                        console.log('🧹 Garbage collection triggered due to high memory usage');
+                    }
+                }
+            }
+            
+        } catch (err) {
+            console.error(`❌ Upload failed [${i + 1}/${images.length}] ${destinationPath}:`, err.message);
+            failed.push(destinationPath);
+            
+            // Kritik hata durumunda (bellek vs.) devam etmeye çalış
+            if (err.message.includes('out of memory') || err.message.includes('ENOMEM')) {
+                console.error('💥 Memory error detected, triggering GC and continuing...');
+                if (global.gc) {
+                    global.gc();
+                }
+            }
+        }
+    }
+    
+    // Sonuçları raporla
+    console.log(`📊 Chunk completed - Processed: ${processed.length}, Failed: ${failed.length}`);
+    if (failed.length > 0) {
+        console.log('❌ Failed uploads:', failed.slice(0, 5)); // İlk 5 hatalı dosyayı göster
+    }
+    
+    // Final bellek durumu
+    const finalMemory = process.memoryUsage();
+    console.log('Final memory usage:', {
+        rss: Math.round(finalMemory.rss / 1024 / 1024) + 'MB',
+        heapUsed: Math.round(finalMemory.heapUsed / 1024 / 1024) + 'MB'
+    });
 }
 function getContentType(filePath) {
   if (/\.png$/i.test(filePath)) return "image/png";
