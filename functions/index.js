@@ -1042,7 +1042,7 @@ exports.indexTrademarkBulletinRecords = onRequest(
             applicationNo: data.applicationNo || null,
             applicationDate: data.applicationDate || null,
             niceClasses: data.niceClasses || null,
-            bulletinId: data.bulletinId || null,
+            bulletinId: String(data.bulletinId || ''),
             holders: Array.isArray(data.holders) ? data.holders.map(h => h.name).join(', ') : '',
             imagePath: data.imagePath || null,
             createdAt: data.createdAt ? data.createdAt.toDate().getTime() : null
@@ -1118,7 +1118,7 @@ exports.onTrademarkBulletinRecordWrite = onDocumentWritten(
         applicationNo: newData.applicationNo || null,
         applicationDate: newData.applicationDate || null,
         niceClasses: newData.niceClasses || null,
-        bulletinId: newData.bulletinId || null,
+        bulletinId: String(newData.bulletinId || ''),
         holders: Array.isArray(newData.holders)
           ? newData.holders.map(h => h.name).join(', ')
           : '',
