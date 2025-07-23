@@ -731,7 +731,7 @@ exports.processTrademarkBulletinUploadV3 = onObjectFinalized(
       }
 
       // **CHUNK UPLOAD - Bellek dostu**
-      const CHUNK_SIZE = 50; // Aynı anda en fazla 50 dosya
+      const CHUNK_SIZE = 200; // Aynı anda en fazla 50 dosya
       for (let i = 0; i < imagesDir.length; i += CHUNK_SIZE) {
         const chunk = imagesDir.slice(i, i + CHUNK_SIZE);
         console.log(`📦 Görsel chunk yükleniyor: ${i + 1}-${i + chunk.length}/${imagesDir.length}`);
@@ -809,96 +809,68 @@ async function parseScriptContentStreaming(scriptPath) {
   return parseScriptContent(fs.readFileSync(scriptPath, "utf8"));
 }
 function parseScriptContent(content) {
-  console.log(`🔍 Parse başlıyor... Content length: ${content.length} karakterler`);
-  
-  const lines = content.split("\n");
-  console.log(`📝 Toplam satır sayısı: ${lines.length}`);
-  
-  const records = {};
-  let currentTable = null;
+  console.log(`🔍 Parse başlıyor... Content length: ${content.length} karakter`);
+
+  const insertRegex = /INSERT INTO\s+(\w+)\s+VALUES\s*\(([\s\S]*?)\);/gi;
+  const recordsMap = {};
   let insertCount = 0;
-  let valuesParsed = 0;
 
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    
-    if (line.startsWith("INSERT INTO")) {
-      const match = line.match(/INSERT INTO (\w+)/);
-      currentTable = match ? match[1] : null;
-      insertCount++;
-      if (insertCount <= 5) { // İlk 5 INSERT komutunu logla
-        console.log(`📋 INSERT INTO ${currentTable} bulundu (satır ${i + 1})`);
-      }
-      continue;
-    }
-    
-    if (currentTable && line.includes("VALUES")) {
-      const values = parseValuesFromLine(line);
-      if (!values || !values.length) {
-        console.warn(`⚠️ VALUES satırı parse edilemedi (satır ${i + 1}): ${line.substring(0, 100)}...`);
-        continue;
-      }
-      
-      valuesParsed++;
-      
-      const appNo = values[0];
-      if (!records[appNo]) {
-        records[appNo] = {
-          applicationNo: appNo,
-          applicationDate: null,
-          markName: null,
-          niceClasses: null,
-          holders: [],
-          goods: [],
-          extractedGoods: [],
-          attorneys: []
-        };
-      }
+  let match;
+  while ((match = insertRegex.exec(content)) !== null) {
+    const tableName = match[1].toUpperCase();
+    const valuesRaw = match[2];
+    const values = parseValues(valuesRaw);
 
-      switch (currentTable) {
-        case "TRADEMARK":
-          records[appNo].applicationDate = values[1] ?? null;
-          records[appNo].markName = values[5] ?? null;
-          records[appNo].niceClasses = values[6] ?? null;
-          if (valuesParsed <= 3) { // İlk 3 TRADEMARK kaydını logla
-            console.log(`📊 TRADEMARK parse edildi:`, {
-              appNo,
-              date: values[1],
-              markName: values[5],
-              classes: values[6]
-            });
-          }
-          break;
-        case "HOLDER":
-          records[appNo].holders.push({
-            name: extractHolderName(values[2]),
-            address: [values[3], values[4], values[5], values[6]]
-                      .filter(Boolean).join(", ") || null,
-            country: values[7] ?? null
-          });
-          break;
-        case "GOODS":
-          records[appNo].goods.push(values[3]);
-          break;
-        case "EXTRACTEDGOODS":
-          records[appNo].extractedGoods.push(values[3]);
-          break;
-        case "ATTORNEY":
-          records[appNo].attorneys.push(values[2]);
-          break;
-      }
+    if (!values || values.length === 0) continue;
+    const appNo = values[0];
+
+    if (!recordsMap[appNo]) {
+      recordsMap[appNo] = {
+        applicationNo: appNo,
+        applicationDate: null,
+        markName: null,
+        niceClasses: null,
+        holders: [],
+        goods: [],
+        extractedGoods: [],
+        attorneys: []
+      };
     }
+
+    switch (tableName) {
+      case "TRADEMARK":
+        recordsMap[appNo].applicationDate = values[1] ?? null;
+        recordsMap[appNo].markName = values[5] ?? null;
+        recordsMap[appNo].niceClasses = values[6] ?? null;
+        break;
+      case "HOLDER":
+        recordsMap[appNo].holders.push({
+          name: extractHolderName(values[2]),
+          address: [values[3], values[4], values[5], values[6]]
+            .filter(Boolean)
+            .join(", ") || null,
+          country: values[7] ?? null
+        });
+        break;
+      case "GOODS":
+        recordsMap[appNo].goods.push(values[3]);
+        break;
+      case "EXTRACTEDGOODS":
+        recordsMap[appNo].extractedGoods.push(values[3]);
+        break;
+      case "ATTORNEY":
+        recordsMap[appNo].attorneys.push(values[2]);
+        break;
+    }
+
+    insertCount++;
   }
 
-  const recordsArray = Object.values(records);
-  console.log(`✅ Parse tamamlandı:`, {
-    totalInserts: insertCount,
-    valuesParsed: valuesParsed,
-    uniqueApplications: recordsArray.length,
-    tablesFound: [...new Set(lines.filter(l => l.startsWith("INSERT INTO")).map(l => l.match(/INSERT INTO (\w+)/)?.[1]))]
-  });
-
-  return recordsArray;
+  const result = Object.values(recordsMap);
+  console.log(
+    `✅ Parse tamamlandı: ${insertCount} INSERT bulundu, ${result.length} başvuru işlendi`
+  );
+  return result;
 }
 
 async function parseScriptInChunks(scriptPath) {
@@ -961,29 +933,32 @@ async function parseScriptInChunks(scriptPath) {
   return Object.values(records);
 }
 function parseValuesFromLine(line) {
-  const valuesMatch = line.match(/VALUES\s*\((.*)\)/i);
-  if (!valuesMatch) return null;
-  const valuesStr = valuesMatch[1];
   const values = [];
   let current = "";
-  let inQuotes = false;
-  for (let i = 0; i < valuesStr.length; i++) {
-    const char = valuesStr[i];
+  let inString = false;
+  let i = 0;
+
+  while (i < raw.length) {
+    const char = raw[i];
     if (char === "'") {
-      if (inQuotes && valuesStr[i + 1] === "'") {
+      if (inString && raw[i + 1] === "'") {
         current += "'";
-        i++;
+        i += 2;
+        continue;
       } else {
-        inQuotes = !inQuotes;
+        inString = !inString;
       }
-    } else if (char === "," && !inQuotes) {
+    } else if (char === "," && !inString) {
       values.push(decodeValue(current.trim()));
       current = "";
+      i++;
+      continue;
     } else {
       current += char;
     }
+    i++;
   }
-  if (current.trim()) values.push(decodeValue(current.trim()));
+  values.push(decodeValue(current.trim()));
   return values;
 }
 function decodeValue(str) {
