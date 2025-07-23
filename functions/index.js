@@ -662,32 +662,32 @@ exports.processTrademarkBulletinUploadV2 = onObjectFinalized(
     memory: "1GiB"
   },
   async (event) => {
-    console.log("🔥 Trademark Bulletin Upload V2 başladı");
-
-    const object = event.data;
-    const filePath = object.name;
+    const filePath = event.data.name || "";
     const fileName = path.basename(filePath);
-    const bucket = admin.storage().bucket();
 
+    // Yalnızca bulletins/ altında ve zip uzantılı dosyaları işle
     if (!filePath.startsWith("bulletins/") || !fileName.toLowerCase().endsWith(".zip")) {
-      console.log("⏭️ Desteklenmeyen dosya:", filePath);
-      return null;
+      return null; // Sessiz çıkış (log yok)
     }
 
+    console.log("🔥 Trademark Bulletin Upload V2 başladı:", filePath);
+
+    const bucket = admin.storage().bucket();
     const tempFilePath = path.join(os.tmpdir(), fileName);
     const extractDir = path.join(os.tmpdir(), `extract_${Date.now()}`);
 
     try {
-      console.log("⬇️ Zip dosyası indiriliyor...");
+      // ZIP indir
       await downloadWithStream(bucket.file(filePath), tempFilePath);
 
-      console.log("📦 Zip açılıyor...");
+      // ZIP aç
       fs.mkdirSync(extractDir, { recursive: true });
       await extractZipStreaming(tempFilePath, extractDir);
 
-      console.log("📂 İçerik taranıyor...");
+      // Dosyaları tara
       const allFiles = listAllFilesRecursive(extractDir);
 
+      // bulletin.inf oku
       const bulletinFile = allFiles.find((p) =>
         ["bulletin.inf", "bulletin"].includes(path.basename(p).toLowerCase())
       );
@@ -707,15 +707,15 @@ exports.processTrademarkBulletinUploadV2 = onObjectFinalized(
 
       console.log(`📊 Bülten kaydedildi: ${bulletinNo} (${bulletinDate}) → ${bulletinId}`);
 
+      // script parsing
       const scriptPath = allFiles.find(
         (p) => path.basename(p).toLowerCase() === "tmbulletin.log"
       );
       if (!scriptPath) throw new Error("tmbulletin.log bulunamadı.");
 
-      console.log("🔍 Script parse ediliyor...");
       const records = await parseScriptContentStreaming(scriptPath);
-      console.log(`✅ ${records.length} kayıt bulundu`);
 
+      // Görsel eşleme
       const imageFiles = allFiles.filter((p) => /\.(jpe?g|png)$/i.test(p));
       const imagePathMap = {};
       for (const localPath of imageFiles) {
@@ -731,9 +731,11 @@ exports.processTrademarkBulletinUploadV2 = onObjectFinalized(
       }
 
       await writeBatchesToFirestore(records, bulletinId, imagePathMap);
+
+      // Görselleri Pub/Sub ile kuyruğa ekle
       await processImagesStreaming(imageFiles, bulletinNo);
 
-      console.log("🎉 İşlem tamamlandı!");
+      console.log(`🎉 ZIP işleme tamamlandı: ${bulletinNo} → ${records.length} kayıt, ${imageFiles.length} görsel bulundu.`);
     } catch (e) {
       console.error("❌ Hata:", e.message);
       throw e;
@@ -745,6 +747,7 @@ exports.processTrademarkBulletinUploadV2 = onObjectFinalized(
     return null;
   }
 );
+
 
 // =========================================================
 //              PUB/SUB TRIGGER FONKSİYONLARI (v2)
@@ -855,16 +858,21 @@ function parseScriptContent(content) {
           attorneys: []
         };
       }
-      if (currentTable === "TRADEMARK") {
-        records[appNo].applicationDate = values[1] || null;
-        records[appNo].markName = values[4] || null;
-        records[appNo].niceClasses = values[6] || null;
-      } else if (currentTable === "HOLDER") {
+    if (currentTable === "TRADEMARK") {
+        records[appNo].applicationDate = values[1] ?? null;
+        records[appNo].markName = values[5] ?? null;     // eski koddaki gibi
+        records[appNo].niceClasses = values[6] ?? null;
+    } else if (currentTable === "HOLDER") {
+        const holderName = extractHolderName(values[2]);
+        let addressParts = [values[3], values[4], values[5], values[6]]
+                            .filter(Boolean).join(", ");
+        if (addressParts.trim() === "") addressParts = null;
         records[appNo].holders.push({
-          name: extractHolderName(values[2]),
-          address: values[3],
-          country: values[4]
+            name: holderName,
+            address: addressParts,
+            country: values[7] ?? null,
         });
+    }
       } else if (currentTable === "GOODS") {
         records[appNo].goods.push(values[3]);
       } else if (currentTable === "EXTRACTEDGOODS") {
@@ -962,8 +970,13 @@ function parseValuesFromLine(line) {
   return values;
 }
 function decodeValue(str) {
-  if (!str) return null;
-  return str.replace(/^'/, "").replace(/'$/, "").replace(/''/g, "'");
+    if (str === null || str === undefined) return null;
+    if (str === "") return null;
+    str = str.replace(/^'/, "").replace(/'$/, "").replace(/''/g, "'");
+    // \uXXXX formatındaki unicode karakterleri çöz
+    return str.replace(/\\u([0-9a-fA-F]{4})/g,
+        (m, g1) => String.fromCharCode(parseInt(g1, 16))
+    );
 }
 function extractHolderName(str) {
   if (!str) return null;
