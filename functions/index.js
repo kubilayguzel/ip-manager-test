@@ -651,6 +651,9 @@ exports.createUniversalNotificationOnTaskCompleteV2 = onDocumentUpdated(
 // =========================================================
 
 // Trademark Bulletin Upload Processing (v2 Storage Trigger)
+// Debug edilmiş processTrademarkBulletinUploadV2 fonksiyonu
+// functions/index.js dosyasında mevcut fonksiyonu bu versiyonla değiştirin
+
 exports.processTrademarkBulletinUploadV2 = onObjectFinalized(
   {
     region: 'europe-west1',
@@ -663,18 +666,32 @@ exports.processTrademarkBulletinUploadV2 = onObjectFinalized(
     const fileName = path.basename(filePath);
     const bucket = admin.storage().bucket();
 
-    // Sadece ZIP ve RAR dosyalarını işle
-    if (!fileName.endsWith(".zip") && !fileName.endsWith(".rar")) return null;
+    // 🚫 ERKEN FİLTRELEME: Sadece ZIP/RAR dosyalarını işle
+    if (!fileName.toLowerCase().endsWith(".zip") && !fileName.toLowerCase().endsWith(".rar")) {
+      return null; // Sessizce çık, log spam yapma
+    }
+
+    // 🚫 ERKEN FİLTRELEME: Images klasöründeki dosyaları işleme
+    if (filePath.includes('/images/') || filePath.includes('_images/')) {
+      return null; // Sessizce çık
+    }
+
+    console.log('🔥 Trademark Bulletin Upload V2 - İşlem Başlıyor');
+    console.log('📄 Dosya:', fileName);
+    console.log('📁 Path:', filePath);
 
     const tempFilePath = path.join(os.tmpdir(), fileName);
     const extractDir = path.join(os.tmpdir(), `extract_${Date.now()}`);
 
     try {
+      console.log('1️⃣ Extract dizini oluşturuluyor...');
       fs.mkdirSync(extractDir, { recursive: true });
+
+      console.log('2️⃣ Dosya indiriliyor...');
       await bucket.file(filePath).download({ destination: tempFilePath });
 
-      // Arşivi aç
-      if (fileName.endsWith(".zip")) {
+      console.log('3️⃣ Arşiv açılıyor...');
+      if (fileName.toLowerCase().endsWith(".zip")) {
         const zip = new AdmZip(tempFilePath);
         zip.extractAllTo(extractDir, true);
       } else {
@@ -682,17 +699,27 @@ exports.processTrademarkBulletinUploadV2 = onObjectFinalized(
         await extractor.extractAll(extractDir);
       }
 
-      // bulletin.inf verisi
+      console.log('4️⃣ Dosyalar listeleniyor...');
       const allFiles = listAllFilesRecursive(extractDir);
+      console.log(`📋 ${allFiles.length} dosya bulundu`);
+
+      console.log('5️⃣ bulletin.inf aranıyor...');
       const bulletinPath = allFiles.find((p) =>
         ["bulletin.inf", "bulletin"].includes(path.basename(p).toLowerCase())
       );
-      if (!bulletinPath) throw new Error("bulletin.inf bulunamadı.");
+      
+      if (!bulletinPath) {
+        throw new Error("bulletin.inf bulunamadı.");
+      }
 
+      console.log('6️⃣ bulletin.inf okunuyor...');
       const content = fs.readFileSync(bulletinPath, "utf8");
       const bulletinNo = (content.match(/NO\s*=\s*(.*)/) || [])[1]?.trim() || "Unknown";
       const bulletinDate = (content.match(/DATE\s*=\s*(.*)/) || [])[1]?.trim() || "Unknown";
+      
+      console.log(`📊 Bülten: ${bulletinNo} (${bulletinDate})`);
 
+      console.log('7️⃣ Firestore\'a bülten ekleniyor...');
       const bulletinRef = await db.collection("trademarkBulletins").add({
         bulletinNo,
         bulletinDate,
@@ -701,13 +728,22 @@ exports.processTrademarkBulletinUploadV2 = onObjectFinalized(
       });
       const bulletinId = bulletinRef.id;
 
-      // Kayıtları parse et
+      console.log('8️⃣ Script dosyası aranıyor...');
       const scriptPath = allFiles.find((p) => path.basename(p).toLowerCase() === "tmbulletin.log");
+      if (!scriptPath) {
+        throw new Error("tmbulletin.log bulunamadı.");
+      }
+
+      console.log('9️⃣ Kayıtlar parse ediliyor...');
       const scriptContent = fs.readFileSync(scriptPath, "utf8");
       const records = parseScriptContent(scriptContent);
+      console.log(`📊 ${records.length} kayıt parse edildi`);
+
+      console.log('🔟 Görseller analiz ediliyor...');
+      const imageFiles = allFiles.filter((p) => /\.(jpg|jpeg|png)$/i.test(p));
+      console.log(`🖼️ ${imageFiles.length} görsel bulundu`);
 
       // Görsel path eşleştirme
-      const imageFiles = allFiles.filter((p) => /\.(jpg|jpeg|png)$/i.test(p));
       const imagePathMap = {};
       for (const localPath of imageFiles) {
         const filename = path.basename(localPath);
@@ -719,6 +755,7 @@ exports.processTrademarkBulletinUploadV2 = onObjectFinalized(
         }
       }
 
+      console.log('1️⃣1️⃣ Kayıtlar Firestore\'a yazılıyor...');
       // Firestore'a yazılacak kayıtlar
       for (const record of records) {
         record.bulletinId = bulletinId;
@@ -741,9 +778,9 @@ exports.processTrademarkBulletinUploadV2 = onObjectFinalized(
         });
         await batch.commit();
       }
-      console.log(`✅ ${records.length} kayıt Firestore'a yazıldı.`);
+      console.log(`✅ ${records.length} kayıt Firestore'a yazıldı`);
 
-      // Görselleri Pub/Sub kuyruğuna gönder
+      console.log('1️⃣2️⃣ Görseller Pub/Sub kuyruğuna gönderiliyor...');
       const imageBatchSize = 100;
       for (let i = 0; i < imageFiles.length; i += imageBatchSize) {
         const batch = imageFiles.slice(i, i + imageBatchSize);
@@ -766,18 +803,28 @@ exports.processTrademarkBulletinUploadV2 = onObjectFinalized(
           attributes: { batchSize: batch.length.toString() }
         });
       }
-      console.log(`📤 ${imageFiles.length} görsel Pub/Sub kuyruğuna gönderildi.`);
+      console.log(`✅ ${imageFiles.length} görsel Pub/Sub kuyruğuna gönderildi`);
+
+      console.log('🎉 İŞLEM TAMAMLANDI!');
+      console.log(`📊 Özet: Bülten ${bulletinNo} | ${records.length} kayıt | ${imageFiles.length} görsel`);
 
     } catch (e) {
-      console.error("İşlem hatası:", e);
+      console.error("❌ HATA:", e.message);
       throw e;
     } finally {
-      if (fs.existsSync(tempFilePath)) fs.unlinkSync(tempFilePath);
-      if (fs.existsSync(extractDir)) fs.rmSync(extractDir, { recursive: true, force: true });
+      console.log('🧹 Temizlik yapılıyor...');
+      if (fs.existsSync(tempFilePath)) {
+        fs.unlinkSync(tempFilePath);
+      }
+      if (fs.existsSync(extractDir)) {
+        fs.rmSync(extractDir, { recursive: true, force: true });
+      }
     }
+    
     return null;
   }
 );
+
 
 // =========================================================
 //              PUB/SUB TRIGGER FONKSİYONLARI (v2)
@@ -828,40 +875,6 @@ exports.uploadImageWorkerV2 = onMessagePublished(
     }
 );
 
-exports.uploadBulletinImages = onSchedule("every 5 minutes", async () => {
-  const snapshot = await db.collection("trademarkBulletinRecords")
-    .where("imagePath", "!=", null)
-    .where("imageUploaded", "==", false)
-    .limit(200) // her seferde 200 görsel
-    .get();
-
-  if (snapshot.empty) {
-    console.log("Yüklenecek görsel yok.");
-    return null;
-  }
-
-  const bucket = admin.storage().bucket();
-  let processed = 0;
-
-  for (const doc of snapshot.docs) {
-    const record = doc.data();
-    const localImagePath = path.join(os.tmpdir(), path.basename(record.imagePath));
-
-    try {
-      // Görseli kaynaktan al (senin ZIP açma sonrası veya orijinal path’ten)
-      // Not: Eğer görseller başka yerde ise buraya download logic eklenecek
-
-      // Placeholder: sadece imageUploaded = true yapıyoruz
-      await doc.ref.update({ imageUploaded: true });
-      processed++;
-    } catch (e) {
-      console.error("Görsel yükleme hatası:", e);
-    }
-  }
-
-  console.log(`✅ ${processed} görsel işlendi ve işaretlendi.`);
-  return null;
-});
 
 // =========================================================
 //              HELPER FONKSİYONLARI
