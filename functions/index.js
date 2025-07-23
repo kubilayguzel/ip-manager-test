@@ -798,541 +798,219 @@ exports.uploadImageWorkerV2 = onMessagePublished(
 
 // =========================================================
 //              HELPER FONKSİYONLARI
-// =========================================================
-// ============== HELPER FUNCTIONS - MEMORY OPTIMIZED ==============
-
-// 1. Streaming download function
 async function downloadWithStream(file, destination) {
-  const readStream = file.createReadStream();
-  const writeStream = fs.createWriteStream(destination);
-  
-  await pipeline(readStream, writeStream);
+  await pipeline(file.createReadStream(), fs.createWriteStream(destination));
 }
-
-// 2. Streaming ZIP extraction
 async function extractZipStreaming(zipPath, extractDir) {
-  return new Promise((resolve, reject) => {
-    const zip = new AdmZip(zipPath);
-    const entries = zip.getEntries();
-    
-    console.log(`📦 ${entries.length} entries bulundu, streaming extract başlıyor...`);
-    
-    let processed = 0;
-    
-    for (const entry of entries) {
-      if (!entry.isDirectory) {
-        const outputPath = path.join(extractDir, entry.entryName);
-        const outputDir = path.dirname(outputPath);
-        
-        // Ensure directory exists
-        if (!fs.existsSync(outputDir)) {
-          fs.mkdirSync(outputDir, { recursive: true });
-        }
-        
-        // Extract individual file - memory efficient
-        try {
-          const data = zip.readFile(entry);
-          fs.writeFileSync(outputPath, data);
-          processed++;
-          
-          // Log progress for large archives
-          if (processed % 100 === 0) {
-            console.log(`📦 Progress: ${processed}/${entries.length} files extracted`);
-          }
-        } catch (err) {
-          console.warn(`⚠️ Extract warning for ${entry.entryName}:`, err.message);
-        }
-      }
+  const zip = new AdmZip(zipPath);
+  const entries = zip.getEntries();
+  for (const entry of entries) {
+    if (entry.isDirectory) continue;
+    const outputPath = path.join(extractDir, entry.entryName);
+    fs.mkdirSync(path.dirname(outputPath), { recursive: true });
+    fs.writeFileSync(outputPath, zip.readFile(entry));
+  }
+}
+function listAllFilesRecursive(dir) {
+  let results = [];
+  const list = fs.readdirSync(dir);
+  list.forEach((file) => {
+    const fullPath = path.join(dir, file);
+    const stat = fs.statSync(fullPath);
+    if (stat.isDirectory()) {
+      results = results.concat(listAllFilesRecursive(fullPath));
+    } else {
+      results.push(fullPath);
     }
-    
-    console.log(`✅ ${processed} files extracted successfully`);
-    resolve();
   });
+  return results;
 }
-
-// 3. Streaming script content parser
 async function parseScriptContentStreaming(scriptPath) {
-  console.log('🔄 Basit script parser başlıyor...');
-  
-  // Dosya boyutunu kontrol et
   const stats = fs.statSync(scriptPath);
-  const fileSizeMB = stats.size / 1024 / 1024;
-  console.log(`📊 Script dosya boyutu: ${fileSizeMB.toFixed(2)} MB`);
-  
-  if (fileSizeMB > 100) {
-    console.warn('⚠️ Çok büyük script dosyası, parçalı okuma yapılıyor...');
-    return parseScriptInChunks(scriptPath);
-  }
-  
-  try {
-    // Küçük dosyalar için normal okuma
-    console.log('📄 Script dosyası okunuyor...');
-    const content = fs.readFileSync(scriptPath, 'utf8');
-    console.log(`📊 Script içerik uzunluğu: ${content.length} karakter`);
-    
-    return parseScriptContent(content);
-    
-  } catch (error) {
-    console.error('❌ Script okuma hatası:', error.message);
-    throw error;
-  }
+  if (stats.size > 100 * 1024 * 1024) return parseScriptInChunks(scriptPath);
+  return parseScriptContent(fs.readFileSync(scriptPath, "utf8"));
 }
-
-async function parseScriptInChunks(scriptPath) {
-  console.log('🔄 Chunk-based parsing başlıyor...');
-  
+function parseScriptContent(content) {
+  const lines = content.split("\n");
   const records = {};
   let currentTable = null;
-  let buffer = '';
-  let lineCount = 0;
-  
-  const chunkSize = 1024 * 1024; // 1MB chunks
-  const fd = fs.openSync(scriptPath, 'r');
-  const fileSize = fs.statSync(scriptPath).size;
-  
-  try {
-    for (let position = 0; position < fileSize; position += chunkSize) {
-      const chunk = Buffer.alloc(Math.min(chunkSize, fileSize - position));
-      fs.readSync(fd, chunk, 0, chunk.length, position);
-      
-      buffer += chunk.toString('utf8');
-      const lines = buffer.split('\n');
-      
-      // Son satırı buffer'da tut (tamamlanmamış olabilir)
-      buffer = lines.pop() || '';
-      
-      // Satırları işle
-      for (const line of lines) {
-        lineCount++;
-        
-        if (lineCount % 50000 === 0) {
-          console.log(`📄 İşlenen satır: ${lineCount}, memory: ${(process.memoryUsage().heapUsed / 1024 / 1024).toFixed(1)}MB`);
-          
-          // Garbage collection
-          if (global.gc && lineCount % 100000 === 0) {
-            global.gc();
-          }
-        }
-        
-        processScriptLine(line, records, currentTable);
+  for (const line of lines) {
+    if (line.startsWith("INSERT INTO")) {
+      const match = line.match(/INSERT INTO (\w+)/);
+      currentTable = match ? match[1] : null;
+    }
+    if (currentTable && line.includes("VALUES")) {
+      const values = parseValuesFromLine(line);
+      if (!values || !values.length) continue;
+      const appNo = values[0];
+      if (!records[appNo]) {
+        records[appNo] = {
+          applicationNo: appNo,
+          applicationDate: null,
+          markName: null,
+          niceClasses: null,
+          holders: [],
+          goods: [],
+          extractedGoods: [],
+          attorneys: []
+        };
       }
-      
-      console.log(`📊 Chunk progress: ${((position + chunk.length) / fileSize * 100).toFixed(1)}%`);
+      if (currentTable === "TRADEMARK") {
+        records[appNo].applicationDate = values[1] || null;
+        records[appNo].markName = values[4] || null;
+        records[appNo].niceClasses = values[6] || null;
+      } else if (currentTable === "HOLDER") {
+        records[appNo].holders.push({
+          name: extractHolderName(values[2]),
+          address: values[3],
+          country: values[4]
+        });
+      } else if (currentTable === "GOODS") {
+        records[appNo].goods.push(values[3]);
+      } else if (currentTable === "EXTRACTEDGOODS") {
+        records[appNo].extractedGoods.push(values[3]);
+      } else if (currentTable === "ATTORNEY") {
+        records[appNo].attorneys.push(values[2]);
+      }
     }
-    
-    // Son buffer'ı işle
-    if (buffer.trim()) {
-      processScriptLine(buffer, records, currentTable);
-    }
-    
-  } finally {
-    fs.closeSync(fd);
   }
-  
-  console.log(`✅ Script parsing tamamlandı: ${lineCount} satır, ${Object.keys(records).length} kayıt`);
   return Object.values(records);
 }
-
-function processScriptLine(line, records, currentTable) {
-  if (line.startsWith("INSERT INTO")) {
-    const match = line.match(/INSERT INTO (\w+)/);
-    currentTable = match ? match[1] : null;
-    return;
-  }
-
-  if (currentTable && line.includes("VALUES")) {
-    const values = parseValuesFromLine(line);
-    if (!values || values.length === 0) return;
-
-    const appNo = values[0];
-    if (!appNo) return;
-
-    if (!records[appNo]) {
-      records[appNo] = {
-        applicationNo: appNo,
-        applicationDate: null,
-        markName: null,
-        niceClasses: null,
-        holders: [],
-        goods: [],
-        extractedGoods: [],
-        attorneys: []
-      };
+async function parseScriptInChunks(scriptPath) {
+  const fd = fs.openSync(scriptPath, "r");
+  const fileSize = fs.statSync(scriptPath).size;
+  const chunkSize = 1024 * 1024;
+  let buffer = "";
+  let position = 0;
+  const records = {};
+  let currentTable = null;
+  while (position < fileSize) {
+    const chunk = Buffer.alloc(Math.min(chunkSize, fileSize - position));
+    fs.readSync(fd, chunk, 0, chunk.length, position);
+    position += chunk.length;
+    buffer += chunk.toString("utf8");
+    const lines = buffer.split("\n");
+    buffer = lines.pop() || "";
+    for (const line of lines) {
+      if (line.startsWith("INSERT INTO")) {
+        const match = line.match(/INSERT INTO (\w+)/);
+        currentTable = match ? match[1] : null;
+      }
+      if (currentTable && line.includes("VALUES")) {
+        const values = parseValuesFromLine(line);
+        if (!values || !values.length) continue;
+        const appNo = values[0];
+        if (!records[appNo]) {
+          records[appNo] = {
+            applicationNo: appNo,
+            applicationDate: null,
+            markName: null,
+            niceClasses: null,
+            holders: [],
+            goods: [],
+            extractedGoods: [],
+            attorneys: []
+          };
+        }
+        if (currentTable === "TRADEMARK") {
+          records[appNo].applicationDate = values[1] || null;
+          records[appNo].markName = values[4] || null;
+          records[appNo].niceClasses = values[6] || null;
+        } else if (currentTable === "HOLDER") {
+          records[appNo].holders.push({
+            name: extractHolderName(values[2]),
+            address: values[3],
+            country: values[4]
+          });
+        } else if (currentTable === "GOODS") {
+          records[appNo].goods.push(values[3]);
+        } else if (currentTable === "EXTRACTEDGOODS") {
+          records[appNo].extractedGoods.push(values[3]);
+        } else if (currentTable === "ATTORNEY") {
+          records[appNo].attorneys.push(values[2]);
+        }
+      }
     }
-
-    // Process based on table type
-    if (currentTable === "TRADEMARK") {
-      records[appNo].applicationDate = values[1] || null;
-      records[appNo].markName = values[4] || null;
-      records[appNo].niceClasses = values[6] || null;
-    } else if (currentTable === "HOLDER") {
-      records[appNo].holders.push({
-        name: extractHolderName(values[2]) || null,
-        address: values[3] || null,
-        country: values[4] || null,
-      });
-    } else if (currentTable === "GOODS") {
-      records[appNo].goods.push(values[3] || null);
-    } else if (currentTable === "EXTRACTEDGOODS") {
-      records[appNo].extractedGoods.push(values[3] || null);
-    } else if (currentTable === "ATTORNEY") {
-      records[appNo].attorneys.push(values[2] || null);
-    }
   }
+  fs.closeSync(fd);
+  return Object.values(records);
 }
-
-// Helper function to parse VALUES from SQL line
 function parseValuesFromLine(line) {
   const valuesMatch = line.match(/VALUES\s*\((.*)\)/i);
   if (!valuesMatch) return null;
-
   const valuesStr = valuesMatch[1];
   const values = [];
-  let current = '';
+  let current = "";
   let inQuotes = false;
-  let quoteChar = null;
-
   for (let i = 0; i < valuesStr.length; i++) {
     const char = valuesStr[i];
-    
-    if (!inQuotes && (char === "'" || char === '"')) {
-      inQuotes = true;
-      quoteChar = char;
-    } else if (inQuotes && char === quoteChar) {
-      if (valuesStr[i + 1] === quoteChar) {
-        current += char;
+    if (char === "'") {
+      if (inQuotes && valuesStr[i + 1] === "'") {
+        current += "'";
         i++;
       } else {
-        inQuotes = false;
-        quoteChar = null;
+        inQuotes = !inQuotes;
       }
-    } else if (!inQuotes && char === ',') {
+    } else if (char === "," && !inQuotes) {
       values.push(decodeValue(current.trim()));
-      current = '';
+      current = "";
     } else {
       current += char;
     }
   }
-  
-  if (current.trim()) {
-    values.push(decodeValue(current.trim()));
-  }
-  
+  if (current.trim()) values.push(decodeValue(current.trim()));
   return values;
 }
-
-// 4. Batched Firestore writes
-async function writeBatchesToFirestore(records, bulletinId, imagePathMap) {
-  const batchSize = 250; // Reduced batch size for memory efficiency
-  let totalWritten = 0;
-  
-  for (let i = 0; i < records.length; i += batchSize) {
-    const chunk = records.slice(i, i + batchSize);
-    const batch = db.batch();
-    
-    chunk.forEach((record) => {
-      record.bulletinId = bulletinId;
-      const matchingImages = imagePathMap[record.applicationNo] || [];
-      record.imagePath = matchingImages.length > 0 ? matchingImages[0] : null;
-      record.imageUploaded = false;
-      
-      const docRef = db.collection("trademarkBulletinRecords").doc();
-      batch.set(docRef, {
-        ...record,
-        createdAt: admin.firestore.FieldValue.serverTimestamp(),
-      });
-    });
-    
-    await batch.commit();
-    totalWritten += chunk.length;
-    
-    console.log(`📝 Progress: ${totalWritten}/${records.length} records written to Firestore`);
-    
-    // Memory cleanup between batches
-    if (global.gc && i % (batchSize * 4) === 0) {
-      global.gc();
-    }
-  }
-  
-  console.log(`✅ ${totalWritten} records written to Firestore`);
-}
-
-// 5. Streaming image processing
-async function processImagesStreaming(imageFiles, bulletinNo) {
-  const imageBatchSize = 50; // Smaller batches for memory efficiency
-  let totalSent = 0;
-  
-  for (let i = 0; i < imageFiles.length; i += imageBatchSize) {
-    const batch = imageFiles.slice(i, i + imageBatchSize);
-    const encodedImages = [];
-    
-    for (const localPath of batch) {
-      try {
-        const filename = path.basename(localPath);
-        const destinationPath = `bulletins/trademark_${bulletinNo}_images/${filename}`;
-        
-        // Stream file reading for large images
-        const imageBuffer = fs.readFileSync(localPath);
-        
-        encodedImages.push({
-          destinationPath,
-          base64: imageBuffer.toString('base64'),
-          contentType: getContentType(filename)
-        });
-        
-        // Clear reference to help GC
-        imageBuffer.fill(0);
-        
-      } catch (err) {
-        console.warn(`⚠️ Image processing warning for ${localPath}:`, err.message);
-      }
-    }
-    
-    if (encodedImages.length > 0) {
-      await pubsubClient.topic("trademark-image-upload").publishMessage({
-        data: Buffer.from(JSON.stringify(encodedImages)),
-        attributes: { batchSize: encodedImages.length.toString() }
-      });
-      
-      totalSent += encodedImages.length;
-      console.log(`📤 Progress: ${totalSent}/${imageFiles.length} images queued`);
-    }
-    
-    // Memory cleanup between batches
-    if (global.gc && i % (imageBatchSize * 4) === 0) {
-      global.gc();
-    }
-  }
-  
-  console.log(`✅ ${totalSent} images queued for upload`);
-}
-
-async function downloadWithStream(file, destination) {
-  const readStream = file.createReadStream();
-  const writeStream = fs.createWriteStream(destination);
-  
-  await pipeline(readStream, writeStream);
-}
-
-async function extractZipStreaming(zipPath, extractDir) {
-  return new Promise((resolve, reject) => {
-    const zip = new AdmZip(zipPath);
-    const entries = zip.getEntries();
-    
-    console.log(`📦 ${entries.length} entries bulundu, streaming extract başlıyor...`);
-    
-    let processed = 0;
-    
-    for (const entry of entries) {
-      if (!entry.isDirectory) {
-        const outputPath = path.join(extractDir, entry.entryName);
-        const outputDir = path.dirname(outputPath);
-        
-        // Ensure directory exists
-        if (!fs.existsSync(outputDir)) {
-          fs.mkdirSync(outputDir, { recursive: true });
-        }
-        
-        // Extract individual file - memory efficient
-        try {
-          const data = zip.readFile(entry);
-          fs.writeFileSync(outputPath, data);
-          processed++;
-          
-          // Log progress for large archives
-          if (processed % 100 === 0) {
-            console.log(`📦 Progress: ${processed}/${entries.length} files extracted`);
-          }
-        } catch (err) {
-          console.warn(`⚠️ Extract warning for ${entry.entryName}:`, err.message);
-        }
-      }
-    }
-    
-    console.log(`✅ ${processed} files extracted successfully`);
-    resolve();
-  });
-}
-
-async function writeBatchesToFirestore(records, bulletinId, imagePathMap) {
-  const batchSize = 250; // Reduced batch size for memory efficiency
-  let totalWritten = 0;
-  
-  for (let i = 0; i < records.length; i += batchSize) {
-    const chunk = records.slice(i, i + batchSize);
-    const batch = db.batch();
-    
-    chunk.forEach((record) => {
-      record.bulletinId = bulletinId;
-      const matchingImages = imagePathMap[record.applicationNo] || [];
-      record.imagePath = matchingImages.length > 0 ? matchingImages[0] : null;
-      record.imageUploaded = false;
-      
-      const docRef = db.collection("trademarkBulletinRecords").doc();
-      batch.set(docRef, {
-        ...record,
-        createdAt: admin.firestore.FieldValue.serverTimestamp(),
-      });
-    });
-    
-    await batch.commit();
-    totalWritten += chunk.length;
-    
-    console.log(`📝 Progress: ${totalWritten}/${records.length} records written to Firestore`);
-    
-    // Memory cleanup between batches
-    if (global.gc && i % (batchSize * 4) === 0) {
-      global.gc();
-    }
-  }
-  
-  console.log(`✅ ${totalWritten} records written to Firestore`);
-}
-async function processImagesStreaming(imageFiles, bulletinNo) {
-  const imageBatchSize = 50; // Smaller batches for memory efficiency
-  let totalSent = 0;
-  
-  for (let i = 0; i < imageFiles.length; i += imageBatchSize) {
-    const batch = imageFiles.slice(i, i + imageBatchSize);
-    const encodedImages = [];
-    
-    for (const localPath of batch) {
-      try {
-        const filename = path.basename(localPath);
-        const destinationPath = `bulletins/trademark_${bulletinNo}_images/${filename}`;
-        
-        // Stream file reading for large images
-        const imageBuffer = fs.readFileSync(localPath);
-        
-        encodedImages.push({
-          destinationPath,
-          base64: imageBuffer.toString('base64'),
-          contentType: getContentType(filename)
-        });
-        
-        // Clear reference to help GC
-        imageBuffer.fill(0);
-        
-      } catch (err) {
-        console.warn(`⚠️ Image processing warning for ${localPath}:`, err.message);
-      }
-    }
-    
-    if (encodedImages.length > 0) {
-      await pubsubClient.topic("trademark-image-upload").publishMessage({
-        data: Buffer.from(JSON.stringify(encodedImages)),
-        attributes: { batchSize: encodedImages.length.toString() }
-      });
-      
-      totalSent += encodedImages.length;
-      console.log(`📤 Progress: ${totalSent}/${imageFiles.length} images queued`);
-    }
-    
-    // Memory cleanup between batches
-    if (global.gc && i % (imageBatchSize * 4) === 0) {
-      global.gc();
-    }
-  }
-  
-  console.log(`✅ ${totalSent} images queued for upload`);
-}
-function listAllFilesRecursive(dir) {
-    let results = [];
-    const list = fs.readdirSync(dir);
-    list.forEach((file) => {
-        const fullPath = path.join(dir, file);
-        const stat = fs.statSync(fullPath);
-        if (stat && stat.isDirectory()) {
-            results = results.concat(listAllFilesRecursive(fullPath));
-        } else {
-            results.push(fullPath);
-        }
-    });
-    return results;
-}
-
-function extractAppNoFromFilename(filename) {
-    const match = filename.match(/(\d{4,})/); 
-    return match ? match[1] : null;
-}
-
-function parseValues(raw) {
-    const values = [];
-    let current = '';
-    let inString = false;
-    let i = 0;
-
-    while (i < raw.length) {
-        const char = raw[i];
-        
-        if (char === "'") {
-            if (inString && raw[i + 1] === "'") {
-                current += "'";
-                i += 2;
-                continue;
-            } else {
-                inString = !inString;
-            }
-        } else if (char === ',' && !inString) {
-            values.push(decodeValue(current.trim()));
-            current = '';
-            i++;
-            continue;
-        } else {
-            current += char;
-        }
-        i++;
-    }
-    
-    values.push(decodeValue(current.trim()));
-    return values;
-}
-
-function parseScriptContent(content) {
-  console.log('📄 Basit parsing başlıyor...');
-  
-  const lines = content.split('\n');
-  console.log(`📊 Toplam satır: ${lines.length}`);
-  
-  const records = {};
-  let currentTable = null;
-  
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    
-    if (i % 10000 === 0 && i > 0) {
-      console.log(`📄 Progress: ${i}/${lines.length} (${(i/lines.length*100).toFixed(1)}%)`);
-    }
-    
-    processScriptLine(line, records, currentTable);
-  }
-  
-  console.log(`✅ Basit parsing tamamlandı: ${Object.keys(records).length} kayıt`);
-  return Object.values(records);
-}
-
 function decodeValue(str) {
-    if (str === null || str === undefined) return null;
-    if (str === "") return null;
-    str = str.replace(/^'/, "").replace(/'$/, "").replace(/''/g, "'");
-    return str.replace(/\\u([0-9a-fA-F]{4})/g, (m, g1) => String.fromCharCode(parseInt(g1, 16)));
+  if (!str) return null;
+  return str.replace(/^'/, "").replace(/'$/, "").replace(/''/g, "'");
 }
-
 function extractHolderName(str) {
-    if (!str) return null;
-    str = str.trim();
-    const parenMatch = str.match(/^\(\d+\)\s*(.*)$/);
-    if (parenMatch) {
-        return parenMatch[1].trim();
-    }
-    return str;
+  if (!str) return null;
+  const parenMatch = str.match(/^\(\d+\)\s*(.*)$/);
+  return parenMatch ? parenMatch[1].trim() : str.trim();
+}
+async function writeBatchesToFirestore(records, bulletinId, imagePathMap) {
+  const batchSize = 250;
+  for (let i = 0; i < records.length; i += batchSize) {
+    const chunk = records.slice(i, i + batchSize);
+    const batch = db.batch();
+    chunk.forEach((record) => {
+      record.bulletinId = bulletinId;
+      const matchingImages = imagePathMap[record.applicationNo] || [];
+      record.imagePath = matchingImages.length > 0 ? matchingImages[0] : null;
+      record.imageUploaded = false;
+      batch.set(db.collection("trademarkBulletinRecords").doc(), {
+        ...record,
+        createdAt: admin.firestore.FieldValue.serverTimestamp()
+      });
+    });
+    await batch.commit();
+    console.log(`📝 ${Math.min(i + batchSize, records.length)}/${records.length} kayıt yazıldı`);
+  }
+}
+async function processImagesStreaming(imageFiles, bulletinNo) {
+  const batchSize = 50;
+  for (let i = 0; i < imageFiles.length; i += batchSize) {
+    const batch = imageFiles.slice(i, i + batchSize);
+    const encodedImages = batch.map((localPath) => ({
+      destinationPath: `bulletins/trademark_${bulletinNo}_images/${path.basename(localPath)}`,
+      base64: fs.readFileSync(localPath).toString("base64"),
+      contentType: getContentType(localPath)
+    }));
+    await pubsubClient.topic("trademark-image-upload").publishMessage({
+      data: Buffer.from(JSON.stringify(encodedImages))
+    });
+    console.log(`📤 ${i + batch.length}/${imageFiles.length} görsel kuyruğa eklendi`);
+  }
+}
+function getContentType(filePath) {
+  if (/\.png$/i.test(filePath)) return "image/png";
+  if (/\.jpe?g$/i.test(filePath)) return "image/jpeg";
+  return "application/octet-stream";
 }
 
-function getContentType(filePath) {
-    if (/\.png$/i.test(filePath)) return "image/png";
-    if (/\.jpe?g$/i.test(filePath)) return "image/jpeg";
-    return "application/octet-stream";
-}
+
 //              ALGOLIA İLK İNDEKSLEME FONKSİYONU (v2 onRequest)
 // =========================================================
 
@@ -1463,10 +1141,8 @@ exports.onTrademarkBulletinRecordWrite = onDocumentWritten(
     return null;
   }
 );
-// functions/index.js dosyasına eklenecek deleteBulletinV2 fonksiyonu
-// Basit deleteBulletinV2 - Sadece Database ve Storage
-// Ultra basit deleteBulletinV2 - functions/index.js
-// Region yok, CORS yok, sadece temel silme
+
+// BÜLTEN SİLME 
 
 exports.deleteBulletinV2 = onCall(async (request) => {
   console.log('🔥 Basit delete başladı');
