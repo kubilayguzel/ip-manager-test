@@ -1155,7 +1155,11 @@ exports.onTrademarkBulletinRecordWrite = onDocumentWritten(
 );
 
 // BÜLTEN SİLME 
-exports.deleteBulletinV2 = onCall(async (request) => {
+exports.deleteBulletinV2 = onCall(
+  { timeoutSeconds: 540, 
+    memory: "1GiB", 
+    region: "europe-west1" },
+  async (request) => {
   console.log('🔥 Bülten silme başladı');
 
   const { bulletinId } = request.data;
