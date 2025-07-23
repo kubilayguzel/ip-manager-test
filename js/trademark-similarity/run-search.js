@@ -62,7 +62,7 @@ export async function runTrademarkSearch(monitoredMark, selectedBulletinNo) {
       // 1. Tırnak olmadan dene
       console.log("🔄 Deneme 1: Tırnak olmadan");
       const tryUnquoted = await index.search(markName, {
-        filters: `bulletinId:${selectedBulletinNo}`,
+        filters: `bulletinId:${selectedBulletinNo}`,   // ✅ Numeric format
         hitsPerPage: 1000
       });
       console.log("   Sonuç:", tryUnquoted.nbHits);
