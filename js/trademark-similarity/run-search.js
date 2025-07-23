@@ -55,45 +55,6 @@ export async function runTrademarkSearch(monitoredMark, selectedBulletinNo) {
       processingTime: searchResult.processingTimeMS + "ms"
     });
 
-    // Eğer sonuç yoksa alternatif denemeler yap
-    if (searchResult.hits.length === 0) {
-      console.log("⚠️ Ana arama sonuç vermedi, alternatif denemeler yapılıyor...");
-      
-      // 1. Tırnak olmadan dene
-      console.log("🔄 Deneme 1: Tırnak olmadan");
-      const tryUnquoted = await index.search(markName, {
-        filters: `bulletinId:${selectedBulletinNo}`,   // ✅ Numeric format
-        hitsPerPage: 1000
-      });
-      console.log("   Sonuç:", tryUnquoted.nbHits);
-      
-      // 2. Farklı escape karakterleri dene
-      console.log("🔄 Deneme 2: Farklı format");
-      const tryDifferent = await index.search(markName, {
-        filters: `bulletinId='${selectedBulletinNo}'`,
-        hitsPerPage: 1000
-      });
-      console.log("   Sonuç:", tryDifferent.nbHits);
-      
-      // 3. BulletinId'nin bir kısmı ile dene (prefix search)
-      if (selectedBulletinNo && selectedBulletinNo.length > 10) {
-        console.log("🔄 Deneme 3: İlk 15 karakter ile");
-        const prefix = selectedBulletinNo.substring(0, 15);
-        console.log("   Prefix:", prefix);
-        
-        const tryPrefix = await index.search('', {
-          filters: `bulletinId:"${prefix}"`,
-          hitsPerPage: 100
-        });
-        console.log("   Sonuç:", tryPrefix.nbHits);
-        
-        if (tryPrefix.hits.length > 0) {
-          console.log("   İlk sonucun bulletinId'si:", tryPrefix.hits[0].bulletinId);
-          console.log("   Tam eşleşme kontrolü:", tryPrefix.hits[0].bulletinId === selectedBulletinNo);
-        }
-      }
-    }
-
     if (searchResult.hits.length === 0) {
       console.log("⚠️ Bu marka için hiç sonuç bulunamadı");
       return [];
