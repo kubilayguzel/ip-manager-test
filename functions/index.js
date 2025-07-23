@@ -1157,60 +1157,48 @@ exports.onTrademarkBulletinRecordWrite = onDocumentWritten(
 // BÜLTEN SİLME 
 
 exports.deleteBulletinV2 = onCall(async (request) => {
-  console.log('🔥 Basit delete başladı');
-  
+  console.log('🔥 Bülten silme başladı');
+
   const { bulletinId } = request.data;
-  
-  if (!bulletinId) {
-    console.error('❌ BulletinId yok');
-    throw new Error('BulletinId gerekli');
-  }
+  if (!bulletinId) throw new Error('BulletinId gerekli');
 
   try {
-    console.log(`🗑️ Silme başlıyor: ${bulletinId}`);
-    
-    // 1. Bülteni al
     const bulletinDoc = await db.collection('trademarkBulletins').doc(bulletinId).get();
-    if (!bulletinDoc.exists) {
-      throw new Error('Bülten bulunamadı');
-    }
-    
+    if (!bulletinDoc.exists) throw new Error('Bülten bulunamadı');
+
     const bulletinData = bulletinDoc.data();
     const bulletinNo = bulletinData.bulletinNo;
     console.log(`📋 Silinecek bülten: ${bulletinNo}`);
 
-    // 2. Kayıtları sil
+    // 1. Kayıtları chunk halinde sil
+    let totalDeleted = 0;
     const recordsQuery = db.collection('trademarkBulletinRecords').where('bulletinId', '==', bulletinId);
-    const recordsSnapshot = await recordsQuery.get();
-    const totalRecords = recordsSnapshot.size;
-    
-    console.log(`📊 Silinecek kayıt: ${totalRecords}`);
-    
-    if (totalRecords > 0) {
+    let snapshot = await recordsQuery.limit(500).get();
+
+    while (!snapshot.empty) {
       const batch = db.batch();
-      recordsSnapshot.docs.forEach(doc => {
-        batch.delete(doc.ref);
-      });
+      snapshot.docs.forEach(doc => batch.delete(doc.ref));
       await batch.commit();
-      console.log(`✅ ${totalRecords} kayıt silindi`);
+      totalDeleted += snapshot.size;
+      console.log(`✅ ${totalDeleted} kayıt silindi (toplam)`);
+
+      // Sonraki 500 kaydı al
+      snapshot = await recordsQuery.limit(500).get();
     }
 
-    // 3. Ana bülteni sil
+    // 2. Ana bülteni sil
     await bulletinDoc.ref.delete();
     console.log('✅ Ana bülten silindi');
 
     return {
       success: true,
-      bulletinNo: bulletinNo,
-      recordsDeleted: totalRecords,
-      message: `Bülten ${bulletinNo} başarıyla silindi (${totalRecords} kayıt)`
+      bulletinNo,
+      recordsDeleted: totalDeleted,
+      message: `Bülten ${bulletinNo} başarıyla silindi (${totalDeleted} kayıt)`
     };
 
   } catch (error) {
     console.error('❌ Silme hatası:', error);
-    return {
-      success: false,
-      error: error.message
-    };
+    return { success: false, error: error.message };
   }
 });
