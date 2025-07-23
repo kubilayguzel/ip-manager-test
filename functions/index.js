@@ -1340,3 +1340,177 @@ exports.onTrademarkBulletinRecordWrite = onDocumentWritten(
     return null;
   }
 );
+// functions/index.js dosyasına eklenecek deleteBulletinV2 fonksiyonu
+
+exports.deleteBulletinV2 = onCall(
+  {
+    region: 'europe-west1',
+    timeoutSeconds: 540,
+    memory: '1GiB'
+  },
+  async (request) => {
+    const { bulletinId } = request.data;
+    
+    if (!bulletinId) {
+      throw new HttpsError('invalid-argument', 'BulletinId gerekli');
+    }
+
+    console.log(`🗑️ Bülten silme işlemi başlıyor: ${bulletinId}`);
+    
+    const results = {
+      bulletinDeleted: false,
+      recordsDeleted: 0,
+      totalRecords: 0,
+      imagesDeleted: 0,
+      totalImages: 0,
+      algoliaDeleted: 0,
+      errors: []
+    };
+
+    try {
+      // 1. Bülten bilgilerini al
+      console.log('1️⃣ Bülten bilgileri getiriliyor...');
+      const bulletinDoc = await db.collection('trademarkBulletins').doc(bulletinId).get();
+      
+      if (!bulletinDoc.exists) {
+        throw new HttpsError('not-found', 'Bülten bulunamadı');
+      }
+      
+      const bulletinData = bulletinDoc.data();
+      const bulletinNo = bulletinData.bulletinNo;
+      console.log(`📋 Bülten No: ${bulletinNo}`);
+
+      // 2. İlişkili kayıtları say ve sil
+      console.log('2️⃣ İlişkili kayıtlar bulunuyor...');
+      const recordsQuery = db.collection('trademarkBulletinRecords')
+        .where('bulletinId', '==', bulletinId);
+      
+      const recordsSnapshot = await recordsQuery.get();
+      results.totalRecords = recordsSnapshot.size;
+      console.log(`📊 Silinecek kayıt sayısı: ${results.totalRecords}`);
+
+      // Kayıtları batch'ler halinde sil
+      if (results.totalRecords > 0) {
+        console.log('🗑️ Kayıtlar siliniyor (batch işlemi)...');
+        const batchSize = 500;
+        let deletedCount = 0;
+        
+        while (true) {
+          const batch = db.batch();
+          const querySnapshot = await recordsQuery.limit(batchSize).get();
+          
+          if (querySnapshot.empty) break;
+          
+          querySnapshot.docs.forEach(doc => {
+            batch.delete(doc.ref);
+          });
+          
+          await batch.commit();
+          deletedCount += querySnapshot.size;
+          console.log(`📝 Progress: ${deletedCount}/${results.totalRecords} kayıt silindi`);
+          
+          if (querySnapshot.size < batchSize) break;
+        }
+        
+        results.recordsDeleted = deletedCount;
+      }
+
+      // 3. Algolia'dan kayıtları sil
+      console.log('3️⃣ Algolia kayıtları siliniyor...');
+      try {
+        const algoliaClient = algoliasearch(ALGOLIA_APP_ID, ALGOLIA_ADMIN_API_KEY);
+        const algoliaIndex = algoliaClient.initIndex('trademark_bulletin_records_live');
+        
+        // Algolia'da bu bulletinId'ye ait kayıtları bul
+        const algoliaSearchResult = await algoliaIndex.search('', {
+          filters: `bulletinId:"${bulletinId}"`,
+          hitsPerPage: 1000
+        });
+        
+        if (algoliaSearchResult.hits.length > 0) {
+          const objectIDs = algoliaSearchResult.hits.map(hit => hit.objectID);
+          await algoliaIndex.deleteObjects(objectIDs);
+          results.algoliaDeleted = objectIDs.length;
+          console.log(`🔍 ${results.algoliaDeleted} Algolia kaydı silindi`);
+        }
+      } catch (algoliaError) {
+        console.warn('⚠️ Algolia silme hatası:', algoliaError.message);
+        results.errors.push(`Algolia silme hatası: ${algoliaError.message}`);
+      }
+
+      // 4. Storage'daki görselleri sil
+      console.log('4️⃣ Storage görselleri siliniyor...');
+      const imagesFolderPath = `bulletins/trademark_${bulletinNo}_images/`;
+      
+      try {
+        const bucket = admin.storage().bucket();
+        const [files] = await bucket.getFiles({
+          prefix: imagesFolderPath
+        });
+        
+        results.totalImages = files.length;
+        console.log(`🖼️ Silinecek görsel sayısı: ${results.totalImages}`);
+        
+        if (files.length > 0) {
+          // Paralel silme - daha hızlı
+          const deletePromises = files.map(file => 
+            file.delete().catch(error => {
+              console.warn(`⚠️ Görsel silme hatası: ${file.name}`, error.message);
+              return { error: error.message, file: file.name };
+            })
+          );
+          
+          const deleteResults = await Promise.all(deletePromises);
+          
+          // Başarılı silme sayısını hesapla
+          const successfulDeletes = deleteResults.filter(result => !result?.error);
+          results.imagesDeleted = successfulDeletes.length;
+          
+          // Hataları kaydet
+          const failedDeletes = deleteResults.filter(result => result?.error);
+          if (failedDeletes.length > 0) {
+            results.errors.push(`${failedDeletes.length} görsel silinemedi`);
+            console.warn(`⚠️ ${failedDeletes.length} görsel silinemedi`);
+          }
+          
+          console.log(`🖼️ ${results.imagesDeleted}/${results.totalImages} görsel silindi`);
+        }
+      } catch (storageError) {
+        console.warn('⚠️ Storage silme hatası:', storageError.message);
+        results.errors.push(`Storage silme hatası: ${storageError.message}`);
+      }
+
+      // 5. Ana bülten kaydını sil
+      console.log('5️⃣ Ana bülten kaydı siliniyor...');
+      await bulletinDoc.ref.delete();
+      results.bulletinDeleted = true;
+      console.log('✅ Ana bülten kaydı silindi');
+
+      // 6. Sonuç özeti
+      console.log('🎉 Silme işlemi tamamlandı!');
+      console.log('📊 ÖZET:', {
+        bulletinNo: bulletinNo,
+        bulletinDeleted: results.bulletinDeleted,
+        recordsDeleted: `${results.recordsDeleted}/${results.totalRecords}`,
+        imagesDeleted: `${results.imagesDeleted}/${results.totalImages}`,
+        algoliaDeleted: results.algoliaDeleted,
+        errors: results.errors.length
+      });
+
+      return {
+        success: true,
+        bulletinNo: bulletinNo,
+        ...results
+      };
+
+    } catch (error) {
+      console.error('❌ Bülten silme hatası:', error);
+      
+      return {
+        success: false,
+        error: error.message,
+        ...results
+      };
+    }
+  }
+);
