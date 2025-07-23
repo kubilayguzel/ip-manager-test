@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Bülten Yükleme</title>
   <link rel="stylesheet" href="css/shared-styles.css" />
-  <!-- Aynı CSS stilleri -->
   <style>
     .main-container {
       max-width: 100%;
@@ -193,6 +192,8 @@ setTimeout(async () => {
         console.log('✅ Firebase modülleri yüklendi');
         
         const db = firebaseModule.db;
+        
+        // 🔧 DÜZELTME: Default region kullan (region belirtme)
         const functions = getFunctions();
         
         // Tabloyu doldur
@@ -284,16 +285,15 @@ setTimeout(async () => {
             document.getElementById('deleteProgressDetails').textContent = details;
         }
 
-        // 🔥 YENİ BACKEND DELETE FONKSİYONU
+        // 🔥 YENİ BACKEND DELETE FONKSİYONU - REGION FIX
         window.deleteTrademarkBulletin = async function(bulletinId, bulletinNo) {
             const userConfirmed = confirm(
                 `⚠️ "${bulletinNo}" numaralı bülteni silmek istediğinizden emin misiniz?\n\n` +
                 `Bu işlem geri alınamaz ve şunları silecek:\n` +
                 `• Ana bülten kaydı\n` +
                 `• Tüm marka kayıtları\n` +
-                `• Tüm görsel dosyalar\n` +
-                `• Algolia indeks kayıtları\n\n` +
-                `İşlem 30-90 saniye sürecek (eski yöntemden 10x hızlı).`
+                `• Tüm görsel dosyalar\n\n` +
+                `İşlem 30-90 saniye sürecek (backend'de hızlı silme).`
             );
             
             if (!userConfirmed) {
@@ -312,10 +312,15 @@ setTimeout(async () => {
                 
                 updateDeleteProgress(20, 'Cloud Function çalışıyor...', 'Bu işlem 30-90 saniye sürebilir');
                 
+                console.log('📞 Function çağrılıyor...');
+                const startTime = performance.now();
+                
                 const result = await deleteBulletinFunction({ bulletinId });
                 const data = result.data;
                 
+                const duration = Math.round((performance.now() - startTime) / 1000);
                 console.log('🎉 Backend silme sonucu:', data);
+                console.log(`⏱️ İşlem süresi: ${duration} saniye`);
                 
                 if (data.success) {
                     // Başarılı sonuç
@@ -331,10 +336,9 @@ setTimeout(async () => {
 • Ana bülten: ✅
 • Kayıtlar: ${data.recordsDeleted}/${data.totalRecords} ✅  
 • Görseller: ${data.imagesDeleted}/${data.totalImages} ${data.imagesDeleted === data.totalImages ? '✅' : '⚠️'}
-• Algolia: ${data.algoliaDeleted} ✅
 ${hasErrors ? '\n⚠️ Uyarılar: ' + data.errors.join(', ') : ''}
 
-⚡ İşlem süresi: ~${Math.round(performance.now() / 1000)} saniye`;
+⚡ İşlem süresi: ${duration} saniye (backend silme)`;
                         
                         showNotification(
                             successMessage, 
@@ -354,13 +358,16 @@ ${hasErrors ? '\n⚠️ Uyarılar: ' + data.errors.join(', ') : ''}
                 
             } catch (error) {
                 console.error('❌ Backend silme hatası:', error);
+                console.error('❌ Error details:', error);
+                
                 hideDeleteProgress();
                 
                 showNotification(
                     `❌ Backend silme hatası: ${error.message}\n\n` +
-                    `Fonksiyon deploy edildi mi? Console'u kontrol edin.`, 
+                    `Fonksiyon deploy edildi mi?\n` +
+                    `Console logs: firebase functions:log --only deleteBulletinV2`, 
                     'error', 
-                    10000
+                    15000
                 );
             }
         };
