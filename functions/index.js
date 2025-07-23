@@ -916,88 +916,133 @@ async function extractZipStreaming(zipPath, extractDir) {
 
 // 3. Streaming script content parser
 async function parseScriptContentStreaming(scriptPath) {
-  console.log('🔄 Streaming script parser başlıyor...');
+  console.log('🔄 Basit script parser başlıyor...');
   
-  return new Promise((resolve, reject) => {
-    const records = {};
-    let currentTable = null;
-    let lineCount = 0;
+  // Dosya boyutunu kontrol et
+  const stats = fs.statSync(scriptPath);
+  const fileSizeMB = stats.size / 1024 / 1024;
+  console.log(`📊 Script dosya boyutu: ${fileSizeMB.toFixed(2)} MB`);
+  
+  if (fileSizeMB > 100) {
+    console.warn('⚠️ Çok büyük script dosyası, parçalı okuma yapılıyor...');
+    return parseScriptInChunks(scriptPath);
+  }
+  
+  try {
+    // Küçük dosyalar için normal okuma
+    console.log('📄 Script dosyası okunuyor...');
+    const content = fs.readFileSync(scriptPath, 'utf8');
+    console.log(`📊 Script içerik uzunluğu: ${content.length} karakter`);
     
-    const readStream = fs.createReadStream(scriptPath, { encoding: 'utf8' });
-    const lineStream = readStream.pipe(new stream.Transform({
-      objectMode: true,
-      transform(chunk, encoding, callback) {
-        const lines = chunk.toString().split('\n');
-        for (const line of lines) {
-          this.push(line);
-        }
-        callback();
-      }
-    }));
+    return parseScriptContent(content);
     
-    lineStream.on('data', (line) => {
-      lineCount++;
+  } catch (error) {
+    console.error('❌ Script okuma hatası:', error.message);
+    throw error;
+  }
+}
+
+async function parseScriptInChunks(scriptPath) {
+  console.log('🔄 Chunk-based parsing başlıyor...');
+  
+  const records = {};
+  let currentTable = null;
+  let buffer = '';
+  let lineCount = 0;
+  
+  const chunkSize = 1024 * 1024; // 1MB chunks
+  const fd = fs.openSync(scriptPath, 'r');
+  const fileSize = fs.statSync(scriptPath).size;
+  
+  try {
+    for (let position = 0; position < fileSize; position += chunkSize) {
+      const chunk = Buffer.alloc(Math.min(chunkSize, fileSize - position));
+      fs.readSync(fd, chunk, 0, chunk.length, position);
       
-      // Progress logging for large files
-      if (lineCount % 10000 === 0) {
-        console.log(`📄 Processed ${lineCount} lines, memory:`, process.memoryUsage().heapUsed / 1024 / 1024, 'MB');
+      buffer += chunk.toString('utf8');
+      const lines = buffer.split('\n');
+      
+      // Son satırı buffer'da tut (tamamlanmamış olabilir)
+      buffer = lines.pop() || '';
+      
+      // Satırları işle
+      for (const line of lines) {
+        lineCount++;
+        
+        if (lineCount % 50000 === 0) {
+          console.log(`📄 İşlenen satır: ${lineCount}, memory: ${(process.memoryUsage().heapUsed / 1024 / 1024).toFixed(1)}MB`);
+          
+          // Garbage collection
+          if (global.gc && lineCount % 100000 === 0) {
+            global.gc();
+          }
+        }
+        
+        processScriptLine(line, records, currentTable);
       }
       
-      // Parse line (same logic as original parseScriptContent)
-      if (line.startsWith("INSERT INTO")) {
-        const match = line.match(/INSERT INTO (\w+)/);
-        currentTable = match ? match[1] : null;
-        return;
-      }
-
-      if (currentTable && line.includes("VALUES")) {
-        const values = parseValuesFromLine(line);
-        if (!values || values.length === 0) return;
-
-        const appNo = values[0];
-        if (!appNo) return;
-
-        if (!records[appNo]) {
-          records[appNo] = {
-            applicationNo: appNo,
-            applicationDate: null,
-            markName: null,
-            niceClasses: null,
-            holders: [],
-            goods: [],
-            extractedGoods: [],
-            attorneys: []
-          };
-        }
-
-        // Process based on table type (same logic as original)
-        if (currentTable === "TRADEMARK") {
-          records[appNo].applicationDate = values[1] || null;
-          records[appNo].markName = values[4] || null;
-          records[appNo].niceClasses = values[6] || null;
-        } else if (currentTable === "HOLDER") {
-          records[appNo].holders.push({
-            name: extractHolderName(values[2]) || null,
-            address: values[3] || null,
-            country: values[4] || null,
-          });
-        } else if (currentTable === "GOODS") {
-          records[appNo].goods.push(values[3] || null);
-        } else if (currentTable === "EXTRACTEDGOODS") {
-          records[appNo].extractedGoods.push(values[3] || null);
-        } else if (currentTable === "ATTORNEY") {
-          records[appNo].attorneys.push(values[2] || null);
-        }
-      }
-    });
+      console.log(`📊 Chunk progress: ${((position + chunk.length) / fileSize * 100).toFixed(1)}%`);
+    }
     
-    lineStream.on('end', () => {
-      console.log(`✅ Script parsing tamamlandı: ${lineCount} lines processed`);
-      resolve(Object.values(records));
-    });
+    // Son buffer'ı işle
+    if (buffer.trim()) {
+      processScriptLine(buffer, records, currentTable);
+    }
     
-    lineStream.on('error', reject);
-  });
+  } finally {
+    fs.closeSync(fd);
+  }
+  
+  console.log(`✅ Script parsing tamamlandı: ${lineCount} satır, ${Object.keys(records).length} kayıt`);
+  return Object.values(records);
+}
+
+function processScriptLine(line, records, currentTable) {
+  if (line.startsWith("INSERT INTO")) {
+    const match = line.match(/INSERT INTO (\w+)/);
+    currentTable = match ? match[1] : null;
+    return;
+  }
+
+  if (currentTable && line.includes("VALUES")) {
+    const values = parseValuesFromLine(line);
+    if (!values || values.length === 0) return;
+
+    const appNo = values[0];
+    if (!appNo) return;
+
+    if (!records[appNo]) {
+      records[appNo] = {
+        applicationNo: appNo,
+        applicationDate: null,
+        markName: null,
+        niceClasses: null,
+        holders: [],
+        goods: [],
+        extractedGoods: [],
+        attorneys: []
+      };
+    }
+
+    // Process based on table type
+    if (currentTable === "TRADEMARK") {
+      records[appNo].applicationDate = values[1] || null;
+      records[appNo].markName = values[4] || null;
+      records[appNo].niceClasses = values[6] || null;
+    } else if (currentTable === "HOLDER") {
+      records[appNo].holders.push({
+        name: extractHolderName(values[2]) || null,
+        address: values[3] || null,
+        country: values[4] || null,
+      });
+    } else if (currentTable === "GOODS") {
+      records[appNo].goods.push(values[3] || null);
+    } else if (currentTable === "EXTRACTEDGOODS") {
+      records[appNo].extractedGoods.push(values[3] || null);
+    } else if (currentTable === "ATTORNEY") {
+      records[appNo].attorneys.push(values[2] || null);
+    }
+  }
 }
 
 // Helper function to parse VALUES from SQL line
@@ -1173,90 +1218,6 @@ async function extractZipStreaming(zipPath, extractDir) {
   });
 }
 
-async function parseScriptContentStreaming(scriptPath) {
-  console.log('🔄 Streaming script parser başlıyor...');
-  
-  return new Promise((resolve, reject) => {
-    const records = {};
-    let currentTable = null;
-    let lineCount = 0;
-    
-    const readStream = fs.createReadStream(scriptPath, { encoding: 'utf8' });
-    const lineStream = readStream.pipe(new stream.Transform({
-      objectMode: true,
-      transform(chunk, encoding, callback) {
-        const lines = chunk.toString().split('\n');
-        for (const line of lines) {
-          this.push(line);
-        }
-        callback();
-      }
-    }));
-    
-    lineStream.on('data', (line) => {
-      lineCount++;
-      
-      // Progress logging for large files
-      if (lineCount % 10000 === 0) {
-        console.log(`📄 Processed ${lineCount} lines, memory:`, process.memoryUsage().heapUsed / 1024 / 1024, 'MB');
-      }
-      
-      // Parse line (same logic as original parseScriptContent)
-      if (line.startsWith("INSERT INTO")) {
-        const match = line.match(/INSERT INTO (\w+)/);
-        currentTable = match ? match[1] : null;
-        return;
-      }
-
-      if (currentTable && line.includes("VALUES")) {
-        const values = parseValuesFromLine(line);
-        if (!values || values.length === 0) return;
-
-        const appNo = values[0];
-        if (!appNo) return;
-
-        if (!records[appNo]) {
-          records[appNo] = {
-            applicationNo: appNo,
-            applicationDate: null,
-            markName: null,
-            niceClasses: null,
-            holders: [],
-            goods: [],
-            extractedGoods: [],
-            attorneys: []
-          };
-        }
-
-        // Process based on table type (same logic as original)
-        if (currentTable === "TRADEMARK") {
-          records[appNo].applicationDate = values[1] || null;
-          records[appNo].markName = values[4] || null;
-          records[appNo].niceClasses = values[6] || null;
-        } else if (currentTable === "HOLDER") {
-          records[appNo].holders.push({
-            name: extractHolderName(values[2]) || null,
-            address: values[3] || null,
-            country: values[4] || null,
-          });
-        } else if (currentTable === "GOODS") {
-          records[appNo].goods.push(values[3] || null);
-        } else if (currentTable === "EXTRACTEDGOODS") {
-          records[appNo].extractedGoods.push(values[3] || null);
-        } else if (currentTable === "ATTORNEY") {
-          records[appNo].attorneys.push(values[2] || null);
-        }
-      }
-    });
-    
-    lineStream.on('end', () => {
-      console.log(`✅ Script parsing tamamlandı: ${lineCount} lines processed`);
-      resolve(Object.values(records));
-    });
-    
-    lineStream.on('error', reject);
-  });
-}
 async function writeBatchesToFirestore(records, bulletinId, imagePathMap) {
   const batchSize = 250; // Reduced batch size for memory efficiency
   let totalWritten = 0;
@@ -1392,69 +1353,26 @@ function parseValues(raw) {
 }
 
 function parseScriptContent(content) {
-    const recordsMap = {};
+  console.log('📄 Basit parsing başlıyor...');
+  
+  const lines = content.split('\n');
+  console.log(`📊 Toplam satır: ${lines.length}`);
+  
+  const records = {};
+  let currentTable = null;
+  
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
     
-    const lines = content.split('\n');
-    
-    let processedLines = 0;
-    
-    for (let i = 0; i < lines.length; i++) {
-        const line = lines[i].trim();
-        
-        if (!line.length || !line.startsWith('INSERT INTO')) {
-            continue;
-        }
-        
-        processedLines++;
-        if (processedLines % 1000 === 0) {
-            console.log(`İşlenen satır: ${processedLines}/${lines.length}`);
-        }
-        
-        const match = line.match(/INSERT INTO (\w+) VALUES\s*\((.*)\)$/);
-        if (!match) continue;
-        
-        const table = match[1].toUpperCase();
-        const values = parseValues(match[2]);
-        
-        const appNo = values[0];
-        if (!appNo) continue;
-
-        if (!recordsMap[appNo]) {
-            recordsMap[appNo] = {
-                applicationNo: appNo,
-                applicationDate: null,
-                markName: null,
-                niceClasses: null,
-                holders: [],
-                goods: [],
-                extractedGoods: [],
-                attorneys: [],
-            };
-        }
-
-        if (table === "TRADEMARK") {
-            recordsMap[appNo].applicationDate = values[1] ?? null;
-            recordsMap[appNo].markName = values[5] ?? null;
-            recordsMap[appNo].niceClasses = values[6] ?? null;
-        } else if (table === "HOLDER") {
-            const holderName = extractHolderName(values[2]);
-            let addressParts = [values[3], values[4], values[5], values[6]].filter(Boolean).join(", ");
-            if (addressParts.trim() === "") addressParts = null;
-            recordsMap[appNo].holders.push({
-                name: holderName,
-                address: addressParts,
-                country: values[7] ?? null,
-            });
-        } else if (table === "GOODS") {
-            recordsMap[appNo].goods.push(values[3] ?? null);
-        } else if (table === "EXTRACTEDGOODS") {
-            recordsMap[appNo].extractedGoods.push(values[3] ?? null);
-        } else if (table === "ATTORNEY") {
-            recordsMap[appNo].attorneys.push(values[2] ?? null);
-        }
+    if (i % 10000 === 0 && i > 0) {
+      console.log(`📄 Progress: ${i}/${lines.length} (${(i/lines.length*100).toFixed(1)}%)`);
     }
     
-    return Object.values(recordsMap);
+    processScriptLine(line, records, currentTable);
+  }
+  
+  console.log(`✅ Basit parsing tamamlandı: ${Object.keys(records).length} kayıt`);
+  return Object.values(records);
 }
 
 function decodeValue(str) {
