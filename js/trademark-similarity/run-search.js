@@ -118,7 +118,7 @@ export async function runTrademarkSearch(monitoredMark, selectedBulletinNo) {
 
   try {
     // Filter string debug
-    const filterString = `bulletinId:"${selectedBulletinNo}"`;
+    const filterString = `bulletinId:${selectedBulletinNo}`;
     console.log("🎯 FILTER DEBUG:", {
       filterString,
       encoded: encodeURIComponent(filterString),
