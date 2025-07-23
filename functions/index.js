@@ -655,7 +655,6 @@ exports.createUniversalNotificationOnTaskCompleteV2 = onDocumentUpdated(
 
 // Trademark Bulletin Upload Processing (v2 Storage Trigger)
 // Debug edilmiş processTrademarkBulletinUploadV2 fonksiyonu
-// functions/index.js dosyasında mevcut fonksiyonu bu versiyonla değiştirin
 exports.processTrademarkBulletinUploadV2 = onObjectFinalized(
   {
     region: 'europe-west1',
@@ -673,12 +672,23 @@ exports.processTrademarkBulletinUploadV2 = onObjectFinalized(
 
     console.log(`📄 Dosya: ${fileName} (${(fileSize / 1024 / 1024).toFixed(2)} MB)`);
 
-    // Erken filtreleme
+    // 🚫 ERKEN FİLTRELEME - Sadece ZIP/RAR dosyalarını işle
     if (!fileName.toLowerCase().endsWith(".zip") && !fileName.toLowerCase().endsWith(".rar")) {
-      return null;
+      console.log('⏭️ Desteklenmeyen dosya türü, atlanıyor:', fileName);
+      return null; // Sessizce çık
     }
+    
+    // 🚫 ERKEN FİLTRELEME - Images klasöründeki dosyaları işleme
     if (filePath.includes('/images/') || filePath.includes('_images/')) {
-      return null;
+      console.log('⏭️ Görsel dosyası, atlanıyor:', filePath);
+      return null; // Sessizce çık
+    }
+    
+    // 🚫 ERKEN FİLTRELEME - Sadece bulletins/ kök klasöründeki ZIP'leri işle
+    const pathParts = filePath.split('/');
+    if (pathParts.length !== 2 || pathParts[0] !== 'bulletins') {
+      console.log('⏭️ Yanlış path, atlanıyor:', filePath);
+      return null; // Sadece bulletins/dosya.zip formatını kabul et
     }
 
     const tempFilePath = path.join(os.tmpdir(), fileName);
@@ -799,7 +809,6 @@ exports.processTrademarkBulletinUploadV2 = onObjectFinalized(
     return null;
   }
 );
-
 
 // =========================================================
 //              PUB/SUB TRIGGER FONKSİYONLARI (v2)
