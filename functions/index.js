@@ -1155,7 +1155,6 @@ exports.onTrademarkBulletinRecordWrite = onDocumentWritten(
 );
 
 // BÜLTEN SİLME 
-
 exports.deleteBulletinV2 = onCall(async (request) => {
   console.log('🔥 Bülten silme başladı');
 
@@ -1163,6 +1162,7 @@ exports.deleteBulletinV2 = onCall(async (request) => {
   if (!bulletinId) throw new Error('BulletinId gerekli');
 
   try {
+    // 1. Bülten dokümanını al
     const bulletinDoc = await db.collection('trademarkBulletins').doc(bulletinId).get();
     if (!bulletinDoc.exists) throw new Error('Bülten bulunamadı');
 
@@ -1170,7 +1170,7 @@ exports.deleteBulletinV2 = onCall(async (request) => {
     const bulletinNo = bulletinData.bulletinNo;
     console.log(`📋 Silinecek bülten: ${bulletinNo}`);
 
-    // 1. Kayıtları chunk halinde sil
+    // 2. İlişkili trademarkBulletinRecords silme (500'erli chunk)
     let totalDeleted = 0;
     const recordsQuery = db.collection('trademarkBulletinRecords').where('bulletinId', '==', bulletinId);
     let snapshot = await recordsQuery.limit(500).get();
@@ -1182,11 +1182,36 @@ exports.deleteBulletinV2 = onCall(async (request) => {
       totalDeleted += snapshot.size;
       console.log(`✅ ${totalDeleted} kayıt silindi (toplam)`);
 
-      // Sonraki 500 kaydı al
       snapshot = await recordsQuery.limit(500).get();
     }
 
-    // 2. Ana bülteni sil
+    // 3. Storage görsellerini sil (chunklı)
+    const storage = admin.storage().bucket();
+    const prefix = `bulletins/trademark_${bulletinNo}_images/`;
+    let [files] = await storage.getFiles({ prefix });
+
+    let totalImagesDeleted = 0;
+    const chunkSize = 200; // aynı anda kaç dosya silinecek
+
+    while (files.length > 0) {
+      const chunk = files.splice(0, chunkSize);
+      await Promise.all(
+        chunk.map(file =>
+          file.delete().catch(err =>
+            console.warn(`⚠️ ${file.name} silinemedi: ${err.message}`)
+          )
+        )
+      );
+      totalImagesDeleted += chunk.length;
+      console.log(`🖼️ ${totalImagesDeleted} görsel silindi (toplam)`);
+
+      // Yeni listeleme (kalan dosya varsa)
+      if (files.length === 0) {
+        [files] = await storage.getFiles({ prefix });
+      }
+    }
+
+    // 4. Ana bulletin dokümanını sil
     await bulletinDoc.ref.delete();
     console.log('✅ Ana bülten silindi');
 
@@ -1194,7 +1219,8 @@ exports.deleteBulletinV2 = onCall(async (request) => {
       success: true,
       bulletinNo,
       recordsDeleted: totalDeleted,
-      message: `Bülten ${bulletinNo} başarıyla silindi (${totalDeleted} kayıt)`
+      imagesDeleted: totalImagesDeleted,
+      message: `Bülten ${bulletinNo} ve ${totalImagesDeleted} görsel başarıyla silindi (${totalDeleted} kayıt)`
     };
 
   } catch (error) {
@@ -1202,3 +1228,4 @@ exports.deleteBulletinV2 = onCall(async (request) => {
     return { success: false, error: error.message };
   }
 });
+
