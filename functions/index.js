@@ -655,7 +655,7 @@ exports.processTrademarkBulletinUploadV2 = onObjectFinalized(
     {
         region: 'europe-west1',
         timeoutSeconds: 540,
-        memory: '2GiB',
+        memory: '1GiB', // Şimdilik 1GB kalabilir
         bucket: 'ip-manager-production-aab4b.firebasestorage.app'
     },
     async (event) => {
@@ -664,7 +664,7 @@ exports.processTrademarkBulletinUploadV2 = onObjectFinalized(
         const fileName = path.basename(filePath);
         const bucket = admin.storage().bucket();
 
-        if (!fileName.endsWith(".zip") && !fileName.endsWith(".rar")) return null; 
+        if (!fileName.endsWith(".zip") && !fileName.endsWith(".rar")) return null;
 
         const tempFilePath = path.join(os.tmpdir(), fileName);
         const extractDir = path.join(os.tmpdir(), `extract_${Date.now()}`);
@@ -708,10 +708,9 @@ exports.processTrademarkBulletinUploadV2 = onObjectFinalized(
             // Script content parse
             const scriptPath = allFiles.find((p) => path.basename(p).toLowerCase() === "tmbulletin.log");
             if (!scriptPath) throw new Error("tmbulletin.log bulunamadı.");
-            
+
             const scriptContent = fs.readFileSync(scriptPath, "utf8");
             const records = parseScriptContent(scriptContent);
-            const imagePathsForPubSub = [];
 
             // Görselleri applicationNo'ya göre eşle
             const imageFiles = allFiles.filter((p) => /\.(jpg|jpeg|png)$/i.test(p));
@@ -728,47 +727,43 @@ exports.processTrademarkBulletinUploadV2 = onObjectFinalized(
                 }
             }
 
-            // Her kayda görsel yolunu ekle
+            // Kayıtlara görsel yolu ekle
             for (const record of records) {
                 record.bulletinId = bulletinId;
                 const matchingImages = imagePathMap[record.applicationNo] || [];
                 record.imagePath = matchingImages.length > 0 ? matchingImages[0] : null;
             }
-     
-            // Görsel işlemleri (yeni hafifletilmiş base64 yöntemi)
-            console.log(`📤 ${imageFiles.length} görsel base64 ile 200'lük Pub/Sub batch'lerinde gönderiliyor...`);
 
-            const imageBatchSize = 100;
+            console.log(`📤 ${imageFiles.length} görsel Storage'a yüklenecek ve path bilgisi Pub/Sub ile gönderilecek...`);
+
+            // Görselleri yükle ve path bilgisini gönder
+            const imageBatchSize = 50;
             for (let i = 0; i < imageFiles.length; i += imageBatchSize) {
                 const batch = imageFiles.slice(i, i + imageBatchSize);
-                const encodedImages = [];
+                const imageMeta = [];
 
                 for (const localPath of batch) {
                     const filename = path.basename(localPath);
                     const destinationPath = `bulletins/trademark_${bulletinNo}_images/${filename}`;
-                    imagePathsForPubSub.push(destinationPath);
 
-                    const imageStream = fs.createReadStream(localPath);
-                    let base64 = '';
-                    for await (const chunk of imageStream) {
-                        base64 += chunk.toString('base64');
-                    }
+                    // Görseli Storage'a yükle (varsa üzerine yazar)
+                    await bucket.upload(localPath, { destination: destinationPath });
 
-                    encodedImages.push({
+                    imageMeta.push({
                         destinationPath,
-                        base64,
                         contentType: getContentType(filename)
                     });
                 }
 
-                // Tek mesajda 200 görsel gönder
+                // Pub/Sub ile sadece path bilgisi gönder
                 await pubsubClient.topic("trademark-image-upload").publishMessage({
-                    data: Buffer.from(JSON.stringify(encodedImages)),
-                    attributes: { batchSize: batch.length.toString() }
+                    data: Buffer.from(JSON.stringify(imageMeta)),
+                    attributes: { batchSize: batch.length.toString(), type: "PATH_ONLY" }
                 });
 
-                await new Promise(resolve => setTimeout(resolve, 200));
+                await new Promise(resolve => setTimeout(resolve, 100)); // küçük bekleme
             }
+
             console.log(`✅ ${records.length} kayıt ve ${imageFiles.length} görsel işleme alındı.`);
 
             // Firestore'a kayıtları ekle
@@ -790,15 +785,6 @@ exports.processTrademarkBulletinUploadV2 = onObjectFinalized(
                 console.log(`✅ Firestore'a ${chunk.length} kayıt eklendi (${i + chunk.length}/${records.length})`);
             }
 
-            // Hafıza temizliği
-            delete records;
-            delete imagePathsForPubSub;
-            delete allFiles;
-            
-            if (global.gc) {
-                global.gc();
-            }
-            
         } catch (e) {
             console.error("İşlem hatası:", e);
             throw e;
