@@ -7,8 +7,82 @@ const algoliasearch = window.algoliasearch;
 const client = algoliasearch('THCIEJJTZ9', 'b6c38850bfc00adcf0ecdd9a14638c27');
 const index = client.initIndex('trademark_bulletin_records_live');
 
-// run-search.js içinde değiştirilecek bölüm
+// Debug function - BulletinId'leri listeleyen fonksiyon
+export async function debugBulletinIds() {
+  try {
+    console.log("🔍 Index'teki bulletinId'leri kontrol ediliyor...");
+    const result = await index.search("", {
+      hitsPerPage: 50,
+      attributesToRetrieve: ['bulletinId', 'markName']
+    });
+    
+    console.log("🔍 Index'teki bulletinId'ler:");
+    const uniqueBulletinIds = [...new Set(result.hits.map(h => h.bulletinId))];
+    uniqueBulletinIds.forEach(id => {
+      console.log(`"${id}" (length: ${id?.length})`);
+    });
+    
+    return uniqueBulletinIds;
+  } catch (error) {
+    console.error("❌ Debug BulletinIds failed:", error);
+    return [];
+  }
+}
 
+// Debug function - Farklı filter formatlarını test eden fonksiyon
+export async function debugFilters(selectedBulletinNo, testQuery = "setcard") {
+  console.log("🧪 Farklı filter formatları test ediliyor...");
+  
+  const filters = [
+    `bulletinId:"${selectedBulletinNo}"`,
+    `bulletinId='${selectedBulletinNo}'`,
+    `bulletinId:${selectedBulletinNo}`,
+    `bulletinId="${selectedBulletinNo}"`,
+    `bulletinId:\"${selectedBulletinNo}\"`
+  ];
+
+  for (const filter of filters) {
+    try {
+      console.log(`🧪 Testing filter: ${filter}`);
+      const result = await index.search(testQuery, {
+        filters: filter,
+        hitsPerPage: 5
+      });
+      console.log(`✅ Result with "${filter}": ${result.nbHits} hits`);
+      if (result.nbHits > 0) {
+        console.log("📄 Sample hits:", result.hits.slice(0, 2).map(h => ({
+          markName: h.markName,
+          bulletinId: h.bulletinId
+        })));
+      }
+    } catch (error) {
+      console.log(`❌ Error with "${filter}":`, error.message);
+    }
+  }
+}
+
+// Debug function - Genel arama testi
+export async function debugGeneralSearch(testQuery = "setcard") {
+  try {
+    console.log(`🔍 "${testQuery}" için genel arama yapılıyor (filter olmadan)...`);
+    const generalResult = await index.search(testQuery, {
+      hitsPerPage: 10
+    });
+    console.log(`🔍 Genel arama sonucu: ${generalResult.nbHits} hits`);
+    
+    if (generalResult.nbHits > 0) {
+      console.log("🔍 Sonuçlardaki BulletinIds:", 
+        generalResult.hits.map(h => `"${h.bulletinId}" (${h.markName})`));
+    }
+    
+    return generalResult;
+  } catch (error) {
+    console.error("❌ Genel arama hatası:", error);
+    return null;
+  }
+}
+
+// Ana arama fonksiyonu - Debug logları eklenmiş
 export async function runTrademarkSearch(monitoredMark, selectedBulletinNo) {
   console.log("🚀 runTrademarkSearch başlatılıyor:", {
     markName: monitoredMark.markName,
@@ -17,23 +91,45 @@ export async function runTrademarkSearch(monitoredMark, selectedBulletinNo) {
     niceClasses: monitoredMark.niceClasses
   });
 
-  // BulletinId debug
-  console.log("🔍 BULLETIN ID DEBUG:", {
-    type: typeof selectedBulletinNo,
-    length: selectedBulletinNo?.length,
-    previewStart: selectedBulletinNo?.substring(0, 10),
-    previewEnd: selectedBulletinNo?.substring(-10)
-  });
+  // DETAYLI BULLETIN ID DEBUG
+  console.log("🔍 DETAYLI DEBUG - BULLETIN ID:");
+  console.log("Raw selectedBulletinNo:", selectedBulletinNo);
+  console.log("Type:", typeof selectedBulletinNo);
+  console.log("Length:", selectedBulletinNo?.length);
+  console.log("Char codes:", Array.from(selectedBulletinNo || '').map(c => c.charCodeAt(0)));
+  
+  // Beklenen değer ile karşılaştırma
+  const expectedBulletinId = "ABa9mcv07R3bltQgs6N8";
+  console.log("Expected:", expectedBulletinId);
+  console.log("Exact match?", selectedBulletinNo === expectedBulletinId);
+  
+  // Character by character comparison
+  if (selectedBulletinNo && expectedBulletinId) {
+    for (let i = 0; i < Math.max(selectedBulletinNo.length, expectedBulletinId.length); i++) {
+      const actual = selectedBulletinNo[i] || 'undefined';
+      const expected = expectedBulletinId[i] || 'undefined';
+      if (actual !== expected) {
+        console.log(`❌ Diff at position ${i}: '${actual}' (${actual.charCodeAt ? actual.charCodeAt(0) : 'N/A'}) vs '${expected}' (${expected.charCodeAt ? expected.charCodeAt(0) : 'N/A'})`);
+      }
+    }
+  }
 
   const { markName, applicationDate, niceClasses } = monitoredMark;
 
   try {
-    // Filter string
+    // Filter string debug
     const filterString = `bulletinId:"${selectedBulletinNo}"`;
     console.log("🎯 FILTER DEBUG:", {
       filterString,
-      encoded: encodeURIComponent(filterString)
+      encoded: encodeURIComponent(filterString),
+      decoded: decodeURIComponent(encodeURIComponent(filterString))
     });
+
+    // Debug functions çağır
+    console.log("🔧 Debug functions çalıştırılıyor...");
+    await debugBulletinIds();
+    await debugGeneralSearch(markName);
+    await debugFilters(selectedBulletinNo, markName);
 
     // Algolia search params
     const searchParams = {
@@ -55,12 +151,23 @@ export async function runTrademarkSearch(monitoredMark, selectedBulletinNo) {
     console.log("🧾 Algolia sonuç özeti:", {
       nbHits: searchResult.nbHits,
       hitsLength: searchResult.hits.length,
-      processingTime: searchResult.processingTimeMS + "ms"
+      processingTime: searchResult.processingTimeMS + "ms",
+      query: searchResult.query,
+      params: searchResult.params
     });
-    console.log("🔎 Algolia ham sonuçlar (ilk 5):", searchResult.hits.slice(0, 5));
-
-    if (searchResult.hits.length === 0) {
+    
+    if (searchResult.hits.length > 0) {
+      console.log("🔎 Algolia ham sonuçlar (ilk 5):", searchResult.hits.slice(0, 5));
+    } else {
       console.log("⚠️ Bu marka için hiç sonuç bulunamadı");
+      
+      // Sonuç bulunamadığında ek debug
+      console.log("🔍 Ek debug - filter olmadan arama:");
+      const noFilterResult = await index.search(markName, {
+        hitsPerPage: 10
+      });
+      console.log("📊 Filter olmadan sonuç:", noFilterResult.nbHits);
+      
       return [];
     }
 
@@ -68,39 +175,72 @@ export async function runTrademarkSearch(monitoredMark, selectedBulletinNo) {
       .filter(hit => {
         const isValid = isValidBasedOnDate(hit.applicationDate, applicationDate);
         if (!isValid) {
-          console.log(`📅 Tarih filtresi reddetti: ${hit.markName} (${hit.applicationDate})`);
+          console.log(`🚫 Tarih filtresi: ${hit.markName} (${hit.applicationDate}) geçersiz`);
         }
         return isValid;
       })
       .map(hit => {
-        const similarityScore = calculateSimilarityScore(hit, markName);
-        const sameClass = hasOverlappingNiceClasses(hit.niceClasses || [], niceClasses || []);
-
-        console.log(`📊 ${hit.markName}: score=${similarityScore.toFixed(2)}, sameClass=${sameClass}`);
+        const similarityScore = calculateSimilarityScore(markName, hit.markName);
+        const overlappingClasses = hasOverlappingNiceClasses(niceClasses, hit.niceClasses);
         
-        return { 
-          ...hit, 
-          similarityScore, 
-          sameClass, 
-          monitoredNiceClasses: niceClasses || []
+        console.log(`📊 Benzerlik hesaplaması: ${hit.markName} -> ${(similarityScore * 100).toFixed(1)}%`);
+        
+        return {
+          ...hit,
+          similarityScore,
+          sameClass: overlappingClasses,
+          monitoredNiceClasses: niceClasses
         };
       })
-      .sort((a, b) => {
-        if (a.sameClass && !b.sameClass) return -1;
-        if (!a.sameClass && b.sameClass) return 1;
-        return b.similarityScore - a.similarityScore;
-      });
+      .sort((a, b) => b.similarityScore - a.similarityScore);
 
-    console.log("🔍 İşlenmiş sonuçlar özeti:", {
-      total: enriched.length,
-      sameClass: enriched.filter(r => r.sameClass).length,
-      highSimilarity: enriched.filter(r => r.similarityScore > 0.7).length
-    });
-
+    console.log(`✅ ${enriched.length} filtrelenmiş sonuç döndürülüyor`);
     return enriched;
 
   } catch (error) {
     console.error("❌ runTrademarkSearch hatası:", error);
+    console.error("❌ Error stack:", error.stack);
     throw error;
   }
+}
+
+// Yardımcı test fonksiyonu - Manuel test için
+export async function manualDebugTest(bulletinId = "ABa9mcv07R3bltQgs6N8", query = "setcard") {
+  console.log("🧪 Manuel debug test başlatılıyor...");
+  console.log("🎯 Test parametreleri:", { bulletinId, query });
+  
+  try {
+    // 1. Index'teki bulletinId'leri listele
+    await debugBulletinIds();
+    
+    // 2. Genel arama yap
+    await debugGeneralSearch(query);
+    
+    // 3. Filter formatlarını test et
+    await debugFilters(bulletinId, query);
+    
+    // 4. Tam arama testi
+    const mockMonitoredMark = {
+      markName: query,
+      applicationDate: "2024-01-01",
+      niceClasses: ["02", "08", "17"]
+    };
+    
+    const result = await runTrademarkSearch(mockMonitoredMark, bulletinId);
+    console.log("🎯 Final test result:", result.length, "matches");
+    
+  } catch (error) {
+    console.error("❌ Manuel test hatası:", error);
+  }
+}
+
+// Global olarak erişilebilir hale getir (debugging için)
+if (typeof window !== 'undefined') {
+  window.debugTrademarkSearch = {
+    debugBulletinIds,
+    debugFilters,
+    debugGeneralSearch,
+    manualDebugTest,
+    runTrademarkSearch
+  };
 }
