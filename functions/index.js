@@ -651,11 +651,12 @@ exports.createUniversalNotificationOnTaskCompleteV2 = onDocumentUpdated(
 // =========================================================
 
 // Trademark Bulletin Upload Processing (v2 Storage Trigger)
-exports.processTrademarkBulletinUploadV3 = onRequest(
+exports.processTrademarkBulletinUploadV2 = onObjectFinalized(
     {
         region: 'europe-west1',
         timeoutSeconds: 540,
-        memory: '1GiB', // Memory artırıldı
+        memory: '1GiB',
+        bucket: 'ip-manager-production-aab4b.firebasestorage.app'
     },
     async (event) => {
         const object = event.data;
@@ -663,56 +664,29 @@ exports.processTrademarkBulletinUploadV3 = onRequest(
         const fileName = path.basename(filePath);
         const bucket = admin.storage().bucket();
 
-        // Sadece ZIP ve RAR dosyalarını işle
-        if (!fileName.endsWith(".zip") && !fileName.endsWith(".rar")) {
-            console.log(`⏭️ Dosya atlandı (desteklenmeyen format): ${fileName}`);
-            return null;
-        }
+        if (!fileName.endsWith(".zip") && !fileName.endsWith(".rar")) return null; 
 
-        console.log(`🚀 STORAGE TRIGGER ÇALIŞTI: ${fileName}`);
-        console.log(`📁 File path: ${filePath}`);
-        console.log(`🪣 Bucket: ${object.bucket}`);
-
-        const tempDir = path.join(os.tmpdir(), `bulletin_${Date.now()}`);
-        let extractDir = null;
+        const tempFilePath = path.join(os.tmpdir(), fileName);
+        const extractDir = path.join(os.tmpdir(), `extract_${Date.now()}`);
 
         try {
-            console.log('📁 Dosya işleme başlatıldı...');
-            
-            // Storage'dan dosyayı indir
-            const tempFilePath = path.join(tempDir, fileName);
-            fs.mkdirSync(tempDir, { recursive: true });
-            
-            console.log(`⬇️ Dosya indiriliyor: ${filePath}`);
-            await bucket.file(filePath).download({ destination: tempFilePath });
-            console.log(`✅ Dosya indirildi: ${tempFilePath}`);
-
-            // Dosya tipini kontrol et ve extract işlemi
-            extractDir = path.join(tempDir, "extracted");
             fs.mkdirSync(extractDir, { recursive: true });
+            await bucket.file(filePath).download({ destination: tempFilePath });
 
-            console.log('🔓 Dosya extract ediliyor...');
-            
-            if (fileName.toLowerCase().endsWith('.zip')) {
+            // Extract işlemi
+            if (fileName.endsWith(".zip")) {
                 const zip = new AdmZip(tempFilePath);
                 zip.extractAllTo(extractDir, true);
-                console.log('✅ ZIP dosyası extract edildi');
-            } else if (fileName.toLowerCase().endsWith('.rar')) {
-                // RAR dosyası
-                const extractor = await createExtractorFromFile({
-                    filepath: tempFilePath,
-                    targetPath: extractDir,
-                });
-                
-                if (!extractor) {
-                    throw new Error("RAR extractor oluşturulamadı.");
+            } else if (fileName.endsWith(".rar")) {
+                const extractor = await createExtractorFromFile({ path: tempFilePath });
+                const list = extractor.getFileList();
+                if (list.files.length === 0) {
+                    throw new Error("RAR dosyası boş veya içerik listelenemedi.");
                 }
                 await extractor.extractAll(extractDir);
-                console.log('✅ RAR dosyası extract edildi');
             }
 
             // Bulletin info okuma
-            console.log('📄 Bulletin bilgileri okunuyor...');
             const allFiles = listAllFilesRecursive(extractDir);
             const bulletinPath = allFiles.find((p) =>
                 ["bulletin.inf", "bulletin"].includes(path.basename(p).toLowerCase())
@@ -723,9 +697,6 @@ exports.processTrademarkBulletinUploadV3 = onRequest(
             const bulletinNo = (content.match(/NO\s*=\s*(.*)/) || [])[1]?.trim() || "Unknown";
             const bulletinDate = (content.match(/DATE\s*=\s*(.*)/) || [])[1]?.trim() || "Unknown";
 
-            console.log(`📋 Bulletin bilgisi: ${bulletinNo} - ${bulletinDate}`);
-
-            // Firestore'a bulletin kaydı
             const bulletinRef = await db.collection("trademarkBulletins").add({
                 bulletinNo,
                 bulletinDate,
@@ -733,117 +704,115 @@ exports.processTrademarkBulletinUploadV3 = onRequest(
                 createdAt: admin.firestore.FieldValue.serverTimestamp(),
             });
             const bulletinId = bulletinRef.id;
-            console.log(`✅ Bulletin Firestore'a kaydedildi: ${bulletinId}`);
 
-            // Script content parse (STREAMING)
-            console.log('📄 Script content streaming ile parse ediliyor...');
+            // Script content parse
             const scriptPath = allFiles.find((p) => path.basename(p).toLowerCase() === "tmbulletin.log");
             if (!scriptPath) throw new Error("tmbulletin.log bulunamadı.");
-
-            const scriptContent = fs.readFileSync(scriptPath, "utf8");
-            console.log(`📊 Script content boyutu: ${scriptContent.length} characters`);
             
-            const records = parseScriptContent(scriptContent); // ← STREAMING PARSING
-            console.log(`✅ Parse tamamlandı: ${records.length} kayıt`);
+            const scriptContent = fs.readFileSync(scriptPath, "utf8");
+            const records = parseScriptContent(scriptContent);
+            const imagePathsForPubSub = [];
 
             // Görselleri applicationNo'ya göre eşle
-            console.log('🖼️ Görseller eşleniyor...');
             const imageFiles = allFiles.filter((p) => /\.(jpg|jpeg|png)$/i.test(p));
             const imagePathMap = {};
-            
-            // Storage'a görsel yükleme ve path mapping
-            const bucket = admin.storage().bucket();
-            let uploadedImages = 0;
-            
             for (const localPath of imageFiles) {
                 const filename = path.basename(localPath);
                 const destinationPath = `bulletins/trademark_${bulletinNo}_images/${filename}`;
 
-                try {
-                    // Storage'a yükle
-                    await bucket.upload(localPath, {
-                        destination: destinationPath,
-                        metadata: {
-                            contentType: getContentType(localPath),
-                        },
-                    });
-                    
-                    uploadedImages++;
-                    
-                    // ApplicationNo ile eşle
-                    const match = filename.match(/^(\d{4})[_\-]?(\d{5,})/);
-                    if (match) {
-                        const appNo = `${match[1]}/${match[2]}`;
-                        if (!imagePathMap[appNo]) imagePathMap[appNo] = [];
-                        imagePathMap[appNo].push(destinationPath);
-                    }
-                    
-                    if (uploadedImages % 100 === 0) {
-                        console.log(`📤 ${uploadedImages}/${imageFiles.length} görsel yüklendi`);
-                    }
-                } catch (uploadError) {
-                    console.error(`❌ Görsel yükleme hatası (${filename}):`, uploadError.message);
+                const match = filename.match(/^(\d{4})[_\-]?(\d{5,})/);
+                if (match) {
+                    const appNo = `${match[1]}/${match[2]}`;
+                    if (!imagePathMap[appNo]) imagePathMap[appNo] = [];
+                    imagePathMap[appNo].push(destinationPath);
                 }
             }
-            
-            console.log(`✅ ${uploadedImages} görsel Storage'a yüklendi`);
 
-            // Kayıtlara görsel yolu ekle ve BulletinId ata
-            console.log('🔗 Kayıtlar hazırlanıyor...');
+            // Her kayda görsel yolunu ekle
             for (const record of records) {
                 record.bulletinId = bulletinId;
                 const matchingImages = imagePathMap[record.applicationNo] || [];
                 record.imagePath = matchingImages.length > 0 ? matchingImages[0] : null;
             }
+     
+            // Görsel işlemleri (yeni hafifletilmiş base64 yöntemi)
+            console.log(`📤 ${imageFiles.length} görsel base64 ile 200'lük Pub/Sub batch'lerinde gönderiliyor...`);
 
-            // Batch processing ile Firestore'a kaydetme
-            console.log('💾 Kayıtlar Firestore\'a kaydediliyor...');
-            const batchSize = 100; // Firestore için optimum batch size
-            let savedCount = 0;
-            
-            for (let i = 0; i < records.length; i += batchSize) {
-                const batch = records.slice(i, i + batchSize);
-                const promises = batch.map(record => {
-                    return db.collection("trademarkBulletinRecords").add(record);
-                });
-                
-                await Promise.all(promises);
-                savedCount += batch.length;
-                
-                console.log(`💾 ${savedCount}/${records.length} kayıt Firestore'a kaydedildi (${(savedCount/records.length*100).toFixed(1)}%)`);
-                
-                // Memory temizliği
-                if (global.gc && savedCount % 500 === 0) {
-                    global.gc();
-                    console.log('🧹 Memory temizliği yapıldı');
+            const imageBatchSize = 200;
+            for (let i = 0; i < imageFiles.length; i += imageBatchSize) {
+                const batch = imageFiles.slice(i, i + imageBatchSize);
+                const encodedImages = [];
+
+                for (const localPath of batch) {
+                    const filename = path.basename(localPath);
+                    const destinationPath = `bulletins/trademark_${bulletinNo}_images/${filename}`;
+                    imagePathsForPubSub.push(destinationPath);
+
+                    const imageStream = fs.createReadStream(localPath);
+                    let base64 = '';
+                    for await (const chunk of imageStream) {
+                        base64 += chunk.toString('base64');
+                    }
+
+                    encodedImages.push({
+                        destinationPath,
+                        base64,
+                        contentType: getContentType(filename)
+                    });
                 }
+
+                // Tek mesajda 200 görsel gönder
+                await pubsubClient.topic("trademark-image-upload").publishMessage({
+                    data: Buffer.from(JSON.stringify(encodedImages)),
+                    attributes: { batchSize: batch.length.toString() }
+                });
+
+                await new Promise(resolve => setTimeout(resolve, 200));
+            }
+            console.log(`✅ ${records.length} kayıt ve ${imageFiles.length} görsel işleme alındı.`);
+
+            // Firestore'a kayıtları ekle
+            const batchSize = 500;
+            for (let i = 0; i < records.length; i += batchSize) {
+                const batch = db.batch();
+                const chunk = records.slice(i, i + batchSize);
+
+                chunk.forEach((record) => {
+                    const docRef = db.collection("trademarkBulletinRecords").doc();
+                    batch.set(docRef, {
+                        ...record,
+                        bulletinId,
+                        createdAt: admin.firestore.FieldValue.serverTimestamp()
+                    });
+                });
+
+                await batch.commit();
+                console.log(`✅ Firestore'a ${chunk.length} kayıt eklendi (${i + chunk.length}/${records.length})`);
             }
 
-            // Cleanup temp files
-            console.log('🧹 Geçici dosyalar temizleniyor...');
-            if (fs.existsSync(tempDir)) {
-                fs.rmSync(tempDir, { recursive: true, force: true });
-            }
-
-            console.log('🎉 İşlem başarıyla tamamlandı!');
-
-            return null; // Storage trigger için null return
-
-        } catch (error) {
-            console.error("❌ Processing hatası:", error);
+            // Hafıza temizliği
+            delete records;
+            delete imagePathsForPubSub;
+            delete allFiles;
             
-            // Cleanup on error
-            if (extractDir && fs.existsSync(extractDir)) {
+            if (global.gc) {
+                global.gc();
+            }
+            
+        } catch (e) {
+            console.error("İşlem hatası:", e);
+            throw e;
+        } finally {
+            // Geçici dosyaları temizle
+            if (fs.existsSync(tempFilePath)) {
+                fs.unlinkSync(tempFilePath);
+            }
+            if (fs.existsSync(extractDir)) {
                 fs.rmSync(extractDir, { recursive: true, force: true });
             }
-            if (fs.existsSync(tempDir)) {
-                fs.rmSync(tempDir, { recursive: true, force: true });
-            }
-
-            // Storage trigger için error'ı log'la ama response dönme
-            console.error(`❌ Processing failed for file: ${fileName}`, error.message);
-            return null;
         }
+
+        return null;
     }
 );
 
@@ -901,23 +870,18 @@ exports.uploadImageWorkerV2 = onMessagePublished(
 // =========================================================
 
 function listAllFilesRecursive(dir) {
-    const files = [];
-    
-    function traverse(currentDir) {
-        const items = fs.readdirSync(currentDir);
-        for (const item of items) {
-            const fullPath = path.join(currentDir, item);
-            const stat = fs.statSync(fullPath);
-            if (stat.isDirectory()) {
-                traverse(fullPath);
-            } else {
-                files.push(fullPath);
-            }
+    let results = [];
+    const list = fs.readdirSync(dir);
+    list.forEach((file) => {
+        const fullPath = path.join(dir, file);
+        const stat = fs.statSync(fullPath);
+        if (stat && stat.isDirectory()) {
+            results = results.concat(listAllFilesRecursive(fullPath));
+        } else {
+            results.push(fullPath);
         }
-    }
-    
-    traverse(dir);
-    return files;
+    });
+    return results;
 }
 
 function extractAppNoFromFilename(filename) {
@@ -958,157 +922,67 @@ function parseValues(raw) {
 }
 
 function parseScriptContent(content) {
-    console.log('🚀 Streaming parsing başlatıldı...');
-    
     const recordsMap = {};
+    
+    const lines = content.split('\n');
+    
     let processedLines = 0;
-    let totalLines = 0;
     
-    // İlk geçiş: Toplam satır sayısını hesapla (memory efficient)
-    for (let i = 0; i < content.length; i++) {
-        if (content[i] === '\n') {
-            totalLines++;
-        }
-    }
-    console.log(`📊 Toplam satır sayısı: ${totalLines}`);
-    
-    // İkinci geçiş: Streaming processing
-    const CHUNK_SIZE = 200000; // 200KB chunks
-    let currentPos = 0;
-    let lineBuffer = '';
-    
-    while (currentPos < content.length) {
-        // Chunk okuma
-        const chunkEnd = Math.min(currentPos + CHUNK_SIZE, content.length);
-        const chunk = content.slice(currentPos, chunkEnd);
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim();
         
-        // Son satırı tamamla
-        lineBuffer += chunk;
-        const lines = lineBuffer.split('\n');
-        
-        // Son satırı sonraki chunk için sakla
-        lineBuffer = lines.pop() || '';
-        
-        // Chunk'taki satırları işle
-        for (const line of lines) {
-            processedLines++;
-            
-            // Progress log
-            if (processedLines % 5000 === 0) {
-                console.log(`📈 İşlenen: ${processedLines}/${totalLines} (${(processedLines/totalLines*100).toFixed(1)}%)`);
-                
-                // Memory temizliği için
-                if (global.gc) {
-                    global.gc();
-                }
-            }
-            
-            // Satır işleme
-            const trimmedLine = line.trim();
-            if (!trimmedLine.length || !trimmedLine.startsWith('INSERT INTO')) {
-                continue;
-            }
-            
-            const match = trimmedLine.match(/INSERT INTO (\w+) VALUES\s*\((.*)\)$/);
-            if (!match) continue;
-            
-            const table = match[1].toUpperCase();
-            const values = parseValues(match[2]);
-            
-            const appNo = values[0];
-            if (!appNo) continue;
-
-            // RecordsMap'e ekleme
-            if (!recordsMap[appNo]) {
-                recordsMap[appNo] = {
-                    applicationNo: appNo,
-                    applicationDate: null,
-                    markName: null,
-                    niceClasses: null,
-                    holders: [],
-                    goods: [],
-                    extractedGoods: [],
-                    attorneys: [],
-                };
-            }
-
-            if (table === "TRADEMARK") {
-                recordsMap[appNo].applicationDate = values[1] ?? null;
-                recordsMap[appNo].markName = values[5] ?? null;
-                recordsMap[appNo].niceClasses = values[6] ?? null;
-            } else if (table === "HOLDER") {
-                const holderName = extractHolderName(values[2]);
-                let addressParts = [values[3], values[4], values[5], values[6]].filter(Boolean).join(", ");
-                if (addressParts.trim() === "") addressParts = null;
-                recordsMap[appNo].holders.push({
-                    name: holderName,
-                    address: addressParts,
-                    country: values[7] ?? null,
-                });
-            } else if (table === "GOODS") {
-                recordsMap[appNo].goods.push(values[3] ?? null);
-            } else if (table === "EXTRACTEDGOODS") {
-                recordsMap[appNo].extractedGoods.push(values[3] ?? null);
-            } else if (table === "ATTORNEY") {
-                recordsMap[appNo].attorneys.push(values[2] ?? null);
-            }
+        if (!line.length || !line.startsWith('INSERT INTO')) {
+            continue;
         }
         
-        currentPos = chunkEnd;
-    }
-    
-    // Son kalan satırı işle
-    if (lineBuffer.trim()) {
         processedLines++;
-        const trimmedLine = lineBuffer.trim();
-        if (trimmedLine.startsWith('INSERT INTO')) {
-            const match = trimmedLine.match(/INSERT INTO (\w+) VALUES\s*\((.*)\)$/);
-            if (match) {
-                const table = match[1].toUpperCase();
-                const values = parseValues(match[2]);
-                const appNo = values[0];
-                
-                if (appNo && !recordsMap[appNo]) {
-                    recordsMap[appNo] = {
-                        applicationNo: appNo,
-                        applicationDate: null,
-                        markName: null,
-                        niceClasses: null,
-                        holders: [],
-                        goods: [],
-                        extractedGoods: [],
-                        attorneys: [],
-                    };
-                }
-                
-                // Table processing logic aynı...
-                if (appNo) {
-                    if (table === "TRADEMARK") {
-                        recordsMap[appNo].applicationDate = values[1] ?? null;
-                        recordsMap[appNo].markName = values[5] ?? null;
-                        recordsMap[appNo].niceClasses = values[6] ?? null;
-                    } else if (table === "HOLDER") {
-                        const holderName = extractHolderName(values[2]);
-                        let addressParts = [values[3], values[4], values[5], values[6]].filter(Boolean).join(", ");
-                        if (addressParts.trim() === "") addressParts = null;
-                        recordsMap[appNo].holders.push({
-                            name: holderName,
-                            address: addressParts,
-                            country: values[7] ?? null,
-                        });
-                    } else if (table === "GOODS") {
-                        recordsMap[appNo].goods.push(values[3] ?? null);
-                    } else if (table === "EXTRACTEDGOODS") {
-                        recordsMap[appNo].extractedGoods.push(values[3] ?? null);
-                    } else if (table === "ATTORNEY") {
-                        recordsMap[appNo].attorneys.push(values[2] ?? null);
-                    }
-                }
-            }
+        if (processedLines % 1000 === 0) {
+            console.log(`İşlenen satır: ${processedLines}/${lines.length}`);
+        }
+        
+        const match = line.match(/INSERT INTO (\w+) VALUES\s*\((.*)\)$/);
+        if (!match) continue;
+        
+        const table = match[1].toUpperCase();
+        const values = parseValues(match[2]);
+        
+        const appNo = values[0];
+        if (!appNo) continue;
+
+        if (!recordsMap[appNo]) {
+            recordsMap[appNo] = {
+                applicationNo: appNo,
+                applicationDate: null,
+                markName: null,
+                niceClasses: null,
+                holders: [],
+                goods: [],
+                extractedGoods: [],
+                attorneys: [],
+            };
+        }
+
+        if (table === "TRADEMARK") {
+            recordsMap[appNo].applicationDate = values[1] ?? null;
+            recordsMap[appNo].markName = values[5] ?? null;
+            recordsMap[appNo].niceClasses = values[6] ?? null;
+        } else if (table === "HOLDER") {
+            const holderName = extractHolderName(values[2]);
+            let addressParts = [values[3], values[4], values[5], values[6]].filter(Boolean).join(", ");
+            if (addressParts.trim() === "") addressParts = null;
+            recordsMap[appNo].holders.push({
+                name: holderName,
+                address: addressParts,
+                country: values[7] ?? null,
+            });
+        } else if (table === "GOODS") {
+            recordsMap[appNo].goods.push(values[3] ?? null);
+        } else if (table === "EXTRACTEDGOODS") {
+            recordsMap[appNo].extractedGoods.push(values[3] ?? null);
+        } else if (table === "ATTORNEY") {
+            recordsMap[appNo].attorneys.push(values[2] ?? null);
         }
     }
-    
-    console.log(`✅ Streaming parsing tamamlandı: ${processedLines} satır, ${Object.keys(recordsMap).length} kayıt`);
     
     return Object.values(recordsMap);
 }
@@ -1138,17 +1012,15 @@ function getContentType(filePath) {
 //              ALGOLIA İLK İNDEKSLEME FONKSİYONU (v2 onRequest)
 // =========================================================
 
-// DÜZELTME 1: indexTrademarkBulletinRecords - Streaming Algolia Transfer
 exports.indexTrademarkBulletinRecords = onRequest(
   {
     region: 'europe-west1',
     timeoutSeconds: 540,
-    memory: '2GiB' // Güvenlik için biraz artırıldı
+    memory: '2GiB'
   },
   async (req, res) => {
-    console.log('Algolia: trademarkBulletinRecords için streaming indeksleme başlatıldı.');
-    
-    let totalProcessed = 0;
+    console.log('Algolia: trademarkBulletinRecords için toplu indeksleme başlatıldı.');
+    let recordsToIndex = [];
     let lastDoc = null;
     const batchSize = 500;
 
@@ -1162,7 +1034,6 @@ exports.indexTrademarkBulletinRecords = onRequest(
         const snapshot = await query.get();
         if (snapshot.empty) break;
 
-        // Batch'i hazırla
         const currentBatch = snapshot.docs.map(doc => {
           const data = doc.data();
           return {
@@ -1171,47 +1042,34 @@ exports.indexTrademarkBulletinRecords = onRequest(
             applicationNo: data.applicationNo || null,
             applicationDate: data.applicationDate || null,
             niceClasses: data.niceClasses || null,
-            bulletinId: String(data.bulletinId || ''), // ← STRING GARANTİSİ!
-            holders: Array.isArray(data.holders) 
-              ? data.holders.map(h => h.name).join(', ') 
-              : '',
+            bulletinId: data.bulletinId || null,
+            holders: Array.isArray(data.holders) ? data.holders.map(h => h.name).join(', ') : '',
             imagePath: data.imagePath || null,
-            createdAt: data.createdAt 
-              ? data.createdAt.toDate().getTime() 
-              : null
+            createdAt: data.createdAt ? data.createdAt.toDate().getTime() : null
           };
         });
 
-        // ✅ HEMEN ALGOLIA'YA GÖNDER (Memory'de biriktirme!)
-        console.log(`📤 ${currentBatch.length} kayıt Algolia'ya gönderiliyor...`);
-        const { objectIDs } = await algoliaIndex.saveObjects(currentBatch);
-        
-        totalProcessed += currentBatch.length;
+        recordsToIndex = recordsToIndex.concat(currentBatch);
         lastDoc = snapshot.docs[snapshot.docs.length - 1];
-        
-        console.log(`✅ Toplam ${totalProcessed} kayıt işlendi`);
-        
-        // Memory temizliği
-        currentBatch.length = 0;
-        
+        console.log(`Firestore'dan şu ana kadar ${recordsToIndex.length} belge okundu.`);
+
         if (snapshot.docs.length < batchSize) break;
       }
 
-      console.log(`🎉 Streaming transfer tamamlandı: ${totalProcessed} kayıt`);
-      
+      console.log(`Algolia'ya toplam ${recordsToIndex.length} belge gönderiliyor.`);
+      const { objectIDs } = await algoliaIndex.saveObjects(recordsToIndex);
+      console.log(`Algolia'ya ${objectIDs.length} belge başarıyla eklendi/güncellendi.`);
+
       return res.status(200).send({
         status: 'success',
-        message: `${totalProcessed} kayıt streaming ile Algolia'ya başarıyla transfer edildi.`,
-        totalRecords: totalProcessed
+        message: `${objectIDs.length} belge Algolia'ya eklendi/güncellendi.`
       });
-      
     } catch (error) {
-      console.error('❌ Streaming Algolia transfer hatası:', error);
+      console.error('Algolia indeksleme hatası:', error);
       return res.status(500).send({
         status: 'error',
-        message: 'Streaming transfer sırasında hata oluştu.',
-        error: error.message,
-        processedSoFar: totalProcessed
+        message: 'Algolia indeksleme sırasında bir hata oluştu.',
+        error: error.message
       });
     }
   }
@@ -1260,7 +1118,7 @@ exports.onTrademarkBulletinRecordWrite = onDocumentWritten(
         applicationNo: newData.applicationNo || null,
         applicationDate: newData.applicationDate || null,
         niceClasses: newData.niceClasses || null,
-        bulletinId: String(newData.bulletinId || ''),
+        bulletinId: newData.bulletinId || null,
         holders: Array.isArray(newData.holders)
           ? newData.holders.map(h => h.name).join(', ')
           : '',
@@ -1281,27 +1139,3 @@ exports.onTrademarkBulletinRecordWrite = onDocumentWritten(
     return null;
   }
 );
-exports.deleteBulletin = onCall(async (req) => {
-  const { bulletinId } = req.data;
-
-  if (!bulletinId) {
-    throw new functions.https.HttpsError('invalid-argument', 'bulletinId is required');
-  }
-
-  // 1. Firestore kayıtları
-  const snapshot = await db.collection('trademarkBulletinRecords')
-                           .where('bulletinId', '==', bulletinId)
-                           .get();
-  const batch = db.batch();
-  snapshot.forEach(doc => batch.delete(doc.ref));
-  await batch.commit();
-
-  // 2. Algolia kayıtları
-  await index.deleteBy({ filters: `bulletinId:"${bulletinId}"` });
-
-  // 3. Storage görselleri
-  const [files] = await bucket.getFiles({ prefix: `bulletins/trademark_${bulletinId}_images/` });
-  await Promise.all(files.map(file => file.delete()));
-
-  return { success: true, deleted: snapshot.size, files: files.length };
-});
