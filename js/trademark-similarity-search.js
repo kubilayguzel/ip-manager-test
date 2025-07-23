@@ -69,7 +69,7 @@ async function runSimilaritySearch(trademark, bulletinId) {
   const targetNice = trademark.niceClasses || [];
 
 const { hits } = await index.search(query, {
-  filters: `bulletinId:"${bulletinId}"`,
+  filters: `bulletinId:'${bulletinId}'`,
   hitsPerPage: 1000,
 });
 
