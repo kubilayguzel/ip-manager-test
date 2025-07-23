@@ -192,6 +192,7 @@ setTimeout(async () => {
         console.log('✅ Firebase modülleri yüklendi');
         
         const db = firebaseModule.db;
+        const app = firebaseModule.app;
         const functions = getFunctions(app, "europe-west1");
         
         // Tabloyu doldur
