@@ -1611,148 +1611,64 @@ exports.onTrademarkBulletinRecordWrite = onDocumentWritten(
 );
 // functions/index.js dosyasına eklenecek deleteBulletinV2 fonksiyonu
 // Basit deleteBulletinV2 - Sadece Database ve Storage
-// functions/index.js dosyasına ekleyin
+// Ultra basit deleteBulletinV2 - functions/index.js
+// Region yok, CORS yok, sadece temel silme
 
-exports.deleteBulletinV2 = onCall(
-  {
-    timeoutSeconds: 540,
-    memory: '1GiB'
-  },
-  async (request) => {
-    console.log('🔥 deleteBulletinV2 başladı');
+exports.deleteBulletinV2 = onCall(async (request) => {
+  console.log('🔥 Basit delete başladı');
+  
+  const { bulletinId } = request.data;
+  
+  if (!bulletinId) {
+    console.error('❌ BulletinId yok');
+    throw new Error('BulletinId gerekli');
+  }
+
+  try {
+    console.log(`🗑️ Silme başlıyor: ${bulletinId}`);
     
-    const { bulletinId } = request.data;
+    // 1. Bülteni al
+    const bulletinDoc = await db.collection('trademarkBulletins').doc(bulletinId).get();
+    if (!bulletinDoc.exists) {
+      throw new Error('Bülten bulunamadı');
+    }
     
-    if (!bulletinId) {
-      throw new HttpsError('invalid-argument', 'BulletinId gerekli');
+    const bulletinData = bulletinDoc.data();
+    const bulletinNo = bulletinData.bulletinNo;
+    console.log(`📋 Silinecek bülten: ${bulletinNo}`);
+
+    // 2. Kayıtları sil
+    const recordsQuery = db.collection('trademarkBulletinRecords').where('bulletinId', '==', bulletinId);
+    const recordsSnapshot = await recordsQuery.get();
+    const totalRecords = recordsSnapshot.size;
+    
+    console.log(`📊 Silinecek kayıt: ${totalRecords}`);
+    
+    if (totalRecords > 0) {
+      const batch = db.batch();
+      recordsSnapshot.docs.forEach(doc => {
+        batch.delete(doc.ref);
+      });
+      await batch.commit();
+      console.log(`✅ ${totalRecords} kayıt silindi`);
     }
 
-    console.log(`🗑️ Bülten silme: ${bulletinId}`);
-    
-    const results = {
-      bulletinDeleted: false,
-      recordsDeleted: 0,
-      totalRecords: 0,
-      imagesDeleted: 0,
-      totalImages: 0,
-      errors: []
+    // 3. Ana bülteni sil
+    await bulletinDoc.ref.delete();
+    console.log('✅ Ana bülten silindi');
+
+    return {
+      success: true,
+      bulletinNo: bulletinNo,
+      recordsDeleted: totalRecords,
+      message: `Bülten ${bulletinNo} başarıyla silindi (${totalRecords} kayıt)`
     };
 
-    try {
-      // 1. Bülten bilgilerini al
-      console.log('1️⃣ Bülten getiriliyor...');
-      const bulletinDoc = await db.collection('trademarkBulletins').doc(bulletinId).get();
-      
-      if (!bulletinDoc.exists) {
-        throw new HttpsError('not-found', 'Bülten bulunamadı');
-      }
-      
-      const bulletinData = bulletinDoc.data();
-      const bulletinNo = bulletinData.bulletinNo;
-      console.log(`📋 Bülten No: ${bulletinNo}`);
-
-      // 2. İlişkili kayıtları sil
-      console.log('2️⃣ Kayıtlar siliniyor...');
-      const recordsQuery = db.collection('trademarkBulletinRecords')
-        .where('bulletinId', '==', bulletinId);
-      
-      const recordsSnapshot = await recordsQuery.get();
-      results.totalRecords = recordsSnapshot.size;
-      console.log(`📊 Silinecek kayıt: ${results.totalRecords}`);
-
-      // Batch'lerle sil
-      if (results.totalRecords > 0) {
-        const batchSize = 500;
-        let deletedCount = 0;
-        
-        while (true) {
-          const batch = db.batch();
-          const querySnapshot = await recordsQuery.limit(batchSize).get();
-          
-          if (querySnapshot.empty) break;
-          
-          querySnapshot.docs.forEach(doc => {
-            batch.delete(doc.ref);
-          });
-          
-          await batch.commit();
-          deletedCount += querySnapshot.size;
-          console.log(`📝 ${deletedCount}/${results.totalRecords} kayıt silindi`);
-          
-          if (querySnapshot.size < batchSize) break;
-        }
-        
-        results.recordsDeleted = deletedCount;
-      }
-
-      // 3. Storage görselleri sil
-      console.log('3️⃣ Storage görselleri siliniyor...');
-      const imagesFolderPath = `bulletins/trademark_${bulletinNo}_images/`;
-      
-      try {
-        const bucket = admin.storage().bucket();
-        const [files] = await bucket.getFiles({
-          prefix: imagesFolderPath
-        });
-        
-        results.totalImages = files.length;
-        console.log(`🖼️ Silinecek görsel: ${results.totalImages}`);
-        
-        if (files.length > 0) {
-          // Paralel silme
-          const deletePromises = files.map(file => 
-            file.delete().catch(error => {
-              console.warn(`⚠️ ${file.name} silinemedi:`, error.message);
-              return { error: error.message, file: file.name };
-            })
-          );
-          
-          const deleteResults = await Promise.all(deletePromises);
-          
-          const successfulDeletes = deleteResults.filter(result => !result?.error);
-          results.imagesDeleted = successfulDeletes.length;
-          
-          const failedDeletes = deleteResults.filter(result => result?.error);
-          if (failedDeletes.length > 0) {
-            results.errors.push(`${failedDeletes.length} görsel silinemedi`);
-          }
-          
-          console.log(`🖼️ ${results.imagesDeleted}/${results.totalImages} görsel silindi`);
-        }
-      } catch (storageError) {
-        console.warn('⚠️ Storage hatası:', storageError.message);
-        results.errors.push(`Storage hatası: ${storageError.message}`);
-      }
-
-      // 4. Ana bülten sil
-      console.log('4️⃣ Ana bülten siliniyor...');
-      await bulletinDoc.ref.delete();
-      results.bulletinDeleted = true;
-      console.log('✅ Ana bülten silindi');
-
-      console.log('🎉 Silme tamamlandı!');
-      console.log('📊 SONUÇ:', {
-        bulletinNo: bulletinNo,
-        bulletinDeleted: results.bulletinDeleted,
-        recordsDeleted: `${results.recordsDeleted}/${results.totalRecords}`,
-        imagesDeleted: `${results.imagesDeleted}/${results.totalImages}`,
-        errors: results.errors.length
-      });
-
-      return {
-        success: true,
-        bulletinNo: bulletinNo,
-        ...results
-      };
-
-    } catch (error) {
-      console.error('❌ Silme hatası:', error);
-      
-      return {
-        success: false,
-        error: error.message,
-        ...results
-      };
-    }
+  } catch (error) {
+    console.error('❌ Silme hatası:', error);
+    return {
+      success: false,
+      error: error.message
+    };
   }
-);
+});
