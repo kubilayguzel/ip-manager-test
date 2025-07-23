@@ -809,20 +809,38 @@ async function parseScriptContentStreaming(scriptPath) {
   return parseScriptContent(fs.readFileSync(scriptPath, "utf8"));
 }
 function parseScriptContent(content) {
+  console.log(`🔍 Parse başlıyor... Content length: ${content.length} karakterler`);
+  
   const lines = content.split("\n");
+  console.log(`📝 Toplam satır sayısı: ${lines.length}`);
+  
   const records = {};
   let currentTable = null;
+  let insertCount = 0;
+  let valuesParsed = 0;
 
-  for (const line of lines) {
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    
     if (line.startsWith("INSERT INTO")) {
       const match = line.match(/INSERT INTO (\w+)/);
       currentTable = match ? match[1] : null;
+      insertCount++;
+      if (insertCount <= 5) { // İlk 5 INSERT komutunu logla
+        console.log(`📋 INSERT INTO ${currentTable} bulundu (satır ${i + 1})`);
+      }
       continue;
     }
+    
     if (currentTable && line.includes("VALUES")) {
       const values = parseValuesFromLine(line);
-      if (!values || !values.length) continue;
-
+      if (!values || !values.length) {
+        console.warn(`⚠️ VALUES satırı parse edilemedi (satır ${i + 1}): ${line.substring(0, 100)}...`);
+        continue;
+      }
+      
+      valuesParsed++;
+      
       const appNo = values[0];
       if (!records[appNo]) {
         records[appNo] = {
@@ -842,6 +860,14 @@ function parseScriptContent(content) {
           records[appNo].applicationDate = values[1] ?? null;
           records[appNo].markName = values[5] ?? null;
           records[appNo].niceClasses = values[6] ?? null;
+          if (valuesParsed <= 3) { // İlk 3 TRADEMARK kaydını logla
+            console.log(`📊 TRADEMARK parse edildi:`, {
+              appNo,
+              date: values[1],
+              markName: values[5],
+              classes: values[6]
+            });
+          }
           break;
         case "HOLDER":
           records[appNo].holders.push({
@@ -864,7 +890,15 @@ function parseScriptContent(content) {
     }
   }
 
-  return Object.values(records);
+  const recordsArray = Object.values(records);
+  console.log(`✅ Parse tamamlandı:`, {
+    totalInserts: insertCount,
+    valuesParsed: valuesParsed,
+    uniqueApplications: recordsArray.length,
+    tablesFound: [...new Set(lines.filter(l => l.startsWith("INSERT INTO")).map(l => l.match(/INSERT INTO (\w+)/)?.[1]))]
+  });
+
+  return recordsArray;
 }
 
 async function parseScriptInChunks(scriptPath) {
