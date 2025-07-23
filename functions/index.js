@@ -768,29 +768,41 @@ exports.uploadImageWorkerV2 = onMessagePublished(
     },
     async (event) => {
         console.log('🔥 uploadImageWorker tetiklendi (Batch)...');
+        // Bellek başlangıcı
+        console.log('Memory usage at start:', process.memoryUsage());
 
         let images;
         try {
             const batchData = Buffer.from(event.data.message.data, 'base64').toString();
             images = JSON.parse(batchData);
             if (!Array.isArray(images)) throw new Error("Geçersiz batch verisi.");
+            console.log(`Received batch with ${images.length} images.`);
+            console.log('Memory usage after JSON parse:', process.memoryUsage());
         } catch (err) {
             console.error("❌ JSON parse hatası:", err);
-            return;
+            return; // JSON parse hatasında fonksiyonu sonlandır
         }
 
-        await Promise.all(images.map(async (img) => {
+        // Promise.all yerine for...of döngüsü kullanarak daha kontrollü ilerlemek
+        // ve her adımda bellek takibi yapmak
+        for (const img of images) {
             const { destinationPath, base64, contentType } = img;
 
             if (!destinationPath || !base64) {
                 console.warn('❌ Eksik veri, işlem atlandı:', img);
-                return;
+                continue; // Bir sonraki görselle devam et
             }
 
-            const imageBuffer = Buffer.from(base64, 'base64');
-            const file = admin.storage().bucket().file(destinationPath);
+            console.log(`Attempting to upload: ${destinationPath}`);
+            // Her görsel için bellek kullanımını takip edin
+            console.log('Memory usage before Buffer:', process.memoryUsage());
 
             try {
+                const imageBuffer = Buffer.from(base64, 'base64');
+                console.log('Memory usage after Buffer:', process.memoryUsage()); // Buffer oluşturulduktan sonra
+
+                const file = admin.storage().bucket().file(destinationPath);
+
                 await file.save(imageBuffer, {
                     contentType: contentType || 'image/jpeg',
                     resumable: false,
@@ -798,12 +810,13 @@ exports.uploadImageWorkerV2 = onMessagePublished(
                 console.log(`✅ Yüklendi: ${destinationPath}`);
             } catch (err) {
                 console.error(`❌ Hata: ${destinationPath}`, err);
+                // Hatalı görselde durmak yerine devam etmek için catch içinde return yerine continue kullanın
+                // throw err; // Fonksiyonun tamamen başarısız olmasını istiyorsanız bu satırı aktif edin
             }
-        }));
+        }
+        console.log('Batch processing completed for uploadImageWorkerV2. Final memory usage:', process.memoryUsage());
     }
 );
-
-
 // =========================================================
 //              HELPER FONKSİYONLARI
 async function downloadWithStream(file, destination) {
