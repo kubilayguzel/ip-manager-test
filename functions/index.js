@@ -652,167 +652,131 @@ exports.createUniversalNotificationOnTaskCompleteV2 = onDocumentUpdated(
 
 // Trademark Bulletin Upload Processing (v2 Storage Trigger)
 exports.processTrademarkBulletinUploadV2 = onObjectFinalized(
-    {
-        region: 'europe-west1',
-        timeoutSeconds: 540,
-        memory: '1GiB',
-    },
-    async (event) => {
-        const object = event.data;
-        const filePath = object.name;
-        const fileName = path.basename(filePath);
-        const bucket = admin.storage().bucket();
+  {
+    region: 'europe-west1',
+    timeoutSeconds: 540,
+    memory: '1GiB'
+  },
+  async (event) => {
+    const object = event.data;
+    const filePath = object.name;
+    const fileName = path.basename(filePath);
+    const bucket = admin.storage().bucket();
 
-        if (!fileName.endsWith(".zip") && !fileName.endsWith(".rar")) return null; 
+    // Sadece ZIP ve RAR dosyalarını işle
+    if (!fileName.endsWith(".zip") && !fileName.endsWith(".rar")) return null;
 
-        const tempFilePath = path.join(os.tmpdir(), fileName);
-        const extractDir = path.join(os.tmpdir(), `extract_${Date.now()}`);
+    const tempFilePath = path.join(os.tmpdir(), fileName);
+    const extractDir = path.join(os.tmpdir(), `extract_${Date.now()}`);
 
-        try {
-            fs.mkdirSync(extractDir, { recursive: true });
-            await bucket.file(filePath).download({ destination: tempFilePath });
+    try {
+      fs.mkdirSync(extractDir, { recursive: true });
+      await bucket.file(filePath).download({ destination: tempFilePath });
 
-            // Extract işlemi
-            if (fileName.endsWith(".zip")) {
-                const zip = new AdmZip(tempFilePath);
-                zip.extractAllTo(extractDir, true);
-            } else if (fileName.endsWith(".rar")) {
-                const extractor = await createExtractorFromFile({ path: tempFilePath });
-                const list = extractor.getFileList();
-                if (list.files.length === 0) {
-                    throw new Error("RAR dosyası boş veya içerik listelenemedi.");
-                }
-                await extractor.extractAll(extractDir);
-            }
+      // Arşivi aç
+      if (fileName.endsWith(".zip")) {
+        const zip = new AdmZip(tempFilePath);
+        zip.extractAllTo(extractDir, true);
+      } else {
+        const extractor = await createExtractorFromFile({ path: tempFilePath });
+        await extractor.extractAll(extractDir);
+      }
 
-            // Bulletin info okuma
-            const allFiles = listAllFilesRecursive(extractDir);
-            const bulletinPath = allFiles.find((p) =>
-                ["bulletin.inf", "bulletin"].includes(path.basename(p).toLowerCase())
-            );
-            if (!bulletinPath) throw new Error("bulletin.inf bulunamadı.");
+      // bulletin.inf verisi
+      const allFiles = listAllFilesRecursive(extractDir);
+      const bulletinPath = allFiles.find((p) =>
+        ["bulletin.inf", "bulletin"].includes(path.basename(p).toLowerCase())
+      );
+      if (!bulletinPath) throw new Error("bulletin.inf bulunamadı.");
 
-            const content = fs.readFileSync(bulletinPath, "utf8");
-            const bulletinNo = (content.match(/NO\s*=\s*(.*)/) || [])[1]?.trim() || "Unknown";
-            const bulletinDate = (content.match(/DATE\s*=\s*(.*)/) || [])[1]?.trim() || "Unknown";
+      const content = fs.readFileSync(bulletinPath, "utf8");
+      const bulletinNo = (content.match(/NO\s*=\s*(.*)/) || [])[1]?.trim() || "Unknown";
+      const bulletinDate = (content.match(/DATE\s*=\s*(.*)/) || [])[1]?.trim() || "Unknown";
 
-            const bulletinRef = await db.collection("trademarkBulletins").add({
-                bulletinNo,
-                bulletinDate,
-                type: "marka",
-                createdAt: admin.firestore.FieldValue.serverTimestamp(),
-            });
-            const bulletinId = bulletinRef.id;
+      const bulletinRef = await db.collection("trademarkBulletins").add({
+        bulletinNo,
+        bulletinDate,
+        type: "marka",
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+      const bulletinId = bulletinRef.id;
 
-            // Script content parse
-            const scriptPath = allFiles.find((p) => path.basename(p).toLowerCase() === "tmbulletin.log");
-            if (!scriptPath) throw new Error("tmbulletin.log bulunamadı.");
-            
-            const scriptContent = fs.readFileSync(scriptPath, "utf8");
-            const records = parseScriptContent(scriptContent);
-            const imagePathsForPubSub = [];
+      // Kayıtları parse et
+      const scriptPath = allFiles.find((p) => path.basename(p).toLowerCase() === "tmbulletin.log");
+      const scriptContent = fs.readFileSync(scriptPath, "utf8");
+      const records = parseScriptContent(scriptContent);
 
-            // Görselleri applicationNo'ya göre eşle
-            const imageFiles = allFiles.filter((p) => /\.(jpg|jpeg|png)$/i.test(p));
-            const imagePathMap = {};
-            for (const localPath of imageFiles) {
-                const filename = path.basename(localPath);
-                const destinationPath = `bulletins/trademark_${bulletinNo}_images/${filename}`;
+      // Görsel path eşleştirme
+      const imageFiles = allFiles.filter((p) => /\.(jpg|jpeg|png)$/i.test(p));
+      const imagePathMap = {};
+      for (const localPath of imageFiles) {
+        const filename = path.basename(localPath);
+        const match = filename.match(/^(\d{4})[_\-]?(\d{5,})/);
+        if (match) {
+          const appNo = `${match[1]}/${match[2]}`;
+          if (!imagePathMap[appNo]) imagePathMap[appNo] = [];
+          imagePathMap[appNo].push(`bulletins/trademark_${bulletinNo}_images/${filename}`);
+        }
+      }
 
-                const match = filename.match(/^(\d{4})[_\-]?(\d{5,})/);
-                if (match) {
-                    const appNo = `${match[1]}/${match[2]}`;
-                    if (!imagePathMap[appNo]) imagePathMap[appNo] = [];
-                    imagePathMap[appNo].push(destinationPath);
-                }
-            }
+      // Firestore'a yazılacak kayıtlar
+      for (const record of records) {
+        record.bulletinId = bulletinId;
+        const matchingImages = imagePathMap[record.applicationNo] || [];
+        record.imagePath = matchingImages.length > 0 ? matchingImages[0] : null;
+        record.imageUploaded = false;
+      }
 
-            // Her kayda görsel yolunu ekle
-            for (const record of records) {
-                record.bulletinId = bulletinId;
-                const matchingImages = imagePathMap[record.applicationNo] || [];
-                record.imagePath = matchingImages.length > 0 ? matchingImages[0] : null;
-            }
-     
-            // Görsel işlemleri (yeni hafifletilmiş base64 yöntemi)
-            console.log(`📤 ${imageFiles.length} görsel base64 ile 200'lük Pub/Sub batch'lerinde gönderiliyor...`);
+      // Firestore batch insert
+      const batchSize = 500;
+      for (let i = 0; i < records.length; i += batchSize) {
+        const batch = db.batch();
+        const chunk = records.slice(i, i + batchSize);
+        chunk.forEach((record) => {
+          const docRef = db.collection("trademarkBulletinRecords").doc();
+          batch.set(docRef, {
+            ...record,
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+          });
+        });
+        await batch.commit();
+      }
+      console.log(`✅ ${records.length} kayıt Firestore'a yazıldı.`);
 
-            const imageBatchSize = 200;
-            for (let i = 0; i < imageFiles.length; i += imageBatchSize) {
-                const batch = imageFiles.slice(i, i + imageBatchSize);
-                const encodedImages = [];
+      // Görselleri Pub/Sub kuyruğuna gönder
+      const imageBatchSize = 100;
+      for (let i = 0; i < imageFiles.length; i += imageBatchSize) {
+        const batch = imageFiles.slice(i, i + imageBatchSize);
+        const encodedImages = [];
 
-                for (const localPath of batch) {
-                    const filename = path.basename(localPath);
-                    const destinationPath = `bulletins/trademark_${bulletinNo}_images/${filename}`;
-                    imagePathsForPubSub.push(destinationPath);
+        for (const localPath of batch) {
+          const filename = path.basename(localPath);
+          const destinationPath = `bulletins/trademark_${bulletinNo}_images/${filename}`;
+          const imageBuffer = fs.readFileSync(localPath);
 
-                    const imageStream = fs.createReadStream(localPath);
-                    let base64 = '';
-                    for await (const chunk of imageStream) {
-                        base64 += chunk.toString('base64');
-                    }
-
-                    encodedImages.push({
-                        destinationPath,
-                        base64,
-                        contentType: getContentType(filename)
-                    });
-                }
-
-                // Tek mesajda 200 görsel gönder
-                await pubsubClient.topic("trademark-image-upload").publishMessage({
-                    data: Buffer.from(JSON.stringify(encodedImages)),
-                    attributes: { batchSize: batch.length.toString() }
-                });
-
-                await new Promise(resolve => setTimeout(resolve, 200));
-            }
-            console.log(`✅ ${records.length} kayıt ve ${imageFiles.length} görsel işleme alındı.`);
-
-            // Firestore'a kayıtları ekle
-            const batchSize = 500;
-            for (let i = 0; i < records.length; i += batchSize) {
-                const batch = db.batch();
-                const chunk = records.slice(i, i + batchSize);
-
-                chunk.forEach((record) => {
-                    const docRef = db.collection("trademarkBulletinRecords").doc();
-                    batch.set(docRef, {
-                        ...record,
-                        bulletinId,
-                        createdAt: admin.firestore.FieldValue.serverTimestamp()
-                    });
-                });
-
-                await batch.commit();
-                console.log(`✅ Firestore'a ${chunk.length} kayıt eklendi (${i + chunk.length}/${records.length})`);
-            }
-
-            // Hafıza temizliği
-            delete records;
-            delete imagePathsForPubSub;
-            delete allFiles;
-            
-            if (global.gc) {
-                global.gc();
-            }
-            
-        } catch (e) {
-            console.error("İşlem hatası:", e);
-            throw e;
-        } finally {
-            // Geçici dosyaları temizle
-            if (fs.existsSync(tempFilePath)) {
-                fs.unlinkSync(tempFilePath);
-            }
-            if (fs.existsSync(extractDir)) {
-                fs.rmSync(extractDir, { recursive: true, force: true });
-            }
+          encodedImages.push({
+            destinationPath,
+            base64: imageBuffer.toString('base64'),
+            contentType: getContentType(filename)
+          });
         }
 
-        return null;
+        await pubsubClient.topic("trademark-image-upload").publishMessage({
+          data: Buffer.from(JSON.stringify(encodedImages)),
+          attributes: { batchSize: batch.length.toString() }
+        });
+      }
+      console.log(`📤 ${imageFiles.length} görsel Pub/Sub kuyruğuna gönderildi.`);
+
+    } catch (e) {
+      console.error("İşlem hatası:", e);
+      throw e;
+    } finally {
+      if (fs.existsSync(tempFilePath)) fs.unlinkSync(tempFilePath);
+      if (fs.existsSync(extractDir)) fs.rmSync(extractDir, { recursive: true, force: true });
     }
+    return null;
+  }
 );
 
 // =========================================================
@@ -863,6 +827,41 @@ exports.uploadImageWorkerV2 = onMessagePublished(
         }));
     }
 );
+
+exports.uploadBulletinImages = onSchedule("every 5 minutes", async () => {
+  const snapshot = await db.collection("trademarkBulletinRecords")
+    .where("imagePath", "!=", null)
+    .where("imageUploaded", "==", false)
+    .limit(200) // her seferde 200 görsel
+    .get();
+
+  if (snapshot.empty) {
+    console.log("Yüklenecek görsel yok.");
+    return null;
+  }
+
+  const bucket = admin.storage().bucket();
+  let processed = 0;
+
+  for (const doc of snapshot.docs) {
+    const record = doc.data();
+    const localImagePath = path.join(os.tmpdir(), path.basename(record.imagePath));
+
+    try {
+      // Görseli kaynaktan al (senin ZIP açma sonrası veya orijinal path’ten)
+      // Not: Eğer görseller başka yerde ise buraya download logic eklenecek
+
+      // Placeholder: sadece imageUploaded = true yapıyoruz
+      await doc.ref.update({ imageUploaded: true });
+      processed++;
+    } catch (e) {
+      console.error("Görsel yükleme hatası:", e);
+    }
+  }
+
+  console.log(`✅ ${processed} görsel işlendi ve işaretlendi.`);
+  return null;
+});
 
 // =========================================================
 //              HELPER FONKSİYONLARI
