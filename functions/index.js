@@ -651,11 +651,11 @@ exports.createUniversalNotificationOnTaskCompleteV2 = onDocumentUpdated(
 // =========================================================
 
 // Trademark Bulletin Upload Processing (v2 Storage Trigger)
-exports.processTrademarkBulletinUploadV2 = onRequest(
+exports.processTrademarkBulletinUploadV3 = onRequest(
     {
         region: 'europe-west1',
         timeoutSeconds: 540,
-        memory: '1GiB',
+        memory: '4GiB', // Memory artırıldı
     },
     async (req, res) => {
         const tempDir = path.join(os.tmpdir(), `bulletin_${Date.now()}`);
