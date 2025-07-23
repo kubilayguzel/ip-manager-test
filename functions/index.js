@@ -655,7 +655,7 @@ exports.processTrademarkBulletinUploadV2 = onObjectFinalized(
     {
         region: 'europe-west1',
         timeoutSeconds: 540,
-        memory: '1GiB',
+        memory: '2GiB',
         bucket: 'ip-manager-production-aab4b.firebasestorage.app'
     },
     async (event) => {
@@ -738,7 +738,7 @@ exports.processTrademarkBulletinUploadV2 = onObjectFinalized(
             // Görsel işlemleri (yeni hafifletilmiş base64 yöntemi)
             console.log(`📤 ${imageFiles.length} görsel base64 ile 200'lük Pub/Sub batch'lerinde gönderiliyor...`);
 
-            const imageBatchSize = 200;
+            const imageBatchSize = 100;
             for (let i = 0; i < imageFiles.length; i += imageBatchSize) {
                 const batch = imageFiles.slice(i, i + imageBatchSize);
                 const encodedImages = [];
@@ -1139,3 +1139,27 @@ exports.onTrademarkBulletinRecordWrite = onDocumentWritten(
     return null;
   }
 );
+exports.deleteBulletin = onCall(async (req) => {
+  const { bulletinId } = req.data;
+
+  if (!bulletinId) {
+    throw new functions.https.HttpsError('invalid-argument', 'bulletinId is required');
+  }
+
+  // 1. Firestore kayıtları
+  const snapshot = await db.collection('trademarkBulletinRecords')
+                           .where('bulletinId', '==', bulletinId)
+                           .get();
+  const batch = db.batch();
+  snapshot.forEach(doc => batch.delete(doc.ref));
+  await batch.commit();
+
+  // 2. Algolia kayıtları
+  await index.deleteBy({ filters: `bulletinId:"${bulletinId}"` });
+
+  // 3. Storage görselleri
+  const [files] = await bucket.getFiles({ prefix: `bulletins/trademark_${bulletinId}_images/` });
+  await Promise.all(files.map(file => file.delete()));
+
+  return { success: true, deleted: snapshot.size, files: files.length };
+});
