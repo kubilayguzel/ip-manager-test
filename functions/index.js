@@ -819,88 +819,135 @@ async function parseScriptContentStreaming(scriptPath) {
 function parseScriptContent(content) {
   console.log(`🔍 Parse başlıyor... Content length: ${content.length} karakter`);
 
-  const insertRegex = /INSERT INTO\s+(\w+)\s+VALUES\s*\(([\s\S]*?)\);/gi;
-  const recordsMap = {};
+  const lines = content.split("\n");
+  console.log(`📝 Toplam satır sayısı: ${lines.length}`);
+  
+  const records = {};
+  let currentTable = null;
   let insertCount = 0;
   let valuesParsed = 0;
+  let errorCount = 0;
 
-  let match;
-  while ((match = insertRegex.exec(content)) !== null) {
-    const tableName = match[1].toUpperCase();
-    const valuesRaw = match[2];
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
     
-    const values = parseValuesFromRaw(valuesRaw);
-
-    if (!values || values.length === 0) {
-      console.warn(`⚠️ VALUES parse edilemedi: ${tableName}`);
-      continue;
-    }
-    
-    valuesParsed++;
-    const appNo = values[0];
-
-    if (!recordsMap[appNo]) {
-      recordsMap[appNo] = {
-        applicationNo: appNo,
-        applicationDate: null,
-        markName: null,
-        niceClasses: null,
-        holders: [],
-        goods: [],
-        extractedGoods: [],
-        attorneys: []
-      };
-    }
-
-    switch (tableName) {
-      case "TRADEMARK":
-        recordsMap[appNo].applicationDate = values[1] ?? null;
-        recordsMap[appNo].markName = values[5] ?? null;
-        recordsMap[appNo].niceClasses = values[6] ?? null;
-        
-        if (valuesParsed <= 3) { // İlk 3 kaydı logla
-          console.log(`📊 TRADEMARK parse edildi:`, {
-            appNo: appNo,
-            date: values[1],
-            markName: values[5],
-            classes: values[6]
-          });
+    // INSERT INTO satırı
+    if (line.startsWith("INSERT INTO")) {
+      const match = line.match(/INSERT INTO\s+(\w+)/i);
+      currentTable = match ? match[1].toUpperCase() : null;
+      insertCount++;
+      
+      if (insertCount <= 5) {
+        console.log(`📋 INSERT INTO ${currentTable} bulundu (satır ${i + 1})`);
+        console.log(`📝 Satır içeriği: ${line.substring(0, 150)}...`);
+      }
+      
+      // VALUES kısmını parse et
+      if (line.includes("VALUES")) {
+        const valuesMatch = line.match(/VALUES\s*\((.*)\)\s*;?\s*$/i);
+        if (!valuesMatch) {
+          console.warn(`⚠️ VALUES regex eşleşmedi (satır ${i + 1}): ${line.substring(0, 100)}...`);
+          continue;
         }
-        break;
-      case "HOLDER":
-        recordsMap[appNo].holders.push({
-          name: extractHolderName(values[2]),
-          address: [values[3], values[4], values[5], values[6]]
-            .filter(Boolean)
-            .join(", ") || null,
-          country: values[7] ?? null
-        });
-        break;
-      case "GOODS":
-        recordsMap[appNo].goods.push(values[3]);
-        break;
-      case "EXTRACTEDGOODS":
-        recordsMap[appNo].extractedGoods.push(values[3]);
-        break;
-      case "ATTORNEY":
-        recordsMap[appNo].attorneys.push(values[2]);
-        break;
-    }
+        
+        const valuesContent = valuesMatch[1];
+        
+        if (valuesParsed < 3) {
+          console.log(`🔍 VALUES content örneği: ${valuesContent.substring(0, 200)}...`);
+        }
+        
+        try {
+          const values = parseValuesFromRaw(valuesContent);
+          
+          if (!values || values.length === 0) {
+            errorCount++;
+            if (errorCount <= 3) {
+              console.warn(`⚠️ VALUES parse edilemedi (satır ${i + 1})`);
+              console.warn(`⚠️ Raw content: ${valuesContent.substring(0, 100)}...`);
+            }
+            continue;
+          }
+          
+          valuesParsed++;
+          const appNo = values[0];
+          
+          if (valuesParsed <= 3) {
+            console.log(`✅ Parse başarılı (${currentTable}):`, {
+              appNo: appNo,
+              totalValues: values.length,
+              firstFewValues: values.slice(0, 3)
+            });
+          }
+          
+          if (!records[appNo]) {
+            records[appNo] = {
+              applicationNo: appNo,
+              applicationDate: null,
+              markName: null,
+              niceClasses: null,
+              holders: [],
+              goods: [],
+              extractedGoods: [],
+              attorneys: []
+            };
+          }
 
-    insertCount++;
+          switch (currentTable) {
+            case "TRADEMARK":
+              records[appNo].applicationDate = values[1] ?? null;
+              records[appNo].markName = values[5] ?? null;
+              records[appNo].niceClasses = values[6] ?? null;
+              break;
+            case "HOLDER":
+              records[appNo].holders.push({
+                name: extractHolderName(values[2]),
+                address: [values[3], values[4], values[5], values[6]]
+                  .filter(Boolean).join(", ") || null,
+                country: values[7] ?? null
+              });
+              break;
+            case "GOODS":
+              records[appNo].goods.push(values[3]);
+              break;
+            case "EXTRACTEDGOODS":
+              records[appNo].extractedGoods.push(values[3]);
+              break;
+            case "ATTORNEY":
+              records[appNo].attorneys.push(values[2]);
+              break;
+          }
+        } catch (error) {
+          errorCount++;
+          if (errorCount <= 3) {
+            console.error(`❌ Parse hatası (satır ${i + 1}):`, error.message);
+            console.log(`📝 Hatalı satır: ${line.substring(0, 150)}...`);
+          }
+        }
+      }
+    }
   }
 
-  const result = Object.values(recordsMap);
-  console.log(
-    `✅ Parse tamamlandı: ${insertCount} INSERT bulundu, ${valuesParsed} VALUES işlendi, ${result.length} benzersiz başvuru`
-  );
+  const result = Object.values(records);
+  console.log(`✅ Parse tamamlandı:`, {
+    totalInserts: insertCount,
+    valuesParsed: valuesParsed,
+    errorCount: errorCount,
+    uniqueApplications: result.length,
+    successRate: insertCount > 0 ? ((valuesParsed / insertCount) * 100).toFixed(1) + '%' : '0%'
+  });
   
   if (result.length > 0) {
     console.log(`📋 İlk kayıt örneği:`, JSON.stringify(result[0], null, 2));
+  } else {
+    console.error(`❌ HİÇBİR KAYIT PARSE EDİLEMEDİ!`);
+    // İlk birkaç INSERT satırını yazdır
+    const insertLines = lines.filter(l => l.includes('INSERT INTO')).slice(0, 3);
+    console.log(`📝 İlk INSERT örnekleri:`, insertLines);
   }
   
   return result;
 }
+
 function parseValuesFromRaw(raw) {
   const values = [];
   let current = "";
