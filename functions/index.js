@@ -737,7 +737,7 @@ exports.processTrademarkBulletinUploadV2 = onObjectFinalized(
             console.log(`📤 ${imageFiles.length} görsel paralel yüklenecek ve path bilgisi Pub/Sub ile gönderilecek...`);
 
             // Görselleri paralel yükle ve path bilgisi gönder
-            const imageBatchSize = 50;
+            const imageBatchSize = 200;
             for (let i = 0; i < imageFiles.length; i += imageBatchSize) {
                 const batch = imageFiles.slice(i, i + imageBatchSize);
 
