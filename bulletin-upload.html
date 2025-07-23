@@ -192,9 +192,7 @@ setTimeout(async () => {
         console.log('✅ Firebase modülleri yüklendi');
         
         const db = firebaseModule.db;
-        
-        // 🔧 DÜZELTME: Default region kullan (region belirtme)
-        const functions = getFunctions();
+        const functions = getFunctions(app, "europe-west1");
         
         // Tabloyu doldur
         async function loadTrademarkBulletins() {
