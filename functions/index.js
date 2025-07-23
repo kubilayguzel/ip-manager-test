@@ -1606,7 +1606,6 @@ exports.onTrademarkBulletinRecordWrite = onDocumentWritten(
 
 exports.deleteBulletinV2 = onCall(
   {
-    region: 'europe-west1',
     timeoutSeconds: 540,
     memory: '1GiB'
   },
