@@ -655,7 +655,7 @@ exports.processTrademarkBulletinUploadV2 = onObjectFinalized(
     {
         region: 'europe-west1',
         timeoutSeconds: 540,
-        memory: '1GiB', // Şimdilik 1GB kalabilir
+        memory: '1GiB', 
         bucket: 'ip-manager-production-aab4b.firebasestorage.app'
     },
     async (event) => {
@@ -734,34 +734,34 @@ exports.processTrademarkBulletinUploadV2 = onObjectFinalized(
                 record.imagePath = matchingImages.length > 0 ? matchingImages[0] : null;
             }
 
-            console.log(`📤 ${imageFiles.length} görsel Storage'a yüklenecek ve path bilgisi Pub/Sub ile gönderilecek...`);
+            console.log(`📤 ${imageFiles.length} görsel paralel yüklenecek ve path bilgisi Pub/Sub ile gönderilecek...`);
 
-            // Görselleri yükle ve path bilgisini gönder
+            // Görselleri paralel yükle ve path bilgisi gönder
             const imageBatchSize = 50;
             for (let i = 0; i < imageFiles.length; i += imageBatchSize) {
                 const batch = imageFiles.slice(i, i + imageBatchSize);
-                const imageMeta = [];
 
-                for (const localPath of batch) {
-                    const filename = path.basename(localPath);
-                    const destinationPath = `bulletins/trademark_${bulletinNo}_images/${filename}`;
+                // Paralel upload (Promise.all)
+                await Promise.all(
+                    batch.map(localPath => {
+                        const filename = path.basename(localPath);
+                        const destinationPath = `bulletins/trademark_${bulletinNo}_images/${filename}`;
+                        return bucket.upload(localPath, { destination: destinationPath });
+                    })
+                );
 
-                    // Görseli Storage'a yükle (varsa üzerine yazar)
-                    await bucket.upload(localPath, { destination: destinationPath });
+                // Pub/Sub'a sadece path bilgisi gönder
+                const imageMeta = batch.map(localPath => ({
+                    destinationPath: `bulletins/trademark_${bulletinNo}_images/${path.basename(localPath)}`,
+                    contentType: getContentType(path.basename(localPath))
+                }));
 
-                    imageMeta.push({
-                        destinationPath,
-                        contentType: getContentType(filename)
-                    });
-                }
-
-                // Pub/Sub ile sadece path bilgisi gönder
                 await pubsubClient.topic("trademark-image-upload").publishMessage({
                     data: Buffer.from(JSON.stringify(imageMeta)),
                     attributes: { batchSize: batch.length.toString(), type: "PATH_ONLY" }
                 });
 
-                await new Promise(resolve => setTimeout(resolve, 100)); // küçük bekleme
+                await new Promise(resolve => setTimeout(resolve, 20)); // Bekleme 100ms → 20ms
             }
 
             console.log(`✅ ${records.length} kayıt ve ${imageFiles.length} görsel işleme alındı.`);
@@ -789,13 +789,8 @@ exports.processTrademarkBulletinUploadV2 = onObjectFinalized(
             console.error("İşlem hatası:", e);
             throw e;
         } finally {
-            // Geçici dosyaları temizle
-            if (fs.existsSync(tempFilePath)) {
-                fs.unlinkSync(tempFilePath);
-            }
-            if (fs.existsSync(extractDir)) {
-                fs.rmSync(extractDir, { recursive: true, force: true });
-            }
+            if (fs.existsSync(tempFilePath)) fs.unlinkSync(tempFilePath);
+            if (fs.existsSync(extractDir)) fs.rmSync(extractDir, { recursive: true, force: true });
         }
 
         return null;
