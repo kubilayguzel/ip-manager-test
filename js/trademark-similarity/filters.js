@@ -1,3 +1,5 @@
+// js/trademark-similarity/filters.js
+
 export function isValidBasedOnDate(hitApplicationDate, monitoredApplicationDate) {
   console.log("📅 Tarih karşılaştırması:", hitApplicationDate, "vs", monitoredApplicationDate);
   
