@@ -68,10 +68,10 @@ async function runSimilaritySearch(trademark, bulletinId) {
   const targetDate = new Date(trademark.priorityDate || trademark.applicationDate).getTime();
   const targetNice = trademark.niceClasses || [];
 
-  const { hits } = await index.search(query, {
-    filters: `bulletinId:"${bulletinId}"`,
-    hitsPerPage: 1000,
-  });
+const { hits } = await index.search(query, {
+  filters: `bulletinId:${bulletinId}`,    // ← Tırnak kaldırıldı
+  hitsPerPage: 1000,
+});
 
   const previous = [], differentNice = [], normal = [];
 
