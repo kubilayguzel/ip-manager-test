@@ -656,7 +656,7 @@ exports.processTrademarkBulletinUploadV2 = onObjectFinalized(
         region: 'europe-west1',
         timeoutSeconds: 540,
         memory: '1GiB',
-        bucket: 'ip-manager-production-aab4b.firebasestorage.app'
+        bucket: 'ip-manager-production-aab4b.appspot.com'
     },
     async (event) => {
         const object = event.data;
