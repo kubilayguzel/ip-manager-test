@@ -881,7 +881,6 @@ function parseScriptContent(content) {
         records[appNo].attorneys.push(values[2]);
       }
     }
-  }
   return Object.values(records);
 }
 async function parseScriptInChunks(scriptPath) {
