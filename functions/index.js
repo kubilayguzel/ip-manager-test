@@ -818,140 +818,106 @@ async function parseScriptContentStreaming(scriptPath) {
 }
 function parseScriptContent(content) {
   console.log(`🔍 Parse başlıyor... Content length: ${content.length} karakter`);
-
-  const lines = content.split("\n");
+  
+  const recordsMap = {};
+  const lines = content.split('\n');
+  
   console.log(`📝 Toplam satır sayısı: ${lines.length}`);
   
-  const records = {};
+  let processedLines = 0;
   let insertCount = 0;
   let valuesParsed = 0;
-
+  
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim();
     
-    // INSERT INTO satırı
-    if (line.startsWith("INSERT INTO")) {
-      const match = line.match(/INSERT INTO\s+(\w+)/i);
-      const currentTable = match ? match[1].toUpperCase() : null;
-      insertCount++;
-      
+    if (!line.length || !line.startsWith('INSERT INTO')) {
+      continue;
+    }
+    
+    processedLines++;
+    insertCount++;
+    
+    if (processedLines % 1000 === 0) {
+      console.log(`📈 İşlenen satır: ${processedLines}/${lines.length}`);
+    }
+    
+    // ESKİ ÇALIŞAN REGEX PATTERN
+    const match = line.match(/INSERT INTO (\w+) VALUES\s*\((.*)\)$/);
+    if (!match) {
       if (insertCount <= 5) {
-        console.log(`📋 INSERT INTO ${currentTable} bulundu (satır ${i + 1})`);
+        console.warn(`⚠️ Regex eşleşmedi (satır ${i + 1}): ${line.substring(0, 100)}...`);
       }
-      
-      // VALUES kısmını parse et - PARANTEZLERİ SAYARAK
-      if (line.includes("VALUES(")) {
-        const valuesStart = line.indexOf("VALUES(") + 7; // "VALUES(" sonrası
-        
-        // Parantez sayısını takip ederek doğru kapanışı bul
-        let valuesEnd = -1;
-        let parenthesesCount = 1; // VALUES( için 1 ile başla
-        
-        for (let j = valuesStart; j < line.length; j++) {
-          if (line[j] === "'") {
-            // String içindeyiz, bir sonraki ' karakterini bul
-            j++; // ' karakterini atla
-            while (j < line.length && line[j] !== "'") {
-              if (line[j] === "\\") {
-                j++; // Escape karakterini atla
-              }
-              j++;
-            }
-            // Şimdi j, kapanış ' karakterinde veya satır sonunda
-          } else if (line[j] === '(') {
-            parenthesesCount++;
-          } else if (line[j] === ')') {
-            parenthesesCount--;
-            if (parenthesesCount === 0) {
-              valuesEnd = j;
-              break;
-            }
-          }
-        }
-        
-        if (valuesEnd === -1) {
-          console.warn(`⚠️ VALUES kapanış parantezi bulunamadı (satır ${i + 1})`);
-          continue;
-        }
-        
-        const valuesContent = line.substring(valuesStart, valuesEnd);
-        
-        if (valuesParsed < 3) {
-          console.log(`🔍 VALUES content: ${valuesContent.substring(0, 100)}...`);
-        }
-        
-        try {
-          const values = parseValuesFromRaw(valuesContent);
-          
-          if (!values || values.length === 0) {
-            console.warn(`⚠️ VALUES parse edilemedi (satır ${i + 1})`);
-            if (valuesParsed < 3) {
-              console.warn(`⚠️ Content: ${valuesContent.substring(0, 200)}...`);
-            }
-            continue;
-          }
-          
-          valuesParsed++;
-          const appNo = values[0];
-          
-          if (valuesParsed <= 3) {
-            console.log(`✅ Parse başarılı (${currentTable}):`, {
-              appNo: appNo,
-              totalValues: values.length,
-              sample: values.slice(0, 3)
-            });
-          }
-          
-          if (!records[appNo]) {
-            records[appNo] = {
-              applicationNo: appNo,
-              applicationDate: null,
-              markName: null,
-              niceClasses: null,
-              holders: [],
-              goods: [],
-              extractedGoods: [],
-              attorneys: []
-            };
-          }
+      continue;
+    }
+    
+    const table = match[1].toUpperCase();
+    const valuesRaw = match[2];
+    
+    // MEVCUT parseValuesFromRaw FONKSİYONUNU KULLAN
+    const values = parseValuesFromRaw(valuesRaw);
+    
+    if (!values || values.length === 0) {
+      if (valuesParsed < 3) {
+        console.warn(`⚠️ VALUES parse edilemedi: ${valuesRaw.substring(0, 50)}...`);
+      }
+      continue;
+    }
+    
+    valuesParsed++;
+    
+    if (valuesParsed <= 3) {
+      console.log(`✅ Parse başarılı (${table}):`, {
+        appNo: values[0],
+        totalValues: values.length,
+        sample: values.slice(0, 3)
+      });
+    }
+    
+    const appNo = values[0];
+    if (!appNo) continue;
 
-          switch (currentTable) {
-            case "TRADEMARK":
-              records[appNo].applicationDate = values[1] ?? null;
-              records[appNo].markName = values[5] ?? null;
-              records[appNo].niceClasses = values[6] ?? null;
-              break;
-            case "HOLDER":
-              records[appNo].holders.push({
-                name: extractHolderName(values[2]),
-                address: [values[3], values[4], values[5], values[6]]
-                  .filter(Boolean).join(", ") || null,
-                country: values[7] ?? null
-              });
-              break;
-            case "GOODS":
-              records[appNo].goods.push(values[3]);
-              break;
-            case "EXTRACTEDGOODS":
-              records[appNo].extractedGoods.push(values[3]);
-              break;
-            case "ATTORNEY":
-              records[appNo].attorneys.push(values[2]);
-              break;
-          }
-        } catch (error) {
-          console.error(`❌ Parse hatası (satır ${i + 1}):`, error.message);
-          if (valuesParsed < 3) {
-            console.log(`📝 Hatalı satır: ${line.substring(0, 200)}...`);
-          }
-        }
-      }
+    if (!recordsMap[appNo]) {
+      recordsMap[appNo] = {
+        applicationNo: appNo,
+        applicationDate: null,
+        markName: null,
+        niceClasses: null,
+        holders: [],
+        goods: [],
+        extractedGoods: [],
+        attorneys: [],
+      };
+    }
+
+    if (table === "TRADEMARK") {
+      recordsMap[appNo].applicationDate = values[1] ?? null;
+      recordsMap[appNo].markName = values[5] ?? null;
+      recordsMap[appNo].niceClasses = values[6] ?? null;
+    } else if (table === "HOLDER") {
+      const holderName = extractHolderName(values[2]);
+      let addressParts = [values[3], values[4], values[5], values[6]].filter(Boolean).join(", ");
+      if (addressParts.trim() === "") addressParts = null;
+      recordsMap[appNo].holders.push({
+        name: holderName,
+        address: addressParts,
+        country: values[7] ?? null,
+      });
+    } else if (table === "GOODS") {
+      recordsMap[appNo].goods.push(values[3] ?? null);
+    } else if (table === "EXTRACTEDGOODS") {
+      recordsMap[appNo].extractedGoods.push(values[3] ?? null);
+    } else if (table === "ATTORNEY") {
+      recordsMap[appNo].attorneys.push(values[2] ?? null);
     }
   }
-
-  const result = Object.values(records);
+  
+  const result = Object.values(recordsMap);
+  
   console.log(`✅ Parse tamamlandı:`, {
-    totalInserts: insertCount,
+    totalLines: lines.length,
+    processedLines: processedLines,
+    insertCount: insertCount,
     valuesParsed: valuesParsed,
     uniqueApplications: result.length,
     successRate: insertCount > 0 ? ((valuesParsed / insertCount) * 100).toFixed(1) + '%' : '0%'
@@ -963,8 +929,6 @@ function parseScriptContent(content) {
   
   return result;
 }
-
-
 function parseValuesFromRaw(raw) {
   const values = [];
   let current = "";
