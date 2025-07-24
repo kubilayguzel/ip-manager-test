@@ -180,7 +180,7 @@ export async function runTrademarkSearch(monitoredMark, selectedBulletinNo) {
         return isValid;
       })
       .map(hit => {
-        const similarityScore = calculateSimilarityScore(markName, hit.markName);
+        const similarityScore = calculateSimilarityScore(hit, markName);
         const overlappingClasses = hasOverlappingNiceClasses(niceClasses, hit.niceClasses);
         
         console.log(`📊 Benzerlik hesaplaması: ${hit.markName} -> ${(similarityScore * 100).toFixed(1)}%`);
