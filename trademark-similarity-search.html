@@ -119,8 +119,9 @@
         }
 
         .nice-class-badge.match {
-        background-color: #28a745;
+        background-color: #28a745; /* yeşil arkaplan */
         color: white;
+        font-weight: bold;
         }
 
     </style>
@@ -606,11 +607,14 @@ window.algoliaLoadPromise = loadAlgolia();
                     const holders = Array.isArray(hit.holders) ? hit.holders.join(', ') : hit.holders || '';
                     const monitoredNiceClasses = hit.monitoredNiceClasses || [];
                     const niceClassHtml = Array.isArray(hit.niceClasses)
-                        ? hit.niceClasses.map(cls => {
-                            const isMatch = monitoredNiceClasses.includes(cls);
-                            return `<span class="nice-class-badge ${isMatch ? 'match' : ''}">${cls}</span>`;
+                    ? hit.niceClasses.map(cls => {
+                        const normalized = cls.replace(/\D/g, '');
+                        const isOverlap = monitoredNiceClasses
+                            .map(mc => mc.replace(/\D/g, ''))
+                            .includes(normalized);
+                        return `<span class="nice-class-badge ${isOverlap ? 'match' : ''}">${cls}</span>`;
                         }).join('')
-                        : hit.niceClasses || '';
+                    : hit.niceClasses || '';
 
                     const similarityScore = hit.similarityScore 
                         ? (hit.similarityScore * 100).toFixed(0) + '%'
