@@ -1,5 +1,21 @@
 // js/trademark-similarity/filters.js
+  function parseDate(dateStr) {
+  if (!dateStr) return null;
 
+  // ISO format (YYYY-MM-DD)
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+    return new Date(dateStr);
+  }
+
+  // DD/MM/YYYY formatı
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateStr)) {
+    const [day, month, year] = dateStr.split('/');
+    return new Date(`${year}-${month}-${day}`);
+  }
+
+  // Default
+  return new Date(dateStr);
+}
 export function isValidBasedOnDate(hitApplicationDate, monitoredApplicationDate) {
   console.log("📅 Tarih karşılaştırması:", hitApplicationDate, "vs", monitoredApplicationDate);
   
@@ -9,15 +25,14 @@ export function isValidBasedOnDate(hitApplicationDate, monitoredApplicationDate)
       return true;
     }
     
-    const hitDate = new Date(hitApplicationDate);
-    const monitoredDate = new Date(monitoredApplicationDate);
-    
-    // Geçersiz tarihler için true döndür
-    if (isNaN(hitDate.getTime()) || isNaN(monitoredDate.getTime())) {
+  const hitDate = parseDate(hitApplicationDate);
+  const monitoredDate = parseDate(monitoredApplicationDate);
+
+  if (!hitDate || !monitoredDate || isNaN(hitDate.getTime()) || isNaN(monitoredDate.getTime())) {
       console.log("⚠️ Geçersiz tarih formatı, kabul ediliyor");
       return true;
-    }
-    
+  }
+
     // Hit'in tarihi izlenen markanın tarihinden önce veya aynı gün ise dahil et
     const isValid = hitDate >= monitoredDate;
     console.log(`📅 Tarih kontrolü: ${isValid ? 'Geçerli' : 'Geçersiz'}`);
