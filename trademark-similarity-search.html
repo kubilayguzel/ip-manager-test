@@ -254,7 +254,6 @@ window.algoliaLoadPromise = loadAlgolia();
                                 <th>Marka Adı</th>
                                 <th>Sahip</th>
                                 <th>Nice Sınıfı</th>
-                                <th>Bülten Tarihi</th>
                                 <th>Durum</th>
                                 <th>İşlemler</th>
                             </tr>
@@ -593,59 +592,53 @@ window.algoliaLoadPromise = loadAlgolia();
             }
         }
 
-        function renderMonitoringResults(results) {
-            showLoading(false);
-            
-            if (results.length === 0) {
-                showError('İzlenen markalarınıza benzer yeni marka bulunamadı.');
-                return;
+            function renderMonitoringResults(results) {
+                showLoading(false);
+
+                if (results.length === 0) {
+                    showError('İzlenen markalarınıza benzer yeni marka bulunamadı.');
+                    return;
+                }
+
+                hideMessages();
+
+                const tableHTML = results.map(hit => {
+                    const holders = Array.isArray(hit.holders) ? hit.holders.join(', ') : hit.holders || '';
+                    const monitoredNiceClasses = hit.monitoredNiceClasses || [];
+                    const niceClassHtml = Array.isArray(hit.niceClasses)
+                        ? hit.niceClasses.map(cls => {
+                            const isMatch = monitoredNiceClasses.includes(cls);
+                            return `<span class="nice-class-badge ${isMatch ? 'match' : ''}">${cls}</span>`;
+                        }).join('')
+                        : hit.niceClasses || '';
+
+                    const similarityScore = hit.similarityScore 
+                        ? (hit.similarityScore * 100).toFixed(0) + '%'
+                        : '-';
+
+                    return `
+                        <tr>
+                            <td>${hit.applicationNo || '-'}</td>
+                            <td>
+                                <strong>${hit.markName || '-'}</strong><br/>
+                                <small>İzlenen: ${hit.monitoredTrademark}</small>
+                            </td>
+                            <td>${holders}</td>
+                            <td>${niceClassHtml}</td>
+                            <td><span class="similarity-score">${similarityScore}</span></td>
+                            <td>
+                                <button class="btn btn-sm btn-primary" onclick="viewRecord('${hit.objectID}')">
+                                    👁️ Görüntüle
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+
+                resultsTableBody.innerHTML = tableHTML;
+                console.log("✅ Gerçek arama sonuçları render edildi!");
             }
 
-            hideMessages();
-
-            const tableHTML = results.map(hit => {
-                const holders = Array.isArray(hit.holders) ? hit.holders.join(', ') : hit.holders || '';
-                const monitoredNiceClasses = hit.monitoredNiceClasses || [];
-                const niceClassHtml = Array.isArray(hit.niceClasses)
-                    ? hit.niceClasses.map(cls => {
-                        const isMatch = monitoredNiceClasses.includes(cls);
-                        return `<span class="nice-class-badge ${isMatch ? 'match' : ''}">${cls}</span>`;
-                    }).join('')
-                    : hit.niceClasses || '';
-                
-                const similarityScore = hit.similarityScore 
-                    ? (hit.similarityScore * 100).toFixed(0) + '%'
-                    : '-';
-
-                const statusText = hit.sameClass ? 'Benzer Sınıf' : 'Farklı Sınıf';
-                const statusClass = hit.sameClass ? 'same-class' : 'different-class';
-
-                return `
-                    <tr class="${statusClass}">
-                        <td>${hit.applicationNo || '-'}</td>
-                        <td>
-                            <strong>${hit.markName || '-'}</strong><br/>
-                            <small>İzlenen: ${hit.monitoredTrademark}</small>
-                        </td>
-                        <td>${holders}</td>
-                        <td>${niceClassHtml}</td>
-                        <td>${hit.bulletinId || '-'}</td>
-                        <td>
-                            <span class="similarity-score">${similarityScore}</span><br/>
-                            <small class="status-${statusClass}">${statusText}</small>
-                        </td>
-                        <td>
-                            <button class="btn btn-sm btn-primary" onclick="viewRecord('${hit.objectID}')">
-                                👁️ Görüntüle
-                            </button>
-                        </td>
-                    </tr>
-                `;
-            }).join('');
-
-            resultsTableBody.innerHTML = tableHTML;
-            console.log("✅ Gerçek arama sonuçları render edildi!");
-        }
 
         // Event handlers
         window.viewRecord = function(recordId) {
