@@ -19,7 +19,7 @@ export function isValidBasedOnDate(hitApplicationDate, monitoredApplicationDate)
     }
     
     // Hit'in tarihi izlenen markanın tarihinden önce veya aynı gün ise dahil et
-    const isValid = hitDate <= monitoredDate;
+    const isValid = hitDate >= monitoredDate;
     console.log(`📅 Tarih kontrolü: ${isValid ? 'Geçerli' : 'Geçersiz'}`);
     return isValid;
     
