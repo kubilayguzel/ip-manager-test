@@ -118,7 +118,7 @@ export async function runTrademarkSearch(monitoredMark, selectedBulletinNo) {
   try {
     // Filter string - BULLETINID NUMERIC FORMAT (TRAK YOK!)
     // Algolia 400 hatası veriyordu çünkü bulletinId numeric field
-    const filterString = `bulletinId:'${selectedBulletinNo}'`;
+    const filterString = `bulletinId:${selectedBulletinNo}`;
     console.log("🎯 FILTER DEBUG - NUMERIC FORMAT:", {
       filterString,
       bulletinIdType: typeof selectedBulletinNo,
