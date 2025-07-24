@@ -39,9 +39,9 @@ export function calculateSimilarityScore(hit, searchMarkName) {
   const maxLength = Math.max(hitMarkName.length, searchName.length);
   let similarity = 1 - (distance / maxLength);
 
-  // Görsel benzerlik cezası (0.25)
+  // Görsel benzerlik cezası (0.25 benzer harf, 1.0 farklı harf, uzunluk farkı *0.5)
   const visualPenalty = visualMismatchPenalty(hitMarkName, searchName);
-  similarity -= (visualPenalty * 0.05); // 0.25 ceza => %5 etki
+  similarity -= (visualPenalty * 0.05);
 
   // Tek harf farkı bonusu (aynı uzunluk, distance=1 ise)
   if (distance === 1 && hitMarkName.length === searchName.length) {
