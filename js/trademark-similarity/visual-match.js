@@ -16,9 +16,9 @@ export function visualMismatchPenalty(a, b) {
 
     if (ca !== cb) {
       if (visualMap[ca]?.includes(cb)) {
-        penalty += 0.5;
+        penalty += 0.25;  // görsel benzer harf → düşük ceza
       } else {
-        penalty += 1.5;
+        penalty += 1.0;   // normal ceza
       }
     }
   }
