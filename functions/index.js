@@ -823,10 +823,8 @@ function parseScriptContent(content) {
   console.log(`📝 Toplam satır sayısı: ${lines.length}`);
   
   const records = {};
-  let currentTable = null;
   let insertCount = 0;
   let valuesParsed = 0;
-  let errorCount = 0;
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim();
@@ -834,36 +832,61 @@ function parseScriptContent(content) {
     // INSERT INTO satırı
     if (line.startsWith("INSERT INTO")) {
       const match = line.match(/INSERT INTO\s+(\w+)/i);
-      currentTable = match ? match[1].toUpperCase() : null;
+      const currentTable = match ? match[1].toUpperCase() : null;
       insertCount++;
       
       if (insertCount <= 5) {
         console.log(`📋 INSERT INTO ${currentTable} bulundu (satır ${i + 1})`);
-        console.log(`📝 Satır içeriği: ${line.substring(0, 150)}...`);
       }
       
-      // VALUES kısmını parse et
-      if (line.includes("VALUES")) {
-        const valuesMatch = line.match(/VALUES\s*\((.*)\)\s*;?\s*$/i);
-        if (!valuesMatch) {
-          console.warn(`⚠️ VALUES regex eşleşmedi (satır ${i + 1}): ${line.substring(0, 100)}...`);
+      // VALUES kısmını parse et - PARANTEZLERİ SAYARAK
+      if (line.includes("VALUES(")) {
+        const valuesStart = line.indexOf("VALUES(") + 7; // "VALUES(" sonrası
+        
+        // Parantez sayısını takip ederek doğru kapanışı bul
+        let valuesEnd = -1;
+        let parenthesesCount = 1; // VALUES( için 1 ile başla
+        
+        for (let j = valuesStart; j < line.length; j++) {
+          if (line[j] === "'") {
+            // String içindeyiz, bir sonraki ' karakterini bul
+            j++; // ' karakterini atla
+            while (j < line.length && line[j] !== "'") {
+              if (line[j] === "\\") {
+                j++; // Escape karakterini atla
+              }
+              j++;
+            }
+            // Şimdi j, kapanış ' karakterinde veya satır sonunda
+          } else if (line[j] === '(') {
+            parenthesesCount++;
+          } else if (line[j] === ')') {
+            parenthesesCount--;
+            if (parenthesesCount === 0) {
+              valuesEnd = j;
+              break;
+            }
+          }
+        }
+        
+        if (valuesEnd === -1) {
+          console.warn(`⚠️ VALUES kapanış parantezi bulunamadı (satır ${i + 1})`);
           continue;
         }
         
-        const valuesContent = valuesMatch[1];
+        const valuesContent = line.substring(valuesStart, valuesEnd);
         
         if (valuesParsed < 3) {
-          console.log(`🔍 VALUES content örneği: ${valuesContent.substring(0, 200)}...`);
+          console.log(`🔍 VALUES content: ${valuesContent.substring(0, 100)}...`);
         }
         
         try {
           const values = parseValuesFromRaw(valuesContent);
           
           if (!values || values.length === 0) {
-            errorCount++;
-            if (errorCount <= 3) {
-              console.warn(`⚠️ VALUES parse edilemedi (satır ${i + 1})`);
-              console.warn(`⚠️ Raw content: ${valuesContent.substring(0, 100)}...`);
+            console.warn(`⚠️ VALUES parse edilemedi (satır ${i + 1})`);
+            if (valuesParsed < 3) {
+              console.warn(`⚠️ Content: ${valuesContent.substring(0, 200)}...`);
             }
             continue;
           }
@@ -875,7 +898,7 @@ function parseScriptContent(content) {
             console.log(`✅ Parse başarılı (${currentTable}):`, {
               appNo: appNo,
               totalValues: values.length,
-              firstFewValues: values.slice(0, 3)
+              sample: values.slice(0, 3)
             });
           }
           
@@ -917,10 +940,9 @@ function parseScriptContent(content) {
               break;
           }
         } catch (error) {
-          errorCount++;
-          if (errorCount <= 3) {
-            console.error(`❌ Parse hatası (satır ${i + 1}):`, error.message);
-            console.log(`📝 Hatalı satır: ${line.substring(0, 150)}...`);
+          console.error(`❌ Parse hatası (satır ${i + 1}):`, error.message);
+          if (valuesParsed < 3) {
+            console.log(`📝 Hatalı satır: ${line.substring(0, 200)}...`);
           }
         }
       }
@@ -931,22 +953,17 @@ function parseScriptContent(content) {
   console.log(`✅ Parse tamamlandı:`, {
     totalInserts: insertCount,
     valuesParsed: valuesParsed,
-    errorCount: errorCount,
     uniqueApplications: result.length,
     successRate: insertCount > 0 ? ((valuesParsed / insertCount) * 100).toFixed(1) + '%' : '0%'
   });
   
   if (result.length > 0) {
     console.log(`📋 İlk kayıt örneği:`, JSON.stringify(result[0], null, 2));
-  } else {
-    console.error(`❌ HİÇBİR KAYIT PARSE EDİLEMEDİ!`);
-    // İlk birkaç INSERT satırını yazdır
-    const insertLines = lines.filter(l => l.includes('INSERT INTO')).slice(0, 3);
-    console.log(`📝 İlk INSERT örnekleri:`, insertLines);
   }
   
   return result;
 }
+
 
 function parseValuesFromRaw(raw) {
   const values = [];
