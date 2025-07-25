@@ -84,6 +84,84 @@
         transform: none;
     }
 
+    /* Filtre Bölümü Stilleri */
+    .filter-section {
+        background: rgba(255,255,255,0.95);
+        padding: 20px;
+        border-radius: 10px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        animation: fadeIn 0.3s ease-in;
+    }
+    
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(-10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .filter-controls {
+        display: flex;
+        gap: 15px;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+    
+    .filter-group {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+    }
+    
+    .filter-group.search {
+        flex: 1;
+        min-width: 200px;
+    }
+    
+    .filter-label {
+        font-size: 0.9em;
+        color: #666;
+        font-weight: 500;
+    }
+    
+    .filter-input, .filter-select {
+        padding: 8px 12px;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        font-size: 14px;
+        transition: all 0.2s ease;
+    }
+    
+    .filter-input:focus, .filter-select:focus {
+        outline: none;
+        border-color: #007bff;
+        box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+    }
+    
+    .filter-input.search {
+        width: 100%;
+    }
+    
+    .filter-select {
+        min-width: 120px;
+    }
+    
+    .clear-filters-btn {
+        padding: 8px 16px;
+        background: #6c757d;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 14px;
+        transition: all 0.2s ease;
+        align-self: flex-end;
+    }
+    
+    .clear-filters-btn:hover {
+        background: #5a6268;
+        transform: translateY(-1px);
+    }
+
     .accruals-container {
         background: rgba(255,255,255,0.95);
         border-radius: 20px;
@@ -174,6 +252,17 @@
     .status-badge.objection { background-color: #6f42c1; }
     .status-badge.litigation { background-color: #fd7e14; }
 
+    .nice-class-badge {
+        display: inline-block;
+        background: #e9ecef;
+        color: #495057;
+        padding: 2px 8px;
+        border-radius: 12px;
+        font-size: 0.8em;
+        margin-right: 4px;
+        margin-bottom: 2px;
+    }
+
     .loading, .no-records {
         text-align: center;
         padding: 30px;
@@ -187,6 +276,155 @@
         border: 1px solid #f5c6cb;
         border-radius: 5px;
         margin: 20px 0;
+    }
+
+    /* Pagination Stilleri */
+    .pagination-wrapper {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+        align-items: center;
+        padding: 20px;
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        margin-top: 20px;
+    }
+
+    .pagination-controls {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+
+    .pagination-nav {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+    }
+
+    .pagination-btn {
+        padding: 8px 12px;
+        border: 1px solid #ddd;
+        background: white;
+        color: #333;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 14px;
+        transition: all 0.2s ease;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        min-width: 40px;
+        justify-content: center;
+    }
+
+    .pagination-btn:hover:not(:disabled) {
+        background: #f8f9fa;
+        border-color: #007bff;
+        transform: translateY(-1px);
+    }
+
+    .pagination-btn:active:not(:disabled) {
+        transform: translateY(0);
+    }
+
+    .pagination-btn.current {
+        background: #007bff;
+        color: white;
+        border-color: #007bff;
+        font-weight: 600;
+    }
+
+    .pagination-btn:disabled {
+        background: #f8f9fa;
+        color: #6c757d;
+        border-color: #dee2e6;
+        cursor: not-allowed;
+        opacity: 0.6;
+    }
+
+    .pagination-ellipsis {
+        padding: 8px 4px;
+        color: #6c757d;
+        font-size: 14px;
+    }
+
+    .pagination-info {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 5px;
+        font-size: 14px;
+        color: #666;
+    }
+
+    .pagination-page-info {
+        font-weight: 500;
+    }
+
+    .pagination-items-info {
+        font-size: 13px;
+    }
+
+    .pagination-items-per-page {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 14px;
+        color: #666;
+    }
+
+    .pagination-items-select {
+        padding: 4px 8px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        background: white;
+        font-size: 14px;
+    }
+
+    .pagination-no-results {
+        text-align: center;
+        padding: 40px 20px;
+        color: #666;
+        font-style: italic;
+    }
+
+    /* Responsive Design */
+    @media (max-width: 768px) {
+        .filter-controls {
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .filter-group {
+            width: 100%;
+        }
+        
+        .filter-input, .filter-select {
+            width: 100%;
+        }
+        
+        .pagination-wrapper {
+            padding: 15px;
+        }
+        
+        .pagination-controls {
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .pagination-btn {
+            padding: 10px 12px;
+            min-width: 44px;
+        }
+        
+        .pagination-info {
+            order: -1;
+            text-align: center;
+        }
     }
 </style>
 </head>
@@ -205,302 +443,430 @@
           Seçileni Kaldır (<span id="selectedCount">0</span>)
         </button>
       </div>
+
+      <!-- Filtre Bölümü -->
+      <div id="filterSection" class="filter-section" style="display: none;">
+        <div class="filter-controls">
+          <div class="filter-group search">
+            <label class="filter-label">Arama</label>
+            <input type="text" id="searchFilter" class="filter-input search" placeholder="Marka adı, sahip veya başvuru no ile ara...">
+          </div>
+          <div class="filter-group">
+            <label class="filter-label">Durum</label>
+            <select id="statusFilter" class="filter-select">
+              <option value="all">Tüm Durumlar</option>
+              <option value="application">Başvuru</option>
+              <option value="registered">Tescilli</option>
+              <option value="rejected">Reddedildi</option>
+              <option value="pending">Beklemede</option>
+              <option value="objection">İtiraz</option>
+              <option value="litigation">Dava</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label class="filter-label">Nice Sınıfı</label>
+            <input type="text" id="niceClassFilter" class="filter-input" placeholder="35, 42..." style="width: 120px;">
+          </div>
+          <div class="filter-group">
+            <label class="filter-label">Sahip</label>
+            <input type="text" id="ownerFilter" class="filter-input" placeholder="Şirket adı..." style="width: 150px;">
+          </div>
+          <button type="button" id="clearFilters" class="clear-filters-btn">Temizle</button>
+        </div>
+      </div>
+
       <div class="accruals-container">
         <div id="monitoringTableContainer">
           <div class="loading">Yükleniyor...</div>
         </div>
       </div>
+
+      <!-- Pagination Container -->
+      <div id="paginationContainer"></div>
     </main>
   </div>
+
 <script type="module">
     import { loadSharedLayout } from './js/layout-loader.js';
-    import { monitoringService, personService  } from './firebase-config.js';
+    import { monitoringService, personService } from './firebase-config.js';
     import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
     import { showNotification } from './utils.js';
 
-    const auth = getAuth();
-    let selectedMonitoringItems = new Set();
-    let allPersons = [];
+    // Pagination Sınıfı (Inline)
+    class Pagination {
+        constructor(options = {}) {
+            this.options = {
+                itemsPerPage: options.itemsPerPage || 20,
+                maxVisiblePages: options.maxVisiblePages || 5,
+                containerId: options.containerId || 'paginationContainer',
+                onPageChange: options.onPageChange || (() => {}),
+                showFirstLast: options.showFirstLast !== false,
+                showPrevNext: options.showPrevNext !== false,
+                showPageInfo: options.showPageInfo !== false,
+                showItemsPerPageSelector: options.showItemsPerPageSelector !== false,
+                itemsPerPageOptions: options.itemsPerPageOptions || [10, 20, 50, 100],
+                strings: {
+                    first: 'İlk',
+                    previous: 'Önceki',
+                    next: 'Sonraki',
+                    last: 'Son',
+                    pageInfo: 'Sayfa {current} / {total}',
+                    itemsInfo: 'Toplam {total} kayıt ({start}-{end} arası gösteriliyor)',
+                    itemsPerPage: 'Sayfa başına:',
+                    noResults: 'Gösterilecek kayıt bulunamadı'
+                },
+                ...options.strings
+            };
 
-    document.addEventListener('DOMContentLoaded', async () => {
-        try {
-            console.log('Sayfa yükleniyor...');
-            
-            // İlk olarak layout'u yükle
-            await loadSharedLayout({ activeMenuLink: 'monitoring-trademarks.html' });
-            console.log('Layout yüklendi');
+            this.currentPage = 1;
+            this.totalItems = 0;
+            this.totalPages = 0;
+            this.container = null;
 
-            // Kişileri yükle - hata durumunda bile devam et
-            try {
-                const personsResult = await personService.getPersons();
-                if (personsResult.success) {
-                    allPersons = personsResult.data || [];
-                    console.log('Kişiler yüklendi:', allPersons.length);
-                } else {
-                    console.warn('Kişiler yüklenirken hata:', personsResult.error);
-                    allPersons = [];
-                }
-            } catch (error) {
-                console.warn('Kişiler yüklenirken hata:', error);
-                allPersons = []; // Boş array ile devam et
+            this.init();
+        }
+
+        init() {
+            this.container = document.getElementById(this.options.containerId);
+            if (!this.container) {
+                console.error(`Pagination container '${this.options.containerId}' bulunamadı!`);
+                return;
             }
+        }
 
-            const container = document.getElementById('monitoringTableContainer');
-            const removeSelectedBtn = document.getElementById('removeSelectedBtn');
-            const selectedCountSpan = document.getElementById('selectedCount');
+        update(totalItems, currentPage = 1) {
+            this.totalItems = totalItems;
+            this.currentPage = Math.max(1, Math.min(currentPage, this.getTotalPages()));
+            this.totalPages = this.getTotalPages();
+            
+            this.render();
+            return this;
+        }
 
-            if (!container || !removeSelectedBtn || !selectedCountSpan) {
-                console.error('Gerekli DOM elementleri bulunamadı');
+        getTotalPages() {
+            return Math.ceil(this.totalItems / this.options.itemsPerPage);
+        }
+
+        getCurrentPageData(allData) {
+            const startIndex = (this.currentPage - 1) * this.options.itemsPerPage;
+            const endIndex = startIndex + this.options.itemsPerPage;
+            return allData.slice(startIndex, endIndex);
+        }
+
+        getStartIndex() {
+            return (this.currentPage - 1) * this.options.itemsPerPage;
+        }
+
+        getEndIndex() {
+            return Math.min(this.currentPage * this.options.itemsPerPage, this.totalItems);
+        }
+
+        render() {
+            if (!this.container) return;
+
+            if (this.totalItems === 0) {
+                this.container.innerHTML = `
+                    <div class="pagination-wrapper">
+                        <div class="pagination-no-results">
+                            ${this.options.strings.noResults}
+                        </div>
+                    </div>
+                `;
                 return;
             }
 
-            // Durumları Türkçeye çeviren fonksiyon
-            const getStatusInTurkish = (status) => {
-                switch (status) {
-                    case 'application': return { text: 'Başvuru', class: 'application' };
-                    case 'registered': return { text: 'Tescilli', class: 'registered' };
-                    case 'rejected': return { text: 'Reddedildi', class: 'rejected' };
-                    case 'pending': return { text: 'Beklemede', class: 'pending' };
-                    case 'objection': return { text: 'İtiraz', class: 'objection' };
-                    case 'litigation': return { text: 'Dava', class: 'litigation' };
-                    default: return { text: status || 'Bilinmiyor', class: '' };
-                }
-            };
+            if (this.totalPages <= 1 && !this.options.showItemsPerPageSelector) {
+                this.container.innerHTML = '';
+                return;
+            }
 
-            // Tarih formatlama yardımcı fonksiyonu
-            const formatTurkishDate = (dateString) => {
-                if (!dateString) return '-';
-                try {
-                    const date = new Date(dateString);
-                    if (isNaN(date.getTime())) {
-                        return dateString;
-                    }
-                    const day = String(date.getDate()).padStart(2, '0');
-                    const month = String(date.getMonth() + 1).padStart(2, '0');
-                    const year = date.getFullYear();
-                    return `${day}.${month}.${year}`;
-                } catch (e) {
-                    console.error("Tarih formatlama hatası:", e);
-                    return dateString;
-                }
-            };
+            const paginationHTML = this.generatePaginationHTML();
+            this.container.innerHTML = paginationHTML;
+            this.attachEventListeners();
+        }
 
-            const renderMonitoringTable = (data, userUid) => {
-                console.log('Tablo render ediliyor, veri sayısı:', data?.length || 0);
-                
-                selectedMonitoringItems.clear();
-                updateSelectedButtonState();
+        generatePaginationHTML() {
+            let html = '<div class="pagination-wrapper">';
 
-                if (!data || data.length === 0) {
-                    container.innerHTML = '<div class="no-records">İzleme listeniz boş.</div>';
-                    return;
-                }
-
-                let html = `
-                    <table class="accruals-table">
-                        <thead>
-                            <tr>
-                                <th><input type="checkbox" id="headerSelectAllCheckbox" /></th>
-                                <th>Görsel</th>
-                                <th>Marka Adı</th>
-                                <th>Sahip</th>
-                                <th>Başvuru No</th>
-                                <th>Başvuru Tarihi</th>
-                                <th>Nice Sınıfı</th>
-                                <th>Durum</th>
-                            </tr>
-                        </thead>
-                        <tbody>
+            // Sayfa bilgisi
+            if (this.options.showPageInfo) {
+                html += `
+                    <div class="pagination-info">
+                        <div class="pagination-page-info">
+                            ${this.options.strings.pageInfo
+                                .replace('{current}', this.currentPage)
+                                .replace('{total}', this.totalPages)}
+                        </div>
+                        <div class="pagination-items-info">
+                            ${this.options.strings.itemsInfo
+                                .replace('{total}', this.totalItems)
+                                .replace('{start}', this.getStartIndex() + 1)
+                                .replace('{end}', this.getEndIndex())}
+                        </div>
+                    </div>
                 `;
+            }
 
-                data.forEach(r => {
-                    const isSelected = selectedMonitoringItems.has(r.id) ? 'checked' : '';
-                    const trademarkImageHtml = r.trademarkImage && typeof r.trademarkImage === 'string' && r.trademarkImage.startsWith('data:image')
-                        ? `<img src="${r.trademarkImage}" alt="Marka Görseli" class="trademark-image-thumbnail">`
-                        : '-';
-                    
-                    const statusInfo = getStatusInTurkish(r.status);
-                    
-                    // Sahip bilgisini güvenli şekilde işle
-                    let ownerNames = '-';
-                    try {
-                        if (r.owners && Array.isArray(r.owners)) {
-                            ownerNames = r.owners.map(owner => {
-                                if (typeof owner === 'object' && owner.id) {
-                                    const match = allPersons.find(p => p.id === owner.id);
-                                    return match ? match.name : `ID:${owner.id} (Bulunamadı)`;
-                                } else if (typeof owner === 'string') {
-                                    return owner;
-                                } else if (typeof owner === 'object' && owner.name) {
-                                    return owner.name;
-                                }
-                                return 'Bilinmeyen format';
-                            }).join(', ');
-                        } else if (typeof r.owners === 'string') {
-                            ownerNames = r.owners;
-                        }
-                    } catch (error) {
-                        console.warn('Sahip bilgisi işlenirken hata:', error, r.owners);
-                        ownerNames = 'Hata: ' + error.message;
+            html += '<div class="pagination-controls">';
+
+            // Sayfa navigation butonları
+            if (this.totalPages > 1) {
+                html += '<div class="pagination-nav">';
+                html += this.generateNavigationButtons();
+                html += '</div>';
+            }
+
+            // Sayfa başına öğe seçici
+            if (this.options.showItemsPerPageSelector) {
+                html += `
+                    <div class="pagination-items-per-page">
+                        <span>${this.options.strings.itemsPerPage}</span>
+                        <select class="pagination-items-select" data-action="changeItemsPerPage">
+                            ${this.options.itemsPerPageOptions.map(option => 
+                                `<option value="${option}" ${option === this.options.itemsPerPage ? 'selected' : ''}>${option}</option>`
+                            ).join('')}
+                        </select>
+                    </div>
+                `;
+            }
+
+            html += '</div></div>';
+            return html;
+        }
+
+        generateNavigationButtons() {
+            let html = '';
+
+            // İlk sayfa butonu
+            if (this.options.showFirstLast) {
+                html += `<button class="pagination-btn" data-action="goToPage" data-page="1" ${this.currentPage === 1 ? 'disabled' : ''}>
+                    ${this.options.strings.first}
+                </button>`;
+            }
+
+            // Önceki sayfa butonu
+            if (this.options.showPrevNext) {
+                html += `<button class="pagination-btn" data-action="goToPage" data-page="${this.currentPage - 1}" ${this.currentPage === 1 ? 'disabled' : ''}>
+                    ${this.options.strings.previous}
+                </button>`;
+            }
+
+            // Sayfa numaraları
+            html += this.generatePageNumbers();
+
+            // Sonraki sayfa butonu
+            if (this.options.showPrevNext) {
+                html += `<button class="pagination-btn" data-action="goToPage" data-page="${this.currentPage + 1}" ${this.currentPage === this.totalPages ? 'disabled' : ''}>
+                    ${this.options.strings.next}
+                </button>`;
+            }
+
+            // Son sayfa butonu
+            if (this.options.showFirstLast) {
+                html += `<button class="pagination-btn" data-action="goToPage" data-page="${this.totalPages}" ${this.currentPage === this.totalPages ? 'disabled' : ''}>
+                    ${this.options.strings.last}
+                </button>`;
+            }
+
+            return html;
+        }
+
+        generatePageNumbers() {
+            let html = '';
+            const maxVisible = this.options.maxVisiblePages;
+            const current = this.currentPage;
+            const total = this.totalPages;
+
+            if (total <= maxVisible) {
+                // Tüm sayfaları göster
+                for (let i = 1; i <= total; i++) {
+                    html += `<button class="pagination-btn ${i === current ? 'current' : ''}" 
+                             data-action="goToPage" data-page="${i}">${i}</button>`;
+                }
+            } else {
+                // Akıllı sayfa numarası gösterimi
+                let start = Math.max(1, current - Math.floor(maxVisible / 2));
+                let end = Math.min(total, start + maxVisible - 1);
+
+                if (end - start + 1 < maxVisible) {
+                    start = Math.max(1, end - maxVisible + 1);
+                }
+
+                // İlk sayfa ve ellipsis
+                if (start > 1) {
+                    html += `<button class="pagination-btn" data-action="goToPage" data-page="1">1</button>`;
+                    if (start > 2) {
+                        html += `<span class="pagination-ellipsis">...</span>`;
                     }
-
-                    html += `
-                        <tr data-id="${r.id}">
-                            <td><input type="checkbox" class="row-checkbox" data-id="${r.id}" ${isSelected}></td>
-                            <td>${trademarkImageHtml}</td>
-                            <td>${r.title || r.markName || '-'}</td>
-                            <td>${ownerNames}</td>
-                            <td>${r.applicationNumber || r.applicationNo || '-'}</td>
-                            <td>${formatTurkishDate(r.applicationDate)}</td>
-                            <td>${r.niceClass || '-'}</td>
-                            <td><span class="status-badge ${statusInfo.class}">${statusInfo.text}</span></td>
-                        </tr>`;
-                });
-                html += '</tbody></table>';
-                container.innerHTML = html;
-
-                // Header checkbox'ını bağla
-                const headerSelectAllCheckbox = document.getElementById('headerSelectAllCheckbox');
-                if (headerSelectAllCheckbox) {
-                    const allRowCheckboxes = document.querySelectorAll('.row-checkbox');
-                    headerSelectAllCheckbox.checked = allRowCheckboxes.length > 0 && Array.from(allRowCheckboxes).every(cb => selectedMonitoringItems.has(cb.dataset.id));
-
-                    headerSelectAllCheckbox.addEventListener('change', (e) => {
-                        const isChecked = e.target.checked;
-                        document.querySelectorAll('.row-checkbox').forEach(checkbox => {
-                            checkbox.checked = isChecked;
-                            if (isChecked) {
-                                selectedMonitoringItems.add(checkbox.dataset.id);
-                            } else {
-                                selectedMonitoringItems.delete(checkbox.dataset.id);
-                            }
-                        });
-                        updateSelectedButtonState();
-                    });
                 }
-            };
 
-            const updateSelectedButtonState = () => {
-                selectedCountSpan.textContent = selectedMonitoringItems.size;
-                removeSelectedBtn.disabled = selectedMonitoringItems.size === 0;
-
-                const allRowCheckboxes = document.querySelectorAll('.row-checkbox');
-                const headerSelectAllCheckbox = document.getElementById('headerSelectAllCheckbox');
-
-                if (headerSelectAllCheckbox) {
-                    const allChecked = allRowCheckboxes.length > 0 && Array.from(allRowCheckboxes).every(cb => selectedMonitoringItems.has(cb.dataset.id));
-                    headerSelectAllCheckbox.checked = allChecked;
+                // Orta sayfalar
+                for (let i = start; i <= end; i++) {
+                    html += `<button class="pagination-btn ${i === current ? 'current' : ''}" 
+                             data-action="goToPage" data-page="${i}">${i}</button>`;
                 }
-            };
 
-            // Auth state değişikliklerini dinle
-            onAuthStateChanged(auth, async (user) => {
-                console.log('Auth state değişti:', user ? 'Giriş yapıldı' : 'Çıkış yapıldı');
+                // Son sayfa ve ellipsis
+                if (end < total) {
+                    if (end < total - 1) {
+                        html += `<span class="pagination-ellipsis">...</span>`;
+                    }
+                    html += `<button class="pagination-btn" data-action="goToPage" data-page="${total}">${total}</button>`;
+                }
+            }
+
+            return html;
+        }
+
+        attachEventListeners() {
+            if (!this.container) return;
+
+            // Event delegation kullanarak tüm butonları dinle
+            this.container.addEventListener('click', (e) => {
+                const button = e.target.closest('[data-action]');
+                if (!button) return;
+
+                e.preventDefault();
                 
-                if (!user) {
-                    container.innerHTML = '<div class="no-records">Giriş yapmalısınız.</div>';
-                    return;
-                }
-
-                container.innerHTML = '<div class="loading">İzleme listeniz yükleniyor...</div>';
+                const action = button.dataset.action;
                 
-                try {
-                    console.log('Monitoring verileri yükleniyor...');
-                    const { success, data, error } = await monitoringService.getMonitoringItems(user.uid);
-                    
-                    if (success) {
-                        console.log('Monitoring verileri başarıyla yüklendi:', data?.length || 0);
-                        renderMonitoringTable(data, user.uid);
-                    } else {
-                        console.error("Marka izleme öğeleri yüklenirken hata:", error);
-                        container.innerHTML = `<div class="error-message">İzleme listeniz yüklenirken bir hata oluştu: ${error}</div>`;
+                if (action === 'goToPage') {
+                    const page = parseInt(button.dataset.page);
+                    if (page && !button.disabled) {
+                        this.goToPage(page);
                     }
-                } catch (error) {
-                    console.error("Monitoring yükleme hatası:", error);
-                    container.innerHTML = '<div class="error-message">İzleme listeniz yüklenirken beklenmeyen bir hata oluştu.</div>';
                 }
             });
 
-            // Checkbox event delegation
-            container.addEventListener('change', (e) => {
-                if (e.target.classList.contains('row-checkbox')) {
-                    const id = e.target.dataset.id;
-                    if (e.target.checked) {
-                        selectedMonitoringItems.add(id);
-                    } else {
-                        selectedMonitoringItems.delete(id);
-                    }
-                    updateSelectedButtonState();
+            // Sayfa başına öğe sayısı değişikliği
+            this.container.addEventListener('change', (e) => {
+                if (e.target.dataset.action === 'changeItemsPerPage') {
+                    const newItemsPerPage = parseInt(e.target.value);
+                    this.setItemsPerPage(newItemsPerPage);
                 }
             });
+        }
 
-            // Seçileni kaldır butonu
-            removeSelectedBtn.addEventListener('click', async () => {
-                if (selectedMonitoringItems.size === 0) {
-                    showNotification('Lütfen kaldırmak istediğiniz kayıtları seçin.', 'info');
-                    return;
-                }
-
-                if (!confirm(`Seçilen ${selectedMonitoringItems.size} adet kaydı izleme listesinden kaldırmak istediğinizden emin misiniz?`)) {
-                    return;
-                }
-
-                const user = auth.currentUser;
-                if (!user) {
-                    showNotification('Kayıtları kaldırmak için giriş yapmalısınız.', 'error');
-                    return;
-                }
-
-                let successfulRemovals = 0;
-                let failedRemovals = 0;
-                const itemsToRemove = Array.from(selectedMonitoringItems);
-
-                container.innerHTML = '<div class="loading">Seçili kayıtlar kaldırılıyor...</div>';
-
-                for (const id of itemsToRemove) {
-                    try {
-                        const res = await monitoringService.removeMonitoringItem(user.uid, id);
-                        if (res.success) {
-                            successfulRemovals++;
-                        } else {
-                            console.error(`Kayıt (${id}) kaldırılamadı: ${res.error}`);
-                            failedRemovals++;
-                        }
-                    } catch (error) {
-                        console.error(`Kayıt (${id}) kaldırılamadı:`, error);
-                        failedRemovals++;
-                    }
-                }
-
-                // Tabloyu yeniden yükle
-                try {
-                    const { success, data } = await monitoringService.getMonitoringItems(user.uid);
-                    if (success) {
-                        renderMonitoringTable(data, user.uid);
-                    } else {
-                        container.innerHTML = '<div class="error-message">İzleme listeniz güncellenirken bir hata oluştu.</div>';
-                    }
-                } catch (error) {
-                    container.innerHTML = '<div class="error-message">İzleme listeniz güncellenirken beklenmeyen bir hata oluştu.</div>';
-                }
-
-                // Bildirimleri göster
-                if (successfulRemovals > 0) {
-                    showNotification(`${successfulRemovals} kayıt başarıyla kaldırıldı.`, 'success');
-                }
-                if (failedRemovals > 0) {
-                    showNotification(`${failedRemovals} kayıt kaldırılamadı. Konsolu kontrol edin.`, 'error');
-                }
-            });
-
-        } catch (error) {
-            console.error('Sayfa başlatma hatası:', error);
-            const container = document.getElementById('monitoringTableContainer');
-            if (container) {
-                container.innerHTML = '<div class="error-message">Sayfa yüklenirken bir hata oluştu. Lütfen sayfayı yenileyin.</div>';
+        goToPage(page) {
+            const newPage = Math.max(1, Math.min(page, this.totalPages));
+            if (newPage !== this.currentPage) {
+                this.currentPage = newPage;
+                this.render();
+                this.options.onPageChange(newPage, this.options.itemsPerPage);
             }
         }
-    });
-</script>
-</body>
-</html>
+
+        setItemsPerPage(itemsPerPage) {
+            this.options.itemsPerPage = itemsPerPage;
+            
+            // Mevcut pozisyonu korumaya çalış
+            const currentFirstItem = (this.currentPage - 1) * this.options.itemsPerPage + 1;
+            this.currentPage = Math.ceil(currentFirstItem / itemsPerPage);
+            
+            this.totalPages = this.getTotalPages();
+            this.currentPage = Math.max(1, Math.min(this.currentPage, this.totalPages));
+            
+            this.render();
+            this.options.onPageChange(this.currentPage, this.options.itemsPerPage);
+        }
+
+        reset() {
+            this.currentPage = 1;
+            this.render();
+        }
+
+        destroy() {
+            if (this.container) {
+                this.container.innerHTML = '';
+            }
+        }
+
+        getCurrentPage() {
+            return this.currentPage;
+        }
+
+        getItemsPerPage() {
+            return this.options.itemsPerPage;
+        }
+
+        getTotalItems() {
+            return this.totalItems;
+        }
+    }
+
+    // Global değişkenler
+    const auth = getAuth();
+    let selectedMonitoringItems = new Set();
+    let allPersons = [];
+    let pagination = null;
+    let allMonitoringData = [];
+    let filteredData = [];
+    let currentFilters = {
+        search: '',
+        status: 'all',
+        niceClass: '',
+        owner: ''
+    };
+
+    // Pagination'ı başlat
+    function initializePagination() {
+        pagination = new Pagination({
+            containerId: 'paginationContainer',
+            itemsPerPage: 20,
+            maxVisiblePages: 5,
+            showFirstLast: true,
+            showPrevNext: true,
+            showPageInfo: true,
+            showItemsPerPageSelector: true,
+            itemsPerPageOptions: [10, 20, 50, 100],
+            onPageChange: (page, itemsPerPage) => {
+                renderCurrentPage();
+                selectedMonitoringItems.clear();
+                updateSelectedButtonState();
+                
+                // Sayfanın üstüne scroll yap
+                document.querySelector('.accruals-container').scrollIntoView({ 
+                    behavior: 'smooth', 
+                    block: 'start' 
+                });
+            }
+        });
+    }
+
+    // Filtreleri kur
+    function setupFilters() {
+        const filterSection = document.getElementById('filterSection');
+        
+        // Filtre event listener'ları
+        const searchInput = document.getElementById('searchFilter');
+        const statusSelect = document.getElementById('statusFilter');
+        const niceClassInput = document.getElementById('niceClassFilter');
+        const ownerInput = document.getElementById('ownerFilter');
+        const clearButton = document.getElementById('clearFilters');
+        
+        // Debounce fonksiyonu
+        const debounce = (func, wait) => {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        };
+
+        // Filtre uygulama fonksiyonu
+        const applyFiltersDebounced = debounce(() => {
+            currentFilters.search = searchInput?.value || '';
+            currentFilters.status = statusSelect?.value || 'all';
+            currentFilters.niceClass = niceClassInput?.value || '';
+            currentFilters.owner = ownerInput?.value || '';
+            
+            applyFilters();
+        }, 300);
+
+        // Event listener'ları ekle
+        if (searchInput) {
+            searchInput.addEventListener('input', applyFiltersDebounced);
