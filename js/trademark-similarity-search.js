@@ -1,5 +1,3 @@
-// public/js/trademark-similarity-search.js
-
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
 import {
   getFirestore, collection, getDocs
@@ -7,7 +5,7 @@ import {
 import { firebaseConfig } from '../firebase-config.js';
 
 const algoliaClient = algoliasearch('THCIEJJTZ9', 'b6c38850bfc00adcf0ecdd9a14638c27');
-const index = algoliaClient.initIndex('trademark_bulletin_records');
+const index = algoliaClient.initIndex('trademark_bulletin_records_live');
 
 initializeApp(firebaseConfig);
 const db = getFirestore();
@@ -53,70 +51,40 @@ startButton.addEventListener('click', async () => {
     <li><strong>${m.markName}</strong> (${m.applicationNo})</li>
   `).join('');
 
-  // Aramaları sırayla başlat
   const allResults = [];
   for (const trademark of monitored) {
-    const results = await runSimilaritySearch(trademark, selectedBulletin);
-    allResults.push({ trademark, ...results });
+    try {
+      const hits = await runSimilaritySearch(trademark, selectedBulletin);
+      allResults.push({ trademark, hits });
+    } catch (e) {
+      console.error("Arama hatası:", trademark.markName, e);
+      allResults.push({ trademark, hits: [] });
+    }
   }
 
-  renderSearchResults(allResults);
+  renderCombinedResults(allResults);
 });
 
 async function runSimilaritySearch(trademark, bulletinId) {
   const query = trademark.markName;
-  const targetDate = new Date(trademark.priorityDate || trademark.applicationDate).getTime();
-  const targetNice = trademark.niceClasses || [];
-
-const { hits } = await index.search(query, {
-  filters: `bulletinId:'${bulletinId}'`,
-  hitsPerPage: 1000,
-});
-
-  const previous = [], differentNice = [], normal = [];
-
-  for (const hit of hits) {
-    const hitDate = new Date(hit.priorityDate || hit.applicationDate).getTime();
-    const hitNice = hit.niceClasses || [];
-
-    const hasCommonNice = targetNice.some(cls =>
-      hitNice.some(h => h.replace(/\D/g, '') === cls.replace(/\D/g, ''))
-    );
-    const isPrevious = hitDate < targetDate;
-
-    if (isPrevious) {
-      previous.push(hit);
-    } else if (!hasCommonNice) {
-      differentNice.push(hit);
-    } else {
-      normal.push(hit);
-    }
-  }
-
-  return { previous, differentNice, normal };
+  const { hits } = await index.search(query, {
+    filters: `bulletinId:'${bulletinId}'`,
+    hitsPerPage: 1000
+  });
+  return hits;
 }
 
-function renderSearchResults(results) {
+function renderCombinedResults(results) {
   let html = '';
 
-  results.forEach(({ trademark, previous, normal, differentNice }) => {
+  results.forEach(({ trademark, hits }) => {
     html += `<div class="result-block">
       <h3>${trademark.markName} (${trademark.applicationNo})</h3>`;
-
-    if (previous.length > 0) {
-      html += `<h4>Önceki Tarihli Benzer Marka</h4>${buildList(previous)}`;
-    }
-    if (normal.length > 0) {
-      html += `<h4>Benzer Markalar</h4>${buildList(normal)}`;
-    }
-    if (differentNice.length > 0) {
-      html += `<h4>Farklı Nice Sınıfı</h4>${buildList(differentNice)}`;
-    }
-
-    if (previous.length + normal.length + differentNice.length === 0) {
+    if (hits.length > 0) {
+      html += buildList(hits);
+    } else {
       html += `<p>Benzer marka bulunamadı.</p>`;
     }
-
     html += `</div><hr/>`;
   });
 
