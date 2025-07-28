@@ -138,6 +138,7 @@
     
     let runTrademarkSearch;
     let allSimilarResults = [];
+    let monitoringTrademarks = [];
     let filteredMonitoringTrademarks = [];
     let allPersons = [];
     let pagination;
@@ -151,6 +152,14 @@
     const loadingIndicator = document.getElementById('loadingIndicator');
     const noRecordsMessage = document.getElementById('noRecordsMessage');
     const infoMessageContainer = document.getElementById('infoMessageContainer');
+    
+    const debounce = (func, delay) => {
+        let timeout;
+        return (...args) => {
+            clearTimeout(timeout);
+            timeout = setTimeout(() => func(...args), delay);
+        };
+    };
 
     function initializePagination() {
         pagination = new Pagination({
@@ -165,7 +174,11 @@
         const personsResult = await personService.getPersons();
         if (personsResult.success) allPersons = personsResult.data;
         await loadBulletinOptions();
-        await loadMonitoringTrademarks();
+        
+        const snapshot = await getDocs(collection(db, 'monitoringTrademarks'));
+        monitoringTrademarks = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        
+        applyMonitoringListFilters();
     }
 
     async function loadBulletinOptions() {
@@ -174,19 +187,19 @@
         bulletins.sort((a, b) => new Date(b.bulletinDate) - new Date(a.bulletinDate));
         bulletinSelect.innerHTML = '<option value="">Bülten seçin...</option>' + bulletins.map(b => `<option value="${b.id}">${b.bulletinNo} - ${b.bulletinDate}</option>`).join('');
     }
-
-    async function loadMonitoringTrademarks() {
+    
+    function applyMonitoringListFilters() {
         const ownerFilter = ownerSearchInput.value.toLowerCase().trim();
         const niceFilter = niceClassSearchInput.value.trim();
-        const snapshot = await getDocs(collection(db, 'monitoringTrademarks'));
         
-        filteredMonitoringTrademarks = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })).filter(data => {
+        filteredMonitoringTrademarks = monitoringTrademarks.filter(data => {
             const ownerName = (data.owners?.[0]?.name || '').toLowerCase();
             const niceClasses = Array.isArray(data.niceClass) ? data.niceClass.join(' ') : (data.niceClass || '');
             const ownerMatch = !ownerFilter || ownerName.includes(ownerFilter);
             const niceMatch = !niceFilter || niceClasses.includes(niceFilter);
             return ownerMatch && niceMatch;
         });
+        
         renderMonitoringList();
         checkCacheAndToggleSearchButton();
     }
@@ -212,9 +225,12 @@
         const selectedBulletin = bulletinSelect.value;
         startSearchBtn.disabled = true;
         infoMessageContainer.innerHTML = '';
-        resultsTableBody.innerHTML = '';
-        noRecordsMessage.style.display = 'none';
-        pagination.update(0);
+        
+        if (allSimilarResults.length > 0) {
+            allSimilarResults = [];
+            pagination.update(0);
+            renderCurrentPageOfResults();
+        }
 
         if (!selectedBulletin || filteredMonitoringTrademarks.length === 0) {
             return;
@@ -290,16 +306,21 @@
 
         loadingIndicator.style.display = 'none';
         
-        // DÜZELTME BURADA: Buton sadece manuel aramadan sonra aktif edilecek.
-        if (!fromCacheOnly) {
-            startSearchBtn.disabled = false;
-        }
-        
         const infoMessage = `Toplam ${allSimilarResults.length} benzer sonuç bulundu. (${cachedResults.length} önbellekten, ${newSearchResults.length} yeni arama ile)`;
         infoMessageContainer.innerHTML = `<div class="info-message">${infoMessage}</div>`;
 
         pagination.update(allSimilarResults.length, 1);
         renderCurrentPageOfResults();
+        
+        // DÜZELTME: Arama bittikten sonra butonun durumunu yeniden kontrol ETMEK YERİNE,
+        // Eğer yeni arama yapıldıysa ve artık hepsi önbellekteyse, butonu pasif yap.
+        if (newSearchResults.length > 0) {
+            await checkCacheAndToggleSearchButton(); // Bu, durumu yeniden değerlendirir ve gerekirse butonu pasif yapar.
+        } else if (fromCacheOnly) {
+             startSearchBtn.disabled = true; // Sadece cache'den yüklendiyse pasif kalmalı.
+        } else {
+             startSearchBtn.disabled = false; // Diğer durumlarda aktif olabilir.
+        }
     }
 
     function renderCurrentPageOfResults() {
@@ -340,6 +361,9 @@
         alert(`Kayıt ID: ${recordId} - Bu özellik geliştirilecek.`);
     };
 
+    const debouncedFilter = debounce(applyMonitoringListFilters, 400);
+
+    // EVENT LISTENERS
     startSearchBtn.addEventListener('click', () => performSearch(false));
     clearFiltersBtn.addEventListener('click', () => {
         ownerSearchInput.value = '';
@@ -349,11 +373,11 @@
         infoMessageContainer.innerHTML = '';
         noRecordsMessage.style.display = 'none';
         pagination.update(0);
-        loadMonitoringTrademarks();
+        applyMonitoringListFilters();
     });
     
-    ownerSearchInput.addEventListener('input', loadMonitoringTrademarks);
-    niceClassSearchInput.addEventListener('input', loadMonitoringTrademarks);
+    ownerSearchInput.addEventListener('input', debouncedFilter);
+    niceClassSearchInput.addEventListener('input', debouncedFilter);
     bulletinSelect.addEventListener('change', checkCacheAndToggleSearchButton);
 
     document.addEventListener('DOMContentLoaded', async () => {
