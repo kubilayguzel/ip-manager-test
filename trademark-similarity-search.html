@@ -290,16 +290,16 @@
 
         loadingIndicator.style.display = 'none';
         
+        // DÜZELTME BURADA: Buton sadece manuel aramadan sonra aktif edilecek.
+        if (!fromCacheOnly) {
+            startSearchBtn.disabled = false;
+        }
+        
         const infoMessage = `Toplam ${allSimilarResults.length} benzer sonuç bulundu. (${cachedResults.length} önbellekten, ${newSearchResults.length} yeni arama ile)`;
         infoMessageContainer.innerHTML = `<div class="info-message">${infoMessage}</div>`;
 
         pagination.update(allSimilarResults.length, 1);
         renderCurrentPageOfResults();
-
-        // *** DÜZELTME BURADA ***
-        // Arama bittikten sonra, buton durumunu yeniden kontrol et.
-        // Bu, yeni sonuçlar önbelleğe alındığı için butonun pasif olmasını sağlar.
-        checkCacheAndToggleSearchButton();
     }
 
     function renderCurrentPageOfResults() {
