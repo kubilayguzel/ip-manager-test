@@ -3,705 +3,307 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>IP Manager - Marka Bülten İzleme</title>
+    <title>IP Manager - Marka Benzerlik Araştırması</title>
     <style>
-        /* Shared styles matching the accruals page */
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333; }
-        
+        /* Bu sayfaya özel stiller */
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333; display: flex; }
         .page-wrapper { flex-grow: 1; display: flex; flex-direction: column; height: 100vh; overflow-y: auto; background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); }
         .main-container { width: 100%; padding: 30px; margin: 0; }
-        
+
         .page-header { background: rgba(255, 255, 255, 0.95); padding: 30px; border-radius: 20px; margin-bottom: 30px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1); }
         .page-title { font-size: 2em; color: #1e3c72; margin-bottom: 10px; }
         .page-subtitle { color: #666; font-size: 1.1em; }
-        
-        .monitoring-container { background: rgba(255, 255, 255, 0.95); border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); overflow: hidden; margin-bottom: 30px; }
-        .monitoring-header { padding: 20px 30px; border-bottom: 1px solid #e1e8ed; }
-        .monitoring-header h3 { color: #1e3c72; margin-bottom: 20px; font-size: 1.3em; }
-        
-        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px 25px; }
-        .form-group { margin-bottom: 15px; }
-        .form-label { display: block; margin-bottom: 8px; font-weight: 600; color: #333; }
-        .form-input, .form-select { 
-            width: 100%; 
-            padding: 12px 15px; 
-            border: 2px solid #e1e8ed; 
-            border-radius: 10px; 
-            font-size: 1em; 
-            transition: all 0.3s ease; 
-            background: white; 
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+
+        .search-container {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+            margin-bottom: 30px;
         }
-        .form-input:focus, .form-select:focus { 
-            border-color: #1e3c72; 
-            outline: none; 
-            box-shadow: 0 0 0 3px rgba(30, 60, 114, 0.1); 
+
+        .search-form {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .form-row {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .form-group {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-width: 200px;
+        }
+
+        .form-group label {
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #495057;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid #ced4da;
+            font-size: 1em;
+            transition: all 0.3s ease;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #1e3c72;
+            box-shadow: 0 0 0 3px rgba(30, 60, 114, 0.1);
+        }
+
+        .btn-search {
+            background: linear-gradient(45deg, #1e3c72, #2a5298);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1.1em;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            align-self: flex-start;
+        }
+
+        .btn-search:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(30, 60, 114, 0.2);
         }
         
-        .btn { 
-            padding: 12px 24px; 
-            border: none; 
-            border-radius: 10px; 
-            cursor: pointer; 
-            font-size: 1em; 
-            font-weight: 600; 
-            transition: all 0.3s ease; 
-            text-decoration: none; 
-            display: inline-block; 
-            text-align: center; 
+        .btn-search:disabled {
+            background: #cccccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
         }
-        .btn-primary { background: #1e3c72; color: white; }
-        .btn-primary:hover { background: #2a5298; transform: translateY(-1px); }
-        .btn-secondary { background: #6c757d; color: white; }
-        .btn-secondary:hover { background: #5a6268; transform: translateY(-1px); }
-        
-        .results-container { background: rgba(255, 255, 255, 0.95); border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); overflow: hidden; }
-        .results-header { padding: 20px 30px; border-bottom: 1px solid #e1e8ed; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; }
-        .results-header h3 { color: #1e3c72; font-size: 1.3em; }
-        
-        .results-table { width: 100%; border-collapse: collapse; }
-        .results-table th, .results-table td { padding: 15px; text-align: left; border-bottom: 1px solid #f0f0f0; }
-        .results-table th { background: #f8f9fa; font-weight: 600; }
-        .results-table tbody tr:hover { background-color: #f8f9fa; }
-        
-        .status-badge { padding: 4px 10px; border-radius: 12px; font-size: 0.8em; font-weight: 500; color: white; text-align: center; }
-        .status-new { background-color: #28a745; }
-        .status-monitored { background-color: #007bff; }
-        .status-expired { background-color: #6c757d; }
-        
-        .action-btn { 
-            background: #007bff; 
-            color: white; 
-            border: none; 
-            padding: 8px 12px; 
-            border-radius: 6px; 
-            cursor: pointer; 
-            margin-left: 5px; 
-            transition: all 0.3s ease; 
+
+        .results-container {
+            margin-top: 30px;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            padding: 30px;
+        }
+
+        .results-header {
+            font-size: 1.5em;
+            color: #1e3c72;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #dee2e6;
+            padding-bottom: 10px;
+        }
+
+        .results-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+        }
+
+        .result-card {
+            border: 1px solid #e0e0e0;
+            border-radius: 10px;
+            padding: 15px;
+            transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .result-card:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            transform: translateY(-5px);
+        }
+
+        .result-image {
+            width: 100%;
+            height: 150px;
+            object-fit: contain;
+            margin-bottom: 15px;
+            border-radius: 5px;
+        }
+
+        .result-title {
+            font-weight: 600;
+            font-size: 1.1em;
+            margin-bottom: 10px;
+        }
+
+        .result-info {
             font-size: 0.9em;
+            color: #666;
+            margin-bottom: 5px;
         }
-        .action-btn:hover { background: #0056b3; transform: translateY(-1px); }
-        .action-btn.view-btn { background-color: #17a2b8; }
-        .action-btn.view-btn:hover { background-color: #138496; }
-        .action-btn.monitor-btn { background-color: #28a745; }
-        .action-btn.monitor-btn:hover { background-color: #218838; }
-        
-        .loading { text-align: center; padding: 50px; color: #666; }
-        .no-records { text-align: center; padding: 50px; color: #666; }
-        
-        .filter-group { display: flex; gap: 10px; align-items: center; }
-        .filter-label { font-weight: 500; }
-        .filter-select { padding: 8px 12px; border-radius: 8px; border: 1px solid #ccc; }
-        
-        .search-section { background: #f8f9fa; padding: 20px; border-radius: 15px; margin-bottom: 20px; }
-        
-        .form-actions { 
-            display: flex; 
-            gap: 15px; 
-            align-items: center; 
-            margin-top: 20px; 
-            flex-wrap: wrap; 
+        .result-info strong {
+            color: #333;
         }
         
-        @media (max-width: 768px) {
-            .form-grid { grid-template-columns: 1fr; }
-            .form-actions { flex-direction: column; align-items: stretch; }
+        .status-message {
+            text-align: center;
+            padding: 40px;
+            font-size: 1.1em;
+            color: #555;
+            background-color: #f8f9fa;
+            border-radius: 10px;
         }
-        .nice-class-badge {
-        display: inline-block;
-        padding: 4px 8px;
-        border-radius: 8px;
-        font-size: 0.8em;
-        background-color: #e2e3e5;
-        color: #333;
-        margin-right: 4px;
-        }
-
-        .nice-class-badge.match {
-        background-color: #28a745; /* yeşil arkaplan */
-        color: white;
-        font-weight: bold;
-        }
-
     </style>
 </head>
-<!-- Önce HTML'de Algolia dinamik yükleme script'i (</body> etiketinden önce) -->
-<script>
-// Algolia'yı dinamik olarak yükle
-function loadAlgolia() {
-    return new Promise((resolve, reject) => {
-        // Önce jsdelivr dene
-        const script1 = document.createElement('script');
-        script1.src = 'https://cdn.jsdelivr.net/npm/algoliasearch@4/dist/algoliasearch-lite.umd.js';
-        script1.onload = () => {
-            console.log("✅ Algolia yüklendi (jsdelivr)");
-            resolve(true);
-        };
-        script1.onerror = () => {
-            console.log("❌ jsdelivr başarısız, unpkg deneniyor...");
-            
-            // unpkg dene
-            const script2 = document.createElement('script');
-            script2.src = 'https://unpkg.com/algoliasearch@4/dist/algoliasearch-lite.umd.js';
-            script2.onload = () => {
-                console.log("✅ Algolia yüklendi (unpkg)");
-                resolve(true);
-            };
-            script2.onerror = () => {
-                console.log("❌ Algolia yüklenemedi, fallback kullanılacak");
-                resolve(false);
-            };
-            
-            document.head.appendChild(script2);
-        };
-        
-        document.head.appendChild(script1);
-    });
-}
-
-// Sayfa yüklendiğinde Algolia'yı yükle
-window.algoliaLoadPromise = loadAlgolia();
-</script>
 <body>
+    <div id="notification-container" class="notification-container"></div>
     <div id="layout-placeholder"></div>
-    <div id="sidebar-container"></div>
     <div class="page-wrapper">
         <main class="main-container">
             <section class="page-header">
-                <h1 class="page-title">Marka Bülten İzleme</h1>
-                <p class="page-subtitle">Marka bültenlerini takip edin ve yeni başvuruları izleyin.</p>
+                <h1 class="page-title">Marka Benzerlik Araştırması</h1>
+                <p class="page-subtitle">Marka adı ve Nice sınıflarına göre benzerlik araştırması yapın.</p>
             </section>
-    
-            <div class="monitoring-container">
-                <div class="monitoring-header">
-                    <h3>Arama Kriterleri</h3>
-                    <div class="search-section">
-                        <div class="form-grid">
-                            <div class="form-group">
-                                <label for="ownerSearch" class="form-label">Sahip</label>
-                                <input type="text" id="ownerSearch" class="form-input" placeholder="Sahip adına göre filtrele">
-                            </div>
-                            <div class="form-group">
-                                <label for="niceClassSearch" class="form-label">Nice Sınıfı</label>
-                                <input type="text" id="niceClassSearch" class="form-input" placeholder="Nice sınıfına göre filtrele (örn: 35)">
-                            </div>
-                            <div class="form-group">
-                                <label for="bulletinSelect" class="form-label">Bülten Seç</label>
-                                <select id="bulletinSelect" class="form-select">
-                                    <option value="">Bülten seçiniz...</option>
-                                    <!-- Bültenler Firebase'dan dinamik olarak yüklenir -->
-                                </select>
-                            </div>
+
+            <div class="search-container">
+                <form id="searchForm" class="search-form">
+                    <div class="form-row">
+                        <div class="form-group" style="flex-grow: 2;">
+                            <label for="trademarkName">Marka Adı</label>
+                            <input type="text" id="trademarkName" name="trademarkName" required>
                         </div>
-                        <div style="text-align: right; margin-top: 15px;">
-                            <button type="button" class="btn btn-secondary" id="clearFiltersBtn">🗑️ Temizle</button>
+                        <div class="form-group">
+                            <label for="niceClasses">Nice Sınıfları</label>
+                            <input type="text" id="niceClasses" name="niceClasses" placeholder="Örn: 9, 35, 42">
                         </div>
                     </div>
-                </div>
+                    <button type="submit" id="searchButton" class="btn-search">Ara</button>
+                </form>
             </div>
 
-            <div class="results-container">
-                <div class="results-header">
-                    <h3>Filtrelenmiş İzleme Listesi</h3>
-                </div>
-                <div class="table-container">
-                    <table class="results-table">
-                        <thead>
-                            <tr>
-                                <th>Marka Adı</th>
-                                <th>Başvuru No</th>
-                                <th>Sahip</th>
-                                <th>Nice Sınıfı</th>
-                                <th>Başvuru Tarihi</th>
-                                <th>Durum</th>
-                            </tr>
-                        </thead>
-                        <tbody id="monitoringListBody">
-                            <!-- İzleme listesi dinamik olarak yüklenir -->
-                        </tbody>
-                    </table>
-                    <div id="loadingMonitoringList" class="loading" style="display: none;">
-                        İzleme listesi yükleniyor...
+            <div id="resultsContainer" class="results-container" style="display: none;">
+                <h2 class="results-header">Arama Sonuçları</h2>
+                <div id="resultsGrid" class="results-grid">
                     </div>
-                    <div id="noMonitoringRecords" class="no-records" style="display: none;">
-                        İzleme listenizde marka bulunamadı.
-                    </div>
-                </div>
-                
-                <div style="text-align: right; padding: 20px;">
-                    <button type="button" class="btn btn-primary" id="startSearchBtn">🔍 Aramayı Başlat</button>
-                </div>
+                 <div id="paginationContainer"></div>
             </div>
-
-            <div class="results-container" style="margin-top: 30px;">
-                <div class="results-header">
-                    <h3>Arama Sonuçları</h3>
-                    <div class="filter-group">
-                        <label class="filter-label" for="statusFilter">Duruma Göre Filtrele:</label>
-                        <select id="statusFilter" class="filter-select">
-                            <option value="all">Tümü</option>
-                            <option value="new">Yeni</option>
-                            <option value="monitored">İzleniyor</option>
-                            <option value="expired">Süresi Dolmuş</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="table-container">
-                    <table class="results-table">
-                        <thead>
-                            <tr>
-                                <th>Başvuru No</th>
-                                <th>Marka Adı</th>
-                                <th>Sahip</th>
-                                <th>Nice Sınıfı</th>
-                                <th>Durum</th>
-                                <th>İşlemler</th>
-                            </tr>
-                        </thead>
-                        <tbody id="resultsTableBody">
-                            <!-- Arama sonuçları dinamik olarak yüklenir -->
-                        </tbody>
-                    </table>
-                    <div id="loadingIndicator" class="loading" style="display: none;">
-                        <div>🔍 Arama yapılıyor...</div>
-                    </div>
-                    <div id="noRecordsMessage" class="no-records" style="display: none;">
-                        Arama kriterlerinize uygun sonuç bulunamadı.
-                    </div>
-                </div>
-            </div>
+           
         </main>
     </div>
-<!-- Ana JavaScript Kodu -->
-<script type="module">
+
+    <script type="module">
+        import Pagination from './js/pagination.js'; // Pagination import edildi
         import { loadSharedLayout } from './js/layout-loader.js';
-        import { authService, monitoringService, personService } from './firebase-config.js';
-        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
-        import { getFirestore, collection, getDocs } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
-        
-        // Dinamik import ile run-search.js'yi yükle
-        let runTrademarkSearch;
-        
-        async function loadTrademarkSearchModule() {
-            try {
-                console.log("📦 run-search.js modülü yükleniyor...");
-                const module = await import('./js/trademark-similarity/run-search.js');
-                runTrademarkSearch = module.runTrademarkSearch;
-                console.log("✅ run-search.js başarıyla yüklendi - GERÇEKLİ ALGOLIA AKTİF");
-                return true;
-            } catch (error) {
-                console.error("❌ run-search.js yüklenemedi:", error);
-                console.log("🔄 Fallback arama fonksiyonuna geçiliyor...");
-                
-                // Fallback: Mock arama
-                runTrademarkSearch = async function(monitoredMark, selectedBulletinNo) {
-                    console.log("🚀 Fallback (Mock) arama çalışıyor...");
-                    
-                    const mockResults = [
-                        {
-                            objectID: "fallback_" + Date.now(),
-                            markName: "Mock: " + monitoredMark.markName,
-                            applicationNo: "2025/" + Math.floor(Math.random() * 100000),
-                            holders: ["Fallback Şirket"],
-                            niceClasses: ["35"],
-                            bulletinId: selectedBulletinNo,
-                            applicationDate: "2025-05-01",
-                            similarityScore: 0.75,
-                            sameClass: true,
-                            monitoredNiceClasses: monitoredMark.niceClasses || []
-                        }
-                    ];
-                    
-                    console.log("📊 Fallback sonuç:", mockResults.length, "kayıt");
-                    return mockResults;
-                };
-                
-                return false;
-            }
-        }
+        import { getAuth } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { showNotification } from './utils.js';
+        import { trademarkSimilarityService } from './firebase-config.js';
 
-        // Firebase configuration
-        const firebaseConfig = {
-            apiKey: "AIzaSyDbdqfiVbobnl1BtyiWxhD4bfIcREw8ZRc",
-            authDomain: "ip-manager-production-aab4b.firebaseapp.com",
-            projectId: "ip-manager-production-aab4b",
-            storageBucket: "ip-manager-production-aab4b.firebasestorage.app",
-            messagingSenderId: "594650169512",
-            appId: "1:594650169512:web:43496005e063a40511829d",
-            measurementId: "G-QY1P3ZCMC4"
-        };
+        let allResults = [];
+        let pagination; // Pagination nesnesi için global değişken
 
-        // Initialize Firebase
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-
-        // Initialize Algolia
-        let algoliaClient, index;
-
-        function initializeAlgolia() {
-            if (!window.algoliasearch) {
-                console.error("❌ Algolia library not loaded yet");
-                return false;
-            }
-            
-            try {
-                algoliaClient = algoliasearch('THCIEJJTZ9', 'b6c38850bfc00adcf0ecdd9a14638c27');
-                index = algoliaClient.initIndex('trademark_bulletin_records_live');
-                console.log('✅ Algolia initialized successfully');
-                return true;
-            } catch (error) {
-                console.error('❌ Algolia initialization failed:', error);
-                return false;
-            }
-        }
-
-        // Algolia'nın yüklenmesini bekle
-        async function waitForAlgolia() {
-            try {
-                console.log("⏳ Algolia yüklenmesi bekleniyor...");
-                const loaded = await window.algoliaLoadPromise;
-                
-                if (loaded && window.algoliasearch) {
-                    console.log("✅ Algolia hazır");
-                    return true;
-                } else {
-                    console.log("❌ Algolia yüklenemedi");
-                    return false;
-                }
-            } catch (error) {
-                console.error("❌ Algolia yükleme hatası:", error);
-                return false;
-            }
-        }
-
-        // Global variables
-        let currentResults = [];
-        let monitoringTrademarks = [];
-        let filteredMonitoringTrademarks = [];
-        let allPersons = [];
-        let currentFilters = {
-            owner: '',
-            niceClass: '',
-            bulletin: ''
-        };
-
-        // DOM elements
-        const startSearchBtn = document.getElementById('startSearchBtn');
-        const clearFiltersBtn = document.getElementById('clearFiltersBtn');
-        const ownerSearchInput = document.getElementById('ownerSearch');
-        const niceClassSearchInput = document.getElementById('niceClassSearch');
-        const bulletinSelect = document.getElementById('bulletinSelect');
-        const statusFilter = document.getElementById('statusFilter');
-        const resultsTableBody = document.getElementById('resultsTableBody');
-        const loadingIndicator = document.getElementById('loadingIndicator');
-        const noRecordsMessage = document.getElementById('noRecordsMessage');
-
-        // Utility functions
-        function showLoading(show) {
-            if (loadingIndicator) {
-                loadingIndicator.style.display = show ? 'block' : 'none';
-            }
-        }
-
-        function showError(message) {
-            showLoading(false);
-            if (noRecordsMessage) {
-                noRecordsMessage.textContent = message;
-                noRecordsMessage.style.display = 'block';
-            }
-            console.error("Error:", message);
-        }
-
-        function hideMessages() {
-            if (noRecordsMessage) noRecordsMessage.style.display = 'none';
-        }
-
-        function formatBulletinDate(dateString) {
-            if (!dateString) return 'Tarih Yok';
-            
-            const parseBulletinDate = (dateStr) => {
-                if (!dateStr) return new Date(0);
-                const parts = dateStr.split('.');
-                if (parts.length === 3) {
-                    return new Date(parts[2], parts[1] - 1, parts[0]);
-                }
-                const date = new Date(dateStr);
-                return isNaN(date.getTime()) ? new Date(0) : date;
-            };
-            
-            const date = parseBulletinDate(dateString);
-            if (isNaN(date.getTime())) {
-                return dateString;
-            }
-            
-            return date.toLocaleDateString('tr-TR');
-        }
-
-        // Load monitoring trademarks from Firestore
-        async function loadMonitoringTrademarks() {
-            try {
-                console.log("📋 İzleme markaları yükleniyor...");
-                const snapshot = await getDocs(collection(db, 'monitoringTrademarks'));
-                monitoringTrademarks = [];
-                
-                snapshot.forEach(doc => {
-                    const data = doc.data();
-                    monitoringTrademarks.push({ id: doc.id, ...data });
-                });
-                
-                filteredMonitoringTrademarks = [...monitoringTrademarks];
-                console.log(`✅ ${monitoringTrademarks.length} izleme markası yüklendi`);
-                
-                // İzleme listesi tablosunu render et
-                renderMonitoringList();
-                
-            } catch (error) {
-                console.error("❌ İzleme markaları yükleme hatası:", error);
-            }
-        }
-
-        // İzleme listesi tablosunu render et
-        function renderMonitoringList() {
-            const monitoringTable = document.querySelector('table tbody');
-            
-            if (monitoringTable && filteredMonitoringTrademarks.length > 0) {
-                const html = filteredMonitoringTrademarks.map(trademark => `
-                    <tr>
-                        <td>${trademark.title || trademark.markName || '-'}</td>
-                        <td>${trademark.applicationNumber || '-'}</td>
-                        <td>${trademark.owners?.[0]?.name || '-'}</td>
-                        <td>${Array.isArray(trademark.niceClass) ? trademark.niceClass.join(', ') : trademark.niceClass || '-'}</td>
-                        <td>${trademark.applicationDate || '-'}</td>
-                        <td>Aktif</td>
-                    </tr>
-                `).join('');
-                
-                monitoringTable.innerHTML = html;
-                console.log("✅ İzleme listesi tablosu render edildi");
-            }
-        }
-
-        // Load bulletin options
-        async function loadBulletinOptions() {
-            try {
-                console.log("📅 Bülten listesi yükleniyor...");
-                const snapshot = await getDocs(collection(db, 'trademarkBulletins'));
-                const bulletins = [];
-                
-                snapshot.forEach(doc => {
-                    bulletins.push({ id: doc.id, ...doc.data() });
-                });
-                
-                bulletins.sort((a, b) => new Date(b.bulletinDate) - new Date(a.bulletinDate));
-                
-                bulletinSelect.innerHTML = '<option value="">Bülten seçin...</option>' +
-                    bulletins.map(b => `<option value="${b.id}">${b.bulletinNo} - ${b.bulletinDate}</option>`).join('');
-                
-                console.log(`✅ ${bulletins.length} bülten yüklendi`);
-                
-            } catch (error) {
-                console.error("❌ Bülten listesi yükleme hatası:", error);
-            }
-        }
-
-        // Ana arama fonksiyonu  
-        async function performSearch() {
-            console.log('🚀 Arama başlatılıyor...');
-            showLoading(true);
-            hideMessages();
-            
-            try {
-                const ownerFilter = currentFilters.owner.trim();
-                const niceFilter = currentFilters.niceClass.trim();
-                const bulletinFilter = currentFilters.bulletin;
-
-                console.log('🔍 Filtreler:', {
-                    owner: ownerFilter,
-                    niceClass: niceFilter,
-                    bulletin: bulletinFilter
-                });
-
-                // Sadece bülten seçili -> monitoring trademark search
-                if (bulletinFilter && !ownerFilter && !niceFilter) {
-                    console.log('📊 Monitoring trademark araması yapılıyor...');
-                    await performMonitoringTrademarkSearch(bulletinFilter);
-                    return;
-                }
-
-                // Normal Algolia search için diğer kodlar...
-                showError('Normal arama henüz aktif değil. Sadece bülten seçerek monitoring arama yapabilirsiniz.');
-                
-            } catch (error) {
-                console.error('❌ Arama hatası:', error);
-                showError('Arama sırasında bir hata oluştu: ' + error.message);
-            } finally {
-                showLoading(false);
-            }
-        }
-        
-        // Monitoring trademark search - GERÇEKLİ ALGOLİA
-        async function performMonitoringTrademarkSearch(bulletinId) {
-            try {
-                console.log("🚀 GERÇEKLİ Monitoring arama başlatılıyor:", bulletinId);
-                
-                if (filteredMonitoringTrademarks.length === 0) {
-                    showError('İzleme listesinde marka bulunamadı.');
-                    return;
-                }
-
-                console.log(`📋 ${filteredMonitoringTrademarks.length} marka için gerçek arama yapılacak`);
-                const allSimilarResults = [];
-
-                for (const trademark of filteredMonitoringTrademarks) {
-                    console.log("🔍 Gerçek arama yapılıyor:", trademark.title || trademark.markName);
-                    
-                    try {
-                        const searchParams = {
-                            markName: trademark.title || trademark.markName,
-                            applicationDate: trademark.applicationDate,
-                            niceClasses: Array.isArray(trademark.niceClass) 
-                                ? trademark.niceClass 
-                                : (trademark.niceClass ? [trademark.niceClass] : [])
-                        };
-
-                        const result = await runTrademarkSearch(searchParams, bulletinId);
-                        
-                        console.log(`📊 ${trademark.title || trademark.markName} için ${result.length} gerçek sonuç bulundu`);
-
-                        result.forEach(hit => {
-                            allSimilarResults.push({
-                                ...hit,
-                                monitoredTrademark: trademark.title || trademark.markName,
-                                monitoredApplicationNo: trademark.applicationNumber || trademark.applicationNo
-                            });
-                        });
-
-                    } catch (searchError) {
-                        console.error(`❌ ${trademark.title || trademark.markName} için arama hatası:`, searchError);
-                        continue;
-                    }
-                }
-
-                console.log("🎯 Toplam gerçek sonuç:", allSimilarResults.length);
-                currentResults = allSimilarResults;
-                renderMonitoringResults(allSimilarResults);
-                
-            } catch (err) {
-                console.error("❌ Monitoring arama hatası:", err);
-                showError("Gerçek arama sırasında hata oluştu: " + err.message);
-            }
-        }
-
-            function renderMonitoringResults(results) {
-                showLoading(false);
-
-                if (results.length === 0) {
-                    showError('İzlenen markalarınıza benzer yeni marka bulunamadı.');
-                    return;
-                }
-
-                hideMessages();
-
-                const tableHTML = results.map(hit => {
-                    const holders = Array.isArray(hit.holders) ? hit.holders.join(', ') : hit.holders || '';
-                    const monitoredNiceClasses = hit.monitoredNiceClasses || [];
-                    const niceClassHtml = Array.isArray(hit.niceClasses)
-                    ? hit.niceClasses.map(cls => {
-                        const normalized = cls.replace(/\D/g, '');
-                        const isOverlap = monitoredNiceClasses
-                            .map(mc => mc.replace(/\D/g, ''))
-                            .includes(normalized);
-                        return `<span class="nice-class-badge ${isOverlap ? 'match' : ''}">${cls}</span>`;
-                        }).join('')
-                    : hit.niceClasses || '';
-
-                    const similarityScore = hit.similarityScore 
-                        ? (hit.similarityScore * 100).toFixed(0) + '%'
-                        : '-';
-
-                    return `
-                        <tr>
-                            <td>${hit.applicationNo || '-'}</td>
-                            <td>
-                                <strong>${hit.markName || '-'}</strong><br/>
-                                <small>İzlenen: ${hit.monitoredTrademark}</small>
-                            </td>
-                            <td>${holders}</td>
-                            <td>${niceClassHtml}</td>
-                            <td><span class="similarity-score">${similarityScore}</span></td>
-                            <td>
-                                <button class="btn btn-sm btn-primary" onclick="viewRecord('${hit.objectID}')">
-                                    👁️ Görüntüle
-                                </button>
-                            </td>
-                        </tr>
-                    `;
-                }).join('');
-
-                resultsTableBody.innerHTML = tableHTML;
-                console.log("✅ Gerçek arama sonuçları render edildi!");
-            }
-
-
-        // Event handlers
-        window.viewRecord = function(recordId) {
-            console.log('Viewing record:', recordId);
-            alert(`Kayıt görüntüleme özelliği geliştirilecek. ID: ${recordId}`);
-        };
-
-        // Initialize everything when DOM is ready
         document.addEventListener('DOMContentLoaded', async () => {
-            try {
-                console.log("🚀 Sayfa başlatılıyor - GERÇEKLİ ALGOLİA MOD");
-                
-                await loadSharedLayout({ activeMenuLink: 'trademark-similarity-search' });
-                
-                const algoliaReady = await waitForAlgolia();
-                
-                if (algoliaReady) {
-                    console.log("✅ Algolia hazır, gerçek arama aktif");
-                    initializeAlgolia();
-                } else {
-                    console.warn("⚠️ Algolia yüklenemedi, fallback aktif");
-                }
-                
-                await Promise.all([
-                    loadMonitoringTrademarks(),
-                    loadBulletinOptions()
-                ]);
-                
-                const moduleLoaded = await loadTrademarkSearchModule();
-                if (moduleLoaded && algoliaReady) {
-                    console.log("🎯 GELİŞMİŞ GERÇEK ARAMA ALGORİTMASI AKTİF! 🎯");
-                } else {
-                    console.log("⚠️ Fallback arama algoritması aktif");
-                }
-                
-                console.log("✅ Sistem hazır - Gerçek Algolia araması!");
-                
-            } catch (error) {
-                console.error("❌ Initialization error:", error);
+            await loadSharedLayout({ activeMenuLink: 'trademark-similarity-search.html' });
+            
+            const auth = getAuth();
+            if (!auth.currentUser) {
+                window.location.href = 'index.html';
+                return;
             }
+
+            initializePagination(); // Sayfa yüklendiğinde pagination başlatılıyor
+            setupEventListeners();
         });
 
-        // Event Listeners
-        startSearchBtn?.addEventListener('click', async (e) => {
-            e.preventDefault();
-            currentFilters.owner = ownerSearchInput.value.trim();
-            currentFilters.niceClass = niceClassSearchInput.value.trim();
-            currentFilters.bulletin = bulletinSelect.value;
-            await performSearch();
-        });
+        function initializePagination() {
+            pagination = new Pagination({
+                containerId: 'paginationContainer',
+                itemsPerPage: 12, // Kart gösterimi için 12 daha uygun
+                onPageChange: () => {
+                    renderCurrentPage(); // Sayfa değiştiğinde sonuçları yeniden çiz
+                }
+            });
+        }
 
-        clearFiltersBtn?.addEventListener('click', () => {
-            ownerSearchInput.value = '';
-            niceClassSearchInput.value = '';
-            bulletinSelect.value = '';
-            statusFilter.value = 'all';
-            currentFilters = { owner: '', niceClass: '', bulletin: '' };
-            resultsTableBody.innerHTML = '';
-            hideMessages();
-        });
+        function setupEventListeners() {
+            const searchForm = document.getElementById('searchForm');
+            searchForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const trademarkName = document.getElementById('trademarkName').value;
+                const niceClasses = document.getElementById('niceClasses').value;
+                const searchButton = document.getElementById('searchButton');
 
+                if (!trademarkName) {
+                    showNotification('Lütfen bir marka adı girin.', 'warning');
+                    return;
+                }
+
+                const resultsContainer = document.getElementById('resultsContainer');
+                const resultsGrid = document.getElementById('resultsGrid');
+                resultsGrid.innerHTML = '<div class="status-message">Arama yapılıyor, lütfen bekleyin...</div>';
+                document.getElementById('paginationContainer').innerHTML = ''; // Eski pagination'ı temizle
+                resultsContainer.style.display = 'block';
+                searchButton.disabled = true;
+                searchButton.textContent = 'Aranıyor...';
+
+                try {
+                    const result = await trademarkSimilarityService.search(trademarkName, niceClasses);
+                    
+                    if (result.success && result.data && result.data.length > 0) {
+                        allResults = result.data;
+                        // Tüm sonuçları render etmek yerine pagination'ı güncelle
+                        pagination.update(allResults.length, 1);
+                    } else if (result.success) {
+                        allResults = [];
+                        pagination.update(0); // Sonuç yoksa pagination'ı sıfırla
+                        resultsGrid.innerHTML = '<div class="status-message">Benzer marka bulunamadı.</div>';
+                    } else {
+                        throw new Error(result.error || 'Bilinmeyen bir hata oluştu.');
+                    }
+                } catch (error) {
+                    allResults = [];
+                    pagination.update(0);
+                    resultsGrid.innerHTML = `<div class="status-message" style="color: red;">Hata: ${error.message}</div>`;
+                    showNotification('Arama sırasında bir hata oluştu.', 'error');
+                } finally {
+                    searchButton.disabled = false;
+                    searchButton.textContent = 'Ara';
+                }
+            });
+        }
+        
+        // Yeni Fonksiyon: Sadece geçerli sayfadaki sonuçları render eder
+        function renderCurrentPage() {
+            const resultsGrid = document.getElementById('resultsGrid');
+            resultsGrid.innerHTML = ''; 
+
+            const currentPageData = pagination.getCurrentPageData(allResults);
+
+            if (currentPageData.length === 0 && allResults.length > 0) {
+                 resultsGrid.innerHTML = '<div class="status-message">Bu sayfada gösterilecek sonuç bulunamadı.</div>';
+                 return;
+            }
+
+            currentPageData.forEach(item => {
+                const card = document.createElement('div');
+                card.className = 'result-card';
+                
+                const imageHtml = item.image_url ? `<img src="${item.image_url}" alt="${item.markName}" class="result-image">` : '';
+
+                card.innerHTML = `
+                    ${imageHtml}
+                    <div class="result-title">${item.markName || 'N/A'}</div>
+                    <div class="result-info"><strong>Başvuru No:</strong> ${item.applicationNo || 'N/A'}</div>
+                    <div class="result-info"><strong>Başvuru Tarihi:</strong> ${item.applicationDate || 'N/A'}</div>
+                    <div class="result-info"><strong>Nice Sınıfları:</strong> ${item.niceClasses || 'N/A'}</div>
+                    <div class="result-info"><strong>Sahibi:</strong> ${item.holderName || 'N/A'}</div>
+                `;
+                resultsGrid.appendChild(card);
+            });
+        }
     </script>
+</body>
+</html>
