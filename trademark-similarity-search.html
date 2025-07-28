@@ -168,11 +168,7 @@
     };
 
     function initializePagination() {
-        pagination = new Pagination({
-            containerId: 'paginationContainer',
-            itemsPerPage: 10,
-            onPageChange: renderCurrentPageOfResults
-        });
+        pagination = new Pagination({ containerId: 'paginationContainer', itemsPerPage: 10, onPageChange: renderCurrentPageOfResults });
     }
 
     async function loadInitialData() {
@@ -226,25 +222,14 @@
         const selectedBulletin = bulletinSelect.value;
         startSearchBtn.disabled = true;
         researchBtn.disabled = true;
-        infoMessageContainer.innerHTML = '';
         
-        if (allSimilarResults.length > 0) {
-            allSimilarResults = [];
-            pagination.update(0);
-            renderCurrentPageOfResults();
-        }
-
-        if (!selectedBulletin || filteredMonitoringTrademarks.length === 0) {
-            return;
-        }
+        if (!selectedBulletin || filteredMonitoringTrademarks.length === 0) return;
 
         const checkPromises = filteredMonitoringTrademarks.map(tm => searchRecordService.getRecord(`${tm.id}_${selectedBulletin}`));
         const results = await Promise.all(checkPromises);
         const cachedCount = results.filter(r => r.success && r.data).length;
         
-        if (cachedCount > 0) {
-            researchBtn.disabled = false;
-        }
+        if (cachedCount > 0) researchBtn.disabled = false;
 
         if (cachedCount === filteredMonitoringTrademarks.length) {
             startSearchBtn.disabled = true;
@@ -330,7 +315,18 @@
         pagination.update(allSimilarResults.length, 1);
         renderCurrentPageOfResults();
         
-        await checkCacheAndToggleButtonStates();
+        // DÖNGÜYÜ ÖNLEMEK İÇİN BU SATIR KALDIRILDI
+        // await checkCacheAndToggleButtonStates(); 
+        
+        // YERİNE DOĞRUDAN BUTON DURUMLARI AYARLANDI
+        if (allSimilarResults.length > 0) {
+            researchBtn.disabled = false;
+        }
+        if (trademarksToSearch.length === 0) { // Eğer arama sonrası yeni arama kalmadıysa
+             startSearchBtn.disabled = true;
+        } else {
+             startSearchBtn.disabled = false;
+        }
     }
 
     function renderCurrentPageOfResults() {
@@ -370,7 +366,16 @@
     window.viewRecord = (recordId) => alert(`Kayıt ID: ${recordId} - Bu özellik geliştirilecek.`);
 
     const debouncedFilter = debounce(applyMonitoringListFilters, 400);
+    
+    function resetSearchUI() {
+        resultsTableBody.innerHTML = '';
+        infoMessageContainer.innerHTML = '';
+        noRecordsMessage.style.display = 'none';
+        pagination.update(0);
+        checkCacheAndToggleButtonStates();
+    }
 
+    // EVENT LISTENERS
     startSearchBtn.addEventListener('click', () => performSearch(false));
     researchBtn.addEventListener('click', performResearch);
     clearFiltersBtn.addEventListener('click', () => {
@@ -382,7 +387,10 @@
     
     ownerSearchInput.addEventListener('input', debouncedFilter);
     niceClassSearchInput.addEventListener('input', debouncedFilter);
-    bulletinSelect.addEventListener('change', checkCacheAndToggleButtonStates);
+    bulletinSelect.addEventListener('change', () => {
+        resetSearchUI();
+        checkCacheAndToggleButtonStates();
+    });
 
     document.addEventListener('DOMContentLoaded', async () => {
         initializePagination();
