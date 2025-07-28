@@ -1681,7 +1681,8 @@ export const searchRecordService = {
     async getRecord(recordId) {
         if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor." };
         try {
-            const docRef = doc(db, 'searchRecords', recordId);
+            // DOĞRU KOLEKSİYON ADI KULLANILDI
+            const docRef = doc(db, 'monitoringTrademarkRecords', recordId);
             const docSnap = await getDoc(docRef);
             if (docSnap.exists()) {
                 return { success: true, data: docSnap.data() };
@@ -1697,7 +1698,8 @@ export const searchRecordService = {
     async saveRecord(recordId, data) {
         if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor." };
         try {
-            const docRef = doc(db, 'searchRecords', recordId);
+            // DOĞRU KOLEKSİYON ADI KULLANILDI
+            const docRef = doc(db, 'monitoringTrademarkRecords', recordId);
             await setDoc(docRef, data);
             return { success: true };
         } catch (error) {
