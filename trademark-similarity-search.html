@@ -305,7 +305,9 @@
             loadingIndicator.textContent = `Algolia'da ${trademarksToSearch.length} marka için arama yapılıyor...`;
             const searchPromises = trademarksToSearch.map(async (trademark) => {
                 const searchParams = { markName: trademark.title, niceClasses: trademark.niceClass };
+                console.log("🔍 Algolia arama parametreleri:", searchParams, "Bulletin:", selectedBulletin);
                 const results = await runTrademarkSearch(searchParams, selectedBulletin);
+                console.log(`✅ Algolia ${trademark.title} için ${results.length} sonuç döndürdü:`, results);
                 const recordId = `${trademark.id}_${selectedBulletin}`;
                 await searchRecordService.saveRecord(recordId, { results: results, searchDate: new Date().toISOString() });
                 return results.map(hit => ({...hit, source: 'new', monitoredTrademark: trademark.title}));
@@ -326,6 +328,7 @@
         // Arama bittikten sonra butonların durumunu son kez ayarla.
         startSearchBtn.disabled = true;
         researchBtn.disabled = allSimilarResults.length === 0;
+        console.log("📊 Tüm benzer sonuçlar (render öncesi):", allSimilarResults);
     }
 
     function renderCurrentPageOfResults() {
