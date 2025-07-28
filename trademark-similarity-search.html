@@ -32,10 +32,9 @@
         .form-label { display: block; margin-bottom: 8px; font-weight: 600; color: #333; }
         .form-input, .form-select { width: 100%; padding: 12px 15px; border: 2px solid #e1e8ed; border-radius: 10px; font-size: 1em; }
         .btn { padding: 12px 24px; border: none; border-radius: 10px; cursor: pointer; font-size: 1em; font-weight: 600; }
-        .btn:disabled { background-color: #cccccc !important; color: #666 !important; cursor: not-allowed; }
+        .btn:disabled { background-color: #cccccc !important; cursor: not-allowed; }
         .btn-primary { background: #1e3c72; color: white; }
         .btn-secondary { background: #6c757d; color: white; }
-        .btn-warning { background-color: #ffc107; color: #212529; }
         .results-table { width: 100%; border-collapse: collapse; }
         .results-table th, .results-table td { padding: 15px; text-align: left; border-bottom: 1px solid #f0f0f0; }
         .results-table th { background: #f8f9fa; font-weight: 600; }
@@ -43,7 +42,6 @@
         .nice-class-badge.match { background-color: #28a745; color: white; font-weight: bold; }
         .loading, .no-records { text-align: center; padding: 50px; color: #666; }
         .info-message { text-align: center; padding: 10px; font-size: 0.9em; background-color: #e2f3ff; color: #004085; border-radius: 8px; margin: 10px 20px; }
-        .button-group { display: flex; gap: 10px; }
     </style>
 </head>
 <body>
@@ -100,8 +98,7 @@
                         <tbody id="monitoringListBody"></tbody>
                     </table>
                 </div>
-                <div style="text-align: right; padding: 20px;" class="button-group">
-                    <button type="button" class="btn btn-warning" id="researchBtn" disabled>🔄 Yeniden Ara</button>
+                <div style="text-align: right; padding: 20px;">
                     <button type="button" class="btn btn-primary" id="startSearchBtn" disabled>🔍 Aramayı Başlat</button>
                 </div>
             </div>
@@ -147,7 +144,6 @@
     let pagination;
 
     const startSearchBtn = document.getElementById('startSearchBtn');
-    const researchBtn = document.getElementById('researchBtn'); // Yeni buton
     const clearFiltersBtn = document.getElementById('clearFiltersBtn');
     const ownerSearchInput = document.getElementById('ownerSearch');
     const niceClassSearchInput = document.getElementById('niceClassSearch');
@@ -166,7 +162,11 @@
     };
 
     function initializePagination() {
-        pagination = new Pagination({ containerId: 'paginationContainer', itemsPerPage: 10, onPageChange: renderCurrentPageOfResults });
+        pagination = new Pagination({
+            containerId: 'paginationContainer',
+            itemsPerPage: 10,
+            onPageChange: renderCurrentPageOfResults
+        });
     }
 
     async function loadInitialData() {
@@ -195,74 +195,62 @@
         filteredMonitoringTrademarks = monitoringTrademarks.filter(data => {
             const ownerName = (data.owners?.[0]?.name || '').toLowerCase();
             const niceClasses = Array.isArray(data.niceClass) ? data.niceClass.join(' ') : (data.niceClass || '');
-            return (!ownerFilter || ownerName.includes(ownerFilter)) && (!niceFilter || niceClasses.includes(niceFilter));
+            const ownerMatch = !ownerFilter || ownerName.includes(ownerFilter);
+            const niceMatch = !niceFilter || niceClasses.includes(niceFilter);
+            return ownerMatch && niceMatch;
         });
         
         renderMonitoringList();
-        checkCacheAndToggleButtonStates();
+        checkCacheAndToggleSearchButton();
     }
 
     function renderMonitoringList() {
         const tbody = document.getElementById('monitoringListBody');
-        tbody.innerHTML = filteredMonitoringTrademarks.length === 0 
-            ? '<tr><td colspan="5" class="no-records">Filtreye uygun izlenecek marka bulunamadı.</td></tr>'
-            : filteredMonitoringTrademarks.map(tm => `
-                <tr>
-                    <td>${tm.title || tm.markName || '-'}</td>
-                    <td>${tm.applicationNumber || '-'}</td>
-                    <td>${tm.owners?.[0]?.name || '-'}</td>
-                    <td>${Array.isArray(tm.niceClass) ? tm.niceClass.join(', ') : (tm.niceClass || '-')}</td>
-                    <td>${tm.applicationDate || '-'}</td>
-                </tr>`).join('');
+        tbody.innerHTML = '';
+        if (filteredMonitoringTrademarks.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" class="no-records">Filtreye uygun izlenecek marka bulunamadı.</td></tr>';
+            return;
+        }
+        tbody.innerHTML = filteredMonitoringTrademarks.map(tm => `
+            <tr>
+                <td>${tm.title || tm.markName || '-'}</td>
+                <td>${tm.applicationNumber || '-'}</td>
+                <td>${tm.owners?.[0]?.name || '-'}</td>
+                <td>${Array.isArray(tm.niceClass) ? tm.niceClass.join(', ') : (tm.niceClass || '-')}</td>
+                <td>${tm.applicationDate || '-'}</td>
+            </tr>`).join('');
     }
 
-    async function checkCacheAndToggleButtonStates() {
+    async function checkCacheAndToggleSearchButton() {
         const selectedBulletin = bulletinSelect.value;
         startSearchBtn.disabled = true;
-        researchBtn.disabled = true;
         infoMessageContainer.innerHTML = '';
+        
         if (allSimilarResults.length > 0) {
             allSimilarResults = [];
             pagination.update(0);
             renderCurrentPageOfResults();
         }
 
-        if (!selectedBulletin || filteredMonitoringTrademarks.length === 0) return;
+        if (!selectedBulletin || filteredMonitoringTrademarks.length === 0) {
+            return;
+        }
 
-        const checkPromises = filteredMonitoringTrademarks.map(tm => searchRecordService.getRecord(`${tm.id}_${selectedBulletin}`));
+        const checkPromises = filteredMonitoringTrademarks.map(tm => {
+            const recordId = `${tm.id}_${selectedBulletin}`;
+            return searchRecordService.getRecord(recordId);
+        });
+
         const results = await Promise.all(checkPromises);
         const cachedCount = results.filter(r => r.success && r.data).length;
         
-        if (cachedCount > 0) {
-            researchBtn.disabled = false; // Önbellekte en az bir kayıt varsa "Yeniden Ara" aktif olur.
-        }
-
-        if (cachedCount === filteredMonitoringTrademarks.length) {
+        if (cachedCount > 0 && cachedCount === filteredMonitoringTrademarks.length) {
             startSearchBtn.disabled = true;
             infoMessageContainer.innerHTML = `<div class="info-message">Bu bülten için tüm sonuçlar önbellekte mevcut. Sonuçlar otomatik olarak yükleniyor...</div>`;
             await performSearch(true);
         } else {
             startSearchBtn.disabled = false;
         }
-    }
-    
-    async function performResearch() {
-        const selectedBulletin = bulletinSelect.value;
-        if (!selectedBulletin) return alert('Lütfen bir bülten seçin.');
-        if (filteredMonitoringTrademarks.length === 0) return alert('Filtreye uygun izlenen marka bulunamadı.');
-
-        const confirmMsg = `Seçili bülten için filtrelenmiş ${filteredMonitoringTrademarks.length} markanın mevcut arama sonuçları silinecek ve Algolia'da yeniden arama yapılacaktır. Onaylıyor musunuz?`;
-        if (!confirm(confirmMsg)) return;
-
-        loadingIndicator.textContent = 'Eski kayıtlar siliniyor...';
-        loadingIndicator.style.display = 'block';
-        startSearchBtn.disabled = true;
-        researchBtn.disabled = true;
-
-        const deletePromises = filteredMonitoringTrademarks.map(tm => searchRecordService.deleteRecord(`${tm.id}_${selectedBulletin}`));
-        await Promise.all(deletePromises);
-        
-        await performSearch(false); // Önbellek temizlendiği için normal arama yap
     }
 
     async function performSearch(fromCacheOnly = false) {
@@ -277,7 +265,6 @@
         resultsTableBody.innerHTML = '';
         allSimilarResults = [];
         startSearchBtn.disabled = true;
-        researchBtn.disabled = true;
 
         let cachedResults = [];
         let trademarksToSearch = [];
@@ -304,15 +291,19 @@
             const searchPromises = trademarksToSearch.map(async (trademark) => {
                 const searchParams = { markName: trademark.title, niceClasses: trademark.niceClass };
                 const results = await runTrademarkSearch(searchParams, selectedBulletin);
+                
                 const recordId = `${trademark.id}_${selectedBulletin}`;
                 await searchRecordService.saveRecord(recordId, { results: results, searchDate: new Date().toISOString() });
+
                 return results.map(hit => ({...hit, source: 'new', monitoredTrademark: trademark.title}));
             });
+            
             const resultsArrays = await Promise.all(searchPromises);
             newSearchResults = resultsArrays.flat();
         }
         
         allSimilarResults = [...cachedResults, ...newSearchResults];
+
         loadingIndicator.style.display = 'none';
         
         const infoMessage = `Toplam ${allSimilarResults.length} benzer sonuç bulundu. (${cachedResults.length} önbellekten, ${newSearchResults.length} yeni arama ile)`;
@@ -321,16 +312,29 @@
         pagination.update(allSimilarResults.length, 1);
         renderCurrentPageOfResults();
         
-        checkCacheAndToggleButtonStates();
+        // DÜZELTME: Arama bittikten sonra butonun durumunu yeniden kontrol ETMEK YERİNE,
+        // Eğer yeni arama yapıldıysa ve artık hepsi önbellekteyse, butonu pasif yap.
+        if (newSearchResults.length > 0) {
+            await checkCacheAndToggleSearchButton(); // Bu, durumu yeniden değerlendirir ve gerekirse butonu pasif yapar.
+        } else if (fromCacheOnly) {
+             startSearchBtn.disabled = true; // Sadece cache'den yüklendiyse pasif kalmalı.
+        } else {
+             startSearchBtn.disabled = false; // Diğer durumlarda aktif olabilir.
+        }
     }
 
     function renderCurrentPageOfResults() {
         resultsTableBody.innerHTML = '';
         if(!pagination) return;
+        
         const currentPageData = pagination.getCurrentPageData(allSimilarResults);
         
-        noRecordsMessage.style.display = allSimilarResults.length === 0 ? 'block' : 'none';
-        if (allSimilarResults.length > 0) noRecordsMessage.textContent = 'Arama sonucu bulunamadı.';
+        if (allSimilarResults.length === 0) {
+             noRecordsMessage.textContent = 'Arama sonucu bulunamadı.';
+             noRecordsMessage.style.display = 'block';
+             return;
+        }
+        noRecordsMessage.style.display = 'none';
 
         currentPageData.forEach(hit => {
             const holders = Array.isArray(hit.holders) ? hit.holders.join(', ') : (hit.holders || '');
@@ -353,23 +357,28 @@
         });
     }
 
-    window.viewRecord = (recordId) => alert(`Kayıt ID: ${recordId} - Bu özellik geliştirilecek.`);
+    window.viewRecord = (recordId) => {
+        alert(`Kayıt ID: ${recordId} - Bu özellik geliştirilecek.`);
+    };
 
     const debouncedFilter = debounce(applyMonitoringListFilters, 400);
 
     // EVENT LISTENERS
     startSearchBtn.addEventListener('click', () => performSearch(false));
-    researchBtn.addEventListener('click', performResearch);
     clearFiltersBtn.addEventListener('click', () => {
         ownerSearchInput.value = '';
         niceClassSearchInput.value = '';
         bulletinSelect.selectedIndex = 0;
+        resultsTableBody.innerHTML = '';
+        infoMessageContainer.innerHTML = '';
+        noRecordsMessage.style.display = 'none';
+        pagination.update(0);
         applyMonitoringListFilters();
     });
     
     ownerSearchInput.addEventListener('input', debouncedFilter);
     niceClassSearchInput.addEventListener('input', debouncedFilter);
-    bulletinSelect.addEventListener('change', checkCacheAndToggleButtonStates);
+    bulletinSelect.addEventListener('change', checkCacheAndToggleSearchButton);
 
     document.addEventListener('DOMContentLoaded', async () => {
         initializePagination();
