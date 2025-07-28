@@ -277,7 +277,6 @@
         border-radius: 5px;
         margin: 20px 0;
     }
-
   </style>
 </head>
 <body>
@@ -337,8 +336,7 @@
   </div>
 
 <script type="module">
-    // YENİ: Pagination sınıfını harici dosyadan import et
-    import Pagination from './js/pagination.js'; 
+    import Pagination from './js/pagination.js'; // <- DIŞARIDAN İÇERİ AKTARILDI
     import { loadSharedLayout } from './js/layout-loader.js';
     import { monitoringService, personService } from './firebase-config.js';
     import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
@@ -363,6 +361,12 @@
         pagination = new Pagination({
             containerId: 'paginationContainer',
             itemsPerPage: 20,
+            maxVisiblePages: 5,
+            showFirstLast: true,
+            showPrevNext: true,
+            showPageInfo: true,
+            showItemsPerPageSelector: true,
+            itemsPerPageOptions: [10, 20, 50, 100],
             onPageChange: (page, itemsPerPage) => {
                 renderCurrentPage();
                 selectedMonitoringItems.clear();
@@ -379,6 +383,7 @@
     // Filtreleri kur
     function setupFilters() {
         const filterSection = document.getElementById('filterSection');
+        
         const searchInput = document.getElementById('searchFilter');
         const statusSelect = document.getElementById('statusFilter');
         const niceClassInput = document.getElementById('niceClassFilter');
@@ -402,6 +407,7 @@
             currentFilters.status = statusSelect?.value || 'all';
             currentFilters.niceClass = niceClassInput?.value || '';
             currentFilters.owner = ownerInput?.value || '';
+            
             applyFilters();
         }, 300);
 
@@ -416,7 +422,9 @@
                 if (statusSelect) statusSelect.value = 'all';
                 if (niceClassInput) niceClassInput.value = '';
                 if (ownerInput) ownerInput.value = '';
+                
                 currentFilters = { search: '', status: 'all', niceClass: '', owner: '' };
+                
                 applyFilters();
             });
         }
@@ -430,6 +438,7 @@
                 const markName = (item.title || item.markName || '').toLowerCase();
                 const owner = getOwnerNames(item).toLowerCase();
                 const applicationNo = (item.applicationNumber || item.applicationNo || '').toLowerCase();
+                
                 if (!markName.includes(searchTerm) && !owner.includes(searchTerm) && !applicationNo.includes(searchTerm)) {
                     return false;
                 }
@@ -437,31 +446,25 @@
             
             if (currentFilters.status !== 'all') {
                 const itemStatus = getStatusInTurkish(item.status).value || 'unknown';
-                if (itemStatus !== currentFilters.status) {
-                    return false;
-                }
+                if (itemStatus !== currentFilters.status) return false;
             }
             
             if (currentFilters.niceClass) {
                 const itemClasses = Array.isArray(item.niceClass) ? item.niceClass.join(' ') : (item.niceClass || '').toString();
-                if (!itemClasses.toLowerCase().includes(currentFilters.niceClass.toLowerCase())) {
-                    return false;
-                }
+                if (!itemClasses.toLowerCase().includes(currentFilters.niceClass.toLowerCase())) return false;
             }
             
             if (currentFilters.owner) {
                 const ownerName = getOwnerNames(item).toLowerCase();
-                if (!ownerName.includes(currentFilters.owner.toLowerCase())) {
-                    return false;
-                }
+                if (!ownerName.includes(currentFilters.owner.toLowerCase())) return false;
             }
             
             return true;
         });
         
-        if (pagination) {
-            pagination.update(filteredData.length, 1);
-        }
+        if (pagination) pagination.update(filteredData.length, 1);
+        
+        renderCurrentPage();
     }
 
     // Mevcut sayfadaki veriyi render et
@@ -475,7 +478,8 @@
         const currentPageData = pagination ? pagination.getCurrentPageData(filteredData) : filteredData;
         
         if (currentPageData.length === 0) {
-            const hasFilters = currentFilters.search || currentFilters.status !== 'all' || currentFilters.niceClass || currentFilters.owner;
+            const hasFilters = currentFilters.search || currentFilters.status !== 'all' || 
+                              currentFilters.niceClass || currentFilters.owner;
             container.innerHTML = `<div class="no-records">${hasFilters ? 'Filtreleme kriterlerinize uygun kayıt bulunamadı.' : 'İzleme listeniz boş.'}</div>`;
             return;
         }
@@ -575,7 +579,7 @@
         return '-';
     };
 
-    const renderMonitoringTable = (data) => {
+    const renderMonitoringTable = (data, userUid) => {
         allMonitoringData = data || [];
         const filterSection = document.getElementById('filterSection');
         if (filterSection && allMonitoringData.length > 0) {
@@ -587,6 +591,7 @@
     const updateSelectedButtonState = () => {
         const selectedCountSpan = document.getElementById('selectedCount');
         const removeSelectedBtn = document.getElementById('removeSelectedBtn');
+        
         if (selectedCountSpan) selectedCountSpan.textContent = selectedMonitoringItems.size;
         if (removeSelectedBtn) removeSelectedBtn.disabled = selectedMonitoringItems.size === 0;
 
@@ -621,7 +626,7 @@
                 try {
                     const { success, data, error } = await monitoringService.getMonitoringItems(user.uid);
                     if (success) {
-                        renderMonitoringTable(data);
+                        renderMonitoringTable(data, user.uid);
                     } else {
                         container.innerHTML = `<div class="error-message">İzleme listeniz yüklenirken bir hata oluştu: ${error}</div>`;
                     }
@@ -664,7 +669,7 @@
                     if (success) renderMonitoringTable(data);
                     else container.innerHTML = '<div class="error-message">Liste güncellenirken hata oluştu.</div>';
                 } catch (error) {
-                    container.innerHTML = '<div class="error-message">Liste güncellenirken hata oluştu.</div>';
+                    container.innerHTML = '<div class="error-message">Liste güncellenirken beklenmeyen bir hata oluştu.</div>';
                 }
 
                 if (successfulRemovals > 0) showNotification(`${successfulRemovals} kayıt başarıyla kaldırıldı.`, 'success');
