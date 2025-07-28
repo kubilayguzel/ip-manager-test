@@ -227,9 +227,6 @@
         startSearchBtn.disabled = true;
         researchBtn.disabled = true;
         
-        // DÖNGÜYÜ ÖNLEMEK İÇİN SONUÇ TEMİZLEME İŞİ BURADAN ÇIKARILDI.
-        // Temizleme artık sadece filtreler değiştiğinde yapılacak.
-
         if (!selectedBulletin || filteredMonitoringTrademarks.length === 0) {
             return;
         }
@@ -322,14 +319,16 @@
         
         const infoMessage = `Toplam ${allSimilarResults.length} benzer sonuç bulundu. (${cachedResults.length} önbellekten, ${newSearchResults.length} yeni arama ile)`;
         infoMessageContainer.innerHTML = `<div class="info-message">${infoMessage}</div>`;
-
+        
         pagination.update(allSimilarResults.length, 1);
         
-        if (allSimilarResults.length > 0) {
-            researchBtn.disabled = false;
-        }
-        // Arama yapıldığına göre, artık tüm sonuçlar önbellekte demektir, bu yüzden "Aramayı Başlat" butonu pasif olmalı.
-        startSearchBtn.disabled = true; 
+        // *** DÜZELTME BURADA ***
+        // Arama bittikten ve pagination güncellendikten sonra, ilk sayfayı render et.
+        renderCurrentPageOfResults(); 
+        
+        // Arama bittikten sonra butonların durumunu son kez ayarla.
+        startSearchBtn.disabled = (trademarksToSearch.length === 0 && newSearchResults.length === 0);
+        researchBtn.disabled = allSimilarResults.length === 0;
     }
 
     function renderCurrentPageOfResults() {
@@ -338,12 +337,11 @@
         
         const currentPageData = pagination.getCurrentPageData(allSimilarResults);
         
+        noRecordsMessage.style.display = 'none';
         if (allSimilarResults.length === 0) {
              noRecordsMessage.textContent = 'Arama sonucu bulunamadı.';
              noRecordsMessage.style.display = 'block';
-             return;
         }
-        noRecordsMessage.style.display = 'none';
 
         currentPageData.forEach(hit => {
             const holders = Array.isArray(hit.holders) ? hit.holders.join(', ') : (hit.holders || '');
@@ -371,6 +369,7 @@
     const debouncedFilter = debounce(applyMonitoringListFilters, 400);
 
     function resetUI() {
+        allSimilarResults = [];
         resultsTableBody.innerHTML = '';
         infoMessageContainer.innerHTML = '';
         noRecordsMessage.style.display = 'none';
@@ -378,20 +377,19 @@
         checkCacheAndToggleButtonStates();
     }
     
-    // EVENT LISTENERS
     startSearchBtn.addEventListener('click', () => performSearch(false));
     researchBtn.addEventListener('click', performResearch);
     clearFiltersBtn.addEventListener('click', () => {
         ownerSearchInput.value = '';
         niceClassSearchInput.value = '';
         bulletinSelect.selectedIndex = 0;
+        resetUI();
         applyMonitoringListFilters();
     });
     
     ownerSearchInput.addEventListener('input', debouncedFilter);
     niceClassSearchInput.addEventListener('input', debouncedFilter);
     bulletinSelect.addEventListener('change', () => {
-        // Bülten değiştiğinde sadece UI'ı temizle ve buton durumunu kontrol et.
         resetUI();
     });
 
