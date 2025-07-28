@@ -1706,7 +1706,7 @@ export const searchRecordService = {
         }
     },
 
-    // YENİ EKLENEN FONKSİYON
+    // YENİ EKLENEN FONKSİYON: Mevcut arama kaydını siler
     async deleteRecord(recordId) {
         if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor." };
         try {
