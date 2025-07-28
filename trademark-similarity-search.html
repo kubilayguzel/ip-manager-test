@@ -255,7 +255,6 @@
         }
     }
 
-    // YENİ FONKSİYON: Yeniden arama işlemini yönetir
     async function performResearch() {
         const selectedBulletin = bulletinSelect.value;
         if (!selectedBulletin) return alert('Lütfen bir bülten seçin.');
@@ -340,9 +339,13 @@
         
         const currentPageData = pagination.getCurrentPageData(allSimilarResults);
         
-        noRecordsMessage.style.display = allSimilarResults.length === 0 ? 'block' : 'none';
-        if (allSimilarResults.length > 0) noRecordsMessage.textContent = 'Arama sonucu bulunamadı.';
-        
+        if (allSimilarResults.length === 0) {
+             noRecordsMessage.textContent = 'Arama sonucu bulunamadı.';
+             noRecordsMessage.style.display = 'block';
+             return;
+        }
+        noRecordsMessage.style.display = 'none';
+
         currentPageData.forEach(hit => {
             const holders = Array.isArray(hit.holders) ? hit.holders.join(', ') : (hit.holders || '');
             const monitoredNice = hit.monitoredNiceClasses || [];
@@ -370,7 +373,7 @@
 
     // EVENT LISTENERS
     startSearchBtn.addEventListener('click', () => performSearch(false));
-    researchBtn.addEventListener('click', performResearch); // YENİ BUTON EVENT'İ
+    researchBtn.addEventListener('click', performResearch);
     clearFiltersBtn.addEventListener('click', () => {
         ownerSearchInput.value = '';
         niceClassSearchInput.value = '';
