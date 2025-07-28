@@ -5,16 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>IP Manager - Marka Bülten İzleme</title>
     <script>
-        // Algolia'yı dinamik olarak yükle
         function loadAlgolia() {
             return new Promise((resolve) => {
                 const script = document.createElement('script');
                 script.src = 'https://cdn.jsdelivr.net/npm/algoliasearch@4/dist/algoliasearch-lite.umd.js';
                 script.onload = () => resolve(true);
-                script.onerror = () => {
-                    console.error("Algolia CDN'den yüklenemedi.");
-                    resolve(false);
-                };
+                script.onerror = () => { console.error("Algolia CDN'den yüklenemedi."); resolve(false); };
                 document.head.appendChild(script);
             });
         }
@@ -36,6 +32,7 @@
         .form-label { display: block; margin-bottom: 8px; font-weight: 600; color: #333; }
         .form-input, .form-select { width: 100%; padding: 12px 15px; border: 2px solid #e1e8ed; border-radius: 10px; font-size: 1em; }
         .btn { padding: 12px 24px; border: none; border-radius: 10px; cursor: pointer; font-size: 1em; font-weight: 600; }
+        .btn:disabled { background-color: #cccccc !important; cursor: not-allowed; }
         .btn-primary { background: #1e3c72; color: white; }
         .btn-secondary { background: #6c757d; color: white; }
         .results-table { width: 100%; border-collapse: collapse; }
@@ -44,6 +41,7 @@
         .nice-class-badge { display: inline-block; padding: 4px 8px; border-radius: 8px; font-size: 0.8em; background-color: #e2e3e5; color: #333; margin-right: 4px; }
         .nice-class-badge.match { background-color: #28a745; color: white; font-weight: bold; }
         .loading, .no-records { text-align: center; padding: 50px; color: #666; }
+        .info-message { text-align: center; padding: 10px; font-size: 0.9em; background-color: #e2f3ff; color: #004085; border-radius: 8px; margin: 10px 20px; }
     </style>
 </head>
 <body>
@@ -99,8 +97,6 @@
                         </thead>
                         <tbody id="monitoringListBody"></tbody>
                     </table>
-                    <div id="loadingMonitoringList" class="loading" style="display: none;">İzleme listesi yükleniyor...</div>
-                    <div id="noMonitoringRecords" class="no-records" style="display: none;">İzleme listenizde marka bulunamadı.</div>
                 </div>
                 <div style="text-align: right; padding: 20px;">
                     <button type="button" class="btn btn-primary" id="startSearchBtn">🔍 Aramayı Başlat</button>
@@ -111,6 +107,7 @@
                 <div class="results-header">
                     <h3>Arama Sonuçları</h3>
                 </div>
+                <div id="infoMessageContainer"></div>
                 <div class="table-container">
                     <table class="results-table">
                         <thead>
@@ -125,8 +122,8 @@
                         </thead>
                         <tbody id="resultsTableBody"></tbody>
                     </table>
-                    <div id="loadingIndicator" class="loading" style="display: none;">🔍 Arama yapılıyor...</div>
-                    <div id="noRecordsMessage" class="no-records" style="display: none;">Arama kriterlerinize uygun sonuç bulunamadı.</div>
+                    <div id="loadingIndicator" class="loading" style="display: none;"></div>
+                    <div id="noRecordsMessage" class="no-records" style="display: none;"></div>
                 </div>
                 <div id="paginationContainer"></div>
             </div>
@@ -134,11 +131,11 @@
     </div>
 
 <script type="module">
-    import Pagination from './js/pagination.js';
+    import Pagination from './js/pagination.js'; 
     import { loadSharedLayout } from './js/layout-loader.js';
-    import { db, personService } from './firebase-config.js';
+    import { db, personService, searchRecordService } from './firebase-config.js';
     import { collection, getDocs } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
-
+    
     let runTrademarkSearch;
     let allSimilarResults = [];
     let filteredMonitoringTrademarks = [];
@@ -153,6 +150,7 @@
     const resultsTableBody = document.getElementById('resultsTableBody');
     const loadingIndicator = document.getElementById('loadingIndicator');
     const noRecordsMessage = document.getElementById('noRecordsMessage');
+    const infoMessageContainer = document.getElementById('infoMessageContainer');
 
     function initializePagination() {
         pagination = new Pagination({
@@ -190,6 +188,7 @@
             return ownerMatch && niceMatch;
         });
         renderMonitoringList();
+        checkCacheAndToggleSearchButton();
     }
 
     function renderMonitoringList() {
@@ -209,69 +208,97 @@
             </tr>`).join('');
     }
 
-    async function performSearch() {
-        if (!runTrademarkSearch) {
-            alert("Arama modülü henüz hazır değil, lütfen bekleyin.");
-            return;
-        }
+    async function checkCacheAndToggleSearchButton() {
         const selectedBulletin = bulletinSelect.value;
-        if (!selectedBulletin) {
-            alert('Lütfen bir bülten seçin.');
-            return;
-        }
-        if (filteredMonitoringTrademarks.length === 0){
-            alert('Arama yapılacak izlenen marka bulunamadı. Lütfen filtrelerinizi kontrol edin.');
-            return;
-        }
+        startSearchBtn.disabled = false;
+        infoMessageContainer.innerHTML = '';
+        if (!selectedBulletin || filteredMonitoringTrademarks.length === 0) return;
 
+        const checkPromises = filteredMonitoringTrademarks.map(tm => {
+            const recordId = `${tm.id}_${selectedBulletin}`;
+            return searchRecordService.getRecord(recordId);
+        });
+
+        const results = await Promise.all(checkPromises);
+        const cachedCount = results.filter(r => r.success && r.data).length;
+        
+        if (cachedCount === filteredMonitoringTrademarks.length) {
+            startSearchBtn.disabled = true;
+            infoMessageContainer.innerHTML = `<div class="info-message">Bu bülten için tüm sonuçlar önbellekte mevcut. Sonuçlar otomatik olarak yükleniyor...</div>`;
+            await performSearch(true); // Otomatik arama (sadece önbellekten)
+        }
+    }
+
+    async function performSearch(fromCacheOnly = false) {
+        const selectedBulletin = bulletinSelect.value;
+        if (!selectedBulletin) return alert('Lütfen bir bülten seçin.');
+        if (filteredMonitoringTrademarks.length === 0) return alert('Filtreye uygun izlenen marka bulunamadı.');
+
+        loadingIndicator.textContent = 'Arama yapılıyor...';
         loadingIndicator.style.display = 'block';
         noRecordsMessage.style.display = 'none';
+        infoMessageContainer.innerHTML = '';
         resultsTableBody.innerHTML = '';
         allSimilarResults = [];
         startSearchBtn.disabled = true;
 
-        const searchPromises = filteredMonitoringTrademarks.map(trademark => {
-            const searchParams = {
-                markName: trademark.title || trademark.markName,
-                applicationDate: trademark.applicationDate,
-                niceClasses: Array.isArray(trademark.niceClass) ? trademark.niceClass : [trademark.niceClass]
-            };
-            return runTrademarkSearch(searchParams, selectedBulletin).then(results => {
-                return results.map(hit => ({
-                    ...hit,
-                    monitoredTrademark: trademark.title || trademark.markName,
-                    monitoredApplicationNo: trademark.applicationNumber,
-                }));
-            }).catch(error => {
-                console.error(`Arama hatası (${trademark.title}):`, error);
-                return [];
-            });
-        });
+        let cachedResults = [];
+        let trademarksToSearch = [];
 
-        const resultsArrays = await Promise.all(searchPromises);
-        allSimilarResults = resultsArrays.flat();
+        for (const tm of filteredMonitoringTrademarks) {
+            const recordId = `${tm.id}_${selectedBulletin}`;
+            const result = await searchRecordService.getRecord(recordId);
+            if (result.success && result.data) {
+                cachedResults.push(...result.data.results.map(r => ({...r, source: 'cache', monitoredTrademark: tm.title})));
+            } else {
+                trademarksToSearch.push(tm);
+            }
+        }
+
+        let newSearchResults = [];
+        if (!fromCacheOnly && trademarksToSearch.length > 0) {
+            if (!runTrademarkSearch) {
+                alert("Arama modülü henüz yüklenmedi, lütfen bekleyin.");
+                loadingIndicator.style.display = 'none';
+                startSearchBtn.disabled = false;
+                return;
+            }
+            loadingIndicator.textContent = `Algolia'da ${trademarksToSearch.length} marka için arama yapılıyor...`;
+            const searchPromises = trademarksToSearch.map(async (trademark) => {
+                const searchParams = { markName: trademark.title, niceClasses: trademark.niceClass };
+                const results = await runTrademarkSearch(searchParams, selectedBulletin);
+                
+                const recordId = `${trademark.id}_${selectedBulletin}`;
+                await searchRecordService.saveRecord(recordId, { results: results, searchDate: new Date().toISOString() });
+
+                return results.map(hit => ({...hit, source: 'new', monitoredTrademark: trademark.title}));
+            });
+            
+            const resultsArrays = await Promise.all(searchPromises);
+            newSearchResults = resultsArrays.flat();
+        }
+        
+        allSimilarResults = [...cachedResults, ...newSearchResults];
 
         loadingIndicator.style.display = 'none';
         startSearchBtn.disabled = false;
         
-        // ÖNCE pagination'ı güncelle
+        const infoMessage = `Toplam ${allSimilarResults.length} benzer sonuç bulundu. (${cachedResults.length} önbellekten, ${newSearchResults.length} yeni arama ile)`;
+        infoMessageContainer.innerHTML = `<div class="info-message">${infoMessage}</div>`;
+
         pagination.update(allSimilarResults.length, 1);
-        
-        // SONRA ilk sayfayı render et
-        renderCurrentPageOfResults(); 
+        renderCurrentPageOfResults();
     }
 
     function renderCurrentPageOfResults() {
         resultsTableBody.innerHTML = '';
         if(!pagination) return;
-        
         const currentPageData = pagination.getCurrentPageData(allSimilarResults);
         
         if (allSimilarResults.length === 0) {
              noRecordsMessage.style.display = 'block';
              return;
         }
-        
         noRecordsMessage.style.display = 'none';
 
         currentPageData.forEach(hit => {
@@ -300,19 +327,18 @@
     };
 
     // EVENT LISTENERS
-    startSearchBtn.addEventListener('click', performSearch);
+    startSearchBtn.addEventListener('click', () => performSearch(false));
     clearFiltersBtn.addEventListener('click', () => {
-        ownerSearchInput.value = '';
-        niceClassSearchInput.value = '';
-        resultsTableBody.innerHTML = '';
-        noRecordsMessage.style.display = 'none';
-        pagination.update(0);
+        ownerSearchInput.value = ''; niceClassSearchInput.value = '';
+        resultsTableBody.innerHTML = ''; infoMessageContainer.innerHTML = '';
+        noRecordsMessage.style.display = 'none'; pagination.update(0);
         loadMonitoringTrademarks();
     });
+    
     ownerSearchInput.addEventListener('input', loadMonitoringTrademarks);
     niceClassSearchInput.addEventListener('input', loadMonitoringTrademarks);
+    bulletinSelect.addEventListener('change', checkCacheAndToggleSearchButton);
 
-    // SAYFA YÜKLENDİĞİNDE BAŞLATMA
     document.addEventListener('DOMContentLoaded', async () => {
         initializePagination();
         await loadInitialData();
@@ -321,13 +347,9 @@
             try {
                 const module = await import('./js/trademark-similarity/run-search.js');
                 runTrademarkSearch = module.runTrademarkSearch;
-                console.log("✅ Arama modülü başarıyla yüklendi.");
-            } catch (e) {
-                console.error("❌ Arama modülü yüklenemedi.", e);
-            }
+            } catch (e) { console.error("Arama modülü yüklenemedi.", e); }
         }
     });
-
 </script>
 </body>
 </html>
