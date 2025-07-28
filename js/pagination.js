@@ -1,21 +1,17 @@
 // js/pagination.js - Yeniden kullanılabilir pagination sistemi
 
-/**
- * Hızlı ve esnek pagination sınıfı
- * Herhangi bir liste sayfasında kullanılabilir
- */
-export class Pagination {
+export default class Pagination {
     constructor(options = {}) {
         this.options = {
-            itemsPerPage: options.itemsPerPage || 20,
-            maxVisiblePages: options.maxVisiblePages || 5,
-            containerId: options.containerId || 'paginationContainer',
-            onPageChange: options.onPageChange || (() => {}),
-            showFirstLast: options.showFirstLast !== false,
-            showPrevNext: options.showPrevNext !== false,
-            showPageInfo: options.showPageInfo !== false,
-            showItemsPerPageSelector: options.showItemsPerPageSelector !== false,
-            itemsPerPageOptions: options.itemsPerPageOptions || [10, 20, 50, 100],
+            itemsPerPage: 20,
+            maxVisiblePages: 5,
+            containerId: 'paginationContainer',
+            onPageChange: () => {},
+            showFirstLast: true,
+            showPrevNext: true,
+            showPageInfo: true,
+            showItemsPerPageSelector: true,
+            itemsPerPageOptions: [10, 20, 50, 100],
             strings: {
                 first: 'İlk',
                 previous: 'Önceki',
@@ -28,6 +24,9 @@ export class Pagination {
             },
             ...options.strings
         };
+        
+        // Gelen seçeneklerle varsayılanları birleştir
+        this.options = {...this.options, ...options};
 
         this.currentPage = 1;
         this.totalItems = 0;
@@ -43,161 +42,39 @@ export class Pagination {
             console.error(`Pagination container '${this.options.containerId}' bulunamadı!`);
             return;
         }
-        
-        // CSS'i dinamik olarak ekle
         this.injectCSS();
     }
 
     injectCSS() {
         const cssId = 'pagination-styles';
-        if (!document.getElementById(cssId)) {
-            const style = document.createElement('style');
-            style.id = cssId;
-            style.textContent = `
-                .pagination-wrapper {
-                    display: flex;
-                    flex-direction: column;
-                    gap: 15px;
-                    align-items: center;
-                    padding: 20px;
-                    background: rgba(255, 255, 255, 0.95);
-                    border-radius: 10px;
-                    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-                }
-
-                .pagination-controls {
-                    display: flex;
-                    align-items: center;
-                    gap: 10px;
-                    flex-wrap: wrap;
-                    justify-content: center;
-                }
-
-                .pagination-nav {
-                    display: flex;
-                    align-items: center;
-                    gap: 5px;
-                }
-
-                .pagination-btn {
-                    padding: 8px 12px;
-                    border: 1px solid #ddd;
-                    background: white;
-                    color: #333;
-                    border-radius: 6px;
-                    cursor: pointer;
-                    font-size: 14px;
-                    transition: all 0.2s ease;
-                    text-decoration: none;
-                    display: inline-flex;
-                    align-items: center;
-                    min-width: 40px;
-                    justify-content: center;
-                }
-
-                .pagination-btn:hover:not(:disabled) {
-                    background: #f8f9fa;
-                    border-color: #007bff;
-                    transform: translateY(-1px);
-                }
-
-                .pagination-btn:active:not(:disabled) {
-                    transform: translateY(0);
-                }
-
-                .pagination-btn.current {
-                    background: #007bff;
-                    color: white;
-                    border-color: #007bff;
-                    font-weight: 600;
-                }
-
-                .pagination-btn:disabled {
-                    background: #f8f9fa;
-                    color: #6c757d;
-                    border-color: #dee2e6;
-                    cursor: not-allowed;
-                    opacity: 0.6;
-                }
-
-                .pagination-ellipsis {
-                    padding: 8px 4px;
-                    color: #6c757d;
-                    font-size: 14px;
-                }
-
-                .pagination-info {
-                    display: flex;
-                    flex-direction: column;
-                    align-items: center;
-                    gap: 5px;
-                    font-size: 14px;
-                    color: #666;
-                }
-
-                .pagination-page-info {
-                    font-weight: 500;
-                }
-
-                .pagination-items-info {
-                    font-size: 13px;
-                }
-
-                .pagination-items-per-page {
-                    display: flex;
-                    align-items: center;
-                    gap: 8px;
-                    font-size: 14px;
-                    color: #666;
-                }
-
-                .pagination-items-select {
-                    padding: 4px 8px;
-                    border: 1px solid #ddd;
-                    border-radius: 4px;
-                    background: white;
-                    font-size: 14px;
-                }
-
-                .pagination-no-results {
-                    text-align: center;
-                    padding: 40px 20px;
-                    color: #666;
-                    font-style: italic;
-                }
-
-                @media (max-width: 768px) {
-                    .pagination-wrapper {
-                        padding: 15px;
-                    }
-                    
-                    .pagination-controls {
-                        flex-direction: column;
-                        gap: 15px;
-                    }
-                    
-                    .pagination-btn {
-                        padding: 10px 12px;
-                        min-width: 44px;
-                    }
-                    
-                    .pagination-info {
-                        order: -1;
-                        text-align: center;
-                    }
-                }
-            `;
-            document.head.appendChild(style);
-        }
+        if (document.getElementById(cssId)) return;
+        
+        const style = document.createElement('style');
+        style.id = cssId;
+        style.textContent = `
+            .pagination-wrapper { display: flex; flex-flow: row wrap; justify-content: space-between; align-items: center; padding: 15px; margin-top:20px; background: rgba(255, 255, 255, 0.9); border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+            .pagination-controls { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+            .pagination-nav { display: flex; align-items: center; gap: 5px; }
+            .pagination-btn { padding: 8px 12px; border: 1px solid #ddd; background: white; color: #333; border-radius: 6px; cursor: pointer; font-size: 14px; transition: all 0.2s ease; text-decoration: none; display: inline-flex; align-items: center; min-width: 40px; justify-content: center; }
+            .pagination-btn:hover:not(:disabled) { background: #f0f5ff; border-color: #0056b3; transform: translateY(-1px); }
+            .pagination-btn.current { background: #007bff; color: white; border-color: #007bff; font-weight: 600; }
+            .pagination-btn:disabled { background: #f8f9fa; color: #6c757d; cursor: not-allowed; opacity: 0.6; }
+            .pagination-ellipsis { padding: 8px 4px; color: #6c757d; }
+            .pagination-info { font-size: 14px; color: #555; text-align: right;}
+            .pagination-items-per-page { display: flex; align-items: center; gap: 8px; font-size: 14px; color: #555; }
+            .pagination-items-select { padding: 6px 8px; border-radius: 6px; border: 1px solid #ccc; }
+            .pagination-no-results { width:100%; text-align: center; padding: 20px; color: #666; font-style: italic; }
+        `;
+        document.head.appendChild(style);
     }
 
-    update(totalItems, currentPage = 1) {
+    update(totalItems) {
         this.totalItems = totalItems;
-        this.currentPage = Math.max(1, Math.min(currentPage, this.getTotalPages()));
         this.totalPages = this.getTotalPages();
-        
+        if (this.currentPage > this.totalPages) {
+            this.currentPage = this.totalPages || 1;
+        }
         this.render();
-        return this;
     }
 
     getTotalPages() {
@@ -209,7 +86,7 @@ export class Pagination {
         const endIndex = startIndex + this.options.itemsPerPage;
         return allData.slice(startIndex, endIndex);
     }
-
+    
     getStartIndex() {
         return (this.currentPage - 1) * this.options.itemsPerPage;
     }
@@ -222,221 +99,116 @@ export class Pagination {
         if (!this.container) return;
 
         if (this.totalItems === 0) {
-            this.container.innerHTML = `
-                <div class="pagination-wrapper">
-                    <div class="pagination-no-results">
-                        ${this.options.strings.noResults}
-                    </div>
-                </div>
-            `;
+            this.container.innerHTML = `<div class="pagination-wrapper"><div class="pagination-no-results">${this.options.strings.noResults}</div></div>`;
             return;
         }
-
-        if (this.totalPages <= 1 && !this.options.showItemsPerPageSelector) {
-            this.container.innerHTML = '';
-            return;
-        }
-
-        const paginationHTML = this.generatePaginationHTML();
-        this.container.innerHTML = paginationHTML;
+        
+        this.container.innerHTML = this.generatePaginationHTML();
         this.attachEventListeners();
     }
 
     generatePaginationHTML() {
-        let html = '<div class="pagination-wrapper">';
-
-        // Sayfa bilgisi
+        let infoHtml = '';
         if (this.options.showPageInfo) {
-            html += `
-                <div class="pagination-info">
-                    <div class="pagination-page-info">
-                        ${this.options.strings.pageInfo
-                            .replace('{current}', this.currentPage)
-                            .replace('{total}', this.totalPages)}
-                    </div>
-                    <div class="pagination-items-info">
-                        ${this.options.strings.itemsInfo
-                            .replace('{total}', this.totalItems)
-                            .replace('{start}', this.getStartIndex() + 1)
-                            .replace('{end}', this.getEndIndex())}
-                    </div>
-                </div>
-            `;
+            infoHtml = `<div class="pagination-info">${this.options.strings.itemsInfo.replace('{total}', this.totalItems).replace('{start}', this.getStartIndex() + 1).replace('{end}', this.getEndIndex())}</div>`;
         }
 
-        html += '<div class="pagination-controls">';
-
-        // Sayfa navigation butonları
-        if (this.totalPages > 1) {
-            html += '<div class="pagination-nav">';
-            html += this.generateNavigationButtons();
-            html += '</div>';
-        }
-
-        // Sayfa başına öğe seçici
+        let controlsHtml = this.totalPages > 1 ? `<div class="pagination-nav">${this.generateNavigationButtons()}</div>` : '';
+        let selectorHtml = '';
         if (this.options.showItemsPerPageSelector) {
-            html += `
-                <div class="pagination-items-per-page">
-                    <span>${this.options.strings.itemsPerPage}</span>
-                    <select class="pagination-items-select" data-action="changeItemsPerPage">
-                        ${this.options.itemsPerPageOptions.map(option => 
-                            `<option value="${option}" ${option === this.options.itemsPerPage ? 'selected' : ''}>${option}</option>`
-                        ).join('')}
-                    </select>
-                </div>
-            `;
+            selectorHtml = `<div class="pagination-items-per-page">
+                <span>${this.options.strings.itemsPerPage}</span>
+                <select class="pagination-items-select">
+                    ${this.options.itemsPerPageOptions.map(opt => `<option value="${opt}" ${opt === this.options.itemsPerPage ? 'selected' : ''}>${opt}</option>`).join('')}
+                </select>
+            </div>`;
         }
-
-        html += '</div></div>';
-        return html;
+        
+        return `<div class="pagination-wrapper">
+                    ${selectorHtml}
+                    <div class="pagination-controls">${controlsHtml}</div>
+                    ${infoHtml}
+                </div>`;
     }
 
     generateNavigationButtons() {
-        let html = '';
+        let buttons = '';
+        if (this.options.showFirstLast) buttons += this.createNavButton(this.options.strings.first, 1);
+        if (this.options.showPrevNext) buttons += this.createNavButton(this.options.strings.previous, this.currentPage - 1);
+        buttons += this.generatePageNumbers();
+        if (this.options.showPrevNext) buttons += this.createNavButton(this.options.strings.next, this.currentPage + 1);
+        if (this.options.showFirstLast) buttons += this.createNavButton(this.options.strings.last, this.totalPages);
+        return buttons;
+    }
 
-        // İlk sayfa butonu
-        if (this.options.showFirstLast) {
-            html += `<button class="pagination-btn" data-action="goToPage" data-page="1" ${this.currentPage === 1 ? 'disabled' : ''}>
-                ${this.options.strings.first}
-            </button>`;
-        }
-
-        // Önceki sayfa butonu
-        if (this.options.showPrevNext) {
-            html += `<button class="pagination-btn" data-action="goToPage" data-page="${this.currentPage - 1}" ${this.currentPage === 1 ? 'disabled' : ''}>
-                ${this.options.strings.previous}
-            </button>`;
-        }
-
-        // Sayfa numaraları
-        html += this.generatePageNumbers();
-
-        // Sonraki sayfa butonu
-        if (this.options.showPrevNext) {
-            html += `<button class="pagination-btn" data-action="goToPage" data-page="${this.currentPage + 1}" ${this.currentPage === this.totalPages ? 'disabled' : ''}>
-                ${this.options.strings.next}
-            </button>`;
-        }
-
-        // Son sayfa butonu
-        if (this.options.showFirstLast) {
-            html += `<button class="pagination-btn" data-action="goToPage" data-page="${this.totalPages}" ${this.currentPage === this.totalPages ? 'disabled' : ''}>
-                ${this.options.strings.last}
-            </button>`;
-        }
-
-        return html;
+    createNavButton(text, page) {
+        const isDisabled = (page < 1 || page > this.totalPages || page === this.currentPage);
+        return `<button class="pagination-btn" data-page="${page}" ${isDisabled ? 'disabled' : ''}>${text}</button>`;
     }
 
     generatePageNumbers() {
-        let html = '';
-        const maxVisible = this.options.maxVisiblePages;
+        let pages = '';
+        const { maxVisiblePages } = this.options;
         const current = this.currentPage;
         const total = this.totalPages;
 
-        if (total <= maxVisible) {
-            // Tüm sayfaları göster
-            for (let i = 1; i <= total; i++) {
-                html += `<button class="pagination-btn ${i === current ? 'current' : ''}" 
-                         data-action="goToPage" data-page="${i}">${i}</button>`;
-            }
+        if (total <= maxVisiblePages) {
+            for (let i = 1; i <= total; i++) pages += this.createPageButton(i);
         } else {
-            // Akıllı sayfa numarası gösterimi
-            let start = Math.max(1, current - Math.floor(maxVisible / 2));
-            let end = Math.min(total, start + maxVisible - 1);
+            let start = Math.max(1, current - Math.floor(maxVisiblePages / 2));
+            let end = Math.min(total, start + maxVisiblePages - 1);
+            if (end - start + 1 < maxVisiblePages) start = Math.max(1, end - maxVisiblePages + 1);
 
-            if (end - start + 1 < maxVisible) {
-                start = Math.max(1, end - maxVisible + 1);
-            }
-
-            // İlk sayfa ve ellipsis
             if (start > 1) {
-                html += `<button class="pagination-btn" data-action="goToPage" data-page="1">1</button>`;
-                if (start > 2) {
-                    html += `<span class="pagination-ellipsis">...</span>`;
-                }
+                pages += this.createPageButton(1);
+                if (start > 2) pages += `<span class="pagination-ellipsis">...</span>`;
             }
-
-            // Orta sayfalar
-            for (let i = start; i <= end; i++) {
-                html += `<button class="pagination-btn ${i === current ? 'current' : ''}" 
-                         data-action="goToPage" data-page="${i}">${i}</button>`;
-            }
-
-            // Son sayfa ve ellipsis
+            for (let i = start; i <= end; i++) pages += this.createPageButton(i);
             if (end < total) {
-                if (end < total - 1) {
-                    html += `<span class="pagination-ellipsis">...</span>`;
-                }
-                html += `<button class="pagination-btn" data-action="goToPage" data-page="${total}">${total}</button>`;
+                if (end < total - 1) pages += `<span class="pagination-ellipsis">...</span>`;
+                pages += this.createPageButton(total);
             }
         }
+        return pages;
+    }
 
-        return html;
+    createPageButton(page) {
+        return `<button class="pagination-btn ${page === this.currentPage ? 'current' : ''}" data-page="${page}">${page}</button>`;
     }
 
     attachEventListeners() {
-        if (!this.container) return;
-
-        // Event delegation kullanarak tüm butonları dinle
         this.container.addEventListener('click', (e) => {
-            const button = e.target.closest('[data-action]');
-            if (!button) return;
-
-            e.preventDefault();
-            
-            const action = button.dataset.action;
-            
-            if (action === 'goToPage') {
-                const page = parseInt(button.dataset.page);
-                if (page && !button.disabled) {
-                    this.goToPage(page);
-                }
-            }
+            const button = e.target.closest('.pagination-btn');
+            if (button && !button.disabled) this.goToPage(parseInt(button.dataset.page));
         });
-
-        // Sayfa başına öğe sayısı değişikliği
-        this.container.addEventListener('change', (e) => {
-            if (e.target.dataset.action === 'changeItemsPerPage') {
-                const newItemsPerPage = parseInt(e.target.value);
-                this.setItemsPerPage(newItemsPerPage);
-            }
+        this.container.querySelector('.pagination-items-select')?.addEventListener('change', (e) => {
+            this.setItemsPerPage(parseInt(e.target.value));
         });
     }
 
     goToPage(page) {
-        const newPage = Math.max(1, Math.min(page, this.totalPages));
-        if (newPage !== this.currentPage) {
-            this.currentPage = newPage;
-            this.render();
-            this.options.onPageChange(newPage, this.options.itemsPerPage);
-        }
-    }
-
-    setItemsPerPage(itemsPerPage) {
-        this.options.itemsPerPage = itemsPerPage;
-        
-        // Mevcut pozisyonu korumaya çalış
-        const currentFirstItem = (this.currentPage - 1) * this.options.itemsPerPage + 1;
-        this.currentPage = Math.ceil(currentFirstItem / itemsPerPage);
-        
-        this.totalPages = this.getTotalPages();
-        this.currentPage = Math.max(1, Math.min(this.currentPage, this.totalPages));
-        
+        if (page === this.currentPage) return;
+        this.currentPage = page;
         this.render();
         this.options.onPageChange(this.currentPage, this.options.itemsPerPage);
     }
 
-    // Yardımcı metodlar
-    reset() {
-        this.currentPage = 1;
+    setItemsPerPage(itemsPerPage) {
+        const oldFirstItemIndex = (this.currentPage - 1) * this.options.itemsPerPage;
+        this.options.itemsPerPage = itemsPerPage;
+        this.totalPages = this.getTotalPages();
+        this.currentPage = Math.max(1, Math.floor(oldFirstItemIndex / itemsPerPage) + 1);
         this.render();
+        this.options.onPageChange(this.currentPage, this.options.itemsPerPage);
+    }
+
+    // SINIF İÇİNE TAŞINAN YARDIMCI METODLAR
+    reset() {
+        this.goToPage(1);
     }
 
     destroy() {
-        if (this.container) {
-            this.container.innerHTML = '';
-        }
+        if (this.container) this.container.innerHTML = '';
     }
 
     getCurrentPage() {
@@ -451,46 +223,3 @@ export class Pagination {
         return this.totalItems;
     }
 }
-
-// Kullanım örneği ve yardımcı fonksiyonlar
-export const PaginationHelper = {
-    /**
-     * Hızlı pagination oluşturma fonksiyonu
-     */
-    create(options) {
-        return new Pagination(options);
-    },
-
-    /**
-     * Dizi üzerinde client-side pagination
-     */
-    paginate(array, page, itemsPerPage) {
-        const startIndex = (page - 1) * itemsPerPage;
-        const endIndex = startIndex + itemsPerPage;
-        return array.slice(startIndex, endIndex);
-    },
-
-    /**
-     * Pagination state'ini URL'e kaydetme
-     */
-    saveToURL(page, itemsPerPage, baseUrl = window.location.pathname) {
-        const url = new URL(baseUrl, window.location.origin);
-        url.searchParams.set('page', page);
-        url.searchParams.set('perPage', itemsPerPage);
-        window.history.replaceState({}, '', url);
-    },
-
-    /**
-     * URL'den pagination state'ini okuma
-     */
-    loadFromURL() {
-        const urlParams = new URLSearchParams(window.location.search);
-        return {
-            page: parseInt(urlParams.get('page')) || 1,
-            itemsPerPage: parseInt(urlParams.get('perPage')) || 20
-        };
-    }
-};
-
-// Default export
-export default Pagination;
