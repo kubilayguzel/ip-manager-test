@@ -210,7 +210,7 @@
 
     async function checkCacheAndToggleSearchButton() {
         const selectedBulletin = bulletinSelect.value;
-        startSearchBtn.disabled = true; // Her durumda önce pasif yap
+        startSearchBtn.disabled = true;
         infoMessageContainer.innerHTML = '';
         resultsTableBody.innerHTML = '';
         noRecordsMessage.style.display = 'none';
@@ -229,11 +229,11 @@
         const cachedCount = results.filter(r => r.success && r.data).length;
         
         if (cachedCount > 0 && cachedCount === filteredMonitoringTrademarks.length) {
-            startSearchBtn.disabled = true; // Hepsi önbellekte, buton pasif kalır
+            startSearchBtn.disabled = true;
             infoMessageContainer.innerHTML = `<div class="info-message">Bu bülten için tüm sonuçlar önbellekte mevcut. Sonuçlar otomatik olarak yükleniyor...</div>`;
             await performSearch(true);
         } else {
-            startSearchBtn.disabled = false; // Arama yapılacak marka var, buton aktif
+            startSearchBtn.disabled = false;
         }
     }
 
@@ -289,7 +289,11 @@
         allSimilarResults = [...cachedResults, ...newSearchResults];
 
         loadingIndicator.style.display = 'none';
-        startSearchBtn.disabled = false;
+        
+        // DÜZELTME BURADA: Buton sadece manuel aramadan sonra aktif edilecek.
+        if (!fromCacheOnly) {
+            startSearchBtn.disabled = false;
+        }
         
         const infoMessage = `Toplam ${allSimilarResults.length} benzer sonuç bulundu. (${cachedResults.length} önbellekten, ${newSearchResults.length} yeni arama ile)`;
         infoMessageContainer.innerHTML = `<div class="info-message">${infoMessage}</div>`;
