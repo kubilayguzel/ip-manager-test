@@ -399,14 +399,28 @@
     document.addEventListener('DOMContentLoaded', async () => {
         initializePagination();
         await loadInitialData();
+
         const algoliaReady = await window.algoliaLoadPromise;
         if (algoliaReady) {
             try {
+                console.log(">>> run-search import başlatılıyor");  // <-- Log eklendi
                 const module = await import('./js/trademark-similarity/run-search.js');
+                console.log(">>> run-search import tamamlandı", module);  // <-- Log eklendi
+
                 runTrademarkSearch = module.runTrademarkSearch;
-            } catch (e) { console.error("Arama modülü yüklenemedi.", e); }
+                if (typeof runTrademarkSearch !== "function") {
+                    console.error("runTrademarkSearch fonksiyonu bulunamadı!");
+                } else {
+                    console.log(">>> runTrademarkSearch başarıyla atandı");
+                }
+            } catch (e) {
+                console.error("Arama modülü yüklenemedi:", e);  // <-- Hata logu güçlendirildi
+            }
+        } else {
+            console.error("Algolia kütüphanesi yüklenmedi!");
         }
     });
+
 </script>
 </body>
 </html>
