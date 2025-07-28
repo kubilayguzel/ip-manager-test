@@ -324,7 +324,7 @@
         renderCurrentPageOfResults(1, pagination.getItemsPerPage());
                 
         // Arama bittikten sonra butonların durumunu son kez ayarla.
-        startSearchBtn.disabled = (trademarksToSearch.length === 0 && newSearchResults.length === 0);
+        startSearchBtn.disabled = true;
         researchBtn.disabled = allSimilarResults.length === 0;
     }
 
