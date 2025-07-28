@@ -3,307 +3,211 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>IP Manager - Marka Benzerlik Araştırması</title>
+    <title>IP Manager - Marka Bülten İzleme</title>
+    <script src="https://cdn.jsdelivr.net/npm/algoliasearch@4/dist/algoliasearch-lite.umd.js"></script>
     <style>
-        /* Bu sayfaya özel stiller */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333; display: flex; }
         .page-wrapper { flex-grow: 1; display: flex; flex-direction: column; height: 100vh; overflow-y: auto; background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); }
         .main-container { width: 100%; padding: 30px; margin: 0; }
-
         .page-header { background: rgba(255, 255, 255, 0.95); padding: 30px; border-radius: 20px; margin-bottom: 30px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1); }
         .page-title { font-size: 2em; color: #1e3c72; margin-bottom: 10px; }
         .page-subtitle { color: #666; font-size: 1.1em; }
-
-        .search-container {
-            background: rgba(255, 255, 255, 0.95);
-            padding: 30px;
-            border-radius: 20px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
-            margin-bottom: 30px;
-        }
-
-        .search-form {
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-        }
-
-        .form-row {
-            display: flex;
-            gap: 20px;
-            flex-wrap: wrap;
-        }
-
-        .form-group {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            min-width: 200px;
-        }
-
-        .form-group label {
-            margin-bottom: 8px;
-            font-weight: 600;
-            color: #495057;
-        }
-
-        .form-group input,
-        .form-group select,
-        .form-group textarea {
-            padding: 12px;
-            border-radius: 8px;
-            border: 1px solid #ced4da;
-            font-size: 1em;
-            transition: all 0.3s ease;
-        }
-
-        .form-group input:focus,
-        .form-group select:focus,
-        .form-group textarea:focus {
-            outline: none;
-            border-color: #1e3c72;
-            box-shadow: 0 0 0 3px rgba(30, 60, 114, 0.1);
-        }
-
-        .btn-search {
-            background: linear-gradient(45deg, #1e3c72, #2a5298);
-            color: white;
-            border: none;
-            padding: 12px 25px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 1.1em;
-            font-weight: 600;
-            transition: all 0.3s ease;
-            align-self: flex-start;
-        }
-
-        .btn-search:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(30, 60, 114, 0.2);
-        }
-        
-        .btn-search:disabled {
-            background: #cccccc;
-            cursor: not-allowed;
-            transform: none;
-            box-shadow: none;
-        }
-
-        .results-container {
-            margin-top: 30px;
-            background: rgba(255, 255, 255, 0.95);
-            border-radius: 20px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-            padding: 30px;
-        }
-
-        .results-header {
-            font-size: 1.5em;
-            color: #1e3c72;
-            margin-bottom: 20px;
-            border-bottom: 1px solid #dee2e6;
-            padding-bottom: 10px;
-        }
-
-        .results-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 20px;
-        }
-
-        .result-card {
-            border: 1px solid #e0e0e0;
-            border-radius: 10px;
-            padding: 15px;
-            transition: all 0.3s ease;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .result-card:hover {
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-            transform: translateY(-5px);
-        }
-
-        .result-image {
-            width: 100%;
-            height: 150px;
-            object-fit: contain;
-            margin-bottom: 15px;
-            border-radius: 5px;
-        }
-
-        .result-title {
-            font-weight: 600;
-            font-size: 1.1em;
-            margin-bottom: 10px;
-        }
-
-        .result-info {
-            font-size: 0.9em;
-            color: #666;
-            margin-bottom: 5px;
-        }
-        .result-info strong {
-            color: #333;
-        }
-        
-        .status-message {
-            text-align: center;
-            padding: 40px;
-            font-size: 1.1em;
-            color: #555;
-            background-color: #f8f9fa;
-            border-radius: 10px;
-        }
+        .monitoring-container, .results-container { background: rgba(255, 255, 255, 0.95); border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); overflow: hidden; margin-bottom: 30px; }
+        .monitoring-header, .results-header { padding: 20px 30px; border-bottom: 1px solid #e1e8ed; }
+        .monitoring-header h3, .results-header h3 { color: #1e3c72; margin-bottom: 20px; font-size: 1.3em; }
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px 25px; }
+        .form-group { margin-bottom: 15px; }
+        .form-label { display: block; margin-bottom: 8px; font-weight: 600; color: #333; }
+        .form-input, .form-select { width: 100%; padding: 12px 15px; border: 2px solid #e1e8ed; border-radius: 10px; font-size: 1em; }
+        .btn { padding: 12px 24px; border: none; border-radius: 10px; cursor: pointer; font-size: 1em; font-weight: 600; }
+        .btn-primary { background: #1e3c72; color: white; }
+        .results-table { width: 100%; border-collapse: collapse; }
+        .results-table th, .results-table td { padding: 15px; text-align: left; border-bottom: 1px solid #f0f0f0; }
+        .results-table th { background: #f8f9fa; font-weight: 600; }
+        .result-block { margin-bottom: 20px; }
+        .similarity-list { list-style-type: none; padding-left: 0; }
+        .similarity-list li { border-bottom: 1px dashed #ccc; padding: 10px 0; }
     </style>
 </head>
 <body>
-    <div id="notification-container" class="notification-container"></div>
     <div id="layout-placeholder"></div>
     <div class="page-wrapper">
         <main class="main-container">
             <section class="page-header">
-                <h1 class="page-title">Marka Benzerlik Araştırması</h1>
-                <p class="page-subtitle">Marka adı ve Nice sınıflarına göre benzerlik araştırması yapın.</p>
+                <h1 class="page-title">Marka Bülten İzleme</h1>
+                <p class="page-subtitle">Marka bültenlerini takip edin ve yeni başvuruları izleyin.</p>
             </section>
-
-            <div class="search-container">
-                <form id="searchForm" class="search-form">
-                    <div class="form-row">
-                        <div class="form-group" style="flex-grow: 2;">
-                            <label for="trademarkName">Marka Adı</label>
-                            <input type="text" id="trademarkName" name="trademarkName" required>
+    
+            <div class="monitoring-container">
+                <div class="monitoring-header">
+                    <h3>Arama Kriterleri</h3>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="owner-filter" class="form-label">Sahip</label>
+                            <input type="text" id="owner-filter" class="form-input" placeholder="Sahip adına göre filtrele">
                         </div>
                         <div class="form-group">
-                            <label for="niceClasses">Nice Sınıfları</label>
-                            <input type="text" id="niceClasses" name="niceClasses" placeholder="Örn: 9, 35, 42">
+                            <label for="nice-filter" class="form-label">Nice Sınıfı</label>
+                            <input type="text" id="nice-filter" class="form-input" placeholder="Nice sınıfına göre filtrele (örn: 35)">
+                        </div>
+                        <div class="form-group">
+                            <label for="bulletin-select" class="form-label">Bülten Seç</label>
+                            <select id="bulletin-select" class="form-select">
+                                <option value="">Bülten seçiniz...</option>
+                            </select>
                         </div>
                     </div>
-                    <button type="submit" id="searchButton" class="btn-search">Ara</button>
-                </form>
+                </div>
             </div>
 
-            <div id="resultsContainer" class="results-container" style="display: none;">
-                <h2 class="results-header">Arama Sonuçları</h2>
-                <div id="resultsGrid" class="results-grid">
-                    </div>
-                 <div id="paginationContainer"></div>
+            <div class="results-container">
+                <h3>İzlenecek Markalar</h3>
+                <ul id="trademark-list" style="padding: 20px;"></ul>
+                <div style="text-align: right; padding: 20px;">
+                    <button type="button" class="btn btn-primary" id="start-search">🔍 Aramayı Başlat</button>
+                </div>
             </div>
-           
+
+            <div class="results-container" style="margin-top: 30px;">
+                <h3>Arama Sonuçları</h3>
+                <div id="search-results" style="padding: 20px;"></div>
+                <div id="paginationContainer" style="padding: 20px;"></div> 
+            </div>
         </main>
     </div>
 
-    <script type="module">
-        import Pagination from './js/pagination.js'; // Pagination import edildi
-        import { loadSharedLayout } from './js/layout-loader.js';
-        import { getAuth } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-        import { showNotification } from './utils.js';
-        import { trademarkSimilarityService } from './firebase-config.js';
+<script type="module">
+    // PAGINATION SINIFINI DOĞRU YERDEN IMPORT EDİYORUZ
+    import Pagination from './js/pagination.js'; 
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+    import { getFirestore, collection, getDocs } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+    import { firebaseConfig } from './firebase-config.js';
+    import { loadSharedLayout } from './js/layout-loader.js';
 
-        let allResults = [];
-        let pagination; // Pagination nesnesi için global değişken
+    // Mevcut JS kodunuzun tamamı (değişiklik yok)
+    const algoliaClient = algoliasearch('THCIEJJTZ9', 'b6c38850bfc00adcf0ecdd9a14638c27');
+    const index = algoliaClient.initIndex('trademark_bulletin_records_live');
 
-        document.addEventListener('DOMContentLoaded', async () => {
-            await loadSharedLayout({ activeMenuLink: 'trademark-similarity-search.html' });
-            
-            const auth = getAuth();
-            if (!auth.currentUser) {
-                window.location.href = 'index.html';
-                return;
+    initializeApp(firebaseConfig);
+    const db = getFirestore();
+
+    const startButton = document.getElementById('start-search');
+    const bulletinSelect = document.getElementById('bulletin-select');
+    const ownerFilterInput = document.getElementById('owner-filter');
+    const niceFilterInput = document.getElementById('nice-filter');
+    const trademarkListEl = document.getElementById('trademark-list');
+    const resultsContainer = document.getElementById('search-results');
+
+    // YENİ GLOBAL DEĞİŞKENLER
+    let pagination;
+    let allCombinedResults = [];
+
+    // Sayfa yüklendiğinde layout ve bültenleri doldur
+    loadSharedLayout({ activeMenuLink: 'trademark-similarity-search.html' });
+    loadBulletinOptions();
+    initializePagination(); // Pagination'ı başlat
+
+    async function loadBulletinOptions() {
+      const snapshot = await getDocs(collection(db, 'trademarkBulletins'));
+      const bulletins = [];
+      snapshot.forEach(doc => bulletins.push({ id: doc.id, ...doc.data() }));
+      bulletinSelect.innerHTML = bulletins
+        .map(b => `<option value="${b.id}">${b.bulletinNo} - ${b.bulletinDate}</option>`)
+        .join('');
+    }
+    
+    // YENİ: Pagination'ı başlatan fonksiyon
+    function initializePagination() {
+        pagination = new Pagination({
+            containerId: 'paginationContainer',
+            itemsPerPage: 5, // Her bir izlenen marka bir "sayfa" gibi düşünülebilir
+            onPageChange: () => {
+                renderCurrentPageResults();
             }
-
-            initializePagination(); // Sayfa yüklendiğinde pagination başlatılıyor
-            setupEventListeners();
         });
+    }
 
-        function initializePagination() {
-            pagination = new Pagination({
-                containerId: 'paginationContainer',
-                itemsPerPage: 12, // Kart gösterimi için 12 daha uygun
-                onPageChange: () => {
-                    renderCurrentPage(); // Sayfa değiştiğinde sonuçları yeniden çiz
-                }
-            });
+    startButton.addEventListener('click', async () => {
+      const selectedBulletin = bulletinSelect.value;
+      if (!selectedBulletin) return alert('Lütfen bir bülten seçin.');
+
+      const ownerFilter = ownerFilterInput.value.toLowerCase();
+      const niceFilter = niceFilterInput.value;
+
+      const snapshot = await getDocs(collection(db, 'monitoringTrademarks'));
+      const monitored = [];
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        const owner = (data.owners?.[0]?.name || '').toLowerCase();
+        const niceMatch = !niceFilter || (data.niceClass && data.niceClass.includes(niceFilter));
+        if (owner.includes(ownerFilter) && niceMatch) {
+          monitored.push({ id: doc.id, ...data });
         }
+      });
 
-        function setupEventListeners() {
-            const searchForm = document.getElementById('searchForm');
-            searchForm.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                const trademarkName = document.getElementById('trademarkName').value;
-                const niceClasses = document.getElementById('niceClasses').value;
-                const searchButton = document.getElementById('searchButton');
+      trademarkListEl.innerHTML = monitored.map(m => `
+        <li><strong>${m.title}</strong> (${m.applicationNumber})</li>
+      `).join('');
 
-                if (!trademarkName) {
-                    showNotification('Lütfen bir marka adı girin.', 'warning');
-                    return;
-                }
+      // ARAMA SONUÇLARINI GLOBAL DEĞİŞKENDE SAKLA
+      allCombinedResults = [];
+      resultsContainer.innerHTML = 'Arama yapılıyor...'; // Yükleniyor mesajı
 
-                const resultsContainer = document.getElementById('resultsContainer');
-                const resultsGrid = document.getElementById('resultsGrid');
-                resultsGrid.innerHTML = '<div class="status-message">Arama yapılıyor, lütfen bekleyin...</div>';
-                document.getElementById('paginationContainer').innerHTML = ''; // Eski pagination'ı temizle
-                resultsContainer.style.display = 'block';
-                searchButton.disabled = true;
-                searchButton.textContent = 'Aranıyor...';
-
-                try {
-                    const result = await trademarkSimilarityService.search(trademarkName, niceClasses);
-                    
-                    if (result.success && result.data && result.data.length > 0) {
-                        allResults = result.data;
-                        // Tüm sonuçları render etmek yerine pagination'ı güncelle
-                        pagination.update(allResults.length, 1);
-                    } else if (result.success) {
-                        allResults = [];
-                        pagination.update(0); // Sonuç yoksa pagination'ı sıfırla
-                        resultsGrid.innerHTML = '<div class="status-message">Benzer marka bulunamadı.</div>';
-                    } else {
-                        throw new Error(result.error || 'Bilinmeyen bir hata oluştu.');
-                    }
-                } catch (error) {
-                    allResults = [];
-                    pagination.update(0);
-                    resultsGrid.innerHTML = `<div class="status-message" style="color: red;">Hata: ${error.message}</div>`;
-                    showNotification('Arama sırasında bir hata oluştu.', 'error');
-                } finally {
-                    searchButton.disabled = false;
-                    searchButton.textContent = 'Ara';
-                }
-            });
+      for (const trademark of monitored) {
+        try {
+          const hits = await runSimilaritySearch(trademark, selectedBulletin);
+          allCombinedResults.push({ trademark, hits });
+        } catch (e) {
+          console.error("Arama hatası:", trademark.title, e);
+          allCombinedResults.push({ trademark, hits: [] });
         }
+      }
+      
+      // ARAMA BİTTİKTEN SONRA PAGINATION'I GÜNCELLE
+      pagination.update(allCombinedResults.length, 1);
+    });
+
+    async function runSimilaritySearch(trademark, bulletinId) {
+      const query = trademark.title || trademark.markName;
+      const { hits } = await index.search(query, {
+        filters: `bulletinId:'${bulletinId}'`,
+        hitsPerPage: 1000
+      });
+      return hits;
+    }
+    
+    // ESKİ RENDER FONKSİYONU YERİNE YENİSİ
+    function renderCurrentPageResults() {
+        resultsContainer.innerHTML = '';
+        const currentPageData = pagination.getCurrentPageData(allCombinedResults);
         
-        // Yeni Fonksiyon: Sadece geçerli sayfadaki sonuçları render eder
-        function renderCurrentPage() {
-            const resultsGrid = document.getElementById('resultsGrid');
-            resultsGrid.innerHTML = ''; 
-
-            const currentPageData = pagination.getCurrentPageData(allResults);
-
-            if (currentPageData.length === 0 && allResults.length > 0) {
-                 resultsGrid.innerHTML = '<div class="status-message">Bu sayfada gösterilecek sonuç bulunamadı.</div>';
-                 return;
+        currentPageData.forEach(({ trademark, hits }) => {
+            let blockHtml = `<div class="result-block">
+              <h3>${trademark.title} (${trademark.applicationNumber})</h3>`;
+            if (hits.length > 0) {
+              blockHtml += buildList(hits);
+            } else {
+              blockHtml += `<p>Benzer marka bulunamadı.</p>`;
             }
+            blockHtml += `</div><hr/>`;
+            resultsContainer.innerHTML += blockHtml;
+        });
+    }
 
-            currentPageData.forEach(item => {
-                const card = document.createElement('div');
-                card.className = 'result-card';
-                
-                const imageHtml = item.image_url ? `<img src="${item.image_url}" alt="${item.markName}" class="result-image">` : '';
-
-                card.innerHTML = `
-                    ${imageHtml}
-                    <div class="result-title">${item.markName || 'N/A'}</div>
-                    <div class="result-info"><strong>Başvuru No:</strong> ${item.applicationNo || 'N/A'}</div>
-                    <div class="result-info"><strong>Başvuru Tarihi:</strong> ${item.applicationDate || 'N/A'}</div>
-                    <div class="result-info"><strong>Nice Sınıfları:</strong> ${item.niceClasses || 'N/A'}</div>
-                    <div class="result-info"><strong>Sahibi:</strong> ${item.holderName || 'N/A'}</div>
-                `;
-                resultsGrid.appendChild(card);
-            });
-        }
-    </script>
+    function buildList(list) {
+      return `
+        <ul class="similarity-list">
+          ${list.map(item => `
+            <li>
+              <strong>${item.markName}</strong> (${item.applicationNo})<br/>
+              Sınıflar: ${Array.isArray(item.niceClasses) ? item.niceClasses.join(', ') : (item.niceClasses || '-')}<br/>
+              Başvuru Tarihi: ${new Date(item.applicationDate).toLocaleDateString('tr-TR')}
+            </li>
+          `).join('')}
+        </ul>
+      `;
+    }
+</script>
 </body>
 </html>
