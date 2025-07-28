@@ -138,7 +138,8 @@
     
     let runTrademarkSearch;
     let allSimilarResults = [];
-    let filteredMonitoringTrademarks = [];
+    let monitoringTrademarks = []; // Tüm izleme listesi burada tutulacak
+    let filteredMonitoringTrademarks = []; // Sadece filtrelenmiş olanlar
     let allPersons = [];
     let pagination;
 
@@ -151,6 +152,15 @@
     const loadingIndicator = document.getElementById('loadingIndicator');
     const noRecordsMessage = document.getElementById('noRecordsMessage');
     const infoMessageContainer = document.getElementById('infoMessageContainer');
+    
+    // YENİ: Sürekli tetiklenmeyi önlemek için debounce fonksiyonu
+    const debounce = (func, delay) => {
+        let timeout;
+        return (...args) => {
+            clearTimeout(timeout);
+            timeout = setTimeout(() => func(...args), delay);
+        };
+    };
 
     function initializePagination() {
         pagination = new Pagination({
@@ -165,7 +175,12 @@
         const personsResult = await personService.getPersons();
         if (personsResult.success) allPersons = personsResult.data;
         await loadBulletinOptions();
-        await loadMonitoringTrademarks();
+
+        // Başlangıçta tüm izleme listesini çek
+        const snapshot = await getDocs(collection(db, 'monitoringTrademarks'));
+        monitoringTrademarks = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+        applyMonitoringListFilters(); // Filtreleri uygula ve listeyi göster
     }
 
     async function loadBulletinOptions() {
@@ -174,19 +189,20 @@
         bulletins.sort((a, b) => new Date(b.bulletinDate) - new Date(a.bulletinDate));
         bulletinSelect.innerHTML = '<option value="">Bülten seçin...</option>' + bulletins.map(b => `<option value="${b.id}">${b.bulletinNo} - ${b.bulletinDate}</option>`).join('');
     }
-
-    async function loadMonitoringTrademarks() {
+    
+    // İSİM DEĞİŞİKLİĞİ ve MANTIK DÜZELTMESİ
+    function applyMonitoringListFilters() {
         const ownerFilter = ownerSearchInput.value.toLowerCase().trim();
         const niceFilter = niceClassSearchInput.value.trim();
-        const snapshot = await getDocs(collection(db, 'monitoringTrademarks'));
         
-        filteredMonitoringTrademarks = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })).filter(data => {
+        filteredMonitoringTrademarks = monitoringTrademarks.filter(data => {
             const ownerName = (data.owners?.[0]?.name || '').toLowerCase();
             const niceClasses = Array.isArray(data.niceClass) ? data.niceClass.join(' ') : (data.niceClass || '');
             const ownerMatch = !ownerFilter || ownerName.includes(ownerFilter);
             const niceMatch = !niceFilter || niceClasses.includes(niceFilter);
             return ownerMatch && niceMatch;
         });
+        
         renderMonitoringList();
         checkCacheAndToggleSearchButton();
     }
@@ -212,9 +228,13 @@
         const selectedBulletin = bulletinSelect.value;
         startSearchBtn.disabled = true;
         infoMessageContainer.innerHTML = '';
-        resultsTableBody.innerHTML = '';
-        noRecordsMessage.style.display = 'none';
-        pagination.update(0);
+        
+        // Önbellek kontrolünden önce sonuçları temizle
+        if (allSimilarResults.length > 0) {
+            allSimilarResults = [];
+            pagination.update(0);
+            renderCurrentPageOfResults();
+        }
 
         if (!selectedBulletin || filteredMonitoringTrademarks.length === 0) {
             return;
@@ -238,6 +258,7 @@
     }
 
     async function performSearch(fromCacheOnly = false) {
+        // ... (Bu fonksiyonun içeriği aynı kalabilir) ...
         const selectedBulletin = bulletinSelect.value;
         if (!selectedBulletin) return alert('Lütfen bir bülten seçin.');
         if (filteredMonitoringTrademarks.length === 0) return alert('Filtreye uygun izlenen marka bulunamadı.');
@@ -287,19 +308,16 @@
         }
         
         allSimilarResults = [...cachedResults, ...newSearchResults];
-
         loadingIndicator.style.display = 'none';
-        
-        // DÜZELTME BURADA: Buton sadece manuel aramadan sonra aktif edilecek.
-        if (!fromCacheOnly) {
-            startSearchBtn.disabled = false;
-        }
         
         const infoMessage = `Toplam ${allSimilarResults.length} benzer sonuç bulundu. (${cachedResults.length} önbellekten, ${newSearchResults.length} yeni arama ile)`;
         infoMessageContainer.innerHTML = `<div class="info-message">${infoMessage}</div>`;
 
         pagination.update(allSimilarResults.length, 1);
         renderCurrentPageOfResults();
+        
+        // Arama bittikten sonra buton durumunu yeniden değerlendir
+        await checkCacheAndToggleSearchButton();
     }
 
     function renderCurrentPageOfResults() {
@@ -339,7 +357,13 @@
     window.viewRecord = (recordId) => {
         alert(`Kayıt ID: ${recordId} - Bu özellik geliştirilecek.`);
     };
+    
+    // YENİ: Debounce edilmiş filtreleme fonksiyonu
+    const debouncedFilter = debounce(() => {
+        applyMonitoringListFilters();
+    }, 400); // 400ms bekle
 
+    // EVENT LISTENERS
     startSearchBtn.addEventListener('click', () => performSearch(false));
     clearFiltersBtn.addEventListener('click', () => {
         ownerSearchInput.value = '';
@@ -349,13 +373,15 @@
         infoMessageContainer.innerHTML = '';
         noRecordsMessage.style.display = 'none';
         pagination.update(0);
-        loadMonitoringTrademarks();
+        applyMonitoringListFilters();
     });
     
-    ownerSearchInput.addEventListener('input', loadMonitoringTrademarks);
-    niceClassSearchInput.addEventListener('input', loadMonitoringTrademarks);
+    // DÜZELTME: input event'leri artık debounced fonksiyonu çağırıyor
+    ownerSearchInput.addEventListener('input', debouncedFilter);
+    niceClassSearchInput.addEventListener('input', debouncedFilter);
     bulletinSelect.addEventListener('change', checkCacheAndToggleSearchButton);
 
+    // SAYFA YÜKLENDİĞİNDE BAŞLATMA
     document.addEventListener('DOMContentLoaded', async () => {
         initializePagination();
         await loadInitialData();
@@ -367,6 +393,7 @@
             } catch (e) { console.error("Arama modülü yüklenemedi.", e); }
         }
     });
+
 </script>
 </body>
 </html>
