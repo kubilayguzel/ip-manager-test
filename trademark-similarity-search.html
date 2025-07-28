@@ -133,32 +133,22 @@
     </div>
 
 <script type="module">
-    import Pagination from './js/pagination.js'; // <- PAGINATION IMPORT EDİLDİ
+    import Pagination from './js/pagination.js';
     import { loadSharedLayout } from './js/layout-loader.js';
-    import { monitoringService, personService } from './firebase-config.js';
-    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+    // DİKKAT: db objesini ve diğer servisleri doğrudan firebase-config'den alıyoruz
+    import { db, monitoringService, personService } from './firebase-config.js';
     import { getFirestore, collection, getDocs } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
     
+    // Dinamik import ile run-search.js'yi yükle
     let runTrademarkSearch;
-    
-    // Firebase configuration
-    const firebaseConfig = { // Kendi Firebase bilgilerinizi buraya ekleyin
-        apiKey: "YOUR_API_KEY",
-        authDomain: "YOUR_AUTH_DOMAIN",
-        projectId: "YOUR_PROJECT_ID",
-        storageBucket: "YOUR_STORAGE_BUCKET",
-        messagingSenderId: "YOUR_SENDER_ID",
-        appId: "YOUR_APP_ID"
-    };
 
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-
+    // Global variables
     let allSimilarResults = [];
     let filteredMonitoringTrademarks = [];
     let allPersons = [];
     let pagination;
 
+    // DOM elements
     const startSearchBtn = document.getElementById('startSearchBtn');
     const clearFiltersBtn = document.getElementById('clearFiltersBtn');
     const ownerSearchInput = document.getElementById('ownerSearch');
@@ -168,13 +158,13 @@
     const loadingIndicator = document.getElementById('loadingIndicator');
     const noRecordsMessage = document.getElementById('noRecordsMessage');
 
-    // PAGINATION'I BAŞLATAN FONKSİYON
+    // Pagination'ı başlat
     function initializePagination() {
         pagination = new Pagination({
             containerId: 'paginationContainer',
             itemsPerPage: 10,
             onPageChange: () => {
-                renderCurrentPageOfResults(); // Sayfa değiştiğinde sonuçları render et
+                renderCurrentPageOfResults();
             }
         });
     }
@@ -198,9 +188,24 @@
     }
 
     async function loadMonitoringTrademarks() {
+        // Bu kısım owner ve nice class filtrelemesi için kullanılacak
+        const ownerFilter = ownerSearchInput.value.toLowerCase().trim();
+        const niceFilter = niceClassSearchInput.value.trim();
+
         const snapshot = await getDocs(collection(db, 'monitoringTrademarks'));
         filteredMonitoringTrademarks = [];
-        snapshot.forEach(doc => filteredMonitoringTrademarks.push({ id: doc.id, ...doc.data() }));
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            const ownerName = (data.owners?.[0]?.name || '').toLowerCase();
+            const niceClasses = Array.isArray(data.niceClass) ? data.niceClass.join(' ') : (data.niceClass || '');
+            
+            const ownerMatch = !ownerFilter || ownerName.includes(ownerFilter);
+            const niceMatch = !niceFilter || niceClasses.includes(niceFilter);
+
+            if(ownerMatch && niceMatch){
+                filteredMonitoringTrademarks.push({ id: doc.id, ...data });
+            }
+        });
         renderMonitoringList();
     }
 
@@ -208,7 +213,7 @@
         const tbody = document.getElementById('monitoringListBody');
         tbody.innerHTML = '';
         if (filteredMonitoringTrademarks.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="6" class="no-records">İzlenecek marka bulunamadı.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="5" class="no-records">Filtreye uygun izlenecek marka bulunamadı.</td></tr>';
             return;
         }
         tbody.innerHTML = filteredMonitoringTrademarks.map(trademark => {
@@ -220,20 +225,23 @@
                         <td>${ownerName}</td>
                         <td>${niceClasses}</td>
                         <td>${trademark.applicationDate || '-'}</td>
-                        <td>Aktif</td>
                     </tr>`;
         }).join('');
     }
 
     async function performSearch() {
         if (!runTrademarkSearch) {
-            alert("Arama modülü henüz yüklenmedi, lütfen bekleyin.");
+            showNotification("Arama modülü henüz hazır değil, lütfen bekleyin.", "warning");
             return;
         }
 
         const selectedBulletin = bulletinSelect.value;
         if (!selectedBulletin) {
-            alert('Lütfen bir bülten seçin.');
+            showNotification('Lütfen bir bülten seçin.', 'warning');
+            return;
+        }
+        if (filteredMonitoringTrademarks.length === 0){
+            showNotification('Arama yapılacak izlenen marka bulunamadı. Lütfen filtrelerinizi kontrol edin.', 'info');
             return;
         }
 
@@ -265,13 +273,14 @@
         loadingIndicator.style.display = 'none';
         pagination.update(allSimilarResults.length, 1);
     }
-    
-    // RENDER FONKSİYONU PAGINATION'A UYGUN HALE GETİRİLDİ
+
     function renderCurrentPageOfResults() {
         resultsTableBody.innerHTML = '';
+        if(!pagination) return;
         const currentPageData = pagination.getCurrentPageData(allSimilarResults);
         
         if (currentPageData.length === 0) {
+            if(allSimilarResults.length > 0) return; // Başka sayfada veri var demektir
             noRecordsMessage.style.display = 'block';
             return;
         }
@@ -304,22 +313,22 @@
 
     // EVENT LISTENERS
     startSearchBtn.addEventListener('click', performSearch);
-
     clearFiltersBtn.addEventListener('click', () => {
         ownerSearchInput.value = '';
         niceClassSearchInput.value = '';
-        bulletinSelect.value = '';
         resultsTableBody.innerHTML = '';
         noRecordsMessage.style.display = 'none';
         pagination.update(0);
-        loadMonitoringTrademarks(); // Filtresiz listeyi yeniden yükle
+        loadMonitoringTrademarks();
     });
+    ownerSearchInput.addEventListener('input', loadMonitoringTrademarks);
+    niceClassSearchInput.addEventListener('input', loadMonitoringTrademarks);
+
 
     // SAYFA YÜKLENDİĞİNDE BAŞLATMA
     document.addEventListener('DOMContentLoaded', async () => {
         initializePagination();
         await loadInitialData();
-        // Algolia ve Arama modülünü yükle
         const algoliaReady = await window.algoliaLoadPromise;
         if (algoliaReady) {
             try {
