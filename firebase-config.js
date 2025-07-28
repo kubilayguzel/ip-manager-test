@@ -455,43 +455,6 @@ export const monitoringService = {
     }
 };
 
-// =====================================================================
-// YENİ EKLENECEK BÖLÜM - 1: SearchRecordService Sınıfı
-// =====================================================================
-// Bu sınıf, arama sonuçlarını Firebase'e kaydetmek ve oradan okumak için kullanılacak.
-// Bu bloğu diğer servis sınıflarının sonuna ekleyebilirsiniz.
-class SearchRecordService {
-    constructor(db) {
-        this.db = db;
-        this.collectionRef = collection(this.db, 'searchRecords');
-    }
-
-    async getRecord(recordId) {
-        try {
-            const docRef = doc(this.db, 'searchRecords', recordId);
-            const docSnap = await getDoc(docRef);
-            if (docSnap.exists()) {
-                return { success: true, data: docSnap.data() };
-            } else {
-                return { success: false, data: null };
-            }
-        } catch (error) {
-            console.error("Arama kaydı alınırken hata:", error);
-            return { success: false, error: error.message };
-        }
-    }
-
-    async saveRecord(recordId, data) {
-        try {
-            const docRef = doc(this.db, 'searchRecords', recordId);
-            await setDoc(docRef, data);
-            return { success: true };
-        } catch (error) {
-            console.error("Arama kaydı kaydedilirken hata:", error);
-            return { success: false, error: error.message };
-        }
-    }
-}
 // --- YENİ EKLENDİ: Task Service ---
 export const taskService = {
     async createTask(taskData) { 
@@ -1712,9 +1675,37 @@ export const etebsAutoProcessor = {
         }
     }
 };
-
 console.log('🔐 ETEBS Service Layer loaded successfully');
-export const searchRecordService = new SearchRecordService(db);
+
+export const searchRecordService = {
+    async getRecord(recordId) {
+        if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor." };
+        try {
+            const docRef = doc(db, 'searchRecords', recordId);
+            const docSnap = await getDoc(docRef);
+            if (docSnap.exists()) {
+                return { success: true, data: docSnap.data() };
+            } else {
+                return { success: false, data: null };
+            }
+        } catch (error) {
+            console.error("Arama kaydı alınırken hata:", error);
+            return { success: false, error: error.message };
+        }
+    },
+
+    async saveRecord(recordId, data) {
+        if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor." };
+        try {
+            const docRef = doc(db, 'searchRecords', recordId);
+            await setDoc(docRef, data);
+            return { success: true };
+        } catch (error) {
+            console.error("Arama kaydı kaydedilirken hata:", error);
+            return { success: false, error: error.message };
+        }
+    }
+};
 // --- Exports ---
 export {auth, storage, db, app}; 
 export const firebaseServices = { 
