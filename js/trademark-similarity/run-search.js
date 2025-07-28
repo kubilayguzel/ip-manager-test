@@ -1,8 +1,11 @@
 // js/trademark-similarity/run-search.js
 
+console.log(">>> run-search.js modülü yürütülmeye başlandı <<<"); // EN ÜSTTE BU LOGU EKLEYİN
 import { calculateSimilarityScore } from './scorer.js';
 import { isValidBasedOnDate, hasOverlappingNiceClasses } from './filters.js';
-console.log("### run-search.js modülü yüklendi ###");
+
+console.log("### run-search.js modülü yüklendi ###"); // Mevcut log
+console.log("Type of window.algoliasearch at start:", typeof window.algoliasearch); // Yeni log
 
 const algoliasearch = window.algoliasearch;
 const client = algoliasearch('THCIEJJTZ9', 'b6c38850bfc00adcf0ecdd9a14638c27');
