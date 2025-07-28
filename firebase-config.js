@@ -1681,7 +1681,6 @@ export const searchRecordService = {
     async getRecord(recordId) {
         if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor." };
         try {
-            // DOĞRU KOLEKSİYON ADI KULLANILDI
             const docRef = doc(db, 'monitoringTrademarkRecords', recordId);
             const docSnap = await getDoc(docRef);
             if (docSnap.exists()) {
@@ -1698,12 +1697,28 @@ export const searchRecordService = {
     async saveRecord(recordId, data) {
         if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor." };
         try {
-            // DOĞRU KOLEKSİYON ADI KULLANILDI
             const docRef = doc(db, 'monitoringTrademarkRecords', recordId);
             await setDoc(docRef, data);
             return { success: true };
         } catch (error) {
             console.error("Arama kaydı kaydedilirken hata:", error);
+            return { success: false, error: error.message };
+        }
+    },
+
+    // YENİ EKLENEN FONKSİYON
+    async deleteRecord(recordId) {
+        if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor." };
+        try {
+            const docRef = doc(db, 'monitoringTrademarkRecords', recordId);
+            await deleteDoc(docRef);
+            return { success: true };
+        } catch (error) {
+            // Kayıt zaten yoksa bu bir hata değil, görmezden gel.
+            if (error.code === 'not-found') {
+                return { success: true };
+            }
+            console.error("Arama kaydı silinirken hata:", error);
             return { success: false, error: error.message };
         }
     }
