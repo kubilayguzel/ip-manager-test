@@ -68,7 +68,7 @@ startButton.addEventListener('click', async () => {
 async function runSimilaritySearch(trademark, bulletinId) {
   const query = trademark.markName;
   const { hits } = await index.search(query, {
-    filters: `bulletinId:'${bulletinId}'`,
+    filters: `bulletinId:"${bulletinId}"`,  // ← tek tırnak yerine çift tırnak
     hitsPerPage: 1000
   });
   return hits;
