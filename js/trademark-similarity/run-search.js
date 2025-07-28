@@ -2,6 +2,7 @@
 
 import { calculateSimilarityScore } from './scorer.js';
 import { isValidBasedOnDate, hasOverlappingNiceClasses } from './filters.js';
+console.log("### run-search.js modülü yüklendi ###");
 
 const algoliasearch = window.algoliasearch;
 const client = algoliasearch('THCIEJJTZ9', 'b6c38850bfc00adcf0ecdd9a14638c27');
