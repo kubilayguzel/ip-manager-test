@@ -136,7 +136,7 @@
 <script type="module">
     import Pagination from './js/pagination.js';
     import { loadSharedLayout } from './js/layout-loader.js';
-    import { db, personService } from './firebase-config.js'; // <- FIREBASE DB BURADAN ALINIYOR
+    import { db, personService } from './firebase-config.js';
     import { collection, getDocs } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 
     let runTrademarkSearch;
@@ -244,16 +244,21 @@
                 }));
             }).catch(error => {
                 console.error(`Arama hatası (${trademark.title}):`, error);
-                return []; // Hata durumunda boş dizi döndür
+                return [];
             });
         });
 
         const resultsArrays = await Promise.all(searchPromises);
-        allSimilarResults = resultsArrays.flat(); // Tüm sonuçları tek bir dizide birleştir
+        allSimilarResults = resultsArrays.flat();
 
         loadingIndicator.style.display = 'none';
         startSearchBtn.disabled = false;
+        
+        // ÖNCE pagination'ı güncelle
         pagination.update(allSimilarResults.length, 1);
+        
+        // SONRA ilk sayfayı render et
+        renderCurrentPageOfResults(); 
     }
 
     function renderCurrentPageOfResults() {
@@ -262,10 +267,11 @@
         
         const currentPageData = pagination.getCurrentPageData(allSimilarResults);
         
-        if (currentPageData.length === 0) {
-            noRecordsMessage.style.display = 'block';
-            return;
+        if (allSimilarResults.length === 0) {
+             noRecordsMessage.style.display = 'block';
+             return;
         }
+        
         noRecordsMessage.style.display = 'none';
 
         currentPageData.forEach(hit => {
