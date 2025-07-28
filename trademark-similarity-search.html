@@ -99,7 +99,7 @@
                     </table>
                 </div>
                 <div style="text-align: right; padding: 20px;">
-                    <button type="button" class="btn btn-primary" id="startSearchBtn">🔍 Aramayı Başlat</button>
+                    <button type="button" class="btn btn-primary" id="startSearchBtn" disabled>🔍 Aramayı Başlat</button>
                 </div>
             </div>
 
@@ -210,9 +210,15 @@
 
     async function checkCacheAndToggleSearchButton() {
         const selectedBulletin = bulletinSelect.value;
-        startSearchBtn.disabled = false;
+        startSearchBtn.disabled = true; // Her durumda önce pasif yap
         infoMessageContainer.innerHTML = '';
-        if (!selectedBulletin || filteredMonitoringTrademarks.length === 0) return;
+        resultsTableBody.innerHTML = '';
+        noRecordsMessage.style.display = 'none';
+        pagination.update(0);
+
+        if (!selectedBulletin || filteredMonitoringTrademarks.length === 0) {
+            return;
+        }
 
         const checkPromises = filteredMonitoringTrademarks.map(tm => {
             const recordId = `${tm.id}_${selectedBulletin}`;
@@ -222,10 +228,12 @@
         const results = await Promise.all(checkPromises);
         const cachedCount = results.filter(r => r.success && r.data).length;
         
-        if (cachedCount === filteredMonitoringTrademarks.length) {
-            startSearchBtn.disabled = true;
+        if (cachedCount > 0 && cachedCount === filteredMonitoringTrademarks.length) {
+            startSearchBtn.disabled = true; // Hepsi önbellekte, buton pasif kalır
             infoMessageContainer.innerHTML = `<div class="info-message">Bu bülten için tüm sonuçlar önbellekte mevcut. Sonuçlar otomatik olarak yükleniyor...</div>`;
-            await performSearch(true); // Otomatik arama (sadece önbellekten)
+            await performSearch(true);
+        } else {
+            startSearchBtn.disabled = false; // Arama yapılacak marka var, buton aktif
         }
     }
 
@@ -293,9 +301,11 @@
     function renderCurrentPageOfResults() {
         resultsTableBody.innerHTML = '';
         if(!pagination) return;
+        
         const currentPageData = pagination.getCurrentPageData(allSimilarResults);
         
         if (allSimilarResults.length === 0) {
+             noRecordsMessage.textContent = 'Arama sonucu bulunamadı.';
              noRecordsMessage.style.display = 'block';
              return;
         }
@@ -326,12 +336,15 @@
         alert(`Kayıt ID: ${recordId} - Bu özellik geliştirilecek.`);
     };
 
-    // EVENT LISTENERS
     startSearchBtn.addEventListener('click', () => performSearch(false));
     clearFiltersBtn.addEventListener('click', () => {
-        ownerSearchInput.value = ''; niceClassSearchInput.value = '';
-        resultsTableBody.innerHTML = ''; infoMessageContainer.innerHTML = '';
-        noRecordsMessage.style.display = 'none'; pagination.update(0);
+        ownerSearchInput.value = '';
+        niceClassSearchInput.value = '';
+        bulletinSelect.selectedIndex = 0;
+        resultsTableBody.innerHTML = '';
+        infoMessageContainer.innerHTML = '';
+        noRecordsMessage.style.display = 'none';
+        pagination.update(0);
         loadMonitoringTrademarks();
     });
     
