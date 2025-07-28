@@ -168,7 +168,11 @@
     };
 
     function initializePagination() {
-        pagination = new Pagination({ containerId: 'paginationContainer', itemsPerPage: 10, onPageChange: renderCurrentPageOfResults });
+        pagination = new Pagination({
+            containerId: 'paginationContainer',
+            itemsPerPage: 10,
+            onPageChange: renderCurrentPageOfResults
+        });
     }
 
     async function loadInitialData() {
@@ -223,13 +227,20 @@
         startSearchBtn.disabled = true;
         researchBtn.disabled = true;
         
-        if (!selectedBulletin || filteredMonitoringTrademarks.length === 0) return;
+        // DÖNGÜYÜ ÖNLEMEK İÇİN SONUÇ TEMİZLEME İŞİ BURADAN ÇIKARILDI.
+        // Temizleme artık sadece filtreler değiştiğinde yapılacak.
+
+        if (!selectedBulletin || filteredMonitoringTrademarks.length === 0) {
+            return;
+        }
 
         const checkPromises = filteredMonitoringTrademarks.map(tm => searchRecordService.getRecord(`${tm.id}_${selectedBulletin}`));
         const results = await Promise.all(checkPromises);
         const cachedCount = results.filter(r => r.success && r.data).length;
         
-        if (cachedCount > 0) researchBtn.disabled = false;
+        if (cachedCount > 0) {
+            researchBtn.disabled = false;
+        }
 
         if (cachedCount === filteredMonitoringTrademarks.length) {
             startSearchBtn.disabled = true;
@@ -261,8 +272,8 @@
     
     async function performSearch(fromCacheOnly = false) {
         const selectedBulletin = bulletinSelect.value;
-        if (!selectedBulletin) return alert('Lütfen bir bülten seçin.');
-        if (filteredMonitoringTrademarks.length === 0) return alert('Filtreye uygun izlenen marka bulunamadı.');
+        if (!selectedBulletin) return;
+        if (filteredMonitoringTrademarks.length === 0) return;
 
         loadingIndicator.textContent = 'Arama yapılıyor...';
         loadingIndicator.style.display = 'block';
@@ -313,20 +324,12 @@
         infoMessageContainer.innerHTML = `<div class="info-message">${infoMessage}</div>`;
 
         pagination.update(allSimilarResults.length, 1);
-        renderCurrentPageOfResults();
         
-        // DÖNGÜYÜ ÖNLEMEK İÇİN BU SATIR KALDIRILDI
-        // await checkCacheAndToggleButtonStates(); 
-        
-        // YERİNE DOĞRUDAN BUTON DURUMLARI AYARLANDI
         if (allSimilarResults.length > 0) {
             researchBtn.disabled = false;
         }
-        if (trademarksToSearch.length === 0) { // Eğer arama sonrası yeni arama kalmadıysa
-             startSearchBtn.disabled = true;
-        } else {
-             startSearchBtn.disabled = false;
-        }
+        // Arama yapıldığına göre, artık tüm sonuçlar önbellekte demektir, bu yüzden "Aramayı Başlat" butonu pasif olmalı.
+        startSearchBtn.disabled = true; 
     }
 
     function renderCurrentPageOfResults() {
@@ -366,15 +369,15 @@
     window.viewRecord = (recordId) => alert(`Kayıt ID: ${recordId} - Bu özellik geliştirilecek.`);
 
     const debouncedFilter = debounce(applyMonitoringListFilters, 400);
-    
-    function resetSearchUI() {
+
+    function resetUI() {
         resultsTableBody.innerHTML = '';
         infoMessageContainer.innerHTML = '';
         noRecordsMessage.style.display = 'none';
         pagination.update(0);
         checkCacheAndToggleButtonStates();
     }
-
+    
     // EVENT LISTENERS
     startSearchBtn.addEventListener('click', () => performSearch(false));
     researchBtn.addEventListener('click', performResearch);
@@ -388,8 +391,8 @@
     ownerSearchInput.addEventListener('input', debouncedFilter);
     niceClassSearchInput.addEventListener('input', debouncedFilter);
     bulletinSelect.addEventListener('change', () => {
-        resetSearchUI();
-        checkCacheAndToggleButtonStates();
+        // Bülten değiştiğinde sadece UI'ı temizle ve buton durumunu kontrol et.
+        resetUI();
     });
 
     document.addEventListener('DOMContentLoaded', async () => {
