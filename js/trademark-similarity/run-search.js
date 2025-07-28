@@ -125,12 +125,6 @@ export async function runTrademarkSearch(monitoredMark, selectedBulletinNo) {
       bulletinIdValue: selectedBulletinNo
     });
 
-    // Debug functions çağır
-    console.log("🔧 Debug functions çalıştırılıyor...");
-    await debugBulletinIds();
-    await debugGeneralSearch(markName);
-    await debugFilters(selectedBulletinNo, markName);
-
     // Algolia search params
     const searchParams = {
       filters: filterString,
