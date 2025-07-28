@@ -320,12 +320,9 @@
         const infoMessage = `Toplam ${allSimilarResults.length} benzer sonuç bulundu. (${cachedResults.length} önbellekten, ${newSearchResults.length} yeni arama ile)`;
         infoMessageContainer.innerHTML = `<div class="info-message">${infoMessage}</div>`;
         
-        pagination.update(allSimilarResults.length, 1);
-        
-        // *** DÜZELTME BURADA ***
-        // Arama bittikten ve pagination güncellendikten sonra, ilk sayfayı render et.
-        renderCurrentPageOfResults(); 
-        
+        pagination.update(allSimilarResults.length);
+        renderCurrentPageOfResults(1, pagination.getItemsPerPage());
+                
         // Arama bittikten sonra butonların durumunu son kez ayarla.
         startSearchBtn.disabled = (trademarksToSearch.length === 0 && newSearchResults.length === 0);
         researchBtn.disabled = allSimilarResults.length === 0;
