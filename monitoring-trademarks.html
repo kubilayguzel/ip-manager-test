@@ -870,3 +870,418 @@
         // Event listener'ları ekle
         if (searchInput) {
             searchInput.addEventListener('input', applyFiltersDebounced);
+        }
+        
+        if (statusSelect) {
+            statusSelect.addEventListener('change', applyFiltersDebounced);
+        }
+        
+        if (niceClassInput) {
+            niceClassInput.addEventListener('input', applyFiltersDebounced);
+        }
+        
+        if (ownerInput) {
+            ownerInput.addEventListener('input', applyFiltersDebounced);
+        }
+        
+        if (clearButton) {
+            clearButton.addEventListener('click', () => {
+                if (searchInput) searchInput.value = '';
+                if (statusSelect) statusSelect.value = 'all';
+                if (niceClassInput) niceClassInput.value = '';
+                if (ownerInput) ownerInput.value = '';
+                
+                currentFilters = {
+                    search: '',
+                    status: 'all',
+                    niceClass: '',
+                    owner: ''
+                };
+                
+                applyFilters();
+            });
+        }
+    }
+
+    // Filtreleri uygula
+    function applyFilters() {
+        filteredData = allMonitoringData.filter(item => {
+            // Arama filtresi
+            if (currentFilters.search) {
+                const searchTerm = currentFilters.search.toLowerCase();
+                const markName = (item.title || item.markName || '').toLowerCase();
+                const owner = getOwnerNames(item).toLowerCase();
+                const applicationNo = (item.applicationNumber || item.applicationNo || '').toLowerCase();
+                
+                if (!markName.includes(searchTerm) && 
+                    !owner.includes(searchTerm) && 
+                    !applicationNo.includes(searchTerm)) {
+                    return false;
+                }
+            }
+            
+            // Durum filtresi
+            if (currentFilters.status !== 'all') {
+                const itemStatus = getStatusInTurkish(item.status).value || 'unknown';
+                if (itemStatus !== currentFilters.status) {
+                    return false;
+                }
+            }
+            
+            // Nice sınıfı filtresi
+            if (currentFilters.niceClass) {
+                const itemClasses = Array.isArray(item.niceClass) 
+                    ? item.niceClass.join(' ') 
+                    : (item.niceClass || '').toString();
+                if (!itemClasses.toLowerCase().includes(currentFilters.niceClass.toLowerCase())) {
+                    return false;
+                }
+            }
+            
+            // Sahip filtresi
+            if (currentFilters.owner) {
+                const ownerName = getOwnerNames(item).toLowerCase();
+                if (!ownerName.includes(currentFilters.owner.toLowerCase())) {
+                    return false;
+                }
+            }
+            
+            return true;
+        });
+        
+        // Pagination'ı güncelle
+        if (pagination) {
+            pagination.update(filteredData.length, 1);
+        }
+        
+        // Mevcut sayfayı render et
+        renderCurrentPage();
+    }
+
+    // Mevcut sayfadaki veriyi render et
+    function renderCurrentPage() {
+        const container = document.getElementById('monitoringTableContainer');
+        
+        if (!container) return;
+        
+        selectedMonitoringItems.clear();
+        updateSelectedButtonState();
+
+        if (filteredData.length === 0) {
+            const hasFilters = currentFilters.search || currentFilters.status !== 'all' || 
+                              currentFilters.niceClass || currentFilters.owner;
+            container.innerHTML = `
+                <div class="no-records">
+                    ${hasFilters 
+                        ? 'Filtreleme kriterlerinize uygun kayıt bulunamadı.' 
+                        : 'İzleme listeniz boş.'}
+                </div>
+            `;
+            return;
+        }
+
+        // Pagination'dan mevcut sayfa verisini al
+        const currentPageData = pagination ? pagination.getCurrentPageData(filteredData) : filteredData;
+        
+        let html = `
+            <table class="accruals-table">
+                <thead>
+                    <tr>
+                        <th><input type="checkbox" id="headerSelectAllCheckbox" /></th>
+                        <th>Görsel</th>
+                        <th>Marka Adı</th>
+                        <th>Sahip</th>
+                        <th>Başvuru No</th>
+                        <th>Başvuru Tarihi</th>
+                        <th>Nice Sınıfı</th>
+                        <th>Durum</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+
+        currentPageData.forEach(r => {
+            const isSelected = selectedMonitoringItems.has(r.id) ? 'checked' : '';
+            const trademarkImageHtml = r.trademarkImage && typeof r.trademarkImage === 'string' && r.trademarkImage.startsWith('data:image')
+                ? `<img src="${r.trademarkImage}" alt="Marka Görseli" class="trademark-image-thumbnail">`
+                : '-';
+            
+            const statusInfo = getStatusInTurkish(r.status);
+            const ownerNames = getOwnerNames(r);
+            const niceClassesHtml = Array.isArray(r.niceClass) 
+                ? r.niceClass.map(cls => `<span class="nice-class-badge">${cls}</span>`).join(' ')
+                : (r.niceClass || '-');
+
+            html += `
+                <tr data-id="${r.id}">
+                    <td><input type="checkbox" class="row-checkbox" data-id="${r.id}" ${isSelected}></td>
+                    <td>${trademarkImageHtml}</td>
+                    <td style="font-weight: 500;">${r.title || r.markName || '-'}</td>
+                    <td>${ownerNames}</td>
+                    <td>${r.applicationNumber || r.applicationNo || '-'}</td>
+                    <td>${formatTurkishDate(r.applicationDate)}</td>
+                    <td>${niceClassesHtml}</td>
+                    <td><span class="status-badge ${statusInfo.class}">${statusInfo.text}</span></td>
+                </tr>
+            `;
+        });
+
+        html += `</tbody></table>`;
+        container.innerHTML = html;
+
+        // "Tümünü Seç" checkbox'ı event listener'ı
+        const headerCheckbox = document.getElementById('headerSelectAllCheckbox');
+        if (headerCheckbox) {
+            headerCheckbox.addEventListener('change', (e) => {
+                const checkboxes = container.querySelectorAll('.row-checkbox');
+                checkboxes.forEach(checkbox => {
+                    checkbox.checked = e.target.checked;
+                    const id = checkbox.dataset.id;
+                    if (e.target.checked) {
+                        selectedMonitoringItems.add(id);
+                    } else {
+                        selectedMonitoringItems.delete(id);
+                    }
+                });
+                updateSelectedButtonState();
+            });
+        }
+    }
+
+    // Yardımcı fonksiyonlar
+    const getStatusInTurkish = (status) => {
+        switch (status) {
+            case 'application': return { text: 'Başvuru', class: 'application', value: 'application' };
+            case 'registered': return { text: 'Tescilli', class: 'registered', value: 'registered' };
+            case 'rejected': return { text: 'Reddedildi', class: 'rejected', value: 'rejected' };
+            case 'pending': return { text: 'Beklemede', class: 'pending', value: 'pending' };
+            case 'objection': return { text: 'İtiraz', class: 'objection', value: 'objection' };
+            case 'litigation': return { text: 'Dava', class: 'litigation', value: 'litigation' };
+            default: return { text: 'İzleniyor', class: '', value: 'unknown' };
+        }
+    };
+
+    const formatTurkishDate = (dateString) => {
+        if (!dateString) return '-';
+        try {
+            const date = new Date(dateString);
+            if (isNaN(date.getTime())) {
+                return dateString;
+            }
+            const day = String(date.getDate()).padStart(2, '0');
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const year = date.getFullYear();
+            return `${day}.${month}.${year}`;
+        } catch (e) {
+            console.error("Tarih formatlama hatası:", e);
+            return dateString;
+        }
+    };
+
+    const getOwnerNames = (item) => {
+        try {
+            if (item.owners && Array.isArray(item.owners)) {
+                return item.owners.map(owner => {
+                    if (typeof owner === 'object' && owner.id) {
+                        const match = allPersons.find(p => p.id === owner.id);
+                        return match ? match.name : `ID:${owner.id} (Bulunamadı)`;
+                    } else if (typeof owner === 'string') {
+                        return owner;
+                    } else if (typeof owner === 'object' && owner.name) {
+                        return owner.name;
+                    }
+                    return 'Bilinmeyen format';
+                }).join(', ');
+            } else if (typeof item.owners === 'string') {
+                return item.owners;
+            }
+        } catch (error) {
+            console.warn('Sahip bilgisi işlenirken hata:', error, item.owners);
+            return 'Hata: ' + error.message;
+        }
+        return '-';
+    };
+
+    const renderMonitoringTable = (data, userUid) => {
+        console.log('Tablo render ediliyor, veri sayısı:', data?.length || 0);
+        
+        // Veriyi global değişkenlere kaydet
+        allMonitoringData = data || [];
+        
+        // Filtre bölümünü göster
+        const filterSection = document.getElementById('filterSection');
+        if (filterSection && allMonitoringData.length > 0) {
+            filterSection.style.display = 'block';
+        }
+        
+        applyFilters(); // Filtreleri uygula ve pagination'ı güncelle
+    };
+
+    const updateSelectedButtonState = () => {
+        const selectedCountSpan = document.getElementById('selectedCount');
+        const removeSelectedBtn = document.getElementById('removeSelectedBtn');
+        
+        if (selectedCountSpan) {
+            selectedCountSpan.textContent = selectedMonitoringItems.size;
+        }
+        if (removeSelectedBtn) {
+            removeSelectedBtn.disabled = selectedMonitoringItems.size === 0;
+        }
+
+        const allRowCheckboxes = document.querySelectorAll('.row-checkbox');
+        const headerSelectAllCheckbox = document.getElementById('headerSelectAllCheckbox');
+
+        if (headerSelectAllCheckbox) {
+            const allChecked = allRowCheckboxes.length > 0 && Array.from(allRowCheckboxes).every(cb => selectedMonitoringItems.has(cb.dataset.id));
+            headerSelectAllCheckbox.checked = allChecked;
+        }
+    };
+
+    document.addEventListener('DOMContentLoaded', async () => {
+        try {
+            console.log('Sayfa yükleniyor...');
+            
+            // Önce pagination'ı başlat
+            initializePagination();
+            
+            // Sonra filtreleri kur
+            setupFilters();
+            
+            // İlk olarak layout'u yükle
+            await loadSharedLayout({ activeMenuLink: 'monitoring-trademarks.html' });
+            console.log('Layout yüklendi');
+
+            // Kişileri yükle - hata durumunda bile devam et
+            try {
+                const personsResult = await personService.getPersons();
+                if (personsResult.success) {
+                    allPersons = personsResult.data || [];
+                    console.log('Kişiler yüklendi:', allPersons.length);
+                } else {
+                    console.warn('Kişiler yüklenirken hata:', personsResult.error);
+                    allPersons = [];
+                }
+            } catch (error) {
+                console.warn('Kişiler yüklenirken hata:', error);
+                allPersons = []; // Boş array ile devam et
+            }
+
+            const container = document.getElementById('monitoringTableContainer');
+            const removeSelectedBtn = document.getElementById('removeSelectedBtn');
+
+            if (!container || !removeSelectedBtn) {
+                console.error('Gerekli DOM elementleri bulunamadı');
+                return;
+            }
+
+            // Auth state değişikliklerini dinle
+            onAuthStateChanged(auth, async (user) => {
+                console.log('Auth state değişti:', user ? 'Giriş yapıldı' : 'Çıkış yapıldı');
+                
+                if (!user) {
+                    container.innerHTML = '<div class="no-records">Giriş yapmalısınız.</div>';
+                    return;
+                }
+
+                container.innerHTML = '<div class="loading">İzleme listeniz yükleniyor...</div>';
+                
+                try {
+                    console.log('Monitoring verileri yükleniyor...');
+                    const { success, data, error } = await monitoringService.getMonitoringItems(user.uid);
+                    
+                    if (success) {
+                        console.log('Monitoring verileri başarıyla yüklendi:', data?.length || 0);
+                        renderMonitoringTable(data, user.uid);
+                    } else {
+                        console.error("Marka izleme öğeleri yüklenirken hata:", error);
+                        container.innerHTML = `<div class="error-message">İzleme listeniz yüklenirken bir hata oluştu: ${error}</div>`;
+                    }
+                } catch (error) {
+                    console.error("Monitoring yükleme hatası:", error);
+                    container.innerHTML = '<div class="error-message">İzleme listeniz yüklenirken beklenmeyen bir hata oluştu.</div>';
+                }
+            });
+
+            // Checkbox event delegation
+            container.addEventListener('change', (e) => {
+                if (e.target.classList.contains('row-checkbox')) {
+                    const id = e.target.dataset.id;
+                    if (e.target.checked) {
+                        selectedMonitoringItems.add(id);
+                    } else {
+                        selectedMonitoringItems.delete(id);
+                    }
+                    updateSelectedButtonState();
+                }
+            });
+
+            // Seçileni kaldır butonu
+            removeSelectedBtn.addEventListener('click', async () => {
+                if (selectedMonitoringItems.size === 0) {
+                    showNotification('Lütfen kaldırmak istediğiniz kayıtları seçin.', 'info');
+                    return;
+                }
+
+                if (!confirm(`Seçilen ${selectedMonitoringItems.size} adet kaydı izleme listesinden kaldırmak istediğinizden emin misiniz?`)) {
+                    return;
+                }
+
+                const user = auth.currentUser;
+                if (!user) {
+                    showNotification('Kayıtları kaldırmak için giriş yapmalısınız.', 'error');
+                    return;
+                }
+
+                let successfulRemovals = 0;
+                let failedRemovals = 0;
+                const itemsToRemove = Array.from(selectedMonitoringItems);
+
+                container.innerHTML = '<div class="loading">Seçili kayıtlar kaldırılıyor...</div>';
+
+                for (const id of itemsToRemove) {
+                    try {
+                        const res = await monitoringService.removeMonitoringItem(user.uid, id);
+                        if (res.success) {
+                            successfulRemovals++;
+                        } else {
+                            console.error(`Kayıt (${id}) kaldırılamadı: ${res.error}`);
+                            failedRemovals++;
+                        }
+                    } catch (error) {
+                        console.error(`Kayıt (${id}) kaldırılamadı:`, error);
+                        failedRemovals++;
+                    }
+                }
+
+                // Tabloyu yeniden yükle
+                try {
+                    const { success, data } = await monitoringService.getMonitoringItems(user.uid);
+                    if (success) {
+                        renderMonitoringTable(data, user.uid);
+                    } else {
+                        container.innerHTML = '<div class="error-message">İzleme listeniz güncellenirken bir hata oluştu.</div>';
+                    }
+                } catch (error) {
+                    container.innerHTML = '<div class="error-message">İzleme listeniz güncellenirken beklenmeyen bir hata oluştu.</div>';
+                }
+
+                // Bildirimleri göster
+                if (successfulRemovals > 0) {
+                    showNotification(`${successfulRemovals} kayıt başarıyla kaldırıldı.`, 'success');
+                }
+                if (failedRemovals > 0) {
+                    showNotification(`${failedRemovals} kayıt kaldırılamadı. Konsolu kontrol edin.`, 'error');
+                }
+            });
+
+        } catch (error) {
+            console.error('Sayfa başlatma hatası:', error);
+            const container = document.getElementById('monitoringTableContainer');
+            if (container) {
+                container.innerHTML = '<div class="error-message">Sayfa yüklenirken bir hata oluştu. Lütfen sayfayı yenileyin.</div>';
+            }
+        }
+    });
+</script>
+</body>
+</html>
