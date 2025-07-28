@@ -97,7 +97,7 @@
             box-shadow: 0 5px 15px rgba(30, 60, 114, 0.2);
         }
         .btn-status-toggle.activate {
-             background-color: #28a745;
+            background-color: #28a745;
         }
         .btn-status-toggle.archive {
             background-color: #dc3545;
@@ -337,7 +337,6 @@
         .transaction-history .accordion-header {
             display: flex; /* İçeriği esnek kutu olarak düzenle */
             align-items: center; /* Öğeleri dikeyde ortala */
-            /* cursor: pointer; /* Varsayılan olarak kaldırın, sadece has-children için JS ile eklenecek */
             padding: 12px 15px; /* Mevcut padding'i koru */
             background: #eaf2f8; /* Daha açık bir arka plan */
             color: #1e3c72;
@@ -499,6 +498,12 @@
                 <div id="loadingIndicator" class="loading">Yükleniyor...</div>
                 <div id="noRecordsMessage" class="no-records">Henüz kayıt bulunmamaktadır.</div>
             </div>
+
+            <div class="d-flex justify-content-between align-items-center mt-3">
+                <div id="pagination-info"></div>
+                <div id="pagination-controls"></div>
+                <div id="records-per-page-container"></div>
+            </div>
         </main>
     </div>
 
@@ -507,7 +512,7 @@
             <span class="close-modal-btn" id="closeRecordDetailModal">&times;</span>
             <h3 class="modal-title" id="modalRecordTitle">Kayıt Detayı</h3>
             <div id="modalBody" class="modal-body-content">
-                </div>
+            </div>
         </div>
     </div>
     
@@ -515,908 +520,585 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
+    <script src="js/pagination.js"></script>
+
     <script type="module">
         import { authService, ipRecordsService, personService, transactionTypeService, auth, monitoringService } from './firebase-config.js';
         import { showNotification, formatFileSize, exportTableToExcel, exportTableToPdf } from './utils.js';
         import { loadSharedLayout } from './js/layout-loader.js';
 
-        // İşlem tiplerini ve kişileri saklayacak global değişkenler
+        // GLOBAL DEĞİŞKENLER
         let transactionTypesMap = new Map();
         let allPersons = []; 
+        let pagination;
+        let portfolioModule; 
 
-        // Sayfa yüklendiğinde işlem tiplerini ve kişileri yükle
+        // SAYFA YÜKLENME OLAYI
         document.addEventListener('DOMContentLoaded', async () => {
             await loadSharedLayout({ activeMenuLink: 'portfolio.html' });
-            // Modül örneği oluşmadan önce global verileri yükleyelim
             await loadTransactionTypes();
             await loadPersons();
 
-            class PortfolioModule {
-                constructor() {
-                    this.currentUser = null;
-                    this.allRecords = []; 
-                    // this.allPersons kaldırıldı, global allPersons kullanılacak
-                    this.activeTypeFilter = 'all'; 
-                    this.columnFilters = {}; 
-                    this.sortBy = { column: null, direction: 'asc' }; 
-                    this.selectedRecords = new Set(); 
-                }
+            initializePagination();
 
-                async init() {
-                    this.currentUser = auth.currentUser; // auth objesini doğrudan kullanıyoruz
-                    if (!this.currentUser) {
-                        window.location.href = 'index.html';
-                        return;
-                    }
-                    await this.loadAllData();
-                }
-
-                async loadAllData() {
-                    const loadingIndicator = document.getElementById('loadingIndicator');
-                    if (loadingIndicator) { 
-                        loadingIndicator.style.display = 'block';
-                    }
-                    
-                    try {
-                        // Sadece kayıtları çekiyoruz, kişiler ve transaction tipleri zaten yüklendi.
-                        const recordsResult = await ipRecordsService.getRecords();
-
-                        this.allRecords = recordsResult.success ? recordsResult.data.map(record => ({
-                            ...record,
-                            recordStatus: record.recordStatus || 'aktif',
-                            recordType: record.recordType || 'Portföy' // Default value for existing records
-                        })) : [];
-                        
-                        this.initialRenderTableStructure(); 
-                        this.populateTableBody(); 
-                        this.applyFiltersAndSort(); 
-                        this.setupEventListeners(); 
-                        this.updateRecordStatusToggleButtonState(); 
-                    } catch (error) {
-                        showNotification('Veriler yüklenirken bir hata oluştu: ' + error.message, 'error');
-                    } finally {
-                        if (loadingIndicator) { 
-                            loadingIndicator.style.display = 'none';
-                        }
-                    }
-                }
-
-                setupEventListeners() {
-                    document.querySelectorAll('.tab-menu .tab-button').forEach(button => {
-                        button.addEventListener('click', (e) => {
-                            document.querySelectorAll('.tab-menu .tab-button').forEach(btn => btn.classList.remove('active'));
-                            e.target.classList.add('active');
-                            this.activeTypeFilter = e.target.dataset.type;
-                            this.selectedRecords.clear(); 
-                            document.getElementById('selectAllCheckbox').checked = false; 
-                            this.updateRecordStatusToggleButtonState(); 
-                            this.initialRenderTableStructure(); 
-                            this.applyFiltersAndSort(); 
-                        });
-                    });
-
-                    let globalSearchTimeout;
-                    document.getElementById('searchBar').addEventListener('input', (e) => {
-                        clearTimeout(globalSearchTimeout);
-                        globalSearchTimeout = setTimeout(() => {
-                            this.applyFiltersAndSort();
-                        }, 300); 
-                    });
-
-                    let columnFilterTimeout;
-                    document.querySelector('.portfolio-table thead').addEventListener('input', (e) => {
-                        if (e.target.classList.contains('column-filter')) {
-                            clearTimeout(columnFilterTimeout);
-                            columnFilterTimeout = setTimeout(() => {
-                                const columnKey = e.target.dataset.column;
-                                this.columnFilters[columnKey] = e.target.value.toLowerCase();
-                                this.applyFiltersAndSort();
-                            }, 300); 
-                        }
-                    });
-
-                    document.getElementById('portfolioTableHeaderRow').addEventListener('click', (e) => {
-                        const targetTh = e.target.closest('.sortable-header');
-                        if (targetTh) {
-                            const columnKey = targetTh.dataset.column;
-                            this.toggleSort(columnKey);
-                        }
-                    });
-
-                    document.getElementById('portfolioTableBody').addEventListener('change', (e) => {
-                        if (e.target.classList.contains('record-checkbox')) {
-                            const recordId = e.target.dataset.id;
-                            this.toggleRecordSelection(recordId, e.target.checked);
-                            this.updateAddToMonitoringButtonState();
-                        }
-                    });
-
-                    document.getElementById('selectAllCheckbox').addEventListener('change', (e) => {
-                        const isChecked = e.target.checked;
-                        document.querySelectorAll('#portfolioTableBody .record-checkbox').forEach(checkbox => {
-                            if (checkbox.closest('tr').style.display !== 'none') {
-                                checkbox.checked = isChecked;
-                                this.toggleRecordSelection(checkbox.dataset.id, isChecked);
-                            }
-                        });
-                        this.updateAddToMonitoringButtonState();
-                    });
-                    
-                    document.getElementById('toggleRecordStatusBtn').addEventListener('click', () => {
-                        this.toggleSelectedRecordsStatus();
-                    });
-
-                    document.getElementById('portfolioTableBody').addEventListener('click', (e) => { 
-                        if (e.target.classList.contains('action-btn')) {
-                            e.preventDefault();
-                            const recordId = e.target.dataset.id;
-                            if (e.target.classList.contains('edit-btn')) {
-                                window.location.href = `data-entry.html?id=${recordId}`;
-                            } else if (e.target.classList.contains('delete-btn')) {
-                                this.deleteRecord(recordId);
-                            } else if (e.target.classList.contains('view-btn')) {
-                                // showRecordDetailModal'ı sınıfın bir metodu olarak çağırıyoruz
-                                this.showRecordDetailModal(recordId);
-                            }
-                        }
-                    });
-
-                    document.getElementById('addToMonitoringBtn').addEventListener('click', async () => {
-                        const selectedIds = Array.from(this.selectedRecords);
-
-                        if (selectedIds.length === 0) {
-                            showNotification('İzlemeye eklemek için lütfen en az bir kayıt seçin.', 'info');
-                            return;
-                        }
-
-                        let successfulAdditions = 0;
-                        let failedAdditions = 0;
-                        let skippedNonTrademark = 0;
-
-                        for (const id of selectedIds) {
-                            const record = this.allRecords.find(r => String(r.id).trim() === String(id).trim());
-
-                            if (!record) {
-                                console.error('İzlemeye eklenemedi: Kayıt bulunamadı, ID:', id);
-                                failedAdditions++;
-                                continue;
-                            }
-
-                            // Sadece trademark tipindeki kayıtları izlemek istiyorsanız bu bloğu tutun
-                            // Diğer tipleri de izlemek isterseniz bu if bloğunu kaldırın
-                            if (record.type !== 'trademark') {
-                                console.warn('İzlemeye eklenemedi: Kayıt marka (trademark) tipi değil, atlanıyor.', record.title, '(ID:', record.id, ')');
-                                skippedNonTrademark++;
-                                continue;
-                            }
-
-                            // UserID parametresi kaldırıldı - sadece record bilgisi gönderiliyor
-                            const res = await monitoringService.addMonitoringItem({
-                                id: record.id,
-                                title: record.title,
-                                applicationNumber: record.applicationNumber,
-                                applicationDate: record.applicationDate,
-                                status: record.status,
-                                type: record.type,
-                                recordType: record.recordType || 'Portföy',
-                                trademarkImage: record.trademarkImage || null,
-                                niceClass: record.niceClass || null,
-                                owners: record.owners || [],
-                                registrationNumber: record.registrationNumber || null,
-                                registrationDate: record.registrationDate || null,
-                                renewalDateTrademark: record.renewalDateTrademark || null
-                            });
-
-                            if (!res.success) {
-                                console.error('İzlemeye eklenirken hata oluştu:', record.title, '(ID:', record.id, ')', res.error);
-                                failedAdditions++;
-                            } else {
-                                successfulAdditions++;
-                            }
-                        }
-
-                        // İşlem sonunda kullanıcıya bilgi ver
-                        if (successfulAdditions > 0) {
-                            showNotification(`${successfulAdditions} kayıt başarıyla izlemeye eklendi.`, 'success');
-                        }
-                        if (skippedNonTrademark > 0) {
-                            showNotification(`${skippedNonTrademark} marka olmayan kayıt atlandı.`, 'info');
-                        }
-                        if (failedAdditions > 0) {
-                            showNotification(`${failedAdditions} kayıt izlemeye eklenirken hata oluştu.`, 'error');
-                        }
-
-                        // Seçimi temizle ve buton durumunu güncelle
-                        this.selectedRecords.clear();
-                        document.getElementById('selectAllCheckbox').checked = false;
-                        this.updateAddToMonitoringButtonState();
-                    });
-                }
-                toggleRecordSelection(recordId, isChecked) {
-                    if (isChecked) {
-                        this.selectedRecords.add(recordId);
-                    } else {
-                        this.selectedRecords.delete(recordId);
-                    }
-                    this.updateRecordStatusToggleButtonState();
-                    this.updateAddToMonitoringButtonState(); // Burası yeni eklendi
-                }
-
-                updateRecordStatusToggleButtonState() {
-                    const toggleButton = document.getElementById('toggleRecordStatusBtn');
-                    if (this.selectedRecords.size === 0) {
-                        toggleButton.disabled = true;
-                        toggleButton.textContent = 'Aktif/Pasif';
-                        toggleButton.classList.remove('activate', 'archive'); 
-                        return;
-                    }
-
-                    let allActive = true;
-                    let allPasif = true;
-
-                    this.selectedRecords.forEach(id => {
-                        const record = this.allRecords.find(r => r.id === id);
-                        if (record) {
-                            if (record.recordStatus === 'pasif') {
-                                allActive = false;
-                            } else if (record.recordStatus === 'aktif') {
-                                allPasif = false;
-                            }
-                        }
-                    });
-
-                    toggleButton.disabled = false;
-                    toggleButton.classList.remove('activate', 'archive'); 
-
-                    if (allActive) { 
-                        toggleButton.textContent = `Arşivle (${this.selectedRecords.size})`;
-                        toggleButton.classList.add('archive');
-                    } else if (allPasif) { 
-                        toggleButton.textContent = `Aktif Et (${this.selectedRecords.size})`;
-                        toggleButton.classList.add('activate');
-                    } else { 
-                        toggleButton.textContent = `Aktif/Pasif (${this.selectedRecords.size})`;
-                        toggleButton.classList.add('btn-status-toggle');
-                    }
-                }
-                updateAddToMonitoringButtonState() {
-                const btn = document.getElementById('addToMonitoringBtn');
-                if (this.selectedRecords.size === 0) {
-                    btn.disabled = true;
-                    btn.textContent = 'İzlemeye Ekle';
-                } else {
-                    btn.disabled = false;
-                    btn.textContent = `İzlemeye Ekle (${this.selectedRecords.size})`;
-                }
-                }
-                async toggleSelectedRecordsStatus() {
-                    if (this.selectedRecords.size === 0) {
-                        showNotification('Lütfen işlem yapmak için en az bir kayıt seçin.', 'info');
-                        return;
-                    }
-
-                    const recordsToUpdate = Array.from(this.selectedRecords).map(id => 
-                        this.allRecords.find(record => record.id === id)
-                    ).filter(Boolean); 
-
-                    if (recordsToUpdate.length === 0) {
-                        showNotification('Seçili geçerli kayıt bulunamadı.', 'info');
-                        return;
-                    }
-
-                    let targetRecordStatus; 
-                    const firstRecordActiveStatus = recordsToUpdate[0].recordStatus; 
-
-                    const allSameRecordStatus = recordsToUpdate.every(record => record.recordStatus === firstRecordActiveStatus);
-
-                    if (allSameRecordStatus) {
-                        targetRecordStatus = (firstRecordActiveStatus === 'aktif') ? 'pasif' : 'aktif';
-                    } else {
-                        showNotification('Seçili kayıtların aktiflik durumları farklı. Lütfen aynı durumda olan kayıtları seçin.', 'warning');
-                        return;
-                    }
-                    
-                    const confirmationMessage = `Seçilen ${recordsToUpdate.length} adet kaydın aktiflik durumunu "${targetRecordStatus.toUpperCase()}" olarak değiştirmek istediğinizden emin misiniz?`;
-
-                    if (!confirm(confirmationMessage)) {
-                        return;
-                    }
-
-                    const updatePromises = recordsToUpdate.map(record => {
-                        return ipRecordsService.updateRecord(record.id, { recordStatus: targetRecordStatus });
-                    });
-
-                    try {
-                        const results = await Promise.all(updatePromises);
-                        const successfulUpdates = results.filter(res => res.success).length;
-                        const failedUpdates = results.length - successfulUpdates;
-
-                        if (successfulUpdates > 0) {
-                            showNotification(`${successfulUpdates} adet kayıt başarıyla güncellendi.`, 'success');
-                            this.selectedRecords.clear(); 
-                            document.getElementById('selectAllCheckbox').checked = false;
-                            this.updateRecordStatusToggleButtonState(); 
-                            await this.loadAllData(); // Verileri yeniden yükle ve tabloyu güncelle
-                        }
-
-                        if (failedUpdates > 0) {
-                            showNotification(`${failedUpdates} adet kayıt güncellenirken hata oluştu. Lütfen konsolu kontrol edin.`, 'error');
-                            results.filter(res => !res.success).forEach(res => console.error('Durum güncelleme hatası:', res.error));
-                        }
-                    } catch (error) {
-                        showNotification('Kayıt durumu güncelleme işleminde beklenmeyen bir hata oluştu: ' + error.message, 'error');
-                    }
-                }
-
-                toggleSort(columnKey) {
-                    if (this.sortBy.column === columnKey) {
-                        this.sortBy.direction = this.sortBy.direction === 'asc' ? 'desc' : 'asc';
-                    } else {
-                        this.sortBy.column = columnKey;
-                        this.sortBy.direction = 'asc';
-                    }
-                    this.applyFiltersAndSort(); 
-                }
-
-                initialRenderTableStructure() {
-                    const tableHeaderRow = document.getElementById('portfolioTableHeaderRow');
-                    const tableFilterRow = document.getElementById('portfolioTableFilterRow'); 
-                    
-                    tableHeaderRow.innerHTML = ''; 
-                    tableFilterRow.innerHTML = ''; 
-
-                    const currentTypeFilter = this.activeTypeFilter; 
-
-                    const columnDefinitions = [
-                        { key: 'selection', label: '<input type="checkbox" id="headerSelectAllCheckbox" />', sortable: false, searchable: false, isCheckbox: true, fixedWidth: '40px', index: 0 },
-                        { key: 'recordType', label: 'Kayıt Tipi', sortable: true, searchable: true, fixedWidth: '80px', index: 1 }, // Yeni Kayıt Tipi Kolonu
-                        { key: 'type', label: 'Kayıt Türü', sortable: true, searchable: true, fixedWidth: '80px', index: 2 }, // Bu kolonun adı 'Kayıt Türü' olarak değişti
-                        { key: 'title', label: 'Başlık', sortable: true, searchable: true, fixedWidth: '150px', index: 3 }, 
-                        { key: 'trademarkImage', label: 'Marka Görseli', sortable: false, searchable: false, onlyTrademark: true, fixedWidth: '80px', index: 4 }, 
-                        { key: 'applicationNumber', label: 'Başvuru Numarası', sortable: true, searchable: true, fixedWidth: '120px', index: 5 },
-                        { key: 'applicationDate', label: 'Başvuru Tarihi', sortable: true, searchable: true, fixedWidth: '100px', index: 6 },
-                        { key: 'status', label: 'Başvuru Durumu', sortable: true, searchable: true, fixedWidth: '110px', index: 7 },
-                        { key: 'recordStatus', label: 'Kayıt Durumu', sortable: true, searchable: true, fixedWidth: '110px', index: 8 },
-                        { key: 'owners', label: 'Hak Sahipleri', sortable: true, searchable: true, fixedWidth: '200px', index: 9 }, 
-                        { key: 'actions', label: 'İşlemler', sortable: false, searchable: false, fixedWidth: '250px', index: 10 } 
-                    ];
-
-                    columnDefinitions.forEach(col => {
-                        const th = document.createElement('th');
-                        if (col.sortable) {
-                            th.classList.add('sortable-header');
-                            th.dataset.column = col.key;
-                        }
-                        if (col.fixedWidth) {
-                            th.style.width = col.fixedWidth;
-                        }
-
-                        if (col.isCheckbox) {
-                            th.innerHTML = '<input type="checkbox" id="selectAllCheckbox">'; 
-                        } else {
-                            th.textContent = col.label; 
-                        }
-                        
-                        tableHeaderRow.appendChild(th);
-                        
-                        // 'Kayıt Tipi' kolonu her zaman gözükecek
-                        if (col.key === 'type' && currentTypeFilter === 'thirdParty') {
-                             th.style.display = 'none'; // '3. Taraf' sekmesinde 'Kayıt Türü' gizlensin
-                        } else if (col.onlyTrademark && currentTypeFilter !== 'trademark') {
-                            th.style.display = 'none';
-                        }
-
-
-                        const thFilter = document.createElement('th');
-                        if (col.searchable) {
-                            const input = document.createElement('input');
-                            input.type = 'text';
-                            input.classList.add('column-filter');
-                            input.dataset.column = col.key;
-                            input.placeholder = `${col.label} ara...`;
-                            input.value = this.columnFilters[col.key] || ''; 
-                            thFilter.appendChild(input);
-                        }
-                        tableFilterRow.appendChild(thFilter);
-
-                        if (col.key === 'type' && currentTypeFilter === 'thirdParty') {
-                            thFilter.style.display = 'none';
-                        } else if (col.onlyTrademark && currentTypeFilter !== 'trademark') {
-                            thFilter.style.display = 'none';
-                        }
-                        if (col.isCheckbox) {
-                            thFilter.style.display = 'table-cell';
-                            thFilter.innerHTML = '';
-                        }
-                    });
-                }
-                
-                populateTableBody() {
-                    const tableBody = document.getElementById('portfolioTableBody');
-                    tableBody.innerHTML = ''; 
-
-                    const columnDefinitions = [ 
-                        { key: 'selection', label: '', isCheckbox: true },
-                        { key: 'recordType', label: 'Kayıt Tipi' }, // Yeni
-                        { key: 'type', label: 'Kayıt Türü' },
-                        { key: 'title', label: 'Başlık' },
-                        { key: 'trademarkImage', label: 'Marka Görseli', onlyTrademark: true }, 
-                        { key: 'applicationNumber', label: 'Başvuru Numarası' },
-                        { key: 'applicationDate', label: 'Başvuru Tarihi' },
-                        { key: 'status', label: 'Başvuru Durumu' }, 
-                        { key: 'recordStatus', label: 'Kayıt Durumu' },
-                        { key: 'owners', label: 'Hak Sahipleri' },
-                        { key: 'actions', label: 'İşlemler' }
-                    ];
-
-                    this.allRecords.forEach(record => {
-                        const row = document.createElement('tr');
-                        row.dataset.recordId = record.id; 
-                        row.classList.add(`record-status-${record.recordStatus}`); 
-                        
-                        const ownerNames = record.owners ? record.owners.map(owner => {
-                            const person = allPersons.find(p => p.id === owner.id); // 'this.allPersons' yerine 'allPersons'
-                            return person ? person.name : 'Bilinmeyen Kişi';
-                        }).filter(Boolean).join(', ') : 'Belirtilmemiş';
-
-                        let rowCellsHtml = '';
-                        
-                        columnDefinitions.forEach(col => {
-                            let cellHtmlContent = '';
-                            if (col.key === 'selection') {
-                                const isChecked = this.selectedRecords.has(record.id) ? 'checked' : '';
-                                cellHtmlContent = `<input type="checkbox" class="record-checkbox" data-id="${record.id}" ${isChecked}>`;
-                            } else if (col.key === 'recordType') { cellHtmlContent = `${record.recordType || '-'}`; } // Yeni Kayıt Tipi
-                            else if (col.key === 'type') { cellHtmlContent = `${record.type.charAt(0).toUpperCase() + record.type.slice(1)}`; }
-                            else if (col.key === 'title') { cellHtmlContent = `${record.title || 'Başlıksız Kayıt'}`; }
-                            else if (col.key === 'trademarkImage') {
-                            let imageSrc = '-';
-                            if (record.type === 'trademark' && record.trademarkImage) {
-                                imageSrc = typeof record.trademarkImage === 'string'
-                                    ? record.trademarkImage
-                                    : record.trademarkImage.content;
-                            }
-
-                            if (imageSrc && imageSrc.startsWith('data:image')) {
-                                cellHtmlContent = `
-                                    <div class="trademark-image-wrapper">
-                                        <img src="${imageSrc}" alt="Marka Görseli" class="trademark-image-thumbnail">
-                                    </div>`;
-                            } else {
-                                cellHtmlContent = `-`;
-                            }
-                                                   }
-                            else if (col.key === 'applicationNumber') { cellHtmlContent = `${record.applicationNumber || '-'}`; }
-                            else if (col.key === 'applicationDate') { cellHtmlContent = `${record.applicationDate || '-'}`; }
-                            else if (col.key === 'status') { 
-                                const statusText = record.status ? record.status.charAt(0).toUpperCase() + record.status.slice(1) : '-';
-                                cellHtmlContent = `<span class="application-status-badge ${record.status}">${statusText}</span>`;
-                            }
-                            else if (col.key === 'recordStatus') {
-                                const recordStatusText = record.recordStatus ? record.recordStatus.charAt(0).toUpperCase() + record.recordStatus.slice(1) : '-';
-                                cellHtmlContent = `<span class="record-active-status-badge ${record.recordStatus}">${recordStatusText}</span>`;
-                            }
-                            else if (col.key === 'owners') { cellHtmlContent = `${ownerNames || '-'}`; }
-                            else if (col.key === 'actions') {
-                                cellHtmlContent = `
-                                    <button type="button" class="action-btn view-btn" data-id="${record.id}">Görüntüle</button>
-                                    <button type="button" class="action-btn edit-btn" data-id="${record.id}">Düzenle</button>
-                                    <button type="button" class="action-btn delete-btn" data-id="${record.id}">Sil</button>
-                                `;
-                            }
-                            rowCellsHtml += `<td>${cellHtmlContent}</td>`;
-                        });
-                        row.innerHTML = rowCellsHtml; 
-                        tableBody.appendChild(row);
-                    });
-                }
-                
-                applyFiltersAndSort() {
-                    const tableBody = document.getElementById('portfolioTableBody');
-                    const noRecordsMessage = document.getElementById('noRecordsMessage');
-                    const allRows = Array.from(tableBody.children); 
-
-                    const currentTypeFilter = this.activeTypeFilter; 
-                    const globalSearchTerm = document.getElementById('searchBar').value.toLowerCase();
-
-                    const columnDefinitions = [
-                        { key: 'selection', searchable: false, index: 0 },
-                        { key: 'recordType', searchable: true, index: 1 }, // Yeni
-                        { key: 'type', searchable: true, index: 2 }, 
-                        { key: 'title', searchable: true, index: 3 },
-                        { key: 'trademarkImage', searchable: false, onlyTrademark: true, index: 4 }, 
-                        { key: 'applicationNumber', searchable: true, index: 5 },
-                        { key: 'applicationDate', searchable: true, index: 6 },
-                        { key: 'status', searchable: true, index: 7 }, 
-                        { key: 'recordStatus', searchable: true, index: 8 },
-                        { key: 'owners', searchable: true, index: 9 },
-                        { key: 'actions', searchable: false, index: 10 }
-                    ];
-
-                    let filteredRows = allRows.filter(row => {
-                        const recordId = row.dataset.recordId;
-                        const record = this.allRecords.find(r => r.id === recordId); 
-
-                        if (!record) return false; 
-
-                        // 1. Tab Filtrelemesi (recordType ve type'a göre)
-                        let matchesTabFilter = false;
-                        if (currentTypeFilter === 'all') {
-                            matchesTabFilter = record.recordType === 'Portföy';
-                        } else if (currentTypeFilter === 'thirdParty') {
-                            matchesTabFilter = record.recordType === '3. Taraf';
-                        } else if (currentTypeFilter === 'objections') {
-                            matchesTabFilter = record.recordType === 'Portföy' && record.transactions && record.transactions.some(t => t.type && t.type.includes('İtiraz'));
-                        } else if (currentTypeFilter === 'litigation') {
-                            matchesTabFilter = record.recordType === 'Portföy' && record.transactions && record.transactions.some(t => t.type && t.type.includes('Dava'));
-                        } else { // patent, trademark, copyright, design
-                            matchesTabFilter = record.recordType === 'Portföy' && record.type === currentTypeFilter;
-                        }
-                        
-                        // 2. Genel Arama Çubuğu Filtrelemesi
-                        const globalSearchMatch = [
-                            record.type,
-                            record.recordType, // Yeni eklendi
-                            record.title,
-                            record.applicationNumber,
-                            record.status,
-                            record.recordStatus,
-                            record.description,
-                            record.patentClass, 
-                            record.niceClass, 
-                            record.copyrightType, 
-                            record.designClass,
-                            (record.owners ? record.owners.map(owner => allPersons.find(p => p.id === owner.id)?.name || '').filter(Boolean).join(' ') : '') // 'this.allPersons' yerine 'allPersons'
-                        ].filter(Boolean).join(' ').toLowerCase().includes(globalSearchTerm);
-
-                        // 3. Sütun Bazlı Filtreleme
-                        const columnFilterMatch = columnDefinitions.every(col => {
-                            if (!col.searchable || !this.columnFilters[col.key]) {
-                                return true; 
-                            }
-                             if (col.key === 'type' && currentTypeFilter === 'thirdParty') return true; // '3. Taraf' sekmesinde 'Kayıt Türü' filtresi uygulanmasın
-                            if (col.onlyTrademark && currentTypeFilter !== 'trademark') return true; 
-
-                            let recordValue = '';
-                            if (col.key === 'owners') {
-                                recordValue = record.owners ? record.owners.map(owner => allPersons.find(p => p.id === owner.id)?.name || '').filter(Boolean).join(' ') : ''; // 'this.allPersons' yerine 'allPersons'
-                            } else if (col.key === 'applicationDate') {
-                                recordValue = record.applicationDate ? new Date(record.applicationDate).toLocaleDateString('tr-TR') : '';
-                            } else {
-                                recordValue = record[col.key] ? String(record[col.key]) : '';
-                            }
-                            return recordValue.toLowerCase().includes(this.columnFilters[col.key]);
-                        });
-                        
-                        return matchesTabFilter && globalSearchMatch && columnFilterMatch;
-                    });
-
-                    // 4. Sıralama
-                    if (this.sortBy.column) {
-                        const sortColumn = this.sortBy.column;
-                        const sortDirection = this.sortBy.direction;
-                        filteredRows.sort((rowA, rowB) => {
-                            const recordA = this.allRecords.find(r => r.id === rowA.dataset.recordId);
-                            const recordB = this.allRecords.find(r => r.id === rowB.dataset.recordId);
-
-                            if (!recordA || !recordB) return 0; 
-
-                            let valA, valB;
-
-                            if (sortColumn === 'owners') {
-                                valA = (recordA.owners ? recordA.owners.map(owner => allPersons.find(p => p.id === owner.id)?.name || '').filter(Boolean).join(' ') : ''); // 'this.allPersons' yerine 'allPersons'
-                                valB = (recordB.owners ? recordB.map(owner => allPersons.find(p => p.id === owner.id)?.name || '').filter(Boolean).join(' ') : ''); // 'this.allPersons' yerine 'allPersons'
-                            } else if (sortColumn === 'applicationDate') {
-                                valA = new Date(recordA.applicationDate || '1970-01-01'); 
-                                valB = new Date(recordB.applicationDate || '1970-01-01');
-                            } else if (sortColumn === 'type' || sortColumn === 'title' || sortColumn === 'status' || sortColumn === 'applicationNumber' || sortColumn === 'recordStatus' || sortColumn === 'recordType') { // recordType eklendi
-                                valA = String(recordA[sortColumn] || '');
-                                valB = String(recordB[sortColumn] || '');
-                            } else {
-                                valA = recordA[sortColumn];
-                                valB = recordB[sortColumn];
-                            }
-
-                            if (typeof valA === 'string' && typeof valB === 'string') {
-                                return sortDirection === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
-                            } else if (typeof valA === 'number' && typeof valB === 'number') {
-                                return sortDirection === 'asc' ? valA - valB : valB - valA;
-                            } else if (valA instanceof Date && valB instanceof Date) {
-                                return sortDirection === 'asc' ? valA.getTime() - valB.getTime() : valB.getTime() - valA.getTime();
-                            }
-                            return 0; 
-                        });
-                    }
-                    
-                    document.querySelectorAll('.sortable-header').forEach(header => {
-                        header.classList.remove('asc', 'desc', 'inactive');
-                        if (header.dataset.column === this.sortBy.column) {
-                            header.classList.add(this.sortBy.direction);
-                        } else {
-                            header.classList.add('inactive');
-                        }
-                    });
-
-                    allRows.forEach(row => {
-                        const recordId = row.dataset.recordId;
-                        const record = this.allRecords.find(r => r.id === recordId);
-                        
-                        columnDefinitions.forEach(col => {
-                            const cellIndex = col.index;
-                            const cell = row.children[cellIndex];
-                            if (cell) { 
-                                const hideColumn = (col.key === 'type' && currentTypeFilter === 'thirdParty') || // '3. Taraf' sekmesinde 'Kayıt Türü' kolonu gizlensin
-                                                   (col.onlyTrademark && currentTypeFilter !== 'trademark');
-                                
-                                cell.style.display = hideColumn ? 'none' : 'table-cell'; 
-                            }
-                        });
-
-                        row.style.display = filteredRows.includes(row) ? 'table-row' : 'none';
-
-                        const checkbox = row.querySelector('.record-checkbox');
-                        if (checkbox) {
-                            checkbox.checked = this.selectedRecords.has(recordId);
-                        }
-                        row.classList.remove('record-status-aktif', 'record-status-pasif');
-                        if (record && record.recordStatus) {
-                            row.classList.add(`record-status-${record.recordStatus}`);
-                        }
-                    });
-                    
-                    const fragment = document.createDocumentFragment();
-                    filteredRows.forEach(row => {
-                        fragment.appendChild(row);
-                    });
-                    tableBody.appendChild(fragment); 
-
-                    if (filteredRows.length === 0) {
-                        noRecordsMessage.style.display = 'block';
-                        tableBody.style.display = 'none'; 
-                    } else {
-                        noRecordsMessage.style.display = 'none';
-                        tableBody.style.display = 'table-row-group'; 
-                    }
-
-                    const allVisibleCheckboxes = document.querySelectorAll('#portfolioTableBody tr[style="display: table-row;"] .record-checkbox');
-                    const allChecked = allVisibleCheckboxes.length > 0 && Array.from(allVisibleCheckboxes).every(cb => cb.checked);
-                    document.getElementById('selectAllCheckbox').checked = allChecked;
-                    this.updateRecordStatusToggleButtonState();
-                }
-                
-                async deleteRecord(recordId) {
-                    if (confirm('Bu kaydı silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.')) {
-                        const result = await ipRecordsService.deleteRecord(recordId);
-                        if (result.success) {
-                            showNotification('Kayıt başarıyla silindi.', 'success');
-                            this.selectedRecords.delete(recordId); 
-                            this.updateRecordStatusToggleButtonState(); 
-                            await this.loadAllData(); 
-                        } else {
-                            showNotification('Kayıt silinirken hata oluştu: ' + result.error, 'error');
-                        }
-                    }
-                }
-                
-                // Buradaki showRecordDetailModal fonksiyonunu güncelliyoruz
-                async showRecordDetailModal(recordId) {
-                    const modal = document.getElementById('recordDetailModal');
-                    const modalBody = document.getElementById('modalBody');
-                    
-                    // Yükleme mesajı göster
-                    modalBody.innerHTML = '<p>Yükleniyor...</p>'; 
-
-                    try {
-                        const recordResult = await ipRecordsService.getRecordById(recordId);
-                        if (!recordResult.success || !recordResult.data) {
-                            showNotification('Kayıt bulunamadı veya yüklenirken hata oluştu.', 'error');
-                            modalBody.innerHTML = '<p>Kayıt bulunamadı veya yüklenirken hata oluştu.</p>';
-                            return;
-                        }
-                        const record = recordResult.data;
-
-                        document.getElementById('modalRecordTitle').textContent = `Kayıt Detayı: ${record.title || 'N/A'}`;
-
-                        // getOwnerNames fonksiyonunu global allPersons'ı kullanacak şekilde güncelledik
-                        const getOwnerNames = (owners) => {
-                            if (!owners || owners.length === 0) return '-';
-                            return owners.map(owner => {
-                                const person = allPersons.find(p => p.id === owner.id); // 'this.allPersons' yerine 'allPersons'
-                                return person ? person.name : 'Bilinmeyen Kişi';
-                            }).join(', ');
-                        };
-                        
-                        let imageHtml = '';
-                        let imageSrc = typeof record.trademarkImage === 'string'
-                            ? record.trademarkImage
-                            : record.trademarkImage?.content;
-
-                        if (record.type === 'trademark' && imageSrc?.startsWith('data:image')) {
-                            imageHtml = `<h4 class="modal-detail-section-title">Marka Görseli</h4>
-                                        <img src="${imageSrc}" alt="Marka Görseli" class="record-image-display">`;
-                        }
-
-                        let documentsHtml = '<ul class="document-list"><li>Henüz belge yok.</li></ul>';
-                        if (record.documents && record.documents.length > 0) {
-                            documentsHtml = '<ul class="document-list">';
-                            record.documents.forEach(doc => {
-                                documentsHtml += `<li><a href="${doc.content}" download="${doc.name}"><span class="doc-icon">📄</span>${doc.name} (${formatFileSize(doc.size)}) - ${doc.documentDesignation || 'Belge'}</a></li>`;
-                            });
-                            documentsHtml += '</ul>';
-                        }
-
-                        // **İŞLEM GEÇMİŞİNİ ALT KOLEKSİYONDAN ÇEK**
-                        let transactionsHtml = '<div class="transaction-history">';
-                        const transactionsResult = await ipRecordsService.getRecordTransactions(record.id);
-
-                        if (transactionsResult.success && transactionsResult.data.length > 0) {
-                            const transactions = transactionsResult.data;
-
-                            const transactionMap = new Map(transactions.map(tx => [tx.id, { ...tx, children: [] }]));
-
-                            const topLevelTransactions = [];
-
-                            transactions.forEach(tx => {
-                                if (tx.transactionHierarchy === 'child' && tx.parentId && transactionMap.has(tx.parentId)) {
-                                    transactionMap.get(tx.parentId).children.push(transactionMap.get(tx.id));
-                                } else {
-                                    topLevelTransactions.push(transactionMap.get(tx.id));
-                                }
-                            });
-
-                            // Top-level işlemleri zamana göre sırala (en eski en üstte)
-                            topLevelTransactions.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-
-                            if (topLevelTransactions.length > 0) {
-                                topLevelTransactions.forEach(parentTx => {
-                                    parentTx.children.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)); // Çocukları en yeni en üstte sırala
-
-                                    const hasChildrenClass = parentTx.children.length > 0 ? 'has-children' : '';
-                                    
-                                    // İşlem tipi için Türkçe isim al
-                                    const transactionTypeObj = transactionTypesMap.get(parentTx.type);
-                                    const transactionTypeName = (transactionTypeObj ? (transactionTypeObj.alias || transactionTypeObj.name) : parentTx.type || parentTx.designation) || 'Bilinmiyor';
-                                    
-                                transactionsHtml += `
-                                                    <div class="accordion">
-                                                        <div class="accordion-header ${hasChildrenClass}">
-                                                            <span class="transaction-type">
-                                                                ${transactionTypeName} 
-                                                                <span class="transaction-meta-inline">${new Date(parentTx.timestamp).toLocaleString('tr-TR')}</span>
-                                                                <span class="transaction-meta-inline user-info">(${parentTx.userName || parentTx.userEmail || 'Bilinmeyen Kullanıcı'})</span>
-                                                            </span>
-                                                        </div>
-                                                        <div class="accordion-content">
-                                                            ${parentTx.children.map(childTx => {
-                                                                const childTransactionTypeObj = transactionTypesMap.get(childTx.type);
-                                                                const childTransactionTypeName = (childTransactionTypeObj ? (childTransactionTypeObj.alias || childTransactionTypeObj.name) : childTx.type || childTx.designation) || 'Bilinmiyor';
-                                                                return `
-                                                                <div class="transaction-item" style="margin-left: 20px; border-left: 2px solid #ccc; padding-left: 10px;">
-                                                                    <div class="transaction-type">Alt İşlem: ${childTransactionTypeName}</div>
-                                                                    <div class="transaction-meta">Açıklama: ${childTx.description || '-'}</div>
-                                                                    <div class="transaction-meta">Tarih: ${childTx.timestamp ? new Date(childTx.timestamp).toLocaleString('tr-TR') : '-'}</div>
-                                                                    <div class="transaction-meta">Yapan: ${childTx.userName || childTx.userEmail || 'Bilinmeyen Kullanıcı'}</div>
-                                                                </div>
-                                                            `;
-                                                            }).join('')}
-                                                        </div>
-                                                    </div>
-                                                `;
-                                });
-                            } else {
-                                transactionsHtml += '<p>Bu kayıt için işlem geçmişi bulunmamaktadır.</p>';
-                            }
-                        } else {
-                            transactionsHtml += '<p>İşlem geçmişi yüklenemedi veya bulunamadı.</p>';
-                        }
-                        transactionsHtml += '</div>';
-
-                        // Modal içeriğini oluştur
-                        modalBody.innerHTML = `
-                            <div class="modal-detail-grid">
-                                <div class="modal-detail-item"><div class="modal-detail-label">Kayıt Tipi</div><div class="modal-detail-value">${record.recordType || '-'}</div></div>
-                                <div class="modal-detail-item"><div class="modal-detail-label">Kayıt Türü</div><div class="modal-detail-value">${record.type.charAt(0).toUpperCase() + record.type.slice(1)}</div></div>
-                                <div class="modal-detail-item"><div class="modal-detail-label">Başvuru Durumu</div><div class="modal-detail-value">${record.status}</div></div>
-                                <div class="modal-detail-item"><div class="modal-detail-label">Kayıt Durumu</div><div class="modal-detail-value">${record.recordStatus}</div></div>
-                                <div class="modal-detail-item full-width"><div class="modal-detail-label">Başlık</div><div class="modal-detail-value">${record.title}</div></div>
-                                <div class="modal-detail-item"><div class="modal-detail-label">Başvuru Numarası</div><div class="modal-detail-value">${record.applicationNumber || '-'}</div></div>
-                                <div class="modal-detail-item"><div class="modal-detail-label">Başvuru Tarihi</div><div class="modal-detail-value">${record.applicationDate || '-'}</div></div>
-                                <div class="modal-detail-item"><div class="modal-detail-label">Tescil Numarası</div><div class="modal-detail-value">${record.registrationNumber || '-'}</div></div>
-                                <div class="modal-detail-item"><div class="modal-detail-label">Tescil Tarihi</div><div class="modal-detail-value">${record.registrationDate || '-'}</div></div>
-                                <div class="modal-detail-item full-width"><div class="modal-detail-label">Hak Sahipleri</div><div class="modal-detail-value">${getOwnerNames(record.owners)}</div></div>
-                                
-                                ${record.patentClass ? `<div class="modal-detail-item"><div class="modal-detail-label">Patent Sınıfı</div><div class="modal-detail-value">${record.patentClass}</div></div>` : ''}
-                                ${record.renewalDatePatent ? `<div class="modal-detail-item"><div class="modal-detail-label">Patent Yenileme Tarihi</div><div class="modal-detail-value">${record.renewalDatePatent}</div></div>` : ''}
-
-                                ${record.niceClass ? `<div class="modal-detail-item"><div class="modal-detail-label">Nice Sınıfı</div><div class="modal-detail-value">${record.niceClass}</div></div>` : ''}
-                                ${record.renewalDateTrademark ? `<div class="modal-detail-item"><div class="modal-detail-label">Marka Yenileme Tarihi</div><div class="modal-detail-value">${record.renewalDateTrademark}</div></div>` : ''}
-
-                                ${record.copyrightType ? `<div class="modal-detail-item"><div class="modal-detail-label">Telif Hakkı Tipi</div><div class="modal-detail-value">${record.copyrightType}</div></div>` : ''}
-                                
-                                ${record.designClass ? `<div class="modal-detail-item"><div class="modal-detail-label">Tasarım Sınıfı</div><div class="modal-detail-value">${record.designClass}</div></div>` : ''}
-                                ${record.renewalDateDesign ? `<div class="modal-detail-item"><div class="modal-detail-label">Tasarım Yenileme Tarihi</div><div class="modal-detail-value">${record.renewalDateDesign}</div></div>` : ''}
-
-                                <div class="modal-detail-item full-width"><div class="modal-detail-label">Açıklama</div><div class="modal-detail-value long-text">${record.description || '-'}</div></div>
-                            </div>
-                            ${imageHtml}
-                            <h4 class="modal-detail-section-title">Ekli Belgeler</h4>
-                            <div class="modal-detail-item full-width">${documentsHtml}</div>
-                            <h4 class="modal-detail-section-title">İşlem Geçmişi</h4>
-                            <div class="modal-detail-item full-width">${transactionsHtml}</div>
-                        `;
-                        
-                        // Accordion functionality (sadece has-children class'ı varsa etkinleştir)
-                        const accordions = modalBody.querySelectorAll('.accordion-header.has-children');
-                        accordions.forEach(accordion => {
-                            accordion.addEventListener('click', function() {
-                                this.classList.toggle('active');
-                                const content = this.nextElementSibling;
-                                if (content.style.maxHeight) {
-                                    content.style.maxHeight = null;
-                                } else {
-                                    content.style.maxHeight = content.scrollHeight + "px";
-                                }
-                            });
-                        });
-                        //Accordion özelliği olmayanlar için accordion-content div'ini gizle
-                        modalBody.querySelectorAll('.accordion-header:not(.has-children)').forEach(header => {
-                            const content = header.nextElementSibling;
-                            if (content) {
-                                content.style.maxHeight = '0';
-                                content.style.overflow = 'hidden';
-                                content.style.paddingTop = '0';
-                                content.style.paddingBottom = '0';
-                                content.style.border = 'none';
-                                content.style.marginBottom = '0';
-                            }
-                        });
-
-                        modal.classList.add('show');
-                    } catch (error) {
-                        showNotification('Kayıt detayları yüklenirken beklenmedik bir hata oluştu: ' + error.message, 'error');
-                        console.error('Kayıt detay modalı hatası:', error);
-                        modalBody.innerHTML = '<p>Detaylar yüklenirken bir hata oluştu.</p>';
-                    }
-                }
-
-                closeModal(modalId) {
-                    document.getElementById(modalId).classList.remove('show');
-                }
-            }
-
-            const portfolioModule = new PortfolioModule();
+            portfolioModule = new PortfolioModule();
             portfolioModule.init(); 
         });
 
-        // YENİ FONKSİYON: İşlem tiplerini Firestore'dan yükler ve haritaya kaydeder
-        async function loadTransactionTypes() {
-            const result = await transactionTypeService.getTransactionTypes();
-            if (result.success) {
-                result.data.forEach(type => {
-                    // map'e objenin tamamını kaydediyoruz
-                    transactionTypesMap.set(type.id, type); 
+        // =====================================================================
+        // PAGINATION BAŞLATMA FONKSİYONU
+        // =====================================================================
+        function initializePagination() {
+            const recordsPerPageContainer = document.getElementById('records-per-page-container');
+            pagination = new Pagination({
+                onPageChange: (page, recordsPerPage) => {
+                    if (portfolioModule) {
+                        portfolioModule.renderCurrentPage(); 
+                    }
+                },
+                recordsPerPageContainer: recordsPerPageContainer
+            });
+        }
+        
+        // =====================================================================
+        // PORTFOLIO MODÜL SINIFI
+        // =====================================================================
+        class PortfolioModule {
+            constructor() {
+                this.currentUser = null;
+                this.allRecords = []; 
+                this.filteredAndSortedRecords = []; // Filtrelenmiş ve sıralanmış veriyi tutacak dizi
+                this.activeTypeFilter = 'all'; 
+                this.columnFilters = {}; 
+                this.sortBy = { column: 'applicationDate', direction: 'desc' }; // Varsayılan sıralama
+                this.selectedRecords = new Set(); 
+            }
+
+            async init() {
+                this.currentUser = auth.currentUser;
+                if (!this.currentUser) {
+                    window.location.href = 'index.html';
+                    return;
+                }
+                this.setupEventListeners();
+                await this.loadAllData();
+            }
+
+            async loadAllData() {
+                const loadingIndicator = document.getElementById('loadingIndicator');
+                loadingIndicator.style.display = 'block';
+                
+                try {
+                    const recordsResult = await ipRecordsService.getRecords();
+                    this.allRecords = recordsResult.success ? recordsResult.data.map(record => ({
+                        ...record,
+                        recordStatus: record.recordStatus || 'aktif',
+                        recordType: record.recordType || 'Portföy'
+                    })) : [];
+                    
+                    this.initialRenderTableStructure(); 
+                    this.applyFiltersAndSort(); 
+                } catch (error) {
+                    showNotification('Veriler yüklenirken bir hata oluştu: ' + error.message, 'error');
+                } finally {
+                    loadingIndicator.style.display = 'none';
+                }
+            }
+            
+            // =====================================================================
+            // GÜNCEL SAYFAYI TABLOYA ÇİZEN FONKSİYON
+            // =====================================================================
+            renderCurrentPage() {
+                const tableBody = document.getElementById('portfolioTableBody');
+                tableBody.innerHTML = ''; 
+
+                const currentPageData = pagination.getCurrentPageData(this.filteredAndSortedRecords);
+                const currentTypeFilter = this.activeTypeFilter;
+
+                const fragment = document.createDocumentFragment();
+
+                currentPageData.forEach(record => {
+                    const row = document.createElement('tr');
+                    row.dataset.recordId = record.id;
+                    row.classList.add(`record-status-${record.recordStatus}`);
+                    
+                    const ownerNames = record.owners ? record.owners.map(owner => {
+                        const person = allPersons.find(p => p.id === owner.id);
+                        return person ? person.name : 'Bilinmeyen Kişi';
+                    }).filter(Boolean).join(', ') : 'Belirtilmemiş';
+
+                    const isChecked = this.selectedRecords.has(record.id) ? 'checked' : '';
+                    let imageSrc = typeof record.trademarkImage === 'string' ? record.trademarkImage : record.trademarkImage?.content;
+                    let imageHtml = '-';
+                    if (record.type === 'trademark' && imageSrc?.startsWith('data:image')) {
+                        imageHtml = `<div class="trademark-image-wrapper"><img src="${imageSrc}" alt="Marka Görseli" class="trademark-image-thumbnail"></div>`;
+                    }
+                    
+                    const statusText = record.status ? record.status.charAt(0).toUpperCase() + record.status.slice(1) : '-';
+                    const recordStatusText = record.recordStatus ? record.recordStatus.charAt(0).toUpperCase() + record.recordStatus.slice(1) : '-';
+
+                    row.innerHTML = `
+                        <td><input type="checkbox" class="record-checkbox" data-id="${record.id}" ${isChecked}></td>
+                        <td>${record.recordType || '-'}</td>
+                        <td>${record.type.charAt(0).toUpperCase() + record.type.slice(1)}</td>
+                        <td>${record.title || 'Başlıksız Kayıt'}</td>
+                        <td>${imageHtml}</td>
+                        <td>${record.applicationNumber || '-'}</td>
+                        <td>${record.applicationDate || '-'}</td>
+                        <td><span class="application-status-badge ${record.status}">${statusText}</span></td>
+                        <td><span class="record-active-status-badge ${record.recordStatus}">${recordStatusText}</span></td>
+                        <td>${ownerNames || '-'}</td>
+                        <td>
+                            <button type="button" class="action-btn view-btn" data-id="${record.id}">Görüntüle</button>
+                            <button type="button" class="action-btn edit-btn" data-id="${record.id}">Düzenle</button>
+                            <button type="button" class="action-btn delete-btn" data-id="${record.id}">Sil</button>
+                        </td>
+                    `;
+                    // Kolonları gizle/göster
+                    const cells = row.children;
+                    cells[1].style.display = 'table-cell'; // Kayıt tipi her zaman görünür
+                    cells[2].style.display = currentTypeFilter === 'thirdParty' ? 'none' : 'table-cell'; // Kayıt Türü
+                    cells[4].style.display = currentTypeFilter !== 'trademark' ? 'none' : 'table-cell'; // Marka Görseli
+
+                    fragment.appendChild(row);
                 });
-            } else {
-                console.error("İşlem tipleri yüklenirken hata:", result.error);
-                showNotification("İşlem tipleri yüklenirken hata oluştu.", "error");
+
+                tableBody.appendChild(fragment);
+            }
+
+            // =====================================================================
+            // FİLTRELEME, SIRALAMA VE GÜNCELLEME YAPAN ANA FONKSİYON
+            // =====================================================================
+            applyFiltersAndSort() {
+                const globalSearchTerm = document.getElementById('searchBar').value.toLowerCase();
+                const currentTypeFilter = this.activeTypeFilter;
+                
+                let filtered = this.allRecords.filter(record => {
+                    let matchesTabFilter = false;
+                    if (currentTypeFilter === 'all') matchesTabFilter = record.recordType === 'Portföy';
+                    else if (currentTypeFilter === 'thirdParty') matchesTabFilter = record.recordType === '3. Taraf';
+                    else if (currentTypeFilter === 'objections') matchesTabFilter = record.recordType === 'Portföy' && record.transactions?.some(t => t.type?.includes('İtiraz'));
+                    else if (currentTypeFilter === 'litigation') matchesTabFilter = record.recordType === 'Portföy' && record.transactions?.some(t => t.type?.includes('Dava'));
+                    else matchesTabFilter = record.recordType === 'Portföy' && record.type === currentTypeFilter;
+
+                    if (!matchesTabFilter) return false;
+
+                    const globalSearchMatch = [
+                        record.type, record.recordType, record.title, record.applicationNumber,
+                        record.status, record.recordStatus, record.description, record.patentClass, 
+                        record.niceClass, record.copyrightType, record.designClass,
+                        (record.owners ? record.owners.map(owner => allPersons.find(p => p.id === owner.id)?.name || '').join(' ') : '')
+                    ].filter(Boolean).join(' ').toLowerCase().includes(globalSearchTerm);
+
+                    if (!globalSearchMatch) return false;
+
+                    const columnFilterMatch = Object.keys(this.columnFilters).every(key => {
+                        const filterValue = this.columnFilters[key];
+                        if (!filterValue) return true;
+                        let recordValue = (key === 'owners')
+                            ? (record.owners ? record.owners.map(owner => allPersons.find(p => p.id === owner.id)?.name || '').join(' ') : '')
+                            : (record[key] ? String(record[key]) : '');
+                        return recordValue.toLowerCase().includes(filterValue);
+                    });
+                    
+                    return columnFilterMatch;
+                });
+
+                if (this.sortBy.column) {
+                    const { column, direction } = this.sortBy;
+                    filtered.sort((a, b) => {
+                         let valA, valB;
+                        if (column === 'applicationDate') {
+                            valA = new Date(a[column] || 0);
+                            valB = new Date(b[column] || 0);
+                        } else if (column === 'owners') {
+                            valA = (a.owners ? a.owners.map(owner => allPersons.find(p => p.id === owner.id)?.name || '').join(' ') : '');
+                            valB = (b.owners ? b.owners.map(owner => allPersons.find(p => p.id === owner.id)?.name || '').join(' ') : '');
+                        } else {
+                            valA = String(a[column] || '').toLowerCase();
+                            valB = String(b[column] || '').toLowerCase();
+                        }
+                        
+                        if (valA < valB) return direction === 'asc' ? -1 : 1;
+                        if (valA > valB) return direction === 'asc' ? 1 : -1;
+                        return 0;
+                    });
+                }
+                
+                this.filteredAndSortedRecords = filtered;
+
+                pagination.update({
+                    totalRecords: this.filteredAndSortedRecords.length
+                });
+
+                this.renderCurrentPage();
+
+                const noRecordsMessage = document.getElementById('noRecordsMessage');
+                const tableBody = document.getElementById('portfolioTableBody');
+                noRecordsMessage.style.display = this.filteredAndSortedRecords.length === 0 ? 'block' : 'none';
+                tableBody.style.display = this.filteredAndSortedRecords.length === 0 ? 'none' : 'table-row-group';
+
+                 document.querySelectorAll('.sortable-header').forEach(header => {
+                    header.classList.remove('asc', 'desc', 'inactive');
+                    if (header.dataset.column === this.sortBy.column) {
+                        header.classList.add(this.sortBy.direction);
+                    } else {
+                        header.classList.add('inactive');
+                    }
+                });
+            }
+
+            // =====================================================================
+            // OLAY DİNLEYİCİLERİ
+            // =====================================================================
+            setupEventListeners() {
+                document.querySelectorAll('.tab-menu .tab-button').forEach(button => {
+                    button.addEventListener('click', (e) => {
+                        document.querySelectorAll('.tab-menu .tab-button').forEach(btn => btn.classList.remove('active'));
+                        e.target.classList.add('active');
+                        this.activeTypeFilter = e.target.dataset.type;
+                        this.selectedRecords.clear(); 
+                        document.getElementById('selectAllCheckbox').checked = false; 
+                        this.updateRecordStatusToggleButtonState(); 
+                        this.initialRenderTableStructure(); 
+                        this.applyFiltersAndSort(); 
+                    });
+                });
+
+                let globalSearchTimeout;
+                document.getElementById('searchBar').addEventListener('input', () => {
+                    clearTimeout(globalSearchTimeout);
+                    globalSearchTimeout = setTimeout(() => this.applyFiltersAndSort(), 300); 
+                });
+
+                document.getElementById('portfolioTableFilterRow').addEventListener('input', (e) => {
+                    if (e.target.classList.contains('column-filter')) {
+                        const columnKey = e.target.dataset.column;
+                        this.columnFilters[columnKey] = e.target.value.toLowerCase();
+                        this.applyFiltersAndSort();
+                    }
+                });
+
+                document.getElementById('portfolioTableHeaderRow').addEventListener('click', (e) => {
+                    const targetTh = e.target.closest('.sortable-header');
+                    if (targetTh) this.toggleSort(targetTh.dataset.column);
+                });
+
+                document.getElementById('portfolioTableBody').addEventListener('change', (e) => {
+                    if (e.target.classList.contains('record-checkbox')) {
+                        this.toggleRecordSelection(e.target.dataset.id, e.target.checked);
+                    }
+                });
+
+                document.getElementById('selectAllCheckbox').addEventListener('change', (e) => {
+                    const isChecked = e.target.checked;
+                    const currentPageIds = pagination.getCurrentPageData(this.filteredAndSortedRecords).map(r => r.id);
+                    currentPageIds.forEach(id => this.toggleRecordSelection(id, isChecked));
+                    document.querySelectorAll('#portfolioTableBody .record-checkbox').forEach(checkbox => checkbox.checked = isChecked);
+                });
+                
+                document.getElementById('toggleRecordStatusBtn').addEventListener('click', () => this.toggleSelectedRecordsStatus());
+
+                document.getElementById('addToMonitoringBtn').addEventListener('click', () => this.addSelectedToMonitoring());
+
+                document.getElementById('portfolioTableBody').addEventListener('click', (e) => { 
+                    const button = e.target.closest('.action-btn');
+                    if (button) {
+                        e.preventDefault();
+                        const recordId = button.dataset.id;
+                        if (button.classList.contains('edit-btn')) window.location.href = `data-entry.html?id=${recordId}`;
+                        else if (button.classList.contains('delete-btn')) this.deleteRecord(recordId);
+                        else if (button.classList.contains('view-btn')) this.showRecordDetailModal(recordId);
+                    }
+                });
+
+                document.getElementById('closeRecordDetailModal').addEventListener('click', () => this.closeModal('recordDetailModal'));
+            }
+
+            toggleSort(columnKey) {
+                if (this.sortBy.column === columnKey) {
+                    this.sortBy.direction = this.sortBy.direction === 'asc' ? 'desc' : 'asc';
+                } else {
+                    this.sortBy.column = columnKey;
+                    this.sortBy.direction = 'asc';
+                }
+                this.applyFiltersAndSort(); 
+            }
+
+            toggleRecordSelection(recordId, isChecked) {
+                if (isChecked) this.selectedRecords.add(recordId);
+                else this.selectedRecords.delete(recordId);
+                this.updateRecordStatusToggleButtonState();
+                this.updateAddToMonitoringButtonState();
+            }
+
+            updateRecordStatusToggleButtonState() {
+                const toggleButton = document.getElementById('toggleRecordStatusBtn');
+                if (this.selectedRecords.size === 0) {
+                    toggleButton.disabled = true;
+                    toggleButton.textContent = 'Aktif/Pasif';
+                    toggleButton.className = 'btn-status-toggle';
+                    return;
+                }
+                let allActive = true, allPasif = true;
+                this.selectedRecords.forEach(id => {
+                    const record = this.allRecords.find(r => r.id === id);
+                    if (record) {
+                        if (record.recordStatus === 'pasif') allActive = false;
+                        else allPasif = false;
+                    }
+                });
+                toggleButton.disabled = false;
+                if (allActive) {
+                    toggleButton.textContent = `Arşivle (${this.selectedRecords.size})`;
+                    toggleButton.className = 'btn-status-toggle archive';
+                } else if (allPasif) {
+                    toggleButton.textContent = `Aktif Et (${this.selectedRecords.size})`;
+                    toggleButton.className = 'btn-status-toggle activate';
+                } else {
+                    toggleButton.textContent = `Aktif/Pasif (${this.selectedRecords.size})`;
+                    toggleButton.className = 'btn-status-toggle';
+                }
+            }
+
+            updateAddToMonitoringButtonState() {
+                const btn = document.getElementById('addToMonitoringBtn');
+                btn.disabled = this.selectedRecords.size === 0;
+                btn.textContent = this.selectedRecords.size > 0 ? `İzlemeye Ekle (${this.selectedRecords.size})` : 'İzlemeye Ekle';
+            }
+
+            async toggleSelectedRecordsStatus() {
+                if (this.selectedRecords.size === 0) return;
+                const recordsToUpdate = Array.from(this.selectedRecords).map(id => this.allRecords.find(r => r.id === id)).filter(Boolean);
+                if (recordsToUpdate.length === 0) return;
+
+                const firstStatus = recordsToUpdate[0].recordStatus;
+                const allSame = recordsToUpdate.every(r => r.recordStatus === firstStatus);
+                if (!allSame) {
+                    showNotification('Seçili kayıtların aktiflik durumları farklı. Lütfen aynı durumda olan kayıtları seçin.', 'warning');
+                    return;
+                }
+                const targetStatus = firstStatus === 'aktif' ? 'pasif' : 'aktif';
+                if (!confirm(`Seçilen ${recordsToUpdate.length} kaydı "${targetStatus}" yapmak istediğinizden emin misiniz?`)) return;
+
+                const promises = recordsToUpdate.map(r => ipRecordsService.updateRecord(r.id, { recordStatus: targetStatus }));
+                const results = await Promise.all(promises);
+                const successCount = results.filter(r => r.success).length;
+                if (successCount > 0) {
+                    showNotification(`${successCount} kayıt güncellendi.`, 'success');
+                    this.selectedRecords.clear();
+                    this.updateRecordStatusToggleButtonState();
+                    await this.loadAllData();
+                }
+                if (results.length > successCount) {
+                    showNotification(`${results.length - successCount} kayıt güncellenirken hata oluştu.`, 'error');
+                }
+            }
+            
+            async addSelectedToMonitoring() {
+                const selectedIds = Array.from(this.selectedRecords);
+                if (selectedIds.length === 0) return;
+                let successful = 0, failed = 0, skipped = 0;
+
+                for (const id of selectedIds) {
+                    const record = this.allRecords.find(r => r.id === id);
+                    if (!record) { failed++; continue; }
+                    if (record.type !== 'trademark') { skipped++; continue; }
+                    
+                    const res = await monitoringService.addMonitoringItem({ ...record });
+                    if (res.success) successful++;
+                    else failed++;
+                }
+                if (successful > 0) showNotification(`${successful} kayıt başarıyla izlemeye eklendi.`, 'success');
+                if (failed > 0) showNotification(`${failed} kayıt izlemeye eklenirken hata oluştu.`, 'error');
+                if (skipped > 0) showNotification(`${skipped} marka olmayan kayıt atlandı.`, 'info');
+                
+                this.selectedRecords.clear();
+                this.updateAddToMonitoringButtonState();
+                this.renderCurrentPage(); // Checkboxları temizlemek için
+            }
+
+            async deleteRecord(recordId) {
+                if (confirm('Bu kaydı silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.')) {
+                    const result = await ipRecordsService.deleteRecord(recordId);
+                    if (result.success) {
+                        showNotification('Kayıt başarıyla silindi.', 'success');
+                        this.selectedRecords.delete(recordId);
+                        this.updateRecordStatusToggleButtonState();
+                        await this.loadAllData();
+                    } else {
+                        showNotification('Kayıt silinirken hata oluştu: ' + result.error, 'error');
+                    }
+                }
+            }
+            
+            initialRenderTableStructure() {
+                const tableHeaderRow = document.getElementById('portfolioTableHeaderRow');
+                const tableFilterRow = document.getElementById('portfolioTableFilterRow');
+                tableHeaderRow.innerHTML = '';
+                tableFilterRow.innerHTML = '';
+
+                const columnDefinitions = [
+                    { key: 'selection', label: '<input type="checkbox" id="headerSelectAllCheckbox" />', sortable: false, searchable: false, isCheckbox: true, fixedWidth: '40px' },
+                    { key: 'recordType', label: 'Kayıt Tipi', sortable: true, searchable: true, fixedWidth: '80px' },
+                    { key: 'type', label: 'Kayıt Türü', sortable: true, searchable: true, fixedWidth: '80px' },
+                    { key: 'title', label: 'Başlık', sortable: true, searchable: true, fixedWidth: '150px' },
+                    { key: 'trademarkImage', label: 'Marka Görseli', sortable: false, searchable: false, onlyTrademark: true, fixedWidth: '80px' },
+                    { key: 'applicationNumber', label: 'Başvuru Numarası', sortable: true, searchable: true, fixedWidth: '120px' },
+                    { key: 'applicationDate', label: 'Başvuru Tarihi', sortable: true, searchable: true, fixedWidth: '100px' },
+                    { key: 'status', label: 'Başvuru Durumu', sortable: true, searchable: true, fixedWidth: '110px' },
+                    { key: 'recordStatus', label: 'Kayıt Durumu', sortable: true, searchable: true, fixedWidth: '110px' },
+                    { key: 'owners', label: 'Hak Sahipleri', sortable: true, searchable: true, fixedWidth: '200px' },
+                    { key: 'actions', label: 'İşlemler', sortable: false, searchable: false, fixedWidth: '250px' }
+                ];
+                
+                const currentTypeFilter = this.activeTypeFilter;
+
+                columnDefinitions.forEach(col => {
+                    const th = document.createElement('th');
+                    if (col.sortable) {
+                        th.className = 'sortable-header';
+                        th.dataset.column = col.key;
+                    }
+                    th.style.width = col.fixedWidth;
+                    th.innerHTML = col.isCheckbox ? '<input type="checkbox" id="selectAllCheckbox">' : col.label;
+                    
+                    const thFilter = document.createElement('th');
+                    if (col.searchable) {
+                        thFilter.innerHTML = `<input type="text" class="column-filter" data-column="${col.key}" placeholder="${col.label} ara...">`;
+                    }
+                    
+                    const hideColumn = (col.key === 'type' && currentTypeFilter === 'thirdParty') || (col.onlyTrademark && currentTypeFilter !== 'trademark');
+                    if (hideColumn) {
+                        th.style.display = 'none';
+                        thFilter.style.display = 'none';
+                    }
+
+                    tableHeaderRow.appendChild(th);
+                    tableFilterRow.appendChild(thFilter);
+                });
+            }
+            
+            async showRecordDetailModal(recordId) {
+                // Bu fonksiyon oldukça uzun ve karmaşık olduğu için,
+                // içeriğini değiştirmeden orijinal halini buraya kopyalıyorum.
+                const modal = document.getElementById('recordDetailModal');
+                const modalBody = document.getElementById('modalBody');
+                modalBody.innerHTML = '<p>Yükleniyor...</p>'; 
+
+                try {
+                    const recordResult = await ipRecordsService.getRecordById(recordId);
+                    if (!recordResult.success || !recordResult.data) {
+                        throw new Error('Kayıt bulunamadı.');
+                    }
+                    const record = recordResult.data;
+
+                    document.getElementById('modalRecordTitle').textContent = `Kayıt Detayı: ${record.title || 'N/A'}`;
+                    const getOwnerNames = (owners) => (!owners || owners.length === 0) ? '-' : owners.map(o => allPersons.find(p => p.id === o.id)?.name || 'Bilinmeyen').join(', ');
+                    
+                    let imageHtml = '';
+                    let imageSrc = typeof record.trademarkImage === 'string' ? record.trademarkImage : record.trademarkImage?.content;
+                    if (record.type === 'trademark' && imageSrc?.startsWith('data:image')) {
+                        imageHtml = `<h4 class="modal-detail-section-title">Marka Görseli</h4><img src="${imageSrc}" alt="Marka Görseli" class="record-image-display">`;
+                    }
+
+                    let documentsHtml = '<ul class="document-list"><li>Henüz belge yok.</li></ul>';
+                    if (record.documents && record.documents.length > 0) {
+                        documentsHtml = '<ul class="document-list">' + record.documents.map(doc => `<li><a href="${doc.content}" download="${doc.name}"><span class="doc-icon">📄</span>${doc.name} (${formatFileSize(doc.size)}) - ${doc.documentDesignation || 'Belge'}</a></li>`).join('') + '</ul>';
+                    }
+
+                    let transactionsHtml = '<div class="transaction-history">';
+                    const transResult = await ipRecordsService.getRecordTransactions(record.id);
+                    if (transResult.success && transResult.data.length > 0) {
+                        // İşlem geçmişi oluşturma mantığı... (orijinal koddan alındı)
+                        const transactions = transResult.data;
+                        const transactionMap = new Map(transactions.map(tx => [tx.id, { ...tx, children: [] }]));
+                        const topLevelTransactions = [];
+                        transactions.forEach(tx => {
+                            if (tx.transactionHierarchy === 'child' && tx.parentId && transactionMap.has(tx.parentId)) {
+                                transactionMap.get(tx.parentId).children.push(transactionMap.get(tx.id));
+                            } else {
+                                topLevelTransactions.push(transactionMap.get(tx.id));
+                            }
+                        });
+                        topLevelTransactions.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+                        topLevelTransactions.forEach(parentTx => {
+                            parentTx.children.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+                            const hasChildrenClass = parentTx.children.length > 0 ? 'has-children' : '';
+                            const typeObj = transactionTypesMap.get(parentTx.type);
+                            const typeName = (typeObj ? (typeObj.alias || typeObj.name) : parentTx.type || parentTx.designation) || 'Bilinmiyor';
+                            transactionsHtml += `<div class="accordion"><div class="accordion-header ${hasChildrenClass}"><span class="transaction-type">${typeName} <span class="transaction-meta-inline">${new Date(parentTx.timestamp).toLocaleString('tr-TR')}</span><span class="transaction-meta-inline user-info">(${parentTx.userName || parentTx.userEmail || 'Bilinmeyen'})</span></span></div><div class="accordion-content">${parentTx.children.map(childTx => { const cTypeObj = transactionTypesMap.get(childTx.type); const cTypeName = (cTypeObj ? (cTypeObj.alias || cTypeObj.name) : childTx.type || childTx.designation) || 'Bilinmiyor'; return `<div class="transaction-item" style="margin-left: 20px; border-left: 2px solid #ccc; padding-left: 10px;"><div class="transaction-type">Alt İşlem: ${cTypeName}</div><div class="transaction-meta">Açıklama: ${childTx.description || '-'}</div><div class="transaction-meta">Tarih: ${childTx.timestamp ? new Date(childTx.timestamp).toLocaleString('tr-TR') : '-'}</div><div class="transaction-meta">Yapan: ${childTx.userName || childTx.userEmail || 'Bilinmeyen'}</div></div>`; }).join('')}</div></div>`;
+                        });
+
+                    } else {
+                        transactionsHtml += '<p>Bu kayıt için işlem geçmişi bulunmamaktadır.</p>';
+                    }
+                    transactionsHtml += '</div>';
+
+                    modalBody.innerHTML = `
+                        <div class="modal-detail-grid">
+                            <div class="modal-detail-item"><div class="modal-detail-label">Kayıt Tipi</div><div class="modal-detail-value">${record.recordType || '-'}</div></div>
+                            <div class="modal-detail-item"><div class="modal-detail-label">Kayıt Türü</div><div class="modal-detail-value">${record.type.charAt(0).toUpperCase() + record.type.slice(1)}</div></div>
+                            <div class="modal-detail-item"><div class="modal-detail-label">Başvuru Durumu</div><div class="modal-detail-value">${record.status}</div></div>
+                            <div class="modal-detail-item"><div class="modal-detail-label">Kayıt Durumu</div><div class="modal-detail-value">${record.recordStatus}</div></div>
+                            <div class="modal-detail-item full-width"><div class="modal-detail-label">Başlık</div><div class="modal-detail-value">${record.title}</div></div>
+                            <div class="modal-detail-item"><div class="modal-detail-label">Başvuru Numarası</div><div class="modal-detail-value">${record.applicationNumber || '-'}</div></div>
+                            <div class="modal-detail-item"><div class="modal-detail-label">Başvuru Tarihi</div><div class="modal-detail-value">${record.applicationDate || '-'}</div></div>
+                            <div class="modal-detail-item"><div class="modal-detail-label">Tescil Numarası</div><div class="modal-detail-value">${record.registrationNumber || '-'}</div></div>
+                            <div class="modal-detail-item"><div class="modal-detail-label">Tescil Tarihi</div><div class="modal-detail-value">${record.registrationDate || '-'}</div></div>
+                            <div class="modal-detail-item full-width"><div class="modal-detail-label">Hak Sahipleri</div><div class="modal-detail-value">${getOwnerNames(record.owners)}</div></div>
+                            ${record.patentClass ? `<div class="modal-detail-item"><div class="modal-detail-label">Patent Sınıfı</div><div class="modal-detail-value">${record.patentClass}</div></div>` : ''}
+                            ${record.renewalDatePatent ? `<div class="modal-detail-item"><div class="modal-detail-label">Patent Yenileme Tarihi</div><div class="modal-detail-value">${record.renewalDatePatent}</div></div>` : ''}
+                            ${record.niceClass ? `<div class="modal-detail-item"><div class="modal-detail-label">Nice Sınıfı</div><div class="modal-detail-value">${record.niceClass}</div></div>` : ''}
+                            ${record.renewalDateTrademark ? `<div class="modal-detail-item"><div class="modal-detail-label">Marka Yenileme Tarihi</div><div class="modal-detail-value">${record.renewalDateTrademark}</div></div>` : ''}
+                            ${record.designClass ? `<div class="modal-detail-item"><div class="modal-detail-label">Tasarım Sınıfı</div><div class="modal-detail-value">${record.designClass}</div></div>` : ''}
+                            ${record.renewalDateDesign ? `<div class="modal-detail-item"><div class="modal-detail-label">Tasarım Yenileme Tarihi</div><div class="modal-detail-value">${record.renewalDateDesign}</div></div>` : ''}
+                            <div class="modal-detail-item full-width"><div class="modal-detail-label">Açıklama</div><div class="modal-detail-value long-text">${record.description || '-'}</div></div>
+                        </div>
+                        ${imageHtml}
+                        <h4 class="modal-detail-section-title">Ekli Belgeler</h4>
+                        <div class="modal-detail-item full-width">${documentsHtml}</div>
+                        <h4 class="modal-detail-section-title">İşlem Geçmişi</h4>
+                        <div class="modal-detail-item full-width">${transactionsHtml}</div>
+                    `;
+                    
+                    modalBody.querySelectorAll('.accordion-header.has-children').forEach(acc => {
+                        acc.addEventListener('click', function() {
+                            this.classList.toggle('active');
+                            const content = this.nextElementSibling;
+                            content.style.maxHeight = content.style.maxHeight ? null : content.scrollHeight + "px";
+                        });
+                    });
+                    modal.classList.add('show');
+                } catch (error) {
+                    showNotification('Kayıt detayları yüklenirken hata oluştu: ' + error.message, 'error');
+                }
+            }
+
+            closeModal(modalId) {
+                document.getElementById(modalId).classList.remove('show');
             }
         }
 
-        // YENİ FONKSİYON: Kişileri Firestore'dan yükler
+        // =====================================================================
+        // YARDIMCI GLOBAL FONKSİYONLAR
+        // =====================================================================
+        async function loadTransactionTypes() {
+            const result = await transactionTypeService.getTransactionTypes();
+            if (result.success) {
+                result.data.forEach(type => transactionTypesMap.set(type.id, type));
+            } else {
+                console.error("İşlem tipleri yüklenirken hata:", result.error);
+            }
+        }
+
         async function loadPersons() {
             const result = await personService.getPersons();
             if (result.success) {
                 allPersons = result.data;
             } else {
                 console.error("Kişiler yüklenirken hata:", result.error);
-                showNotification("Kişiler yüklenirken hata oluştu.", "error");
             }
-        }
-
-        // Kişinin tam adını bulan yardımcı fonksiyon (global olarak tanımlandı)
-        function getPersonFullName(userId) {
-            const person = allPersons.find(p => p.id === userId);
-            return person ? `${person.firstName || ''} ${person.lastName || ''}`.trim() : 'Bilinmeyen Kullanıcı';
         }
     </script>
 </body>
