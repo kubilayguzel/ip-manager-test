@@ -304,9 +304,12 @@
             }
             loadingIndicator.textContent = `Algolia'da ${trademarksToSearch.length} marka için arama yapılıyor...`;
             const searchPromises = trademarksToSearch.map(async (trademark) => {
-                const searchParams = { markName: trademark.title, niceClasses: trademark.niceClass };
-                console.log("🔍 Algolia arama parametreleri:", searchParams, "Bulletin:", selectedBulletin);
-                const results = await runTrademarkSearch(searchParams, selectedBulletin);
+            const monitoredMark = {
+                markName: trademark.title,
+                applicationDate: trademark.applicationDate,
+                niceClasses: trademark.niceClass
+            };
+            const results = await runTrademarkSearch(monitoredMark, selectedBulletin);
                 console.log(`✅ Algolia ${trademark.title} için ${results.length} sonuç döndürdü:`, results);
                 const recordId = `${trademark.id}_${selectedBulletin}`;
                 await searchRecordService.saveRecord(recordId, { results: results, searchDate: new Date().toISOString() });
