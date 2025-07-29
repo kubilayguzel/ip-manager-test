@@ -329,6 +329,8 @@ async function performResearch() {
     await performSearch(false);
 }
 
+// trademark-similarity-search.html dosyasındaki performSearch fonksiyonunu bu şekilde değiştirin:
+
 async function performSearch(fromCacheOnly = false) {
     const selectedBulletin = bulletinSelect.value;
     if (!selectedBulletin) return;
@@ -351,7 +353,13 @@ async function performSearch(fromCacheOnly = false) {
         const recordId = `${tm.id}_${selectedBulletin}`;
         const result = await searchRecordService.getRecord(recordId);
         if (result.success && result.data) {
-            cachedResults.push(...result.data.results.map(r => ({...r, source: 'cache', monitoredTrademark: tm.title})));
+            // DÜZELTME: monitoredTrademark alanını ekle
+            cachedResults.push(...result.data.results.map(r => ({
+                ...r, 
+                source: 'cache', 
+                monitoredTrademark: tm.title || tm.markName,
+                monitoredTrademarkId: tm.id
+            })));
         } else {
             trademarksToSearch.push(tm);
         }
@@ -368,33 +376,33 @@ async function performSearch(fromCacheOnly = false) {
         loadingIndicator.textContent = `${trademarksToSearch.length} marka için arama yapılıyor... (Bu biraz zaman alabilir)`;
         
         try {
-            const resultsFromCF = await runTrademarkSearch(
-                trademarksToSearch.map(tm => ({
-                    id: tm.id,
-                    markName: tm.title || tm.markName,
-                    applicationDate: tm.applicationDate,
-                    niceClasses: tm.niceClass
-                })),
-                selectedBulletin
-            );
-            
-            if (resultsFromCF && resultsFromCF.length > 0) {
-                newSearchResults = resultsFromCF.map(hit => ({...hit, source: 'new'}));
+            // DÜZELTME: Her bir marka için ayrı ayrı arama yap ve sonuçları etiketle
+            for (const trademark of trademarksToSearch) {
+                const results = await runTrademarkSearch({
+                    id: trademark.id,
+                    markName: trademark.title || trademark.markName,
+                    applicationDate: trademark.applicationDate,
+                    niceClasses: trademark.niceClass
+                }, selectedBulletin);
                 
-                const groupedResults = newSearchResults.reduce((acc, currentResult) => {
-                    const monitoredTrademarkId = currentResult.monitoredTrademarkId;
-                    if (!acc[monitoredTrademarkId]) {
-                        acc[monitoredTrademarkId] = [];
-                    }
-                    acc[monitoredTrademarkId].push(currentResult);
-                    return acc;
-                }, {});
-
-                for (const [monitoredTrademarkId, results] of Object.entries(groupedResults)) {
-                    const recordId = `${monitoredTrademarkId}_${selectedBulletin}`;
-                    await searchRecordService.saveRecord(recordId, { results: results, searchDate: new Date().toISOString() });
-                }
+                // Sonuçlara monitoredTrademark bilgisini ekle
+                const labeledResults = results.map(hit => ({
+                    ...hit, 
+                    source: 'new',
+                    monitoredTrademark: trademark.title || trademark.markName,
+                    monitoredTrademarkId: trademark.id
+                }));
+                
+                newSearchResults.push(...labeledResults);
+                
+                // Sonuçları önbelleğe kaydet
+                const recordId = `${trademark.id}_${selectedBulletin}`;
+                await searchRecordService.saveRecord(recordId, { 
+                    results: labeledResults, 
+                    searchDate: new Date().toISOString() 
+                });
             }
+            
         } catch (error) {
             console.error("Arama işlemi sırasında hata:", error);
             infoMessageContainer.innerHTML = `<div class="error-message">Arama işlemi sırasında hata oluştu: ${error.message}. Detaylar için konsolu kontrol edin.</div>`;
@@ -418,7 +426,7 @@ async function performSearch(fromCacheOnly = false) {
     researchBtn.disabled = allSimilarResults.length === 0;
     console.log("📊 Tüm benzer sonuçlar (render öncesi):", allSimilarResults);
 }
-
+    
 function renderCurrentPageOfResults() {
     resultsTableBody.innerHTML = '';
     if(!pagination) {
