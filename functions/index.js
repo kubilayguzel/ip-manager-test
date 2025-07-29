@@ -1298,15 +1298,23 @@ function isPhoneticallySimilar(a, b) {
 }
 function parseDate(value) {
   if (!value) return null;
-  // dd/MM/yyyy formatı desteği
+  
+  // dd/MM/yyyy formatı desteği (Türkiye standartı)
   const parts = value.split('/');
   if (parts.length === 3) {
     const day = parseInt(parts[0], 10);
-    const month = parseInt(parts[1], 10) - 1;
+    const month = parseInt(parts[1], 10) - 1; // 0-indexed
     const year = parseInt(parts[2], 10);
-    return new Date(year, month, day);
+    
+    // Geçerlilik kontrolü ekleyin
+    if (day > 0 && day <= 31 && month >= 0 && month <= 11 && year > 1900) {
+      return new Date(year, month, day);
+    }
   }
-  return new Date(value); // ISO uyumlu ise
+  
+  // ISO formatı veya başka formatlar için
+  const isoDate = new Date(value);
+  return isNaN(isoDate) ? null : isoDate;
 }
 
 function isValidBasedOnDate(hitDate, monitoredDate) {
