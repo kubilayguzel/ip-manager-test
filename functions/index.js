@@ -1407,6 +1407,8 @@ function levenshteinSimilarity(a, b) {
 
 function calculateSimilarityScoreInternal(hitMarkName, searchMarkName, hitApplicationDate, searchApplicationDate, hitNiceClasses, searchNiceClasses) {
     // Jenerik ibare temizliği
+    // Sadece birden fazla kelime içeren markalar için generic kelime temizliği yap.
+    // Tek kelimelik markalarda 'market' gibi kelimeler temizlenmemeli, çünkü markanın çekirdeği olabilir.
     const isSearchMultiWord = searchMarkName.trim().split(/\s+/).length > 1;
     const isHitMultiWord = (hitMarkName || '').trim().split(/\s+/).length > 1;
 
@@ -1416,15 +1418,16 @@ function calculateSimilarityScoreInternal(hitMarkName, searchMarkName, hitApplic
     logger.log(`📊 Skorlama: '${searchMarkName}' (temizlenmiş: '${cleanedSearchName}') vs '${hitMarkName}' (temizlenmiş: '${cleanedHitName}')`);
 
     if (!cleanedSearchName || !cleanedHitName) {
-        return { finalScore: 0.0, positionalExactMatchScore: 0.0 }; // Her iki skoru da döndür
+        return 0.0;
     }
 
     // Tam eşleşme kontrolü (en yüksek öncelik)
     if (cleanedSearchName === cleanedHitName) {
-        return { finalScore: 1.0, positionalExactMatchScore: 1.0 }; // Her iki skoru da döndür
+        return 1.0;
     }
 
     // ======== Alt Benzerlik Skorları ========
+    // Levenshtein Benzerlik Skoru
     const levenshteinScore = (() => {
         const matrix = [];
         if (cleanedSearchName.length === 0) return cleanedHitName.length === 0 ? 1.0 : 0.0;
@@ -1452,12 +1455,13 @@ function calculateSimilarityScoreInternal(hitMarkName, searchMarkName, hitApplic
     })();
     logger.log(`   - Levenshtein Score: ${levenshteinScore.toFixed(2)}`);
 
+    // Jaro-Winkler Benzerlik Skoru
     const jaroWinklerScore = (() => {
         const s1 = cleanedSearchName;
         const s2 = cleanedHitName;
         if (s1 === s2) return 1.0;
 
-        let m = 0;
+        let m = 0; // matching characters
         const s1_len = s1.length;
         const s2_len = s2.length;
 
@@ -1480,7 +1484,7 @@ function calculateSimilarityScoreInternal(hitMarkName, searchMarkName, hitApplic
         if (m === 0) return 0.0;
 
         let k = 0;
-        let t = 0;
+        let t = 0; // transpositions
         for (let i = 0; i < s1_len; i++) {
             if (s1_matches[i]) {
                 let j;
@@ -1499,9 +1503,10 @@ function calculateSimilarityScoreInternal(hitMarkName, searchMarkName, hitApplic
 
         const jaro_score = (m / s1_len + m / s2_len + (m - t) / m) / 3;
 
-        const p = 0.1;
-        let l = 0;
-        const max_prefix_len = 4;
+        // Winkler modification
+        const p = 0.1; // prefix scale (typically 0.1)
+        let l = 0; // length of common prefix
+        const max_prefix_len = 4; // usually up to 4 characters
 
         for (let i = 0; i < Math.min(s1_len, s2_len, max_prefix_len); i++) {
             if (s1[i] === s2[i]) {
@@ -1515,6 +1520,7 @@ function calculateSimilarityScoreInternal(hitMarkName, searchMarkName, hitApplic
     })();
     logger.log(`   - Jaro-Winkler Score: ${jaroWinklerScore.toFixed(2)}`);
 
+    // N-gram Benzerlik Skoru (Bigram, n=2)
     const ngramScore = (() => {
         const s1 = cleanedSearchName;
         const s2 = cleanedHitName;
@@ -1547,6 +1553,7 @@ function calculateSimilarityScoreInternal(hitMarkName, searchMarkName, hitApplic
     })();
     logger.log(`   - N-gram Score (n=2): ${ngramScore.toFixed(2)}`);
 
+    // Görsel Karakter Benzerlik Skoru
     const visualScore = (() => {
         const visualPenalty = visualMismatchPenalty(cleanedSearchName, cleanedHitName);
         const maxPossibleVisualPenalty = Math.max(cleanedSearchName.length, cleanedHitName.length) * 1.0;
@@ -1554,6 +1561,7 @@ function calculateSimilarityScoreInternal(hitMarkName, searchMarkName, hitApplic
     })();
     logger.log(`   - Visual Score: ${visualScore.toFixed(2)}`);
 
+    // Önek Benzerlik Skoru (İlk 3 karakter)
     const prefixScore = (() => {
         const s1 = cleanedSearchName;
         const s2 = cleanedHitName;
@@ -1565,7 +1573,7 @@ function calculateSimilarityScoreInternal(hitMarkName, searchMarkName, hitApplic
         if (prefix1 === prefix2) return 1.0;
         if (prefix1.length === 0 && prefix2.length === 0) return 1.0;
 
-        return levenshteinSimilarity(prefix1, prefix2); // Önek karşılaştırması için levenshteinSimilarity kullan
+        return levenshteinScore; // Önekler arası levenshtein score
     })();
     logger.log(`   - Prefix Score (len 3): ${prefixScore.toFixed(2)}`);
 
@@ -1584,41 +1592,26 @@ function calculateSimilarityScoreInternal(hitMarkName, searchMarkName, hitApplic
         let maxSim = 0.0;
         for (const w1 of words1) {
             for (const w2 of words2) {
-                maxSim = Math.max(maxSim, levenshteinSimilarity(w1, w2));
+                // Burada Levenshtein yerine Jaro-Winkler de kullanabiliriz, tek kelimeler için daha iyi olabilir
+                // Mevcut LevenshteinSimilarity yeterli hassasiyet sunacaktır.
+                maxSim = Math.max(maxSim, levenshteinSimilarity(w1, w2)); // Kelime çiftleri arası Levenshtein
             }
         }
         return maxSim;
     })();
     logger.log(`   - Max Word Score: ${maxWordScore.toFixed(2)}`);
 
-    // Yeni: Konumsal Tam Eşleşme Skoru (örn: ilk 3 karakter tam eşleşiyorsa)
-    const positionalExactMatchScore = (() => {
-        const s1 = cleanedSearchName;
-        const s2 = cleanedHitName;
-        if (!s1 || !s2) return 0.0;
-
-        // İlk 3 karakteri büyük/küçük harf duyarsız karşılaştır
-        const len = Math.min(s1.length, s2.length, 3);
-        if (len === 0) return 0.0; // Karşılaştırılacak karakter yok
-
-        for (let i = 0; i < len; i++) {
-            if (s1[i] !== s2[i]) {
-                return 0.0; // İlk 'len' karakterlerde uyumsuzluk bulundu
-            }
-        }
-        return 1.0; // İlk 'len' karakterlerin hepsi tam eşleşiyor
-    })();
-    logger.log(`   - Positional Exact Match Score (first 3 chars): ${positionalExactMatchScore.toFixed(2)}`);
-
     // ======== YENİ KURAL: Yüksek Kelime Benzerliği Kontrolü ve Önceliklendirme ========
-    const HIGH_WORD_SIMILARITY_THRESHOLD = 0.70;
+    const HIGH_WORD_SIMILARITY_THRESHOLD = 0.70; // %70 eşiği
 
     if (maxWordScore >= HIGH_WORD_SIMILARITY_THRESHOLD) {
         logger.log(`   *** Yüksek kelime bazında benzerlik tespit edildi (${(maxWordScore * 100).toFixed(0)}%), doğrudan skor olarak kullanılıyor. ***`);
-        // Her iki skoru da döndür, finalScore maxWordScore olsun
-        return { finalScore: maxWordScore, positionalExactMatchScore: positionalExactMatchScore };
+        // Eğer bir kelime %70 veya üzeri benzerse, doğrudan o maxWordScore'u nihai skor olarak kullan.
+        // Bu, diğer tüm ağırlıklandırmayı ezer ve bu sonucu üst sıralara taşır.
+        return maxWordScore; 
     }
     
+    // Bu noktadan sonraki kod, sadece maxWordScore eşiği geçemediğinde çalışır.
     // ======== İsim Benzerliği Alt Toplamı Hesaplama (%95 Ağırlık) ========
     const nameSimilarityRaw = (
         levenshteinScore * 0.30 +
@@ -1633,7 +1626,7 @@ function calculateSimilarityScoreInternal(hitMarkName, searchMarkName, hitApplic
     logger.log(`   - Name Similarity (weighted 95%): ${nameSimilarityWeighted.toFixed(2)}`);
 
     // ======== Fonetik Benzerlik Skoru (%5 Ağırlık) ========
-    const phoneticScoreRaw = isPhoneticallySimilar(searchMarkName, hitMarkName);
+    const phoneticScoreRaw = isPhoneticallySimilar(searchMarkName, hitMarkName); // Orijinal isimleri kullan
     const phoneticSimilarityWeighted = phoneticScoreRaw * 0.05;
     logger.log(`   - Phonetic Score (weighted 5%): ${phoneticSimilarityWeighted.toFixed(2)}`);
 
@@ -1643,8 +1636,9 @@ function calculateSimilarityScoreInternal(hitMarkName, searchMarkName, hitApplic
     finalScore = Math.max(0.0, Math.min(1.0, finalScore));
 
     logger.log(`   - FINAL SCORE: ${finalScore.toFixed(2)}\n`);
-    return { finalScore: finalScore, positionalExactMatchScore: positionalExactMatchScore }; // Her iki skoru da döndür
+    return finalScore;
 }
+
 
 // ======== Yeni Cloud Function: Sunucu Tarafında Marka Benzerliği Araması ========
 
@@ -1703,8 +1697,8 @@ export const performTrademarkSimilaritySearch = onCall(
             continue;
           }
 
-          // Benzerlik skoru ve Konumsal Tam Eşleşme Skoru
-          const { finalScore: similarityScore, positionalExactMatchScore } = calculateSimilarityScoreInternal(
+          // Benzerlik skoru
+          const similarityScore = calculateSimilarityScoreInternal(
             hit.markName,
             markName,
             hit.applicationDate,
@@ -1714,11 +1708,8 @@ export const performTrademarkSimilaritySearch = onCall(
           );
 
           const SIMILARITY_THRESHOLD = 0.5; // başlangıç için düşük eşik
-          
-          // Yeni Kural: Konumsal tam eşleşme varsa (ve eşik üzerindeyse), genel eşik kontrolünü atla
-          // positionalExactMatchScore'un 1.0 olması, ilk 3 karakterin tam eşleştiği anlamına gelir.
-          if (similarityScore < SIMILARITY_THRESHOLD && positionalExactMatchScore < SIMILARITY_THRESHOLD) {
-            logger.log(`⏩ Skor düşük (${similarityScore.toFixed(2)}) ve Konumsal Eşleşme Yeterli Değil (${positionalExactMatchScore.toFixed(2)}): ${hit.markName}`);
+          if (similarityScore < SIMILARITY_THRESHOLD) {
+            logger.log(`⏩ Skor düşük (${similarityScore.toFixed(2)}): ${hit.markName}`);
             continue;
           }
 
@@ -1732,7 +1723,6 @@ export const performTrademarkSimilaritySearch = onCall(
             imagePath: hit.imagePath,
             bulletinId: hit.bulletinId,
             similarityScore,
-            positionalExactMatchScore, // Sonuca ekle
             sameClass: hasNiceClassOverlap,
             monitoredTrademark: markName,
             monitoredNiceClasses: niceClasses
@@ -1750,4 +1740,5 @@ export const performTrademarkSimilaritySearch = onCall(
     }
   }
 );
+
 
