@@ -1656,7 +1656,7 @@ exports.performTrademarkSimilaritySearch = onCall(
             niceClasses
           );
 
-          const SIMILARITY_THRESHOLD = 0.2; // başlangıç için düşük eşik
+          const SIMILARITY_THRESHOLD = 0.5; // başlangıç için düşük eşik
           if (similarityScore < SIMILARITY_THRESHOLD) {
             logger.log(`⏩ Skor düşük (${similarityScore.toFixed(2)}): ${hit.markName}`);
             continue;
