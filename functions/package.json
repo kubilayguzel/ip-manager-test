@@ -14,6 +14,7 @@
     "node": "20"
   },
   "main": "index.js",
+  "type": "module",  
   "dependencies": {
     "@google-cloud/pubsub": "^5.1.0",
     "adm-zip": "^0.5.16",
@@ -23,11 +24,9 @@
     "firebase-functions": "^6.4.0",
     "google-auth-library": "^10.1.0",
     "googleapis": "^150.0.1",
-    "node-fetch": "^2.7.0",
-    "node-unrar-js": "^2.0.2",
-    "nodemailer": "^7.0.5",
-    "p-limit": "^6.2.0",
-    "unrar-promise": "^2.0.1"
+    "node-fetch": "^3.3.2", 
+    "nodemailer": "^6.9.13", 
+    "p-limit": "^6.2.0"
   },
   "devDependencies": {
     "firebase-functions-test": "^3.1.0"
