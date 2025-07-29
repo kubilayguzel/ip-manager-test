@@ -1132,4 +1132,520 @@ exports.deleteBulletinV2 = onCall(
     return { success: false, error: error.message };
   }
 });
+// functions/index.js - Devamı
+
+// Gerekli yardımcı fonksiyonları ve algoritmaları import et
+// Bu modüllerin functions/ altında da bulunması veya fonksiyon içine taşınması gerekecek.
+// Şimdilik varsayımsal olarak import edeceğiz ve deployment sırasında düzenleme gerekebilir.
+// Eğer bu helper dosyalarını (preprocess, visual-match, phonetic) functions klasörüne kopyalamazsanız,
+// aşağıdaki import yollarını Node.js ortamına uygun olarak ayarlamanız veya bu kodları doğrudan bu dosya içine taşımanız gerekebilir.
+// En temiz yöntem, bu helper'ları functions klasörünün altında ayrı bir utils veya helperlar klasörüne taşımaktır.
+// Şimdilik fonksiyonun içine doğrudan kopyalayacağım ki ek dosya bağımlılığı olmasın.
+
+
+// ======== Yardımcı Fonksiyonlar ve Algoritmalar (scorer.js, preprocess.js, visual-match.js, phonetic.js'ten kopyalandı) ========
+
+// GENERIC_WORDS (preprocess.js'ten kopyalandı)
+const GENERIC_WORDS = [
+    // ======== ŞİRKET TİPLERİ ========
+    'ltd', 'şti', 'aş', 'anonim', 'şirketi', 'şirket', 'limited', 'inc', 'corp', 'corporation', 'co', 'company', 'llc', 'group', 'grup',
+
+    // ======== TİCARİ SEKTÖRLER ========
+    'sanayi', 'ticaret', 'turizm', 'tekstil', 'gıda', 'inşaat', 'danışmanlık', 'hizmet', 'hizmetleri', 'bilişim', 'teknoloji', 'sigorta', 'yayıncılık', 'mobilya', 'otomotiv', 'tarım', 'enerji', 'petrol', 'kimya', 'kozmetik', 'ilaç', 'medikal', 'sağlık', 'eğitim', 'spor', 'müzik', 'film', 'medya', 'reklam', 'pazarlama', 'lojistik', 'nakliyat', 'kargo', 'finans', 'bankacılık', 'emlak', 'gayrimenkul', 'madencilik', 'metal', 'plastik', 'cam', 'seramik', 'ahşap',
+
+    // ======== MESLEKİ TERİMLER ========
+    'mühendislik', 'proje', 'taahhüt', 'ithalat', 'ihracat', 'üretim', 'imalat', 'veteriner', 'petshop', 'polikliniği', 'hastane', 'klinik', 'müşavirlik', 'muhasebe', 'hukuk', 'avukatlık', 'mimarlık', 'peyzaj', 'tasarım', 'dizayn', 'design', 'grafik', 'web', 'yazılım', 'software', 'donanım', 'hardware', 'elektronik', 'elektrik', 'makina', 'makine', 'endüstri', 'fabrika', 'laboratuvar', 'araştırma', 'geliştirme',
+
+    // ======== ÜRÜN/HİZMET TERİMLERİ ========
+    'ürünleri', 'products', 'services', 'solutions', 'çözümleri', 'sistem', 'systems', 'teknolojileri', 'technologies', 'malzemeleri', 'materials', 'ekipman', 'equipment', 'cihaz', 'device', 'araç', 'tools', 'yedek', 'parça', 'parts', 'aksesuar', 'accessories', 'gereç', 'malzeme',
+
+    // ======== GENEL MARKALAŞMA TERİMLERİ ========
+    'meşhur', 'ünlü', 'famous', 'since', 'est', 'established', 'tarihi', 'historical', 'geleneksel', 'traditional', 'klasik', 'classic', 'yeni', 'new', 'fresh', 'taze', 'özel', 'special', 'premium', 'lüks', 'luxury', 'kalite', 'quality',
+
+    // ======== LOKASYON TERİMLERİ ========
+    'turkey', 'türkiye', 'international', 'uluslararası',
+
+    // ======== EMLAK TERİMLERİ ========
+    'realestate', 'emlak', 'konut', 'housing', 'arsa', 'ticari', 'commercial', 'ofis', 'office', 'plaza', 'shopping', 'alışveriş', 'residence', 'rezidans', 'villa', 'apartment', 'daire',
+
+    // ======== DİJİTAL TERİMLERİ ========
+    'online', 'digital', 'dijital', 'internet', 'web', 'app', 'mobile', 'mobil', 'network', 'ağ', 'server', 'sunucu', 'hosting', 'domain', 'platform', 'social', 'sosyal', 'media', 'medya',
+
+    // ======== GIDA TERİMLERİ ========
+    'gıda', 'food', 'yemek', 'restaurant', 'restoran', 'cafe', 'kahve', 'coffee', 'çay', 'tea', 'fırın', 'bakery', 'ekmek', 'bread', 'pasta', 'börek', 'pizza', 'burger', 'kebap', 'döner', 'pide', 'lahmacun', 'balık', 'fish', 'et', 'meat', 'tavuk', 'chicken', 'sebze', 'vegetable', 'meyve', 'fruit', 'süt', 'milk', 'peynir', 'cheese', 'yoğurt', 'yogurt', 'dondurma', 'şeker', 'sugar', 'bal', 'reçel', 'jam', 'konserve', 'canned', 'organic', 'organik', 'doğal', 'natural', 'taze', 'fresh',
+
+    // ======== WEB/URL TERİMLERİ ========
+    'www', 'http', 'https', 'com', 'net', 'org', 'tr', 'info', 'biz', 'edu', 'gov'
+];
+
+/**
+ * Marka adını temizler: küçük harfe çevirir, özel karakterleri kaldırır, stopwords'ü çıkarır.
+ *
+ * @param {string} name Marka adı
+ * @param {boolean} removeGenericWords Stopwords'ün çıkarılıp çıkarılmayacağını belirler.
+ * Genellikle çok kelimeli isimler için true olmalı.
+ * @returns {string} Temizlenmiş marka adı.
+ */
+function cleanMarkName(name, removeGenericWords = true) {
+    if (!name) return '';
+    let cleaned = name.toLowerCase().replace(/[^a-z0-9ğüşöçı\s]/g, '').trim(); // Harf, rakam ve boşluk dışındaki her şeyi kaldır
+
+    // Birden fazla boşluğu tek boşluğa indirge
+    cleaned = cleaned.replace(/\s+/g, ' ');
+
+    if (removeGenericWords) {
+        // Kelimelere ayır ve stopwords olmayanları filtrele
+        cleaned = cleaned.split(' ').filter(word => !GENERIC_WORDS.includes(word)).join(' ');
+    }
+
+    return cleaned.trim();
+}
+
+// visual-match.js'ten kopyalandı
+const visualMap = {
+    "a": ["e", "o"], "b": ["d", "p"], "c": ["ç", "s"], "ç": ["c", "s"], "d": ["b", "p"], "e": ["a", "o"], "f": ["t"],
+    "g": ["ğ", "q"], "ğ": ["g", "q"], "h": ["n"], "i": ["l", "j", "ı"], "ı": ["i"], "j": ["i", "y"], "k": ["q", "x"],
+    "l": ["i", "1"], "m": ["n"], "n": ["m", "r"], "o": ["a", "0", "ö"], "ö": ["o"], "p": ["b", "q"], "q": ["g", "k"],
+    "r": ["n"], "s": ["ş", "c", "z"], "ş": ["s", "z"], "t": ["f"], "u": ["ü", "v"], "ü": ["u", "v"], "v": ["u", "ü", "w"],
+    "w": ["v"], "x": ["ks"], "y": ["j"], "z": ["s", "ş"], "0": ["o"], "1": ["l", "i"], "ks": ["x"], "Q": ["O","0"],
+    "O": ["Q", "0"], "I": ["l", "1"], "L": ["I", "1"], "Z": ["2"], "S": ["5"], "B": ["8"], "D": ["O"]
+};
+
+function visualMismatchPenalty(a, b) {
+    if (!a || !b) return 5; 
+
+    const lenDiff = Math.abs(a.length - b.length);
+    const minLen = Math.min(a.length, b.length);
+    let penalty = lenDiff * 0.5;
+
+    for (let i = 0; i < minLen; i++) {
+        const ca = a[i].toLowerCase();
+        const cb = b[i].toLowerCase();
+
+        if (ca !== cb) {
+            if (visualMap[ca] && visualMap[ca].includes(cb)) {
+                penalty += 0.25;
+            } else {
+                penalty += 1.0;
+            }
+        }
+    }
+    return penalty;
+}
+
+// phonetic.js'ten kopyalandı
+function normalizeString(str) {
+    if (!str) return "";
+    return str
+        .toLowerCase()
+        .replace(/[^a-z0-9ğüşöçı]/g, '')
+        .replace(/ğ/g, 'g')
+        .replace(/ü/g, 'u')
+        .replace(/ş/g, 's')
+        .replace(/ö/g, 'o')
+        .replace(/ç/g, 'c')
+        .replace(/ı/g, 'i');
+}
+
+function isPhoneticallySimilar(a, b) {
+    if (!a || !b) return 0.0;
+
+    a = normalizeString(a);
+    b = normalizeString(b);
+
+    if (a === b) return 1.0;
+
+    const lenA = a.length;
+    const lenB = b.length;
+    const minLen = Math.min(lenA, lenB);
+    const maxLen = Math.max(lenA, lenB);
+
+    if (maxLen === 0) return 1.0;
+    if (maxLen > 0 && minLen === 0) return 0.0;
+
+    const lengthMismatchPenalty = Math.abs(lenA - lenB) / maxLen;
+    let score = 1.0 - lengthMismatchPenalty;
+
+    let matchingChars = 0;
+    const matchedA = new Array(lenA).fill(false);
+    const matchedB = new Array(lenB).fill(false);
+
+    const searchRange = Math.min(maxLen, Math.floor(maxLen / 2) + 1);
+    for (let i = 0; i < lenA; i++) {
+        for (let j = Math.max(0, i - searchRange); j < Math.min(lenB, i + searchRange + 1); j++) {
+            if (a[i] === b[j] && !matchedB[j]) {
+                matchingChars++;
+                matchedA[i] = true;
+                matchedB[j] = true;
+                break;
+            }
+        }
+    }
+
+    if (matchingChars === 0) return 0.0;
+
+    const commonality = matchingChars / Math.max(lenA, lenB);
+    
+    let positionalBonus = 0;
+    if (lenA > 0 && lenB > 0) {
+        if (a[0] === b[0]) positionalBonus += 0.2;
+        if (lenA > 1 && lenB > 1 && a[1] === b[1]) positionalBonus += 0.1;
+    }
+
+    score = (commonality * 0.7) + (positionalBonus * 0.3);
+
+    return Math.max(0.0, Math.min(1.0, score));
+}
+
+// filters.js'ten kopyalandı (kendi fonksiyonunuzdan)
+function isValidBasedOnDate(recordApplicationDate, monitoredApplicationDate) {
+    if (!recordApplicationDate || !monitoredApplicationDate) {
+        return false;
+    }
+    try {
+        // "DD/MM/YYYY" formatını Date objesine çevir
+        const [dayRec, monthRec, yearRec] = recordApplicationDate.split('/').map(Number);
+        const recordDate = new Date(yearRec, monthRec - 1, dayRec); // Ay 0-indexed
+
+        const [dayMon, monthMon, yearMon] = monitoredApplicationDate.split('/').map(Number);
+        const monitoredDate = new Date(yearMon, monthMon - 1, dayMon); // Ay 0-indexed
+
+        return recordDate > monitoredDate;
+    } catch (e) {
+        console.error("Tarih formatı hatası:", e);
+        return false;
+    }
+}
+
+function hasOverlappingNiceClasses(monitoredNiceClasses, recordNiceClasses) {
+    if (!Array.isArray(monitoredNiceClasses) || monitoredNiceClasses.length === 0) {
+        return true; // Eğer izlenen markanın Nice sınıfı yoksa, sınıf filtresini atla
+    }
+    if (!Array.isArray(recordNiceClasses) || recordNiceClasses.length === 0) {
+        return false; // İzlenen markanın sınıfı varken, kayıtta yoksa çakışma yok
+    }
+
+    // Her iki dizide de ortak Nice sınıfı var mı kontrol et
+    return monitoredNiceClasses.some(cls => recordNiceClasses.includes(cls));
+}
+
+
+// ======== Ana Benzerlik Skorlama Fonksiyonu (scorer.js'ten kopyalandı) ========
+
+function calculateSimilarityScoreInternal(hitMarkName, searchMarkName, hitApplicationDate, searchApplicationDate, hitNiceClasses, searchNiceClasses) {
+    // Jenerik ibare temizliği
+    // Sadece birden fazla kelime içeren markalar için generic kelime temizliği yap.
+    // Tek kelimelik markalarda 'market' gibi kelimeler temizlenmemeli, çünkü markanın çekirdeği olabilir.
+    const isSearchMultiWord = searchMarkName.trim().split(/\s+/).length > 1;
+    const isHitMultiWord = (hitMarkName || '').trim().split(/\s+/).length > 1;
+
+    const cleanedSearchName = cleanMarkName(searchMarkName || '', isSearchMultiWord).toLowerCase().trim();
+    const cleanedHitName = cleanMarkName(hitMarkName || '', isHitMultiWord).toLowerCase().trim();
+
+    logger.log(`📊 Skorlama: '${searchMarkName}' (temizlenmiş: '${cleanedSearchName}') vs '${hitMarkName}' (temizlenmiş: '${cleanedHitName}')`);
+
+    if (!cleanedSearchName || !cleanedHitName) {
+        return 0.0;
+    }
+
+    // Tam eşleşme kontrolü (en yüksek öncelik)
+    if (cleanedSearchName === cleanedHitName) {
+        return 1.0;
+    }
+
+    // ======== Alt Benzerlik Skorları ========
+    // Levenshtein Benzerlik Skoru
+    const levenshteinScore = (() => {
+        const matrix = [];
+        if (cleanedSearchName.length === 0) return cleanedHitName.length === 0 ? 1.0 : 0.0;
+        if (cleanedHitName.length === 0) return cleanedSearchName.length === 0 ? 1.0 : 0.0;
+    
+        for (let i = 0; i <= cleanedHitName.length; i++) {
+            matrix[i] = [i];
+        }
+        for (let j = 0; j <= cleanedSearchName.length; j++) {
+            matrix[0][j] = j;
+        }
+    
+        for (let i = 1; i <= cleanedHitName.length; i++) {
+            for (let j = 1; j <= cleanedSearchName.length; j++) {
+                const cost = cleanedHitName.charAt(i - 1) === cleanedSearchName.charAt(j - 1) ? 0 : 1;
+                matrix[i][j] = Math.min(
+                    matrix[i - 1][j - 1] + cost, // substitution
+                    matrix[i][j - 1] + 1,     // insertion
+                    matrix[i - 1][j] + 1      // deletion
+                );
+            }
+        }
+        const maxLength = Math.max(cleanedSearchName.length, cleanedHitName.length);
+        return maxLength === 0 ? 1.0 : 1.0 - (matrix[cleanedHitName.length][cleanedSearchName.length] / maxLength);
+    })();
+    logger.log(`   - Levenshtein Score: ${levenshteinScore.toFixed(2)}`);
+
+    // Jaro-Winkler Benzerlik Skoru
+    const jaroWinklerScore = (() => {
+        const s1 = cleanedSearchName;
+        const s2 = cleanedHitName;
+        if (s1 === s2) return 1.0;
+
+        let m = 0; // matching characters
+        const s1_len = s1.length;
+        const s2_len = s2.length;
+
+        const range = Math.floor(Math.max(s1_len, s2_len) / 2) - 1;
+        const s1_matches = new Array(s1_len);
+        const s2_matches = new Array(s2_len);
+
+        for (let i = 0; i < s1_len; i++) {
+            const char_s1 = s1[i];
+            for (let j = Math.max(0, i - range); j < Math.min(s2_len, i + range + 1); j++) {
+                if (char_s1 === s2[j] && !s2_matches[j]) {
+                    s1_matches[i] = true;
+                    s2_matches[j] = true;
+                    m++;
+                    break;
+                }
+            }
+        }
+
+        if (m === 0) return 0.0;
+
+        let k = 0;
+        let t = 0; // transpositions
+        for (let i = 0; i < s1_len; i++) {
+            if (s1_matches[i]) {
+                let j;
+                for (j = k; j < s2_len; j++) {
+                    if (s2_matches[j]) {
+                        k = j + 1;
+                        break;
+                    }
+                }
+                if (s1[i] !== s2[j]) {
+                    t++;
+                }
+            }
+        }
+        t = t / 2;
+
+        const jaro_score = (m / s1_len + m / s2_len + (m - t) / m) / 3;
+
+        // Winkler modification
+        const p = 0.1; // prefix scale (typically 0.1)
+        let l = 0; // length of common prefix
+        const max_prefix_len = 4; // usually up to 4 characters
+
+        for (let i = 0; i < Math.min(s1_len, s2_len, max_prefix_len); i++) {
+            if (s1[i] === s2[i]) {
+                l++;
+            } else {
+                break;
+            }
+        }
+
+        return jaro_score + l * p * (1 - jaro_score);
+    })();
+    logger.log(`   - Jaro-Winkler Score: ${jaroWinklerScore.toFixed(2)}`);
+
+    // N-gram Benzerlik Skoru (Bigram, n=2)
+    const ngramScore = (() => {
+        const s1 = cleanedSearchName;
+        const s2 = cleanedHitName;
+        const n = 2;
+        if (!s1 || !s2) return 0.0;
+        if (s1 === s2) return 1.0;
+
+        const getNGrams = (s, num) => {
+            const ngrams = new Set();
+            for (let i = 0; i <= s.length - num; i++) {
+                ngrams.add(s.substring(i, i + num));
+            }
+            return ngrams;
+        };
+
+        const ngrams1 = getNGrams(s1, n);
+        const ngrams2 = getNGrams(s2, n);
+
+        if (ngrams1.size === 0 && ngrams2.size === 0) return 1.0;
+        if (ngrams1.size === 0 || ngrams2.size === 0) return 0.0;
+
+        let common = 0;
+        ngrams1.forEach(ngram => {
+            if (ngrams2.has(ngram)) {
+                common++;
+            }
+        });
+
+        return common / Math.min(ngrams1.size, ngrams2.size);
+    })();
+    logger.log(`   - N-gram Score (n=2): ${ngramScore.toFixed(2)}`);
+
+    // Görsel Karakter Benzerlik Skoru
+    const visualScore = (() => {
+        const visualPenalty = visualMismatchPenalty(cleanedSearchName, cleanedHitName);
+        const maxPossibleVisualPenalty = Math.max(cleanedSearchName.length, cleanedHitName.length) * 1.0;
+        return maxPossibleVisualPenalty === 0 ? 1.0 : (1.0 - (visualPenalty / maxPossibleVisualPenalty));
+    })();
+    logger.log(`   - Visual Score: ${visualScore.toFixed(2)}`);
+
+    // Önek Benzerlik Skoru (İlk 3 karakter)
+    const prefixScore = (() => {
+        const s1 = cleanedSearchName;
+        const s2 = cleanedHitName;
+        const length = 3;
+        if (!s1 || !s2) return 0.0;
+        const prefix1 = s1.substring(0, Math.min(s1.length, length));
+        const prefix2 = s2.substring(0, Math.min(s2.length, length));
+
+        if (prefix1 === prefix2) return 1.0;
+        if (prefix1.length === 0 && prefix2.length === 0) return 1.0;
+
+        return levenshteinScore; // Önekler arası levenshtein score
+    })();
+    logger.log(`   - Prefix Score (len 3): ${prefixScore.toFixed(2)}`);
+
+    // Kelime Bazında En Yüksek Benzerlik Skoru
+    const maxWordScore = (() => {
+        const s1 = cleanedSearchName;
+        const s2 = cleanedHitName;
+        if (!s1 || !s2) return 0.0;
+
+        const words1 = s1.split(' ').filter(w => w.length > 0);
+        const words2 = s2.split(' ').filter(w => w.length > 0);
+
+        if (words1.length === 0 && words2.length === 0) return 1.0;
+        if (words1.length === 0 || words2.length === 0) return 0.0;
+
+        let maxSim = 0.0;
+        for (const w1 of words1) {
+            for (const w2 of words2) {
+                maxSim = Math.max(maxSim, levenshteinSimilarity(w1, w2)); // Kelime çiftleri arası Levenshtein
+            }
+        }
+        return maxSim;
+    })();
+    logger.log(`   - Max Word Score: ${maxWordScore.toFixed(2)}`);
+
+    // ======== İsim Benzerliği Alt Toplamı Hesaplama (%95 Ağırlık) ========
+    const nameSimilarityRaw = (
+        levenshteinScore * 0.30 +
+        jaroWinklerScore * 0.25 +
+        ngramScore * 0.15 +
+        visualScore * 0.15 +
+        prefixScore * 0.10 +
+        maxWordScore * 0.05
+    );
+
+    const nameSimilarityWeighted = nameSimilarityRaw * 0.95;
+    logger.log(`   - Name Similarity (weighted 95%): ${nameSimilarityWeighted.toFixed(2)}`);
+
+    // ======== Fonetik Benzerlik Skoru (%5 Ağırlık) ========
+    const phoneticScoreRaw = isPhoneticallySimilar(searchMarkName, hitMarkName); // Orijinal isimleri kullan
+    const phoneticSimilarityWeighted = phoneticScoreRaw * 0.05;
+    logger.log(`   - Phonetic Score (weighted 5%): ${phoneticSimilarityWeighted.toFixed(2)}`);
+
+    // ======== Genel Benzerlik Skoru ========
+    let finalScore = nameSimilarityWeighted + phoneticSimilarityWeighted;
+
+    finalScore = Math.max(0.0, Math.min(1.0, finalScore));
+
+    logger.log(`   - FINAL SCORE: ${finalScore.toFixed(2)}\n`);
+    return finalScore;
+}
+
+
+// ======== Yeni Cloud Function: Sunucu Tarafında Marka Benzerliği Araması ========
+
+exports.performTrademarkSimilaritySearch = onCall(
+    {
+        region: 'europe-west1',
+        timeoutSeconds: 300, // 5 dakika, büyük veri setleri için yeterli olmalı
+        memory: '1GB' // Bellek ihtiyacına göre artırılabilir
+    },
+    async (request) => {
+        const { monitoredMark, selectedBulletinId } = request.data;
+
+        if (!monitoredMark || !monitoredMark.markName || !selectedBulletinId) {
+            throw new HttpsError('invalid-argument', 'Missing required parameters: monitoredMark or selectedBulletinId');
+        }
+
+        logger.log('🚀 Cloud Function: performTrademarkSimilaritySearch başlatıldı', { monitoredMark, selectedBulletinId });
+
+        const trademarkRecordsRef = db.collection('trademarkBulletinRecords');
+        const results = [];
+
+        try {
+            // Sadece ilgili bültene ait kayıtları çek (performans için kritik)
+            const querySnapshot = await trademarkRecordsRef
+                .where('bulletinId', '==', selectedBulletinId)
+                .get();
+
+            logger.log(`✅ ${querySnapshot.size} adet trademarkBulletinRecords bulundu (bülten ID'ye göre filtrelendi).`);
+
+            const { markName, applicationDate, niceClasses } = monitoredMark;
+
+            querySnapshot.forEach(doc => {
+                const hit = { id: doc.id, ...doc.data() };
+
+                // Client tarafındaki filtreleme mantığını buraya taşıyoruz
+                // Tarih filtresi
+                const isDateValid = isValidBasedOnDate(hit.applicationDate, applicationDate);
+                if (!isDateValid) {
+                    // logger.log(`🚫 CF: Tarih filtresi: ${hit.markName} (${hit.applicationDate}) geçersiz.`);
+                    return; // Sonuçlara ekleme
+                }
+
+                // Nice sınıfı çakışması
+                const hasNiceClassOverlap = hasOverlappingNiceClasses(niceClasses, hit.niceClasses);
+                if (niceClasses && niceClasses.length > 0 && !hasNiceClassOverlap) {
+                    // logger.log(`🚫 CF: Nice sınıfı çakışması yok: ${hit.markName}`);
+                    return; // Sonuçlara ekleme
+                }
+
+                // Benzerlik skorunu hesapla
+                // Bu fonksiyon, yukarıda bu dosyanın içine kopyaladığımız yardımcı fonksiyonları kullanır
+                const similarityScore = calculateSimilarityScoreInternal(
+                    hit.markName, 
+                    markName, 
+                    hit.applicationDate, 
+                    applicationDate, 
+                    hit.niceClasses, 
+                    niceClasses
+                );
+
+                // Belirli bir eşik değerinin üzerindeki sonuçları dahil et
+                const SIMILARITY_THRESHOLD = 0.3; 
+                if (similarityScore < SIMILARITY_THRESHOLD) {
+                    // logger.log(`📉 CF: Düşük benzerlik skoru (${similarityScore.toFixed(2)}): ${hit.markName}`);
+                    return; // Sonuçlara ekleme
+                }
+
+                results.push({
+                    objectID: hit.id,
+                    markName: hit.markName,
+                    applicationNo: hit.applicationNo,
+                    applicationDate: hit.applicationDate,
+                    niceClasses: hit.niceClasses,
+                    holders: hit.holders,
+                    imagePath: hit.imagePath,
+                    bulletinId: hit.bulletinId,
+                    similarityScore: similarityScore,
+                    sameClass: hasNiceClassOverlap,
+                    monitoredTrademark: monitoredMark.markName,
+                    monitoredNiceClasses: niceClasses
+                });
+            });
+
+            // Sonuçları benzerlik skoruna göre azalan sırada sırala
+            results.sort((a, b) => b.similarityScore - a.similarityScore);
+
+            logger.log(`✅ Cloud Function: ${results.length} filtrelenmiş ve sıralanmış sonuç döndürüyor.`);
+            return { success: true, results: results };
+
+        } catch (error) {
+            logger.error('❌ Cloud Function: performTrademarkSimilaritySearch hatası:', error);
+            throw new HttpsError('internal', 'Marka benzerliği araması sırasında bir hata oluştu.', error.message);
+        }
+    }
+);
 
