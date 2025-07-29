@@ -26,32 +26,21 @@ const performSearchCallable = httpsCallable(functions, 'performTrademarkSimilari
  * @returns {Array} Benzerlik skorlarına göre sıralanmış eşleşen markalar listesi.
  */
 export async function runTrademarkSearch(monitoredMark, selectedBulletinId) {
-    console.log("🚀 runTrademarkSearch başlatılıyor (Firebase Cloud Function ile):", {
-        monitoredMark,
-        selectedBulletinId
-    });
-
-    try {
-        // Cloud Function'ı çağır ve sonucu bekle
-        const response = await performSearchCallable({
-            monitoredMark: monitoredMark,
-            selectedBulletinId: selectedBulletinId
-        });
-
-        // Cloud Function'dan gelen veriyi al
-        const results = response.data.results || [];
-
-        console.log(`✅ Cloud Function'dan ${results.length} sonuç döndürüldü.`);
-        // console.log("Cloud Function sonuç örnekleri (ilk 5):", results.slice(0, 5));
-
-        return results;
-
-    } catch (error) {
-        console.error("❌ Cloud Function çağrılırken hata oluştu:", error);
-        // Hata durumunda boş bir dizi veya uygun bir hata mesajı döndür
-        throw new Error('Arama sırasında sunucu hatası oluştu. Lütfen konsolu kontrol edin.');
-    }
+    const response = await fetch(
+      'https://europe-west1-<PROJECT_ID>.cloudfunctions.net/performTrademarkSimilaritySearchHttp',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          monitoredMarks: [monitoredMark],
+          selectedBulletinId 
+        })
+      }
+    );
+    const data = await response.json();
+    return data.results || [];
 }
+
 
 // Artık client tarafında tüm kayıtları önbelleğe almaya gerek kalmadı.
 // loadAllTrademarkBulletinRecords() kaldırıldı.
