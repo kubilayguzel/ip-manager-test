@@ -1146,21 +1146,24 @@ exports.deleteBulletinV2 = onCall(
 // ======== Yardımcı Fonksiyonlar ve Algoritmalar (scorer.js, preprocess.js, visual-match.js, phonetic.js'ten kopyalandı) ========
 
 // GENERIC_WORDS (preprocess.js'ten kopyalandı)
-const GENERIC_WORDS = [
-    // ======== ŞİRKET TİPLERİ ========
+const GENERIC_WORDS = [// ======== ŞİRKET TİPLERİ ========
     'ltd', 'şti', 'aş', 'anonim', 'şirketi', 'şirket', 'limited', 'inc', 'corp', 'corporation', 'co', 'company', 'llc', 'group', 'grup',
 
     // ======== TİCARİ SEKTÖRLER ========
     'sanayi', 'ticaret', 'turizm', 'tekstil', 'gıda', 'inşaat', 'danışmanlık', 'hizmet', 'hizmetleri', 'bilişim', 'teknoloji', 'sigorta', 'yayıncılık', 'mobilya', 'otomotiv', 'tarım', 'enerji', 'petrol', 'kimya', 'kozmetik', 'ilaç', 'medikal', 'sağlık', 'eğitim', 'spor', 'müzik', 'film', 'medya', 'reklam', 'pazarlama', 'lojistik', 'nakliyat', 'kargo', 'finans', 'bankacılık', 'emlak', 'gayrimenkul', 'madencilik', 'metal', 'plastik', 'cam', 'seramik', 'ahşap',
 
     // ======== MESLEKİ TERİMLER ========
-    'mühendislik', 'proje', 'taahhüt', 'ithalat', 'ihracat', 'üretim', 'imalat', 'veteriner', 'petshop', 'polikliniği', 'hastane', 'klinik', 'müşavirlik', 'muhasebe', 'hukuk', 'avukatlık', 'mimarlık', 'peyzaj', 'tasarım', 'dizayn', 'design', 'grafik', 'web', 'yazılım', 'software', 'donanım', 'hardware', 'elektronik', 'elektrik', 'makina', 'makine', 'endüstri', 'fabrika', 'laboratuvar', 'araştırma', 'geliştirme',
+    'mühendislik', 'proje', 'taahhüt', 'ithalat', 'ihracat', 'üretim', 'imalat', 'veteriner', 'petshop', 'polikliniği', 'hastane', 'klinik', 'müşavirlik', 'muhasebe', 'hukuk', 'avukatlık', 'mimarlık', 'peyzaj', 'tasarım', 'dizayn', 'design', 'grafik', 'web', 'yazılım', 'software', 'donanım', 'hardware', 'elektronik', 'elektrik', 'makina', 'makine', 'endüstri', 'fabrika', 'laboratuvar', 'araştırma', 'geliştirme', 'ofis', // 'ofis' eklendi
 
     // ======== ÜRÜN/HİZMET TERİMLERİ ========
-    'ürünleri', 'products', 'services', 'solutions', 'çözümleri', 'sistem', 'systems', 'teknolojileri', 'technologies', 'malzemeleri', 'materials', 'ekipman', 'equipment', 'cihaz', 'device', 'araç', 'tools', 'yedek', 'parça', 'parts', 'aksesuar', 'accessories', 'gereç', 'malzeme',
+    'ürün', // 'ürün' kökü eklendi (ürünleri, ürünler gibi varyasyonları kapsayacak)
+    'products', 'services', 'solutions', 'çözüm', // 'çözümleri' yerine 'çözüm' kökü
+    'sistem', 'systems', 'teknolojileri', 'teknoloji', // 'teknolojileri' yanına 'teknoloji'
+    'malzeme', 'materials', 'ekipman', 'equipment', 'cihaz', 'device', 'araç', 'tools', 'yedek', 'parça', 'parts', 'aksesuar', 'accessories', 'gereç', 'malzeme',
 
     // ======== GENEL MARKALAŞMA TERİMLERİ ========
-    'meşhur', 'ünlü', 'famous', 'since', 'est', 'established', 'tarihi', 'historical', 'geleneksel', 'traditional', 'klasik', 'classic', 'yeni', 'new', 'fresh', 'taze', 'özel', 'special', 'premium', 'lüks', 'luxury', 'kalite', 'quality',
+    'meşhur', 'ünlü', 'famous', 'since', 'est', 'established', 'tarihi', 'historical', 'geleneksel', 'traditional', 'klasik', 'classic', 'yeni', 'new', 'fresh', 'taze', 'özel', 'special', 'premium', 'lüks', 'luxury', 'kalite', // 'kalite' eklendi
+    'quality', 'uygun', // 'uygun' eklendi
 
     // ======== LOKASYON TERİMLERİ ========
     'turkey', 'türkiye', 'international', 'uluslararası',
@@ -1174,9 +1177,38 @@ const GENERIC_WORDS = [
     // ======== GIDA TERİMLERİ ========
     'gıda', 'food', 'yemek', 'restaurant', 'restoran', 'cafe', 'kahve', 'coffee', 'çay', 'tea', 'fırın', 'bakery', 'ekmek', 'bread', 'pasta', 'börek', 'pizza', 'burger', 'kebap', 'döner', 'pide', 'lahmacun', 'balık', 'fish', 'et', 'meat', 'tavuk', 'chicken', 'sebze', 'vegetable', 'meyve', 'fruit', 'süt', 'milk', 'peynir', 'cheese', 'yoğurt', 'yogurt', 'dondurma', 'şeker', 'sugar', 'bal', 'reçel', 'jam', 'konserve', 'canned', 'organic', 'organik', 'doğal', 'natural', 'taze', 'fresh',
 
-    // ======== WEB/URL TERİMLERİ ========
-    'www', 'http', 'https', 'com', 'net', 'org', 'tr', 'info', 'biz', 'edu', 'gov'
+    // ======== BAĞLAÇLAR ve Yaygın Kelimeler ========
+    've', 'ile', 'için', 'bir', 'bu', 'da', 'de', 'ki', 'mi', 'mı', 'mu', 'mü',
+    'sadece', 'tek', 'en', 'çok', 'az', 'üst', 'alt', 'yeni', 'eski'
 ];
+
+function removeTurkishSuffixes(word) {
+    if (!word) return '';
+    
+    // Çoğul ekleri: -ler, -lar
+    if (word.endsWith('ler') || word.endsWith('lar')) {
+        return word.substring(0, word.length - 3);
+    }
+    // İyelik ekleri (basit formlar): -im, -in, -i, -ımız, -ınız, -ları
+    // Örneğin, 'ofisi' -> 'ofis'
+    if (word.endsWith('si') || word.endsWith('sı') || word.endsWith('sü') || word.endsWith('su')) {
+        return word.substring(0, word.length - 2);
+    }
+    if (word.endsWith('i') || word.endsWith('ı') || word.endsWith('u') || word.endsWith('ü')) {
+        // 'gıda' gibi kelimelerde 'ı' son ek olmamalı, bu yüzden dikkatli olmalı
+        // Daha güvenli bir kontrol için kelime kökü kontrol edilebilir
+        // Şimdilik sadece iyelik ve yönelme eklerini çıkarıyoruz.
+        // Basitçe son harfi kaldırmak riskli, ama şimdilik en yaygın olanları ele alalım
+        if (word.length > 2 && ['i', 'ı', 'u', 'ü'].includes(word[word.length - 1])) {
+             // 'ofis' gibi kelimelerde 'i' iyelik eki olabilir.
+             // Daha sofistike bir çözüm için NLP kütüphanesi gerekir, bu basit bir yaklaşımdır.
+             return word.substring(0, word.length - 1);
+        }
+    }
+    // Fiilimsiler, durum ekleri vb. için daha karmaşık kurallar gerekebilir
+    
+    return word;
+}
 
 /**
  * Marka adını temizler: küçük harfe çevirir, özel karakterleri kaldırır, stopwords'ü çıkarır.
@@ -1186,7 +1218,7 @@ const GENERIC_WORDS = [
  * Genellikle çok kelimeli isimler için true olmalı.
  * @returns {string} Temizlenmiş marka adı.
  */
-function cleanMarkName(name, removeGenericWords = true) {
+export function cleanMarkName(name, removeGenericWords = true) {
     if (!name) return '';
     let cleaned = name.toLowerCase().replace(/[^a-z0-9ğüşöçı\s]/g, '').trim(); // Harf, rakam ve boşluk dışındaki her şeyi kaldır
 
@@ -1194,8 +1226,12 @@ function cleanMarkName(name, removeGenericWords = true) {
     cleaned = cleaned.replace(/\s+/g, ' ');
 
     if (removeGenericWords) {
-        // Kelimelere ayır ve stopwords olmayanları filtrele
-        cleaned = cleaned.split(' ').filter(word => !GENERIC_WORDS.includes(word)).join(' ');
+        // Kelimelere ayır, eklerini kaldır ve stopwords olmayanları filtrele
+        cleaned = cleaned.split(' ').filter(word => {
+            const stemmedWord = removeTurkishSuffixes(word);
+            // Kök kelime veya orijinal kelime stopwords listesinde mi kontrol et
+            return !GENERIC_WORDS.includes(stemmedWord) && !GENERIC_WORDS.includes(word);
+        }).join(' ');
     }
 
     return cleaned.trim();
@@ -1549,7 +1585,7 @@ function calculateSimilarityScoreInternal(hitMarkName, searchMarkName, hitApplic
     })();
     logger.log(`   - Prefix Score (len 3): ${prefixScore.toFixed(2)}`);
 
-    // Kelime Bazında En Yüksek Benzerlik Skoru
+    // 6. Kelime Bazında En Yüksek Benzerlik Skoru
     const maxWordScore = (() => {
         const s1 = cleanedSearchName;
         const s2 = cleanedHitName;
@@ -1564,6 +1600,8 @@ function calculateSimilarityScoreInternal(hitMarkName, searchMarkName, hitApplic
         let maxSim = 0.0;
         for (const w1 of words1) {
             for (const w2 of words2) {
+                // Burada Levenshtein yerine Jaro-Winkler de kullanabiliriz, tek kelimeler için daha iyi olabilir
+                // Mevcut LevenshteinSimilarity yeterli hassasiyet sunacaktır.
                 maxSim = Math.max(maxSim, levenshteinSimilarity(w1, w2)); // Kelime çiftleri arası Levenshtein
             }
         }
@@ -1571,6 +1609,17 @@ function calculateSimilarityScoreInternal(hitMarkName, searchMarkName, hitApplic
     })();
     logger.log(`   - Max Word Score: ${maxWordScore.toFixed(2)}`);
 
+    // ======== YENİ KURAL: Yüksek Kelime Benzerliği Kontrolü ve Önceliklendirme ========
+    const HIGH_WORD_SIMILARITY_THRESHOLD = 0.70; // %70 eşiği
+
+    if (maxWordScore >= HIGH_WORD_SIMILARITY_THRESHOLD) {
+        logger.log(`   *** Yüksek kelime bazında benzerlik tespit edildi (${(maxWordScore * 100).toFixed(0)}%), doğrudan skor olarak kullanılıyor. ***`);
+        // Eğer bir kelime %70 veya üzeri benzerse, doğrudan o maxWordScore'u nihai skor olarak kullan.
+        // Bu, diğer tüm ağırlıklandırmayı ezer ve bu sonucu üst sıralara taşır.
+        return maxWordScore; 
+    }
+    
+    // Bu noktadan sonraki kod, sadece maxWordScore eşiği geçemediğinde çalışır.
     // ======== İsim Benzerliği Alt Toplamı Hesaplama (%95 Ağırlık) ========
     const nameSimilarityRaw = (
         levenshteinScore * 0.30 +
