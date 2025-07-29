@@ -626,7 +626,9 @@
                 try {
                     const { success, data, error } = await monitoringService.getMonitoringItems(user.uid);
                     if (success) {
+                        selectedMonitoringItems.clear();
                         renderMonitoringTable(data, user.uid);
+                        updateSelectedButtonState();
                     } else {
                         container.innerHTML = `<div class="error-message">İzleme listeniz yüklenirken bir hata oluştu: ${error}</div>`;
                     }
@@ -656,7 +658,7 @@
 
                 for (const id of Array.from(selectedMonitoringItems)) {
                     try {
-                        const res = await monitoringService.removeMonitoringItem(user.uid, id);
+                        const res = await monitoringService.removeMonitoringItem(id);
                         if (res.success) successfulRemovals++;
                         else failedRemovals++;
                     } catch (error) {
@@ -665,7 +667,7 @@
                 }
 
                 try {
-                    const { success, data } = await monitoringService.getMonitoringItems(user.uid);
+                    const { success, data } = await monitoringService.getMonitoringItems();
                     if (success) renderMonitoringTable(data);
                     else container.innerHTML = '<div class="error-message">Liste güncellenirken hata oluştu.</div>';
                 } catch (error) {
