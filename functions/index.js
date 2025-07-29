@@ -1572,7 +1572,7 @@ exports.performTrademarkSimilaritySearch = onCall(
       );
     }
 
-    logger.log('🚀 Cloud Function: performTrademarkSimilaritySearch başlatıldı', {
+    logger.log('🚀 Cloud Function: performTrademarkSimilaritySearch TEST MODU', {
       numMonitoredMarks: monitoredMarks.length,
       selectedBulletinId
     });
@@ -1589,28 +1589,25 @@ exports.performTrademarkSimilaritySearch = onCall(
       const allResults = [];
 
       for (const monitoredMark of monitoredMarks) {
-        const { markName, applicationDate, niceClasses } = monitoredMark;
+        const { markName, niceClasses } = monitoredMark;
         if (!markName) {
           logger.warn(`⚠️ İzlenen markanın adı eksik: ${JSON.stringify(monitoredMark)}`);
           continue;
         }
 
         for (const hit of bulletinRecords) {
-          if (!isValidBasedOnDate(hit.applicationDate, applicationDate)) continue;
-
-          const hasNiceClassOverlap = hasOverlappingNiceClasses(niceClasses, hit.niceClasses);
-          if (Array.isArray(niceClasses) && niceClasses.length > 0 && !hasNiceClassOverlap) continue;
-
+          // === FİLTRELER KAPALI ===
           const similarityScore = calculateSimilarityScoreInternal(
             hit.markName,
             markName,
             hit.applicationDate,
-            applicationDate,
+            monitoredMark.applicationDate,
             hit.niceClasses,
             niceClasses
           );
 
-          if (similarityScore < 0.3) continue;
+          const SIMILARITY_THRESHOLD = 0.0;
+          if (similarityScore < SIMILARITY_THRESHOLD) continue;
 
           allResults.push({
             objectID: hit.id,
@@ -1622,7 +1619,7 @@ exports.performTrademarkSimilaritySearch = onCall(
             imagePath: hit.imagePath,
             bulletinId: hit.bulletinId,
             similarityScore,
-            sameClass: hasNiceClassOverlap,
+            sameClass: true,
             monitoredTrademark: markName,
             monitoredNiceClasses: niceClasses
           });
@@ -1630,7 +1627,7 @@ exports.performTrademarkSimilaritySearch = onCall(
       }
 
       allResults.sort((a, b) => b.similarityScore - a.similarityScore);
-      logger.log(`✅ Toplam ${allResults.length} sonuç döndürüldü.`);
+      logger.log(`✅ TEST MODU: Toplam ${allResults.length} sonuç döndürüldü.`);
 
       return { success: true, results: allResults };
     } catch (error) {
