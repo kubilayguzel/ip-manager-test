@@ -152,7 +152,7 @@
 
 <script type="module">
 // Firebase Firestore servislerini import et
-import { db, personService, searchRecordService } from './firebase-config.js';
+import { db, personService, searchRecordService, similarityService } from './firebase-config.js';
 import { collection, getDocs } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 
 // Kendi arama modülümüzü import et
@@ -179,42 +179,8 @@ const loadingIndicator = document.getElementById('loadingIndicator');
 const noRecordsMessage = document.getElementById('noRecordsMessage');
 const infoMessageContainer = document.getElementById('infoMessageContainer');
 
-// Benzerlik servisi - monitoringtrademarkrecords için
-const similarityService = {
-    async updateSimilarityStatus(monitoredTrademarkId, bulletinId, resultId, isSimilar) {
-        try {
-            const recordId = `${monitoredTrademarkId}_${bulletinId}`;
-            const result = await searchRecordService.getRecord(recordId);
-            
-            if (result.success && result.data) {
-                // Mevcut sonuçları al ve güncelle
-                const updatedResults = result.data.results.map(r => {
-                    if (r.objectID === resultId || r.applicationNo === resultId) {
-                        return { 
-                            ...r, 
-                            isSimilar: isSimilar, 
-                            similarityUpdatedAt: new Date().toISOString() 
-                        };
-                    }
-                    return r;
-                });
-                
-                // monitoringtrademarkrecords kaydını güncelle
-                await searchRecordService.saveRecord(recordId, { 
-                    ...result.data, 
-                    results: updatedResults,
-                    lastSimilarityUpdate: new Date().toISOString()
-                });
-                
-                return { success: true };
-            }
-            return { success: false, error: 'Kayıt bulunamadı' };
-        } catch (error) {
-            console.error('Benzerlik durumu güncellenirken hata:', error);
-            return { success: false, error: error.message };
-        }
-    }
-};
+// Import similarityService from firebase-config.js instead of defining locally
+// (similarityService is now imported above)
 
 const debounce = (func, delay) => {
     let timeout;
@@ -565,4 +531,56 @@ window.toggleSimilarity = async function(resultId, monitoredTrademarkName, butto
                 allSimilarResults[resultIndex].similarityUpdatedAt = new Date().toISOString();
             }
 
-            console.log(`✅ Benzerlik durumu güncellendi: ${resultId} -> ${newSimilar
+            console.log(`✅ Benzerlik durumu güncellendi: ${resultId} -> ${newSimilarityStatus ? 'Benzer' : 'Benzemez'}`);
+        } else {
+            // Hata durumunda butonu eski haline çevir
+            if (!newSimilarityStatus) {
+                buttonElement.classList.remove('not-similar');
+                buttonElement.classList.add('similar');
+                buttonElement.textContent = 'Benzer';
+            } else {
+                buttonElement.classList.remove('similar');
+                buttonElement.classList.add('not-similar');
+                buttonElement.textContent = 'Benzemez';
+            }
+            
+            console.error('❌ Benzerlik durumu güncellenemedi:', updateResult.error);
+            alert('Benzerlik durumu güncellenirken hata oluştu.');
+        }
+    } catch (error) {
+        console.error('toggleSimilarity hatası:', error);
+        alert('Benzerlik durumu güncellenirken hata oluştu.');
+    }
+};
+
+window.viewRecord = (recordId) => alert(`Kayıt ID: ${recordId} - Bu özellik geliştirilecek.`);
+
+function resetUI() {
+    allSimilarResults = [];
+    resultsTableBody.innerHTML = '';
+    infoMessageContainer.innerHTML = '';
+    noRecordsMessage.style.display = 'none';
+    pagination.update(0);
+    checkCacheAndToggleButtonStates();
+}
+
+// Event listener'lar
+startSearchBtn.addEventListener('click', () => performSearch(false));
+researchBtn.addEventListener('click', performResearch);
+clearFiltersBtn.addEventListener('click', () => {
+    ownerSearchInput.value = '';
+    niceClassSearchInput.value = '';
+    bulletinSelect.selectedIndex = 0;
+    resetUI();
+    applyMonitoringListFilters();
+});
+ownerSearchInput.addEventListener('input', debounce(applyMonitoringListFilters, 400));
+niceClassSearchInput.addEventListener('input', debounce(applyMonitoringListFilters, 400));
+bulletinSelect.addEventListener('change', resetUI);
+
+// Başlatma
+console.log(">>> initializePagination çağrılıyor");
+initializePagination();
+
+console.log(">>> loadInitialData çağrılıyor");
+loadInitialData();
