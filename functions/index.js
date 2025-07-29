@@ -1556,26 +1556,23 @@ function calculateSimilarityScoreInternal(hitMarkName, searchMarkName, hitApplic
 
 // ======== Yeni Cloud Function: Sunucu Tarafında Marka Benzerliği Araması ========
 
-exports.performTrademarkSimilaritySearch = onRequest(
+exports.performTrademarkSimilaritySearch = onCall(
   {
     region: 'europe-west1',
-    timeoutSeconds: 300, // 5 dakika
+    timeoutSeconds: 300,
     memory: '1GiB'
   },
-  async (req, res) => {
-    if (req.method !== 'POST') {
-      return res.status(405).json({ success: false, error: 'Method Not Allowed' });
-    }
+  async (request) => {
+    const { monitoredMarks, selectedBulletinId } = request.data;
 
-    const { monitoredMarks, selectedBulletinId } = req.body;
     if (!Array.isArray(monitoredMarks) || monitoredMarks.length === 0 || !selectedBulletinId) {
-      return res.status(400).json({
-        success: false,
-        error: 'Missing required parameters: monitoredMarks (array) or selectedBulletinId'
-      });
+      throw new HttpsError(
+        'invalid-argument',
+        'Missing required parameters: monitoredMarks (array) or selectedBulletinId'
+      );
     }
 
-    logger.log('🚀 Cloud Function: performTrademarkSimilaritySearch başlatıldı (toplu arama)', {
+    logger.log('🚀 Cloud Function: performTrademarkSimilaritySearch başlatıldı', {
       numMonitoredMarks: monitoredMarks.length,
       selectedBulletinId
     });
@@ -1587,28 +1584,23 @@ exports.performTrademarkSimilaritySearch = onRequest(
         .get();
 
       const bulletinRecords = bulletinRecordsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      logger.log(`✅ ${bulletinRecords.length} adet trademarkBulletinRecords bulundu.`);
+      logger.log(`✅ ${bulletinRecords.length} kayıt bulundu.`);
 
       const allResults = [];
 
       for (const monitoredMark of monitoredMarks) {
         const { markName, applicationDate, niceClasses } = monitoredMark;
         if (!markName) {
-          logger.warn(`⚠️ İzlenen markanın adı eksik. Atlanıyor: ${JSON.stringify(monitoredMark)}`);
+          logger.warn(`⚠️ İzlenen markanın adı eksik: ${JSON.stringify(monitoredMark)}`);
           continue;
         }
 
-        logger.log(`🔎 İzlenen marka için arama: '${markName}'`);
-
         for (const hit of bulletinRecords) {
-          // Tarih filtresi
           if (!isValidBasedOnDate(hit.applicationDate, applicationDate)) continue;
 
-          // Nice sınıfı çakışması
           const hasNiceClassOverlap = hasOverlappingNiceClasses(niceClasses, hit.niceClasses);
           if (Array.isArray(niceClasses) && niceClasses.length > 0 && !hasNiceClassOverlap) continue;
 
-          // Benzerlik skorunu hesapla
           const similarityScore = calculateSimilarityScoreInternal(
             hit.markName,
             markName,
@@ -1618,9 +1610,7 @@ exports.performTrademarkSimilaritySearch = onRequest(
             niceClasses
           );
 
-          // Eşik kontrolü
-          const SIMILARITY_THRESHOLD = 0.3;
-          if (similarityScore < SIMILARITY_THRESHOLD) continue;
+          if (similarityScore < 0.3) continue;
 
           allResults.push({
             objectID: hit.id,
@@ -1640,16 +1630,12 @@ exports.performTrademarkSimilaritySearch = onRequest(
       }
 
       allResults.sort((a, b) => b.similarityScore - a.similarityScore);
-      logger.log(`✅ Cloud Function: Toplam ${allResults.length} sonuç döndürüyor.`);
+      logger.log(`✅ Toplam ${allResults.length} sonuç döndürüldü.`);
 
-      return res.json({ success: true, results: allResults });
+      return { success: true, results: allResults };
     } catch (error) {
-      logger.error('❌ Cloud Function: performTrademarkSimilaritySearch hatası:', error);
-      return res.status(500).json({
-        success: false,
-        error: 'Marka benzerliği araması sırasında bir hata oluştu.',
-        message: error.message
-      });
+      logger.error('❌ Cloud Function hata:', error);
+      throw new HttpsError('internal', 'Marka benzerliği araması sırasında hata oluştu.', error.message);
     }
   }
 );
