@@ -565,24 +565,26 @@ function resetUI() {
 }
 
 // Event listener'lar
-document.addEventListener('DOMContentLoaded', async () => {
-    console.log(">>> initializePagination çağrılıyor");
-    initializePagination();
-
-    console.log(">>> loadInitialData çağrılıyor");
-    await loadInitialData();
-
-    // Eventler burada bağlansın
-    startSearchBtn.addEventListener('click', () => performSearch(false));
-    researchBtn.addEventListener('click', performResearch);
-    clearFiltersBtn.addEventListener('click', () => {
-        ownerSearchInput.value = '';
-        niceClassSearchInput.value = '';
-        bulletinSelect.selectedIndex = 0;
-        resetUI();
-        applyMonitoringListFilters();
-    });
-    ownerSearchInput.addEventListener('input', debounce(applyMonitoringListFilters, 400));
-    niceClassSearchInput.addEventListener('input', debounce(applyMonitoringListFilters, 400));
-    bulletinSelect.addEventListener('change', resetUI);
+startSearchBtn.addEventListener('click', () => performSearch(false));
+researchBtn.addEventListener('click', performResearch);
+clearFiltersBtn.addEventListener('click', () => {
+    ownerSearchInput.value = '';
+    niceClassSearchInput.value = '';
+    bulletinSelect.selectedIndex = 0;
+    resetUI();
+    applyMonitoringListFilters();
 });
+ownerSearchInput.addEventListener('input', debounce(applyMonitoringListFilters, 400));
+niceClassSearchInput.addEventListener('input', debounce(applyMonitoringListFilters, 400));
+bulletinSelect.addEventListener('change', resetUI);
+
+// Başlatma
+console.log(">>> initializePagination çağrılıyor");
+initializePagination();
+
+console.log(">>> loadInitialData çağrılıyor");
+loadInitialData();
+
+</script>
+</body>
+</html>
