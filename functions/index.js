@@ -1,37 +1,55 @@
 // functions/index.js
 
-// Firebase Admin SDK'sı ve diğer temel modüller
-const admin = require('firebase-admin');
-const path = require('path');
-const os = require('os');
-const fs = require('fs');
-const AdmZip = require('adm-zip');
-const { createExtractorFromFile } = require('node-unrar-js');
-const nodemailer = require('nodemailer');
+// Firebase Admin SDK'sı ve diğer temel modüller (ESM importları)
+import admin from 'firebase-admin';
+import path from 'path';
+import os from 'os';
+import fs from 'fs';
+import AdmZip from 'adm-zip';
+// import { createExtractorFromFile } from 'node-unrar-js'; // Kullanılmıyor, kaldırıldı
+import nodemailer from 'nodemailer';
+import { fileURLToPath } from 'url'; // __dirname/filename eşdeğeri için
+import { createRequire } from 'module'; // Bazı eski CJS modüllerini import etmek için
 
-const stream = require('stream');
-const { pipeline } = require('stream/promises');
+const require = createRequire(import.meta.url); // __dirname gibi CommonJS işlevselliği için
 
-// Firebase Functions v2 SDK importları
-const { onRequest, onCall, HttpsError } = require('firebase-functions/v2/https'); // HTTPS fonksiyonları ve HttpsError için v2 importu
-const { onSchedule } = require('firebase-functions/v2/scheduler'); // Scheduler triggerları için v2 importu
-const { onDocumentCreated, onDocumentUpdated } = require('firebase-functions/v2/firestore'); // Firestore triggerları için v2 importu
-const { onMessagePublished } = require('firebase-functions/v2/pubsub'); // Pub/Sub mesaj trigger'ları için v2 importu
-const { onObjectFinalized } = require('firebase-functions/v2/storage'); // Storage triggerları için v2 importu
-const logger = require('firebase-functions/logger'); // Logger için
-const { onDocumentWritten } = require("firebase-functions/v2/firestore");
+import stream from 'stream';
+import { pipeline } from 'stream/promises';
+
+// Firebase Functions v2 SDK importları (ESM)
+import { onRequest, onCall, HttpsError } from 'firebase-functions/v2/https';
+import { onSchedule } from 'firebase-functions/v2/scheduler';
+import { onDocumentCreated, onDocumentUpdated, onDocumentWritten } from 'firebase-functions/v2/firestore';
+import { onMessagePublished } from 'firebase-functions/v2/pubsub';
+import { onObjectFinalized } from 'firebase-functions/v2/storage';
+import { logger } from 'firebase-functions/logger';
 
 // Dış modüller (npm install ile yüklenmiş)
-const cors = require('cors');
-const fetch = require('node-fetch');
-const { PubSub } = require('@google-cloud/pubsub'); // Pub/Sub mesajı yayınlamak için
+import cors from 'cors';
+import fetch from 'node-fetch'; // v3+ için böyle import edilir
+import algoliasearch from 'algoliasearch';
+import { PubSub } from '@google-cloud/pubsub';
+
 
 // Firebase Admin SDK'sını başlatın
 if (!admin.apps.length) {
   admin.initializeApp();
 }
 const db = admin.firestore();
-const pubsubClient = new PubSub(); // pubsubClient'ı burada tanımlayın
+const pubsubClient = new PubSub();
+
+// **************************** ALGOLIA YAPILANDIRMASI (Henüz Kaldırılmadıysa yorum satırı yapın veya silin) ****************************
+// Environment variables kullanarak Algolia konfigürasyonu
+const ALGOLIA_APP_ID = 'THCIEJJTZ9';
+const ALGOLIA_ADMIN_API_KEY = 'c48fd50edd0a398bbf6d75354b805494';
+const ALGOLIA_INDEX_NAME = 'trademark_bulletin_records_live';
+
+// Algolia client'ı sadece credentials varsa initialize et
+let algoliaClient, algoliaIndex;
+if (ALGOLIA_APP_ID && ALGOLIA_ADMIN_API_KEY) {
+    algoliaClient = algoliasearch(ALGOLIA_APP_ID, ALGOLIA_ADMIN_API_KEY);
+    algoliaIndex = algoliaClient.initIndex(ALGOLIA_INDEX_NAME);
+}
 
 // ********************************************************************************
 
@@ -78,7 +96,7 @@ exports.etebsProxyV2 = onRequest(
             }
 
             try {
-                console.log('🔥 ETEBS Proxy request:', req.body);
+                logger.log('🔥 ETEBS Proxy request:', req.body);
 
                 const { action, token, documentNo } = req.body;
 
@@ -115,7 +133,7 @@ exports.etebsProxyV2 = onRequest(
                         });
                 }
 
-                console.log('📡 ETEBS API call:', apiUrl);
+                logger.log('📡 ETEBS API call:', apiUrl);
 
                 const etebsResponse = await fetch(apiUrl, {
                     method: 'POST',
@@ -133,7 +151,7 @@ exports.etebsProxyV2 = onRequest(
 
                 const etebsData = await etebsResponse.json();
 
-                console.log('✅ ETEBS API response received');
+                logger.log('✅ ETEBS API response received');
 
                 res.json({
                     success: true,
@@ -142,7 +160,7 @@ exports.etebsProxyV2 = onRequest(
                 });
 
             } catch (error) {
-                console.error('❌ ETEBS Proxy Error:', error);
+                logger.error('❌ ETEBS Proxy Error:', error);
 
                 if (error.code === 'ENOTFOUND' || error.code === 'ECONNREFUSED') {
                     res.status(503).json({
@@ -252,10 +270,10 @@ exports.sendEmailNotificationV2 = onCall(
         };
 
         try {
-            console.log("SMTP üzerinden gönderim başlıyor...");
+            logger.log("SMTP üzerinden gönderim başlıyor...");
             await transporter.sendMail(mailOptions);
 
-            console.log(`E-posta başarıyla gönderildi: ${notificationData.recipientEmail}`);
+            logger.log(`E-posta başarıyla gönderildi: ${notificationData.recipientEmail}`);
             await notificationRef.update({
                 status: "sent",
                 sentAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -264,7 +282,7 @@ exports.sendEmailNotificationV2 = onCall(
 
             return { success: true, message: "E-posta başarıyla gönderildi." };
         } catch (error) {
-            console.error("SMTP gönderim hatası:", error);
+            logger.error("SMTP gönderim hatası:", error);
             await notificationRef.update({
                 status: "failed",
                 updatedAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -287,7 +305,7 @@ exports.cleanupEtebsLogsV2 = onSchedule(
         region: 'europe-west1'
     },
     async (event) => {
-        console.log('🧹 ETEBS logs cleanup started');
+        logger.log('🧹 ETEBS logs cleanup started');
 
         const db = admin.firestore();
         const thirtyDaysAgo = new Date();
@@ -306,9 +324,9 @@ exports.cleanupEtebsLogsV2 = onSchedule(
 
             await batch.commit();
 
-            console.log(`🗑️ Cleaned up ${oldLogs.docs.length} old ETEBS logs`);
+            logger.log(`🗑️ Cleaned up ${oldLogs.docs.length} old ETEBS logs`);
         } catch (error) {
-            console.error('❌ Cleanup error:', error);
+            logger.error('❌ Cleanup error:', error);
         }
 
         return null;
@@ -329,7 +347,7 @@ exports.createMailNotificationOnDocumentIndexV2 = onDocumentCreated(
         const newDocument = snap.data();
         const docId = event.params.docId;
         
-        console.log(`Yeni belge algılandı: ${docId}`, newDocument);
+        logger.log(`Yeni belge algılandı: ${docId}`, newDocument);
 
         const db = admin.firestore();
         let missingFields = [];
@@ -349,7 +367,7 @@ exports.createMailNotificationOnDocumentIndexV2 = onDocumentCreated(
                 .get();
 
             if (rulesSnapshot.empty) {
-                console.warn("Kural bulunamadı.");
+                logger.warn("Kural bulunamadı.");
                 missingFields.push("templateRule");
             } else {
                 rule = rulesSnapshot.docs[0].data();
@@ -358,7 +376,7 @@ exports.createMailNotificationOnDocumentIndexV2 = onDocumentCreated(
             if (rule) {
                 const templateSnapshot = await db.collection("mail_templates").doc(rule.templateId).get();
                 if (!templateSnapshot.exists) {
-                    console.warn(`Şablon bulunamadı: ${rule.templateId}`);
+                    logger.warn(`Şablon bulunamadı: ${rule.templateId}`);
                     missingFields.push("mailTemplate");
                 } else {
                     template = templateSnapshot.data();
@@ -368,13 +386,13 @@ exports.createMailNotificationOnDocumentIndexV2 = onDocumentCreated(
             if (newDocument.clientId) {
                 const clientSnapshot = await db.collection("persons").doc(newDocument.clientId).get();
                 if (!clientSnapshot.exists) {
-                    console.warn(`Müvekkil bulunamadı: ${newDocument.clientId}`);
+                    logger.warn(`Müvekkil bulunamadı: ${newDocument.clientId}`);
                     missingFields.push("client");
                 } else {
                     client = clientSnapshot.data();
                 }
             } else {
-                console.warn("clientId eksik.");
+                logger.warn("clientId eksik.");
                 missingFields.push("clientId");
             }
 
@@ -421,12 +439,12 @@ exports.createMailNotificationOnDocumentIndexV2 = onDocumentCreated(
             };
 
             await db.collection("mail_notifications").add(notificationData);
-            console.log(`Mail bildirimi '${status}' olarak oluşturuldu.`);
+            logger.log(`Mail bildirimi '${status}' olarak oluşturuldu.`);
 
             return null;
 
         } catch (error) {
-            console.error("Mail bildirimi oluşturulurken hata:", error);
+            logger.error("Mail bildirimi oluşturulurken hata:", error);
             return null;
         }
     }
@@ -444,7 +462,7 @@ exports.createMailNotificationOnDocumentStatusChangeV2 = onDocumentUpdated(
         const docId = event.params.docId;
 
         if (before.status !== 'indexed' && after.status === 'indexed') {
-            console.log(`Belge indexlendi: ${docId}`, after);
+            logger.log(`Belge indexlendi: ${docId}`, after);
 
             const db = admin.firestore();
 
@@ -464,15 +482,15 @@ exports.createMailNotificationOnDocumentStatusChangeV2 = onDocumentUpdated(
                     .get();
 
                 if (rulesSnapshot.empty) {
-                    console.warn("Kural bulunamadı, eksik bilgi bildirimi oluşturulacak.");
+                    logger.warn("Kural bulunamadı, eksik bilgi bildirimi oluşturulacak.");
                     status = "missing_info";
                 } else {
                     rule = rulesSnapshot.docs[0].data();
-                    console.log(`Kural bulundu. Şablon ID: ${rule.templateId}`);
+                    logger.log(`Kural bulundu. Şablon ID: ${rule.templateId}`);
 
                     const templateSnapshot = await db.collection("mail_templates").doc(rule.templateId).get();
                     if (!templateSnapshot.exists) {
-                        console.warn(`Şablon bulunamadı: ${rule.templateId}`);
+                        logger.warn(`Şablon bulunamadı: ${rule.templateId}`);
                         status = "missing_info";
                     } else {
                         template = templateSnapshot.data();
@@ -482,13 +500,13 @@ exports.createMailNotificationOnDocumentStatusChangeV2 = onDocumentUpdated(
                 if (after.clientId) {
                     const clientSnapshot = await db.collection("persons").doc(after.clientId).get();
                     if (!clientSnapshot.exists) {
-                        console.warn(`Müvekkil bulunamadı: ${after.clientId}`);
+                        logger.warn(`Müvekkil bulunamadı: ${after.clientId}`);
                         status = "missing_info";
                     } else {
                         client = clientSnapshot.data();
                     }
                 } else {
-                    console.warn("clientId alanı eksik.");
+                    logger.warn("clientId alanı eksik.");
                     status = "missing_info";
                 }
 
@@ -525,15 +543,15 @@ exports.createMailNotificationOnDocumentStatusChangeV2 = onDocumentUpdated(
                 };
 
                 await db.collection("mail_notifications").add(notificationData);
-                console.log(`Mail bildirimi '${status}' olarak oluşturuldu.`);
+                logger.log(`Mail bildirimi '${status}' olarak oluşturuldu.`);
                 return null;
 
             } catch (error) {
-                console.error("Bildirim oluşturulurken hata:", error);
+                logger.error("Bildirim oluşturulurken hata:", error);
                 return null;
             }
         } else {
-            console.log("Status değişimi indekslenme değil, işlem atlandı.");
+            logger.log("Status değişimi indekslenme değil, işlem atlandı.");
             return null;
         }
     }
@@ -547,7 +565,7 @@ exports.createUniversalNotificationOnTaskCompleteV2 = onDocumentUpdated(
     async (event) => {
         const change = event.data;
         const taskId = event.params.taskId;
-        console.log(`--- FONKSİYON TETİKLENDİ: tasks/${taskId} ---`);
+        logger.log(`--- FONKSİYON TETİKLENDİ: tasks/${taskId} ---`);
 
         const taskDataBefore = change.before.data();
         const taskDataAfter = change.after.data();
@@ -559,12 +577,12 @@ exports.createUniversalNotificationOnTaskCompleteV2 = onDocumentUpdated(
 
         const wasPreviouslyNotCompleted = taskDataBefore.status !== "completed";
 
-        console.log(`Durum 'completed' olarak mı değişti?: ${isStatusChangedToCompleted}`);
-        console.log(`EPATS dokümanı var mı?: ${hasEpatsData}`);
-        console.log(`Önceki durum 'completed' değil miydi?: ${wasPreviouslyNotCompleted}`);
+        logger.log(`Durum 'completed' olarak mı değişti?: ${isStatusChangedToCompleted}`);
+        logger.log(`EPATS dokümanı var mı?: ${hasEpatsData}`);
+        logger.log(`Önceki durum 'completed' değil miydi?: ${wasPreviouslyNotCompleted}`);
 
         if (isStatusChangedToCompleted && hasEpatsData && wasPreviouslyNotCompleted) {
-            console.log("--> KOŞULLAR SAĞLANDI. Bildirim oluşturma işlemi başlıyor.");
+            logger.log("--> KOŞULLAR SAĞLANDI. Bildirim oluşturma işlemi başlıyor.");
 
             try {
                 const rulesSnapshot = await db.collection("template_rules")
@@ -573,29 +591,29 @@ exports.createUniversalNotificationOnTaskCompleteV2 = onDocumentUpdated(
                     .get();
 
                 if (rulesSnapshot.empty) {
-                    console.error("HATA: 'task_completion_epats' için bir kural bulunamadı!");
+                    logger.error("HATA: 'task_completion_epats' için bir kural bulunamadı!");
                     return null;
                 }
                 const rule = rulesSnapshot.docs[0].data();
-                console.log(`Kural bulundu. Şablon ID: ${rule.templateId}`);
+                logger.log(`Kural bulundu. Şablon ID: ${rule.templateId}`);
 
                 const templateSnapshot = await db.collection("mail_templates").doc(rule.templateId).get();
                 if (!templateSnapshot.exists) {
-                    console.error(`Hata: ${rule.templateId} ID'li mail şablonu bulunamadı!`);
+                    logger.error(`Hata: ${rule.templateId} ID'li mail şablonu bulunamadı!`);
                     return null;
                 }
                 const template = templateSnapshot.data();
 
                 const ipRecordSnapshot = await db.collection("ipRecords").doc(taskDataAfter.relatedIpRecordId).get();
                 if (!ipRecordSnapshot.exists) {
-                    console.error(`Hata: Görevle ilişkili IP kaydı (${taskDataAfter.relatedIpRecordId}) bulunamadı!`);
+                    logger.error(`Hata: Görevle ilişkili IP kaydı (${taskDataAfter.relatedIpRecordId}) bulunamadı!`);
                     return null;
                 }
                 const ipRecord = ipRecordSnapshot.data();
 
                 const primaryOwnerId = ipRecord.owners?.[0]?.id;
                 if (!primaryOwnerId) {
-                    console.error('IP kaydına atanmış birincil hak sahibi bulunamadı.');
+                    logger.error('IP kaydına atanmış birincil hak sahibi bulunamadı.');
                     return null;
                 }
                 const clientSnapshot = await db.collection("persons").doc(primaryOwnerId).get();
@@ -621,15 +639,15 @@ exports.createUniversalNotificationOnTaskCompleteV2 = onDocumentUpdated(
                     createdAt: admin.firestore.FieldValue.serverTimestamp(),
                 });
 
-                console.log("--> BAŞARILI: Bildirim 'mail_notifications' koleksiyonuna eklendi.");
+                logger.log("--> BAŞARILI: Bildirim 'mail_notifications' koleksiyonuna eklendi.");
                 return null;
 
             } catch (error) {
-                console.error("HATA: Bildirim oluşturulurken hata:", error);
+                logger.error("HATA: Bildirim oluşturulurken hata:", error);
                 return null;
             }
         } else {
-            console.log("--> KOŞULLAR SAĞLANMADI. Fonksiyon sonlandırılıyor.");
+            logger.log("--> KOŞULLAR SAĞLANMADI. Fonksiyon sonlandırılıyor.");
             return null;
         }
     }
@@ -656,7 +674,7 @@ exports.processTrademarkBulletinUploadV3 = onObjectFinalized(
       return null; // log atma
     }
 
-    console.log("🔥 Trademark Bulletin Upload V3 başladı:", filePath);
+    logger.log("🔥 Trademark Bulletin Upload V3 başladı:", filePath);
 
     const bucket = admin.storage().bucket();
     const tempFilePath = path.join(os.tmpdir(), fileName);
@@ -691,7 +709,7 @@ exports.processTrademarkBulletinUploadV3 = onObjectFinalized(
       });
       const bulletinId = bulletinRef.id;
 
-      console.log(`📊 Bülten kaydedildi: ${bulletinNo} (${bulletinDate}) → ${bulletinId}`);
+      logger.log(`📊 Bülten kaydedildi: ${bulletinNo} (${bulletinDate}) → ${bulletenId}`);
 
       // script parsing
       const scriptPath = allFiles.find(
@@ -711,7 +729,7 @@ exports.processTrademarkBulletinUploadV3 = onObjectFinalized(
           const appNo = `${match[1]}/${match[2]}`;
           if (!imagePathMap[appNo]) imagePathMap[appNo] = [];
           imagePathMap[appNo].push(
-            `bulletins/trademark_${bulletinNo}_images/${filename}`
+            `bulletins/trademark_${bulletenNo}_images/${filename}`
           );
         }
       }
@@ -720,11 +738,11 @@ exports.processTrademarkBulletinUploadV3 = onObjectFinalized(
       const CHUNK_SIZE = 200; // Aynı anda en fazla 50 dosya
       for (let i = 0; i < imagesDir.length; i += CHUNK_SIZE) {
         const chunk = imagesDir.slice(i, i + CHUNK_SIZE);
-        console.log(`📦 Görsel chunk yükleniyor: ${i + 1}-${i + chunk.length}/${imagesDir.length}`);
+        logger.log(`📦 Görsel chunk yükleniyor: ${i + 1}-${i + chunk.length}/${imagesDir.length}`);
 
         await Promise.all(
           chunk.map((localPath) => {
-            const destination = `bulletins/trademark_${bulletinNo}_images/${path.basename(localPath)}`;
+            const destination = `bulletins/trademark_${bulletenNo}_images/${path.basename(localPath)}`;
             return bucket.upload(localPath, {
               destination,
               metadata: { contentType: getContentType(localPath) }
@@ -732,23 +750,23 @@ exports.processTrademarkBulletinUploadV3 = onObjectFinalized(
           })
         );
 
-        console.log(`✅ Chunk tamamlandı (${i + chunk.length}/${imagesDir.length})`);
+        logger.log(`✅ Chunk tamamlandı (${i + chunk.length}/${imagesDir.length})`);
         if (global.gc) {
           global.gc();
-          console.log("🧹 Garbage collection tetiklendi (chunk sonrası)");
+          logger.log("🧹 Garbage collection tetiklendi (chunk sonrası)");
         }
       }
 
-      console.log(`📷 ${imagesDir.length} görsel doğrudan yüklendi`);
+      logger.log(`📷 ${imagesDir.length} görsel doğrudan yüklendi`);
 
       // Firestore kayıtları (imagePath eşleştirilmiş)
       await writeBatchesToFirestore(records, bulletinId, imagePathMap);
 
-      console.log(
-        `🎉 ZIP işleme tamamlandı: ${bulletinNo} → ${records.length} kayıt, ${imagesDir.length} görsel bulundu.`
+      logger.log(
+        `🎉 ZIP işleme tamamlandı: ${bulletenNo} → ${records.length} kayıt, ${imagesDir.length} görsel bulundu.`
       );
     } catch (e) {
-      console.error("❌ Hata:", e.message);
+      logger.error("❌ Hata:", e.message);
       throw e;
     } finally {
       if (fs.existsSync(tempFilePath)) fs.unlinkSync(tempFilePath);
@@ -791,24 +809,24 @@ function listAllFilesRecursive(dir) {
 }
 async function parseScriptContentStreaming(scriptPath) {
   const stats = fs.statSync(scriptPath);
-  console.log(`📏 Script dosya boyutu: ${stats.size} bytes`);
+  logger.log(`📏 Script dosya boyutu: ${stats.size} bytes`);
   
   if (stats.size > 100 * 1024 * 1024) {
-    console.log("🔄 Büyük dosya - chunk'lı parsing kullanılıyor");
+    logger.log("🔄 Büyük dosya - chunk'lı parsing kullanılıyor");
     return parseScriptInChunks(scriptPath);
   }
   
-  console.log("🔄 Normal parsing kullanılıyor");
+  logger.log("🔄 Normal parsing kullanılıyor");
   const content = fs.readFileSync(scriptPath, "utf8");
   return parseScriptContent(content);
 }
 function parseScriptContent(content) {
-  console.log(`🔍 Parse başlıyor... Content length: ${content.length} karakter`);
+  logger.log(`🔍 Parse başlıyor... Content length: ${content.length} karakter`);
   
   const recordsMap = {};
   const lines = content.split('\n');
   
-  console.log(`📝 Toplam satır sayısı: ${lines.length}`);
+  logger.log(`📝 Toplam satır sayısı: ${lines.length}`);
   
   let processedLines = 0;
   let insertCount = 0;
@@ -825,14 +843,14 @@ function parseScriptContent(content) {
     insertCount++;
     
     if (processedLines % 1000 === 0) {
-      console.log(`📈 İşlenen satır: ${processedLines}/${lines.length}`);
+      logger.log(`📈 İşlenen satır: ${processedLines}/${lines.length}`);
     }
     
     // ESKİ ÇALIŞAN REGEX PATTERN
     const match = line.match(/INSERT INTO (\w+) VALUES\s*\((.*)\)$/);
     if (!match) {
       if (insertCount <= 5) {
-        console.warn(`⚠️ Regex eşleşmedi (satır ${i + 1}): ${line.substring(0, 100)}...`);
+        logger.warn(`⚠️ Regex eşleşmedi (satır ${i + 1}): ${line.substring(0, 100)}...`);
       }
       continue;
     }
@@ -845,7 +863,7 @@ function parseScriptContent(content) {
     
     if (!values || values.length === 0) {
       if (valuesParsed < 3) {
-        console.warn(`⚠️ VALUES parse edilemedi: ${valuesRaw.substring(0, 50)}...`);
+        logger.warn(`⚠️ VALUES parse edilemedi: ${valuesRaw.substring(0, 50)}...`);
       }
       continue;
     }
@@ -853,7 +871,7 @@ function parseScriptContent(content) {
     valuesParsed++;
     
     if (valuesParsed <= 3) {
-      console.log(`✅ Parse başarılı (${table}):`, {
+      logger.log(`✅ Parse başarılı (${table}):`, {
         appNo: values[0],
         totalValues: values.length,
         sample: values.slice(0, 3)
@@ -900,7 +918,7 @@ function parseScriptContent(content) {
   
   const result = Object.values(recordsMap);
   
-  console.log(`✅ Parse tamamlandı:`, {
+  logger.log(`✅ Parse tamamlandı:`, {
     totalLines: lines.length,
     processedLines: processedLines,
     insertCount: insertCount,
@@ -910,7 +928,7 @@ function parseScriptContent(content) {
   });
   
   if (result.length > 0) {
-    console.log(`📋 İlk kayıt örneği:`, JSON.stringify(result[0], null, 2));
+    logger.log(`📋 İlk kayıt örneği:`, JSON.stringify(result[0], null, 2));
   }
   
   return result;
@@ -1044,7 +1062,7 @@ async function writeBatchesToFirestore(records, bulletinId, imagePathMap) {
       });
     });
     await batch.commit();
-    console.log(`📝 ${Math.min(i + batchSize, records.length)}/${records.length} kayıt yazıldı`);
+    logger.log(`📝 ${Math.min(i + batchSize, records.length)}/${records.length} kayıt yazıldı`);
   }
 }
 
@@ -1054,13 +1072,145 @@ function getContentType(filePath) {
   return "application/octet-stream";
 }
 
+
+//              ALGOLIA İLK İNDEKSLEME FONKSİYONU (v2 onRequest)
+// =========================================================
+
+exports.indexTrademarkBulletinRecords = onRequest(
+  {
+    region: 'europe-west1',
+    timeoutSeconds: 540,
+    memory: '2GiB'
+  },
+  async (req, res) => {
+    logger.log('Algolia: trademarkBulletinRecords için toplu indeksleme başlatıldı.');
+    let recordsToIndex = [];
+    let lastDoc = null;
+    const batchSize = 500;
+
+    try {
+      while (true) {
+        let query = db.collection('trademarkBulletinRecords')
+          .orderBy(admin.firestore.FieldPath.documentId())
+          .limit(batchSize);
+
+        if (lastDoc) query = query.startAfter(lastDoc);
+        const snapshot = await query.get();
+        if (snapshot.empty) break;
+
+        const currentBatch = snapshot.docs.map(doc => {
+          const data = doc.data();
+          return {
+            objectID: doc.id,
+            markName: data.markName || null,
+            applicationNo: data.applicationNo || null,
+            applicationDate: data.applicationDate || null,
+            niceClasses: data.niceClasses || null,
+            bulletinId: data.bulletinId ? String(data.bulletinId) : null,
+            holders: Array.isArray(data.holders) ? data.holders.map(h => h.name).join(', ') : '',
+            imagePath: data.imagePath || null,
+            createdAt: data.createdAt ? data.createdAt.toDate().getTime() : null
+          };
+        });
+
+        recordsToIndex = recordsToIndex.concat(currentBatch);
+        lastDoc = snapshot.docs[snapshot.docs.length - 1];
+        logger.log(`Firestore'dan şu ana kadar ${recordsToIndex.length} belge okundu.`);
+
+        if (snapshot.docs.length < batchSize) break;
+      }
+
+      logger.log(`Algolia'ya toplam ${recordsToIndex.length} belge gönderiliyor.`);
+      const { objectIDs } = await algoliaIndex.saveObjects(recordsToIndex);
+      logger.log(`Algolia'ya ${objectIDs.length} belge başarıyla eklendi/güncellendi.`);
+
+      return res.status(200).send({
+        status: 'success',
+        message: `${objectIDs.length} belge Algolia'ya eklendi/güncellendi.`
+      });
+    } catch (error) {
+      logger.error('Algolia indeksleme hatası:', error);
+      return res.status(500).send({
+        status: 'error',
+        message: 'Algolia indeksleme sırasında bir hata oluştu.',
+        error: error.message
+      });
+    }
+  }
+);
+
+exports.onTrademarkBulletinRecordWrite = onDocumentWritten(
+  {
+    document: 'trademarkBulletinRecords/{recordId}',
+    region: 'europe-west1',
+  },
+  async (change) => {
+    const recordId = change.params.recordId;
+
+    // Algolia client'ını fonksiyon içinde initialize et
+    let algoliaClient, algoliaIndex;
+    try {
+      algoliaClient = algoliasearch(ALGOLIA_APP_ID, ALGOLIA_ADMIN_API_KEY);
+      algoliaIndex = algoliaClient.initIndex('trademark_bulletin_records_live');
+      logger.log('Algolia client başarıyla initialize edildi.');
+    } catch (error) {
+      logger.error('Algolia client initialize edilemedi:', error);
+      return null;
+    }
+
+    const oldData = change.data.before.exists ? change.data.before.data() : null;
+    const newData = change.data.after.exists ? change.data.after.data() : null;
+
+    // Silme durumu
+    if (!change.data.after.exists) {
+      logger.log(`Algolia: Belge silindi, kaldırılıyor: ${recordId}`);
+      try {
+        await algoliaIndex.deleteObject(recordId);
+        logger.log(`Algolia: ${recordId} başarıyla kaldırıldı.`);
+      } catch (error) {
+        logger.error(`Algolia: Silme hatası: ${recordId}`, error);
+      }
+      return null;
+    }
+
+    // Ekleme veya güncelleme durumu
+    if (newData) {
+      logger.log(`Algolia: Belge indeksleniyor/güncelleniyor: ${recordId}`);
+      const record = {
+        objectID: recordId,
+        markName: newData.markName || null,
+        applicationNo: newData.applicationNo || null,
+        applicationDate: newData.applicationDate || null,
+        niceClasses: newData.niceClasses || null,
+        bulletinId: newData.bulletinId ? String(newData.bulletinId) : null,
+        holders: Array.isArray(newData.holders)
+          ? newData.holders.map(h => h.name).join(', ')
+          : '',
+        imagePath: newData.imagePath || null,
+        createdAt: newData.createdAt
+          ? newData.createdAt.toDate().getTime()
+          : null
+      };
+
+      try {
+        await algoliaIndex.saveObject(record);
+        logger.log(`Algolia: ${recordId} başarıyla indekslendi.`);
+      } catch (error) {
+        logger.error(`Algolia: İndeksleme hatası: ${recordId}`, error);
+      }
+    }
+
+    return null;
+  }
+);
+
 // BÜLTEN SİLME 
 exports.deleteBulletinV2 = onCall(
   { timeoutSeconds: 540, 
     memory: "1GiB", 
     region: "europe-west1" },
   async (request) => {
-  console.log('🔥 Bülten silme başladı');
+  logger.log('🔥 Bülten silme başladı');
 
   const { bulletinId } = request.data;
   if (!bulletinId) throw new Error('BulletinId gerekli');
@@ -1072,7 +1222,7 @@ exports.deleteBulletinV2 = onCall(
 
     const bulletinData = bulletinDoc.data();
     const bulletinNo = bulletinData.bulletinNo;
-    console.log(`📋 Silinecek bülten: ${bulletinNo}`);
+    logger.log(`📋 Silinecek bülten: ${bulletinNo}`);
 
     // 2. İlişkili trademarkBulletinRecords silme (500'erli chunk)
     let totalDeleted = 0;
@@ -1084,7 +1234,7 @@ exports.deleteBulletinV2 = onCall(
       snapshot.docs.forEach(doc => batch.delete(doc.ref));
       await batch.commit();
       totalDeleted += snapshot.size;
-      console.log(`✅ ${totalDeleted} kayıt silindi (toplam)`);
+      logger.log(`✅ ${totalDeleted} kayıt silindi (toplam)`);
 
       snapshot = await recordsQuery.limit(500).get();
     }
@@ -1102,12 +1252,12 @@ exports.deleteBulletinV2 = onCall(
       await Promise.all(
         chunk.map(file =>
           file.delete().catch(err =>
-            console.warn(`⚠️ ${file.name} silinemedi: ${err.message}`)
+            logger.warn(`⚠️ ${file.name} silinemedi: ${err.message}`)
           )
         )
       );
       totalImagesDeleted += chunk.length;
-      console.log(`🖼️ ${totalImagesDeleted} görsel silindi (toplam)`);
+      logger.log(`🖼️ ${totalImagesDeleted} görsel silindi (toplam)`);
 
       // Yeni listeleme (kalan dosya varsa)
       if (files.length === 0) {
@@ -1117,53 +1267,44 @@ exports.deleteBulletinV2 = onCall(
 
     // 4. Ana bulletin dokümanını sil
     await bulletinDoc.ref.delete();
-    console.log('✅ Ana bülten silindi');
+    logger.log('✅ Ana bülten silindi');
 
     return {
       success: true,
       bulletinNo,
       recordsDeleted: totalDeleted,
       imagesDeleted: totalImagesDeleted,
-      message: `Bülten ${bulletinNo} ve ${totalImagesDeleted} görsel başarıyla silindi (${totalDeleted} kayıt)`
+      message: `Bülten ${bulletenNo} ve ${totalImagesDeleted} görsel başarıyla silindi (${totalDeleted} kayıt)`
     };
 
   } catch (error) {
-    console.error('❌ Silme hatası:', error);
+    logger.error('❌ Silme hatası:', error);
     return { success: false, error: error.message };
   }
 });
-// functions/index.js - Devamı
-
-// Gerekli yardımcı fonksiyonları ve algoritmaları import et
-// Bu modüllerin functions/ altında da bulunması veya fonksiyon içine taşınması gerekecek.
-// Şimdilik varsayımsal olarak import edeceğiz ve deployment sırasında düzenleme gerekebilir.
-// Eğer bu helper dosyalarını (preprocess, visual-match, phonetic) functions klasörüne kopyalamazsanız,
-// aşağıdaki import yollarını Node.js ortamına uygun olarak ayarlamanız veya bu kodları doğrudan bu dosya içine taşımanız gerekebilir.
-// En temiz yöntem, bu helper'ları functions klasörünün altında ayrı bir utils veya helperlar klasörüne taşımaktır.
-// Şimdilik fonksiyonun içine doğrudan kopyalayacağım ki ek dosya bağımlılığı olmasın.
-
 
 // ======== Yardımcı Fonksiyonlar ve Algoritmalar (scorer.js, preprocess.js, visual-match.js, phonetic.js'ten kopyalandı) ========
 
-// GENERIC_WORDS (preprocess.js'ten kopyalandı)
-const GENERIC_WORDS = [// ======== ŞİRKET TİPLERİ ========
+// GENERIC_WORDS (preprocess.js'ten kopyalandı ve güncellendi)
+const GENERIC_WORDS = [
+    // ======== ŞİRKET TİPLERİ ========
     'ltd', 'şti', 'aş', 'anonim', 'şirketi', 'şirket', 'limited', 'inc', 'corp', 'corporation', 'co', 'company', 'llc', 'group', 'grup',
 
     // ======== TİCARİ SEKTÖRLER ========
     'sanayi', 'ticaret', 'turizm', 'tekstil', 'gıda', 'inşaat', 'danışmanlık', 'hizmet', 'hizmetleri', 'bilişim', 'teknoloji', 'sigorta', 'yayıncılık', 'mobilya', 'otomotiv', 'tarım', 'enerji', 'petrol', 'kimya', 'kozmetik', 'ilaç', 'medikal', 'sağlık', 'eğitim', 'spor', 'müzik', 'film', 'medya', 'reklam', 'pazarlama', 'lojistik', 'nakliyat', 'kargo', 'finans', 'bankacılık', 'emlak', 'gayrimenkul', 'madencilik', 'metal', 'plastik', 'cam', 'seramik', 'ahşap',
 
     // ======== MESLEKİ TERİMLER ========
-    'mühendislik', 'proje', 'taahhüt', 'ithalat', 'ihracat', 'üretim', 'imalat', 'veteriner', 'petshop', 'polikliniği', 'hastane', 'klinik', 'müşavirlik', 'muhasebe', 'hukuk', 'avukatlık', 'mimarlık', 'peyzaj', 'tasarım', 'dizayn', 'design', 'grafik', 'web', 'yazılım', 'software', 'donanım', 'hardware', 'elektronik', 'elektrik', 'makina', 'makine', 'endüstri', 'fabrika', 'laboratuvar', 'araştırma', 'geliştirme', 'ofis', // 'ofis' eklendi
+    'mühendislik', 'proje', 'taahhüt', 'ithalat', 'ihracat', 'üretim', 'imalat', 'veteriner', 'petshop', 'polikliniği', 'hastane', 'klinik', 'müşavirlik', 'muhasebe', 'hukuk', 'avukatlık', 'mimarlık', 'peyzaj', 'tasarım', 'dizayn', 'design', 'grafik', 'web', 'yazılım', 'software', 'donanım', 'hardware', 'elektronik', 'elektrik', 'makina', 'makine', 'endüstri', 'fabrika', 'laboratuvar', 'araştırma', 'geliştirme', 'ofis', 
 
     // ======== ÜRÜN/HİZMET TERİMLERİ ========
-    'ürün', // 'ürün' kökü eklendi (ürünleri, ürünler gibi varyasyonları kapsayacak)
-    'products', 'services', 'solutions', 'çözüm', // 'çözümleri' yerine 'çözüm' kökü
-    'sistem', 'systems', 'teknolojileri', 'teknoloji', // 'teknolojileri' yanına 'teknoloji'
+    'ürün', 
+    'products', 'services', 'solutions', 'çözüm', 
+    'sistem', 'systems', 'teknolojileri', 'teknoloji', 
     'malzeme', 'materials', 'ekipman', 'equipment', 'cihaz', 'device', 'araç', 'tools', 'yedek', 'parça', 'parts', 'aksesuar', 'accessories', 'gereç', 'malzeme',
 
     // ======== GENEL MARKALAŞMA TERİMLERİ ========
-    'meşhur', 'ünlü', 'famous', 'since', 'est', 'established', 'tarihi', 'historical', 'geleneksel', 'traditional', 'klasik', 'classic', 'yeni', 'new', 'fresh', 'taze', 'özel', 'special', 'premium', 'lüks', 'luxury', 'kalite', // 'kalite' eklendi
-    'quality', 'uygun', // 'uygun' eklendi
+    'meşhur', 'ünlü', 'famous', 'since', 'est', 'established', 'tarihi', 'historical', 'geleneksel', 'traditional', 'klasik', 'classic', 'yeni', 'new', 'fresh', 'taze', 'özel', 'special', 'premium', 'lüks', 'luxury', 'kalite', 
+    'quality', 'uygun', 
 
     // ======== LOKASYON TERİMLERİ ========
     'turkey', 'türkiye', 'international', 'uluslararası',
@@ -1177,56 +1318,44 @@ const GENERIC_WORDS = [// ======== ŞİRKET TİPLERİ ========
     // ======== GIDA TERİMLERİ ========
     'gıda', 'food', 'yemek', 'restaurant', 'restoran', 'cafe', 'kahve', 'coffee', 'çay', 'tea', 'fırın', 'bakery', 'ekmek', 'bread', 'pasta', 'börek', 'pizza', 'burger', 'kebap', 'döner', 'pide', 'lahmacun', 'balık', 'fish', 'et', 'meat', 'tavuk', 'chicken', 'sebze', 'vegetable', 'meyve', 'fruit', 'süt', 'milk', 'peynir', 'cheese', 'yoğurt', 'yogurt', 'dondurma', 'şeker', 'sugar', 'bal', 'reçel', 'jam', 'konserve', 'canned', 'organic', 'organik', 'doğal', 'natural', 'taze', 'fresh',
 
+    // ======== WEB/URL TERİMLERİ ========
+    'www', 'http', 'https', 'com', 'net', 'org', 'tr', 'info', 'biz', 'edu', 'gov',
+
     // ======== BAĞLAÇLAR ve Yaygın Kelimeler ========
-    've', 'ile', 'için', 'bir', 'bu', 'da', 'de', 'ki', 'mi', 'mı', 'mu', 'mü',
+    've', 
+    'ile', 'için', 'bir', 'bu', 'da', 'de', 'ki', 'mi', 'mı', 'mu', 'mü', 
     'sadece', 'tek', 'en', 'çok', 'az', 'üst', 'alt', 'yeni', 'eski'
 ];
 
+// Helper for stemming (preprocess.js'ten kopyalandı ve geliştirildi)
 function removeTurkishSuffixes(word) {
     if (!word) return '';
     
-    // Çoğul ekleri: -ler, -lar
+    // Basit çoğul ekleri: -ler, -lar
     if (word.endsWith('ler') || word.endsWith('lar')) {
         return word.substring(0, word.length - 3);
     }
-    // İyelik ekleri (basit formlar): -im, -in, -i, -ımız, -ınız, -ları
-    // Örneğin, 'ofisi' -> 'ofis'
-    if (word.endsWith('si') || word.endsWith('sı') || word.endsWith('sü') || word.endsWith('su')) {
+    // Basit iyelik ekleri (3. tekil/çoğul şahıs): -si, -sı, -sü, -su, -i, -ı, -ü, -u
+    if (word.length > 2 && (word.endsWith('si') || word.endsWith('sı') || word.endsWith('sü') || word.endsWith('su'))) {
         return word.substring(0, word.length - 2);
     }
-    if (word.endsWith('i') || word.endsWith('ı') || word.endsWith('u') || word.endsWith('ü')) {
-        // 'gıda' gibi kelimelerde 'ı' son ek olmamalı, bu yüzden dikkatli olmalı
-        // Daha güvenli bir kontrol için kelime kökü kontrol edilebilir
-        // Şimdilik sadece iyelik ve yönelme eklerini çıkarıyoruz.
-        // Basitçe son harfi kaldırmak riskli, ama şimdilik en yaygın olanları ele alalım
-        if (word.length > 2 && ['i', 'ı', 'u', 'ü'].includes(word[word.length - 1])) {
-             // 'ofis' gibi kelimelerde 'i' iyelik eki olabilir.
-             // Daha sofistike bir çözüm için NLP kütüphanesi gerekir, bu basit bir yaklaşımdır.
-             return word.substring(0, word.length - 1);
-        }
+    if (word.length > 1 && (word.endsWith('i') || word.endsWith('ı') || word.endsWith('u') || word.endsWith('ü'))) {
+        // 'gıda' gibi kelimelerde 'ı' son ek olmayabilir, bu yüzden dikkatli olmak gerek.
+        // Daha güvenli bir kontrol için kelime kökünün anlamı kontrol edilebilir ancak bu basit bir stemmer.
+        return word.substring(0, word.length - 1);
     }
-    // Fiilimsiler, durum ekleri vb. için daha karmaşık kurallar gerekebilir
     
     return word;
 }
 
-/**
- * Marka adını temizler: küçük harfe çevirir, özel karakterleri kaldırır, stopwords'ü çıkarır.
- *
- * @param {string} name Marka adı
- * @param {boolean} removeGenericWords Stopwords'ün çıkarılıp çıkarılmayacağını belirler.
- * Genellikle çok kelimeli isimler için true olmalı.
- * @returns {string} Temizlenmiş marka adı.
- */
-export function cleanMarkName(name, removeGenericWords = true) {
+// preprocess.js'ten kopyalandı ve geliştirildi
+function cleanMarkName(name, removeGenericWords = true) {
     if (!name) return '';
-    let cleaned = name.toLowerCase().replace(/[^a-z0-9ğüşöçı\s]/g, '').trim(); // Harf, rakam ve boşluk dışındaki her şeyi kaldır
+    let cleaned = name.toLowerCase().replace(/[^a-z0-9ğüşöçı\s]/g, '').trim(); 
 
-    // Birden fazla boşluğu tek boşluğa indirge
     cleaned = cleaned.replace(/\s+/g, ' ');
 
     if (removeGenericWords) {
-        // Kelimelere ayır, eklerini kaldır ve stopwords olmayanları filtrele
         cleaned = cleaned.split(' ').filter(word => {
             const stemmedWord = removeTurkishSuffixes(word);
             // Kök kelime veya orijinal kelime stopwords listesinde mi kontrol et
@@ -1259,10 +1388,10 @@ function visualMismatchPenalty(a, b) {
         const cb = b[i].toLowerCase();
 
         if (ca !== cb) {
-            if (visualMap[ca] && visualMap[ca].includes(cb)) {
+            if (visualMap[ca] && visualMap[ca].includes(cb)) { 
                 penalty += 0.25;
             } else {
-                penalty += 1.0;
+                penalty += 1.0; 
             }
         }
     }
@@ -1332,91 +1461,190 @@ function isPhoneticallySimilar(a, b) {
 
     return Math.max(0.0, Math.min(1.0, score));
 }
+
+// filters.js'ten kopyalandı
 function parseDate(value) {
   if (!value) return null;
-  
-  // dd/MM/yyyy formatı desteği (Türkiye standartı)
+  // dd/MM/yyyy formatı desteği
   const parts = value.split('/');
   if (parts.length === 3) {
     const day = parseInt(parts[0], 10);
-    const month = parseInt(parts[1], 10) - 1; // 0-indexed
+    const month = parseInt(parts[1], 10) - 1; 
     const year = parseInt(parts[2], 10);
-    
-    // Geçerlilik kontrolü ekleyin
-    if (day > 0 && day <= 31 && month >= 0 && month <= 11 && year > 1900) {
-      return new Date(year, month, day);
-    }
+    return new Date(year, month, day);
   }
-  
-  // ISO formatı veya başka formatlar için
-  const isoDate = new Date(value);
-  return isNaN(isoDate) ? null : isoDate;
+  return new Date(value); // ISO uyumlu ise
 }
 
-function isValidBasedOnDate(hitDate, monitoredDate) {
-  if (!hitDate || !monitoredDate) return true;
+function isValidBasedOnDate(recordApplicationDate, monitoredApplicationDate) {
+  if (!recordApplicationDate || !monitoredApplicationDate) return true;
 
-  const hit = parseDate(hitDate);
-  const monitored = parseDate(monitoredDate);
+  const hit = parseDate(recordApplicationDate);
+  const monitored = parseDate(monitoredApplicationDate);
 
-  if (!hit || !monitored || isNaN(hit) || isNaN(monitored)) return true;
+  if (!hit || !monitored || isNaN(hit.getTime()) || isNaN(monitored.getTime())) return true; // getTime() ile geçerli tarih kontrolü
 
-  // doğru mantık
   return hit >= monitored;
 }
 
-
-
 function hasOverlappingNiceClasses(monitoredNiceClasses, recordNiceClasses) {
     if (!Array.isArray(monitoredNiceClasses) || monitoredNiceClasses.length === 0) {
-        return true; // Eğer izlenen markanın Nice sınıfı yoksa, sınıf filtresini atla
+        return true; 
     }
     if (!Array.isArray(recordNiceClasses) || recordNiceClasses.length === 0) {
-        return false; // İzlenen markanın sınıfı varken, kayıtta yoksa çakışma yok
+        return false; 
     }
 
-    // Her iki dizide de ortak Nice sınıfı var mı kontrol et
     return monitoredNiceClasses.some(cls => recordNiceClasses.includes(cls));
 }
 
-
 // ======== Ana Benzerlik Skorlama Fonksiyonu (scorer.js'ten kopyalandı) ========
-function levenshteinDistance(a, b) {
-  const matrix = [];
 
-  const lenA = a.length;
-  const lenB = b.length;
+function levenshteinSimilarity(str1, str2) {
+    const matrix = [];
+    if (str1.length === 0) return str2.length === 0 ? 1.0 : 0.0;
+    if (str2.length === 0) return str1.length === 0 ? 1.0 : 0.0;
 
-  for (let i = 0; i <= lenB; i++) matrix[i] = [i];
-  for (let j = 0; j <= lenA; j++) matrix[0][j] = j;
-
-  for (let i = 1; i <= lenB; i++) {
-    for (let j = 1; j <= lenA; j++) {
-      if (b.charAt(i - 1) === a.charAt(j - 1)) {
-        matrix[i][j] = matrix[i - 1][j - 1];
-      } else {
-        matrix[i][j] = Math.min(
-          matrix[i - 1][j - 1] + 1, // substitution
-          matrix[i][j - 1] + 1,     // insertion
-          matrix[i - 1][j] + 1      // deletion
-        );
-      }
+    for (let i = 0; i <= str2.length; i++) {
+        matrix[i] = [i];
     }
-  }
-  return matrix[lenB][lenA];
+    for (let j = 0; j <= str1.length; j++) {
+        matrix[0][j] = j;
+    }
+
+    for (let i = 1; i <= str2.length; i++) {
+        for (let j = 1; j <= str1.length; j++) {
+            const cost = str2.charAt(i - 1) === str1.charAt(j - 1) ? 0 : 1;
+            matrix[i][j] = Math.min(
+                matrix[i - 1][j - 1] + cost, // substitution
+                matrix[i][j - 1] + 1,     // insertion
+                matrix[i - 1][j] + 1      // deletion
+            );
+        }
+    }
+    const maxLength = Math.max(str1.length, str2.length);
+    return maxLength === 0 ? 1.0 : 1.0 - (matrix[str2.length][str1.length] / maxLength);
 }
 
-function levenshteinSimilarity(a, b) {
-  if (!a || !b) return 0;
-  const distance = levenshteinDistance(a, b);
-  const maxLen = Math.max(a.length, b.length);
-  return maxLen === 0 ? 1 : (1 - distance / maxLen);
+function jaroWinklerSimilarity(s1, s2) {
+    if (s1 === s2) return 1.0;
+
+    let m = 0; // matching characters
+    const s1_len = s1.length;
+    const s2_len = s2.length;
+
+    const range = Math.floor(Math.max(s1_len, s2_len) / 2) - 1;
+    const s1_matches = new Array(s1_len);
+    const s2_matches = new Array(s2_len);
+
+    for (let i = 0; i < s1_len; i++) {
+        const char_s1 = s1[i];
+        for (let j = Math.max(0, i - range); j < Math.min(s2_len, i + range + 1); j++) {
+            if (char_s1 === s2[j] && !s2_matches[j]) {
+                s1_matches[i] = true;
+                s2_matches[j] = true;
+                m++;
+                break;
+            }
+        }
+    }
+
+    if (m === 0) return 0.0;
+
+    let k = 0;
+    let t = 0; // transpositions
+    for (let i = 0; i < s1_len; i++) {
+        if (s1_matches[i]) {
+            let j;
+            for (j = k; j < s2_len; j++) {
+                if (s2_matches[j]) {
+                    k = j + 1;
+                    break;
+                }
+            }
+            if (s1[i] !== s2[j]) {
+                t++;
+            }
+        }
+    }
+    t = t / 2;
+
+    const jaro_score = (m / s1_len + m / s2_len + (m - t) / m) / 3;
+
+    const p = 0.1; 
+    let l = 0; 
+    const max_prefix_len = 4; 
+
+    for (let i = 0; i < Math.min(s1_len, s2_len, max_prefix_len); i++) {
+        if (s1[i] === s2[i]) {
+            l++;
+        } else {
+            break;
+        }
+    }
+
+    return jaro_score + l * p * (1 - jaro_score);
 }
+
+function ngramSimilarity(s1, s2, n = 2) {
+    if (!s1 || !s2) return 0.0;
+    if (s1 === s2) return 1.0;
+
+    const getNGrams = (s, num) => {
+        const ngrams = new Set();
+        for (let i = 0; i <= s.length - num; i++) {
+            ngrams.add(s.substring(i, i + num));
+        }
+        return ngrams;
+    };
+
+    const ngrams1 = getNGrams(s1, n);
+    const ngrams2 = getNGrams(s2, n);
+
+    if (ngrams1.size === 0 && ngrams2.size === 0) return 1.0;
+    if (ngrams1.size === 0 || ngrams2.size === 0) return 0.0;
+
+    let common = 0;
+    ngrams1.forEach(ngram => {
+        if (ngrams2.has(ngram)) {
+            common++;
+        }
+    });
+
+    return common / Math.min(ngrams1.size, ngrams2.size);
+}
+
+function prefixSimilarity(s1, s2, length = 3) {
+    if (!s1 || !s2) return 0.0;
+    const prefix1 = s1.substring(0, Math.min(s1.length, length));
+    const prefix2 = s2.substring(0, Math.min(s2.length, length));
+
+    if (prefix1 === prefix2) return 1.0;
+    if (prefix1.length === 0 && prefix2.length === 0) return 1.0;
+
+    return levenshteinSimilarity(prefix1, prefix2);
+}
+
+function maxWordSimilarity(s1, s2) {
+    if (!s1 || !s2) return 0.0;
+
+    const words1 = s1.split(' ').filter(w => w.length > 0);
+    const words2 = s2.split(' ').filter(w => w.length > 0);
+
+    if (words1.length === 0 && words2.length === 0) return 1.0;
+    if (words1.length === 0 || words2.length === 0) return 0.0;
+
+    let maxSim = 0.0;
+    for (const w1 of words1) {
+        for (const w2 of words2) {
+            maxSim = Math.max(maxSim, levenshteinSimilarity(w1, w2));
+        }
+    }
+    return maxSim;
+}
+
 
 function calculateSimilarityScoreInternal(hitMarkName, searchMarkName, hitApplicationDate, searchApplicationDate, hitNiceClasses, searchNiceClasses) {
-    // Jenerik ibare temizliği
-    // Sadece birden fazla kelime içeren markalar için generic kelime temizliği yap.
-    // Tek kelimelik markalarda 'market' gibi kelimeler temizlenmemeli, çünkü markanın çekirdeği olabilir.
     const isSearchMultiWord = searchMarkName.trim().split(/\s+/).length > 1;
     const isHitMultiWord = (hitMarkName || '').trim().split(/\s+/).length > 1;
 
@@ -1429,216 +1657,54 @@ function calculateSimilarityScoreInternal(hitMarkName, searchMarkName, hitApplic
         return 0.0;
     }
 
-    // Tam eşleşme kontrolü (en yüksek öncelik)
     if (cleanedSearchName === cleanedHitName) {
         return 1.0;
     }
 
-    // ======== Alt Benzerlik Skorları ========
-    // Levenshtein Benzerlik Skoru
-    const levenshteinScore = (() => {
-        const matrix = [];
-        if (cleanedSearchName.length === 0) return cleanedHitName.length === 0 ? 1.0 : 0.0;
-        if (cleanedHitName.length === 0) return cleanedSearchName.length === 0 ? 1.0 : 0.0;
-    
-        for (let i = 0; i <= cleanedHitName.length; i++) {
-            matrix[i] = [i];
-        }
-        for (let j = 0; j <= cleanedSearchName.length; j++) {
-            matrix[0][j] = j;
-        }
-    
-        for (let i = 1; i <= cleanedHitName.length; i++) {
-            for (let j = 1; j <= cleanedSearchName.length; j++) {
-                const cost = cleanedHitName.charAt(i - 1) === cleanedSearchName.charAt(j - 1) ? 0 : 1;
-                matrix[i][j] = Math.min(
-                    matrix[i - 1][j - 1] + cost, // substitution
-                    matrix[i][j - 1] + 1,     // insertion
-                    matrix[i - 1][j] + 1      // deletion
-                );
-            }
-        }
-        const maxLength = Math.max(cleanedSearchName.length, cleanedHitName.length);
-        return maxLength === 0 ? 1.0 : 1.0 - (matrix[cleanedHitName.length][cleanedSearchName.length] / maxLength);
-    })();
+    const levenshteinScore = levenshteinSimilarity(cleanedSearchName, cleanedHitName);
     logger.log(`   - Levenshtein Score: ${levenshteinScore.toFixed(2)}`);
 
-    // Jaro-Winkler Benzerlik Skoru
-    const jaroWinklerScore = (() => {
-        const s1 = cleanedSearchName;
-        const s2 = cleanedHitName;
-        if (s1 === s2) return 1.0;
-
-        let m = 0; // matching characters
-        const s1_len = s1.length;
-        const s2_len = s2.length;
-
-        const range = Math.floor(Math.max(s1_len, s2_len) / 2) - 1;
-        const s1_matches = new Array(s1_len);
-        const s2_matches = new Array(s2_len);
-
-        for (let i = 0; i < s1_len; i++) {
-            const char_s1 = s1[i];
-            for (let j = Math.max(0, i - range); j < Math.min(s2_len, i + range + 1); j++) {
-                if (char_s1 === s2[j] && !s2_matches[j]) {
-                    s1_matches[i] = true;
-                    s2_matches[j] = true;
-                    m++;
-                    break;
-                }
-            }
-        }
-
-        if (m === 0) return 0.0;
-
-        let k = 0;
-        let t = 0; // transpositions
-        for (let i = 0; i < s1_len; i++) {
-            if (s1_matches[i]) {
-                let j;
-                for (j = k; j < s2_len; j++) {
-                    if (s2_matches[j]) {
-                        k = j + 1;
-                        break;
-                    }
-                }
-                if (s1[i] !== s2[j]) {
-                    t++;
-                }
-            }
-        }
-        t = t / 2;
-
-        const jaro_score = (m / s1_len + m / s2_len + (m - t) / m) / 3;
-
-        // Winkler modification
-        const p = 0.1; // prefix scale (typically 0.1)
-        let l = 0; // length of common prefix
-        const max_prefix_len = 4; // usually up to 4 characters
-
-        for (let i = 0; i < Math.min(s1_len, s2_len, max_prefix_len); i++) {
-            if (s1[i] === s2[i]) {
-                l++;
-            } else {
-                break;
-            }
-        }
-
-        return jaro_score + l * p * (1 - jaro_score);
-    })();
+    const jaroWinklerScore = jaroWinklerSimilarity(cleanedSearchName, cleanedHitName);
     logger.log(`   - Jaro-Winkler Score: ${jaroWinklerScore.toFixed(2)}`);
 
-    // N-gram Benzerlik Skoru (Bigram, n=2)
-    const ngramScore = (() => {
-        const s1 = cleanedSearchName;
-        const s2 = cleanedHitName;
-        const n = 2;
-        if (!s1 || !s2) return 0.0;
-        if (s1 === s2) return 1.0;
-
-        const getNGrams = (s, num) => {
-            const ngrams = new Set();
-            for (let i = 0; i <= s.length - num; i++) {
-                ngrams.add(s.substring(i, i + num));
-            }
-            return ngrams;
-        };
-
-        const ngrams1 = getNGrams(s1, n);
-        const ngrams2 = getNGrams(s2, n);
-
-        if (ngrams1.size === 0 && ngrams2.size === 0) return 1.0;
-        if (ngrams1.size === 0 || ngrams2.size === 0) return 0.0;
-
-        let common = 0;
-        ngrams1.forEach(ngram => {
-            if (ngrams2.has(ngram)) {
-                common++;
-            }
-        });
-
-        return common / Math.min(ngrams1.size, ngrams2.size);
-    })();
+    const ngramScore = ngramSimilarity(cleanedSearchName, cleanedHitName, 2);
     logger.log(`   - N-gram Score (n=2): ${ngramScore.toFixed(2)}`);
 
-    // Görsel Karakter Benzerlik Skoru
-    const visualScore = (() => {
-        const visualPenalty = visualMismatchPenalty(cleanedSearchName, cleanedHitName);
-        const maxPossibleVisualPenalty = Math.max(cleanedSearchName.length, cleanedHitName.length) * 1.0;
-        return maxPossibleVisualPenalty === 0 ? 1.0 : (1.0 - (visualPenalty / maxPossibleVisualPenalty));
-    })();
+    const visualPenalty = visualMismatchPenalty(cleanedSearchName, cleanedHitName);
+    const maxPossibleVisualPenalty = Math.max(cleanedSearchName.length, cleanedHitName.length) * 1.0;
+    const visualScore = maxPossibleVisualPenalty === 0 ? 1.0 : (1.0 - (visualPenalty / maxPossibleVisualPenalty));
     logger.log(`   - Visual Score: ${visualScore.toFixed(2)}`);
 
-    // Önek Benzerlik Skoru (İlk 3 karakter)
-    const prefixScore = (() => {
-        const s1 = cleanedSearchName;
-        const s2 = cleanedHitName;
-        const length = 3;
-        if (!s1 || !s2) return 0.0;
-        const prefix1 = s1.substring(0, Math.min(s1.length, length));
-        const prefix2 = s2.substring(0, Math.min(s2.length, length));
-
-        if (prefix1 === prefix2) return 1.0;
-        if (prefix1.length === 0 && prefix2.length === 0) return 1.0;
-
-        return levenshteinScore; // Önekler arası levenshtein score
-    })();
+    const prefixScore = prefixSimilarity(cleanedSearchName, cleanedHitName, 3);
     logger.log(`   - Prefix Score (len 3): ${prefixScore.toFixed(2)}`);
 
-    // 6. Kelime Bazında En Yüksek Benzerlik Skoru
-    const maxWordScore = (() => {
-        const s1 = cleanedSearchName;
-        const s2 = cleanedHitName;
-        if (!s1 || !s2) return 0.0;
-
-        const words1 = s1.split(' ').filter(w => w.length > 0);
-        const words2 = s2.split(' ').filter(w => w.length > 0);
-
-        if (words1.length === 0 && words2.length === 0) return 1.0;
-        if (words1.length === 0 || words2.length === 0) return 0.0;
-
-        let maxSim = 0.0;
-        for (const w1 of words1) {
-            for (const w2 of words2) {
-                // Burada Levenshtein yerine Jaro-Winkler de kullanabiliriz, tek kelimeler için daha iyi olabilir
-                // Mevcut LevenshteinSimilarity yeterli hassasiyet sunacaktır.
-                maxSim = Math.max(maxSim, levenshteinSimilarity(w1, w2)); // Kelime çiftleri arası Levenshtein
-            }
-        }
-        return maxSim;
-    })();
+    const maxWordScore = maxWordSimilarity(cleanedSearchName, cleanedHitName);
     logger.log(`   - Max Word Score: ${maxWordScore.toFixed(2)}`);
 
     // ======== YENİ KURAL: Yüksek Kelime Benzerliği Kontrolü ve Önceliklendirme ========
-    const HIGH_WORD_SIMILARITY_THRESHOLD = 0.70; // %70 eşiği
+    const HIGH_WORD_SIMILARITY_THRESHOLD = 0.70; 
 
     if (maxWordScore >= HIGH_WORD_SIMILARITY_THRESHOLD) {
         logger.log(`   *** Yüksek kelime bazında benzerlik tespit edildi (${(maxWordScore * 100).toFixed(0)}%), doğrudan skor olarak kullanılıyor. ***`);
-        // Eğer bir kelime %70 veya üzeri benzerse, doğrudan o maxWordScore'u nihai skor olarak kullan.
-        // Bu, diğer tüm ağırlıklandırmayı ezer ve bu sonucu üst sıralara taşır.
         return maxWordScore; 
     }
-    
-    // Bu noktadan sonraki kod, sadece maxWordScore eşiği geçemediğinde çalışır.
-    // ======== İsim Benzerliği Alt Toplamı Hesaplama (%95 Ağırlık) ========
+
     const nameSimilarityRaw = (
         levenshteinScore * 0.30 +
         jaroWinklerScore * 0.25 +
         ngramScore * 0.15 +
         visualScore * 0.15 +
         prefixScore * 0.10 +
-        maxWordScore * 0.05
+        maxWordScore * 0.05 
     );
 
     const nameSimilarityWeighted = nameSimilarityRaw * 0.95;
     logger.log(`   - Name Similarity (weighted 95%): ${nameSimilarityWeighted.toFixed(2)}`);
 
-    // ======== Fonetik Benzerlik Skoru (%5 Ağırlık) ========
-    const phoneticScoreRaw = isPhoneticallySimilar(searchMarkName, hitMarkName); // Orijinal isimleri kullan
+    const phoneticScoreRaw = isPhoneticallySimilar(searchMarkName, hitMarkName); 
     const phoneticSimilarityWeighted = phoneticScoreRaw * 0.05;
     logger.log(`   - Phonetic Score (weighted 5%): ${phoneticSimilarityWeighted.toFixed(2)}`);
 
-    // ======== Genel Benzerlik Skoru ========
     let finalScore = nameSimilarityWeighted + phoneticSimilarityWeighted;
 
     finalScore = Math.max(0.0, Math.min(1.0, finalScore));
@@ -1648,105 +1714,98 @@ function calculateSimilarityScoreInternal(hitMarkName, searchMarkName, hitApplic
 }
 
 
-// ======== Yeni Cloud Function: Sunucu Tarafında Marka Benzerliği Araması ========
+// ======== Yeni Cloud Function: Sunucu Tarafında Toplu Marka Benzerliği Araması ========
 
 exports.performTrademarkSimilaritySearch = onCall(
-  {
-    region: 'europe-west1',
-    timeoutSeconds: 300,
-    memory: '1GiB'
-  },
-  async (request) => {
-    const { monitoredMarks, selectedBulletinId } = request.data;
+    {
+        region: 'europe-west1',
+        timeoutSeconds: 300, 
+        memory: '1GB' 
+    },
+    async (request) => {
+        const { monitoredMarks, selectedBulletinId } = request.data; 
 
-    if (!Array.isArray(monitoredMarks) || monitoredMarks.length === 0 || !selectedBulletinId) {
-      throw new HttpsError(
-        'invalid-argument',
-        'Missing required parameters: monitoredMarks (array) or selectedBulletinId'
-      );
-    }
-
-    logger.log('🚀 Cloud Function: performTrademarkSimilaritySearch BAŞLATILDI', {
-      numMonitoredMarks: monitoredMarks.length,
-      selectedBulletinId
-    });
-
-    try {
-      const trademarkRecordsRef = db.collection('trademarkBulletinRecords');
-      const bulletinRecordsSnapshot = await trademarkRecordsRef
-        .where('bulletinId', '==', selectedBulletinId)
-        .get();
-
-      const bulletinRecords = bulletinRecordsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      logger.log(`✅ ${bulletinRecords.length} kayıt bulundu.`);
-
-      const allResults = [];
-
-      for (const monitoredMark of monitoredMarks) {
-        const { markName, applicationDate, niceClasses } = monitoredMark;
-        if (!markName) {
-          logger.warn(`⚠️ İzlenen markanın adı eksik: ${JSON.stringify(monitoredMark)}`);
-          continue;
+        if (!Array.isArray(monitoredMarks) || monitoredMarks.length === 0 || !selectedBulletinId) {
+            throw new HttpsError('invalid-argument', 'Missing required parameters: monitoredMarks (array) or selectedBulletinId');
         }
 
-        logger.log(`🔎 İzlenen marka için arama: '${markName}' (${applicationDate || 'tarih yok'})`);
+        logger.log('🚀 Cloud Function: performTrademarkSimilaritySearch başlatıldı (toplu arama)', { 
+            numMonitoredMarks: monitoredMarks.length, 
+            selectedBulletinId 
+        });
 
-        for (const hit of bulletinRecords) {
-          // Tarih filtresi
-          if (!isValidBasedOnDate(hit.applicationDate, applicationDate)) {
-            logger.log(`⏩ Tarih filtresi elendi: ${hit.markName} (${hit.applicationDate})`);
-            continue;
-          }
+        const trademarkRecordsRef = db.collection('trademarkBulletinRecords');
+        const allResults = []; 
 
-          // Nice sınıf filtresi
-          const hasNiceClassOverlap = hasOverlappingNiceClasses(niceClasses, hit.niceClasses);
-          if (Array.isArray(niceClasses) && niceClasses.length > 0 && !hasNiceClassOverlap) {
-            logger.log(`⏩ Nice sınıf çakışması yok: ${hit.markName} [${hit.niceClasses}]`);
-            continue;
-          }
+        try {
+            const bulletinRecordsSnapshot = await trademarkRecordsRef
+                .where('bulletinId', '==', selectedBulletinId)
+                .get();
 
-          // Benzerlik skoru
-          const similarityScore = calculateSimilarityScoreInternal(
-            hit.markName,
-            markName,
-            hit.applicationDate,
-            applicationDate,
-            hit.niceClasses,
-            niceClasses
-          );
+            const bulletinRecords = bulletinRecordsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            logger.log(`✅ ${bulletinRecords.length} adet trademarkBulletinRecords bulundu (bülten ID'ye göre filtrelendi).`);
 
-          const SIMILARITY_THRESHOLD = 0.5; // başlangıç için düşük eşik
-          if (similarityScore < SIMILARITY_THRESHOLD) {
-            logger.log(`⏩ Skor düşük (${similarityScore.toFixed(2)}): ${hit.markName}`);
-            continue;
-          }
+            for (const monitoredMark of monitoredMarks) {
+                const { id: monitoredMarkId, markName, applicationDate, niceClasses } = monitoredMark; // id'yi de alıyoruz
 
-          allResults.push({
-            objectID: hit.id,
-            markName: hit.markName,
-            applicationNo: hit.applicationNo,
-            applicationDate: hit.applicationDate,
-            niceClasses: hit.niceClasses,
-            holders: hit.holders,
-            imagePath: hit.imagePath,
-            bulletinId: hit.bulletinId,
-            similarityScore,
-            sameClass: hasNiceClassOverlap,
-            monitoredTrademark: markName,
-            monitoredNiceClasses: niceClasses
-          });
+                if (!markName) {
+                    logger.warn(`⚠️ İzlenen markanın adı eksik. Atlanıyor: ${JSON.stringify(monitoredMark)}`);
+                    continue;
+                }
+
+                logger.log(`🔎 İzlenen marka için arama: '${markName}' (ID: ${monitoredMarkId})`);
+                
+                for (const hit of bulletinRecords) {
+                    const isDateValid = isValidBasedOnDate(hit.applicationDate, applicationDate);
+                    if (!isDateValid) {
+                        continue;
+                    }
+
+                    const hasNiceClassOverlap = hasOverlappingNiceClasses(niceClasses, hit.niceClasses);
+                    if (niceClasses && Array.isArray(niceClasses) && niceClasses.length > 0 && !hasNiceClassOverlap) {
+                        continue;
+                    }
+
+                    const similarityScore = calculateSimilarityScoreInternal(
+                        hit.markName, 
+                        markName, 
+                        hit.applicationDate, 
+                        applicationDate, 
+                        hit.niceClasses, 
+                        niceClasses
+                    );
+
+                    const SIMILARITY_THRESHOLD = 0.3; 
+                    if (similarityScore < SIMILARITY_THRESHOLD) {
+                        continue;
+                    }
+
+                    allResults.push({
+                        objectID: hit.id,
+                        markName: hit.markName,
+                        applicationNo: hit.applicationNo,
+                        applicationDate: hit.applicationDate,
+                        niceClasses: hit.niceClasses,
+                        holders: hit.holders,
+                        imagePath: hit.imagePath,
+                        bulletinId: hit.bulletinId,
+                        similarityScore: similarityScore,
+                        sameClass: hasNiceClassOverlap,
+                        monitoredTrademark: markName, 
+                        monitoredNiceClasses: niceClasses,
+                        monitoredMarkId: monitoredMarkId // Hangi monitoredMark'tan geldiğini belirtiyoruz
+                    });
+                }
+            }
+            
+            allResults.sort((a, b) => b.similarityScore - a.similarityScore);
+
+            logger.log(`✅ Cloud Function: Toplam ${allResults.length} sonuç döndürüyor.`);
+            return { success: true, results: allResults };
+
+        } catch (error) {
+            logger.error('❌ Cloud Function: performTrademarkSimilaritySearch hatası:', error);
+            throw new HttpsError('internal', 'Marka benzerliği araması sırasında bir hata oluştu.', error.message);
         }
-      }
-
-      allResults.sort((a, b) => b.similarityScore - a.similarityScore);
-      logger.log(`✅ Toplam ${allResults.length} sonuç döndürüldü.`);
-
-      return { success: true, results: allResults };
-    } catch (error) {
-      logger.error('❌ Cloud Function hata:', error);
-      throw new HttpsError('internal', 'Marka benzerliği araması sırasında hata oluştu.', error.message);
     }
-  }
 );
-
-
