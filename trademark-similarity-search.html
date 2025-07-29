@@ -65,6 +65,16 @@
         .similarity-btn.similar:hover {
             background-color: #22c55e;
         }
+        .group-header {
+            background-color: #f8f9fa !important;
+            font-weight: bold;
+            border-bottom: 2px solid #dee2e6 !important;
+        }
+
+        .group-header td {
+            padding: 15px !important;
+            color: #495057;
+        }
     </style>
 </head>
 <body>
@@ -442,52 +452,74 @@ function renderCurrentPageOfResults() {
          noRecordsMessage.style.display = 'block';
     }
 
-    // Arama sonuçları başlığını güncelle
+    // Basit başlık güncelle
     updateSearchResultsHeader();
 
+    // Sonuçları marka bazında grupla ve render et
+    const groupedResults = {};
     currentPageData.forEach(hit => {
-        const holders = Array.isArray(hit.holders) ? hit.holders.map(h => h.name || h.id).join(', ') : (hit.holders || '');
+        const monitoredTrademark = hit.monitoredTrademark || 'Bilinmeyen Marka';
+        if (!groupedResults[monitoredTrademark]) {
+            groupedResults[monitoredTrademark] = [];
+        }
+        groupedResults[monitoredTrademark].push(hit);
+    });
 
-        const monitoredNice = hit.monitoredNiceClasses || [];
-        const niceClassHtml = Array.isArray(hit.niceClasses) 
-            ? hit.niceClasses.map(cls => `<span class="nice-class-badge ${monitoredNice.includes(cls) ? 'match' : ''}">${cls}</span>`).join('') 
-            : (hit.niceClasses || '');
-        const similarityScore = hit.similarityScore ? `${(hit.similarityScore * 100).toFixed(0)}%` : '-';
-
-        // Benzerlik durumu butonu
-        const isSimilar = hit.isSimilar;
-        const similarityBtnClass = isSimilar === true ? 'similar' : 'not-similar';
-        const similarityBtnText = isSimilar === true ? 'Benzer' : 'Benzemez';
-        const resultId = hit.objectID || hit.applicationNo;
-
-        const row = document.createElement('tr');
-        row.innerHTML = `
-            <td>${hit.applicationNo || '-'}</td>
-            <td><strong>${hit.markName || '-'}</strong><br><small>İzlenen: ${hit.monitoredTrademark}</small></td>
-            <td>${holders}</td>
-            <td>${niceClassHtml}</td>
-            <td>${similarityScore}</td>
-            <td>
-                <button class="similarity-btn ${similarityBtnClass}" 
-                        onclick="toggleSimilarity('${resultId}', '${hit.monitoredTrademark}', this)">
-                    ${similarityBtnText}
-                </button>
-                <button class="btn btn-sm btn-primary" onclick="viewRecord('${resultId}')">👁️ Görüntüle</button>
+    // Her marka grubu için render et
+    Object.keys(groupedResults).forEach(monitoredTrademark => {
+        // Marka grup başlığı ekle
+        const groupHeaderRow = document.createElement('tr');
+        groupHeaderRow.style.backgroundColor = '#f8f9fa';
+        groupHeaderRow.style.fontWeight = 'bold';
+        groupHeaderRow.innerHTML = `
+            <td colspan="6" style="padding: 15px; border-bottom: 2px solid #dee2e6;">
+                📋 <strong>${monitoredTrademark}</strong> markası için bulunan benzer sonuçlar (${groupedResults[monitoredTrademark].length} adet)
             </td>
         `;
-        resultsTableBody.appendChild(row);
+        resultsTableBody.appendChild(groupHeaderRow);
+
+        // Bu marka için sonuçları render et
+        groupedResults[monitoredTrademark].forEach(hit => {
+            const holders = Array.isArray(hit.holders) ? hit.holders.map(h => h.name || h.id).join(', ') : (hit.holders || '');
+
+            const monitoredNice = hit.monitoredNiceClasses || [];
+            const niceClassHtml = Array.isArray(hit.niceClasses) 
+                ? hit.niceClasses.map(cls => `<span class="nice-class-badge ${monitoredNice.includes(cls) ? 'match' : ''}">${cls}</span>`).join('') 
+                : (hit.niceClasses || '');
+            const similarityScore = hit.similarityScore ? `${(hit.similarityScore * 100).toFixed(0)}%` : '-';
+
+            // Benzerlik durumu butonu
+            const isSimilar = hit.isSimilar;
+            const similarityBtnClass = isSimilar === true ? 'similar' : 'not-similar';
+            const similarityBtnText = isSimilar === true ? 'Benzer' : 'Benzemez';
+            const resultId = hit.objectID || hit.applicationNo;
+
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${hit.applicationNo || '-'}</td>
+                <td><strong>${hit.markName || '-'}</strong></td>
+                <td>${holders}</td>
+                <td>${niceClassHtml}</td>
+                <td>${similarityScore}</td>
+                <td>
+                    <button class="similarity-btn ${similarityBtnClass}" 
+                            onclick="toggleSimilarity('${resultId}', '${hit.monitoredTrademark}', this)">
+                        ${similarityBtnText}
+                    </button>
+                    <button class="btn btn-sm btn-primary" onclick="viewRecord('${resultId}')">👁️ Görüntüle</button>
+                </td>
+            `;
+            resultsTableBody.appendChild(row);
+        });
     });
 }
 
 // Arama sonuçları başlığını güncelleme
 function updateSearchResultsHeader() {
     const resultsHeader = document.querySelector('.results-header h3');
-    if (resultsHeader && filteredMonitoringTrademarks.length > 0) {
-        // İzlenen marka isimlerini topla
-        const searchedTrademarks = filteredMonitoringTrademarks.map(tm => tm.title || tm.markName).join(', ');
-        const bulletinText = bulletinSelect.value ? ` (${bulletinSelect.value} bülteni)` : '';
-        
-        resultsHeader.innerHTML = `Arama Sonuçları: <strong>${searchedTrademarks}</strong>${bulletinText}`;
+    if (resultsHeader) {
+        // Sadece basit başlık, marka isimlerini gösterme
+        resultsHeader.innerHTML = `Arama Sonuçları`;
     }
 }
 
