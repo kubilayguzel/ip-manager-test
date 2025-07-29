@@ -1331,6 +1331,12 @@ function hasOverlappingNiceClasses(monitoredNiceClasses, recordNiceClasses) {
 
 
 // ======== Ana Benzerlik Skorlama Fonksiyonu (scorer.js'ten kopyalandı) ========
+function levenshteinSimilarity(a, b) {
+  if (!a || !b) return 0;
+  const distance = levenshteinDistance(a, b);
+  const maxLen = Math.max(a.length, b.length);
+  return maxLen === 0 ? 1 : (1 - distance / maxLen);
+}
 
 function calculateSimilarityScoreInternal(hitMarkName, searchMarkName, hitApplicationDate, searchApplicationDate, hitNiceClasses, searchNiceClasses) {
     // Jenerik ibare temizliği
