@@ -1556,109 +1556,101 @@ function calculateSimilarityScoreInternal(hitMarkName, searchMarkName, hitApplic
 
 // ======== Yeni Cloud Function: Sunucu Tarafında Marka Benzerliği Araması ========
 
-exports.performTrademarkSimilaritySearch = onCall(
-    {
-        region: 'europe-west1',
-        timeoutSeconds: 300, // 5 dakika, birden fazla markayı işlemek için yeterli olmalı
-        memory: '1GB' // Bellek ihtiyacına göre artırılabilir
-    },
-    async (request) => {
-        const { monitoredMarks, selectedBulletinId } = request.data; // Artık bir dizi monitoredMarks bekliyoruz
-
-        if (!Array.isArray(monitoredMarks) || monitoredMarks.length === 0 || !selectedBulletinId) {
-            throw new HttpsError('invalid-argument', 'Missing required parameters: monitoredMarks (array) or selectedBulletinId');
-        }
-
-        logger.log('🚀 Cloud Function: performTrademarkSimilaritySearch başlatıldı (toplu arama)', { 
-            numMonitoredMarks: monitoredMarks.length, 
-            selectedBulletinId 
-        });
-
-        const trademarkRecordsRef = db.collection('trademarkBulletinRecords');
-        const allResults = []; // Tüm izlenen markaların sonuçları burada toplanacak
-
-        try {
-            // İlgili bültene ait tüm kayıtları bir kez çek (bu, her izlenen marka için tekrar tekrar yapılmayacak)
-            const bulletinRecordsSnapshot = await trademarkRecordsRef
-                .where('bulletinId', '==', selectedBulletinId)
-                .get();
-
-            const bulletinRecords = bulletinRecordsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            logger.log(`✅ ${bulletinRecords.length} adet trademarkBulletinRecords bulundu (bülten ID'ye göre filtrelendi).`);
-
-            // Her bir izlenen marka için arama yap
-            for (const monitoredMark of monitoredMarks) {
-                const { markName, applicationDate, niceClasses } = monitoredMark;
-
-                // İzlenen markanın temel bilgileri eksikse atla
-                if (!markName) {
-                    logger.warn(`⚠️ İzlenen markanın adı eksik. Atlanıyor: ${JSON.stringify(monitoredMark)}`);
-                    continue;
-                }
-
-                logger.log(`🔎 İzlenen marka için arama: '${markName}'`);
-                
-                // Bülten kayıtları üzerinde döngü
-                for (const hit of bulletinRecords) {
-                    // Client tarafındaki filtreleme mantığını buraya taşıyoruz
-                    // Tarih filtresi
-                    const isDateValid = isValidBasedOnDate(hit.applicationDate, applicationDate);
-                    if (!isDateValid) {
-                        // logger.log(`🚫 CF: Tarih filtresi: ${hit.markName} (${hit.applicationDate}) geçersiz.`);
-                        continue;
-                    }
-
-                    // Nice sınıfı çakışması
-                    const hasNiceClassOverlap = hasOverlappingNiceClasses(niceClasses, hit.niceClasses);
-                    if (niceClasses && Array.isArray(niceClasses) && niceClasses.length > 0 && !hasNiceClassOverlap) {
-                        // logger.log(`🚫 CF: Nice sınıfı çakışması yok: ${hit.markName}`);
-                        continue;
-                    }
-
-                    // Benzerlik skorunu hesapla
-                    const similarityScore = calculateSimilarityScoreInternal(
-                        hit.markName, 
-                        markName, 
-                        hit.applicationDate, 
-                        applicationDate, 
-                        hit.niceClasses, 
-                        niceClasses
-                    );
-
-                    // Belirli bir eşik değerinin üzerindeki sonuçları dahil et
-                    const SIMILARITY_THRESHOLD = 0.3; // Eşik değeri sabit
-                    if (similarityScore < SIMILARITY_THRESHOLD) {
-                        // logger.log(`📉 CF: Düşük benzerlik skoru (${similarityScore.toFixed(2)}): ${hit.markName}`);
-                        continue;
-                    }
-
-                    allResults.push({
-                        objectID: hit.id,
-                        markName: hit.markName,
-                        applicationNo: hit.applicationNo,
-                        applicationDate: hit.applicationDate,
-                        niceClasses: hit.niceClasses,
-                        holders: hit.holders,
-                        imagePath: hit.imagePath,
-                        bulletinId: hit.bulletinId,
-                        similarityScore: similarityScore,
-                        sameClass: hasNiceClassOverlap,
-                        monitoredTrademark: markName, // Bu sonucu hangi izlenen marka tetikledi
-                        monitoredNiceClasses: niceClasses // Bu sonucu tetikleyen izlenen markanın sınıfları
-                    });
-                }
-            }
-            
-            // Tüm sonuçları benzerlik skoruna göre azalan sırada sırala (genel sıralama)
-            allResults.sort((a, b) => b.similarityScore - a.similarityScore);
-
-            logger.log(`✅ Cloud Function: Toplam ${allResults.length} sonuç döndürüyor.`);
-            return { success: true, results: allResults };
-
-        } catch (error) {
-            logger.error('❌ Cloud Function: performTrademarkSimilaritySearch hatası:', error);
-            throw new HttpsError('internal', 'Marka benzerliği araması sırasında bir hata oluştu.', error.message);
-        }
+exports.performTrademarkSimilaritySearch = onRequest(
+  {
+    region: 'europe-west1',
+    timeoutSeconds: 300, // 5 dakika
+    memory: '1GiB'
+  },
+  async (req, res) => {
+    if (req.method !== 'POST') {
+      return res.status(405).json({ success: false, error: 'Method Not Allowed' });
     }
+
+    const { monitoredMarks, selectedBulletinId } = req.body;
+    if (!Array.isArray(monitoredMarks) || monitoredMarks.length === 0 || !selectedBulletinId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required parameters: monitoredMarks (array) or selectedBulletinId'
+      });
+    }
+
+    logger.log('🚀 Cloud Function: performTrademarkSimilaritySearch başlatıldı (toplu arama)', {
+      numMonitoredMarks: monitoredMarks.length,
+      selectedBulletinId
+    });
+
+    try {
+      const trademarkRecordsRef = db.collection('trademarkBulletinRecords');
+      const bulletinRecordsSnapshot = await trademarkRecordsRef
+        .where('bulletinId', '==', selectedBulletinId)
+        .get();
+
+      const bulletinRecords = bulletinRecordsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      logger.log(`✅ ${bulletinRecords.length} adet trademarkBulletinRecords bulundu.`);
+
+      const allResults = [];
+
+      for (const monitoredMark of monitoredMarks) {
+        const { markName, applicationDate, niceClasses } = monitoredMark;
+        if (!markName) {
+          logger.warn(`⚠️ İzlenen markanın adı eksik. Atlanıyor: ${JSON.stringify(monitoredMark)}`);
+          continue;
+        }
+
+        logger.log(`🔎 İzlenen marka için arama: '${markName}'`);
+
+        for (const hit of bulletinRecords) {
+          // Tarih filtresi
+          if (!isValidBasedOnDate(hit.applicationDate, applicationDate)) continue;
+
+          // Nice sınıfı çakışması
+          const hasNiceClassOverlap = hasOverlappingNiceClasses(niceClasses, hit.niceClasses);
+          if (Array.isArray(niceClasses) && niceClasses.length > 0 && !hasNiceClassOverlap) continue;
+
+          // Benzerlik skorunu hesapla
+          const similarityScore = calculateSimilarityScoreInternal(
+            hit.markName,
+            markName,
+            hit.applicationDate,
+            applicationDate,
+            hit.niceClasses,
+            niceClasses
+          );
+
+          // Eşik kontrolü
+          const SIMILARITY_THRESHOLD = 0.3;
+          if (similarityScore < SIMILARITY_THRESHOLD) continue;
+
+          allResults.push({
+            objectID: hit.id,
+            markName: hit.markName,
+            applicationNo: hit.applicationNo,
+            applicationDate: hit.applicationDate,
+            niceClasses: hit.niceClasses,
+            holders: hit.holders,
+            imagePath: hit.imagePath,
+            bulletinId: hit.bulletinId,
+            similarityScore,
+            sameClass: hasNiceClassOverlap,
+            monitoredTrademark: markName,
+            monitoredNiceClasses: niceClasses
+          });
+        }
+      }
+
+      allResults.sort((a, b) => b.similarityScore - a.similarityScore);
+      logger.log(`✅ Cloud Function: Toplam ${allResults.length} sonuç döndürüyor.`);
+
+      return res.json({ success: true, results: allResults });
+    } catch (error) {
+      logger.error('❌ Cloud Function: performTrademarkSimilaritySearch hatası:', error);
+      return res.status(500).json({
+        success: false,
+        error: 'Marka benzerliği araması sırasında bir hata oluştu.',
+        message: error.message
+      });
+    }
+  }
 );
 
