@@ -7,7 +7,7 @@ import { getFunctions, httpsCallable } from 'https://www.gstatic.com/firebasejs/
 console.log(">>> run-search.js modülü yüklendi ve Firebase servisleri kullanılıyor <<<");
 
 // Firebase Functions instance'ı oluştur
-const functions = getFunctions(firebaseServices.app); // firebaseServices.app, Firebase app objenizi temsil etmeli
+const functions = getFunctions(firebaseServices.app, "europe-west1"); // firebaseServices.app, Firebase app objenizi temsil etmeli
 
 // performTrademarkSimilaritySearch Cloud Function'ını çağırılabilir yap
 const performSearchCallable = httpsCallable(functions, 'performTrademarkSimilaritySearch');
