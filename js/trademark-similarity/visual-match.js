@@ -50,7 +50,7 @@ const visualMap = {
  * Ek kelime veya uzunluk farkı → ek ceza (0.5 * fark).
  */
 export function visualMismatchPenalty(a, b) {
-  if (!a || !b) return 5;
+  if (!a || !b) return 5; // Herhangi biri boşsa yüksek ceza
 
   const lenDiff = Math.abs(a.length - b.length);
   const minLen = Math.min(a.length, b.length);
@@ -61,7 +61,7 @@ export function visualMismatchPenalty(a, b) {
     const cb = b[i].toLowerCase();
 
     if (ca !== cb) {
-      if (visualMap[ca]?.includes(cb)) {
+      if (visualMap[ca] && visualMap[ca].includes(cb)) { // visualMap[ca] null/undefined değilse kontrol et
         penalty += 0.25;  // görsel benzer harf → düşük ceza
       } else {
         penalty += 1.0;   // normal farklı harf → normal ceza
