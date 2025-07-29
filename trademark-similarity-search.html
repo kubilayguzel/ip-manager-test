@@ -30,6 +30,19 @@
         .results-table { width: 100%; border-collapse: collapse; }
         .results-table th, .results-table td { padding: 15px; text-align: left; border-bottom: 1px solid #f0f0f0; }
         .results-table th { background: #f8f9fa; font-weight: 600; }
+        
+        /* Nice sınıfı kolonu daralttıldı */
+        .results-table th:nth-child(4), .results-table td:nth-child(4) { 
+            width: 120px; 
+            max-width: 120px; 
+        }
+        
+        /* İşlemler kolonu için buton gruplandırması */
+        .results-table th:nth-child(6), .results-table td:nth-child(6) { 
+            width: 180px; 
+            white-space: nowrap; 
+        }
+        
         .nice-class-badge { display: inline-block; padding: 4px 8px; border-radius: 8px; font-size: 0.8em; background-color: #e2e3e5; color: #333; margin-right: 4px; }
         .nice-class-badge.match { background-color: #28a745; color: white; font-weight: bold; }
         .loading, .no-records { text-align: center; padding: 50px; color: #666; }
@@ -44,7 +57,7 @@
             padding: 8px 12px; 
             border-radius: 6px; 
             cursor: pointer; 
-            margin-left: 5px; 
+            margin-right: 5px; 
             transition: all 0.3s ease; 
             font-size: 12px;
             font-weight: 500;
@@ -89,6 +102,13 @@
         
         .action-btn.view-btn:hover { 
             background-color: #138496; 
+        }
+
+        /* Buton grubu - butonları yanyana hizalar */
+        .btn-group {
+            display: flex;
+            gap: 5px;
+            align-items: center;
         }
 
         /* Grup başlık stilleri */
@@ -539,11 +559,13 @@ function renderCurrentPageOfResults() {
                 <td>${niceClassHtml}</td>
                 <td>${similarityScore}</td>
                 <td>
-                    <button class="action-btn ${similarityBtnClass}" 
-                            onclick="toggleSimilarity('${resultId}', '${hit.monitoredTrademark}', this)">
-                        ${similarityBtnText}
-                    </button>
-                    <button class="action-btn view-btn" onclick="viewRecord('${resultId}')">👁️ Görüntüle</button>
+                    <div class="btn-group">
+                        <button class="action-btn ${similarityBtnClass}" 
+                                onclick="toggleSimilarity('${resultId}', '${hit.monitoredTrademark}', this)">
+                            ${similarityBtnText}
+                        </button>
+                        <button class="action-btn view-btn" onclick="viewRecord('${resultId}')">👁️ Görüntüle</button>
+                    </div>
                 </td>
             `;
             resultsTableBody.appendChild(row);
