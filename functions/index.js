@@ -1603,7 +1603,7 @@ exports.performTrademarkSimilaritySearch = onCall(
       );
     }
 
-    logger.log('🚀 Cloud Function: performTrademarkSimilaritySearch TEST MODU', {
+    logger.log('🚀 Cloud Function: performTrademarkSimilaritySearch BAŞLATILDI', {
       numMonitoredMarks: monitoredMarks.length,
       selectedBulletinId
     });
@@ -1620,25 +1620,43 @@ exports.performTrademarkSimilaritySearch = onCall(
       const allResults = [];
 
       for (const monitoredMark of monitoredMarks) {
-        const { markName, niceClasses } = monitoredMark;
+        const { markName, applicationDate, niceClasses } = monitoredMark;
         if (!markName) {
           logger.warn(`⚠️ İzlenen markanın adı eksik: ${JSON.stringify(monitoredMark)}`);
           continue;
         }
 
+        logger.log(`🔎 İzlenen marka için arama: '${markName}' (${applicationDate || 'tarih yok'})`);
+
         for (const hit of bulletinRecords) {
-          // === FİLTRELER KAPALI ===
+          // Tarih filtresi
+          if (!isValidBasedOnDate(hit.applicationDate, applicationDate)) {
+            logger.log(`⏩ Tarih filtresi elendi: ${hit.markName} (${hit.applicationDate})`);
+            continue;
+          }
+
+          // Nice sınıf filtresi
+          const hasNiceClassOverlap = hasOverlappingNiceClasses(niceClasses, hit.niceClasses);
+          if (Array.isArray(niceClasses) && niceClasses.length > 0 && !hasNiceClassOverlap) {
+            logger.log(`⏩ Nice sınıf çakışması yok: ${hit.markName} [${hit.niceClasses}]`);
+            continue;
+          }
+
+          // Benzerlik skoru
           const similarityScore = calculateSimilarityScoreInternal(
             hit.markName,
             markName,
             hit.applicationDate,
-            monitoredMark.applicationDate,
+            applicationDate,
             hit.niceClasses,
             niceClasses
           );
 
-          const SIMILARITY_THRESHOLD = 0.0;
-          if (similarityScore < SIMILARITY_THRESHOLD) continue;
+          const SIMILARITY_THRESHOLD = 0.2; // başlangıç için düşük eşik
+          if (similarityScore < SIMILARITY_THRESHOLD) {
+            logger.log(`⏩ Skor düşük (${similarityScore.toFixed(2)}): ${hit.markName}`);
+            continue;
+          }
 
           allResults.push({
             objectID: hit.id,
@@ -1650,7 +1668,7 @@ exports.performTrademarkSimilaritySearch = onCall(
             imagePath: hit.imagePath,
             bulletinId: hit.bulletinId,
             similarityScore,
-            sameClass: true,
+            sameClass: hasNiceClassOverlap,
             monitoredTrademark: markName,
             monitoredNiceClasses: niceClasses
           });
@@ -1658,7 +1676,7 @@ exports.performTrademarkSimilaritySearch = onCall(
       }
 
       allResults.sort((a, b) => b.similarityScore - a.similarityScore);
-      logger.log(`✅ TEST MODU: Toplam ${allResults.length} sonuç döndürüldü.`);
+      logger.log(`✅ Toplam ${allResults.length} sonuç döndürüldü.`);
 
       return { success: true, results: allResults };
     } catch (error) {
@@ -1667,4 +1685,5 @@ exports.performTrademarkSimilaritySearch = onCall(
     }
   }
 );
+
 
