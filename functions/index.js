@@ -54,7 +54,7 @@ const transporter = nodemailer.createTransport({
 // =========================================================
 
 // ETEBS API Proxy Function (v2 sözdizimi)
-exports.etebsProxyV2 = onRequest(
+export const etebsProxyV2 = onRequest(
     {
         region: 'europe-west1',
         timeoutSeconds: 120,
@@ -161,7 +161,7 @@ exports.etebsProxyV2 = onRequest(
 );
 
 // Health Check Function (v2 sözdizimi)
-exports.etebsProxyHealthV2 = onRequest(
+export const etebsProxyHealthV2 = onRequest(
     {
         region: 'europe-west1'
     },
@@ -178,7 +178,7 @@ exports.etebsProxyHealthV2 = onRequest(
 );
 
 // ETEBS Token Validation Function (v2 sözdizimi)
-exports.validateEtebsTokenV2 = onRequest(
+export const validateEtebsTokenV2 = onRequest(
     {
         region: 'europe-west1'
     },
@@ -216,7 +216,7 @@ exports.validateEtebsTokenV2 = onRequest(
 );
 
 // Send Email Notification (v2 Callable Function)
-exports.sendEmailNotificationV2 = onCall(
+export const sendEmailNotificationV2 = onCall(
     {
         region: 'europe-west1'
     },
@@ -273,7 +273,7 @@ exports.sendEmailNotificationV2 = onCall(
 // =========================================================
 
 // Rate Limiting Function (Scheduled) (v2 sözdizimi)
-exports.cleanupEtebsLogsV2 = onSchedule(
+export const cleanupEtebsLogsV2 = onSchedule(
     {
         schedule: 'every 24 hours',
         region: 'europe-west1'
@@ -311,7 +311,7 @@ exports.cleanupEtebsLogsV2 = onSchedule(
 //              FIRESTORE TRIGGER FONKSİYONLARI (v2)
 // =========================================================
 
-exports.createMailNotificationOnDocumentIndexV2 = onDocumentCreated(
+export const createMailNotificationOnDocumentIndexV2 = onDocumentCreated(
     {
         document: "indexed_documents/{docId}",
         region: 'europe-west1'
@@ -424,7 +424,7 @@ exports.createMailNotificationOnDocumentIndexV2 = onDocumentCreated(
     }
 );
 
-exports.createMailNotificationOnDocumentStatusChangeV2 = onDocumentUpdated(
+export const createMailNotificationOnDocumentStatusChangeV2 = onDocumentUpdated(
     {
         document: "unindexed_pdfs/{docId}",
         region: 'europe-west1'
@@ -531,7 +531,7 @@ exports.createMailNotificationOnDocumentStatusChangeV2 = onDocumentUpdated(
     }
 );
 
-exports.createUniversalNotificationOnTaskCompleteV2 = onDocumentUpdated(
+export const createUniversalNotificationOnTaskCompleteV2 = onDocumentUpdated(
     {
         document: "tasks/{taskId}",
         region: 'europe-west1'
@@ -633,7 +633,7 @@ exports.createUniversalNotificationOnTaskCompleteV2 = onDocumentUpdated(
 
 // Trademark Bulletin Upload Processing (v2 Storage Trigger)
 // Debug edilmiş processTrademarkBulletinUploadV2 fonksiyonu
-exports.processTrademarkBulletinUploadV3 = onObjectFinalized(
+export const processTrademarkBulletinUploadV3 = onObjectFinalized(
   {
     region: "europe-west1",
     timeoutSeconds: 540,
@@ -1047,7 +1047,7 @@ function getContentType(filePath) {
 }
 
 // BÜLTEN SİLME 
-exports.deleteBulletinV2 = onCall(
+export const deleteBulletinV2 = onCall(
   { timeoutSeconds: 540, 
     memory: "1GiB", 
     region: "europe-west1" },
@@ -1642,7 +1642,7 @@ function calculateSimilarityScoreInternal(hitMarkName, searchMarkName, hitApplic
 
 // ======== Yeni Cloud Function: Sunucu Tarafında Marka Benzerliği Araması ========
 
-exports.performTrademarkSimilaritySearch = onCall(
+export const performTrademarkSimilaritySearch = onCall(
   {
     region: 'europe-west1',
     timeoutSeconds: 300,
