@@ -1298,24 +1298,16 @@ function isPhoneticallySimilar(a, b) {
 }
 
 // filters.js'ten kopyalandı (kendi fonksiyonunuzdan)
-function isValidBasedOnDate(recordApplicationDate, monitoredApplicationDate) {
-    if (!recordApplicationDate || !monitoredApplicationDate) {
-        return false;
-    }
-    try {
-        // "DD/MM/YYYY" formatını Date objesine çevir
-        const [dayRec, monthRec, yearRec] = recordApplicationDate.split('/').map(Number);
-        const recordDate = new Date(yearRec, monthRec - 1, dayRec); // Ay 0-indexed
+function isValidBasedOnDate(hitDate, monitoredDate) {
+  if (!hitDate || !monitoredDate) return true;
 
-        const [dayMon, monthMon, yearMon] = monitoredApplicationDate.split('/').map(Number);
-        const monitoredDate = new Date(yearMon, monthMon - 1, dayMon); // Ay 0-indexed
+  const hit = new Date(hitDate);
+  const monitored = new Date(monitoredDate);
 
-        return recordDate > monitoredDate;
-    } catch (e) {
-        console.error("Tarih formatı hatası:", e);
-        return false;
-    }
+  // indeksteki marka tarihi >= izlenen marka tarihi olmalı
+  return hit >= monitored;
 }
+
 
 function hasOverlappingNiceClasses(monitoredNiceClasses, recordNiceClasses) {
     if (!Array.isArray(monitoredNiceClasses) || monitoredNiceClasses.length === 0) {
