@@ -4,18 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>IP Manager - Marka Bülten İzleme</title>
-    <script>
-        function loadAlgolia() {
-            return new Promise((resolve) => {
-                const script = document.createElement('script');
-                script.src = 'https://cdn.jsdelivr.net/npm/algoliasearch@4/dist/algoliasearch-lite.umd.js';
-                script.onload = () => resolve(true);
-                script.onerror = () => { console.error("Algolia CDN'den yüklenemedi."); resolve(false); };
-                document.head.appendChild(script);
-            });
-        }
-        window.algoliaLoadPromise = loadAlgolia();
-    </script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333; display: flex; }
@@ -135,13 +123,17 @@
         </main>
     </div>
 <script type="module">
-import Pagination from './js/pagination.js'; 
-import { loadSharedLayout } from './js/layout-loader.js';
+// Firebase Firestore servislerini import et
 import { db, personService, searchRecordService } from './firebase-config.js';
 import { collection, getDocs } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+
+// Kendi arama modülümüzü import et
+import { runTrademarkSearch } from './js/trademark-similarity/run-search.js';
+import Pagination from './js/pagination.js';
+import { loadSharedLayout } from './js/layout-loader.js';
+
 console.log("### trademark-similarity-search.html script yüklendi ###");
 
-let runTrademarkSearch;
 let allSimilarResults = [];
 let monitoringTrademarks = [];
 let filteredMonitoringTrademarks = [];
@@ -191,8 +183,9 @@ async function loadInitialData() {
 async function loadBulletinOptions() {
     const snapshot = await getDocs(collection(db, 'trademarkBulletins'));
     const bulletins = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    // Tarihe göre ters sırala (en yeni bülten en başta)
     bulletins.sort((a, b) => new Date(b.bulletinDate) - new Date(a.bulletinDate));
-    bulletinSelect.innerHTML = '<option value="">Bülten seçin...</option>' +
+    bulletinSelect.innerHTML = '<option value="">Bülten seçiniz...</option>' +
         bulletins.map(b => `<option value="${b.id}">${b.bulletinNo} - ${b.bulletinDate}</option>`).join('');
 }
 
@@ -218,10 +211,22 @@ function renderMonitoringList() {
             <tr>
                 <td>${tm.title || tm.markName || '-'}</td>
                 <td>${tm.applicationNumber || '-'}</td>
-                <td>${tm.owners?.[0]?.name || '-'}</td>
-                <td>${Array.isArray(tm.niceClass) ? tm.niceClass.join(', ') : (tm.niceClass || '-')}</td>
+                <td>${getOwnerNames(tm)}</td> <td>${Array.isArray(tm.niceClass) ? tm.niceClass.join(', ') : (tm.niceClass || '-')}</td>
                 <td>${tm.applicationDate || '-'}</td>
             </tr>`).join('');
+}
+
+// Yardımcı fonksiyon: Sahip isimlerini string olarak döndürür
+function getOwnerNames(item) {
+    if (item.owners && Array.isArray(item.owners)) {
+        return item.owners.map(owner => {
+            const person = allPersons.find(p => p.id === owner.id);
+            return person ? person.name : (owner.name || 'Bilinmeyen Sahip');
+        }).filter(Boolean).join(', ');
+    } else if (typeof item.holders === 'string') { // Algolia'dan gelen 'holders' string olabilir
+        return item.holders;
+    }
+    return '-';
 }
 
 async function checkCacheAndToggleButtonStates() {
@@ -241,12 +246,14 @@ async function checkCacheAndToggleButtonStates() {
         researchBtn.disabled = false;
     }
 
-    if (cachedCount === filteredMonitoringTrademarks.length) {
+    // Algolia'dan tamamen bağımsız olduğumuz için, tüm sonuçlar önbellekteyse doğrudan yükle.
+    if (cachedCount === filteredMonitoringTrademarks.length && filteredMonitoringTrademarks.length > 0) {
         startSearchBtn.disabled = true;
         infoMessageContainer.innerHTML = `<div class="info-message">Bu bülten için tüm sonuçlar önbellekte mevcut. Sonuçlar otomatik olarak yükleniyor...</div>`;
-        await performSearch(true);
+        await performSearch(true); // Önbellekten yükle
     } else {
         startSearchBtn.disabled = false;
+        infoMessageContainer.innerHTML = ''; // Bilgi mesajını temizle
     }
 }
 
@@ -255,7 +262,7 @@ async function performResearch() {
     if (!selectedBulletin) return alert('Lütfen bir bülten seçin.');
     if (filteredMonitoringTrademarks.length === 0) return alert('Filtreye uygun izlenen marka bulunamadı.');
 
-    const confirmMsg = `Seçili bülten için filtrelenmiş ${filteredMonitoringTrademarks.length} markanın mevcut arama sonuçları silinecek ve Algolia'da yeniden arama yapılacaktır. Onaylıyor musunuz?`;
+    const confirmMsg = `Seçili bülten için filtrelenmiş ${filteredMonitoringTrademarks.length} markanın mevcut arama sonuçları silinecek ve yeniden arama yapılacaktır. Onaylıyor musunuz?`;
     if (!confirm(confirmMsg)) return;
 
     loadingIndicator.textContent = 'Eski kayıtlar siliniyor...';
@@ -263,10 +270,11 @@ async function performResearch() {
     startSearchBtn.disabled = true;
     researchBtn.disabled = true;
 
+    // Firestore'daki önbellek kayıtlarını sil
     const deletePromises = filteredMonitoringTrademarks.map(tm => searchRecordService.deleteRecord(`${tm.id}_${selectedBulletin}`));
     await Promise.all(deletePromises);
     
-    await performSearch(false);
+    await performSearch(false); // Yeni arama yap
 }
 
 async function performSearch(fromCacheOnly = false) {
@@ -277,7 +285,6 @@ async function performSearch(fromCacheOnly = false) {
     loadingIndicator.textContent = 'Arama yapılıyor...';
     loadingIndicator.style.display = 'block';
     noRecordsMessage.style.display = 'none';
-    infoMessageContainer.innerHTML = '';
     resultsTableBody.innerHTML = '';
     allSimilarResults = [];
     startSearchBtn.disabled = true;
@@ -286,6 +293,7 @@ async function performSearch(fromCacheOnly = false) {
     let cachedResults = [];
     let trademarksToSearch = [];
 
+    // Önbellekten çek
     for (const tm of filteredMonitoringTrademarks) {
         const recordId = `${tm.id}_${selectedBulletin}`;
         const result = await searchRecordService.getRecord(recordId);
@@ -298,22 +306,18 @@ async function performSearch(fromCacheOnly = false) {
 
     let newSearchResults = [];
     if (!fromCacheOnly && trademarksToSearch.length > 0) {
-        if (!runTrademarkSearch) {
-            alert("Arama modülü henüz yüklenmedi, lütfen bekleyin.");
-            loadingIndicator.style.display = 'none';
-            checkCacheAndToggleButtonStates();
-            return;
-        }
-        loadingIndicator.textContent = `Algolia'da ${trademarksToSearch.length} marka için arama yapılıyor...`;
+        loadingIndicator.textContent = `${trademarksToSearch.length} marka için arama yapılıyor... (Bu biraz zaman alabilir)`;
         const searchPromises = trademarksToSearch.map(async (trademark) => {
             const monitoredMark = {
-                markName: trademark.title,
+                markName: trademark.title || trademark.markName, // Başlık veya markName'i kullan
                 applicationDate: trademark.applicationDate,
                 niceClasses: trademark.niceClass
             };
+            // runTrademarkSearch artık Algolia değil, kendi modülümüz
             const results = await runTrademarkSearch(monitoredMark, selectedBulletin);
-            console.log(`✅ Algolia ${trademark.title} için ${results.length} sonuç döndürdü:`, results);
+            console.log(`✅ Kendi algoritma: ${trademark.title} için ${results.length} sonuç döndürdü.`);
             const recordId = `${trademark.id}_${selectedBulletin}`;
+            // Sonuçları Firestore'a önbelleğe al
             await searchRecordService.saveRecord(recordId, { results: results, searchDate: new Date().toISOString() });
             return results.map(hit => ({...hit, source: 'new', monitoredTrademark: trademark.title}));
         });
@@ -328,10 +332,10 @@ async function performSearch(fromCacheOnly = false) {
     infoMessageContainer.innerHTML = `<div class="info-message">${infoMessage}</div>`;
     
     pagination.update(allSimilarResults.length);
-    renderCurrentPageOfResults(1, pagination.getItemsPerPage());
+    renderCurrentPageOfResults(); // Sayfayı her zaman baştan render et
             
-    startSearchBtn.disabled = true;
-    researchBtn.disabled = allSimilarResults.length === 0;
+    startSearchBtn.disabled = true; // Arama yapıldıktan sonra düğmeyi devre dışı bırak
+    researchBtn.disabled = allSimilarResults.length === 0; // Sonuç yoksa yeniden ara devre dışı
     console.log("📊 Tüm benzer sonuçlar (render öncesi):", allSimilarResults);
 }
 
@@ -348,7 +352,12 @@ function renderCurrentPageOfResults() {
     }
 
     currentPageData.forEach(hit => {
-        const holders = Array.isArray(hit.holders) ? hit.holders.join(', ') : (hit.holders || '');
+        // `hit.holders` bir dizi olabilir, `getOwnerNames` fonksiyonu burada da kullanılabilir.
+        // Ancak `runTrademarkSearch` içinde `hit.holders` zaten düz bir string olarak Algolia'dan geldiği gibi tutuluyor.
+        // Kendi algoritmamızda `hit.holders` artık bir dizi `owner` objesi olacağı için, bunu düzgün formatlamalıyız.
+        // `hit.holders` doğrudan bir dizi ise, map ile isme çevirip join yapın, yoksa direkt kullanın.
+        const holders = Array.isArray(hit.holders) ? hit.holders.map(h => h.name || h.id).join(', ') : (hit.holders || '');
+
         const monitoredNice = hit.monitoredNiceClasses || [];
         const niceClassHtml = Array.isArray(hit.niceClasses) 
             ? hit.niceClasses.map(cls => `<span class="nice-class-badge ${monitoredNice.includes(cls) ? 'match' : ''}">${cls}</span>`).join('') 
@@ -398,25 +407,7 @@ console.log(">>> initializePagination çağrılıyor");
 initializePagination();
 
 console.log(">>> loadInitialData çağrılıyor");
-await loadInitialData();
-
-const algoliaReady = await window.algoliaLoadPromise;
-if (algoliaReady) {
-    try {
-        console.log(">>> run-search import başlatılıyor");
-        const module = await import('./js/trademark-similarity/run-search.js');
-        console.log(">>> run-search import tamamlandı", module);
-
-        runTrademarkSearch = module.runTrademarkSearch;
-        if (typeof runTrademarkSearch !== "function") {
-            console.error("runTrademarkSearch fonksiyonu bulunamadı!");
-        } else {
-            console.log(">>> runTrademarkSearch başarıyla atandı");
-        }
-    } catch (e) {
-        console.error("Arama modülü yüklenemedi:", e);
-    }
-} else {
-    console.error("Algolia kütüphanesi yüklenmedi!");
-}
+loadInitialData(); // Artık await değil, çünkü asenkron yükleme kendi içinde handle ediliyor.
 </script>
+</body>
+</html>
