@@ -1,30 +1,22 @@
 // functions/index.js
-
-// Firebase Admin SDK'sı ve diğer temel modüller
-const admin = require('firebase-admin');
-const path = require('path');
-const os = require('os');
-const fs = require('fs');
-const AdmZip = require('adm-zip');
-const { createExtractorFromFile } = require('node-unrar-js');
-const nodemailer = require('nodemailer');
-
-const stream = require('stream');
-const { pipeline } = require('stream/promises');
-
-// Firebase Functions v2 SDK importları
-const { onRequest, onCall, HttpsError } = require('firebase-functions/v2/https'); // HTTPS fonksiyonları ve HttpsError için v2 importu
-const { onSchedule } = require('firebase-functions/v2/scheduler'); // Scheduler triggerları için v2 importu
-const { onDocumentCreated, onDocumentUpdated } = require('firebase-functions/v2/firestore'); // Firestore triggerları için v2 importu
-const { onMessagePublished } = require('firebase-functions/v2/pubsub'); // Pub/Sub mesaj trigger'ları için v2 importu
-const { onObjectFinalized } = require('firebase-functions/v2/storage'); // Storage triggerları için v2 importu
-const logger = require('firebase-functions/logger'); // Logger için
-const { onDocumentWritten } = require("firebase-functions/v2/firestore");
-
-// Dış modüller (npm install ile yüklenmiş)
-const cors = require('cors');
-const fetch = require('node-fetch');
-const { PubSub } = require('@google-cloud/pubsub'); // Pub/Sub mesajı yayınlamak için
+import admin from 'firebase-admin';
+import path from 'path';
+import os from 'os';
+import fs from 'fs';
+import AdmZip from 'adm-zip';
+import { createExtractorFromFile } from 'node-unrar-js';
+import nodemailer from 'nodemailer';
+import stream from 'stream';
+import { pipeline } from 'stream/promises';
+import { onRequest, onCall, HttpsError } from 'firebase-functions/v2/https';
+import { onSchedule } from 'firebase-functions/v2/scheduler';
+import { onDocumentCreated, onDocumentUpdated, onDocumentWritten } from 'firebase-functions/v2/firestore';
+import { onMessagePublished } from 'firebase-functions/v2/pubsub';
+import { onObjectFinalized } from 'firebase-functions/v2/storage';
+import logger from 'firebase-functions/logger';
+import cors from 'cors';
+import fetch from 'node-fetch';
+import { PubSub } from '@google-cloud/pubsub';
 
 // Firebase Admin SDK'sını başlatın
 if (!admin.apps.length) {
