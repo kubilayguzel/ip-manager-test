@@ -36,35 +36,62 @@
         .info-message { text-align: center; padding: 10px; font-size: 0.9em; background-color: #e2f3ff; color: #004085; border-radius: 8px; margin: 10px 20px; }
         .button-group { display: flex; gap: 10px; justify-content: flex-end; }
 
-        /* YENİ EKLENDİ: Sadece benzemez/benzer buton stilleri */
-        .similarity-btn {
-            padding: 4px 10px;
-            border: none;
-            border-radius: 3px;
-            cursor: pointer;
-            font-size: 11px;
-            font-weight: bold;
-            margin-right: 3px;
-            transition: background-color 0.2s;
+        /* YENİ EKLENDİ: Accruals.html'den alınan buton tasarımları */
+        .action-btn { 
+            background: #007bff; 
+            color: white; 
+            border: none; 
+            padding: 8px 12px; 
+            border-radius: 6px; 
+            cursor: pointer; 
+            margin-left: 5px; 
+            transition: all 0.3s ease; 
+            font-size: 12px;
+            font-weight: 500;
+        }
+        
+        .action-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .action-btn:disabled { 
+            background-color: #6c757d; 
+            cursor: not-allowed; 
+            opacity: 0.7; 
+            transform: none;
+            box-shadow: none;
         }
 
-        .similarity-btn.not-similar {
-            background-color: #ff6b8a;
+        /* Benzemez/Benzer buton stilleri - accruals.html tasarımı */
+        .action-btn.not-similar {
+            background-color: #dc3545;
             color: white;
         }
-
-        .similarity-btn.not-similar:hover {
-            background-color: #ff5577;
+        
+        .action-btn.not-similar:hover {
+            background-color: #c82333;
         }
 
-        .similarity-btn.similar {
-            background-color: #4ade80;
+        .action-btn.similar {
+            background-color: #28a745;
             color: white;
         }
-
-        .similarity-btn.similar:hover {
-            background-color: #22c55e;
+        
+        .action-btn.similar:hover {
+            background-color: #218838;
         }
+
+        /* Görüntüle butonu stili */
+        .action-btn.view-btn { 
+            background-color: #17a2b8; 
+        }
+        
+        .action-btn.view-btn:hover { 
+            background-color: #138496; 
+        }
+
+        /* Grup başlık stilleri */
         .group-header {
             background-color: #f8f9fa !important;
             font-weight: bold;
@@ -188,9 +215,6 @@ const resultsTableBody = document.getElementById('resultsTableBody');
 const loadingIndicator = document.getElementById('loadingIndicator');
 const noRecordsMessage = document.getElementById('noRecordsMessage');
 const infoMessageContainer = document.getElementById('infoMessageContainer');
-
-// Import similarityService from firebase-config.js instead of defining locally
-// (similarityService is now imported above)
 
 const debounce = (func, delay) => {
     let timeout;
@@ -339,8 +363,6 @@ async function performResearch() {
     await performSearch(false);
 }
 
-// trademark-similarity-search.html dosyasındaki performSearch fonksiyonunu bu şekilde değiştirin:
-
 async function performSearch(fromCacheOnly = false) {
     const selectedBulletin = bulletinSelect.value;
     if (!selectedBulletin) return;
@@ -457,7 +479,9 @@ function renderCurrentPageOfResults() {
 
     // Sonuçları marka bazında grupla ve render et
     const groupedResults = {};
-    currentPageData.forEach(hit => {
+    
+    // ÖNCELİKLE TÜM SONUÇLARDAN GRUPLAMA YAP (sadece currentPageData değil)
+    allSimilarResults.forEach(hit => {
         const monitoredTrademark = hit.monitoredTrademark || 'Bilinmeyen Marka';
         if (!groupedResults[monitoredTrademark]) {
             groupedResults[monitoredTrademark] = [];
@@ -465,21 +489,34 @@ function renderCurrentPageOfResults() {
         groupedResults[monitoredTrademark].push(hit);
     });
 
-    // Her marka grubu için render et
-    Object.keys(groupedResults).forEach(monitoredTrademark => {
-        // Marka grup başlığı ekle
+    // ŞUAN SAYFADA GÖRÜNEN SONUÇLARI GRUPLA
+    const currentPageGrouped = {};
+    currentPageData.forEach(hit => {
+        const monitoredTrademark = hit.monitoredTrademark || 'Bilinmeyen Marka';
+        if (!currentPageGrouped[monitoredTrademark]) {
+            currentPageGrouped[monitoredTrademark] = [];
+        }
+        currentPageGrouped[monitoredTrademark].push(hit);
+    });
+
+    // Her marka grubu için render et (sadece bu sayfada görünen markalar için)
+    Object.keys(currentPageGrouped).forEach(monitoredTrademark => {
+        // TOPLAM sonuç sayısını al (tüm sayfalardaki)
+        const totalResultsForThisMark = groupedResults[monitoredTrademark].length;
+        
+        // Marka grup başlığı ekle - TOPLAM sayıyı göster
         const groupHeaderRow = document.createElement('tr');
         groupHeaderRow.style.backgroundColor = '#f8f9fa';
         groupHeaderRow.style.fontWeight = 'bold';
         groupHeaderRow.innerHTML = `
             <td colspan="6" style="padding: 15px; border-bottom: 2px solid #dee2e6;">
-                📋 <strong>${monitoredTrademark}</strong> markası için bulunan benzer sonuçlar (${groupedResults[monitoredTrademark].length} adet)
+                📋 <strong>${monitoredTrademark}</strong> markası için bulunan benzer sonuçlar (${totalResultsForThisMark} adet)
             </td>
         `;
         resultsTableBody.appendChild(groupHeaderRow);
 
-        // Bu marka için sonuçları render et
-        groupedResults[monitoredTrademark].forEach(hit => {
+        // Bu sayfada görünen sonuçları render et
+        currentPageGrouped[monitoredTrademark].forEach(hit => {
             const holders = Array.isArray(hit.holders) ? hit.holders.map(h => h.name || h.id).join(', ') : (hit.holders || '');
 
             const monitoredNice = hit.monitoredNiceClasses || [];
@@ -488,7 +525,7 @@ function renderCurrentPageOfResults() {
                 : (hit.niceClasses || '');
             const similarityScore = hit.similarityScore ? `${(hit.similarityScore * 100).toFixed(0)}%` : '-';
 
-            // Benzerlik durumu butonu
+            // Benzerlik durumu butonu - accruals.html stilinde
             const isSimilar = hit.isSimilar;
             const similarityBtnClass = isSimilar === true ? 'similar' : 'not-similar';
             const similarityBtnText = isSimilar === true ? 'Benzer' : 'Benzemez';
@@ -502,11 +539,11 @@ function renderCurrentPageOfResults() {
                 <td>${niceClassHtml}</td>
                 <td>${similarityScore}</td>
                 <td>
-                    <button class="similarity-btn ${similarityBtnClass}" 
+                    <button class="action-btn ${similarityBtnClass}" 
                             onclick="toggleSimilarity('${resultId}', '${hit.monitoredTrademark}', this)">
                         ${similarityBtnText}
                     </button>
-                    <button class="btn btn-sm btn-primary" onclick="viewRecord('${resultId}')">👁️ Görüntüle</button>
+                    <button class="action-btn view-btn" onclick="viewRecord('${resultId}')">👁️ Görüntüle</button>
                 </td>
             `;
             resultsTableBody.appendChild(row);
@@ -530,17 +567,6 @@ window.toggleSimilarity = async function(resultId, monitoredTrademarkName, butto
         const currentlyNotSimilar = buttonElement.classList.contains('not-similar');
         const newSimilarityStatus = currentlyNotSimilar;
         
-        // Buton görünümünü hemen güncelle (kullanıcı deneyimi için)
-        if (newSimilarityStatus) {
-            buttonElement.classList.remove('not-similar');
-            buttonElement.classList.add('similar');
-            buttonElement.textContent = 'Benzer';
-        } else {
-            buttonElement.classList.remove('similar');
-            buttonElement.classList.add('not-similar');
-            buttonElement.textContent = 'Benzemez';
-        }
-
         // İlgili izlenen marka ID'sini bul
         const monitoredTrademark = filteredMonitoringTrademarks.find(tm => 
             (tm.title || tm.markName) === monitoredTrademarkName
