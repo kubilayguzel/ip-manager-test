@@ -1331,6 +1331,31 @@ function hasOverlappingNiceClasses(monitoredNiceClasses, recordNiceClasses) {
 
 
 // ======== Ana Benzerlik Skorlama Fonksiyonu (scorer.js'ten kopyalandı) ========
+function levenshteinDistance(a, b) {
+  const matrix = [];
+
+  const lenA = a.length;
+  const lenB = b.length;
+
+  for (let i = 0; i <= lenB; i++) matrix[i] = [i];
+  for (let j = 0; j <= lenA; j++) matrix[0][j] = j;
+
+  for (let i = 1; i <= lenB; i++) {
+    for (let j = 1; j <= lenA; j++) {
+      if (b.charAt(i - 1) === a.charAt(j - 1)) {
+        matrix[i][j] = matrix[i - 1][j - 1];
+      } else {
+        matrix[i][j] = Math.min(
+          matrix[i - 1][j - 1] + 1, // substitution
+          matrix[i][j - 1] + 1,     // insertion
+          matrix[i - 1][j] + 1      // deletion
+        );
+      }
+    }
+  }
+  return matrix[lenB][lenA];
+}
+
 function levenshteinSimilarity(a, b) {
   if (!a || !b) return 0;
   const distance = levenshteinDistance(a, b);
