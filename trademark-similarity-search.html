@@ -315,7 +315,7 @@ async function performSearch(fromCacheOnly = false) {
             };
             // runTrademarkSearch artık Algolia değil, kendi modülümüz
             const results = await runTrademarkSearch(monitoredMark, selectedBulletin);
-            console.log(`✅ Kendi algoritma: ${trademark.title} için ${results.length} sonuç döndürdü.`);
+            console.log(`✅ Cloud Function: ${trademark.title} için ${results.length} sonuç döndürdü.`);
             const recordId = `${trademark.id}_${selectedBulletin}`;
             // Sonuçları Firestore'a önbelleğe al
             await searchRecordService.saveRecord(recordId, { results: results, searchDate: new Date().toISOString() });
