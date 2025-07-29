@@ -2,6 +2,7 @@
   "name": "etebs-proxy-functions",
   "description": "Firebase Functions for ETEBS API Proxy",
   "version": "1.0.0",
+  "type": "commonjs",
   "scripts": {
     "lint": "echo 'Lint skipped'",
     "serve": "firebase emulators:start --only functions",
