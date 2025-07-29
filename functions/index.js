@@ -1296,7 +1296,18 @@ function isPhoneticallySimilar(a, b) {
 
     return Math.max(0.0, Math.min(1.0, score));
 }
-
+function parseDate(value) {
+  if (!value) return null;
+  // dd/MM/yyyy formatı ise parçala:
+  const parts = value.split('/');
+  if (parts.length === 3) {
+    const day = parseInt(parts[0], 10);
+    const month = parseInt(parts[1], 10) - 1; // JS 0-index
+    const year = parseInt(parts[2], 10);
+    return new Date(year, month, day);
+  }
+  return new Date(value); // ISO veya geçerli format için
+}
 // filters.js'ten kopyalandı (kendi fonksiyonunuzdan)
 function isValidBasedOnDate(hitDate, monitoredDate) {
   if (!hitDate || !monitoredDate) return true;
