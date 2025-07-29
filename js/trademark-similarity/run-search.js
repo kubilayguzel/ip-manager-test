@@ -27,7 +27,7 @@ const performSearchCallable = httpsCallable(functions, 'performTrademarkSimilari
  */
 export async function runTrademarkSearch(monitoredMark, selectedBulletinId) {
     const response = await fetch(
-      'https://europe-west1-<PROJECT_ID>.cloudfunctions.net/performTrademarkSimilaritySearchHttp',
+      'https://europe-west1-<ip-manager-production-aab4b>.cloudfunctions.net/performTrademarkSimilaritySearchHttp',
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
