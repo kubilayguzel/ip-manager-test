@@ -1298,24 +1298,26 @@ function isPhoneticallySimilar(a, b) {
 }
 function parseDate(value) {
   if (!value) return null;
-  // dd/MM/yyyy formatı ise parçala:
+  // dd/MM/yyyy formatı desteği
   const parts = value.split('/');
   if (parts.length === 3) {
     const day = parseInt(parts[0], 10);
-    const month = parseInt(parts[1], 10) - 1; // JS 0-index
+    const month = parseInt(parts[1], 10) - 1;
     const year = parseInt(parts[2], 10);
     return new Date(year, month, day);
   }
-  return new Date(value); // ISO veya geçerli format için
+  return new Date(value); // ISO uyumlu ise
 }
-// filters.js'ten kopyalandı (kendi fonksiyonunuzdan)
+
 function isValidBasedOnDate(hitDate, monitoredDate) {
   if (!hitDate || !monitoredDate) return true;
 
-  const hit = new Date(hitDate);
-  const monitored = new Date(monitoredDate);
+  const hit = parseDate(hitDate);
+  const monitored = parseDate(monitoredDate);
 
-  // indeksteki marka tarihi >= izlenen marka tarihi olmalı
+  if (!hit || !monitored || isNaN(hit) || isNaN(monitored)) return true;
+
+  // doğru mantık
   return hit >= monitored;
 }
 
