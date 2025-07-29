@@ -26,20 +26,30 @@ const performSearchCallable = httpsCallable(functions, 'performTrademarkSimilari
  * @returns {Array} Benzerlik skorlarına göre sıralanmış eşleşen markalar listesi.
  */
 export async function runTrademarkSearch(monitoredMark, selectedBulletinId) {
+  try {
     const response = await fetch(
       'https://europe-west1-<ip-manager-production-aab4b>.cloudfunctions.net/performTrademarkSimilaritySearchHttp',
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           monitoredMarks: [monitoredMark],
-          selectedBulletinId 
+          selectedBulletinId
         })
       }
     );
+    if (!response.ok) {
+      console.error(`HTTP Hatası: ${response.status}`);
+      return [];
+    }
     const data = await response.json();
     return data.results || [];
+  } catch (error) {
+    console.error('Cloud Function çağrılırken hata:', error);
+    return [];
+  }
 }
+
 
 
 // Artık client tarafında tüm kayıtları önbelleğe almaya gerek kalmadı.
