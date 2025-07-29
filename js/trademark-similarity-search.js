@@ -4,7 +4,7 @@
 import { db, personService, searchRecordService } from './firebase-config.js';
 import { collection, getDocs } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 
-// Kendi arama modülümüzü import et
+// Kendi arama modülümüzü import et (Bu artık Cloud Function'ı çağıracak)
 import { runTrademarkSearch } from './js/trademark-similarity/run-search.js';
 import Pagination from './js/pagination.js';
 import { loadSharedLayout } from './js/layout-loader.js';
@@ -61,7 +61,7 @@ async function loadBulletinOptions() {
     const snapshot = await getDocs(collection(db, 'trademarkBulletins'));
     const bulletins = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     // Tarihe göre ters sırala (en yeni bülten en başta)
-    bulletins.sort((a, b) => new Date(b.bulletinDate) - new Date(a.bulletinDate));
+    bulletins.sort((a, b) => new Date(b.bulletenDate) - new Date(b.bulletinDate)); // bulletinDate yerine bulletinDate kullanın
     bulletinSelect.innerHTML = '<option value="">Bülten seçiniz...</option>' +
         bulletins.map(b => `<option value="${b.id}">${b.bulletinNo} - ${b.bulletinDate}</option>`).join('');
     console.log(`✅ ${bulletins.length} adet bülten yüklendi.`); // Bülten yüklenme logu
@@ -167,6 +167,7 @@ async function performSearch(fromCacheOnly = false) {
     loadingIndicator.textContent = 'Arama yapılıyor...';
     loadingIndicator.style.display = 'block';
     noRecordsMessage.style.display = 'none';
+    infoMessageContainer.innerHTML = '';
     resultsTableBody.innerHTML = '';
     allSimilarResults = [];
     startSearchBtn.disabled = true;
@@ -188,14 +189,21 @@ async function performSearch(fromCacheOnly = false) {
 
     let newSearchResults = [];
     if (!fromCacheOnly && trademarksToSearch.length > 0) {
+        if (!runTrademarkSearch) {
+            alert("Arama modülü henüz yüklenmedi, lütfen bekleyin.");
+            loadingIndicator.style.display = 'none';
+            checkCacheAndToggleButtonStates();
+            return;
+        }
         loadingIndicator.textContent = `${trademarksToSearch.length} marka için sunucu tarafında arama yapılıyor... (Bu biraz zaman alabilir)`;
         
         // Sadece bir kez runTrademarkSearch (yani Cloud Function) çağırıyoruz
         try {
+            // runTrademarkSearch artık bir dizi monitoredMark objesi bekliyor
             const resultsFromCF = await runTrademarkSearch(
                 trademarksToSearch.map(tm => ({
                     id: tm.id, // Monitored markanın ID'sini de gönder
-                    markName: tm.title || tm.markName,
+                    markName: tm.title || tm.markName, // Başlık veya markName'i kullan
                     applicationDate: tm.applicationDate,
                     niceClasses: tm.niceClass
                 })),
@@ -204,33 +212,29 @@ async function performSearch(fromCacheOnly = false) {
             
             // Cloud Function'dan gelen tüm sonuçları al ve önbelleğe kaydet
             if (resultsFromCF && resultsFromCF.length > 0) {
-                // Cloud Function'dan gelen sonuçlar zaten "monitoredTrademark" ve "monitoredNiceClasses" içeriyor
                 newSearchResults = resultsFromCF.map(hit => ({...hit, source: 'new'}));
                 
-                // Her bir izlenen marka için ilgili sonuçları önbelleğe kaydet
-                // Cloud Function'dan dönen sonuçlar tek bir düz liste olduğu için,
-                // hangi sonucun hangi izlenen markaya ait olduğunu belirleyip ayrı ayrı kaydetmek gerekecek.
-                // Basitlik adına, şimdilik tüm resultsFromCF'yi tek bir kaydın altına önbelleğe alabiliriz,
-                // ancak doğru olan her monitoredMark_bulletinId için ayrı ayrı kaydetmektir.
-                // Bu örnek için her bir monitored markaya ait results'ı ayrı ayrı kaydetmeyi deneyelim:
-                
-                // Öncelikle, resultsFromCF'yi monitoredTrademark'e göre gruplayalım
+                // Gelen sonuçları izlenen markalarına göre grupla ve kaydet
                 const groupedResults = newSearchResults.reduce((acc, currentResult) => {
-                    const monitoredMarkName = currentResult.monitoredTrademark;
-                    if (!acc[monitoredMarkName]) {
-                        acc[monitoredMarkName] = [];
+                    // Cloud Function'dan gelen sonuçların `monitoredTrademarkId` içerdiğini varsayıyoruz.
+                    // Eğer içermiyorsa, Cloud Function'da bu alanı eklememiz gerekir.
+                    const monitoredMarkId = currentResult.monitoredMarkId || trademarksToSearch.find(tm => (tm.title || tm.markName) === currentResult.monitoredTrademark)?.id;
+                    if (monitoredMarkId) {
+                        if (!acc[monitoredMarkId]) {
+                            acc[monitoredMarkId] = [];
+                        }
+                        acc[monitoredMarkId].push(currentResult);
+                    } else {
+                        console.warn("Sonuçta monitoredMarkId bulunamadı, önbelleğe alınamıyor:", currentResult);
                     }
-                    acc[monitoredMarkName].push(currentResult);
                     return acc;
                 }, {});
 
-                // Gruplanmış sonuçları her bir trademarksToSearch için önbelleğe kaydet
                 for (const tm of trademarksToSearch) {
-                    const monitoredMarkTitle = tm.title || tm.markName;
                     const recordId = `${tm.id}_${selectedBulletin}`;
-                    const specificResultsForThisMark = groupedResults[monitoredMarkTitle] || [];
+                    const specificResultsForThisMark = groupedResults[tm.id] || [];
                     
-                    if (specificResultsForThisMark.length > 0) {
+                    if (specificResultsForThisMark.length > 0 || tm.id in groupedResults) { // Sonuç olsun veya olmasın, CF döndürdüyse kaydet
                         await searchRecordService.saveRecord(recordId, { 
                             results: specificResultsForThisMark.map(r => {
                                 // Orijinal 'source' bilgisini kaldırıp sadece datayı kaydet
@@ -241,7 +245,7 @@ async function performSearch(fromCacheOnly = false) {
                         });
                         console.log(`✅ Önbelleğe kaydedildi: ${recordId} (${specificResultsForThisMark.length} sonuç)`);
                     } else {
-                        // Eğer hiç sonuç yoksa, yine de boş bir kayıt oluşturarak bir daha aramamızı engelle
+                        // Eğer hiç sonuç yoksa ve CF döndürmediyse, boş bir kayıt oluştur
                         await searchRecordService.saveRecord(recordId, { results: [], searchDate: new Date().toISOString() });
                         console.log(`✅ Önbelleğe kaydedildi (boş sonuç): ${recordId}`);
                     }
@@ -287,6 +291,10 @@ function renderCurrentPageOfResults() {
     }
 
     currentPageData.forEach(hit => {
+        // `hit.holders` bir dizi olabilir, `getOwnerNames` fonksiyonu burada da kullanılabilir.
+        // Ancak `runTrademarkSearch` içinde `hit.holders` zaten düz bir string olarak Algolia'dan geldiği gibi tutuluyor.
+        // Kendi algoritmamızda `hit.holders` artık bir dizi `owner` objesi olacağı için, bunu düzgün formatlamalıyız.
+        // `hit.holders` doğrudan bir dizi ise, map ile isme çevirip join yapın, yoksa direkt kullanın.
         const holders = Array.isArray(hit.holders) ? hit.holders.map(h => h.name || h.id).join(', ') : (hit.holders || '');
 
         const monitoredNice = hit.monitoredNiceClasses || [];
@@ -315,7 +323,7 @@ function resetUI() {
     resultsTableBody.innerHTML = '';
     infoMessageContainer.innerHTML = '';
     noRecordsMessage.style.display = 'none';
-    if(pagination) pagination.update(0); // Pagination'ı sıfırla
+    pagination.update(0);
     checkCacheAndToggleButtonStates();
 }
 
@@ -338,4 +346,4 @@ console.log(">>> initializePagination çağrılıyor");
 initializePagination();
 
 console.log(">>> loadInitialData çağrılıyor");
-loadInitialData();
+loadInitialData(); // Artık await değil, çünkü asenkron yükleme kendi içinde handle ediliyor.
