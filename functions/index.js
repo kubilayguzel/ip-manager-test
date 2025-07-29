@@ -1309,6 +1309,7 @@ function isValidBasedOnDate(hitDate, monitoredDate) {
 }
 
 
+
 function hasOverlappingNiceClasses(monitoredNiceClasses, recordNiceClasses) {
     if (!Array.isArray(monitoredNiceClasses) || monitoredNiceClasses.length === 0) {
         return true; // Eğer izlenen markanın Nice sınıfı yoksa, sınıf filtresini atla
