@@ -4,10 +4,6 @@
 import { firebaseServices } from '../../firebase-config.js';
 import { getFunctions, httpsCallable } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-functions.js';
 
-// Kendi benzerlik algoritması modüllerini artık client tarafında doğrudan kullanmıyoruz
-// import { calculateSimilarityScore } from './scorer.js';
-// import { isValidBasedOnDate, hasOverlappingNiceClasses } from './filters.js';
-
 console.log(">>> run-search.js modülü yüklendi ve Firebase servisleri kullanılıyor <<<");
 
 // Firebase Functions instance'ı oluştur
@@ -15,7 +11,6 @@ const functions = getFunctions(firebaseServices.app); // firebaseServices.app, F
 
 // performTrademarkSimilaritySearch Cloud Function'ını çağırılabilir yap
 const performSearchCallable = httpsCallable(functions, 'performTrademarkSimilaritySearch');
-
 
 /**
  * Marka benzerliği aramasını çalıştıran ana fonksiyon.
@@ -27,30 +22,18 @@ const performSearchCallable = httpsCallable(functions, 'performTrademarkSimilari
  */
 export async function runTrademarkSearch(monitoredMark, selectedBulletinId) {
   try {
-    const response = await fetch(
-      'https://europe-west1-<ip-manager-production-aab4b>.cloudfunctions.net/performTrademarkSimilaritySearchHttp',
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          monitoredMarks: [monitoredMark],
-          selectedBulletinId
-        })
-      }
-    );
-    if (!response.ok) {
-      console.error(`HTTP Hatası: ${response.status}`);
-      return [];
-    }
-    const data = await response.json();
+    const response = await performSearchCallable({
+      monitoredMarks: [monitoredMark],
+      selectedBulletinId
+    });
+
+    const data = response.data;
     return data.results || [];
   } catch (error) {
     console.error('Cloud Function çağrılırken hata:', error);
     return [];
   }
 }
-
-
 
 // Artık client tarafında tüm kayıtları önbelleğe almaya gerek kalmadı.
 // loadAllTrademarkBulletinRecords() kaldırıldı.
