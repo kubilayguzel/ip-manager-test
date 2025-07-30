@@ -1715,13 +1715,15 @@ export const performTrademarkSimilaritySearch = onCall(
 
           const SIMILARITY_THRESHOLD = 0.5; // başlangıç için düşük eşik
           
-          // Yeni Kural: Konumsal tam eşleşme varsa (ve eşik üzerindeyse), genel eşik kontrolünü atla
-          // positionalExactMatchScore'un 1.0 olması, ilk 3 karakterin tam eşleştiği anlamına gelir.
+          // Güncellenmiş Koşul:
+          // Eğer genel benzerlik eşiğin altındaysa VE konumsal eşleşme de eşiğin altında kalıyorsa, atla.
+          // Aksi takdirde (yani, ya genel eşiğin üstündeyse YA DA konumsal eşleşme eşiğin üstündeyse), dahil et.
           if (similarityScore < SIMILARITY_THRESHOLD && positionalExactMatchScore < SIMILARITY_THRESHOLD) {
             logger.log(`⏩ Skor düşük (${similarityScore.toFixed(2)}) ve Konumsal Eşleşme Yeterli Değil (${positionalExactMatchScore.toFixed(2)}): ${hit.markName}`);
-            continue;
+            continue; // Kaydı atla
           }
 
+          // Bu noktaya gelen tüm kayıtlar ya genel eşiği geçmiştir ya da konumsal eşleşme eşiğini geçmiştir.
           allResults.push({
             objectID: hit.id,
             markName: hit.markName,
