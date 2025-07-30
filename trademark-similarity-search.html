@@ -425,6 +425,7 @@ import { collection, getDocs } from 'https://www.gstatic.com/firebasejs/10.7.1/f
 import { runTrademarkSearch } from './js/trademark-similarity/run-search.js';
 import Pagination from './js/pagination.js';
 import { loadSharedLayout } from './js/layout-loader.js';
+import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-functions.js";
 
 console.log("### trademark-similarity-search.html script yüklendi ###");
 
@@ -444,6 +445,7 @@ const resultsTableBody = document.getElementById('resultsTableBody');
 const loadingIndicator = document.getElementById('loadingIndicator');
 const noRecordsMessage = document.getElementById('noRecordsMessage');
 const infoMessageContainer = document.getElementById('infoMessageContainer');
+const functions = getFunctions();
 
 const debounce = (func, delay) => {
     let timeout;
@@ -1074,26 +1076,33 @@ document.getElementById("btnGenerateReport").addEventListener("click", async () 
         return;
     }
 
-    const FUNCTION_URL = "https://europe-west1-<ip-manager-production-aab4b>.cloudfunctions.net/generateSimilarityReport";
+    try {
+        const generateSimilarityReport = httpsCallable(functions, "generateSimilarityReport");
+        const response = await generateSimilarityReport({ results });
 
-    const response = await fetch(FUNCTION_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ results })
-    });
+        if (!response.data.success) {
+            alert("Rapor oluşturulamadı: " + (response.data.error || ""));
+            return;
+        }
 
+        // Base64 -> Blob
+        const byteCharacters = atob(response.data.file);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+            byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        const blob = new Blob([byteArray], { type: "application/zip" });
 
-    if (!response.ok) {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "similarity-reports.zip";
+        a.click();
+    } catch (error) {
+        console.error("Rapor oluşturma hatası:", error);
         alert("Rapor oluşturulamadı!");
-        return;
     }
-
-    const blob = await response.blob();
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "similarity-reports.zip";
-    a.click();
 });
 
 </script>
