@@ -1027,24 +1027,33 @@ function resetUI() {
 function getAllSearchResults() {
     return allSimilarResults
         .filter(r => r.isSimilar === true) // sadece Benzer olarak işaretlenenler
-        .map(r => ({
-            monitoredMark: {
-                applicationNo: r.monitoredApplicationNo,
-                date: r.monitoredApplicationDate,
-                niceClass: r.monitoredNiceClass,
-                ownerName: r.monitoredOwnerName,
-                imagePath: r.monitoredImagePath
-            },
-            similarMark: {
-                applicationNo: r.similarApplicationNo,
-                date: r.similarApplicationDate,
-                niceClass: r.similarNiceClass,
-                name: r.similarMarkName,
-                imagePath: r.similarImagePath,
-                similarity: r.similarityScore || null,
-                note: r.note || null
-            }
-        }));
+        .map(r => {
+            // İzlenen markayı bul
+            const monitoredTrademark = filteredMonitoringTrademarks.find(mt => mt.id === r.monitoredTrademarkId);
+            
+            return {
+                monitoredMark: {
+                    applicationNo: monitoredTrademark?.applicationNumber || r.monitoredTrademark || '-',
+                    date: monitoredTrademark?.applicationDate || '-',
+                    niceClass: Array.isArray(monitoredTrademark?.niceClass) 
+                        ? monitoredTrademark.niceClass.join(', ') 
+                        : (monitoredTrademark?.niceClass || '-'),
+                    ownerName: getOwnerNames(monitoredTrademark) || 'Bilinmeyen Sahip',
+                    imagePath: monitoredTrademark?.imagePath || null
+                },
+                similarMark: {
+                    applicationNo: r.applicationNo || '-',
+                    date: r.applicationDate || '-',
+                    niceClass: Array.isArray(r.niceClasses) 
+                        ? r.niceClasses.join(', ') 
+                        : (r.niceClasses || '-'),
+                    name: r.markName || '-',
+                    imagePath: r.imagePath || null,
+                    similarity: r.similarityScore ? `${(r.similarityScore * 100).toFixed(0)}%` : null,
+                    note: r.note || null
+                }
+            };
+        });
 }
 
 // Event listener'lar
