@@ -143,6 +143,55 @@
         .note-cell { cursor: pointer; position: relative; }
         .note-input { width: 100%; box-sizing: border-box; }
         .note-placeholder { color: #888; font-style: italic; }
+        /* --- Kolon Genişlik Override --- */
+
+        /* Başvuru Sahibi (3. kolon) iki kat geniş */
+        .results-table th:nth-child(3),
+        .results-table td:nth-child(3) {
+            width: 300px !important;
+            max-width: 300px !important;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        /* Nice Sınıfı (4. kolon) iki kat geniş */
+        .results-table th:nth-child(4),
+        .results-table td:nth-child(4) {
+            width: 200px !important;
+            max-width: 200px !important;
+        }
+
+        /* Benzerlik (5. kolon) dar */
+        .results-table th:nth-child(5),
+        .results-table td:nth-child(5) {
+            width: 80px !important;
+            max-width: 80px !important;
+            text-align: center;
+        }
+
+        /* İşlemler (6. kolon) dar */
+        .results-table th:nth-child(6),
+        .results-table td:nth-child(6) {
+            width: 100px !important;
+            max-width: 100px !important;
+            text-align: center;
+        }
+
+        /* B.Ş (7. kolon) dar */
+        .results-table th:nth-child(7),
+        .results-table td:nth-child(7) {
+            width: 90px !important;
+            max-width: 90px !important;
+        }
+
+        /* Not (8. kolon) dar */
+        .results-table th:nth-child(8),
+        .results-table td:nth-child(8) {
+            width: 120px !important;
+            max-width: 120px !important;
+        }
+
 
     </style>
 </head>
