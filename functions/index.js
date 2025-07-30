@@ -1647,6 +1647,8 @@ function calculateSimilarityScoreInternal(hitMarkName, searchMarkName, hitApplic
 }
 
 // ======== Yeni Cloud Function: Sunucu Tarafında Marka Benzerliği Araması ========
+// functions/index.js dosyasının düzeltilmiş kısmı
+
 export const performTrademarkSimilaritySearch = onCall(
   {
     region: 'europe-west1',
@@ -1680,20 +1682,30 @@ export const performTrademarkSimilaritySearch = onCall(
       const allResults = [];
 
       for (const monitoredMark of monitoredMarks) {
-        // --- Debug log ekleme ---
-        logger.log("DEBUG markName değeri:", {
+        // --- GELİŞTİRİLMİŞ DEBUG LOG ---
+        logger.log("🔍 DEBUG - İşlenen monitored mark:", {
+          id: monitoredMark.id,
           markName: monitoredMark.markName,
-          type: typeof monitoredMark.markName,
-          length: typeof monitoredMark.markName === 'string' ? monitoredMark.markName.length : null
+          title: monitoredMark.title, // title alanı da varsa logla
+          markNameType: typeof monitoredMark.markName,
+          markNameLength: typeof monitoredMark.markName === 'string' ? monitoredMark.markName.length : null,
+          allKeys: Object.keys(monitoredMark) // Tüm özellikleri göster
         });
 
+        // Marka adını alma - önce markName, sonra title, sonra fallback
         const markNameRaw = monitoredMark.markName || monitoredMark.title || '';
         const markName = (typeof markNameRaw === 'string') ? markNameRaw.trim() : '';
         const applicationDate = monitoredMark.applicationDate || null;
         const niceClasses = monitoredMark.niceClasses || [];
 
+        // Boş marka adı kontrolü
         if (!markName) {
-          logger.warn(`⚠️ İzlenen markanın adı eksik veya geçersiz: ${JSON.stringify(monitoredMark)}`);
+          logger.warn(`⚠️ İzlenen markanın adı eksik veya geçersiz:`, {
+            monitoredMarkId: monitoredMark.id,
+            markNameRaw: markNameRaw,
+            markNameType: typeof markNameRaw,
+            fullObject: JSON.stringify(monitoredMark)
+          });
           continue;
         }
 
@@ -1742,7 +1754,8 @@ export const performTrademarkSimilaritySearch = onCall(
             positionalExactMatchScore,
             sameClass: hasNiceClassOverlap,
             monitoredTrademark: markName,
-            monitoredNiceClasses: niceClasses
+            monitoredNiceClasses: niceClasses,
+            monitoredMarkId: monitoredMark.id // Frontend için gerekli
           });
         }
       }
