@@ -706,7 +706,6 @@ async function performSearch(fromCacheOnly = false) {
     console.log("📊 Tüm benzer sonuçlar (render öncesi):", allSimilarResults);
 }
 
-
 function renderCurrentPageOfResults() {
     resultsTableBody.innerHTML = '';
     if(!pagination) {
@@ -714,6 +713,8 @@ function renderCurrentPageOfResults() {
         return;
     }
     
+    // Sadece mevcut sayfanın verilerini alıyoruz. Bu veriler zaten 'allSimilarResults' listesinden
+    // geldiği için genel benzerlik skoruna göre sıralıdır.
     const currentPageData = pagination.getCurrentPageData(allSimilarResults);
     const startIndex = pagination.getStartIndex(); // Sıra No için başlangıç indeksi
 
@@ -726,102 +727,97 @@ function renderCurrentPageOfResults() {
     // Arama sonuçları başlığını güncelle
     updateSearchResultsHeader();
 
-    // Sonuçları marka bazında grupla (tüm sonuçlar üzerinden, sadece mevcut sayfa değil)
-    const groupedResults = allSimilarResults.reduce((acc, hit) => {
-        const monitoredTrademark = hit.monitoredTrademark || 'Bilinmeyen Marka';
-        if (!acc[monitoredTrademark]) {
-            acc[monitoredTrademark] = [];
-        }
-        acc[monitoredTrademark].push(hit);
-        return acc;
-    }, {});
+    // Önceki 'monitoredTrademark' değerini takip etmek için
+    let lastRenderedMonitoredTrademark = null; 
 
-    let currentRowNumber = startIndex + 1; // Sıra numarası için sayaç
-    Object.keys(groupedResults).forEach(monitoredTrademark => { // Tüm markaları döngüye al
-        const groupInfo = groupedResults[monitoredTrademark]; // Bu markaya ait tüm sonuçlar
-        const currentPageGroupHits = currentPageData.filter(hit => (hit.monitoredTrademark || 'Bilinmeyen Marka') === monitoredTrademark); // Sadece bu sayfadaki sonuçlar
-
-        // Marka grup başlığı ekle
-        const groupHeaderRow = document.createElement('tr');
-        groupHeaderRow.classList.add('group-header'); // Yeni CSS sınıfı
-        // colspan değeri toplam kolon sayısına göre ayarlandı (şimdi 9 kolon var)
-        groupHeaderRow.innerHTML = `
-            <td colspan="9">
-                📋 <strong>${monitoredTrademark}</strong> markası için bulunan benzer sonuçlar (${groupInfo.length} adet)
-            </td>
-        `;
-        resultsTableBody.appendChild(groupHeaderRow);
-
-        // Bu sayfadaki ilgili sonuçları render et
-        currentPageGroupHits.forEach(hit => {
-            const holders = Array.isArray(hit.holders) ? hit.holders.map(h => h.name || h.id).filter(Boolean).join(', ') : (hit.holders || '');
-
-            const monitoredNice = hit.monitoredNiceClasses || [];
-            const niceClassHtml = Array.isArray(hit.niceClasses) 
-                ? hit.niceClasses.map(cls => `<span class="nice-class-badge ${monitoredNice.includes(cls) ? 'match' : ''}">${cls}</span>`).join('') 
-                : (hit.niceClasses || '');
-            const similarityScore = hit.similarityScore ? `${(hit.similarityScore * 100).toFixed(0)}%` : '-';
-
-            // Benzerlik durumu butonu: Varsayılan "Benzemez"
-            const isSimilar = hit.isSimilar; // isSimilar: true, false veya undefined/null olabilir
-            let similarityBtnClass = 'not-similar'; // Varsayılan stil
-            let similarityBtnText = 'Benzemez'; // Varsayılan metin
-
-            if (isSimilar === true) {
-                similarityBtnClass = 'similar';
-                similarityBtnText = 'Benzer';
-            }
-            // isSimilar zaten false ise, varsayılan (not-similar) korunur.
+    // Her bir sonuç için döngü kur, gruplandırma yapmadan
+    currentPageData.forEach((hit, index) => { // Sadece mevcut sayfa verisi üzerinde döngü
+        // MonitoredTrademark değiştiyse yeni bir başlık ekle
+        if (hit.monitoredTrademark !== lastRenderedMonitoredTrademark) {
+            const monitoredTrademark = hit.monitoredTrademark || 'Bilinmeyen Marka';
             
-            const resultId = hit.objectID || hit.applicationNo;
+            // Bu markaya ait tüm sonuçları (sadece mevcut sayfadaki değil) saymak için
+            // allSimilarResults içindeki bu monitoredTrademark'e sahip tüm elemanları saymalıyız.
+            const totalCountForThisMonitoredTrademark = allSimilarResults.filter(
+                item => (item.monitoredTrademark || 'Bilinmeyen Marka') === monitoredTrademark
+            ).length;
 
-            const row = document.createElement('tr');
-            row.innerHTML = `
-                <td>${currentRowNumber++}</td> <td>${hit.applicationNo || '-'}</td>
-                <td><strong>${hit.markName || '-'}</strong></td>
-                <td>${holders}</td>
-                <td>${niceClassHtml}</td>
-                <td>${similarityScore}</td>
-                <td>
-                    <button class="action-btn ${similarityBtnClass}" 
-                            data-result-id="${resultId}" 
-                            data-monitored-trademark-id="${hit.monitoredTrademarkId}" 
-                            data-bulletin-id="${bulletinSelect.value}">
-                        ${similarityBtnText}
-                    </button>
-                    </td>
-                <td>
-                    <select class="bs-select" 
-                            data-result-id="${resultId}" 
-                            data-monitored-trademark-id="${hit.monitoredTrademarkId}" 
-                            data-bulletin-id="${bulletinSelect.value}">
-                        <option value="">B.Ş</option>
-                        <option value="%0" ${hit.bs === '%0' ? 'selected' : ''}>%0</option>
-                        <option value="%20" ${hit.bs === '%20' ? 'selected' : ''}>%20</option>
-                        <option value="%30" ${hit.bs === '%30' ? 'selected' : ''}>%30</option>
-                        <option value="%40" ${hit.bs === '%40' ? 'selected' : ''}>%40</option>
-                        <option value="%45" ${hit.bs === '%45' ? 'selected' : ''}>%45</option>
-                        <option value="%50" ${hit.bs === '%50' ? 'selected' : ''}>%50</option>
-                        <option value="%55" ${hit.bs === '%55' ? 'selected' : ''}>%55</option>
-                        <option value="%60" ${hit.bs === '%60' ? 'selected' : ''}>%60</option>
-                        <option value="%70" ${hit.bs === '%70' ? 'selected' : ''}>%70</option>
-                        <option value="%80" ${hit.bs === '%80' ? 'selected' : ''}>%80</option>
-                    </select>
-                </td>
-                <td class="note-cell" 
-                    data-result-id="${resultId}" 
-                    data-monitored-trademark-id="${hit.monitoredTrademarkId}" 
-                    data-bulletin-id="${bulletinSelect.value}">
-                    <div class="note-cell-content">
-                        <span class="note-icon">📝</span>
-                        ${hit.note 
-                            ? `<span class="note-text">${hit.note}</span>` 
-                            : `<span class="note-placeholder">Not ekle</span>`}
-                    </div>
+            const groupHeaderRow = document.createElement('tr');
+            groupHeaderRow.classList.add('group-header');
+            groupHeaderRow.innerHTML = `
+                <td colspan="9">
+                    📋 <strong>${monitoredTrademark}</strong> markası için bulunan benzer sonuçlar (${totalCountForThisMonitoredTrademark} adet)
                 </td>
             `;
-            resultsTableBody.appendChild(row);
-        });
+            resultsTableBody.appendChild(groupHeaderRow);
+            lastRenderedMonitoredTrademark = monitoredTrademark; // Başlığı ekledikten sonra güncelliyoruz
+        }
+
+        const holders = Array.isArray(hit.holders) ? hit.holders.map(h => h.name || h.id).filter(Boolean).join(', ') : (hit.holders || '');
+
+        const monitoredNice = hit.monitoredNiceClasses || [];
+        const niceClassHtml = Array.isArray(hit.niceClasses) 
+            ? hit.niceClasses.map(cls => `<span class="nice-class-badge ${monitoredNice.includes(cls) ? 'match' : ''}">${cls}</span>`).join('') 
+            : (hit.niceClasses || '');
+        const similarityScore = hit.similarityScore ? `${(hit.similarityScore * 100).toFixed(0)}%` : '-';
+
+        const isSimilar = hit.isSimilar;
+        let similarityBtnClass = 'not-similar';
+        let similarityBtnText = 'Benzemez';
+
+        if (isSimilar === true) {
+            similarityBtnClass = 'similar';
+            similarityBtnText = 'Benzer';
+        }
+        
+        const resultId = hit.objectID || hit.applicationNo;
+
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${startIndex + index + 1}</td> <td>${hit.applicationNo || '-'}</td>
+            <td><strong>${hit.markName || '-'}</strong></td>
+            <td>${holders}</td>
+            <td>${niceClassHtml}</td>
+            <td>${similarityScore}</td>
+            <td>
+                <button class="action-btn ${similarityBtnClass}" 
+                        data-result-id="${resultId}" 
+                        data-monitored-trademark-id="${hit.monitoredTrademarkId}" 
+                        data-bulletin-id="${bulletinSelect.value}">
+                    ${similarityBtnText}
+                </button>
+                </td>
+            <td>
+                <select class="bs-select" 
+                        data-result-id="${resultId}" 
+                        data-monitored-trademark-id="${hit.monitoredTrademarkId}" 
+                        data-bulletin-id="${bulletinSelect.value}">
+                    <option value="">B.Ş</option>
+                    <option value="%0" ${hit.bs === '%0' ? 'selected' : ''}>%0</option>
+                    <option value="%20" ${hit.bs === '%20' ? 'selected' : ''}>%20</option>
+                    <option value="%30" ${hit.bs === '%30' ? 'selected' : ''}>%30</option>
+                    <option value="%40" ${hit.bs === '%40' ? 'selected' : ''}>%40</option>
+                    <option value="%45" ${hit.bs === '%45' ? 'selected' : ''}>%45</option>
+                    <option value="%50" ${hit.bs === '%50' ? 'selected' : ''}>%50</option>
+                    <option value="%55" ${hit.bs === '%55' ? 'selected' : ''}>%55</option>
+                    <option value="%60" ${hit.bs === '%60' ? 'selected' : ''}>%60</option>
+                    <option value="%70" ${hit.bs === '%70' ? 'selected' : ''}>%70</option>
+                    <option value="%80" ${hit.bs === '%80' ? 'selected' : ''}>%80</option>
+                </select>
+            </td>
+            <td class="note-cell" 
+                data-result-id="${resultId}" 
+                data-monitored-trademark-id="${hit.monitoredTrademarkId}" 
+                data-bulletin-id="${bulletinSelect.value}">
+                <div class="note-cell-content">
+                    <span class="note-icon">📝</span>
+                    ${hit.note 
+                        ? `<span class="note-text">${hit.note}</span>` 
+                        : `<span class="note-placeholder">Not ekle</span>`}
+                </div>
+            </td>
+        `;
+        resultsTableBody.appendChild(row);
     });
 
     // Add event listeners to similarity buttons after rendering
