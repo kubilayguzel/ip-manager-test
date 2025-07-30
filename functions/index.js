@@ -1925,6 +1925,7 @@ export const generateSimilarityReport = onCall(
       const passthrough = new stream.PassThrough();
       archive.pipe(passthrough);
 
+      // Sahip bazında döngü
       for (const [ownerName, matches] of Object.entries(owners)) {
         const grouped = {};
         matches.forEach(m => {
@@ -1933,6 +1934,7 @@ export const generateSimilarityReport = onCall(
           grouped[key].monitoredMarks.push(m.monitoredMark);
         });
 
+        // Tek document kullan
         const doc = new Document();
 
         for (const g of Object.values(grouped)) {
@@ -1994,14 +1996,18 @@ export const generateSimilarityReport = onCall(
             });
 
             const extraCells = [];
-            if (hasSimilarity) extraCells.push(new TableCell({ children: [new Paragraph(`${g.similarMark.similarity}`)] }));
-            if (hasNote) extraCells.push(new TableCell({ children: [new Paragraph(g.similarMark.note || '')] }));
+            if (hasSimilarity) {
+              extraCells.push(new TableCell({ children: [new Paragraph(`${g.similarMark.similarity}`)] }));
+            }
+            if (hasNote) {
+              extraCells.push(new TableCell({ children: [new Paragraph(g.similarMark.note || '')] }));
+            }
 
             rows.push(new TableRow({ children: [monitoredCell, similarCell, ...extraCells] }));
           }
 
           children.push(new Table({ rows }));
-          doc.addSection({ children, properties: { pageBreakBefore: true } });
+          doc.addSection({ children });
         }
 
         const buffer = await Packer.toBuffer(doc);
@@ -2015,7 +2021,7 @@ export const generateSimilarityReport = onCall(
 
       return {
         success: true,
-        file: finalBuffer.toString('base64') // Base64 döndür
+        file: finalBuffer.toString('base64')
       };
     } catch (error) {
       console.error('Rapor oluşturma hatası:', error);
