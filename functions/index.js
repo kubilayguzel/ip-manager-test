@@ -1929,16 +1929,16 @@ export const generateSimilarityReport = onCall(
         const grouped = {};
         matches.forEach((m) => {
           const key = m.similarMark.applicationNo;
-          if (!grouped[key])
-            grouped[key] = { similarMark: m.similarMark, monitoredMarks: [] };
+          if (!grouped[key]) grouped[key] = { similarMark: m.similarMark, monitoredMarks: [] };
           grouped[key].monitoredMarks.push(m.monitoredMark);
         });
 
-        // --- DOCX dokümanı oluştur ---
+        // Document -> artık sections verilmek zorunda
         const doc = new Document({
           creator: "IP Manager",
           description: "Benzer Markalar Raporu",
-          title: "Benzer Markalar"
+          title: "Benzer Markalar",
+          sections: [{ children: [] }]
         });
 
         for (const g of Object.values(grouped)) {
@@ -1948,21 +1948,14 @@ export const generateSimilarityReport = onCall(
               const [file] = await bucket.file(g.similarMark.imagePath).download();
               similarImage = Media.addImage(doc, file, 50, 50);
             } catch (err) {
-              console.warn(
-                `Benzer marka görseli indirilemedi: ${g.similarMark.imagePath}`,
-                err.message
-              );
+              console.warn(`Benzer marka görseli indirilemedi: ${g.similarMark.imagePath}`, err.message);
             }
           }
 
           const children = [
             new Paragraph({
               children: [
-                new TextRun(
-                  `Benzer Marka: ${g.similarMark.name || "-"} (${
-                    g.similarMark.applicationNo || "-"
-                  })`
-                ),
+                new TextRun(`Benzer Marka: ${g.similarMark.name || "-"} (${g.similarMark.applicationNo || "-"})`),
                 ...(similarImage ? [similarImage] : [])
               ],
               heading: "Heading2"
@@ -1975,12 +1968,8 @@ export const generateSimilarityReport = onCall(
           const headers = [
             new TableCell({ children: [new Paragraph("İzlenen Marka")] }),
             new TableCell({ children: [new Paragraph("Benzer Marka")] }),
-            ...(hasSimilarity
-              ? [new TableCell({ children: [new Paragraph("Benzerlik (%)") ]})]
-              : []),
-            ...(hasNote
-              ? [new TableCell({ children: [new Paragraph("Not")] })]
-              : [])
+            ...(hasSimilarity ? [new TableCell({ children: [new Paragraph("Benzerlik (%)") ] })] : []),
+            ...(hasNote ? [new TableCell({ children: [new Paragraph("Not") ] })] : [])
           ];
 
           const rows = [new TableRow({ children: headers })];
@@ -1992,21 +1981,14 @@ export const generateSimilarityReport = onCall(
                 const [file] = await bucket.file(mark.imagePath).download();
                 monitoredImage = Media.addImage(doc, file, 50, 50);
               } catch (err) {
-                console.warn(
-                  `İzlenen marka görseli indirilemedi: ${mark.imagePath}`,
-                  err.message
-                );
+                console.warn(`İzlenen marka görseli indirilemedi: ${mark.imagePath}`, err.message);
               }
             }
 
             const monitoredCell = new TableCell({
               children: [
                 ...(monitoredImage ? [monitoredImage] : []),
-                new Paragraph(
-                  `${mark.applicationNo || "-"}\n${mark.date || "-"}\n${
-                    mark.niceClass || "-"
-                  }`
-                )
+                new Paragraph(`${mark.applicationNo || "-"}\n${mark.date || "-"}\n${mark.niceClass || "-"}`)
               ]
             });
 
@@ -2014,32 +1996,22 @@ export const generateSimilarityReport = onCall(
               children: [
                 ...(similarImage ? [similarImage] : []),
                 new Paragraph(
-                  `${g.similarMark.applicationNo || "-"}\n${
-                    g.similarMark.date || "-"
-                  }\n${g.similarMark.niceClass || "-"}`
+                  `${g.similarMark.applicationNo || "-"}\n${g.similarMark.date || "-"}\n${g.similarMark.niceClass || "-"}`
                 )
               ]
             });
 
             const extraCells = [];
-            if (hasSimilarity)
-              extraCells.push(
-                new TableCell({
-                  children: [new Paragraph(`${g.similarMark.similarity}`)]
-                })
-              );
-            if (hasNote)
-              extraCells.push(
-                new TableCell({
-                  children: [new Paragraph(g.similarMark.note || "")]
-                })
-              );
+            if (hasSimilarity) extraCells.push(new TableCell({ children: [new Paragraph(`${g.similarMark.similarity}`)] }));
+            if (hasNote) extraCells.push(new TableCell({ children: [new Paragraph(g.similarMark.note || "")] }));
 
             rows.push(new TableRow({ children: [monitoredCell, similarCell, ...extraCells] }));
           }
 
           children.push(new Table({ rows }));
-          doc.addSection({ children });
+
+          // Eski `addSection` yerine doğrudan ilk section'a ekleme
+          doc.Sections[0].children.push(...children);
         }
 
         const buffer = await Packer.toBuffer(doc);
