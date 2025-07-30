@@ -105,6 +105,61 @@
         color: #888;
         font-size: 0.8em;
     }
+    /* bulletin-upload.html içindeki progress bar stilleri için */
+    #progressContainer {
+        width: 100%;
+        margin-top: 10px;
+        background: #f0f0f0;
+        border-radius: 10px;
+        overflow: hidden;
+        box-shadow: inset 0 1px 3px rgba(0,0,0,0.2);
+    }
+
+    #progressBar {
+        height: 20px;
+        width: 0%;
+        background: linear-gradient(45deg, #1e3c72, #2a5298);
+        border-radius: 10px;
+        transition: width 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 12px;
+        font-weight: bold;
+        text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+    }
+
+    .file-upload-area {
+        border: 2px dashed #ccc;
+        border-radius: 10px;
+        padding: 40px 20px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        background: #f9f9f9;
+    }
+
+    .file-upload-area:hover {
+        border-color: #1e3c72;
+        background: #f0f4f8;
+    }
+
+    .file-upload-area.drag-over {
+        border-color: #1e3c72;
+        background: #e8f4fd;
+    }
+
+    .upload-icon {
+        font-size: 48px;
+        margin-bottom: 10px;
+    }
+
+    .file-upload-area p {
+        margin: 0;
+        color: #666;
+        font-size: 16px;
+    }
   </style>
 </head>
 <body>
