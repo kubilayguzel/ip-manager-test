@@ -210,20 +210,32 @@
             align-items: center;
             gap: 5px;
             cursor: pointer;
+            /* Taşmayı yönetmek için */
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 100%; /* Sütun genişliğini aşmaması için */
         }
         .note-icon {
             font-size: 1.1em;
             color: #666;
+            flex-shrink: 0; /* İkonun küçülmemesi için */
         }
         .note-placeholder {
             color: #888;
             font-style: italic;
-            flex-grow: 1;
+            flex-grow: 1; /* Not metninin kalan alanı doldurması için */
+            white-space: nowrap; /* Metnin tek satırda kalmasını sağlar */
+            overflow: hidden; /* Taşmayı gizler */
+            text-overflow: ellipsis; /* Taşma durumunda üç nokta gösterir */
         }
         .note-text {
             flex-grow: 1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
-        .note-input-modal {
+        .note-input-modal { /* Modal içindeki textarea */
             display: block;
             width: 100%;
             padding: 8px 12px;
@@ -232,9 +244,9 @@
             box-sizing: border-box;
             margin-top: 10px;
             min-height: 80px;
-            resize: vertical;
+            resize: vertical; /* Sadece dikeyde boyutlandırmaya izin ver */
         }
-        /* Modal Stilleri - shared-styles.css'ten alınabilir veya buraya eklenebilir */
+        /* Modal Stilleri - Eğer shared-styles.css'inizde benzerleri varsa bunları adapte edin */
         .modal {
             display: none;
             position: fixed;
@@ -741,19 +753,16 @@ function renderCurrentPageOfResults() {
                 : (hit.niceClasses || '');
             const similarityScore = hit.similarityScore ? `${(hit.similarityScore * 100).toFixed(0)}%` : '-';
 
-            // Benzerlik durumu butonu
-            const isSimilar = hit.isSimilar;
-            // Default değeri "Benzemez" olarak ayarlandı
-            let similarityBtnClass = 'not-similar'; 
-            let similarityBtnText = 'Benzemez'; 
+            // Benzerlik durumu butonu: Varsayılan "Benzemez"
+            const isSimilar = hit.isSimilar; // isSimilar: true, false veya undefined/null olabilir
+            let similarityBtnClass = 'not-similar'; // Varsayılan stil
+            let similarityBtnText = 'Benzemez'; // Varsayılan metin
 
             if (isSimilar === true) {
                 similarityBtnClass = 'similar';
                 similarityBtnText = 'Benzer';
-            } else if (isSimilar === false) {
-                similarityBtnClass = 'not-similar';
-                similarityBtnText = 'Benzemez';
             }
+            // isSimilar zaten false ise, varsayılan (not-similar) korunur.
             
             const resultId = hit.objectID || hit.applicationNo;
 
@@ -824,19 +833,20 @@ function renderCurrentPageOfResults() {
                 return;
             }
 
-            // Mevcut durumu ters çevir (true ise false, false ise true, undefined/null ise true)
+            // Mevcut durumu ters çevir (true ise false, false ise true, undefined/null ise false)
+            // Default değer "Benzemez" olduğu için, belirsizden tıklanırsa Benzemez olacak.
             const newSimilarityStatus = currentHit.isSimilar === true ? false : true;
             
             // Buton görünümünü hemen güncelle (kullanıcı deneyimi için)
-            event.target.classList.remove('similar', 'not-similar');
+            event.target.classList.remove('similar', 'not-similar'); // 'unclassified' sınıfı artık yok
             if (newSimilarityStatus === true) {
                 event.target.classList.add('similar');
                 event.target.textContent = 'Benzer';
-            } else if (newSimilarityStatus === false) {
+            } else { // newSimilarityStatus === false
                 event.target.classList.add('not-similar');
                 event.target.textContent = 'Benzemez';
             }
-            
+
             // `monitoringTrademarkRecords` tablosunda güncelle
             const updateResult = await similarityService.updateSimilarityFields(
                 monitoredTrademarkId, 
@@ -865,9 +875,9 @@ function renderCurrentPageOfResults() {
                 } else if (currentHit.isSimilar === false) {
                     event.target.classList.add('not-similar');
                     event.target.textContent = 'Benzemez';
-                } else {
-                     // Eğer daha önce belirsiz idiyse
-                    event.target.textContent = 'Benzemez'; // Varsayılanı geri yükle
+                } else { // Eğer daha önce belirsiz idiyse veya hiç ayarlanmadıysa
+                    event.target.classList.add('not-similar'); // Varsayılanı "Benzemez"
+                    event.target.textContent = 'Benzemez';
                 }
                 console.error('❌ Benzerlik durumu güncellenemedi:', updateResult.error);
                 alert('Benzerlik durumu güncellenirken hata oluştu.');
