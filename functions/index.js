@@ -1647,7 +1647,6 @@ function calculateSimilarityScoreInternal(hitMarkName, searchMarkName, hitApplic
 }
 
 // ======== Yeni Cloud Function: Sunucu Tarafında Marka Benzerliği Araması ========
-
 export const performTrademarkSimilaritySearch = onCall(
   {
     region: 'europe-west1',
@@ -1681,7 +1680,15 @@ export const performTrademarkSimilaritySearch = onCall(
       const allResults = [];
 
       for (const monitoredMark of monitoredMarks) {
-        const markName = (typeof monitoredMark.markName === 'string' ? monitoredMark.markName.trim() : '');
+        // --- Debug log ekleme ---
+        logger.log("DEBUG markName değeri:", {
+          markName: monitoredMark.markName,
+          type: typeof monitoredMark.markName,
+          length: typeof monitoredMark.markName === 'string' ? monitoredMark.markName.length : null
+        });
+
+        const markNameRaw = monitoredMark.markName || monitoredMark.title || '';
+        const markName = (typeof markNameRaw === 'string') ? markNameRaw.trim() : '';
         const applicationDate = monitoredMark.applicationDate || null;
         const niceClasses = monitoredMark.niceClasses || [];
 
@@ -1716,10 +1723,10 @@ export const performTrademarkSimilaritySearch = onCall(
             niceClasses
           );
 
-          const SIMILARITY_THRESHOLD = 0.5; // başlangıç için düşük eşik
+          const SIMILARITY_THRESHOLD = 0.5;
           if (similarityScore < SIMILARITY_THRESHOLD && positionalExactMatchScore < SIMILARITY_THRESHOLD) {
             logger.log(`⏩ Skor düşük (${similarityScore.toFixed(2)}) ve Konumsal Eşleşme Yeterli Değil (${positionalExactMatchScore.toFixed(2)}): ${hit.markName}`);
-            continue; // Kaydı atla
+            continue;
           }
 
           allResults.push({
