@@ -1727,6 +1727,8 @@ function calculateSimilarityScoreInternal(hitMarkName, searchMarkName, hitApplic
 // ======== Yeni Cloud Function: Sunucu Tarafında Marka Benzerliği Araması ========
 // functions/index.js dosyasının düzeltilmiş kısmı
 
+// functions/index.js - performTrademarkSimilaritySearch fonksiyonunun düzeltilmiş kısmı
+
 export const performTrademarkSimilaritySearch = onCall(
   {
     region: 'europe-west1',
@@ -1745,7 +1747,8 @@ export const performTrademarkSimilaritySearch = onCall(
 
     logger.log('🚀 Cloud Function: performTrademarkSimilaritySearch BAŞLATILDI', {
       numMonitoredMarks: monitoredMarks.length,
-      selectedBulletinId
+      selectedBulletinId,
+      monitoredMarksDetails: monitoredMarks.map(m => ({ id: m.id, markName: m.markName }))
     });
 
     try {
@@ -1760,7 +1763,7 @@ export const performTrademarkSimilaritySearch = onCall(
       const allResults = [];
 
       for (const monitoredMark of monitoredMarks) {
-        logger.log("🔍 DEBUG - İşlenen monitored mark:", {
+        logger.log("🔍 İşlenen monitored mark:", {
           id: monitoredMark.id,
           markName: monitoredMark.markName,
           applicationDate: monitoredMark.applicationDate,
@@ -1773,43 +1776,24 @@ export const performTrademarkSimilaritySearch = onCall(
         const niceClasses = monitoredMark.niceClasses || [];
 
         if (!markName) {
-          logger.warn(`⚠️ İzlenen markanın adı eksik veya geçersiz:`, {
-            monitoredMarkId: monitoredMark.id,
-            markNameRaw: markNameRaw,
-            fullObject: JSON.stringify(monitoredMark)
-          });
+          logger.warn(`⚠️ İzlenen markanın adı eksik:`, monitoredMark);
           continue;
         }
 
-        logger.log(`🔎 İzlenen marka için arama: '${markName}' (Nice sınıf filtresi DEVRE DIŞI)`);
+        logger.log(`🔎 Arama: '${markName}' (ID: ${monitoredMark.id})`);
 
-        let processedCount = 0;
-        let dateFilteredCount = 0;
-        let scoreFilteredCount = 0;
+        let matchCount = 0;
 
         for (const hit of bulletinRecords) {
-          processedCount++;
-          
           // Tarih filtresi
           if (!isValidBasedOnDate(hit.applicationDate, applicationDate)) {
-            dateFilteredCount++;
-            if (processedCount <= 3) {
-              logger.log(`⏩ Tarih filtresi elendi: ${hit.markName} (${hit.applicationDate})`);
-            }
             continue;
           }
 
-          // *** GEÇİCİ: Nice sınıf filtresini tamamen devre dışı bırak ***
-          // const hasNiceClassOverlap = hasOverlappingNiceClasses(niceClasses, hit.niceClasses);
-          // if (Array.isArray(niceClasses) && niceClasses.length > 0 && !hasNiceClassOverlap) {
-          //   logger.log(`⏩ Nice sınıf çakışması yok: ${hit.markName}`);
-          //   continue;
-          // }
-          
-          // Nice sınıf filtresi devre dışı - hepsini geçir
-          const hasNiceClassOverlap = true; // Her zaman true döndür
+          // Nice sınıf filtresi devre dışı
+          const hasNiceClassOverlap = true;
 
-          // Benzerlik skoru hesapla
+          // Benzerlik skoru
           const { finalScore: similarityScore, positionalExactMatchScore } = calculateSimilarityScoreInternal(
             hit.markName,
             markName,
@@ -1819,19 +1803,14 @@ export const performTrademarkSimilaritySearch = onCall(
             niceClasses
           );
 
-          // Benzerlik eşik değerini de düşür
           const SIMILARITY_THRESHOLD = 0.5;
           if (similarityScore < SIMILARITY_THRESHOLD && positionalExactMatchScore < SIMILARITY_THRESHOLD) {
-            scoreFilteredCount++;
-            if (scoreFilteredCount <= 5) { // İlk 5 reddedileni logla
-              logger.log(`⏩ Skor düşük: ${hit.markName} (${similarityScore.toFixed(2)}/${positionalExactMatchScore.toFixed(2)})`);
-            }
             continue;
           }
 
-          // *** BAŞARILI EŞLEŞMEYİ LOGLA ***
-          logger.log(`🎯 EŞLEŞME: ${hit.markName} -> ${markName} (Skor: ${similarityScore.toFixed(2)})`);
+          matchCount++;
 
+          // *** ÖNEMLİ: Tüm gerekli alanları ekle ***
           allResults.push({
             objectID: hit.id,
             markName: hit.markName,
@@ -1843,25 +1822,30 @@ export const performTrademarkSimilaritySearch = onCall(
             bulletinId: hit.bulletinId,
             similarityScore,
             positionalExactMatchScore,
-            sameClass: hasNiceClassOverlap, // Her zaman true olacak
-            monitoredTrademark: markName,
+            sameClass: hasNiceClassOverlap,
+            
+            // *** FRONTEND İÇİN GEREKLİ ALANLAR ***
+            monitoredTrademark: markName,              // Frontend'in eşleştirme için kullandığı alan
             monitoredNiceClasses: niceClasses,
-            monitoredMarkId: monitoredMark.id
+            monitoredMarkId: monitoredMark.id,         // Yeni alan adı
+            monitoredTrademarkId: monitoredMark.id     // Eski uyumluluk için
           });
         }
 
-        // Filtre istatistikleri
-        logger.log(`📊 '${markName}' için filtre istatistikleri:`, {
-          totalProcessed: processedCount,
-          dateFiltered: dateFilteredCount,
-          niceClassFiltered: 0, // Nice sınıf filtresi devre dışı
-          scoreFiltered: scoreFilteredCount,
-          matchesFound: allResults.filter(r => r.monitoredTrademark === markName).length
-        });
+        logger.log(`📊 '${markName}' (ID: ${monitoredMark.id}) için ${matchCount} eşleşme bulundu`);
       }
 
       allResults.sort((a, b) => b.similarityScore - a.similarityScore);
-      logger.log(`✅ Toplam ${allResults.length} sonuç döndürüldü (Nice sınıf filtresi DEVRE DIŞI).`);
+      
+      // *** SON KONTROL LOGU ***
+      logger.log(`✅ Toplam ${allResults.length} sonuç döndürülüyor`, {
+        sampleResult: allResults[0] ? {
+          markName: allResults[0].markName,
+          monitoredTrademark: allResults[0].monitoredTrademark,
+          monitoredMarkId: allResults[0].monitoredMarkId,
+          monitoredTrademarkId: allResults[0].monitoredTrademarkId
+        } : 'No results'
+      });
 
       return { success: true, results: allResults };
     } catch (error) {
