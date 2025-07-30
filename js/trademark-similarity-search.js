@@ -58,13 +58,46 @@ async function loadInitialData() {
 }
 
 async function loadBulletinOptions() {
-    const snapshot = await getDocs(collection(db, 'trademarkBulletins'));
-    const bulletins = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    // Tarihe göre ters sırala (en yeni bülten en başta)
-    bulletins.sort((a, b) => new Date(b.bulletenDate) - new Date(b.bulletinDate)); // bulletinDate yerine bulletinDate kullanın
-    bulletinSelect.innerHTML = '<option value="">Bülten seçiniz...</option>' +
-        bulletins.map(b => `<option value="${b.id}">${b.bulletinNo} - ${b.bulletinDate}</option>`).join('');
-    console.log(`✅ ${bulletins.length} adet bülten yüklendi.`); // Bülten yüklenme logu
+    try {
+        const snapshot = await getDocs(collection(db, 'trademarkBulletins'));
+        const bulletins = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        
+        // Timestamp objeleriyle sıralama
+        bulletins.sort((a, b) => {
+            const dateA = (a.createdAt && typeof a.createdAt.toDate === 'function') ? a.createdAt.toDate() : new Date(0); // Güvenli dönüşüm
+            const dateB = (b.createdAt && typeof b.createdAt.toDate === 'function') ? b.createdAt.toDate() : new Date(0); // Güvenli dönüşüm
+            return dateB.getTime() - dateA.getTime(); // Tarih objelerini milisaniyeye çevirerek karşılaştır
+        });
+
+        bulletinSelect.innerHTML = '<option value="">Bülten seçin...</option>';
+        bulletins.forEach(bulletin => {
+            let dateText = 'Tarih yok';
+            
+            // bulletin.createdAt'ın bir Firestore Timestamp objesi olup olmadığını kontrol et
+            if (bulletin.createdAt && typeof bulletin.createdAt.toDate === 'function') {
+                try {
+                    const dateObj = bulletin.createdAt.toDate();
+                    // Date objesinin geçerli olup olmadığını kontrol et
+                    if (!isNaN(dateObj.getTime())) {
+                        dateText = dateObj.toLocaleDateString('tr-TR');
+                    } else {
+                        console.warn("Geçersiz tarih objesi:", bulletin.createdAt);
+                        dateText = 'Geçersiz Tarih';
+                    }
+                } catch (e) {
+                    console.error("Tarih objesinden string'e dönüştürülürken hata:", e);
+                    dateText = 'Hata';
+                }
+            }
+            
+            // `split` hatası alıyorsanız, buradaki satırı dikkatlice kontrol edin.
+            // Bu kısımda `split` çağrısı olmamalı.
+            option.textContent = `${bulletin.bulletinNo} - ${dateText}`;
+            bulletinSelect.appendChild(option);
+        });
+    } catch (error) {
+        console.error('Bülten seçenekleri yüklenirken hata:', error);
+    }
 }
 
 function applyMonitoringListFilters() {
