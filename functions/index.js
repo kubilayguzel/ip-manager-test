@@ -1681,9 +1681,12 @@ export const performTrademarkSimilaritySearch = onCall(
       const allResults = [];
 
       for (const monitoredMark of monitoredMarks) {
-        const { markName, applicationDate, niceClasses } = monitoredMark;
+        const markName = (typeof monitoredMark.markName === 'string' ? monitoredMark.markName.trim() : '');
+        const applicationDate = monitoredMark.applicationDate || null;
+        const niceClasses = monitoredMark.niceClasses || [];
+
         if (!markName) {
-          logger.warn(`⚠️ İzlenen markanın adı eksik: ${JSON.stringify(monitoredMark)}`);
+          logger.warn(`⚠️ İzlenen markanın adı eksik veya geçersiz: ${JSON.stringify(monitoredMark)}`);
           continue;
         }
 
@@ -1714,16 +1717,11 @@ export const performTrademarkSimilaritySearch = onCall(
           );
 
           const SIMILARITY_THRESHOLD = 0.5; // başlangıç için düşük eşik
-          
-          // Güncellenmiş Koşul:
-          // Eğer genel benzerlik eşiğin altındaysa VE konumsal eşleşme de eşiğin altında kalıyorsa, atla.
-          // Aksi takdirde (yani, ya genel eşiğin üstündeyse YA DA konumsal eşleşme eşiğin üstündeyse), dahil et.
           if (similarityScore < SIMILARITY_THRESHOLD && positionalExactMatchScore < SIMILARITY_THRESHOLD) {
             logger.log(`⏩ Skor düşük (${similarityScore.toFixed(2)}) ve Konumsal Eşleşme Yeterli Değil (${positionalExactMatchScore.toFixed(2)}): ${hit.markName}`);
             continue; // Kaydı atla
           }
 
-          // Bu noktaya gelen tüm kayıtlar ya genel eşiği geçmiştir ya da konumsal eşleşme eşiğini geçmiştir.
           allResults.push({
             objectID: hit.id,
             markName: hit.markName,
@@ -1734,7 +1732,7 @@ export const performTrademarkSimilaritySearch = onCall(
             imagePath: hit.imagePath,
             bulletinId: hit.bulletinId,
             similarityScore,
-            positionalExactMatchScore, // Sonuca ekle
+            positionalExactMatchScore,
             sameClass: hasNiceClassOverlap,
             monitoredTrademark: markName,
             monitoredNiceClasses: niceClasses
