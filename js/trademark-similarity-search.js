@@ -192,8 +192,6 @@ async function performResearch() {
     await performSearch(false); // Yeni arama yap
 }
 // js/trademark-similarity-search.js dosyasının düzeltilmiş kısmı
-// trademark-similarity-search.js dosyasının performSearch fonksiyonunun düzeltilmiş hali
-// trademark-similarity-search.js - Debug için geçici kod eklemeleri
 
 async function performSearch(fromCacheOnly = false) {
     const selectedBulletin = bulletinSelect.value;
@@ -240,9 +238,6 @@ async function performSearch(fromCacheOnly = false) {
 
         const monitoredMarksPayload = trademarksToSearch.map(tm => {
             const markName = (tm.title || tm.markName || '').trim();
-            if (!markName) {
-                console.warn(`⚠️ Bu markanın adı eksik (ID: ${tm.id})`, tm);
-            }
             return {
                 id: tm.id,
                 markName: markName || 'BELİRSİZ_MARKA',
@@ -253,129 +248,75 @@ async function performSearch(fromCacheOnly = false) {
             };
         });
 
-        console.log('🚀 Cloud Function\'a gönderilen payload:', {
-            monitoredMarksCount: monitoredMarksPayload.length,
-            selectedBulletin,
-            detailPayload: monitoredMarksPayload
-        });
-
         try {
             const resultsFromCF = await runTrademarkSearch(
                 monitoredMarksPayload,
                 selectedBulletin
             );
             
-            // *** DETAYLI DEBUG LOGU ***
-            console.log('🔍 Cloud Function\'dan dönen RAW yanıt:', resultsFromCF);
-            
             if (resultsFromCF && resultsFromCF.length > 0) {
-                console.log('🔍 İlk sonucun detayları:', {
-                    keys: Object.keys(resultsFromCF[0]),
-                    monitoredMarkId: resultsFromCF[0].monitoredMarkId,
-                    monitoredTrademarkId: resultsFromCF[0].monitoredTrademarkId,
-                    monitoredTrademark: resultsFromCF[0].monitoredTrademark,
-                    fullObject: resultsFromCF[0]
+                // *** BASİT ÇÖZÜM: Her sonuca marka ID'sini ekle ***
+                newSearchResults = resultsFromCF.map(hit => {
+                    // Marka adına göre ID bul
+                    const matchingTrademark = trademarksToSearch.find(tm => 
+                        (tm.title || tm.markName) === hit.monitoredTrademark
+                    );
+                    
+                    return {
+                        ...hit, 
+                        source: 'new',
+                        monitoredTrademarkId: matchingTrademark ? matchingTrademark.id : 'UNKNOWN',
+                        monitoredTrademark: hit.monitoredTrademark || 'BELİRSİZ_MARKA'
+                    };
                 });
-                
-                newSearchResults = resultsFromCF.map(hit => ({...hit, source: 'new'}));
-                
-                // Gruplandırma öncesi debug
-                console.log('🔍 Gruplandırma öncesi newSearchResults:', newSearchResults.slice(0, 2));
-                
-                const groupedResults = newSearchResults.reduce((acc, currentResult) => {
-                    // Tüm olası alan adlarını kontrol et
-                    const monitoredMarkId = currentResult.monitoredMarkId || 
-                        currentResult.monitoredTrademarkId || 
-                        currentResult.monitored_mark_id ||
-                        currentResult.monitored_trademark_id;
-                        
-                    console.log('🔍 Gruplandırma detayı:', {
-                        resultMarkName: currentResult.markName,
-                        monitoredTrademark: currentResult.monitoredTrademark,
-                        allPossibleIds: {
-                            monitoredMarkId: currentResult.monitoredMarkId,
-                            monitoredTrademarkId: currentResult.monitoredTrademarkId,
-                            monitored_mark_id: currentResult.monitored_mark_id,
-                            monitored_trademark_id: currentResult.monitored_trademark_id
-                        },
-                        finalMarkId: monitoredMarkId,
-                        availableKeys: Object.keys(currentResult)
-                    });
-                        
-                    if (monitoredMarkId) {
-                        if (!acc[monitoredMarkId]) {
-                            acc[monitoredMarkId] = [];
-                        }
-                        acc[monitoredMarkId].push(currentResult);
-                        console.log(`✅ Sonuç gruplandırıldı: ${monitoredMarkId}`);
-                    } else {
-                        console.error("❌ monitoredMarkId bulunamadı:", {
-                            currentResult,
-                            trademarksToSearch: trademarksToSearch.map(tm => ({ id: tm.id, title: tm.title }))
-                        });
-                        
-                        // Manuel eşleştirme deneme
-                        const manualMatch = trademarksToSearch.find(tm => 
-                            (tm.title || tm.markName) === currentResult.monitoredTrademark
-                        );
-                        
-                        if (manualMatch) {
-                            console.log(`🔧 Manuel eşleştirme bulundu: ${manualMatch.id}`);
-                            if (!acc[manualMatch.id]) {
-                                acc[manualMatch.id] = [];
-                            }
-                            acc[manualMatch.id].push(currentResult);
-                        } else {
-                            console.error("❌ Manuel eşleştirme de başarısız");
-                        }
-                    }
-                    return acc;
-                }, {});
 
-                console.log('📊 Final gruplandırılmış sonuçlar:', groupedResults);
+                // Gruplandırma - marka ID'sine göre
+                const groupedResults = {};
+                
+                // Her aramada bulunan marka için grupla
+                for (const tm of trademarksToSearch) {
+                    const thisMarkResults = newSearchResults.filter(result => 
+                        result.monitoredTrademarkId === tm.id
+                    );
+                    groupedResults[tm.id] = thisMarkResults;
+                    
+                    console.log(`📊 ${tm.title || tm.markName}: ${thisMarkResults.length} sonuç`);
+                }
 
                 // Her marka için önbelleğe kaydet
                 for (const tm of trademarksToSearch) {
                     const recordId = `${tm.id}_${selectedBulletin}`;
-                    const specificResultsForThisMark = groupedResults[tm.id] || [];
-                    
-                    console.log(`💾 ${tm.title || tm.markName} için kayıt:`, {
-                        trademarkId: tm.id,
-                        recordId,
-                        resultsCount: specificResultsForThisMark.length,
-                        hasResults: specificResultsForThisMark.length > 0
-                    });
+                    const specificResults = groupedResults[tm.id] || [];
                     
                     await searchRecordService.saveRecord(recordId, { 
-                        results: specificResultsForThisMark.map(r => {
+                        results: specificResults.map(r => {
                             const { source, ...rest } = r; 
                             return rest;
                         }), 
                         searchDate: new Date().toISOString() 
                     });
-                    console.log(`✅ Kayıt tamamlandı: ${recordId}`);
+                    console.log(`✅ Kayıt: ${recordId} (${specificResults.length} sonuç)`);
                 }
             } else {
-                console.log('ℹ️ Cloud Function\'dan sonuç gelmedi, boş kayıtlar oluşturuluyor');
+                // Hiç sonuç yoksa boş kayıt
                 for (const tm of trademarksToSearch) {
                     const recordId = `${tm.id}_${selectedBulletin}`;
                     await searchRecordService.saveRecord(recordId, { 
                         results: [], 
                         searchDate: new Date().toISOString() 
                     });
-                    console.log(`✅ Boş kayıt oluşturuldu: ${recordId}`);
+                    console.log(`✅ Boş kayıt: ${recordId}`);
                 }
             }
         } catch (error) {
-            console.error("❌ Cloud Function çağrılırken kritik hata oluştu:", error);
-            infoMessageContainer.innerHTML = `<div class="info-message" style="background-color: #ffe0e6; color: #721c24;">Hata: Arama sırasında bir sorun oluştu. Detaylar konsola yazıldı.</div>`;
+            console.error("❌ Hata:", error);
             loadingIndicator.style.display = 'none';
             startSearchBtn.disabled = false;
             return;
         }
     }
 
-    // Tüm sonuçları birleştir ve göster
+    // Sonuçları birleştir
     allSimilarResults = [...cachedResults, ...newSearchResults];
     
     loadingIndicator.style.display = 'none';
@@ -388,9 +329,8 @@ async function performSearch(fromCacheOnly = false) {
 
     startSearchBtn.disabled = true;
     researchBtn.disabled = allSimilarResults.length === 0;
-    console.log("📊 Tüm benzer sonuçlar (render öncesi):", allSimilarResults);
 }
-
+    
 function renderCurrentPageOfResults() {
     resultsTableBody.innerHTML = '';
     if(!pagination) {
