@@ -1910,32 +1910,36 @@ export const generateSimilarityReport = onCall(
     try {
       const { results } = request.data;
       if (!results || !Array.isArray(results)) {
-        throw new Error('Geçersiz veri formatı');
+        throw new Error("Geçersiz veri formatı");
       }
 
       // --- Sahip bazında grupla ---
       const owners = {};
-      results.forEach(m => {
-        const owner = m.monitoredMark.ownerName || 'Bilinmeyen Sahip';
+      results.forEach((m) => {
+        const owner = m.monitoredMark.ownerName || "Bilinmeyen Sahip";
         if (!owners[owner]) owners[owner] = [];
         owners[owner].push(m);
       });
 
-      const archive = archiver('zip', { zlib: { level: 9 } });
+      const archive = archiver("zip", { zlib: { level: 9 } });
       const passthrough = new stream.PassThrough();
       archive.pipe(passthrough);
 
-      // Sahip bazında döngü
       for (const [ownerName, matches] of Object.entries(owners)) {
         const grouped = {};
-        matches.forEach(m => {
+        matches.forEach((m) => {
           const key = m.similarMark.applicationNo;
-          if (!grouped[key]) grouped[key] = { similarMark: m.similarMark, monitoredMarks: [] };
+          if (!grouped[key])
+            grouped[key] = { similarMark: m.similarMark, monitoredMarks: [] };
           grouped[key].monitoredMarks.push(m.monitoredMark);
         });
 
-        // Tek document kullan
-        const doc = new Document();
+        // --- DOCX dokümanı oluştur ---
+        const doc = new Document({
+          creator: "IP Manager",
+          description: "Benzer Markalar Raporu",
+          title: "Benzer Markalar"
+        });
 
         for (const g of Object.values(grouped)) {
           let similarImage = null;
@@ -1944,17 +1948,24 @@ export const generateSimilarityReport = onCall(
               const [file] = await bucket.file(g.similarMark.imagePath).download();
               similarImage = Media.addImage(doc, file, 50, 50);
             } catch (err) {
-              console.warn(`Benzer marka görseli indirilemedi: ${g.similarMark.imagePath}`, err.message);
+              console.warn(
+                `Benzer marka görseli indirilemedi: ${g.similarMark.imagePath}`,
+                err.message
+              );
             }
           }
 
           const children = [
             new Paragraph({
               children: [
-                new TextRun(`Benzer Marka: ${g.similarMark.name || '-'} (${g.similarMark.applicationNo || '-'})`),
+                new TextRun(
+                  `Benzer Marka: ${g.similarMark.name || "-"} (${
+                    g.similarMark.applicationNo || "-"
+                  })`
+                ),
                 ...(similarImage ? [similarImage] : [])
               ],
-              heading: 'Heading2'
+              heading: "Heading2"
             })
           ];
 
@@ -1962,10 +1973,14 @@ export const generateSimilarityReport = onCall(
           const hasNote = !!g.similarMark.note;
 
           const headers = [
-            new TableCell({ children: [new Paragraph('İzlenen Marka')] }),
-            new TableCell({ children: [new Paragraph('Benzer Marka')] }),
-            ...(hasSimilarity ? [new TableCell({ children: [new Paragraph('Benzerlik (%)')] })] : []),
-            ...(hasNote ? [new TableCell({ children: [new Paragraph('Not')] })] : [])
+            new TableCell({ children: [new Paragraph("İzlenen Marka")] }),
+            new TableCell({ children: [new Paragraph("Benzer Marka")] }),
+            ...(hasSimilarity
+              ? [new TableCell({ children: [new Paragraph("Benzerlik (%)") ]})]
+              : []),
+            ...(hasNote
+              ? [new TableCell({ children: [new Paragraph("Not")] })]
+              : [])
           ];
 
           const rows = [new TableRow({ children: headers })];
@@ -1977,31 +1992,48 @@ export const generateSimilarityReport = onCall(
                 const [file] = await bucket.file(mark.imagePath).download();
                 monitoredImage = Media.addImage(doc, file, 50, 50);
               } catch (err) {
-                console.warn(`İzlenen marka görseli indirilemedi: ${mark.imagePath}`, err.message);
+                console.warn(
+                  `İzlenen marka görseli indirilemedi: ${mark.imagePath}`,
+                  err.message
+                );
               }
             }
 
             const monitoredCell = new TableCell({
               children: [
                 ...(monitoredImage ? [monitoredImage] : []),
-                new Paragraph(`${mark.applicationNo || '-'}\n${mark.date || '-'}\n${mark.niceClass || '-'}`)
+                new Paragraph(
+                  `${mark.applicationNo || "-"}\n${mark.date || "-"}\n${
+                    mark.niceClass || "-"
+                  }`
+                )
               ]
             });
 
             const similarCell = new TableCell({
               children: [
                 ...(similarImage ? [similarImage] : []),
-                new Paragraph(`${g.similarMark.applicationNo || '-'}\n${g.similarMark.date || '-'}\n${g.similarMark.niceClass || '-'}`)
+                new Paragraph(
+                  `${g.similarMark.applicationNo || "-"}\n${
+                    g.similarMark.date || "-"
+                  }\n${g.similarMark.niceClass || "-"}`
+                )
               ]
             });
 
             const extraCells = [];
-            if (hasSimilarity) {
-              extraCells.push(new TableCell({ children: [new Paragraph(`${g.similarMark.similarity}`)] }));
-            }
-            if (hasNote) {
-              extraCells.push(new TableCell({ children: [new Paragraph(g.similarMark.note || '')] }));
-            }
+            if (hasSimilarity)
+              extraCells.push(
+                new TableCell({
+                  children: [new Paragraph(`${g.similarMark.similarity}`)]
+                })
+              );
+            if (hasNote)
+              extraCells.push(
+                new TableCell({
+                  children: [new Paragraph(g.similarMark.note || "")]
+                })
+              );
 
             rows.push(new TableRow({ children: [monitoredCell, similarCell, ...extraCells] }));
           }
@@ -2021,10 +2053,10 @@ export const generateSimilarityReport = onCall(
 
       return {
         success: true,
-        file: finalBuffer.toString('base64')
+        file: finalBuffer.toString("base64") // Base64 döndür
       };
     } catch (error) {
-      console.error('Rapor oluşturma hatası:', error);
+      console.error("Rapor oluşturma hatası:", error);
       return { success: false, error: error.message };
     }
   }
