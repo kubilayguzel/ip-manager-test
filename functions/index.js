@@ -1820,7 +1820,7 @@ export const performTrademarkSimilaritySearch = onCall(
           );
 
           // Benzerlik eşik değerini de düşür
-          const SIMILARITY_THRESHOLD = 0.2; // 0.3'den 0.2'ye düşürdük
+          const SIMILARITY_THRESHOLD = 0.5;
           if (similarityScore < SIMILARITY_THRESHOLD && positionalExactMatchScore < SIMILARITY_THRESHOLD) {
             scoreFilteredCount++;
             if (scoreFilteredCount <= 5) { // İlk 5 reddedileni logla
