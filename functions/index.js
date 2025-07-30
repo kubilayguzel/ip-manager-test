@@ -1811,36 +1811,34 @@ export const performTrademarkSimilaritySearch = onCall(
           const SIMILARITY_THRESHOLD = 0.5; //
 
           // Yeni Kriter Kontrolü: Aranan marka, bulunan markanın başında veya sonunda tam geçiyor mu?
-          const cleanedHitName = cleanMarkName(hit.markName, (hit.markName || '').trim().split(/\s+/).length > 1); // cleanMarkName fonksiyonuna erişilebilir olmalı
-          let isPrefixSuffixExactMatch = false;
-          // Minimum uzunluk kontrolü eklendi, çok kısa kelimelerin eşleşmesi anlamsız olabilir.
-          // Örneğin, "a" kelimesinin her yerde eşleşmesini istemeyiz.
-          const MIN_PREFIX_SUFFIX_LENGTH = 3; // En az 3 karakterlik bir eşleşme arıyoruz
-          
-          if (cleanedSearchName.length >= MIN_PREFIX_SUFFIX_LENGTH) {
-              // Kelime sınırları içinde tam eşleşme kontrolü
-              const searchWords = cleanedSearchName.split(' ');
-              const hitWords = cleanedHitName.split(' ');
+        const cleanedHitName = cleanMarkName(hit.markName, (hit.markName || '').trim().split(/\s+/).length > 1);
+        let isPrefixSuffixExactMatch = false;
 
-              // Aranan markanın, bulunan markanın kelimeleri arasında tam olarak baştan veya sondan geçip geçmediğini kontrol et
-              for (const sWord of searchWords) {
-                  for (const hWord of hitWords) {
-                      if (sWord.length >= MIN_PREFIX_SUFFIX_LENGTH) {
-                          if (hWord.startsWith(sWord) || hWord.endsWith(sWord)) {
-                              isPrefixSuffixExactMatch = true;
-                              break; // Bir eşleşme bulmak yeterli
-                          }
-                      }
-                  }
-                  if (isPrefixSuffixExactMatch) break;
-              }
-          }
+        // Minimum uzunluk kontrolü eklendi, çok kısa kelimelerin eşleşmesi anlamsız olabilir.
+        const MIN_SEARCH_LENGTH = 3; // En az 3 karakterlik bir eşleşme arıyoruz
 
+        if (cleanedSearchName.length >= MIN_SEARCH_LENGTH) {
+            // Aranan markanın tüm kelimelerini kontrol et
+            const searchWords = cleanedSearchName.split(' ').filter(word => word.length >= MIN_SEARCH_LENGTH);
+            
+            for (const searchWord of searchWords) {
+                // Bulunan markanın temizlenmiş halinde aranan kelime geçiyor mu?
+                if (cleanedHitName.includes(searchWord)) {
+                    isPrefixSuffixExactMatch = true;
+                    logger.log(`🎯 Tam eşleşme bulundu: '${searchWord}' kelimesi '${cleanedHitName}' içinde geçiyor`);
+                    break; // Bir eşleşme bulmak yeterli
+                }
+            }
+            
+            // Alternatif olarak: Aranan markanın tamamı bulunan markada geçiyor mu?
+            // (kelime kelime değil, bütün olarak)
+            if (!isPrefixSuffixExactMatch && cleanedHitName.includes(cleanedSearchName)) {
+                isPrefixSuffixExactMatch = true;
+                logger.log(`🎯 Tam eşleşme bulundu: '${cleanedSearchName}' tamamı '${cleanedHitName}' içinde geçiyor`);
+            }
+        }
           // GÜNCELLENMİŞ FİLTRELEME KOŞULU
-          // Kayıt şu durumlarda listeye EKLENMEZ (yani continue olur):
-          // 1. Genel benzerlik skoru eşiğin altındaysa (similarityScore < SIMILARITY_THRESHOLD) VE
-          // 2. PositionalExactMatchScore da eşiğin altındaysa (positionalExactMatchScore < SIMILARITY_THRESHOLD) VE
-          // 3. Yeni eklediğimiz tam önek/sonek eşleşmesi durumu da yoksa (!isPrefixSuffixExactMatch).
+
           if (
               similarityScore < SIMILARITY_THRESHOLD && 
               positionalExactMatchScore < SIMILARITY_THRESHOLD && 
