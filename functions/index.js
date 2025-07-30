@@ -1757,17 +1757,6 @@ export const performTrademarkSimilaritySearch = onCall(
       const bulletinRecords = bulletinRecordsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       logger.log(`✅ ${bulletinRecords.length} kayıt bulundu.`);
 
-      // DEBUG: İlk birkaç kayıtın nice sınıf formatını kontrol et
-      if (bulletinRecords.length > 0) {
-        logger.log('📋 İlk 3 bülten kaydında nice sınıf formatları:', 
-          bulletinRecords.slice(0, 3).map(record => ({
-            markName: record.markName,
-            niceClasses: record.niceClasses,
-            niceClassesType: typeof record.niceClasses
-          }))
-        );
-      }
-
       const allResults = [];
 
       for (const monitoredMark of monitoredMarks) {
@@ -1775,8 +1764,7 @@ export const performTrademarkSimilaritySearch = onCall(
           id: monitoredMark.id,
           markName: monitoredMark.markName,
           applicationDate: monitoredMark.applicationDate,
-          niceClasses: monitoredMark.niceClasses,
-          niceClassesType: typeof monitoredMark.niceClasses
+          niceClasses: monitoredMark.niceClasses
         });
 
         const markNameRaw = monitoredMark.markName || monitoredMark.title || '';
@@ -1793,11 +1781,10 @@ export const performTrademarkSimilaritySearch = onCall(
           continue;
         }
 
-        logger.log(`🔎 İzlenen marka için arama: '${markName}' (Nice: ${JSON.stringify(niceClasses)})`);
+        logger.log(`🔎 İzlenen marka için arama: '${markName}' (Nice sınıf filtresi DEVRE DIŞI)`);
 
         let processedCount = 0;
         let dateFilteredCount = 0;
-        let niceClassFilteredCount = 0;
         let scoreFilteredCount = 0;
 
         for (const hit of bulletinRecords) {
@@ -1812,16 +1799,15 @@ export const performTrademarkSimilaritySearch = onCall(
             continue;
           }
 
-          // *** DÜZELTİLMİŞ: Nice sınıf filtresi ***
-          const hasNiceClassOverlap = hasOverlappingNiceClasses(niceClasses, hit.niceClasses);
-          if (Array.isArray(niceClasses) && niceClasses.length > 0 && !hasNiceClassOverlap) {
-            niceClassFilteredCount++;
-            if (processedCount <= 5) {
-              logger.log(`⏩ Nice sınıf çakışması yok: ${hit.markName}`);
-              logger.log(`   İzlenen: ${JSON.stringify(niceClasses)} vs Kayıt: ${JSON.stringify(hit.niceClasses)}`);
-            }
-            continue;
-          }
+          // *** GEÇİCİ: Nice sınıf filtresini tamamen devre dışı bırak ***
+          // const hasNiceClassOverlap = hasOverlappingNiceClasses(niceClasses, hit.niceClasses);
+          // if (Array.isArray(niceClasses) && niceClasses.length > 0 && !hasNiceClassOverlap) {
+          //   logger.log(`⏩ Nice sınıf çakışması yok: ${hit.markName}`);
+          //   continue;
+          // }
+          
+          // Nice sınıf filtresi devre dışı - hepsini geçir
+          const hasNiceClassOverlap = true; // Her zaman true döndür
 
           // Benzerlik skoru hesapla
           const { finalScore: similarityScore, positionalExactMatchScore } = calculateSimilarityScoreInternal(
@@ -1833,11 +1819,11 @@ export const performTrademarkSimilaritySearch = onCall(
             niceClasses
           );
 
-          // DEBUG: Eşik değerini düşürüp test et
-          const SIMILARITY_THRESHOLD = 0.5;
+          // Benzerlik eşik değerini de düşür
+          const SIMILARITY_THRESHOLD = 0.2; // 0.3'den 0.2'ye düşürdük
           if (similarityScore < SIMILARITY_THRESHOLD && positionalExactMatchScore < SIMILARITY_THRESHOLD) {
             scoreFilteredCount++;
-            if (processedCount <= 5) {
+            if (scoreFilteredCount <= 5) { // İlk 5 reddedileni logla
               logger.log(`⏩ Skor düşük: ${hit.markName} (${similarityScore.toFixed(2)}/${positionalExactMatchScore.toFixed(2)})`);
             }
             continue;
@@ -1857,7 +1843,7 @@ export const performTrademarkSimilaritySearch = onCall(
             bulletinId: hit.bulletinId,
             similarityScore,
             positionalExactMatchScore,
-            sameClass: hasNiceClassOverlap,
+            sameClass: hasNiceClassOverlap, // Her zaman true olacak
             monitoredTrademark: markName,
             monitoredNiceClasses: niceClasses,
             monitoredMarkId: monitoredMark.id
@@ -1868,14 +1854,14 @@ export const performTrademarkSimilaritySearch = onCall(
         logger.log(`📊 '${markName}' için filtre istatistikleri:`, {
           totalProcessed: processedCount,
           dateFiltered: dateFilteredCount,
-          niceClassFiltered: niceClassFilteredCount,
+          niceClassFiltered: 0, // Nice sınıf filtresi devre dışı
           scoreFiltered: scoreFilteredCount,
           matchesFound: allResults.filter(r => r.monitoredTrademark === markName).length
         });
       }
 
       allResults.sort((a, b) => b.similarityScore - a.similarityScore);
-      logger.log(`✅ Toplam ${allResults.length} sonuç döndürüldü.`);
+      logger.log(`✅ Toplam ${allResults.length} sonuç döndürüldü (Nice sınıf filtresi DEVRE DIŞI).`);
 
       return { success: true, results: allResults };
     } catch (error) {
