@@ -445,7 +445,7 @@ const resultsTableBody = document.getElementById('resultsTableBody');
 const loadingIndicator = document.getElementById('loadingIndicator');
 const noRecordsMessage = document.getElementById('noRecordsMessage');
 const infoMessageContainer = document.getElementById('infoMessageContainer');
-const functions = getFunctions();
+const functions = getFunctions(undefined, "europe-west1");
 
 const debounce = (func, delay) => {
     let timeout;
