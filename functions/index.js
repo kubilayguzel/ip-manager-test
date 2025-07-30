@@ -1916,7 +1916,7 @@ export const generateSimilarityReport = onCall(
       // --- Sahip bazında grupla ---
       const owners = {};
       results.forEach((m) => {
-        const owner = m.monitoredMark.ownerName || "Bilinmeyen Sahip";
+        const owner = (m.monitoredMark && m.monitoredMark.ownerName) || "Bilinmeyen Sahip";
         if (!owners[owner]) owners[owner] = [];
         owners[owner].push(m);
       });
@@ -1928,22 +1928,18 @@ export const generateSimilarityReport = onCall(
       for (const [ownerName, matches] of Object.entries(owners)) {
         const grouped = {};
         matches.forEach((m) => {
-          const key = m.similarMark.applicationNo;
-          if (!grouped[key]) grouped[key] = { similarMark: m.similarMark, monitoredMarks: [] };
-          grouped[key].monitoredMarks.push(m.monitoredMark);
+          const key = (m.similarMark && m.similarMark.applicationNo) || 'unknown';
+          if (!grouped[key]) grouped[key] = { similarMark: m.similarMark || {}, monitoredMarks: [] };
+          grouped[key].monitoredMarks.push(m.monitoredMark || {});
         });
 
-        // Document -> artık sections verilmek zorunda
-        const doc = new Document({
-          creator: "IP Manager",
-          description: "Benzer Markalar Raporu",
-          title: "Benzer Markalar",
-          sections: [{ children: [] }]
-        });
+        // Document sections array'i olmalı - her section bir object
+        const sections = [];
+        const sectionChildren = [];
 
         for (const g of Object.values(grouped)) {
           let similarImage = null;
-          if (g.similarMark.imagePath) {
+          if (g.similarMark && g.similarMark.imagePath) {
             try {
               const [file] = await bucket.file(g.similarMark.imagePath).download();
               similarImage = Media.addImage(doc, file, 50, 50);
@@ -1955,15 +1951,15 @@ export const generateSimilarityReport = onCall(
           const children = [
             new Paragraph({
               children: [
-                new TextRun(`Benzer Marka: ${g.similarMark.name || "-"} (${g.similarMark.applicationNo || "-"})`),
+                new TextRun(`Benzer Marka: ${(g.similarMark && g.similarMark.name) || "-"} (${(g.similarMark && g.similarMark.applicationNo) || "-"})`),
                 ...(similarImage ? [similarImage] : [])
               ],
               heading: "Heading2"
             })
           ];
 
-          const hasSimilarity = !!g.similarMark.similarity;
-          const hasNote = !!g.similarMark.note;
+          const hasSimilarity = !!(g.similarMark && g.similarMark.similarity);
+          const hasNote = !!(g.similarMark && g.similarMark.note);
 
           const headers = [
             new TableCell({ children: [new Paragraph("İzlenen Marka")] }),
@@ -1976,7 +1972,7 @@ export const generateSimilarityReport = onCall(
 
           for (const mark of g.monitoredMarks) {
             let monitoredImage = null;
-            if (mark.imagePath) {
+            if (mark && mark.imagePath) {
               try {
                 const [file] = await bucket.file(mark.imagePath).download();
                 monitoredImage = Media.addImage(doc, file, 50, 50);
@@ -1988,7 +1984,7 @@ export const generateSimilarityReport = onCall(
             const monitoredCell = new TableCell({
               children: [
                 ...(monitoredImage ? [monitoredImage] : []),
-                new Paragraph(`${mark.applicationNo || "-"}\n${mark.date || "-"}\n${mark.niceClass || "-"}`)
+                new Paragraph(`${(mark && mark.applicationNo) || "-"}\n${(mark && mark.date) || "-"}\n${(mark && mark.niceClass) || "-"}`)
               ]
             });
 
@@ -1996,13 +1992,13 @@ export const generateSimilarityReport = onCall(
               children: [
                 ...(similarImage ? [similarImage] : []),
                 new Paragraph(
-                  `${g.similarMark.applicationNo || "-"}\n${g.similarMark.date || "-"}\n${g.similarMark.niceClass || "-"}`
+                  `${(g.similarMark && g.similarMark.applicationNo) || "-"}\n${(g.similarMark && g.similarMark.date) || "-"}\n${(g.similarMark && g.similarMark.niceClass) || "-"}`
                 )
               ]
             });
 
             const extraCells = [];
-            if (hasSimilarity) extraCells.push(new TableCell({ children: [new Paragraph(`${g.similarMark.similarity}`)] }));
+            if (hasSimilarity) extraCells.push(new TableCell({ children: [new Paragraph(`${g.similarMark.similarity || ""}`)] }));
             if (hasNote) extraCells.push(new TableCell({ children: [new Paragraph(g.similarMark.note || "")] }));
 
             rows.push(new TableRow({ children: [monitoredCell, similarCell, ...extraCells] }));
@@ -2010,9 +2006,22 @@ export const generateSimilarityReport = onCall(
 
           children.push(new Table({ rows }));
 
-          // Eski `addSection` yerine doğrudan ilk section'a ekleme
-          doc.Sections[0].children.push(...children);
+          // Bütün children'ları sectionChildren'a ekle 
+          sectionChildren.push(...children);
         }
+
+        // Section'ı oluştur ve array'e ekle
+        sections.push({
+          children: sectionChildren
+        });
+
+        // Document'i sections array'i ile oluştur
+        const doc = new Document({
+          creator: "IP Manager",
+          description: "Benzer Markalar Raporu",
+          title: "Benzer Markalar",
+          sections: sections
+        });
 
         const buffer = await Packer.toBuffer(doc);
         archive.append(buffer, { name: `${ownerName}.docx` });
