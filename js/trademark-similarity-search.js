@@ -235,8 +235,11 @@ async function performSearch(fromCacheOnly = false) {
             // runTrademarkSearch artık bir dizi monitoredMark objesi bekliyor
             const resultsFromCF = await runTrademarkSearch(
                 trademarksToSearch.map(tm => ({
-                    id: tm.id, // Monitored markanın ID'sini de gönder
-                    markName: tm.title || tm.markName, // Başlık veya markName'i kullan
+                    id: tm.id,
+                    // Hem markName hem de title olarak gönderiyoruz,
+                    // Cloud Function hangisini bekliyorsa onu kullanabilir.
+                    markName: tm.markName,
+                    title: tm.title || tm.markName, // tm.title varsa onu, yoksa tm.markName'i title olarak gönder
                     applicationDate: tm.applicationDate,
                     niceClasses: tm.niceClass
                 })),
