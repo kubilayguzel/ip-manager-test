@@ -377,6 +377,7 @@
             <div class="results-container">
                 <div class="results-header">
                     <h3>Arama Sonuçları</h3>
+                    <button id="btnGenerateReport" class="btn btn-primary">Rapor Oluştur</button>
                 </div>
                 <div id="infoMessageContainer"></div>
                 <div style="overflow-x: auto;">
@@ -1025,6 +1026,28 @@ function resetUI() {
     if(pagination) pagination.update(0);
     checkCacheAndToggleButtonStates();
 }
+function getAllSearchResults() {
+    return allSimilarResults
+        .filter(r => r.isSimilar === true) // sadece Benzer olarak işaretlenenler
+        .map(r => ({
+            monitoredMark: {
+                applicationNo: r.monitoredApplicationNo,
+                date: r.monitoredApplicationDate,
+                niceClass: r.monitoredNiceClass,
+                ownerName: r.monitoredOwnerName,
+                imagePath: r.monitoredImagePath
+            },
+            similarMark: {
+                applicationNo: r.similarApplicationNo,
+                date: r.similarApplicationDate,
+                niceClass: r.similarNiceClass,
+                name: r.similarMarkName,
+                imagePath: r.similarImagePath,
+                similarity: r.similarityScore || null,
+                note: r.note || null
+            }
+        }));
+}
 
 // Event listener'lar
 document.addEventListener('DOMContentLoaded', async () => {
@@ -1048,6 +1071,32 @@ document.addEventListener('DOMContentLoaded', async () => {
     niceClassSearchInput.addEventListener('input', debounce(applyMonitoringListFilters, 400));
     bulletinSelect.addEventListener('change', resetUI); // Bülten değiştiğinde UI'ı sıfırla ve durumu kontrol et
 });
+document.getElementById("btnGenerateReport").addEventListener("click", async () => {
+    const results = getAllSearchResults();
+    if (!results.length) {
+        alert("Hiç benzer olarak işaretlenmiş sonuç yok.");
+        return;
+    }
+
+    const response = await fetch("/generateSimilarityReport", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ results })
+    });
+
+    if (!response.ok) {
+        alert("Rapor oluşturulamadı!");
+        return;
+    }
+
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "similarity-reports.zip";
+    a.click();
+});
+
 </script>
 </body>
 </html>
