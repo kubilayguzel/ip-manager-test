@@ -1357,20 +1357,98 @@ function isValidBasedOnDate(hitDate, monitoredDate) {
   return hit >= monitored;
 }
 
-
+// functions/index.js - Düzeltilmiş nice sınıf fonksiyonu
 
 function hasOverlappingNiceClasses(monitoredNiceClasses, recordNiceClasses) {
-    if (!Array.isArray(monitoredNiceClasses) || monitoredNiceClasses.length === 0) {
-        return true; // Eğer izlenen markanın Nice sınıfı yoksa, sınıf filtresini atla
+  logger.log("🏷️ Nice sınıf karşılaştırması:", {
+    monitoredNiceClasses,
+    recordNiceClasses,
+    monitoredType: typeof monitoredNiceClasses,
+    recordType: typeof recordNiceClasses
+  });
+  
+  try {
+    // Eğer izlenen markanın nice sınıfı yoksa, sınıf filtresini atla
+    if (!monitoredNiceClasses || (Array.isArray(monitoredNiceClasses) && monitoredNiceClasses.length === 0)) {
+      logger.log("ℹ️ İzlenen markanın nice sınıfı yok, filtre atlanıyor");
+      return true;
     }
-    if (!Array.isArray(recordNiceClasses) || recordNiceClasses.length === 0) {
-        return false; // İzlenen markanın sınıfı varken, kayıtta yoksa çakışma yok
+    
+    // Kayıtta nice sınıf yoksa çakışma yok
+    if (!recordNiceClasses) {
+      logger.log("ℹ️ Kayıtta nice sınıf yok, çakışma yok");
+      return false;
     }
 
-    // Her iki dizide de ortak Nice sınıfı var mı kontrol et
-    return monitoredNiceClasses.some(cls => recordNiceClasses.includes(cls));
+    // Nice sınıfları normalize et (sadece rakamları al ve array'e çevir)
+    const normalizeNiceClasses = (classes) => {
+      if (!classes) return [];
+      
+      let classArray = [];
+      
+      if (Array.isArray(classes)) {
+        classArray = classes;
+      } else if (typeof classes === 'string') {
+        // String ise önce " / " ile böl, sonra diğer ayırıcılarla da böl
+        classArray = classes.split(/[\s\/,]+/).filter(c => c.trim());
+      } else {
+        classArray = [String(classes)];
+      }
+      
+      // Her sınıftan sadece rakamları al
+      return classArray
+        .map(cls => String(cls).replace(/\D/g, '')) // Sadece rakamları al
+        .filter(cls => cls && cls.length > 0); // Boş olanları çıkar
+    };
+    
+    const monitoredClasses = normalizeNiceClasses(monitoredNiceClasses);
+    const recordClasses = normalizeNiceClasses(recordNiceClasses);
+    
+    logger.log("🔧 Normalize edilmiş sınıflar:", {
+      monitoredClasses,
+      recordClasses
+    });
+    
+    // Her iki liste de boşsa true döndür
+    if (monitoredClasses.length === 0 && recordClasses.length === 0) {
+      logger.log("ℹ️ Her iki liste de boş, kabul ediliyor");
+      return true;
+    }
+    
+    // İzlenen marka sınıfları boşsa kabul et
+    if (monitoredClasses.length === 0) {
+      logger.log("ℹ️ İzlenen marka sınıfları boş, kabul ediliyor");
+      return true;
+    }
+    
+    // Kayıt sınıfları boşsa çakışma yok
+    if (recordClasses.length === 0) {
+      logger.log("ℹ️ Kayıt sınıfları boş, çakışma yok");
+      return false;
+    }
+    
+    // Kesişim kontrolü
+    const hasOverlap = monitoredClasses.some(monitoredClass => 
+      recordClasses.some(recordClass => monitoredClass === recordClass)
+    );
+    
+    logger.log(`🏷️ Nice sınıf kesişimi: ${hasOverlap ? 'VAR' : 'YOK'}`);
+    
+    // Debug: hangi sınıflar eşleşti?
+    if (hasOverlap) {
+      const matchingClasses = monitoredClasses.filter(monitoredClass => 
+        recordClasses.some(recordClass => monitoredClass === recordClass)
+      );
+      logger.log(`✅ Eşleşen sınıflar: ${matchingClasses.join(', ')}`);
+    }
+    
+    return hasOverlap;
+    
+  } catch (error) {
+    logger.error('❌ Nice class karşılaştırma hatası:', error);
+    return false;
+  }
 }
-
 
 // ======== Ana Benzerlik Skorlama Fonksiyonu (scorer.js'ten kopyalandı) ========
 function levenshteinDistance(a, b) {
@@ -1679,53 +1757,73 @@ export const performTrademarkSimilaritySearch = onCall(
       const bulletinRecords = bulletinRecordsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       logger.log(`✅ ${bulletinRecords.length} kayıt bulundu.`);
 
+      // DEBUG: İlk birkaç kayıtın nice sınıf formatını kontrol et
+      if (bulletinRecords.length > 0) {
+        logger.log('📋 İlk 3 bülten kaydında nice sınıf formatları:', 
+          bulletinRecords.slice(0, 3).map(record => ({
+            markName: record.markName,
+            niceClasses: record.niceClasses,
+            niceClassesType: typeof record.niceClasses
+          }))
+        );
+      }
+
       const allResults = [];
 
       for (const monitoredMark of monitoredMarks) {
-        // --- GELİŞTİRİLMİŞ DEBUG LOG ---
         logger.log("🔍 DEBUG - İşlenen monitored mark:", {
           id: monitoredMark.id,
           markName: monitoredMark.markName,
-          title: monitoredMark.title, // title alanı da varsa logla
-          markNameType: typeof monitoredMark.markName,
-          markNameLength: typeof monitoredMark.markName === 'string' ? monitoredMark.markName.length : null,
-          allKeys: Object.keys(monitoredMark) // Tüm özellikleri göster
+          applicationDate: monitoredMark.applicationDate,
+          niceClasses: monitoredMark.niceClasses,
+          niceClassesType: typeof monitoredMark.niceClasses
         });
 
-        // Marka adını alma - önce markName, sonra title, sonra fallback
         const markNameRaw = monitoredMark.markName || monitoredMark.title || '';
         const markName = (typeof markNameRaw === 'string') ? markNameRaw.trim() : '';
         const applicationDate = monitoredMark.applicationDate || null;
         const niceClasses = monitoredMark.niceClasses || [];
 
-        // Boş marka adı kontrolü
         if (!markName) {
           logger.warn(`⚠️ İzlenen markanın adı eksik veya geçersiz:`, {
             monitoredMarkId: monitoredMark.id,
             markNameRaw: markNameRaw,
-            markNameType: typeof markNameRaw,
             fullObject: JSON.stringify(monitoredMark)
           });
           continue;
         }
 
-        logger.log(`🔎 İzlenen marka için arama: '${markName}' (${applicationDate || 'tarih yok'})`);
+        logger.log(`🔎 İzlenen marka için arama: '${markName}' (Nice: ${JSON.stringify(niceClasses)})`);
+
+        let processedCount = 0;
+        let dateFilteredCount = 0;
+        let niceClassFilteredCount = 0;
+        let scoreFilteredCount = 0;
 
         for (const hit of bulletinRecords) {
+          processedCount++;
+          
           // Tarih filtresi
           if (!isValidBasedOnDate(hit.applicationDate, applicationDate)) {
-            logger.log(`⏩ Tarih filtresi elendi: ${hit.markName} (${hit.applicationDate})`);
+            dateFilteredCount++;
+            if (processedCount <= 3) {
+              logger.log(`⏩ Tarih filtresi elendi: ${hit.markName} (${hit.applicationDate})`);
+            }
             continue;
           }
 
-          // Nice sınıf filtresi
+          // *** DÜZELTİLMİŞ: Nice sınıf filtresi ***
           const hasNiceClassOverlap = hasOverlappingNiceClasses(niceClasses, hit.niceClasses);
           if (Array.isArray(niceClasses) && niceClasses.length > 0 && !hasNiceClassOverlap) {
-            logger.log(`⏩ Nice sınıf çakışması yok: ${hit.markName} [${hit.niceClasses}]`);
+            niceClassFilteredCount++;
+            if (processedCount <= 5) {
+              logger.log(`⏩ Nice sınıf çakışması yok: ${hit.markName}`);
+              logger.log(`   İzlenen: ${JSON.stringify(niceClasses)} vs Kayıt: ${JSON.stringify(hit.niceClasses)}`);
+            }
             continue;
           }
 
-          // Benzerlik skoru ve Konumsal Tam Eşleşme Skoru
+          // Benzerlik skoru hesapla
           const { finalScore: similarityScore, positionalExactMatchScore } = calculateSimilarityScoreInternal(
             hit.markName,
             markName,
@@ -1735,11 +1833,18 @@ export const performTrademarkSimilaritySearch = onCall(
             niceClasses
           );
 
+          // DEBUG: Eşik değerini düşürüp test et
           const SIMILARITY_THRESHOLD = 0.5;
           if (similarityScore < SIMILARITY_THRESHOLD && positionalExactMatchScore < SIMILARITY_THRESHOLD) {
-            logger.log(`⏩ Skor düşük (${similarityScore.toFixed(2)}) ve Konumsal Eşleşme Yeterli Değil (${positionalExactMatchScore.toFixed(2)}): ${hit.markName}`);
+            scoreFilteredCount++;
+            if (processedCount <= 5) {
+              logger.log(`⏩ Skor düşük: ${hit.markName} (${similarityScore.toFixed(2)}/${positionalExactMatchScore.toFixed(2)})`);
+            }
             continue;
           }
+
+          // *** BAŞARILI EŞLEŞMEYİ LOGLA ***
+          logger.log(`🎯 EŞLEŞME: ${hit.markName} -> ${markName} (Skor: ${similarityScore.toFixed(2)})`);
 
           allResults.push({
             objectID: hit.id,
@@ -1755,9 +1860,18 @@ export const performTrademarkSimilaritySearch = onCall(
             sameClass: hasNiceClassOverlap,
             monitoredTrademark: markName,
             monitoredNiceClasses: niceClasses,
-            monitoredMarkId: monitoredMark.id // Frontend için gerekli
+            monitoredMarkId: monitoredMark.id
           });
         }
+
+        // Filtre istatistikleri
+        logger.log(`📊 '${markName}' için filtre istatistikleri:`, {
+          totalProcessed: processedCount,
+          dateFiltered: dateFilteredCount,
+          niceClassFiltered: niceClassFilteredCount,
+          scoreFiltered: scoreFilteredCount,
+          matchesFound: allResults.filter(r => r.monitoredTrademark === markName).length
+        });
       }
 
       allResults.sort((a, b) => b.similarityScore - a.similarityScore);
