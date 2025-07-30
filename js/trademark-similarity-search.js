@@ -238,7 +238,7 @@ async function performSearch(fromCacheOnly = false) {
                 id: tm.id,
                 markName: tm.title || tm.markName || '',  // <-- Önemli düzeltme
                 applicationDate: tm.applicationDate,
-                niceClasses: tm.niceClass
+                niceClasses: Array.isArray(tm.niceClass) ? tm.niceClass : (tm.niceClass ? [tm.niceClass] : [])
             })),
             selectedBulletin
         );
