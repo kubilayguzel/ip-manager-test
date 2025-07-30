@@ -1899,131 +1899,127 @@ export const performTrademarkSimilaritySearch = onCall(
     }
   }
 );
-export const generateSimilarityReport = onRequest(async (req, res) => {
-  const { results } = req.body;
-  if (!results || !Array.isArray(results)) {
-    res.status(400).send({ error: 'Geçersiz veri formatı' });
-    return;
-  }
+const bucket = admin.storage().bucket();
+export const generateSimilarityReport = onCall(
+  {
+    timeoutSeconds: 540,
+    memory: "1GiB",
+    region: "europe-west1"
+  },
+  async (request) => {
+    try {
+      const { results } = request.data;
+      if (!results || !Array.isArray(results)) {
+        throw new Error('Geçersiz veri formatı');
+      }
 
-  const bucket = admin.storage().bucket();
-  const archive = archiver('zip', { zlib: { level: 9 } });
-
-  res.setHeader('Content-Type', 'application/zip');
-  res.setHeader('Content-Disposition', 'attachment; filename="similarity-reports.zip"');
-  archive.pipe(res);
-
-  try {
-    // === Sahip bazında grupla ===
-    const owners = {};
-    for (const m of results) {
-      const owner = m.monitoredMark.ownerName || 'Bilinmeyen Sahip';
-      if (!owners[owner]) owners[owner] = [];
-      owners[owner].push(m);
-    }
-
-    // === Her sahip için ayrı docx oluştur ===
-    for (const [ownerName, matches] of Object.entries(owners)) {
-      const grouped = {};
-      matches.forEach(m => {
-        const key = m.similarMark.applicationNo;
-        if (!grouped[key]) grouped[key] = { similarMark: m.similarMark, monitoredMarks: [] };
-        grouped[key].monitoredMarks.push(m.monitoredMark);
+      // --- Sahip bazında grupla ---
+      const owners = {};
+      results.forEach(m => {
+        const owner = m.monitoredMark.ownerName || 'Bilinmeyen Sahip';
+        if (!owners[owner]) owners[owner] = [];
+        owners[owner].push(m);
       });
 
-      const doc = new Document();
+      const archive = archiver('zip', { zlib: { level: 9 } });
+      const passthrough = new stream.PassThrough();
+      archive.pipe(passthrough);
 
-      for (const g of Object.values(grouped)) {
-        // --- Benzer marka görseli ---
-        let similarImage = null;
-        if (g.similarMark.imagePath) {
-          try {
-            const [file] = await bucket.file(g.similarMark.imagePath).download();
-            similarImage = Media.addImage(doc, file, 50, 50);
-          } catch (e) {
-            console.warn(`Benzer marka görseli indirilemedi: ${g.similarMark.imagePath}`, e.message);
-          }
-        }
+      for (const [ownerName, matches] of Object.entries(owners)) {
+        const grouped = {};
+        matches.forEach(m => {
+          const key = m.similarMark.applicationNo;
+          if (!grouped[key]) grouped[key] = { similarMark: m.similarMark, monitoredMarks: [] };
+          grouped[key].monitoredMarks.push(m.monitoredMark);
+        });
 
-        const children = [
-          new Paragraph({
-            children: [
-              new TextRun(
-                `Benzer Marka: ${g.similarMark.name || '-'} (${g.similarMark.applicationNo || '-'})`
-              ),
-              ...(similarImage ? [similarImage] : [])
-            ],
-            heading: 'Heading2'
-          })
-        ];
+        const doc = new Document();
 
-        const hasSimilarity = !!g.similarMark.similarity;
-        const hasNote = !!g.similarMark.note;
-
-        const headers = [
-          new TableCell({ children: [new Paragraph('İzlenen Marka')] }),
-          new TableCell({ children: [new Paragraph('Benzer Marka')] }),
-          ...(hasSimilarity
-            ? [new TableCell({ children: [new Paragraph('Benzerlik (%)')] })]
-            : []),
-          ...(hasNote ? [new TableCell({ children: [new Paragraph('Not')] })] : [])
-        ];
-
-        const rows = [new TableRow({ children: headers })];
-
-        for (const mark of g.monitoredMarks) {
-          let monitoredImage = null;
-          if (mark.imagePath) {
+        for (const g of Object.values(grouped)) {
+          let similarImage = null;
+          if (g.similarMark.imagePath) {
             try {
-              const [file] = await bucket.file(mark.imagePath).download();
-              monitoredImage = Media.addImage(doc, file, 50, 50);
-            } catch (e) {
-              console.warn(`İzlenen marka görseli indirilemedi: ${mark.imagePath}`, e.message);
+              const [file] = await bucket.file(g.similarMark.imagePath).download();
+              similarImage = Media.addImage(doc, file, 50, 50);
+            } catch (err) {
+              console.warn(`Benzer marka görseli indirilemedi: ${g.similarMark.imagePath}`, err.message);
             }
           }
 
-          const monitoredCell = new TableCell({
-            children: [
-              ...(monitoredImage ? [monitoredImage] : []),
-              new Paragraph(
-                `${mark.applicationNo || '-'}\n${mark.date || '-'}\n${mark.niceClass || '-'}`
-              )
-            ]
-          });
+          const children = [
+            new Paragraph({
+              children: [
+                new TextRun(`Benzer Marka: ${g.similarMark.name || '-'} (${g.similarMark.applicationNo || '-'})`),
+                ...(similarImage ? [similarImage] : [])
+              ],
+              heading: 'Heading2'
+            })
+          ];
 
-          const similarCell = new TableCell({
-            children: [
-              ...(similarImage ? [similarImage] : []),
-              new Paragraph(
-                `${g.similarMark.applicationNo || '-'}\n${g.similarMark.date || '-'}\n${
-                  g.similarMark.niceClass || '-'
-                }`
-              )
-            ]
-          });
+          const hasSimilarity = !!g.similarMark.similarity;
+          const hasNote = !!g.similarMark.note;
 
-          const extraCells = [];
-          if (hasSimilarity)
-            extraCells.push(
-              new TableCell({ children: [new Paragraph(`${g.similarMark.similarity}`)] })
-            );
-          if (hasNote)
-            extraCells.push(new TableCell({ children: [new Paragraph(g.similarMark.note || '')] }));
+          const headers = [
+            new TableCell({ children: [new Paragraph('İzlenen Marka')] }),
+            new TableCell({ children: [new Paragraph('Benzer Marka')] }),
+            ...(hasSimilarity ? [new TableCell({ children: [new Paragraph('Benzerlik (%)')] })] : []),
+            ...(hasNote ? [new TableCell({ children: [new Paragraph('Not')] })] : [])
+          ];
 
-          rows.push(new TableRow({ children: [monitoredCell, similarCell, ...extraCells] }));
+          const rows = [new TableRow({ children: headers })];
+
+          for (const mark of g.monitoredMarks) {
+            let monitoredImage = null;
+            if (mark.imagePath) {
+              try {
+                const [file] = await bucket.file(mark.imagePath).download();
+                monitoredImage = Media.addImage(doc, file, 50, 50);
+              } catch (err) {
+                console.warn(`İzlenen marka görseli indirilemedi: ${mark.imagePath}`, err.message);
+              }
+            }
+
+            const monitoredCell = new TableCell({
+              children: [
+                ...(monitoredImage ? [monitoredImage] : []),
+                new Paragraph(`${mark.applicationNo || '-'}\n${mark.date || '-'}\n${mark.niceClass || '-'}`)
+              ]
+            });
+
+            const similarCell = new TableCell({
+              children: [
+                ...(similarImage ? [similarImage] : []),
+                new Paragraph(`${g.similarMark.applicationNo || '-'}\n${g.similarMark.date || '-'}\n${g.similarMark.niceClass || '-'}`)
+              ]
+            });
+
+            const extraCells = [];
+            if (hasSimilarity) extraCells.push(new TableCell({ children: [new Paragraph(`${g.similarMark.similarity}`)] }));
+            if (hasNote) extraCells.push(new TableCell({ children: [new Paragraph(g.similarMark.note || '')] }));
+
+            rows.push(new TableRow({ children: [monitoredCell, similarCell, ...extraCells] }));
+          }
+
+          children.push(new Table({ rows }));
+          doc.addSection({ children, properties: { pageBreakBefore: true } });
         }
 
-        children.push(new Table({ rows }));
-        doc.addSection({ children, properties: { pageBreakBefore: true } });
+        const buffer = await Packer.toBuffer(doc);
+        archive.append(buffer, { name: `${ownerName}.docx` });
       }
 
-      const buffer = await Packer.toBuffer(doc);
-      archive.append(buffer, { name: `${ownerName}.docx` });
-    }
+      await archive.finalize();
+      const chunks = [];
+      for await (const chunk of passthrough) chunks.push(chunk);
+      const finalBuffer = Buffer.concat(chunks);
 
-    await archive.finalize();
-  } catch (error) {
-    console.error('Rapor oluşturma hatası:', error);
-    res.status(500).send({ error: error.message });
+      return {
+        success: true,
+        file: finalBuffer.toString('base64') // Base64 döndür
+      };
+    } catch (error) {
+      console.error('Rapor oluşturma hatası:', error);
+      return { success: false, error: error.message };
+    }
   }
-});
+);
