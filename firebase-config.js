@@ -1730,55 +1730,51 @@ export const searchRecordService = {
 // --- Similarity Service ---
 export const similarityService = {
     /**
-     * Benzerlik durumunu günceller (monitoringTrademarkRecords tablosunda)
-     * @param {string} monitoredTrademarkId - İzlenen marka ID'si
-     * @param {string} bulletinId - Bülten ID'si  
-     * @param {string} resultId - Sonuç ID'si (objectID veya applicationNo)
-     * @param {boolean} isSimilar - Benzer mi (true) yoksa benzemez mi (false)
-     * @returns {Object} Başarı durumu
-     */
-    async updateSimilarityStatus(monitoredTrademarkId, bulletinId, resultId, isSimilar) {
-        if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor." };
-        
-        try {
-            const recordId = `${monitoredTrademarkId}_${bulletinId}`;
-            
-            // Mevcut kaydı al
-            const result = await searchRecordService.getRecord(recordId);
-            
-            if (result.success && result.data) {
-                // Mevcut sonuçları al ve güncelle
-                const updatedResults = result.data.results.map(r => {
-                    if (r.objectID === resultId || r.applicationNo === resultId) {
-                        return { 
-                            ...r, 
-                            isSimilar: isSimilar, 
-                            similarityUpdatedAt: new Date().toISOString() 
-                        };
-                    }
-                    return r;
-                });
-                
-                // monitoringtrademarkrecords kaydını güncelle
-                const updateData = { 
-                    ...result.data, 
-                    results: updatedResults,
-                    lastSimilarityUpdate: new Date().toISOString()
-                };
-                
-                await searchRecordService.saveRecord(recordId, updateData);
-                
-                console.log(`✅ Benzerlik durumu güncellendi: ${resultId} -> ${isSimilar ? 'Benzer' : 'Benzemez'}`);
-                return { success: true };
-            }
-            
-            return { success: false, error: 'Arama kaydı bulunamadı' };
-            
-        } catch (error) {
-            console.error('Benzerlik durumu güncellenirken hata:', error);
-            return { success: false, error: error.message };
+ * Sonuç kaydı için alan günceller (isSimilar, bs, note vb.)
+ * @param {string} monitoredTrademarkId - İzlenen marka ID'si
+ * @param {string} bulletinId - Bülten ID'si
+ * @param {string} resultId - Sonuç ID'si
+ * @param {Object} fields - Güncellenecek alanlar ({ isSimilar, bs, note, ... })
+ * @returns {Object} Başarı durumu
+ */
+async updateSimilarityFields(monitoredTrademarkId, bulletinId, resultId, fields) {
+    if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor." };
+
+    try {
+        const recordId = `${monitoredTrademarkId}_${bulletinId}`;
+        const result = await searchRecordService.getRecord(recordId);
+
+        if (result.success && result.data) {
+            const updatedResults = result.data.results.map(r => {
+                if (r.objectID === resultId || r.applicationNo === resultId) {
+                    return { 
+                        ...r, 
+                        ...fields,
+                        lastUpdate: new Date().toISOString()
+                    };
+                }
+                return r;
+            });
+
+            const updateData = { 
+                ...result.data, 
+                results: updatedResults,
+                lastSimilarityUpdate: new Date().toISOString()
+            };
+
+            await searchRecordService.saveRecord(recordId, updateData);
+
+            console.log(`✅ Alanlar güncellendi: ${resultId}`, fields);
+            return { success: true };
         }
-    },
+
+        return { success: false, error: 'Arama kaydı bulunamadı' };
+
+    } catch (error) {
+        console.error('Alanlar güncellenirken hata:', error);
+        return { success: false, error: error.message };
+    }
+},
 
     /**
      * Belirli bir kaydın benzerlik durumunu alır
