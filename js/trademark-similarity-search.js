@@ -191,6 +191,7 @@ async function performResearch() {
     
     await performSearch(false); // Yeni arama yap
 }
+// js/trademark-similarity-search.js dosyasının düzeltilmiş kısmı
 
 async function performSearch(fromCacheOnly = false) {
     const selectedBulletin = bulletinSelect.value;
@@ -214,7 +215,12 @@ async function performSearch(fromCacheOnly = false) {
         const recordId = `${tm.id}_${selectedBulletin}`;
         const result = await searchRecordService.getRecord(recordId);
         if (result.success && result.data) {
-            cachedResults.push(...result.data.results.map(r => ({...r, source: 'cache', monitoredTrademark: tm.title})));
+            cachedResults.push(...result.data.results.map(r => ({
+                ...r,
+                source: 'cache',
+                monitoredTrademarkId: tm.id,
+                monitoredTrademark: tm.title || tm.markName || 'BELİRSİZ_MARKA'
+            })));
         } else {
             trademarksToSearch.push(tm);
         }
@@ -228,20 +234,40 @@ async function performSearch(fromCacheOnly = false) {
             checkCacheAndToggleButtonStates();
             return;
         }
-        loadingIndicator.textContent = `${trademarksToSearch.length} marka için sunucu tarafında arama yapılıyor... (Bu biraz zaman alabilir)`;
-        
-        // Sadece bir kez runTrademarkSearch (yani Cloud Function) çağırıyoruz
-        try {
-            // runTrademarkSearch artık bir dizi monitoredMark objesi bekliyor
-        const resultsFromCF = await runTrademarkSearch(
-            trademarksToSearch.map(tm => ({
+        loadingIndicator.textContent = `${trademarksToSearch.length} marka için arama yapılıyor... (Bu biraz zaman alabilir)`;
+
+        // --- DÜZELTİLMİŞ KISIM: Cloud Function'a giden veriyi kontrol et ---
+        const monitoredMarksPayload = trademarksToSearch.map(tm => {
+            // Önce title, sonra markName, sonra fallback değer kullan
+            const markName = (tm.title || tm.markName || '').trim();
+            
+            // Eğer marka adı hala boşsa uyarı ver ve logla
+            if (!markName) {
+                console.warn(`⚠️ Bu markanın adı eksik (ID: ${tm.id})`, tm);
+                console.warn('Mevcut özellikler:', Object.keys(tm));
+            }
+            
+            return {
                 id: tm.id,
-                markName: tm.title || tm.markName || '',  // <-- Önemli düzeltme
-                applicationDate: tm.applicationDate,
-                niceClasses: Array.isArray(tm.niceClass) ? tm.niceClass : (tm.niceClass ? [tm.niceClass] : [])
-            })),
+                markName: markName || 'BELİRSİZ_MARKA', // Cloud Function'ın beklediği alan adı
+                applicationDate: tm.applicationDate || '',
+                niceClasses: Array.isArray(tm.niceClass) 
+                    ? tm.niceClass 
+                    : (tm.niceClass ? [tm.niceClass] : [])
+            };
+        });
+
+        // Debug için payload'ı logla
+        console.log('Cloud Function\'a gönderilen payload:', {
+            monitoredMarks: monitoredMarksPayload,
             selectedBulletin
-        );
+        });
+
+        try {
+            const resultsFromCF = await runTrademarkSearch(
+                monitoredMarksPayload, // Düzeltilmiş payload
+                selectedBulletin
+            );
             
             // Cloud Function'dan gelen tüm sonuçları al ve önbelleğe kaydet
             if (resultsFromCF && resultsFromCF.length > 0) {
@@ -286,23 +312,22 @@ async function performSearch(fromCacheOnly = false) {
             }
         } catch (error) {
             console.error("❌ Cloud Function çağrılırken kritik hata oluştu:", error);
-            infoMessageContainer.innerHTML = `<div class="info-message" style="background-color: #ffe0e6; color: #721c24;">Hata: Arama sırasında bir sorun oluştu. Detaylar için konsolu kontrol edin.</div>`;
-            loadingIndicator.style.display = 'none';
-            startSearchBtn.disabled = false;
-            researchBtn.disabled = false;
-            return; // Hata durumunda işlemi durdur
+            infoMessageContainer.innerHTML = `<div class="info-message" style="background-color: #ffe0e6; color: #721c24;">Hata: Arama sırasında bir sorun oluştu. Detaylar konsola yazıldı.</div>`;
+            return;
         }
     }
-    
+
+    // Tüm sonuçları birleştir ve göster
     allSimilarResults = [...cachedResults, ...newSearchResults];
+    
     loadingIndicator.style.display = 'none';
     
-    const infoMessage = `Toplam ${allSimilarResults.length} benzer sonuç bulundu. (${cachedResults.length} önbellekten, ${newSearchResults.length} yeni arama ile)`;
+    const infoMessage = `Toplam ${allSimilarResults.length} benzer sonuç bulundu (${cachedResults.length} önbellekten, ${newSearchResults.length} yeni arama ile)`;
     infoMessageContainer.innerHTML = `<div class="info-message">${infoMessage}</div>`;
-    
+
     pagination.update(allSimilarResults.length);
     renderCurrentPageOfResults();
-            
+
     startSearchBtn.disabled = true;
     researchBtn.disabled = allSimilarResults.length === 0;
     console.log("📊 Tüm benzer sonuçlar (render öncesi):", allSimilarResults);
