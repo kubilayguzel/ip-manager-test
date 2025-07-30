@@ -122,8 +122,27 @@
             padding: 15px !important;
             color: #495057;
         }
-        .bs-select { width: 100%; padding: 5px; border-radius: 5px; }
+        .bs-select { width: 90px; font-size: 1em; }
         .note-input { width: 100%; padding: 5px; border-radius: 5px; border: 1px solid #ccc; }
+        /* Sahip kolonunu daralt */
+        .results-table th:nth-child(3),
+        .results-table td:nth-child(3) {
+            width: 150px;   /* daha önce genişti, şimdi dar */
+            max-width: 150px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        /* Nice sınıf kolonunu genişlet */
+        .results-table th:nth-child(4),
+        .results-table td:nth-child(4) {
+            width: 200px;   /* daha geniş */
+            max-width: 200px;
+        }
+        .note-cell { cursor: pointer; position: relative; }
+        .note-input { width: 100%; box-sizing: border-box; }
+        .note-placeholder { color: #888; font-style: italic; }
 
     </style>
 </head>
@@ -575,10 +594,12 @@ function renderCurrentPageOfResults() {
                             .map(val => `<option value=\"${val}\" ${hit.bs===val?'selected':''}>${val||'B.Ş'}</option>`).join('')}
                     </select>
                 </td>
-                <td>
-                    <input class="note-input" type="text" value="${hit.note||''}" 
-                        onblur="updateNote('${resultId}','${hit.monitoredTrademarkId}','${bulletinSelect.value}',this)"
-                        placeholder="Not girin..." />
+                <td class="note-cell" onclick="toggleNoteInput(this)">
+                    ${hit.note 
+                        ? `<span class="note-text">${hit.note}</span>` 
+                        : `<span class="note-placeholder">📝 Not ekle</span>`}
+                    <input type="text" class="note-input" value="${hit.note || ''}" style="display:none;"
+                        onblur="saveNoteAndHide(this,'${resultId}','${hit.monitoredTrademarkId}','${bulletinSelect.value}')">
                 </td>
             `;
 
@@ -598,60 +619,35 @@ function updateSearchResultsHeader() {
 
 // Benzerlik durumunu değiştirme fonksiyonu
 window.toggleSimilarity = async function(resultId, monitoredTrademarkName, buttonElement) {
-    try {
-        // Mevcut durumu ters çevir
-        const currentlyNotSimilar = buttonElement.classList.contains('not-similar');
-        const newSimilarityStatus = currentlyNotSimilar;
-        
-        // İlgili izlenen marka ID'sini bul
-        const monitoredTrademark = filteredMonitoringTrademarks.find(tm => 
-            (tm.title || tm.markName) === monitoredTrademarkName
+    const currentlyNotSimilar = buttonElement.classList.contains('not-similar');
+    const newStatus = currentlyNotSimilar;
+
+    const monitoredTrademark = filteredMonitoringTrademarks.find(tm => 
+        (tm.title || tm.markName) === monitoredTrademarkName
+    );
+    if (!monitoredTrademark) return;
+
+    const updateResult = await similarityService.updateSimilarityFields(
+        monitoredTrademark.id,
+        bulletinSelect.value,
+        resultId,
+        { isSimilar: newStatus }
+    );
+
+    if (updateResult.success) {
+        // Butonu anında güncelle
+        buttonElement.classList.toggle('not-similar', !newStatus);
+        buttonElement.classList.toggle('similar', newStatus);
+        buttonElement.textContent = newStatus ? 'Benzer' : 'Benzemez';
+
+        // Cache güncelle
+        const r = allSimilarResults.find(r => 
+            (r.objectID === resultId || r.applicationNo === resultId) &&
+            r.monitoredTrademark === monitoredTrademarkName
         );
-        
-        if (!monitoredTrademark) {
-            console.error('İzlenen marka bulunamadı:', monitoredTrademarkName);
-            return;
-        }
-
-        // monitoringtrademarkrecords tablosunda güncelle
-        const updateResult = await similarityService.updateSimilarityFields(
-            monitoredTrademark.id,
-            bulletinSelect.value,
-            resultId,
-            { isSimilar: newSimilarityStatus }
-        );
-
-        if (updateResult.success) {
-            // Local cache'i de güncelle
-            const resultIndex = allSimilarResults.findIndex(r => 
-                (r.objectID === resultId || r.applicationNo === resultId) &&
-                r.monitoredTrademark === monitoredTrademarkName
-            );
-            
-            if (resultIndex !== -1) {
-                allSimilarResults[resultIndex].isSimilar = newSimilarityStatus;
-                allSimilarResults[resultIndex].similarityUpdatedAt = new Date().toISOString();
-            }
-
-            console.log(`✅ Benzerlik durumu güncellendi: ${resultId} -> ${newSimilarityStatus ? 'Benzer' : 'Benzemez'}`);
-        } else {
-            // Hata durumunda butonu eski haline çevir
-            if (!newSimilarityStatus) {
-                buttonElement.classList.remove('not-similar');
-                buttonElement.classList.add('similar');
-                buttonElement.textContent = 'Benzer';
-            } else {
-                buttonElement.classList.remove('similar');
-                buttonElement.classList.add('not-similar');
-                buttonElement.textContent = 'Benzemez';
-            }
-            
-            console.error('❌ Benzerlik durumu güncellenemedi:', updateResult.error);
-            alert('Benzerlik durumu güncellenirken hata oluştu.');
-        }
-    } catch (error) {
-        console.error('toggleSimilarity hatası:', error);
-        alert('Benzerlik durumu güncellenirken hata oluştu.');
+        if (r) r.isSimilar = newStatus;
+    } else {
+        alert('Güncelleme başarısız!');
     }
 };
 
@@ -683,6 +679,24 @@ window.updateNote = async function(resultId, monitoredTrademarkId, bulletinId, i
     } catch (err) {
         console.error("❌ Not güncellenemedi:", err);
     }
+};
+window.toggleNoteInput = function(cell) {
+    const span = cell.querySelector('.note-text') || cell.querySelector('.note-placeholder');
+    const input = cell.querySelector('.note-input');
+    span.style.display = 'none';
+    input.style.display = 'inline-block';
+    input.focus();
+};
+
+window.saveNoteAndHide = async function(input, resultId, monitoredTrademarkId, bulletinId) {
+    const value = input.value;
+    await similarityService.updateSimilarityFields(monitoredTrademarkId, bulletinId, resultId, { note: value });
+    const cell = input.closest('.note-cell');
+    const span = cell.querySelector('.note-text') || cell.querySelector('.note-placeholder');
+    span.textContent = value || '📝 Not ekle';
+    span.className = value ? 'note-text' : 'note-placeholder';
+    input.style.display = 'none';
+    span.style.display = 'inline';
 };
 
 // Event listener'lar
