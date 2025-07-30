@@ -192,6 +192,7 @@ async function performResearch() {
     await performSearch(false); // Yeni arama yap
 }
 // js/trademark-similarity-search.js dosyasının düzeltilmiş kısmı
+// trademark-similarity-search.js dosyasının performSearch fonksiyonunun düzeltilmiş hali
 
 async function performSearch(fromCacheOnly = false) {
     const selectedBulletin = bulletinSelect.value;
@@ -236,7 +237,7 @@ async function performSearch(fromCacheOnly = false) {
         }
         loadingIndicator.textContent = `${trademarksToSearch.length} marka için arama yapılıyor... (Bu biraz zaman alabilir)`;
 
-        // --- DÜZELTİLMİŞ KISIM: Cloud Function'a giden veriyi kontrol et ---
+        // --- DÜZELTİLMİŞ KISIM: Cloud Function'a doğru array formatında gönder ---
         const monitoredMarksPayload = trademarksToSearch.map(tm => {
             // Önce title, sonra markName, sonra fallback değer kullan
             const markName = (tm.title || tm.markName || '').trim();
@@ -258,16 +259,24 @@ async function performSearch(fromCacheOnly = false) {
         });
 
         // Debug için payload'ı logla
-        console.log('Cloud Function\'a gönderilen payload:', {
-            monitoredMarks: monitoredMarksPayload,
-            selectedBulletin
+        console.log('🚀 Cloud Function\'a gönderilen payload:', {
+            monitoredMarksCount: monitoredMarksPayload.length,
+            selectedBulletin,
+            sampleMark: monitoredMarksPayload[0], // İlk markayı örnek olarak göster
+            allMarks: monitoredMarksPayload // Tüm markaları da göster
         });
 
         try {
+            // *** ÖNEMLİ: runTrademarkSearch artık array ve bulletin ID bekliyor ***
             const resultsFromCF = await runTrademarkSearch(
-                monitoredMarksPayload, // Düzeltilmiş payload
-                selectedBulletin
+                monitoredMarksPayload, // Array olarak gönder
+                selectedBulletin // İkinci parametre olarak bulletin ID
             );
+            
+            console.log('✅ Cloud Function\'dan dönen sonuç:', {
+                resultsCount: resultsFromCF?.length || 0,
+                firstResult: resultsFromCF?.[0] // İlk sonucu örnek olarak göster
+            });
             
             // Cloud Function'dan gelen tüm sonuçları al ve önbelleğe kaydet
             if (resultsFromCF && resultsFromCF.length > 0) {
@@ -275,9 +284,10 @@ async function performSearch(fromCacheOnly = false) {
                 
                 // Gelen sonuçları izlenen markalarına göre grupla ve kaydet
                 const groupedResults = newSearchResults.reduce((acc, currentResult) => {
-                    // Cloud Function'dan gelen sonuçların `monitoredTrademarkId` içerdiğini varsayıyoruz.
-                    // Eğer içermiyorsa, Cloud Function'da bu alanı eklememiz gerekir.
-                    const monitoredMarkId = currentResult.monitoredMarkId || trademarksToSearch.find(tm => (tm.title || tm.markName) === currentResult.monitoredTrademark)?.id;
+                    // Cloud Function'dan monitoredMarkId gelmeli
+                    const monitoredMarkId = currentResult.monitoredMarkId || 
+                        trademarksToSearch.find(tm => (tm.title || tm.markName) === currentResult.monitoredTrademark)?.id;
+                        
                     if (monitoredMarkId) {
                         if (!acc[monitoredMarkId]) {
                             acc[monitoredMarkId] = [];
@@ -289,30 +299,38 @@ async function performSearch(fromCacheOnly = false) {
                     return acc;
                 }, {});
 
+                // Her marka için önbelleğe kaydet
                 for (const tm of trademarksToSearch) {
                     const recordId = `${tm.id}_${selectedBulletin}`;
                     const specificResultsForThisMark = groupedResults[tm.id] || [];
                     
-                    if (specificResultsForThisMark.length > 0 || tm.id in groupedResults) { // Sonuç olsun veya olmasın, CF döndürdüyse kaydet
-                        await searchRecordService.saveRecord(recordId, { 
-                            results: specificResultsForThisMark.map(r => {
-                                // Orijinal 'source' bilgisini kaldırıp sadece datayı kaydet
-                                const { source, ...rest } = r; 
-                                return rest;
-                            }), 
-                            searchDate: new Date().toISOString() 
-                        });
-                        console.log(`✅ Önbelleğe kaydedildi: ${recordId} (${specificResultsForThisMark.length} sonuç)`);
-                    } else {
-                        // Eğer hiç sonuç yoksa ve CF döndürmediyse, boş bir kayıt oluştur
-                        await searchRecordService.saveRecord(recordId, { results: [], searchDate: new Date().toISOString() });
-                        console.log(`✅ Önbelleğe kaydedildi (boş sonuç): ${recordId}`);
-                    }
+                    // Sonuç olsun veya olmasın kaydet
+                    await searchRecordService.saveRecord(recordId, { 
+                        results: specificResultsForThisMark.map(r => {
+                            // 'source' bilgisini kaldırıp sadece datayı kaydet
+                            const { source, ...rest } = r; 
+                            return rest;
+                        }), 
+                        searchDate: new Date().toISOString() 
+                    });
+                    console.log(`✅ Önbelleğe kaydedildi: ${recordId} (${specificResultsForThisMark.length} sonuç)`);
+                }
+            } else {
+                // Hiç sonuç gelmemişse her marka için boş kayıt oluştur
+                for (const tm of trademarksToSearch) {
+                    const recordId = `${tm.id}_${selectedBulletin}`;
+                    await searchRecordService.saveRecord(recordId, { 
+                        results: [], 
+                        searchDate: new Date().toISOString() 
+                    });
+                    console.log(`✅ Önbelleğe kaydedildi (boş sonuç): ${recordId}`);
                 }
             }
         } catch (error) {
             console.error("❌ Cloud Function çağrılırken kritik hata oluştu:", error);
             infoMessageContainer.innerHTML = `<div class="info-message" style="background-color: #ffe0e6; color: #721c24;">Hata: Arama sırasında bir sorun oluştu. Detaylar konsola yazıldı.</div>`;
+            loadingIndicator.style.display = 'none';
+            startSearchBtn.disabled = false;
             return;
         }
     }
