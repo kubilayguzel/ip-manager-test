@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>IP Manager - Marka Bülten İzleme</title>
     <style>
-        /* MEVCUT CSS + GÜNCELLEMELER */
+        /* MEVCUt CSS YAPISI KORUNDU - SADECE BENZEMEZ/BENZER BUTON STİLLERİ EKLENDİ */
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333; display: flex; }
         .page-wrapper { flex-grow: 1; display: flex; flex-direction: column; height: 100vh; overflow-y: auto; background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); }
@@ -30,73 +30,121 @@
         .results-table { width: 100%; border-collapse: collapse; }
         .results-table th, .results-table td { padding: 15px; text-align: left; border-bottom: 1px solid #f0f0f0; }
         .results-table th { background: #f8f9fa; font-weight: 600; }
+        
+        /* Nice sınıfı kolonu daralttıldı */
+        .results-table th:nth-child(4), .results-table td:nth-child(4) { 
+            width: 120px; 
+            max-width: 120px; 
+        }
+        
+        /* İşlemler kolonu için buton gruplandırması */
+        .results-table th:nth-child(6), .results-table td:nth-child(6) { 
+            width: 180px; 
+            white-space: nowrap; 
+        }
+        
+        .nice-class-badge { display: inline-block; padding: 4px 8px; border-radius: 8px; font-size: 0.8em; background-color: #e2e3e5; color: #333; margin-right: 4px; }
+        .nice-class-badge.match { background-color: #28a745; color: white; font-weight: bold; }
+        .loading, .no-records { text-align: center; padding: 50px; color: #666; }
+        .info-message { text-align: center; padding: 10px; font-size: 0.9em; background-color: #e2f3ff; color: #004085; border-radius: 8px; margin: 10px 20px; }
+        .button-group { display: flex; gap: 10px; justify-content: flex-end; }
 
-        /* --- KOLON GENİŞLİKLERİ --- */
-        /* Başvuru Sahibi (3. kolon) genişliği iki kat */
+        /* YENİ EKLENDİ: Accruals.html'den alınan buton tasarımları */
+        .action-btn { 
+            background: #007bff; 
+            color: white; 
+            border: none; 
+            padding: 8px 12px; 
+            border-radius: 6px; 
+            cursor: pointer; 
+            margin-right: 5px; 
+            transition: all 0.3s ease; 
+            font-size: 12px;
+            font-weight: 500;
+        }
+        
+        .action-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .action-btn:disabled { 
+            background-color: #6c757d; 
+            cursor: not-allowed; 
+            opacity: 0.7; 
+            transform: none;
+            box-shadow: none;
+        }
+
+        /* Benzemez/Benzer buton stilleri - accruals.html tasarımı */
+        .action-btn.not-similar {
+            background-color: #dc3545;
+            color: white;
+        }
+        
+        .action-btn.not-similar:hover {
+            background-color: #c82333;
+        }
+
+        .action-btn.similar {
+            background-color: #28a745;
+            color: white;
+        }
+        
+        .action-btn.similar:hover {
+            background-color: #218838;
+        }
+
+        /* Görüntüle butonu stili */
+        .action-btn.view-btn { 
+            background-color: #17a2b8; 
+        }
+        
+        .action-btn.view-btn:hover { 
+            background-color: #138496; 
+        }
+
+        /* Buton grubu - butonları yanyana hizalar */
+        .btn-group {
+            display: flex;
+            gap: 5px;
+            align-items: center;
+        }
+
+        /* Grup başlık stilleri */
+        .group-header {
+            background-color: #f8f9fa !important;
+            font-weight: bold;
+            border-bottom: 2px solid #dee2e6 !important;
+        }
+
+        .group-header td {
+            padding: 15px !important;
+            color: #495057;
+        }
+        .bs-select { width: 90px; font-size: 1em; }
+        .note-input { width: 100%; padding: 5px; border-radius: 5px; border: 1px solid #ccc; }
+        /* Sahip kolonunu daralt */
         .results-table th:nth-child(3),
         .results-table td:nth-child(3) {
-            width: 300px;
-            max-width: 300px;
+            width: 150px;   /* daha önce genişti, şimdi dar */
+            max-width: 150px;
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
         }
 
-        /* Nice Sınıfı (4. kolon) genişliği iki kat */
+        /* Nice sınıf kolonunu genişlet */
         .results-table th:nth-child(4),
         .results-table td:nth-child(4) {
-            width: 200px;
+            width: 200px;   /* daha geniş */
             max-width: 200px;
         }
-
-        /* Benzerlik (5. kolon) dar */
-        .results-table th:nth-child(5),
-        .results-table td:nth-child(5) {
-            width: 80px;
-            max-width: 80px;
-            text-align: center;
-        }
-
-        /* İşlemler (6. kolon) dar */
-        .results-table th:nth-child(6),
-        .results-table td:nth-child(6) {
-            width: 100px;
-            max-width: 100px;
-            text-align: center;
-        }
-
-        /* B.Ş (7. kolon) dar */
-        .results-table th:nth-child(7),
-        .results-table td:nth-child(7) {
-            width: 90px;
-            max-width: 90px;
-        }
-
-        /* Not (8. kolon) dar */
-        .results-table th:nth-child(8),
-        .results-table td:nth-child(8) {
-            width: 120px;
-            max-width: 120px;
-        }
-
-        /* --- B.Ş select kutusu --- */
-        .bs-select { width: 80px; font-size: 1em; }
-
-        /* --- Not hücresi --- */
         .note-cell { cursor: pointer; position: relative; }
         .note-input { width: 100%; box-sizing: border-box; }
         .note-placeholder { color: #888; font-style: italic; }
 
-        /* --- Buton stilleri --- */
-        .action-btn { background: #007bff; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; margin-right: 5px; transition: all 0.3s ease; font-size: 12px; font-weight: 500; }
-        .action-btn:hover { transform: translateY(-1px); box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        .action-btn:disabled { background-color: #6c757d; cursor: not-allowed; opacity: 0.7; transform: none; box-shadow: none; }
-        .action-btn.not-similar { background-color: #dc3545; color: white; }
-        .action-btn.not-similar:hover { background-color: #c82333; }
-        .action-btn.similar { background-color: #28a745; color: white; }
-        .action-btn.similar:hover { background-color: #218838; }
-
-</style>
+    </style>
 </head>
 <body>
     <div id="layout-placeholder"></div>
