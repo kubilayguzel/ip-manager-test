@@ -616,12 +616,11 @@ async function performSearch(fromCacheOnly = false) {
         const recordId = `${tm.id}_${selectedBulletin}`;
         const result = await searchRecordService.getRecord(recordId);
         if (result.success && result.data) {
-            // Ensure monitoredTrademarkId and monitoredTrademark are present for cached results
             cachedResults.push(...result.data.results.map(r => ({
                 ...r,
                 source: 'cache',
-                monitoredTrademarkId: tm.id, // Add monitoredTrademarkId
-                monitoredTrademark: tm.title || tm.markName // Add monitoredTrademark name
+                monitoredTrademarkId: tm.id,
+                monitoredTrademark: tm.title || tm.markName || 'BELİRSİZ_MARKA'
             })));
         } else {
             trademarksToSearch.push(tm);
@@ -637,29 +636,37 @@ async function performSearch(fromCacheOnly = false) {
             return;
         }
         loadingIndicator.textContent = `${trademarksToSearch.length} marka için arama yapılıyor... (Bu biraz zaman alabilir)`;
-        
+
+        // --- EK: Cloud Function’a giden veriyi kontrol etmek için log ekledik ---
+        const monitoredMarksPayload = trademarksToSearch.map(tm => {
+            const markName = (tm.title || tm.markName || '').trim();
+            if (!markName) {
+                console.warn(`⚠️ Bu markanın adı eksik (ID: ${tm.id})`, tm);
+            }
+            return {
+                id: tm.id,
+                markName: markName || 'BELİRSİZ_MARKA',
+                applicationDate: tm.applicationDate || '',
+                niceClasses: Array.isArray(tm.niceClass)
+                    ? tm.niceClass
+                    : (tm.niceClass ? [tm.niceClass] : [])
+            };
+        });
+        console.log("Cloud Function’a gönderilen markalar:", monitoredMarksPayload);
+
         try {
-            const resultsFromCF = await runTrademarkSearch(
-                trademarksToSearch.map(tm => ({
-                    id: tm.id,
-                    markName: tm.title || tm.markName,
-                    applicationDate: tm.applicationDate,
-                    niceClasses: tm.niceClass
-                })),
-                selectedBulletin
-            );
-            
+            const resultsFromCF = await runTrademarkSearch(monitoredMarksPayload, selectedBulletin);
+
             if (resultsFromCF && resultsFromCF.length > 0) {
-                // Attach monitoredTrademark and monitoredTrademarkId to new search results
                 newSearchResults = resultsFromCF.map(hit => {
                     const monitoredTm = trademarksToSearch.find(tm => tm.id === hit.monitoredTrademarkId);
                     return {
                         ...hit,
                         source: 'new',
-                        monitoredTrademark: monitoredTm ? (monitoredTm.title || monitoredTm.markName) : 'Bilinmeyen Marka'
+                        monitoredTrademark: monitoredTm ? (monitoredTm.title || monitoredTm.markName || 'BELİRSİZ_MARKA') : 'Bilinmeyen Marka'
                     };
                 });
-                
+
                 const groupedResults = newSearchResults.reduce((acc, currentResult) => {
                     const monitoredTrademarkId = currentResult.monitoredTrademarkId;
                     if (!acc[monitoredTrademarkId]) {
@@ -683,20 +690,21 @@ async function performSearch(fromCacheOnly = false) {
             return;
         }
     }
-    
+
     allSimilarResults = [...cachedResults, ...newSearchResults];
     loadingIndicator.style.display = 'none';
-    
+
     const infoMessage = `Toplam ${allSimilarResults.length} benzer sonuç bulundu. (${cachedResults.length} önbellekten, ${newSearchResults.length} yeni arama ile)`;
     infoMessageContainer.innerHTML = `<div class="info-message">${infoMessage}</div>`;
-    
+
     pagination.update(allSimilarResults.length);
     renderCurrentPageOfResults();
-            
+
     startSearchBtn.disabled = true;
     researchBtn.disabled = allSimilarResults.length === 0;
     console.log("📊 Tüm benzer sonuçlar (render öncesi):", allSimilarResults);
 }
+
 
 function renderCurrentPageOfResults() {
     resultsTableBody.innerHTML = '';
