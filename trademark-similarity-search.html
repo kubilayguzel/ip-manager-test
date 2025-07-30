@@ -1074,11 +1074,14 @@ document.getElementById("btnGenerateReport").addEventListener("click", async () 
         return;
     }
 
-    const response = await fetch("/generateSimilarityReport", {
+    const FUNCTION_URL = "https://europe-west1-<ip-manager-production-aab4b>.cloudfunctions.net/generateSimilarityReport";
+
+    const response = await fetch(FUNCTION_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ results })
     });
+
 
     if (!response.ok) {
         alert("Rapor oluşturulamadı!");
