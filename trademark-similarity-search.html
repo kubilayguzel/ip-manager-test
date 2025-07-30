@@ -31,12 +31,7 @@
         .results-table th, .results-table td { padding: 15px; text-align: left; border-bottom: 1px solid #f0f0f0; }
         .results-table th { background: #f8f9fa; font-weight: 600; }
         
-        /* Nice sınıfı kolonu daralttıldı */
-        .results-table th:nth-child(4), .results-table td:nth-child(4) { 
-            width: 120px; 
-            max-width: 120px; 
-        }
-        
+       
         /* İşlemler kolonu için buton gruplandırması */
         .results-table th:nth-child(6), .results-table td:nth-child(6) { 
             width: 180px; 
@@ -117,12 +112,21 @@
             font-weight: bold;
             border-bottom: 2px solid #dee2e6 !important;
         }
-
         .group-header td {
             padding: 15px !important;
             color: #495057;
         }
-        .bs-select { width: 90px; font-size: 1em; }
+
+        .bs-select {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e1e8ed;
+            border-radius: 10px;
+            font-size: 1em;
+            background: white;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            transition: all 0.3s ease;
+        }
         .note-input { width: 100%; padding: 5px; border-radius: 5px; border: 1px solid #ccc; }
         /* Sahip kolonunu daralt */
         .results-table th:nth-child(3),
@@ -148,18 +152,11 @@
         /* Başvuru Sahibi (3. kolon) iki kat geniş */
         .results-table th:nth-child(3),
         .results-table td:nth-child(3) {
-            width: 300px !important;
-            max-width: 300px !important;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
+            width: 320px !important; /* sahip alanı genişletildi */
         }
-
-        /* Nice Sınıfı (4. kolon) iki kat geniş */
         .results-table th:nth-child(4),
         .results-table td:nth-child(4) {
-            width: 200px !important;
-            max-width: 200px !important;
+            width: 240px !important; /* nice sınıfı genişletildi */
         }
 
         /* Benzerlik (5. kolon) dar */
@@ -178,20 +175,10 @@
             text-align: center;
         }
 
-        /* B.Ş (7. kolon) dar */
         .results-table th:nth-child(7),
-        .results-table td:nth-child(7) {
-            width: 90px !important;
-            max-width: 90px !important;
-        }
-
-        /* Not (8. kolon) dar */
+        .results-table td:nth-child(7) { width: 90px !important; }
         .results-table th:nth-child(8),
-        .results-table td:nth-child(8) {
-            width: 120px !important;
-            max-width: 120px !important;
-        }
-
+        .results-table td:nth-child(8) { width: 120px !important; }
 
     </style>
 </head>
@@ -238,6 +225,7 @@
                         <table class="results-table">
                             <thead>
                                 <tr>
+                                    <th>#</th>
                                     <th>Marka Adı</th>
                                     <th>Başvuru No</th>
                                     <th>Sahip</th>
@@ -602,7 +590,7 @@ function renderCurrentPageOfResults() {
         groupHeaderRow.style.backgroundColor = '#f8f9fa';
         groupHeaderRow.style.fontWeight = 'bold';
         groupHeaderRow.innerHTML = `
-            <td colspan="6" style="padding: 15px; border-bottom: 2px solid #dee2e6;">
+            <td colspan="9" style="padding: 15px; border-bottom: 2px solid #dee2e6;">
                 📋 <strong>${monitoredTrademark}</strong> markası için bulunan benzer sonuçlar (${totalResultsForThisMark} adet)
             </td>
         `;
@@ -626,6 +614,7 @@ function renderCurrentPageOfResults() {
 
             const row = document.createElement('tr');
             row.innerHTML = `
+                <td>${(pagination.currentPage - 1) * pagination.itemsPerPage + index + 1}</td>
                 <td>${hit.applicationNo || '-'}</td>
                 <td><strong>${hit.markName || '-'}</strong></td>
                 <td>${holders}</td>
@@ -638,9 +627,10 @@ function renderCurrentPageOfResults() {
                     </button>
                 </td>
                 <td>
-                    <select class="bs-select" onchange="updateBS('${resultId}','${hit.monitoredTrademarkId}','${bulletinSelect.value}',this)">
+                    <select class="form-select bs-select"
+                        onchange="updateBS('${resultId}','${hit.monitoredTrademarkId}','${bulletinSelect.value}',this)">
                         ${['','%0','%20','%30','%40','%45','%50','%55','%60','%70','%80']
-                            .map(val => `<option value=\"${val}\" ${hit.bs===val?'selected':''}>${val||'B.Ş'}</option>`).join('')}
+                            .map(val => `<option value="${val}" ${hit.bs===val?'selected':''}>${val||'B.Ş'}</option>`).join('')}
                     </select>
                 </td>
                 <td class="note-cell" onclick="toggleNoteInput(this)">
