@@ -122,6 +122,9 @@
             padding: 15px !important;
             color: #495057;
         }
+        .bs-select { width: 100%; padding: 5px; border-radius: 5px; }
+        .note-input { width: 100%; padding: 5px; border-radius: 5px; border: 1px solid #ccc; }
+
     </style>
 </head>
 <body>
@@ -195,6 +198,8 @@
                                 <th>Nice Sınıfı</th>
                                 <th>Benzerlik</th>
                                 <th>İşlemler</th>
+                                <th>B.Ş</th>
+                                <th>Not</th>
                             </tr>
                         </thead>
                         <tbody id="resultsTableBody"></tbody>
@@ -559,15 +564,24 @@ function renderCurrentPageOfResults() {
                 <td>${niceClassHtml}</td>
                 <td>${similarityScore}</td>
                 <td>
-                    <div class="btn-group">
-                        <button class="action-btn ${similarityBtnClass}" 
-                                onclick="toggleSimilarity('${resultId}', '${hit.monitoredTrademark}', this)">
-                            ${similarityBtnText}
-                        </button>
-                        <button class="action-btn view-btn" onclick="viewRecord('${resultId}')">👁️ Görüntüle</button>
-                    </div>
+                    <button class="action-btn ${similarityBtnClass}" 
+                        onclick="toggleSimilarity('${resultId}', '${hit.monitoredTrademark}', this)">
+                        ${similarityBtnText}
+                    </button>
+                </td>
+                <td>
+                    <select class="bs-select" onchange="updateBS('${resultId}','${hit.monitoredTrademarkId}','${bulletinSelect.value}',this)">
+                        ${['','%0','%20','%30','%40','%45','%50','%55','%60','%70','%80']
+                            .map(val => `<option value=\"${val}\" ${hit.bs===val?'selected':''}>${val||'B.Ş'}</option>`).join('')}
+                    </select>
+                </td>
+                <td>
+                    <input class="note-input" type="text" value="${hit.note||''}" 
+                        onblur="updateNote('${resultId}','${hit.monitoredTrademarkId}','${bulletinSelect.value}',this)"
+                        placeholder="Not girin..." />
                 </td>
             `;
+
             resultsTableBody.appendChild(row);
         });
     });
@@ -600,11 +614,11 @@ window.toggleSimilarity = async function(resultId, monitoredTrademarkName, butto
         }
 
         // monitoringtrademarkrecords tablosunda güncelle
-        const updateResult = await similarityService.updateSimilarityStatus(
-            monitoredTrademark.id, 
-            bulletinSelect.value, 
-            resultId, 
-            newSimilarityStatus
+        const updateResult = await similarityService.updateSimilarityFields(
+            monitoredTrademark.id,
+            bulletinSelect.value,
+            resultId,
+            { isSimilar: newSimilarityStatus }
         );
 
         if (updateResult.success) {
@@ -651,6 +665,25 @@ function resetUI() {
     pagination.update(0);
     checkCacheAndToggleButtonStates();
 }
+window.updateBS = async function(resultId, monitoredTrademarkId, bulletinId, selectEl) {
+    const value = selectEl.value;
+    try {
+        await similarityService.updateSimilarityFields(monitoredTrademarkId, bulletinId, resultId, { bs: value });
+        console.log(`✅ B.Ş güncellendi: ${resultId} => ${value}`);
+    } catch (err) {
+        console.error("❌ B.Ş güncellenemedi:", err);
+    }
+};
+
+window.updateNote = async function(resultId, monitoredTrademarkId, bulletinId, inputEl) {
+    const value = inputEl.value;
+    try {
+        await similarityService.updateSimilarityFields(monitoredTrademarkId, bulletinId, resultId, { note: value });
+        console.log(`✅ Not güncellendi: ${resultId}`);
+    } catch (err) {
+        console.error("❌ Not güncellenemedi:", err);
+    }
+};
 
 // Event listener'lar
 startSearchBtn.addEventListener('click', () => performSearch(false));
