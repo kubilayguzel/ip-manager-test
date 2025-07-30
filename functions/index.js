@@ -1729,6 +1729,8 @@ function calculateSimilarityScoreInternal(hitMarkName, searchMarkName, hitApplic
 
 // functions/index.js - performTrademarkSimilaritySearch fonksiyonunun düzeltilmiş kısmı
 
+// functions/index.js (sadece performTrademarkSimilaritySearch fonksiyonu güncellenmiştir)
+
 export const performTrademarkSimilaritySearch = onCall(
   {
     region: 'europe-west1',
@@ -1780,6 +1782,9 @@ export const performTrademarkSimilaritySearch = onCall(
           continue;
         }
 
+        // Aranan markanın temizlenmiş hali (burada tanımlanması gerekiyor)
+        const cleanedSearchName = cleanMarkName(markName, markName.trim().split(/\s+/).length > 1); // cleanMarkName fonksiyonuna erişilebilir olmalı
+
         logger.log(`🔎 Arama: '${markName}' (ID: ${monitoredMark.id})`);
 
         let matchCount = 0;
@@ -1790,8 +1795,8 @@ export const performTrademarkSimilaritySearch = onCall(
             continue;
           }
 
-          // Nice sınıf filtresi devre dışı
-          const hasNiceClassOverlap = true;
+          // Nice sınıf filtresi devre dışı (mevcut durumda true)
+          const hasNiceClassOverlap = true; //
 
           // Benzerlik skoru
           const { finalScore: similarityScore, positionalExactMatchScore } = calculateSimilarityScoreInternal(
@@ -1803,11 +1808,51 @@ export const performTrademarkSimilaritySearch = onCall(
             niceClasses
           );
 
-          const SIMILARITY_THRESHOLD = 0.5;
-          if (similarityScore < SIMILARITY_THRESHOLD && positionalExactMatchScore < SIMILARITY_THRESHOLD) {
+          const SIMILARITY_THRESHOLD = 0.5; //
+
+          // Yeni Kriter Kontrolü: Aranan marka, bulunan markanın başında veya sonunda tam geçiyor mu?
+          const cleanedHitName = cleanMarkName(hit.markName, (hit.markName || '').trim().split(/\s+/).length > 1); // cleanMarkName fonksiyonuna erişilebilir olmalı
+          let isPrefixSuffixExactMatch = false;
+          // Minimum uzunluk kontrolü eklendi, çok kısa kelimelerin eşleşmesi anlamsız olabilir.
+          // Örneğin, "a" kelimesinin her yerde eşleşmesini istemeyiz.
+          const MIN_PREFIX_SUFFIX_LENGTH = 3; // En az 3 karakterlik bir eşleşme arıyoruz
+          
+          if (cleanedSearchName.length >= MIN_PREFIX_SUFFIX_LENGTH) {
+              // Kelime sınırları içinde tam eşleşme kontrolü
+              const searchWords = cleanedSearchName.split(' ');
+              const hitWords = cleanedHitName.split(' ');
+
+              // Aranan markanın, bulunan markanın kelimeleri arasında tam olarak baştan veya sondan geçip geçmediğini kontrol et
+              for (const sWord of searchWords) {
+                  for (const hWord of hitWords) {
+                      if (sWord.length >= MIN_PREFIX_SUFFIX_LENGTH) {
+                          if (hWord.startsWith(sWord) || hWord.endsWith(sWord)) {
+                              isPrefixSuffixExactMatch = true;
+                              break; // Bir eşleşme bulmak yeterli
+                          }
+                      }
+                  }
+                  if (isPrefixSuffixExactMatch) break;
+              }
+          }
+
+          // GÜNCELLENMİŞ FİLTRELEME KOŞULU
+          // Kayıt şu durumlarda listeye EKLENMEZ (yani continue olur):
+          // 1. Genel benzerlik skoru eşiğin altındaysa (similarityScore < SIMILARITY_THRESHOLD) VE
+          // 2. PositionalExactMatchScore da eşiğin altındaysa (positionalExactMatchScore < SIMILARITY_THRESHOLD) VE
+          // 3. Yeni eklediğimiz tam önek/sonek eşleşmesi durumu da yoksa (!isPrefixSuffixExactMatch).
+          if (
+              similarityScore < SIMILARITY_THRESHOLD && 
+              positionalExactMatchScore < SIMILARITY_THRESHOLD && 
+              !isPrefixSuffixExactMatch
+          ) {
+            // Hiçbir geçerli kriteri sağlamadı, bu yüzden atla
+            logger.log(`⏩ Atlandı: Final Skor: ${similarityScore.toFixed(2)}, Positional: ${positionalExactMatchScore.toFixed(2)}, Prefix/Suffix Eşleşme Yok - ${hit.markName}`);
             continue;
           }
 
+          // Bu noktaya ulaşan tüm kayıtlar, yukarıdaki üç 'continue' koşulundan en az birini karşılamadığı için eklenir.
+          // Yani, ya similarityScore >= THRESHOLD, ya positionalExactMatchScore >= THRESHOLD, ya da isPrefixSuffixExactMatch === true.
           matchCount++;
 
           // *** ÖNEMLİ: Tüm gerekli alanları ekle ***
@@ -1822,13 +1867,13 @@ export const performTrademarkSimilaritySearch = onCall(
             bulletinId: hit.bulletinId,
             similarityScore,
             positionalExactMatchScore,
-            sameClass: hasNiceClassOverlap,
+            sameClass: hasNiceClassOverlap, // Şu anda true olarak ayarlı
             
             // *** FRONTEND İÇİN GEREKLİ ALANLAR ***
-            monitoredTrademark: markName,              // Frontend'in eşleştirme için kullandığı alan
-            monitoredNiceClasses: niceClasses,
-            monitoredMarkId: monitoredMark.id,         // Yeni alan adı
-            monitoredTrademarkId: monitoredMark.id     // Eski uyumluluk için
+            monitoredTrademark: markName, // Frontend'in eşleştirme için kullandığı alan
+            monitoredNiceClasses: niceClasses, //
+            monitoredMarkId: monitoredMark.id, // Yeni alan adı
+            monitoredTrademarkId: monitoredMark.id // Eski uyumluluk için
           });
         }
 
