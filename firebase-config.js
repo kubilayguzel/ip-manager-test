@@ -1729,7 +1729,7 @@ export const searchRecordService = {
 
 // --- Similarity Service ---
 export const similarityService = {
-    /**
+/**
  * Sonuç kaydı için alan günceller (isSimilar, bs, note vb.)
  * @param {string} monitoredTrademarkId - İzlenen marka ID'si
  * @param {string} bulletinId - Bülten ID'si
@@ -1749,8 +1749,8 @@ async updateSimilarityFields(monitoredTrademarkId, bulletinId, resultId, fields)
                 if (r.objectID === resultId || r.applicationNo === resultId) {
                     return { 
                         ...r, 
-                        ...fields,
-                        lastUpdate: new Date().toISOString()
+                        ...fields, // Yeni alanları buraya ekle
+                        lastUpdate: new Date().toISOString() // Son güncelleme zamanını ekle
                     };
                 }
                 return r;
