@@ -19,7 +19,6 @@ import fetch from 'node-fetch';
 import { PubSub } from '@google-cloud/pubsub';
 import archiver from 'archiver';
 import { Document, Packer, Paragraph, Table, TableCell, TableRow, Media, TextRun } from 'docx';
-import * as admin from 'firebase-admin';
 
 // Firebase Admin SDK'sını başlatın
 if (!admin.apps.length) {
