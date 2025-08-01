@@ -19,6 +19,7 @@ import fetch from 'node-fetch';
 import { PubSub } from '@google-cloud/pubsub';
 import archiver from 'archiver';
 import { Document, Packer, Paragraph, Table, TableCell, TableRow, Media, TextRun } from 'docx';
+import * as admin from 'firebase-admin';
 
 // Firebase Admin SDK'sını başlatın
 if (!admin.apps.length) {
@@ -1050,82 +1051,91 @@ function getContentType(filePath) {
 
 // BÜLTEN SİLME 
 export const deleteBulletinV2 = onCall(
-  { timeoutSeconds: 540, 
-    memory: "1GiB", 
-    region: "europe-west1" },
-  async (request) => {
-  console.log('🔥 Bülten silme başladı');
+  { timeoutSeconds: 540, memory: "1GiB", region: "europe-west1" },
+  async (request, context) => {
+    console.log('🔥 Bülten silme başladı');
 
-  const { bulletinId } = request.data;
-  if (!bulletinId) throw new Error('BulletinId gerekli');
-
-  try {
-    // 1. Bülten dokümanını al
-    const bulletinDoc = await db.collection('trademarkBulletins').doc(bulletinId).get();
-    if (!bulletinDoc.exists) throw new Error('Bülten bulunamadı');
-
-    const bulletinData = bulletinDoc.data();
-    const bulletinNo = bulletinData.bulletinNo;
-    console.log(`📋 Silinecek bülten: ${bulletinNo}`);
-
-    // 2. İlişkili trademarkBulletinRecords silme (500'erli chunk)
-    let totalDeleted = 0;
-    const recordsQuery = db.collection('trademarkBulletinRecords').where('bulletinId', '==', bulletinId);
-    let snapshot = await recordsQuery.limit(500).get();
-
-    while (!snapshot.empty) {
-      const batch = db.batch();
-      snapshot.docs.forEach(doc => batch.delete(doc.ref));
-      await batch.commit();
-      totalDeleted += snapshot.size;
-      console.log(`✅ ${totalDeleted} kayıt silindi (toplam)`);
-
-      snapshot = await recordsQuery.limit(500).get();
+    // === 1. Kimlik doğrulama ve rol kontrolü ===
+    if (!context.auth) {
+      throw new HttpsError('unauthenticated', 'Kullanıcı oturumu doğrulanmamış.');
+    }
+    const userRole = context.auth.token.role || 'user';
+    if (userRole !== 'superadmin') {
+      throw new HttpsError('permission-denied', 'Superadmin yetkisi gerekli.');
     }
 
-    // 3. Storage görsellerini sil (chunklı)
-    const storage = admin.storage().bucket();
-    const prefix = `bulletins/trademark_${bulletinNo}_images/`;
-    let [files] = await storage.getFiles({ prefix });
+    const { bulletinId } = request.data;
+    if (!bulletinId) {
+      throw new HttpsError('invalid-argument', 'BulletinId gerekli.');
+    }
 
-    let totalImagesDeleted = 0;
-    const chunkSize = 200; // aynı anda kaç dosya silinecek
-
-    while (files.length > 0) {
-      const chunk = files.splice(0, chunkSize);
-      await Promise.all(
-        chunk.map(file =>
-          file.delete().catch(err =>
-            console.warn(`⚠️ ${file.name} silinemedi: ${err.message}`)
-          )
-        )
-      );
-      totalImagesDeleted += chunk.length;
-      console.log(`🖼️ ${totalImagesDeleted} görsel silindi (toplam)`);
-
-      // Yeni listeleme (kalan dosya varsa)
-      if (files.length === 0) {
-        [files] = await storage.getFiles({ prefix });
+    try {
+      // === 2. Bülten dokümanını al ===
+      const bulletinDoc = await admin.firestore().collection('trademarkBulletins').doc(bulletinId).get();
+      if (!bulletinDoc.exists) {
+        throw new HttpsError('not-found', 'Bülten bulunamadı.');
       }
+
+      const bulletinData = bulletinDoc.data();
+      const bulletinNo = bulletinData.bulletinNo;
+      console.log(`📋 Silinecek bülten: ${bulletinNo}`);
+
+      // === 3. İlişkili trademarkBulletinRecords silme ===
+      let totalDeleted = 0;
+      const recordsQuery = admin.firestore().collection('trademarkBulletinRecords').where('bulletinId', '==', bulletinId);
+      let snapshot = await recordsQuery.limit(500).get();
+
+      while (!snapshot.empty) {
+        const batch = admin.firestore().batch();
+        snapshot.docs.forEach(doc => batch.delete(doc.ref));
+        await batch.commit();
+        totalDeleted += snapshot.size;
+        console.log(`✅ ${totalDeleted} kayıt silindi (toplam)`);
+        snapshot = await recordsQuery.limit(500).get();
+      }
+
+      // === 4. Storage görsellerini sil ===
+      const storage = admin.storage().bucket();
+      const prefix = `bulletins/trademark_${bulletinNo}_images/`;
+      let [files] = await storage.getFiles({ prefix });
+      let totalImagesDeleted = 0;
+      const chunkSize = 200;
+
+      while (files.length > 0) {
+        const chunk = files.splice(0, chunkSize);
+        await Promise.all(
+          chunk.map(file =>
+            file.delete().catch(err =>
+              console.warn(`⚠️ ${file.name} silinemedi: ${err.message}`)
+            )
+          )
+        );
+        totalImagesDeleted += chunk.length;
+        console.log(`🖼️ ${totalImagesDeleted} görsel silindi (toplam)`);
+
+        if (files.length === 0) {
+          [files] = await storage.getFiles({ prefix });
+        }
+      }
+
+      // === 5. Ana bülten dokümanını sil ===
+      await bulletinDoc.ref.delete();
+      console.log('✅ Ana bülten silindi');
+
+      return {
+        success: true,
+        bulletinNo,
+        recordsDeleted: totalDeleted,
+        imagesDeleted: totalImagesDeleted,
+        message: `Bülten ${bulletinNo} ve ${totalImagesDeleted} görsel başarıyla silindi (${totalDeleted} kayıt)`
+      };
+
+    } catch (error) {
+      console.error('❌ Silme hatası:', error);
+      throw new HttpsError('internal', error.message || 'Bülten silinirken hata oluştu.');
     }
-
-    // 4. Ana bulletin dokümanını sil
-    await bulletinDoc.ref.delete();
-    console.log('✅ Ana bülten silindi');
-
-    return {
-      success: true,
-      bulletinNo,
-      recordsDeleted: totalDeleted,
-      imagesDeleted: totalImagesDeleted,
-      message: `Bülten ${bulletinNo} ve ${totalImagesDeleted} görsel başarıyla silindi (${totalDeleted} kayıt)`
-    };
-
-  } catch (error) {
-    console.error('❌ Silme hatası:', error);
-    return { success: false, error: error.message };
   }
-});
+);
 // functions/index.js - Devamı
 
 // Gerekli yardımcı fonksiyonları ve algoritmaları import et
