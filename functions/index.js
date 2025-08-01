@@ -1049,19 +1049,13 @@ function getContentType(filePath) {
 }
 
 // BÜLTEN SİLME 
+const admin = require('firebase-admin');
+const { HttpsError } = require('firebase-functions/v2/https');
+
 export const deleteBulletinV2 = onCall(
   { timeoutSeconds: 540, memory: "1GiB", region: "europe-west1" },
-  async (request, context) => {
+  async (request) => {
     console.log('🔥 Bülten silme başladı');
-
-    // === 1. Kimlik doğrulama ve rol kontrolü ===
-    if (!context.auth) {
-      throw new HttpsError('unauthenticated', 'Kullanıcı oturumu doğrulanmamış.');
-    }
-    const userRole = context.auth.token.role || 'user';
-    if (userRole !== 'superadmin') {
-      throw new HttpsError('permission-denied', 'Superadmin yetkisi gerekli.');
-    }
 
     const { bulletinId } = request.data;
     if (!bulletinId) {
@@ -1069,7 +1063,7 @@ export const deleteBulletinV2 = onCall(
     }
 
     try {
-      // === 2. Bülten dokümanını al ===
+      // === 1. Bülten dokümanını al ===
       const bulletinDoc = await admin.firestore().collection('trademarkBulletins').doc(bulletinId).get();
       if (!bulletinDoc.exists) {
         throw new HttpsError('not-found', 'Bülten bulunamadı.');
@@ -1079,7 +1073,7 @@ export const deleteBulletinV2 = onCall(
       const bulletinNo = bulletinData.bulletinNo;
       console.log(`📋 Silinecek bülten: ${bulletinNo}`);
 
-      // === 3. İlişkili trademarkBulletinRecords silme ===
+      // === 2. İlişkili trademarkBulletinRecords silme ===
       let totalDeleted = 0;
       const recordsQuery = admin.firestore().collection('trademarkBulletinRecords').where('bulletinId', '==', bulletinId);
       let snapshot = await recordsQuery.limit(500).get();
@@ -1093,7 +1087,7 @@ export const deleteBulletinV2 = onCall(
         snapshot = await recordsQuery.limit(500).get();
       }
 
-      // === 4. Storage görsellerini sil ===
+      // === 3. Storage görsellerini sil ===
       const storage = admin.storage().bucket();
       const prefix = `bulletins/trademark_${bulletinNo}_images/`;
       let [files] = await storage.getFiles({ prefix });
@@ -1117,7 +1111,7 @@ export const deleteBulletinV2 = onCall(
         }
       }
 
-      // === 5. Ana bülten dokümanını sil ===
+      // === 4. Ana bülten dokümanını sil ===
       await bulletinDoc.ref.delete();
       console.log('✅ Ana bülten silindi');
 
@@ -1135,9 +1129,7 @@ export const deleteBulletinV2 = onCall(
     }
   }
 );
-// functions/index.js - Devamı
 
-// Gerekli yardımcı fonksiyonları ve algoritmaları import et
 // Bu modüllerin functions/ altında da bulunması veya fonksiyon içine taşınması gerekecek.
 // Şimdilik varsayımsal olarak import edeceğiz ve deployment sırasında düzenleme gerekebilir.
 // Eğer bu helper dosyalarını (preprocess, visual-match, phonetic) functions klasörüne kopyalamazsanız,
