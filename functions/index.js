@@ -1049,8 +1049,6 @@ function getContentType(filePath) {
 }
 
 // BÜLTEN SİLME 
-const admin = require('firebase-admin');
-const { HttpsError } = require('firebase-functions/v2/https');
 
 export const deleteBulletinV2 = onCall(
   { timeoutSeconds: 540, memory: "1GiB", region: "europe-west1" },
