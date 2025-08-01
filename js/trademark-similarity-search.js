@@ -59,42 +59,53 @@ async function loadInitialData() {
 
 async function loadBulletinOptions() {
     try {
+        const bulletinSelect = document.getElementById('bulletinSelect');
+        bulletinSelect.innerHTML = '<option value="">Bülten seçin...</option>';
+
+        // 1) Mevcut bültenleri al
         const snapshot = await getDocs(collection(db, 'trademarkBulletins'));
         const bulletins = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        
-        // Timestamp objeleriyle sıralama
+
         bulletins.sort((a, b) => {
-            const dateA = (a.createdAt && typeof a.createdAt.toDate === 'function') ? a.createdAt.toDate() : new Date(0); // Güvenli dönüşüm
-            const dateB = (b.createdAt && typeof b.createdAt.toDate === 'function') ? b.createdAt.toDate() : new Date(0); // Güvenli dönüşüm
-            return dateB.getTime() - dateA.getTime(); // Tarih objelerini milisaniyeye çevirerek karşılaştır
+            const dateA = (a.createdAt && typeof a.createdAt.toDate === 'function') ? a.createdAt.toDate() : new Date(0);
+            const dateB = (b.createdAt && typeof b.createdAt.toDate === 'function') ? b.createdAt.toDate() : new Date(0);
+            return dateB - dateA;
         });
 
-        bulletinSelect.innerHTML = '<option value="">Bülten seçin...</option>';
+        // 2) `monitoringTrademarkRecords` koleksiyonundan distinct bültenleri çek
+        const monitoringSnap = await getDocs(collection(db, 'monitoringTrademarkRecords'));
+        const extraBulletins = {};
+        monitoringSnap.forEach(doc => {
+            const data = doc.data();
+            if (data.bulletinId && data.bulletinNo) {
+                extraBulletins[data.bulletinId] = data.bulletinNo;
+            }
+        });
+
+        // 3) Bültenleri ekle (mevcut olanlar)
         bulletins.forEach(bulletin => {
             let dateText = 'Tarih yok';
-            
-            // bulletin.createdAt'ın bir Firestore Timestamp objesi olup olmadığını kontrol et
             if (bulletin.createdAt && typeof bulletin.createdAt.toDate === 'function') {
-                try {
-                    const dateObj = bulletin.createdAt.toDate();
-                    // Date objesinin geçerli olup olmadığını kontrol et
-                    if (!isNaN(dateObj.getTime())) {
-                        dateText = dateObj.toLocaleDateString('tr-TR');
-                    } else {
-                        console.warn("Geçersiz tarih objesi:", bulletin.createdAt);
-                        dateText = 'Geçersiz Tarih';
-                    }
-                } catch (e) {
-                    console.error("Tarih objesinden string'e dönüştürülürken hata:", e);
-                    dateText = 'Hata';
-                }
+                const dateObj = bulletin.createdAt.toDate();
+                if (!isNaN(dateObj.getTime())) dateText = dateObj.toLocaleDateString('tr-TR');
             }
-            
-            // `split` hatası alıyorsanız, buradaki satırı dikkatlice kontrol edin.
-            // Bu kısımda `split` çağrısı olmamalı.
+            const option = document.createElement('option');
+            option.value = bulletin.id;
             option.textContent = `${bulletin.bulletinNo} - ${dateText}`;
             bulletinSelect.appendChild(option);
         });
+
+        // 4) Silinmiş bültenleri ekle
+        Object.entries(extraBulletins).forEach(([bulletinId, bulletinNo]) => {
+            const alreadyExists = bulletins.some(b => b.id === bulletinId);
+            if (!alreadyExists) {
+                const option = document.createElement('option');
+                option.value = bulletinId;
+                option.textContent = `${bulletinNo} (Silinmiş)`;
+                bulletinSelect.appendChild(option);
+            }
+        });
+
     } catch (error) {
         console.error('Bülten seçenekleri yüklenirken hata:', error);
     }
