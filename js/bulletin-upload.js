@@ -83,30 +83,34 @@ function setupUploadEvents() {
     dropArea.style.border = "2px dashed #ccc";
   });
 
-  dropArea.addEventListener("drop", (e) => {
-    e.preventDefault();
-    dropArea.style.border = "2px dashed #ccc";
-    
-    const files = e.dataTransfer.files;
-    if (files.length > 0) {
-      selectedFile = files[0];
-      console.log('📦 Dosya drop edildi:', selectedFile.name, selectedFile.type, selectedFile.size);
-      
-      if (selectedFileName) {
-        selectedFileName.textContent = selectedFile.name;
+dropArea.addEventListener("drop", (e) => {
+  e.preventDefault();
+  dropArea.style.border = "2px dashed #ccc";
+
+  const files = e.dataTransfer.files;
+  if (files.length > 0) {
+    selectedFile = files[0];
+    console.log('📦 Dosya drop edildi:', selectedFile.name, selectedFile.type, selectedFile.size);
+
+    if (!selectedFile.name.toLowerCase().endsWith('.zip')) {
+      if (uploadStatus) {
+        uploadStatus.textContent = "⚠️ Sadece .zip dosyaları kabul edilir!";
+        uploadStatus.style.color = "orange";
       }
-      
-      // Dosya tipini kontrol et
-      if (!selectedFile.name.toLowerCase().endsWith('.zip')) {
-        if (uploadStatus) {
-          uploadStatus.textContent = "⚠️ Sadece .zip dosyaları kabul edilir!";
-          uploadStatus.style.color = "orange";
-        }
-        selectedFile = null;
-        return;
-      }
+      selectedFile = null;
+      return;
     }
-  });
+
+    // Yeşil yazı güncellemesi
+    if (uploadStatus) {
+      uploadStatus.textContent = "✅ Dosya seçildi: " + selectedFile.name;
+      uploadStatus.style.color = "green";
+    }
+    if (selectedFileName) {
+      selectedFileName.textContent = selectedFile.name;
+    }
+  }
+});
 
   fileInput.addEventListener("change", (e) => {
     const files = e.target.files;
