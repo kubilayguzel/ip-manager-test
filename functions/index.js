@@ -736,7 +736,7 @@ export const processTrademarkBulletinUploadV3 = onObjectFinalized(
       console.log(`📷 ${imagesDir.length} görsel doğrudan yüklendi`);
 
       // Firestore kayıtları (imagePath eşleştirilmiş)
-      await writeBatchesToFirestore(records, bulletinId, imagePathMap);
+      await writeBatchesToFirestore(records, bulletinId, bulletinNo,imagePathMap);
 
       console.log(
         `🎉 ZIP işleme tamamlandı: ${bulletinNo} → ${records.length} kayıt, ${imagesDir.length} görsel bulundu.`
@@ -1022,13 +1022,14 @@ function extractHolderName(str) {
   const parenMatch = str.match(/^\(\d+\)\s*(.*)$/);
   return parenMatch ? parenMatch[1].trim() : str.trim();
 }
-async function writeBatchesToFirestore(records, bulletinId, imagePathMap) {
+async function writeBatchesToFirestore(records, bulletinId, bulletinNo, imagePathMap) {
   const batchSize = 250;
   for (let i = 0; i < records.length; i += batchSize) {
     const chunk = records.slice(i, i + batchSize);
     const batch = db.batch();
     chunk.forEach((record) => {
       record.bulletinId = bulletinId;
+      record.bulletinNo = bulletinNo;
       const matchingImages = imagePathMap[record.applicationNo] || [];
       record.imagePath = matchingImages.length > 0 ? matchingImages[0] : null;
       record.imageUploaded = false;
