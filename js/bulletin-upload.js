@@ -82,7 +82,6 @@ function setupUploadEvents() {
   dropArea.addEventListener("dragleave", () => {
     dropArea.style.border = "2px dashed #ccc";
   });
-
 dropArea.addEventListener("drop", (e) => {
   e.preventDefault();
   dropArea.style.border = "2px dashed #ccc";
@@ -109,6 +108,10 @@ dropArea.addEventListener("drop", (e) => {
     if (selectedFileName) {
       selectedFileName.textContent = selectedFile.name;
     }
+
+    // **YENİ EKLENDİ** → input'a da dosyayı yaz, change eventini tetikle
+    fileInput.files = e.dataTransfer.files;
+    fileInput.dispatchEvent(new Event('change', { bubbles: true }));
   }
 });
 
