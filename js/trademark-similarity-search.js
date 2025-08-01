@@ -110,6 +110,28 @@ async function loadBulletinOptions() {
         console.error('Bülten seçenekleri yüklenirken hata:', error);
     }
 }
+document.getElementById('bulletinSelect').addEventListener('change', async (e) => {
+    const selectedBulletinId = e.target.value;
+    if (!selectedBulletinId) return;
+
+    try {
+        // Önce trademarkBulletins koleksiyonunda var mı kontrol et
+        const docRef = doc(db, 'trademarkBulletins', selectedBulletinId);
+        const docSnap = await getDoc(docRef);
+
+        if (!docSnap.exists()) {
+            // Eğer bülten yoksa kullanıcıya bilgi ver
+            alert(
+                "Bu bülten sistemde kayıtlı değil, ancak izleme kayıtlarınız mevcut.\n" +
+                "Bu bülten üzerinde arama yapabilmek için bülteni sisteme yüklemelisiniz."
+            );
+            // Kullanıcıya yükleme yönlendirmesi yapılabilir
+            // window.location.href = '/bulletin-upload.html'; // örnek yönlendirme
+        }
+    } catch (error) {
+        console.error("Bülten kontrolü yapılırken hata:", error);
+    }
+});
 
 function applyMonitoringListFilters() {
     const ownerFilter = ownerSearchInput.value.toLowerCase().trim();
