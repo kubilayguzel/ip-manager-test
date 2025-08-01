@@ -1686,7 +1686,7 @@ export const searchRecordService = {
             if (docSnap.exists()) {
                 return { success: true, data: docSnap.data() };
             } else {
-                return { success: false, data: null };
+                return { success: false, error: "Kayıt bulunamadı." };
             }
         } catch (error) {
             console.error("Arama kaydı alınırken hata:", error);
@@ -1694,11 +1694,15 @@ export const searchRecordService = {
         }
     },
 
-    async saveRecord(recordId, data) {
+   async saveRecord(recordId, data, bulletinNo = null) {
         if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor." };
         try {
             const docRef = doc(db, 'monitoringTrademarkRecords', recordId);
-            await setDoc(docRef, data);
+            
+            // Eğer bulletinNo parametre olarak gönderilmişse, data'ya ekle
+            const dataToSave = bulletinNo ? { ...data, bulletinNo } : data;
+            
+            await setDoc(docRef, dataToSave);
             return { success: true };
         } catch (error) {
             console.error("Arama kaydı kaydedilirken hata:", error);
@@ -1714,7 +1718,6 @@ export const searchRecordService = {
             await deleteDoc(docRef);
             return { success: true };
         } catch (error) {
-            // Kayıt zaten yoksa bu bir hata değil, görmezden gel.
             if (error.code === 'not-found') {
                 return { success: true };
             }
