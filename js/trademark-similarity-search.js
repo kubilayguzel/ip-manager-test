@@ -257,7 +257,7 @@ async function loadCachedResultsOnly() {
             where('bulletinNo', '==', selectedBulletinNo)
         );
         const querySnapshot = await getDocs(q);
-
+        console.log('>>> Sorgudan dönen kayıt sayısı:', querySnapshot.size);
         querySnapshot.forEach((docSnap) => {
             const data = docSnap.data();
             if (!Array.isArray(data.results) || data.results.length === 0) return;
@@ -267,11 +267,9 @@ async function loadCachedResultsOnly() {
 
             data.results.forEach(r => {
                 const monitoredTrademarkId = r.monitoredMarkId || r.monitoredTrademarkId;
-                console.log('>>> Result item', r, 'Monitored ID:', monitoredTrademarkId);
-
+                console.log('>>> Result item ID:', monitoredTrademarkId);
                 const matchedTrademark = filteredMonitoringTrademarks.find(tm => tm.id === monitoredTrademarkId);
-                console.log('>>> Matched trademark:', matchedTrademark);
-
+                console.log('>>> Eşleşen trademark:', matchedTrademark);
                 if (!matchedTrademark) return;
 
                 cachedResults.push({
