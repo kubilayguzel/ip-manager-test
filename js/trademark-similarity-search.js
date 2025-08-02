@@ -267,11 +267,11 @@ async function loadCachedResultsOnly() {
             console.log(`✅ Doküman bulundu: ${docSnap.id}, sonuç sayısı: ${data.results.length}`);
 
             data.results.forEach(r => {
-            const monitoredTrademarkId = r.monitoredTrademarkId;
-            const matchedTrademark = filteredMonitoringTrademarks.find(tm => tm.id === monitoredTrademarkId);
+                const monitoredTrademarkId = r.monitoredTrademarkId;
+                const matchedTrademark = filteredMonitoringTrademarks.find(tm => tm.id === monitoredTrademarkId);
 
                 if (!matchedTrademark) {
-                    console.log('❌ Eşleşme bulunamadı ->', { monitoredTrademarkId, applicationNo: r.applicationNo });
+                    console.log('❌ Eşleşme yok:', monitoredTrademarkId);
                     return;
                 }
 
@@ -321,7 +321,6 @@ async function loadCachedResultsOnly() {
         pagination.update(0);
     }
 }
-
 
 async function checkCacheAndToggleButtonStates() {
     const selectedBulletinId = bulletinSelect.value;
