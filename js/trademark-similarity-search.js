@@ -151,13 +151,20 @@ function updateMonitoringCount() {
 function applyMonitoringListFilters() {
     const ownerFilter = ownerSearchInput.value.toLowerCase();
     const niceFilter = niceClassSearchInput.value.toLowerCase();
+    
     filteredMonitoringTrademarks = monitoringTrademarks.filter(data => {
         const ownerNames = getOwnerNames(data).toLowerCase();
-        const niceClasses = Array.isArray(data.niceClass) ? data.niceClass.join(' ') : (data.niceClass || '');
-        return (!ownerFilter || ownerNames.includes(ownerFilter)) && (!niceFilter || niceClasses.includes(niceFilter));
+        const niceClasses = Array.isArray(data.niceClass) ? 
+            data.niceClass.join(' ') : (data.niceClass || '');
+        
+        return (!ownerFilter || ownerNames.includes(ownerFilter)) && 
+               (!niceFilter || niceClasses.includes(niceFilter));
     });
+    
     renderMonitoringList();
     updateMonitoringCount();
+    
+    // Buton durumlarını yeniden kontrol et
     checkCacheAndToggleButtonStates();
 }
 
@@ -188,18 +195,66 @@ function getOwnerNames(item) {
     return '-';
 }
 
+
 async function checkCacheAndToggleButtonStates() {
     const bulletinKey = bulletinSelect.value;
-    if (!bulletinKey || filteredMonitoringTrademarks.length === 0) {
+    
+    // Eğer bülten seçilmemişse her iki butonu da devre dışı bırak
+    if (!bulletinKey) {
         startSearchBtn.disabled = true;
         researchBtn.disabled = true;
         return;
     }
-    const snapshot = await getDocs(collection(db, 'monitoringTrademarkRecords', bulletinKey));
-    const hasCache = snapshot.docs.some(docSnap => docSnap.data().results?.length > 0);
-    startSearchBtn.disabled = hasCache;
-    researchBtn.disabled = !hasCache;
-    if (hasCache) loadDataFromCache(bulletinKey);
+    
+    // Eğer izlenen marka yoksa kullanıcıya bilgi ver ve butonları devre dışı bırak
+    if (filteredMonitoringTrademarks.length === 0) {
+        startSearchBtn.disabled = true;
+        researchBtn.disabled = true;
+        
+        // Kullanıcıya bilgilendirme mesajı göster
+        const infoContainer = document.getElementById('infoMessageContainer') || 
+                            document.querySelector('.info-message-container');
+        if (infoContainer) {
+            infoContainer.innerHTML = `
+                <div class="info-message warning">
+                    <strong>Uyarı:</strong> İzlenen marka bulunamadı. Önce izlenecek markalar ekleyin.
+                </div>
+            `;
+        }
+        return;
+    }
+    
+    // Cache kontrolü yap
+    try {
+        const snapshot = await getDocs(collection(db, 'monitoringTrademarkRecords', bulletinKey));
+        const hasCache = snapshot.docs.some(docSnap => docSnap.data().results?.length > 0);
+        
+        // Buton durumlarını cache durumuna göre ayarla
+        startSearchBtn.disabled = hasCache; // Cache varsa "Başlat" butonunu devre dışı bırak
+        researchBtn.disabled = !hasCache;  // Cache yoksa "Yeniden Ara" butonunu devre dışı bırak
+        
+        // Cache varsa verileri yükle
+        if (hasCache) {
+            loadDataFromCache(bulletinKey);
+        } else {
+            // Cache yoksa bilgilendirme mesajı göster
+            const infoContainer = document.getElementById('infoMessageContainer') || 
+                                document.querySelector('.info-message-container');
+            if (infoContainer) {
+                infoContainer.innerHTML = `
+                    <div class="info-message info">
+                        <strong>Bilgi:</strong> ${bulletinKey} bülteni için önbellekte veri bulunamadı. "Arama Başlat" butonuna tıklayarak arama yapabilirsiniz.
+                    </div>
+                `;
+            }
+        }
+        
+    } catch (error) {
+        console.error('Cache kontrol hatası:', error);
+        // Hata durumunda güvenli tarafta kal
+        startSearchBtn.disabled = false; // Kullanıcı yeni arama yapabilsin
+        researchBtn.disabled = true;     // Yeniden arama yapamamasın
+    }
 }
 
 async function loadDataFromCache(bulletinKey) {
