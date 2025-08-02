@@ -1774,7 +1774,8 @@ export const similarityService = {
         if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor." };
 
         try {
-            const result = await searchRecordService.getRecord(monitoredTrademarkId, bulletinKey);
+            // ✅ GÜNCEL: searchRecordService.getRecord parametreleri doğru sırada
+            const result = await searchRecordService.getRecord(bulletinKey, monitoredTrademarkId);
 
             if (result.success && result.data) {
                 const updatedResults = result.data.results.map(r => {
@@ -1794,7 +1795,8 @@ export const similarityService = {
                     lastSimilarityUpdate: new Date().toISOString()
                 };
 
-                await searchRecordService.saveRecord(monitoredTrademarkId, updateData, bulletinKey);
+                // ✅ GÜNCEL: searchRecordService.saveRecord parametreleri doğru sırada
+                await searchRecordService.saveRecord(bulletinKey, monitoredTrademarkId, updateData);
 
                 console.log(`✅ Alanlar güncellendi: ${bulletinKey}/${monitoredTrademarkId}/${resultId}`, fields);
                 return { success: true };
@@ -1819,9 +1821,10 @@ export const similarityService = {
         if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor." };
         
         try {
-            const result = await searchRecordService.getRecord(monitoredTrademarkId, bulletinKey);
+            // ✅ GÜNCEL: parametreler doğru sırada
+            const result = await searchRecordService.getRecord(bulletinKey, monitoredTrademarkId);
             
-            if (result.success && result.data && result.data.results) {
+            if (result.success && result.data) {
                 const targetResult = result.data.results.find(r => 
                     r.objectID === resultId || r.applicationNo === resultId
                 );
@@ -1831,14 +1834,14 @@ export const similarityService = {
                         success: true, 
                         data: {
                             isSimilar: targetResult.isSimilar,
-                            note: targetResult.note,
                             bs: targetResult.bs,
+                            note: targetResult.note,
                             lastUpdate: targetResult.lastUpdate
                         }
                     };
                 }
                 
-                return { success: false, error: 'Belirtilen sonuç kaydı bulunamadı' };
+                return { success: false, error: 'Belirtilen sonuç bulunamadı' };
             }
             
             return { success: false, error: 'Arama kaydı bulunamadı' };
@@ -1856,11 +1859,12 @@ export const similarityService = {
      * @param {Array} updates - Güncellenecek kayıtlar [{ resultId, isSimilar }, ...]
      * @returns {Object} Başarı durumu
      */
-    async bulkUpdateSimilarity(monitoredTrademarkId, bulletinKey, updates) {
+    async bulkUpdateSimilarityStatus(monitoredTrademarkId, bulletinKey, updates) {
         if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor." };
         
         try {
-            const result = await searchRecordService.getRecord(monitoredTrademarkId, bulletinKey);
+            // ✅ GÜNCEL: parametreler doğru sırada
+            const result = await searchRecordService.getRecord(bulletinKey, monitoredTrademarkId);
             
             if (result.success && result.data) {
                 const updatedResults = result.data.results.map(r => {
@@ -1884,7 +1888,8 @@ export const similarityService = {
                     lastSimilarityUpdate: new Date().toISOString()
                 };
                 
-                await searchRecordService.saveRecord(monitoredTrademarkId, updateData, bulletinKey);
+                // ✅ GÜNCEL: parametreler doğru sırada
+                await searchRecordService.saveRecord(bulletinKey, monitoredTrademarkId, updateData);
                 
                 console.log(`✅ Toplu benzerlik durumu güncellendi: ${updates.length} kayıt`);
                 return { success: true, updatedCount: updates.length };
@@ -1908,141 +1913,53 @@ export const similarityService = {
         if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor." };
         
         try {
-            let stats = {
-                total: 0,
-                similar: 0,
-                notSimilar: 0,
-                pending: 0,
-                withNotes: 0
-            };
-            
             if (bulletinKey) {
                 // Belirli bir bülten için istatistik
-                const result = await searchRecordService.getRecord(monitoredTrademarkId, bulletinKey);
+                // ✅ GÜNCEL: parametreler doğru sırada
+                const result = await searchRecordService.getRecord(bulletinKey, monitoredTrademarkId);
                 
-                if (result.success && result.data && result.data.results) {
-                    result.data.results.forEach(r => {
-                        stats.total++;
-                        if (r.isSimilar === true) stats.similar++;
-                        else if (r.isSimilar === false) stats.notSimilar++;
-                        else stats.pending++;
-                        if (r.note && r.note.trim()) stats.withNotes++;
-                    });
-                }
-            } else {
-                // Tüm bültenler için istatistik
-                const allBulletinKeys = await searchRecordService.getAllBulletinKeys();
-                
-                if (allBulletinKeys.success) {
-                    for (const key of allBulletinKeys.data) {
-                        const result = await searchRecordService.getRecord(monitoredTrademarkId, key);
-                        
-                        if (result.success && result.data && result.data.results) {
-                            result.data.results.forEach(r => {
-                                stats.total++;
-                                if (r.isSimilar === true) stats.similar++;
-                                else if (r.isSimilar === false) stats.notSimilar++;
-                                else stats.pending++;
-                                if (r.note && r.note.trim()) stats.withNotes++;
-                            });
+                if (result.success && result.data) {
+                    const results = result.data.results || [];
+                    const similarCount = results.filter(r => r.isSimilar === true).length;
+                    const notSimilarCount = results.filter(r => r.isSimilar === false).length;
+                    const pendingCount = results.filter(r => r.isSimilar === undefined || r.isSimilar === null).length;
+                    
+                    return {
+                        success: true,
+                        data: {
+                            total: results.length,
+                            similar: similarCount,
+                            notSimilar: notSimilarCount,
+                            pending: pendingCount
                         }
-                    }
-                }
-            }
-            
-            return { success: true, data: stats };
-            
-        } catch (error) {
-            console.error('İstatistik alınırken hata:', error);
-            return { success: false, error: error.message };
-        }
-    },
-
-    /**
-     * Belirli bir bülten için tüm markaların benzerlik istatistiklerini alır
-     * @param {string} bulletinKey - Bülten anahtarı
-     * @param {Array} monitoredTrademarkIds - İzlenen marka ID'leri
-     * @returns {Object} Toplu istatistik bilgileri
-     */
-    async getBulletinSimilarityStats(bulletinKey, monitoredTrademarkIds) {
-        if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor." };
-        
-        try {
-            const allRecords = await searchRecordService.getAllRecordsForBulletin(bulletinKey);
-            
-            if (!allRecords.success) {
-                return { success: false, error: 'Bülten kayıtları alınamadı' };
-            }
-            
-            const stats = {
-                totalTrademarks: 0,
-                totalResults: 0,
-                similar: 0,
-                notSimilar: 0,
-                pending: 0,
-                withNotes: 0,
-                byTrademark: {}
-            };
-            
-            allRecords.data.forEach(record => {
-                if (monitoredTrademarkIds.includes(record.monitoredTrademarkId)) {
-                    stats.totalTrademarks++;
-                    
-                    const trademarkStats = {
-                        total: 0,
-                        similar: 0,
-                        notSimilar: 0,
-                        pending: 0,
-                        withNotes: 0
                     };
-                    
-                    if (record.results) {
-                        record.results.forEach(r => {
-                            stats.totalResults++;
-                            trademarkStats.total++;
-                            
-                            if (r.isSimilar === true) {
-                                stats.similar++;
-                                trademarkStats.similar++;
-                            } else if (r.isSimilar === false) {
-                                stats.notSimilar++;
-                                trademarkStats.notSimilar++;
-                            } else {
-                                stats.pending++;
-                                trademarkStats.pending++;
-                            }
-                            
-                            if (r.note && r.note.trim()) {
-                                stats.withNotes++;
-                                trademarkStats.withNotes++;
-                            }
-                        });
-                    }
-                    
-                    stats.byTrademark[record.monitoredTrademarkId] = trademarkStats;
                 }
-            });
-            
-            return { success: true, data: stats };
+                
+                return { success: false, error: 'Arama kaydı bulunamadı' };
+            } else {
+                // Tüm bültenler için istatistik (gelecekte implement edilebilir)
+                return { success: false, error: 'Tüm bülten istatistikleri henüz desteklenmiyor' };
+            }
             
         } catch (error) {
-            console.error('Bülten istatistikleri alınırken hata:', error);
+            console.error('Benzerlik istatistikleri alınırken hata:', error);
             return { success: false, error: error.message };
         }
     },
 
     /**
-     * Benzerlik durumu filtresine göre sonuçları getir
+     * Filtrelenmiş sonuçları alır
      * @param {string} monitoredTrademarkId - İzlenen marka ID'si
      * @param {string} bulletinKey - Bülten anahtarı
-     * @param {string} filter - Filtre ('similar', 'notSimilar', 'pending', 'withNotes')
+     * @param {string} filter - Filtre türü ('similar', 'notSimilar', 'pending', 'withNotes', 'all')
      * @returns {Object} Filtrelenmiş sonuçlar
      */
-    async getFilteredResults(monitoredTrademarkId, bulletinKey, filter) {
+    async getFilteredResults(monitoredTrademarkId, bulletinKey, filter = 'all') {
         if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor." };
         
         try {
-            const result = await searchRecordService.getRecord(monitoredTrademarkId, bulletinKey);
+            // ✅ GÜNCEL: parametreler doğru sırada
+            const result = await searchRecordService.getRecord(bulletinKey, monitoredTrademarkId);
             
             if (result.success && result.data && result.data.results) {
                 let filteredResults = [];
