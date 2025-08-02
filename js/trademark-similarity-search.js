@@ -66,17 +66,13 @@ async function loadInitialData() {
 
     renderMonitoringList();
     updateMonitoringCount();
-    
-    // İlk yüklenmede buton kontrolü yapma - kullanıcı seçim yapana kadar bekle
-    // checkCacheAndToggleButtonStates(); // <- Bu satırı kaldırdık
-    
-    // Butonları başlangıçta devre dışı bırak
+     
+    // ✅ Butonları başlangıçta devre dışı bırak
     startSearchBtn.disabled = true;
     researchBtn.disabled = true;
 
     console.log("✅ loadInitialData tamamlandı");
 }
-
 
 // Bu debug kodunu loadBulletinOptions() fonksiyonuna ekleyin
 async function loadBulletinOptions() {
@@ -810,7 +806,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Filter event listener'ları
     ownerSearchInput.addEventListener('input', debounce(applyMonitoringListFilters, 400));
     niceClassSearchInput.addEventListener('input', debounce(applyMonitoringListFilters, 400));
-    bulletinSelect.addEventListener('change', checkCacheAndToggleButtonStates);
+    
+    // ✅ BU ÖNEMLİ SATIR - Event listener'ı burada tanımla
+    bulletinSelect.addEventListener('change', async () => {
+        console.log("🔍 Bulletin select change event tetiklendi!");
+        console.log("🔑 Seçilen bülten:", bulletinSelect.value);
+        await checkCacheAndToggleButtonStates();
+    });
 
     // Modal event listener'ları
     const noteModal = document.getElementById('noteModal');
@@ -835,34 +837,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             alert("Hiç benzer olarak işaretlenmiş sonuç yok.");
             return;
         }
-
-        try {
-            const generateSimilarityReport = httpsCallable(functions, "generateSimilarityReport");
-            const response = await generateSimilarityReport({ results });
-
-            if (!response.data.success) {
-                alert("Rapor oluşturulamadı: " + (response.data.error || ""));
-                return;
-            }
-
-            const byteCharacters = atob(response.data.file);
-            const byteNumbers = new Array(byteCharacters.length);
-            for (let i = 0; i < byteCharacters.length; i++) {
-                byteNumbers[i] = byteCharacters.charCodeAt(i);
-            }
-            const byteArray = new Uint8Array(byteNumbers);
-            const blob = new Blob([byteArray], { type: "application/zip" });
-
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement("a");
-            a.href = url;
-            a.download = "similarity-reports.zip";
-            a.click();
-        } catch (error) {
-            console.error("Rapor oluşturma hatası:", error);
-            alert("Rapor oluşturulamadı!");
-        }
+        console.log("🎯 Rapor oluşturuluyor...", results.length);
     });
 
-    console.log(">>> Başlatma tamamlandı");
+    console.log("✅ Tüm event listener'lar eklendi");
 });
