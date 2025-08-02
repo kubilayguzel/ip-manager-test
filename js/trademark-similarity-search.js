@@ -224,6 +224,86 @@ function getOwnerNames(item) {
 }
 
 // === CACHE AND STATE MANAGEMENT ===
+
+// Yeni fonksiyon: Sadece cache'den sonuçları yükle
+async function loadCachedResultsOnly() {
+    const selectedBulletin = bulletinSelect.value;
+    if (!selectedBulletin || filteredMonitoringTrademarks.length === 0) {
+        console.log('❌ loadCachedResultsOnly: selectedBulletin veya filteredMonitoringTrademarks boş');
+        return;
+    }
+
+    console.log('🔍 loadCachedResultsOnly başladı:', {
+        selectedBulletin,
+        monitoringCount: filteredMonitoringTrademarks.length
+    });
+
+    loadingIndicator.textContent = 'İzleme kayıtları yükleniyor...';
+    loadingIndicator.style.display = 'block';
+    noRecordsMessage.style.display = 'none';
+    resultsTableBody.innerHTML = '';
+    allSimilarResults = [];
+
+    let cachedResults = [];
+    let foundRecords = 0;
+
+    // Sadece önbellekten veri çek
+    for (const tm of filteredMonitoringTrademarks) {
+        const recordId = `${tm.id}_${selectedBulletin}`;
+        console.log(`🔍 Kayıt kontrol ediliyor: ${recordId}`);
+        
+        const result = await searchRecordService.getRecord(recordId);
+        if (result.success && result.data) {
+            foundRecords++;
+            console.log(`✅ Kayıt bulundu: ${recordId}, sonuç sayısı: ${result.data.results?.length || 0}`);
+            
+            if (result.data.results && result.data.results.length > 0) {
+                cachedResults.push(...result.data.results.map(r => ({
+                    ...r,
+                    source: 'cache',
+                    monitoredTrademarkId: tm.id,
+                    monitoredTrademark: tm.title || tm.markName || 'BELİRSİZ_MARKA'
+                })));
+            }
+        } else {
+            console.log(`❌ Kayıt bulunamadı: ${recordId}`, result.error);
+        }
+    }
+
+    console.log('📊 Cache sonuçları:', {
+        foundRecords,
+        totalCachedResults: cachedResults.length,
+        monitoringTrademarks: filteredMonitoringTrademarks.map(tm => ({
+            id: tm.id,
+            name: tm.title || tm.markName
+        }))
+    });
+
+    allSimilarResults = cachedResults;
+    
+    if (allSimilarResults.length > 0) {
+        groupAndSortResults();
+    }
+    
+    loadingIndicator.style.display = 'none';
+
+    if (allSimilarResults.length > 0) {
+        const infoMessage = `${allSimilarResults.length} mevcut izleme kaydı bulundu. (Yeni arama yapılamaz - bülten sistemde yok)`;
+        
+        // Mevcut uyarı mesajına ek bilgi ekle
+        const currentMessage = infoMessageContainer.innerHTML;
+        infoMessageContainer.innerHTML = currentMessage + `<div class="info-message" style="background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; margin-top: 10px;">${infoMessage}</div>`;
+        
+        pagination.update(allSimilarResults.length);
+        renderCurrentPageOfResults();
+        noRecordsMessage.style.display = 'none';
+    } else {
+        noRecordsMessage.textContent = 'Bu bülten için izleme kaydı bulunamadı.';
+        noRecordsMessage.style.display = 'block';
+        pagination.update(0);
+    }
+}
+
 async function checkCacheAndToggleButtonStates() {
     const selectedBulletin = bulletinSelect.value;
     startSearchBtn.disabled = true;
@@ -260,6 +340,7 @@ async function checkCacheAndToggleButtonStates() {
         `;
         
         // Mevcut cache'den sonuçları yükle
+        console.log('🚀 loadCachedResultsOnly çağrılıyor...');
         await loadCachedResultsOnly();
         return;
     }
@@ -285,51 +366,6 @@ async function checkCacheAndToggleButtonStates() {
     } else {
         startSearchBtn.disabled = false;
         infoMessageContainer.innerHTML = '';
-    }
-}
-
-// Yeni fonksiyon: Sadece cache'den sonuçları yükle
-async function loadCachedResultsOnly() {
-    const selectedBulletin = bulletinSelect.value;
-    if (!selectedBulletin || filteredMonitoringTrademarks.length === 0) return;
-
-    loadingIndicator.textContent = 'İzleme kayıtları yükleniyor...';
-    loadingIndicator.style.display = 'block';
-    noRecordsMessage.style.display = 'none';
-    resultsTableBody.innerHTML = '';
-    allSimilarResults = [];
-
-    let cachedResults = [];
-
-    // Sadece önbellekten veri çek
-    for (const tm of filteredMonitoringTrademarks) {
-        const recordId = `${tm.id}_${selectedBulletin}`;
-        const result = await searchRecordService.getRecord(recordId);
-        if (result.success && result.data) {
-            cachedResults.push(...result.data.results.map(r => ({
-                ...r,
-                source: 'cache',
-                monitoredTrademarkId: tm.id,
-                monitoredTrademark: tm.title || tm.markName || 'BELİRSİZ_MARKA'
-            })));
-        }
-    }
-
-    allSimilarResults = cachedResults;
-    groupAndSortResults();
-    
-    loadingIndicator.style.display = 'none';
-
-    if (allSimilarResults.length > 0) {
-        const infoMessage = `${allSimilarResults.length} mevcut izleme kaydı bulundu. (Yeni arama yapılamaz - bülten sistemde yok)`;
-        infoMessageContainer.innerHTML += `<div class="info-message">${infoMessage}</div>`;
-        
-        pagination.update(allSimilarResults.length);
-        renderCurrentPageOfResults();
-    } else {
-        noRecordsMessage.textContent = 'Bu bülten için izleme kaydı bulunamadı.';
-        noRecordsMessage.style.display = 'block';
-        pagination.update(0);
     }
 }
 
