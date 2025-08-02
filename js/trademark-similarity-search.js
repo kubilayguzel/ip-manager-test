@@ -281,6 +281,11 @@ async function handleResearch() {
     await performSearch(false);
 }
 async function performSearch(fromCacheOnly = false) {
+        // 🔍 TEST: Fonksiyon çağrıldığında mutlaka görünecek log
+    console.log('🚨 PERFORMSEARCH ÇAĞRILDI! fromCacheOnly:', fromCacheOnly);
+    console.log('🚨 selectedBulletin:', bulletinSelect.value);
+    console.log('🚨 filteredMonitoringTrademarks.length:', filteredMonitoringTrademarks.length);
+  
     const selectedBulletin = bulletinSelect.value;
     if (!selectedBulletin) return;
     if (filteredMonitoringTrademarks.length === 0) return;
