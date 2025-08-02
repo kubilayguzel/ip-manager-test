@@ -247,27 +247,45 @@ async function loadCachedResultsOnly() {
     let cachedResults = [];
     let foundRecords = 0;
 
-    // Sadece önbellekten veri çek
-    for (const tm of filteredMonitoringTrademarks) {
-        const recordId = `${tm.id}_${selectedBulletin}`;
-        console.log(`🔍 Kayıt kontrol ediliyor: ${recordId}`);
-        
-        const result = await searchRecordService.getRecord(recordId);
-        if (result.success && result.data) {
-            foundRecords++;
-            console.log(`✅ Kayıt bulundu: ${recordId}, sonuç sayısı: ${result.data.results?.length || 0}`);
+    // ✅ YENİ YAKLAŞIM: bulletinNo ile arama yap
+    console.log('🔍 bulletinNo ile arama yapılıyor:', selectedBulletin);
+    
+    try {
+        // Her marka için o markaya ait ve belirtilen bulletinNo'ya sahip kayıtları bul
+        for (const tm of filteredMonitoringTrademarks) {
+            console.log(`🔍 ${tm.title || tm.markName} markası için kayıt aranıyor...`);
             
-            if (result.data.results && result.data.results.length > 0) {
-                cachedResults.push(...result.data.results.map(r => ({
-                    ...r,
-                    source: 'cache',
-                    monitoredTrademarkId: tm.id,
-                    monitoredTrademark: tm.title || tm.markName || 'BELİRSİZ_MARKA'
-                })));
-            }
-        } else {
-            console.log(`❌ Kayıt bulunamadı: ${recordId}`, result.error);
+            // Bu marka için bulletinNo = selectedBulletin olan kayıtları bul
+            const q = query(
+                collection(db, 'monitoringTrademarkRecords'),
+                where('bulletinNo', '==', selectedBulletin)
+            );
+            
+            const querySnapshot = await getDocs(q);
+            
+            querySnapshot.forEach((doc) => {
+                const data = doc.data();
+                const docId = doc.id;
+                
+                // Bu kayıt bu markaya ait mi kontrol et (ID'nin başlangıcına bakarak)
+                if (docId.startsWith(tm.id)) {
+                    foundRecords++;
+                    console.log(`✅ Kayıt bulundu: ${docId}, sonuç sayısı: ${data.results?.length || 0}`);
+                    
+                    if (data.results && data.results.length > 0) {
+                        cachedResults.push(...data.results.map(r => ({
+                            ...r,
+                            source: 'cache',
+                            monitoredTrademarkId: tm.id,
+                            monitoredTrademark: tm.title || tm.markName || 'BELİRSİZ_MARKA'
+                        })));
+                    }
+                }
+            });
         }
+        
+    } catch (error) {
+        console.error('❌ Kayıt arama hatası:', error);
     }
 
     console.log('📊 Cache sonuçları:', {
