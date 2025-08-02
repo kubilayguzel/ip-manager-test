@@ -270,6 +270,7 @@ async function loadCachedResultsOnly() {
                 const monitoredTrademarkId = r.monitoredTrademarkId;
                 console.log(">>> filteredMonitoringTrademarks:", filteredMonitoringTrademarks.map(t => t.id));
                 console.log(">>> result.monitoredTrademarkId:", monitoredTrademarkId);
+                console.log(">>> result item:", r);
                 const matchedTrademark = filteredMonitoringTrademarks.find(tm => tm.id === monitoredTrademarkId);
 
                 if (!matchedTrademark) {
