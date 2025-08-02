@@ -330,6 +330,8 @@ async function performSearch(fromCacheOnly = false) {
     const bulletinKey = bulletinSelect.value;
     if (!bulletinKey || filteredMonitoringTrademarks.length === 0) return;
     
+    console.log("🚀 performSearch başladı", { bulletinKey, markaSayisi: filteredMonitoringTrademarks.length });
+    
     loadingIndicator.textContent = 'Arama yapılıyor...';
     loadingIndicator.style.display = 'block';
     noRecordsMessage.style.display = 'none';
@@ -340,9 +342,15 @@ async function performSearch(fromCacheOnly = false) {
     let cachedResults = [];
     let trademarksToSearch = [];
 
+    // Cache kontrol kısmına debug ekleyin
+    console.log("🔍 Cache kontrol ediliyor...");
     for (const tm of filteredMonitoringTrademarks) {
+        console.log(`📋 Marka kontrol ediliyor: ${tm.id} - ${tm.title || tm.markName}`);
         const result = await searchRecordService.getRecord(bulletinKey, tm.id);
+        console.log(`💾 Cache sonucu:`, result);
+        
         if (result.success && result.data) {
+            console.log(`✅ Cache bulundu! ${result.data.results?.length || 0} sonuç`);
             cachedResults.push(...(result.data.results || []).map(r => ({
                 ...r,
                 source: 'cache',
@@ -350,9 +358,12 @@ async function performSearch(fromCacheOnly = false) {
                 monitoredTrademark: tm.title || tm.markName || 'BELİRSİZ_MARKA'
             })));
         } else {
+            console.log(`❌ Cache yok: ${result.error || 'Veri bulunamadı'}`);
             trademarksToSearch.push(tm);
         }
     }
+
+    console.log(`📊 Cache özet: ${cachedResults.length} cache sonuç, ${trademarksToSearch.length} aranacak marka`);
 
     let newSearchResults = [];
     if (!fromCacheOnly && trademarksToSearch.length > 0) {
@@ -364,9 +375,15 @@ async function performSearch(fromCacheOnly = false) {
             niceClasses: Array.isArray(tm.niceClass) ? tm.niceClass : (tm.niceClass ? [tm.niceClass] : [])
         }));
         
+        console.log("🔎 Arama payload hazırlandı:", monitoredMarksPayload);
+        
         try {
+            console.log("📡 Cloud Function çağrılıyor...");
             const resultsFromCF = await runTrademarkSearch(monitoredMarksPayload, bulletinKey);
+            console.log("📨 Cloud Function sonucu:", resultsFromCF);
+            
             if (resultsFromCF?.length > 0) {
+                console.log(`✅ ${resultsFromCF.length} yeni sonuç bulundu`);
                 newSearchResults = resultsFromCF.map(hit => ({
                     ...hit,
                     source: 'new',
@@ -379,15 +396,30 @@ async function performSearch(fromCacheOnly = false) {
                     return acc;
                 }, {});
                 
+                console.log("💾 Sonuçlar gruplandı:", groupedResults);
+                console.log("💾 Arama sonuçları kaydediliyor...");
+                
                 for (const [monitoredTrademarkId, results] of Object.entries(groupedResults)) {
-                    await searchRecordService.saveRecord(bulletinKey, monitoredTrademarkId, {
+                    console.log(`📝 Kaydediliyor: ${bulletinKey}/${monitoredTrademarkId} - ${results.length} sonuç`);
+                    
+                    const saveResult = await searchRecordService.saveRecord(bulletinKey, monitoredTrademarkId, {
                         results,
                         searchDate: new Date().toISOString()
                     });
+                    
+                    console.log(`💾 Kaydetme sonucu:`, saveResult);
+                    
+                    if (!saveResult.success) {
+                        console.error(`❌ KAYDETME HATASI: ${saveResult.error}`);
+                    } else {
+                        console.log(`✅ Başarıyla kaydedildi: ${bulletinKey}/${monitoredTrademarkId}`);
+                    }
                 }
+            } else {
+                console.log("⚠️ Cloud Function'dan sonuç gelmedi");
             }
         } catch (error) {
-            console.error("Arama işlemi sırasında hata:", error);
+            console.error("❌ Arama işlemi sırasında hata:", error);
             loadingIndicator.style.display = 'none';
             startSearchBtn.disabled = false;
             researchBtn.disabled = false;
@@ -396,24 +428,24 @@ async function performSearch(fromCacheOnly = false) {
     }
 
     allSimilarResults = [...cachedResults, ...newSearchResults];
+    console.log(`🎯 Toplam sonuç: ${allSimilarResults.length} (${cachedResults.length} cache + ${newSearchResults.length} yeni)`);
+    
     groupAndSortResults();
     loadingIndicator.style.display = 'none';
     infoMessageContainer.innerHTML = `<div class="info-message">Toplam ${allSimilarResults.length} benzer sonuç bulundu.</div>`;
     pagination.update(allSimilarResults.length);
     renderCurrentPageOfResults();
 
-    // ✅ YENİ EKLEME: Arama tamamlandıktan sonra buton durumlarını güncelle
+    // ✅ Buton durumlarını güncelle
     try {
-        // Eğer yeni arama yapıldıysa (cache'e kayıt edildi), buton durumlarını güncelle
         if (newSearchResults.length > 0 || cachedResults.length > 0) {
-            startSearchBtn.disabled = true;   // Artık cache var, başlat butonunu devre dışı bırak
-            researchBtn.disabled = false;     // Yeniden ara butonunu aktif et
-            console.log("✅ Arama tamamlandı - Buton durumları güncellendi (Başlat: DEVRE DIŞI, Yeniden Ara: AKTİF)");
+            startSearchBtn.disabled = true;   // Artık cache var
+            researchBtn.disabled = false;     // Yeniden ara aktif
+            console.log("✅ Arama tamamlandı - Butonlar güncellendi (Başlat: DEVRE DIŞI, Yeniden Ara: AKTİF)");
         } else {
-            // Hiç sonuç bulunamadıysa
             startSearchBtn.disabled = false;  // Tekrar arama yapabilsin
             researchBtn.disabled = true;      // Yeniden ara devre dışı
-            console.log("⚠️ Hiç sonuç bulunamadı - Buton durumları sıfırlandı");
+            console.log("⚠️ Hiç sonuç bulunamadı - Butonlar sıfırlandı");
         }
     } catch (error) {
         console.error("⚠️ Buton durumu güncelleme hatası:", error);
