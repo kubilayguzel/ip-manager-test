@@ -235,6 +235,9 @@ async function loadCachedResultsOnly() {
 
     const selectedOption = bulletinSelect.querySelector(`option[value="${selectedBulletinId}"]`);
     const selectedBulletinNo = selectedOption?.dataset.bulletinNo || selectedBulletinId;
+    console.log(">>> selectedBulletinId:", selectedBulletinId);
+    console.log(">>> selectedBulletinNo:", selectedBulletinNo);
+    console.log(">>> selectedOption.dataset:", selectedOption?.dataset);
 
     console.log('🔍 loadCachedResultsOnly başladı:', {
         selectedBulletinId,
