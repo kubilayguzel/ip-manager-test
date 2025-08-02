@@ -77,6 +77,7 @@ async function loadBulletinOptions() {
 
         const monitoringSnap = await getDocs(collection(db, 'monitoringTrademarkRecords'));
         const monitoringBulletinMap = new Map();
+        
         monitoringSnap.forEach(doc => {
             const data = doc.data();
             if (data.bulletinNo && data.bulletinDate) {
@@ -92,27 +93,39 @@ async function loadBulletinOptions() {
         });
 
         const allBulletins = new Map();
+        
+        // Mevcut bültenler için bulletinKey oluştur
         existingBulletins.forEach(bulletin => {
+            // Tarihi "27/05/2025" -> "27052025" formatına çevir
+            const bulletinDate = bulletin.bulletinDate || '';
+            const dateFormatted = bulletinDate.replace(/\//g, '');
+            const bulletinKey = `${bulletin.bulletinNo}_${dateFormatted}`;
+            
             allBulletins.set(bulletin.bulletinNo, {
-                id: `${bulletin.bulletinNo}_${bulletin.bulletinDate || ''}`,
+                id: bulletin.id,
                 bulletinNo: bulletin.bulletinNo,
                 bulletinDate: bulletin.bulletinDate,
+                bulletinKey: bulletinKey, // Firestore path için kullanılacak
                 createdAt: bulletin.createdAt,
                 hasOriginalBulletin: true
             });
         });
+        
+        // Monitoring kayıtlarından gelen bültenler
         monitoringBulletinMap.forEach((value, key) => {
             if (!allBulletins.has(value.bulletinNo)) {
                 allBulletins.set(value.bulletinNo, {
                     id: key,
                     bulletinNo: value.bulletinNo,
                     bulletinDate: value.bulletinDate,
+                    bulletinKey: key, // Zaten doğru formatta
                     createdAt: null,
                     hasOriginalBulletin: false
                 });
             }
         });
 
+        // Sıralama
         const sortedBulletins = Array.from(allBulletins.values()).sort((a, b) => {
             if (a.createdAt && b.createdAt) {
                 const dateA = typeof a.createdAt.toDate === 'function' ? a.createdAt.toDate() : new Date(0);
@@ -124,11 +137,13 @@ async function loadBulletinOptions() {
             return b.bulletinNo.localeCompare(a.bulletinNo);
         });
 
+        // Option'ları oluştur - VALUE olarak bulletinKey kullan
         sortedBulletins.forEach(bulletin => {
             const option = document.createElement('option');
-            option.value = bulletin.bulletinNo;
+            option.value = bulletin.bulletinKey; // ÖNEMLİ: bulletinKey kullan (469_27052025)
             option.dataset.hasOriginalBulletin = bulletin.hasOriginalBulletin;
             option.dataset.bulletinNo = bulletin.bulletinNo;
+            option.dataset.bulletinDate = bulletin.bulletinDate;
             option.textContent = `${bulletin.bulletinNo} - ${bulletin.bulletinDate || ''}`;
             bulletinSelect.appendChild(option);
         });
@@ -195,27 +210,30 @@ function getOwnerNames(item) {
     return '-';
 }
 
-
 async function checkCacheAndToggleButtonStates() {
-    const bulletinKey = bulletinSelect.value;
+    console.log("🔍 checkCacheAndToggleButtonStates çağrıldı");
     
-    // Eğer bülten seçilmemişse her iki butonu da devre dışı bırak
+    const bulletinKey = bulletinSelect.value; // Artık doğrudan doğru format: "469_27052025"
+    
+    console.log("🔑 Seçilen bulletinKey:", bulletinKey);
+    console.log("👥 Filtrelenmiş izlenen markalar sayısı:", filteredMonitoringTrademarks.length);
+    
+    // Eğer bülten seçilmemişse
     if (!bulletinKey) {
+        console.log("❌ Bülten seçilmemiş - butonlar devre dışı");
         startSearchBtn.disabled = true;
         researchBtn.disabled = true;
         return;
     }
     
-    // Eğer izlenen marka yoksa kullanıcıya bilgi ver ve butonları devre dışı bırak
+    // Eğer izlenen marka yoksa
     if (filteredMonitoringTrademarks.length === 0) {
+        console.log("❌ İzlenen marka yok - butonlar devre dışı");
         startSearchBtn.disabled = true;
         researchBtn.disabled = true;
         
-        // Kullanıcıya bilgilendirme mesajı göster
-        const infoContainer = document.getElementById('infoMessageContainer') || 
-                            document.querySelector('.info-message-container');
-        if (infoContainer) {
-            infoContainer.innerHTML = `
+        if (infoMessageContainer) {
+            infoMessageContainer.innerHTML = `
                 <div class="info-message warning">
                     <strong>Uyarı:</strong> İzlenen marka bulunamadı. Önce izlenecek markalar ekleyin.
                 </div>
@@ -224,36 +242,52 @@ async function checkCacheAndToggleButtonStates() {
         return;
     }
     
+    console.log("✅ Koşullar sağlandı, cache kontrolü yapılıyor...");
+    
     // Cache kontrolü yap
     try {
+        console.log("🔍 Firestore path:", `monitoringTrademarkRecords/${bulletinKey}`);
         const snapshot = await getDocs(collection(db, 'monitoringTrademarkRecords', bulletinKey));
-        const hasCache = snapshot.docs.some(docSnap => docSnap.data().results?.length > 0);
+        console.log("💾 Cache snapshot:", snapshot.docs.length, "doküman bulundu");
         
-        // Buton durumlarını cache durumuna göre ayarla
-        startSearchBtn.disabled = hasCache; // Cache varsa "Başlat" butonunu devre dışı bırak
-        researchBtn.disabled = !hasCache;  // Cache yoksa "Yeniden Ara" butonunu devre dışı bırak
+        const hasCache = snapshot.docs.some(docSnap => {
+            const data = docSnap.data();
+            const hasResults = data.results && data.results.length > 0;
+            console.log(`📄 Doküman ${docSnap.id}:`, hasResults ? `${data.results.length} sonuç var` : "sonuç yok");
+            return hasResults;
+        });
+        
+        console.log("🗂️ Cache durumu:", hasCache ? "VAR" : "YOK");
+        
+        // Buton durumlarını ayarla
+        startSearchBtn.disabled = hasCache;    // Cache varsa "Başlat" devre dışı
+        researchBtn.disabled = !hasCache;      // Cache yoksa "Yeniden Ara" devre dışı
+        
+        console.log("🔘 startSearchBtn disabled:", startSearchBtn.disabled);
+        console.log("🔘 researchBtn disabled:", researchBtn.disabled);
         
         // Cache varsa verileri yükle
         if (hasCache) {
+            console.log("📊 Cache'ten veriler yükleniyor...");
             loadDataFromCache(bulletinKey);
         } else {
-            // Cache yoksa bilgilendirme mesajı göster
-            const infoContainer = document.getElementById('infoMessageContainer') || 
-                                document.querySelector('.info-message-container');
-            if (infoContainer) {
-                infoContainer.innerHTML = `
+            console.log("ℹ️ Cache yok - bilgilendirme mesajı gösteriliyor");
+            if (infoMessageContainer) {
+                const selectedOption = bulletinSelect.options[bulletinSelect.selectedIndex];
+                const displayText = selectedOption ? selectedOption.textContent : bulletinKey;
+                
+                infoMessageContainer.innerHTML = `
                     <div class="info-message info">
-                        <strong>Bilgi:</strong> ${bulletinKey} bülteni için önbellekte veri bulunamadı. "Arama Başlat" butonuna tıklayarak arama yapabilirsiniz.
+                        <strong>Bilgi:</strong> ${displayText} bülteni için önbellekte veri bulunamadı. "Arama Başlat" butonuna tıklayarak arama yapabilirsiniz.
                     </div>
                 `;
             }
         }
         
     } catch (error) {
-        console.error('Cache kontrol hatası:', error);
-        // Hata durumunda güvenli tarafta kal
-        startSearchBtn.disabled = false; // Kullanıcı yeni arama yapabilsin
-        researchBtn.disabled = true;     // Yeniden arama yapamamasın
+        console.error('❌ Cache kontrol hatası:', error);
+        startSearchBtn.disabled = false;
+        researchBtn.disabled = true;
     }
 }
 
