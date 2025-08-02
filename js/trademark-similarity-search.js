@@ -240,67 +240,45 @@ function getOwnerNames(item) {
 }
 
 async function checkCacheAndToggleButtonStates() {
-    console.log("🔍 checkCacheAndToggleButtonStates çağrıldı");
-    
     const bulletinKey = bulletinSelect.value;
-    
-    console.log("🔑 Seçilen bulletinKey:", bulletinKey);
-    console.log("👥 Filtrelenmiş izlenen markalar sayısı:", filteredMonitoringTrademarks?.length || 0);
-    
-    // Eğer bülten seçilmemişse
     if (!bulletinKey) {
-        console.log("❌ Bülten seçilmemiş - butonlar devre dışı");
         startSearchBtn.disabled = true;
         researchBtn.disabled = true;
         return;
     }
+
+    console.log("🔍 Cache kontrol ediliyor. Bülten:", bulletinKey);
     
-    // Eğer izlenen marka yoksa
-    if (!filteredMonitoringTrademarks || filteredMonitoringTrademarks.length === 0) {
-        console.log("❌ İzlenen marka yok - butonlar devre dışı");
-        startSearchBtn.disabled = true;
-        researchBtn.disabled = true;
-        
-        if (infoMessageContainer) {
-            infoMessageContainer.innerHTML = `
-                <div class="info-message warning">
-                    <strong>Uyarı:</strong> İzlenen marka bulunamadı. Önce izlenecek markalar ekleyin.
-                </div>
-            `;
-        }
-        return;
-    }
-    
-    console.log("✅ Koşullar sağlandı, cache kontrolü yapılıyor...");
-    
-    // Cache kontrolü yap
     try {
-        console.log("🔍 Firestore path:", `monitoringTrademarkRecords/${bulletinKey}`);
-        const snapshot = await getDocs(collection(db, 'monitoringTrademarkRecords', bulletinKey));
-        console.log("💾 Cache snapshot:", snapshot.docs.length, "doküman bulundu");
-        
-        const hasCache = snapshot.docs.some(docSnap => {
-            const data = docSnap.data();
-            const hasResults = data.results && data.results.length > 0;
-            console.log(`📄 Doküman ${docSnap.id}:`, hasResults ? `${data.results.length} sonuç var` : "sonuç yok");
-            return hasResults;
-        });
+        // Cache'de bu bülten için veri var mı kontrol et
+        const hasCache = await Promise.all(
+            filteredMonitoringTrademarks.map(async (tm) => {
+                const result = await searchRecordService.getRecord(bulletinKey, tm.id);
+                const hasResults = result.success && result.data && result.data.results && result.data.results.length > 0;
+                console.log(`Marka ${tm.id}:`, hasResults ? `${result.data.results.length} sonuç var` : "sonuç yok");
+                return hasResults;
+            })
+        ).then(results => results.some(hasResults => hasResults)); // En az bir marka için sonuç varsa true
         
         console.log("🗂️ Cache durumu:", hasCache ? "VAR" : "YOK");
         
         // Buton durumlarını ayarla
-        startSearchBtn.disabled = hasCache;    // Cache varsa "Başlat" devre dışı
-        researchBtn.disabled = !hasCache;      // Cache yoksa "Yeniden Ara" devre dışı
-        
-        console.log("🔘 startSearchBtn disabled:", startSearchBtn.disabled);
-        console.log("🔘 researchBtn disabled:", researchBtn.disabled);
-        
-        // Cache varsa verileri yükle
         if (hasCache) {
+            // Cache varsa "Arama Başlat" devre dışı, "Yeniden Ara" aktif
+            startSearchBtn.disabled = true;
+            researchBtn.disabled = false;
+            console.log("🔘 Cache var - Arama Başlat: DEVRE DIŞI, Yeniden Ara: AKTİF");
+            
+            // Cache'ten verileri yükle
             console.log("📊 Cache'ten veriler yükleniyor...");
             await loadDataFromCache(bulletinKey);
         } else {
-            console.log("ℹ️ Cache yok - bilgilendirme mesajı gösteriliyor");
+            // Cache yoksa "Arama Başlat" aktif, "Yeniden Ara" devre dışı
+            startSearchBtn.disabled = false;
+            researchBtn.disabled = true;
+            console.log("🔘 Cache yok - Arama Başlat: AKTİF, Yeniden Ara: DEVRE DIŞI");
+            
+            // Bilgilendirme mesajı göster
             if (infoMessageContainer) {
                 const selectedOption = bulletinSelect.options[bulletinSelect.selectedIndex];
                 const displayText = selectedOption ? selectedOption.textContent : bulletinKey;
@@ -315,9 +293,10 @@ async function checkCacheAndToggleButtonStates() {
         
     } catch (error) {
         console.error('❌ Cache kontrol hatası:', error);
-        // Hata durumunda basit aktivasyon
+        // Hata durumunda güvenli varsayılan
         startSearchBtn.disabled = false;
         researchBtn.disabled = true;
+        console.log("⚠️ Hata nedeniyle varsayılan durum: Arama Başlat AKTİF");
     }
 }
 
@@ -350,6 +329,7 @@ async function loadDataFromCache(bulletinKey) {
 async function performSearch(fromCacheOnly = false) {
     const bulletinKey = bulletinSelect.value;
     if (!bulletinKey || filteredMonitoringTrademarks.length === 0) return;
+    
     loadingIndicator.textContent = 'Arama yapılıyor...';
     loadingIndicator.style.display = 'block';
     noRecordsMessage.style.display = 'none';
@@ -383,6 +363,7 @@ async function performSearch(fromCacheOnly = false) {
             applicationDate: tm.applicationDate || '',
             niceClasses: Array.isArray(tm.niceClass) ? tm.niceClass : (tm.niceClass ? [tm.niceClass] : [])
         }));
+        
         try {
             const resultsFromCF = await runTrademarkSearch(monitoredMarksPayload, bulletinKey);
             if (resultsFromCF?.length > 0) {
@@ -391,11 +372,13 @@ async function performSearch(fromCacheOnly = false) {
                     source: 'new',
                     monitoredTrademark: trademarksToSearch.find(tm => tm.id === hit.monitoredTrademarkId)?.title || hit.markName
                 }));
+                
                 const groupedResults = newSearchResults.reduce((acc, r) => {
                     if (!acc[r.monitoredTrademarkId]) acc[r.monitoredTrademarkId] = [];
                     acc[r.monitoredTrademarkId].push(r);
                     return acc;
                 }, {});
+                
                 for (const [monitoredTrademarkId, results] of Object.entries(groupedResults)) {
                     await searchRecordService.saveRecord(bulletinKey, monitoredTrademarkId, {
                         results,
@@ -411,12 +394,30 @@ async function performSearch(fromCacheOnly = false) {
             return;
         }
     }
+
     allSimilarResults = [...cachedResults, ...newSearchResults];
     groupAndSortResults();
     loadingIndicator.style.display = 'none';
     infoMessageContainer.innerHTML = `<div class="info-message">Toplam ${allSimilarResults.length} benzer sonuç bulundu.</div>`;
     pagination.update(allSimilarResults.length);
     renderCurrentPageOfResults();
+
+    // ✅ YENİ EKLEME: Arama tamamlandıktan sonra buton durumlarını güncelle
+    try {
+        // Eğer yeni arama yapıldıysa (cache'e kayıt edildi), buton durumlarını güncelle
+        if (newSearchResults.length > 0 || cachedResults.length > 0) {
+            startSearchBtn.disabled = true;   // Artık cache var, başlat butonunu devre dışı bırak
+            researchBtn.disabled = false;     // Yeniden ara butonunu aktif et
+            console.log("✅ Arama tamamlandı - Buton durumları güncellendi (Başlat: DEVRE DIŞI, Yeniden Ara: AKTİF)");
+        } else {
+            // Hiç sonuç bulunamadıysa
+            startSearchBtn.disabled = false;  // Tekrar arama yapabilsin
+            researchBtn.disabled = true;      // Yeniden ara devre dışı
+            console.log("⚠️ Hiç sonuç bulunamadı - Buton durumları sıfırlandı");
+        }
+    } catch (error) {
+        console.error("⚠️ Buton durumu güncelleme hatası:", error);
+    }
 }
 
 function groupAndSortResults() {
@@ -806,48 +807,39 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 // ✅ KALICI ÇÖZÜM: Gecikmeli event listener ekleme
 setTimeout(() => {
-    console.log("🕒 Gecikmeli event listener ekleniyor...");
+    console.log("🕒 Bülten seçimi event listener ekleniyor...");
     
     const bulletinSelect = document.getElementById('bulletinSelect');
     const startSearchBtn = document.getElementById('startSearchBtn');
     const researchBtn = document.getElementById('researchBtn');
     
     if (bulletinSelect && startSearchBtn && researchBtn) {
-        // Mevcut listener'ları kaldır (çakışmayı önle)
+        // Mevcut tüm listener'ları kaldır
         bulletinSelect.removeEventListener('change', checkCacheAndToggleButtonStates);
         
-        // Yeni working listener ekle
+        // Tek bir doğru listener ekle
         bulletinSelect.addEventListener('change', async () => {
             console.log("🔍 Bulletin select change event tetiklendi!");
             const bulletinKey = bulletinSelect.value;
             console.log("🔑 Seçilen bülten:", bulletinKey);
             
             if (bulletinKey) {
-                startSearchBtn.disabled = false;
-                researchBtn.disabled = true;
-                console.log("✅ Buton aktif edildi!");
-                
-                // Cache kontrolü de yap (isteğe bağlı)
-                try {
-                    if (typeof checkCacheAndToggleButtonStates === 'function') {
-                        await checkCacheAndToggleButtonStates();
-                    }
-                } catch (error) {
-                    console.log("Cache kontrol hatası (göz ardı edildi):", error);
-                }
+                // Önce cache kontrolü yap
+                await checkCacheAndToggleButtonStates();
             } else {
+                // Bülten seçilmemişse her iki butonu da devre dışı bırak
                 startSearchBtn.disabled = true;
                 researchBtn.disabled = true;
-                console.log("❌ Buton devre dışı bırakıldı!");
+                console.log("❌ Hiç bülten seçilmedi, butonlar devre dışı!");
             }
         });
         
-        console.log("✅ Gecikmeli event listener başarıyla eklendi!");
+        console.log("✅ Düzeltilmiş event listener başarıyla eklendi!");
         
-        // Eğer sayfa yüklendiğinde zaten bir bülten seçiliyse, aktif et
+        // Eğer sayfa yüklendiğinde zaten bir bülten seçiliyse, cache kontrolü yap
         if (bulletinSelect.value) {
-            console.log("🚀 Sayfa yüklendiğinde bülten zaten seçili, aktif ediliyor...");
-            bulletinSelect.dispatchEvent(new Event('change'));
+            console.log("🚀 Sayfa yüklendiğinde bülten zaten seçili, cache kontrol ediliyor...");
+            checkCacheAndToggleButtonStates();
         }
         
     } else {
