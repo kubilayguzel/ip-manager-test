@@ -842,7 +842,102 @@ function getAllSearchResults() {
             };
         });
 }
+async function performResearch() {
+    console.log("🔄 Yeniden arama başlatılıyor...");
+    
+    const bulletinKey = bulletinSelect.value;
+    if (!bulletinKey) {
+        console.error("❌ Bülten seçilmemiş!");
+        return;
+    }
+    
+    try {
+        // Önce mevcut cache'i temizle (opsiyonel)
+        console.log("🗑️ Mevcut cache temizleniyor...");
+        
+        // Cache'i silmek isterseniz:
+        /*
+        for (const tm of filteredMonitoringTrademarks) {
+            await searchRecordService.deleteRecord(bulletinKey, tm.id);
+        }
+        */
+        
+        // Arama yapın (cache'ten değil, yeni arama)
+        await performSearch(false);
+        
+        console.log("✅ Yeniden arama tamamlandı!");
+        
+    } catch (error) {
+        console.error("❌ Yeniden arama hatası:", error);
+        
+        // Hata durumunda butonları resetle
+        startSearchBtn.disabled = false;
+        researchBtn.disabled = true;
+        loadingIndicator.style.display = 'none';
+        
+        // Hata mesajı göster
+        if (infoMessageContainer) {
+            infoMessageContainer.innerHTML = `
+                <div class="info-message error">
+                    <strong>Hata:</strong> Yeniden arama sırasında bir hata oluştu. Lütfen tekrar deneyin.
+                </div>
+            `;
+        }
+    }
+}
 
+// ✅ BONUS: Cache'i temizleyerek yeniden arama fonksiyonu
+async function performResearchWithCacheClear() {
+    console.log("🔄 Cache temizleyerek yeniden arama başlatılıyor...");
+    
+    const bulletinKey = bulletinSelect.value;
+    if (!bulletinKey) {
+        console.error("❌ Bülten seçilmemiş!");
+        return;
+    }
+    
+    try {
+        loadingIndicator.textContent = 'Cache temizleniyor...';
+        loadingIndicator.style.display = 'block';
+        
+        // Cache'i temizle
+        console.log("🗑️ Cache temizleniyor...");
+        for (const tm of filteredMonitoringTrademarks) {
+            const deleteResult = await searchRecordService.deleteRecord(bulletinKey, tm.id);
+            console.log(`🗑️ ${tm.id} cache silindi:`, deleteResult);
+        }
+        
+        // Sonuçları temizle
+        allSimilarResults = [];
+        resultsTableBody.innerHTML = '';
+        noRecordsMessage.style.display = 'none';
+        infoMessageContainer.innerHTML = '';
+        if (pagination) pagination.update(0);
+        
+        // Yeni arama yap
+        loadingIndicator.textContent = 'Yeniden arama yapılıyor...';
+        await performSearch(false);
+        
+        console.log("✅ Cache temizleyerek yeniden arama tamamlandı!");
+        
+    } catch (error) {
+        console.error("❌ Cache temizleyerek yeniden arama hatası:", error);
+        
+        // Hata durumunda butonları resetle
+        startSearchBtn.disabled = false;
+        researchBtn.disabled = true;
+        loadingIndicator.style.display = 'none';
+        
+        // Hata mesajı göster
+        if (infoMessageContainer) {
+            infoMessageContainer.innerHTML = `
+                <div class="info-message error">
+                    <strong>Hata:</strong> Cache temizleme ve yeniden arama sırasında bir hata oluştu.
+                </div>
+            `;
+        }
+    }
+}
 // === INITIALIZATION ===
 document.addEventListener('DOMContentLoaded', async () => {
     console.log(">>> DOM yüklendi, başlatılıyor...");
@@ -864,50 +959,35 @@ document.addEventListener('DOMContentLoaded', async () => {
     ownerSearchInput.addEventListener('input', debounce(applyMonitoringListFilters, 400));
     niceClassSearchInput.addEventListener('input', debounce(applyMonitoringListFilters, 400));
 
-});
-
-// ✅ KALICI ÇÖZÜM: Gecikmeli event listener ekleme
-setTimeout(() => {
-    console.log("🕒 Bülten seçimi event listener ekleniyor...");
-    
-    const bulletinSelect = document.getElementById('bulletinSelect');
-    const startSearchBtn = document.getElementById('startSearchBtn');
-    const researchBtn = document.getElementById('researchBtn');
-    
-    if (bulletinSelect && startSearchBtn && researchBtn) {
-        // Mevcut tüm listener'ları kaldır
-        bulletinSelect.removeEventListener('change', checkCacheAndToggleButtonStates);
-        
-        // Tek bir doğru listener ekle
+    // ✅ Bülten seçimi event listener'ını buraya ekleyin
+    if (bulletinSelect) {
         bulletinSelect.addEventListener('change', async () => {
             console.log("🔍 Bulletin select change event tetiklendi!");
             const bulletinKey = bulletinSelect.value;
             console.log("🔑 Seçilen bülten:", bulletinKey);
             
             if (bulletinKey) {
-                // Önce cache kontrolü yap
+                // Cache kontrolü yap
                 await checkCacheAndToggleButtonStates();
             } else {
                 // Bülten seçilmemişse her iki butonu da devre dışı bırak
                 startSearchBtn.disabled = true;
                 researchBtn.disabled = true;
                 console.log("❌ Hiç bülten seçilmedi, butonlar devre dışı!");
+                
+                // Sonuçları temizle
+                allSimilarResults = [];
+                resultsTableBody.innerHTML = '';
+                noRecordsMessage.style.display = 'none';
+                infoMessageContainer.innerHTML = '';
+                if (pagination) pagination.update(0);
             }
         });
         
-        console.log("✅ Düzeltilmiş event listener başarıyla eklendi!");
-        
-        // Eğer sayfa yüklendiğinde zaten bir bülten seçiliyse, cache kontrolü yap
+        // Sayfa yüklendiğinde eğer bir bülten seçiliyse cache kontrol et
         if (bulletinSelect.value) {
             console.log("🚀 Sayfa yüklendiğinde bülten zaten seçili, cache kontrol ediliyor...");
-            checkCacheAndToggleButtonStates();
+            await checkCacheAndToggleButtonStates();
         }
-        
-    } else {
-        console.error("❌ Gerekli element'ler bulunamadı:", {
-            bulletinSelect: !!bulletinSelect,
-            startSearchBtn: !!startSearchBtn,
-            researchBtn: !!researchBtn
-        });
     }
-}, 1000); // 1 saniye bekle
+});
