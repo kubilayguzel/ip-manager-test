@@ -1676,12 +1676,14 @@ export const etebsAutoProcessor = {
     }
 };
 console.log('🔐 ETEBS Service Layer loaded successfully');
+
 export const searchRecordService = {
     // Belirli bir marka ve bülten için kayıt getirir
     async getRecord(bulletinKey, monitoredTrademarkId) {
         if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor." };
         try {
-            const docRef = doc(db, 'monitoringTrademarkRecords', bulletinKey, monitoredTrademarkId);
+            // ✅ SUBCOLLECTION PATH: collection/document/subcollection/subdocument (4 segment)
+            const docRef = doc(db, 'monitoringTrademarkRecords', bulletinKey, 'trademarks', monitoredTrademarkId);
             const docSnap = await getDoc(docRef);
             if (!docSnap.exists()) return { success: false, error: "Kayıt bulunamadı" };
             return { success: true, data: docSnap.data() };
@@ -1695,7 +1697,8 @@ export const searchRecordService = {
     async saveRecord(bulletinKey, monitoredTrademarkId, data) {
         if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor." };
         try {
-            const docRef = doc(db, 'monitoringTrademarkRecords', bulletinKey, monitoredTrademarkId);
+            // ✅ SUBCOLLECTION PATH: collection/document/subcollection/subdocument (4 segment)
+            const docRef = doc(db, 'monitoringTrademarkRecords', bulletinKey, 'trademarks', monitoredTrademarkId);
             await setDoc(docRef, {
                 monitoredTrademarkId,
                 ...data,
@@ -1712,7 +1715,8 @@ export const searchRecordService = {
     async deleteRecord(bulletinKey, monitoredTrademarkId) {
         if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor." };
         try {
-            const docRef = doc(db, 'monitoringTrademarkRecords', bulletinKey, monitoredTrademarkId);
+            // ✅ SUBCOLLECTION PATH
+            const docRef = doc(db, 'monitoringTrademarkRecords', bulletinKey, 'trademarks', monitoredTrademarkId);
             await deleteDoc(docRef);
             return { success: true };
         } catch (error) {
@@ -1725,7 +1729,8 @@ export const searchRecordService = {
     async getAllRecordsForBulletin(bulletinKey) {
         if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor." };
         try {
-            const trademarkCollectionRef = collection(db, 'monitoringTrademarkRecords', bulletinKey);
+            // ✅ SUBCOLLECTION REFERENCE
+            const trademarkCollectionRef = collection(db, 'monitoringTrademarkRecords', bulletinKey, 'trademarks');
             const snapshot = await getDocs(trademarkCollectionRef);
             const records = [];
             snapshot.forEach(docSnap => {
@@ -1742,7 +1747,8 @@ export const searchRecordService = {
     async getBulletinTrademarkIds(bulletinKey) {
         if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor." };
         try {
-            const trademarkCollectionRef = collection(db, 'monitoringTrademarkRecords', bulletinKey);
+            // ✅ SUBCOLLECTION REFERENCE
+            const trademarkCollectionRef = collection(db, 'monitoringTrademarkRecords', bulletinKey, 'trademarks');
             const snapshot = await getDocs(trademarkCollectionRef);
             const ids = [];
             snapshot.forEach(docSnap => ids.push(docSnap.id));
