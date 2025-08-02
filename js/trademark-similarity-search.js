@@ -454,12 +454,26 @@ async function performSearch(fromCacheOnly = false) {
         }
     }
 
-    // Sonuçları birleştir
     allSimilarResults = [...cachedResults, ...newSearchResults];
+    // ✅ SIRALAMAYI DÜZELT: Önce marka adına göre grupla, sonra her grup içinde benzerlik skoruna göre sırala
+    allSimilarResults.sort((a, b) => {
+        const markA = a.monitoredTrademark || 'Bilinmeyen Marka';
+        const markB = b.monitoredTrademark || 'Bilinmeyen Marka';
+        
+        // Önce marka adına göre sırala
+        if (markA !== markB) {
+            return markA.localeCompare(markB);
+        }
+        
+        // Aynı marka içinde benzerlik skoruna göre sırala (yüksekten düşüğe)
+        const scoreA = a.similarityScore || 0;
+        const scoreB = b.similarityScore || 0;
+        return scoreB - scoreA;
+    });
     
     loadingIndicator.style.display = 'none';
     
-    const infoMessage = `Toplam ${allSimilarResults.length} benzer sonuç bulundu (${cachedResults.length} önbellekten, ${newSearchResults.length} yeni arama ile)`;
+    const infoMessage = `Toplam ${allSimilarResults.length} benzer sonuç bulundu. (${cachedResults.length} önbellekten, ${newSearchResults.length} yeni arama ile)`;
     infoMessageContainer.innerHTML = `<div class="info-message">${infoMessage}</div>`;
 
     pagination.update(allSimilarResults.length);
@@ -467,7 +481,7 @@ async function performSearch(fromCacheOnly = false) {
 
     startSearchBtn.disabled = true;
     researchBtn.disabled = allSimilarResults.length === 0;
-}
+    console.log("📊 Tüm benzer sonuçlar (render öncesi):", allSimilarResults);
 
 function renderCurrentPageOfResults() {
     resultsTableBody.innerHTML = '';
