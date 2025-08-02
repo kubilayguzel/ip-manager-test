@@ -259,9 +259,13 @@ async function loadCachedResultsOnly() {
         const querySnapshot = await getDocs(q);
         console.log('>>> Sorgudan dönen kayıt sayısı:', querySnapshot.size);
         querySnapshot.forEach((docSnap) => {
+            console.log('>>> Dönen doküman:', docSnap.id, docSnap.data());
             const data = docSnap.data();
-            if (!Array.isArray(data.results) || data.results.length === 0) return;
-
+            if (Array.isArray(data.results)) {
+                data.results.forEach(r => {
+                    console.log('>>> Result item:', r);
+                });
+            }
             foundRecords++;
             console.log(`✅ Kayıt bulundu: ${docSnap.id}, sonuç sayısı: ${data.results.length}`);
 
