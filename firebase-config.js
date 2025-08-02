@@ -1678,10 +1678,10 @@ export const etebsAutoProcessor = {
 console.log('🔐 ETEBS Service Layer loaded successfully');
 
 export const searchRecordService = {
-    async getRecord(recordId) {
+    async getRecord(monitoredTrademarkId, bulletinKey) {
         if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor." };
         try {
-            const docRef = doc(db, 'monitoringTrademarkRecords', recordId);
+            const docRef = doc(db, 'monitoringTrademarkRecords', bulletinKey, 'trademarks', monitoredTrademarkId);
             const docSnap = await getDoc(docRef);
             if (docSnap.exists()) {
                 return { success: true, data: docSnap.data() };
@@ -1693,71 +1693,34 @@ export const searchRecordService = {
             return { success: false, error: error.message };
         }
     },
-async saveRecord(recordId, data, bulletinId = null) {
-    if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor." };
-    
-    console.log('🔍 DEBUG saveRecord çağrıldı:', {
-        recordId,
-        dataKeys: Object.keys(data),
-        bulletinId,
-        bulletinIdType: typeof bulletinId
-    });
-    
-    try {
-        const docRef = doc(db, 'monitoringTrademarkRecords', recordId);
-        
-        // ✅ BULLETINID VAR İSE DİREKT TRADEMARKBULLETINS'DEN BULLETINNO'YU ÇEK
-        let finalBulletinNo = null;
-        
-        if (bulletinId) {
-            console.log('🔍 DEBUG: bulletinId ile trademarkBulletins\'den bulletinNo çekiliyor:', bulletinId);
-            
-            try {
-                const bulletinDocRef = doc(db, 'trademarkBulletins', bulletinId);
-                const bulletinDocSnap = await getDoc(bulletinDocRef);
-                
-                console.log('🔍 DEBUG: Bülten dokümanı var mı?', bulletinDocSnap.exists());
-                
-                if (bulletinDocSnap.exists()) {
-                    const bulletinData = bulletinDocSnap.data();
-                    finalBulletinNo = bulletinData.bulletinNo;
-                    console.log('🔍 DEBUG: Firebase\'den bulletinNo alındı:', finalBulletinNo);
-                    console.log('🔍 DEBUG: Tam bülten datası:', bulletinData);
-                } else {
-                    console.warn('⚠️ Bülten dokümanı bulunamadı:', bulletinId);
-                }
-            } catch (error) {
-                console.error('❌ bulletinNo alınamadı:', error);
-            }
-        } else {
-            console.log('🔍 DEBUG: bulletinId null, bulletinNo eklenmeyecek');
-        }
-        
-        const dataToSave = finalBulletinNo ? { ...data, bulletinNo: finalBulletinNo } : data;
-        
-        console.log('🔍 DEBUG dataToSave:', {
-            hasOwnBulletinNo: dataToSave.hasOwnProperty('bulletinNo'),
-            bulletinNoInData: dataToSave.bulletinNo,
-            finalBulletinNoValue: finalBulletinNo,
-            allKeys: Object.keys(dataToSave)
-        });
-        
-        await setDoc(docRef, dataToSave);
-        
-        console.log('✅ DEBUG: Firestore kayıt başarılı - bulletinNo eklendi!');
-        return { success: true };
-    } catch (error) {
-        console.error("❌ Arama kaydı kaydedilirken hata:", error);
-        return { success: false, error: error.message };
-    }
-},
-
-    // YENİ EKLENEN FONKSİYON: Mevcut arama kaydını siler
-    async deleteRecord(recordId) {
+async saveRecord(monitoredTrademarkId, data, bulletinKey) {
         if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor." };
         try {
-            const docRef = doc(db, 'monitoringTrademarkRecords', recordId);
+            // Yeni format: monitoringTrademarkRecords/{bulletinKey}/trademarks/{monitoredTrademarkId}
+            const docRef = doc(db, 'monitoringTrademarkRecords', bulletinKey, 'trademarks', monitoredTrademarkId);
+            
+            // Data'ya ek bilgiler ekle
+            const saveData = {
+                ...data,
+                monitoredTrademarkId,
+                bulletinKey,
+                lastUpdated: new Date().toISOString()
+            };
+            
+            await setDoc(docRef, saveData);
+            console.log(`✅ Kayıt başarıyla kaydedildi: ${bulletinKey}/${monitoredTrademarkId}`);
+            return { success: true };
+        } catch (error) {
+            console.error("❌ Arama kaydı kaydedilirken hata:", error);
+            return { success: false, error: error.message };
+        }
+    },
+async deleteRecord(monitoredTrademarkId, bulletinKey) {
+        if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor." };
+        try {
+            const docRef = doc(db, 'monitoringTrademarkRecords', bulletinKey, 'trademarks', monitoredTrademarkId);
             await deleteDoc(docRef);
+            console.log(`✅ Kayıt başarıyla silindi: ${bulletinKey}/${monitoredTrademarkId}`);
             return { success: true };
         } catch (error) {
             if (error.code === 'not-found') {
@@ -1766,11 +1729,93 @@ async saveRecord(recordId, data, bulletinId = null) {
             console.error("Arama kaydı silinirken hata:", error);
             return { success: false, error: error.message };
         }
+    },
+// Belirli bir bülten için tüm marka sonuçlarını getir
+    async getAllRecordsForBulletin(bulletinKey) {
+        if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor." };
+        try {
+            const trademarkCollectionRef = collection(db, 'monitoringTrademarkRecords', bulletinKey, 'trademarks');
+            const querySnapshot = await getDocs(trademarkCollectionRef);
+            
+            const records = [];
+            querySnapshot.forEach((doc) => {
+                records.push({
+                    id: doc.id,
+                    ...doc.data()
+                });
+            });
+            
+            return { success: true, data: records };
+        } catch (error) {
+            console.error("Bülten kayıtları alınırken hata:", error);
+            return { success: false, error: error.message };
+        }
+    },
+    // Belirli markalar için toplu kayıt getir
+    async getBatchRecords(monitoredTrademarkIds, bulletinKey) {
+        if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor." };
+        try {
+            const results = [];
+            
+            // Paralel olarak tüm kayıtları getir
+            const promises = monitoredTrademarkIds.map(async (trademarkId) => {
+                const result = await this.getRecord(trademarkId, bulletinKey);
+                return {
+                    trademarkId,
+                    ...result
+                };
+            });
+            
+            const batchResults = await Promise.all(promises);
+            
+            batchResults.forEach(result => {
+                if (result.success) {
+                    results.push({
+                        monitoredTrademarkId: result.trademarkId,
+                        ...result.data
+                    });
+                }
+            });
+            
+            return { success: true, data: results };
+        } catch (error) {
+            console.error("Toplu kayıt alınırken hata:", error);
+            return { success: false, error: error.message };
+        }
+    },
+
+// Belirli bir bülten için tüm markalar listesi
+    async getBulletinTrademarkIds(bulletinKey) {
+        if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor." };
+        try {
+            const trademarkCollectionRef = collection(db, 'monitoringTrademarkRecords', bulletinKey, 'trademarks');
+            const querySnapshot = await getDocs(trademarkCollectionRef);
+            
+            const trademarkIds = querySnapshot.docs.map(doc => doc.id);
+            
+            return { success: true, data: trademarkIds };
+        } catch (error) {
+            console.error("Bülten marka ID'leri alınırken hata:", error);
+            return { success: false, error: error.message };
+        }
+    },
+    
+// Tüm bülten anahtarlarını getir (hangi bültenler için kayıt var)
+    async getAllBulletinKeys() {
+        if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor." };
+        try {
+            const monitoringRecordsRef = collection(db, 'monitoringTrademarkRecords');
+            const querySnapshot = await getDocs(monitoringRecordsRef);
+            
+            const bulletinKeys = querySnapshot.docs.map(doc => doc.id);
+            
+            return { success: true, data: bulletinKeys };
+        } catch (error) {
+            console.error("Bülten anahtarları alınırken hata:", error);
+            return { success: false, error: error.message };
+        }
     }
 };
-
-// firebase-config.js dosyasına eklenecek similarityService nesnesi
-// Mevcut searchRecordService'in altına eklemeniz gereken kod:
 
 // --- Similarity Service ---
 export const similarityService = {
