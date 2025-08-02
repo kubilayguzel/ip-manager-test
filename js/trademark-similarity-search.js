@@ -226,7 +226,6 @@ function getOwnerNames(item) {
 // === CACHE AND STATE MANAGEMENT ===
 
 // Yeni fonksiyon: Sadece cache'den sonuçları yükle
-// Yeni fonksiyon: Sadece cache'den sonuçları yükle
 async function loadCachedResultsOnly() {
     const selectedBulletinId = bulletinSelect.value;
     if (!selectedBulletinId || filteredMonitoringTrademarks.length === 0) {
@@ -234,7 +233,6 @@ async function loadCachedResultsOnly() {
         return;
     }
 
-    // Seçilen option'dan bulletinNo al
     const selectedOption = bulletinSelect.querySelector(`option[value="${selectedBulletinId}"]`);
     const selectedBulletinNo = selectedOption?.dataset.bulletinNo || selectedBulletinId;
 
@@ -254,19 +252,17 @@ async function loadCachedResultsOnly() {
     let foundRecords = 0;
 
     try {
-        // bulletinNo üzerinden arama yap
         const q = query(
             collection(db, 'monitoringTrademarkRecords'),
             where('bulletinNo', '==', selectedBulletinNo)
         );
         const querySnapshot = await getDocs(q);
 
-        // Marka bazında grupla
         querySnapshot.forEach((docSnap) => {
             const data = docSnap.data();
-            const monitoredTrademarkId = data.monitoredTrademarkId || null;
+            const monitoredTrademarkId = data.monitoredTrademarkId;
+            if (!monitoredTrademarkId) return;
 
-            // İzlenen markalardan birine ait mi?
             const matchedTrademark = filteredMonitoringTrademarks.find(tm => tm.id === monitoredTrademarkId);
             if (!matchedTrademark) return;
 
@@ -277,7 +273,7 @@ async function loadCachedResultsOnly() {
                 cachedResults.push(...data.results.map(r => ({
                     ...r,
                     source: 'cache',
-                    monitoredTrademarkId: monitoredTrademarkId,
+                    monitoredTrademarkId,
                     monitoredTrademark: matchedTrademark.title || matchedTrademark.markName || 'BELİRSİZ_MARKA'
                 })));
             }
@@ -330,7 +326,6 @@ async function checkCacheAndToggleButtonStates() {
         return;
     }
 
-    // Seçilen option'dan bulletinNo ve hasOriginalBulletin al
     const selectedOption = bulletinSelect.querySelector(`option[value="${selectedBulletinId}"]`);
     const hasOriginalBulletin = selectedOption?.dataset.hasOriginalBulletin === 'true';
     const selectedBulletinNo = selectedOption?.dataset.bulletinNo || selectedBulletinId;
@@ -343,11 +338,9 @@ async function checkCacheAndToggleButtonStates() {
     });
 
     if (!hasOriginalBulletin) {
-        // Sadece izleme kayıtları var, arama butonları devre dışı
         startSearchBtn.disabled = true;
         researchBtn.disabled = true;
 
-        // Bilgi mesajı göster
         infoMessageContainer.innerHTML = `
             <div class="info-message" style="background-color: #fff3cd; color: #856404; border: 1px solid #ffeaa7;">
                 ⚠️ <strong>${selectedBulletinNo}</strong> bülteni sistemde kayıtlı değil. Yalnızca mevcut izleme kayıtlarınızı görüntüleyebilirsiniz.
@@ -359,10 +352,8 @@ async function checkCacheAndToggleButtonStates() {
         return;
     }
 
-    // Orijinal bülten var
     infoMessageContainer.innerHTML = '';
 
-    // Cache kontrolü (her marka için)
     const checkPromises = filteredMonitoringTrademarks.map(tm =>
         searchRecordService.getRecord(`${tm.id}_${selectedBulletinId}`)
     );
@@ -383,8 +374,6 @@ async function checkCacheAndToggleButtonStates() {
         infoMessageContainer.innerHTML = '';
     }
 }
-
-
 // === SEARCH FUNCTIONS ===
 async function performResearch() {
     const selectedBulletin = bulletinSelect.value;
