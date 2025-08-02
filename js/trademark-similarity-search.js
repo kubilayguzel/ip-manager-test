@@ -801,33 +801,60 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Filter event listener'ları
     ownerSearchInput.addEventListener('input', debounce(applyMonitoringListFilters, 400));
     niceClassSearchInput.addEventListener('input', debounce(applyMonitoringListFilters, 400));
-    
-    // ✅ ÇALIŞAN EVENT LISTENER - Basit versiyon
-    bulletinSelect.addEventListener('change', async () => {
-        console.log("🔍 Bulletin select change event tetiklendi!");
-        const bulletinKey = bulletinSelect.value;
-        console.log("🔑 Seçilen bülten:", bulletinKey);
-        
-        if (bulletinKey) {
-            // Basit koşul - sadece bülten seçildiyse aktif et
-            startSearchBtn.disabled = false;
-            researchBtn.disabled = true;
-            console.log("✅ Buton aktif edildi!");
-            
-            // İsteğe bağlı: Cache kontrolü yapmak istiyorsanız
-            try {
-                await checkCacheAndToggleButtonStates();
-            } catch (error) {
-                console.log("Cache kontrol hatası (göz ardı edildi):", error);
-            }
-        } else {
-            startSearchBtn.disabled = true;
-            researchBtn.disabled = true;
-            console.log("❌ Buton devre dışı bırakıldı!");
-        }
-    });
 
-    // ... diğer event listener'lar aynı kalacak ...
-
-    console.log("✅ Tüm event listener'lar eklendi");
 });
+
+// ✅ KALICI ÇÖZÜM: Gecikmeli event listener ekleme
+setTimeout(() => {
+    console.log("🕒 Gecikmeli event listener ekleniyor...");
+    
+    const bulletinSelect = document.getElementById('bulletinSelect');
+    const startSearchBtn = document.getElementById('startSearchBtn');
+    const researchBtn = document.getElementById('researchBtn');
+    
+    if (bulletinSelect && startSearchBtn && researchBtn) {
+        // Mevcut listener'ları kaldır (çakışmayı önle)
+        bulletinSelect.removeEventListener('change', checkCacheAndToggleButtonStates);
+        
+        // Yeni working listener ekle
+        bulletinSelect.addEventListener('change', async () => {
+            console.log("🔍 Bulletin select change event tetiklendi!");
+            const bulletinKey = bulletinSelect.value;
+            console.log("🔑 Seçilen bülten:", bulletinKey);
+            
+            if (bulletinKey) {
+                startSearchBtn.disabled = false;
+                researchBtn.disabled = true;
+                console.log("✅ Buton aktif edildi!");
+                
+                // Cache kontrolü de yap (isteğe bağlı)
+                try {
+                    if (typeof checkCacheAndToggleButtonStates === 'function') {
+                        await checkCacheAndToggleButtonStates();
+                    }
+                } catch (error) {
+                    console.log("Cache kontrol hatası (göz ardı edildi):", error);
+                }
+            } else {
+                startSearchBtn.disabled = true;
+                researchBtn.disabled = true;
+                console.log("❌ Buton devre dışı bırakıldı!");
+            }
+        });
+        
+        console.log("✅ Gecikmeli event listener başarıyla eklendi!");
+        
+        // Eğer sayfa yüklendiğinde zaten bir bülten seçiliyse, aktif et
+        if (bulletinSelect.value) {
+            console.log("🚀 Sayfa yüklendiğinde bülten zaten seçili, aktif ediliyor...");
+            bulletinSelect.dispatchEvent(new Event('change'));
+        }
+        
+    } else {
+        console.error("❌ Gerekli element'ler bulunamadı:", {
+            bulletinSelect: !!bulletinSelect,
+            startSearchBtn: !!startSearchBtn,
+            researchBtn: !!researchBtn
+        });
+    }
+}, 1000); // 1 saniye bekle
