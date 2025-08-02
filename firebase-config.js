@@ -1696,16 +1696,35 @@ export const searchRecordService = {
 
    async saveRecord(recordId, data, bulletinNo = null) {
         if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor." };
+        
+        // DEBUG LOG'LARI
+        console.log('🔍 DEBUG saveRecord çağrıldı:', {
+            recordId,
+            dataKeys: Object.keys(data),
+            bulletinNo,
+            bulletinNoType: typeof bulletinNo,
+            bulletinNoIsNull: bulletinNo === null,
+            bulletinNoIsUndefined: bulletinNo === undefined
+        });
+        
         try {
             const docRef = doc(db, 'monitoringTrademarkRecords', recordId);
             
             // Eğer bulletinNo parametre olarak gönderilmişse, data'ya ekle
             const dataToSave = bulletinNo ? { ...data, bulletinNo } : data;
             
+            console.log('🔍 DEBUG dataToSave:', {
+                hasOwnBulletinNo: dataToSave.hasOwnProperty('bulletinNo'),
+                bulletinNoInData: dataToSave.bulletinNo,
+                allKeys: Object.keys(dataToSave)
+            });
+            
             await setDoc(docRef, dataToSave);
+            
+            console.log('✅ DEBUG: Firestore kayıt başarılı');
             return { success: true };
         } catch (error) {
-            console.error("Arama kaydı kaydedilirken hata:", error);
+            console.error("❌ Arama kaydı kaydedilirken hata:", error);
             return { success: false, error: error.message };
         }
     },
