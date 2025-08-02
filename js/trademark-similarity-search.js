@@ -257,24 +257,27 @@ async function loadCachedResultsOnly() {
             where('bulletinNo', '==', selectedBulletinNo)
         );
         const querySnapshot = await getDocs(q);
-        console.log('>>> Sorgudan dönen kayıt sayısı:', querySnapshot.size);
+        console.log('>>> Sorgudan dönen doküman sayısı:', querySnapshot.size);
+
         querySnapshot.forEach((docSnap) => {
-            console.log('>>> Dönen doküman:', docSnap.id, docSnap.data());
             const data = docSnap.data();
-            if (Array.isArray(data.results)) {
-                data.results.forEach(r => {
-                    console.log('>>> Result item:', r);
-                });
-            }
+            if (!Array.isArray(data.results) || data.results.length === 0) return;
+
             foundRecords++;
-            console.log(`✅ Kayıt bulundu: ${docSnap.id}, sonuç sayısı: ${data.results.length}`);
+            console.log(`✅ Doküman bulundu: ${docSnap.id}, sonuç sayısı: ${data.results.length}`);
 
             data.results.forEach(r => {
                 const monitoredTrademarkId = r.monitoredMarkId || r.monitoredTrademarkId;
-                console.log('>>> Result item ID:', monitoredTrademarkId);
-                const matchedTrademark = filteredMonitoringTrademarks.find(tm => tm.id === monitoredTrademarkId);
-                console.log('>>> Eşleşen trademark:', matchedTrademark);
-                if (!matchedTrademark) return;
+
+                // İzleme listesindeki markayı bul
+                const matchedTrademark = filteredMonitoringTrademarks.find(tm =>
+                    tm.id === monitoredTrademarkId || tm.applicationNumber === r.applicationNo
+                );
+
+                if (!matchedTrademark) {
+                    console.log('❌ Eşleşme bulunamadı ->', { monitoredTrademarkId, applicationNo: r.applicationNo });
+                    return;
+                }
 
                 cachedResults.push({
                     ...r,
