@@ -359,6 +359,7 @@ async function checkCacheAndToggleButtonStates() {
 
     infoMessageContainer.innerHTML = '';
 
+    // Cache kontrolü (her marka için)
     const checkPromises = filteredMonitoringTrademarks.map(tm =>
         searchRecordService.getRecord(`${tm.id}_${selectedBulletinId}`)
     );
@@ -379,6 +380,7 @@ async function checkCacheAndToggleButtonStates() {
         infoMessageContainer.innerHTML = '';
     }
 }
+
 // === SEARCH FUNCTIONS ===
 async function performResearch() {
     const selectedBulletin = bulletinSelect.value;
