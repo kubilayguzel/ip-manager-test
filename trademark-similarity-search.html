@@ -574,6 +574,117 @@ async function performResearch() {
     await performSearch(false);
 }
 
+async function performSearch(fromCacheOnly = false) {
+    const selectedBulletin = bulletinSelect.value;
+    if (!selectedBulletin) return;
+    if (filteredMonitoringTrademarks.length === 0) return;
+
+    loadingIndicator.textContent = 'Arama yapılıyor...';
+    loadingIndicator.style.display = 'block';
+    noRecordsMessage.style.display = 'none';
+    infoMessageContainer.innerHTML = '';
+    resultsTableBody.innerHTML = '';
+    allSimilarResults = [];
+    startSearchBtn.disabled = true;
+    researchBtn.disabled = true;
+
+    let cachedResults = [];
+    let trademarksToSearch = [];
+
+    // Önbellekten çek
+    for (const tm of filteredMonitoringTrademarks) {
+        const recordId = `${tm.id}_${selectedBulletin}`;
+        const result = await searchRecordService.getRecord(recordId);
+        if (result.success && result.data) {
+            cachedResults.push(...result.data.results.map(r => ({
+                ...r,
+                source: 'cache',
+                monitoredTrademarkId: tm.id,
+                monitoredTrademark: tm.title || tm.markName || 'BELİRSİZ_MARKA'
+            })));
+        } else {
+            trademarksToSearch.push(tm);
+        }
+    }
+
+    let newSearchResults = [];
+    if (!fromCacheOnly && trademarksToSearch.length > 0) {
+        if (!runTrademarkSearch) {
+            alert("Arama modülü henüz yüklenmedi, lütfen bekleyin.");
+            loadingIndicator.style.display = 'none';
+            checkCacheAndToggleButtonStates();
+            return;
+        }
+        loadingIndicator.textContent = `${trademarksToSearch.length} marka için arama yapılıyor... (Bu biraz zaman alabilir)`;
+
+        // --- EK: Cloud Function’a giden veriyi kontrol etmek için log ekledik ---
+        const monitoredMarksPayload = trademarksToSearch.map(tm => {
+            const markName = (tm.title || tm.markName || '').trim();
+            if (!markName) {
+                console.warn(`⚠️ Bu markanın adı eksik (ID: ${tm.id})`, tm);
+            }
+            return {
+                id: tm.id,
+                markName: markName || 'BELİRSİZ_MARKA',
+                applicationDate: tm.applicationDate || '',
+                niceClasses: Array.isArray(tm.niceClass)
+                    ? tm.niceClass
+                    : (tm.niceClass ? [tm.niceClass] : [])
+            };
+        });
+        console.log("Cloud Function’a gönderilen markalar:", monitoredMarksPayload);
+
+        try {
+            const resultsFromCF = await runTrademarkSearch(monitoredMarksPayload, selectedBulletin);
+
+            if (resultsFromCF && resultsFromCF.length > 0) {
+                newSearchResults = resultsFromCF.map(hit => {
+                    const monitoredTm = trademarksToSearch.find(tm => tm.id === hit.monitoredTrademarkId);
+                    return {
+                        ...hit,
+                        source: 'new',
+                        monitoredTrademark: monitoredTm ? (monitoredTm.title || monitoredTm.markName || 'BELİRSİZ_MARKA') : 'Bilinmeyen Marka'
+                    };
+                });
+
+                const groupedResults = newSearchResults.reduce((acc, currentResult) => {
+                    const monitoredTrademarkId = currentResult.monitoredTrademarkId;
+                    if (!acc[monitoredTrademarkId]) {
+                        acc[monitoredTrademarkId] = [];
+                    }
+                    acc[monitoredTrademarkId].push(currentResult);
+                    return acc;
+                }, {});
+
+                for (const [monitoredTrademarkId, results] of Object.entries(groupedResults)) {
+                    const recordId = `${monitoredTrademarkId}_${selectedBulletin}`;
+                    await searchRecordService.saveRecord(recordId, { results: results, searchDate: new Date().toISOString() });
+                }
+            }
+        } catch (error) {
+            console.error("Arama işlemi sırasında hata:", error);
+            infoMessageContainer.innerHTML = `<div class="error-message">Arama işlemi sırasında hata oluştu: ${error.message}. Detaylar için konsolu kontrol edin.</div>`;
+            loadingIndicator.style.display = 'none';
+            startSearchBtn.disabled = false;
+            researchBtn.disabled = false;
+            return;
+        }
+    }
+
+    allSimilarResults = [...cachedResults, ...newSearchResults];
+    loadingIndicator.style.display = 'none';
+
+    const infoMessage = `Toplam ${allSimilarResults.length} benzer sonuç bulundu. (${cachedResults.length} önbellekten, ${newSearchResults.length} yeni arama ile)`;
+    infoMessageContainer.innerHTML = `<div class="info-message">${infoMessage}</div>`;
+
+    pagination.update(allSimilarResults.length);
+    renderCurrentPageOfResults();
+
+    startSearchBtn.disabled = true;
+    researchBtn.disabled = allSimilarResults.length === 0;
+    console.log("📊 Tüm benzer sonuçlar (render öncesi):", allSimilarResults);
+}
+
 function renderCurrentPageOfResults() {
     resultsTableBody.innerHTML = '';
     if(!pagination) {
