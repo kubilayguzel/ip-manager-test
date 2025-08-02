@@ -736,100 +736,124 @@ function renderCurrentPageOfResults() {
     const startIndex = pagination.getStartIndex();
 
     noRecordsMessage.style.display = 'none';
-    if (allSimilarResults.length === 0 && !loadingIndicator.style.display || currentPageData.length === 0 && allSimilarResults.length === 0) {
+    if (allSimilarResults.length === 0) {
          noRecordsMessage.textContent = 'Arama sonucu bulunamadı.';
          noRecordsMessage.style.display = 'block';
+         return;
     }
 
     updateSearchResultsHeader();
 
-    let lastRenderedMonitoredTrademark = null; 
-
-    currentPageData.forEach((hit, index) => {
-        if (hit.monitoredTrademark !== lastRenderedMonitoredTrademark) {
-            const monitoredTrademark = hit.monitoredTrademark || 'Bilinmeyen Marka';
-            
-            const totalCountForThisMonitoredTrademark = allSimilarResults.filter(
-                item => (item.monitoredTrademark || 'Bilinmeyen Marka') === monitoredTrademark
-            ).length;
-
-            const groupHeaderRow = document.createElement('tr');
-            groupHeaderRow.classList.add('group-header');
-            groupHeaderRow.innerHTML = `
-                <td colspan="9">
-                    📋 <strong>${monitoredTrademark}</strong> markası için bulunan benzer sonuçlar (${totalCountForThisMonitoredTrademark} adet)
-                </td>
-            `;
-            resultsTableBody.appendChild(groupHeaderRow);
-            lastRenderedMonitoredTrademark = monitoredTrademark;
+    // ✅ GRUP BAZLI RENDER: Önce mevcut sayfadaki verileri gruplara ayır
+    const pageGroups = {};
+    currentPageData.forEach(hit => {
+        const trademarkKey = hit.monitoredTrademarkId || 'unknown';
+        if (!pageGroups[trademarkKey]) {
+            pageGroups[trademarkKey] = [];
         }
+        pageGroups[trademarkKey].push(hit);
+    });
 
-        const holders = Array.isArray(hit.holders) ? hit.holders.map(h => h.name || h.id).filter(Boolean).join(', ') : (hit.holders || '');
+    // Grup anahtarlarını sırala
+    const sortedGroupKeys = Object.keys(pageGroups).sort((a, b) => {
+        const markA = pageGroups[a][0]?.monitoredTrademark || 'Bilinmeyen Marka';
+        const markB = pageGroups[b][0]?.monitoredTrademark || 'Bilinmeyen Marka';
+        return markA.localeCompare(markB);
+    });
 
-        const monitoredNice = hit.monitoredNiceClasses || [];
-        const niceClassHtml = Array.isArray(hit.niceClasses) 
-            ? hit.niceClasses.map(cls => `<span class="nice-class-badge ${monitoredNice.includes(cls) ? 'match' : ''}">${cls}</span>`).join('') 
-            : (hit.niceClasses || '');
-        const similarityScore = hit.similarityScore ? `${(hit.similarityScore * 100).toFixed(0)}%` : '-';
+    let currentRowIndex = startIndex;
 
-        const isSimilar = hit.isSimilar;
-        let similarityBtnClass = 'not-similar';
-        let similarityBtnText = 'Benzemez';
-
-        if (isSimilar === true) {
-            similarityBtnClass = 'similar';
-            similarityBtnText = 'Benzer';
-        }
+    // Her grup için render
+    sortedGroupKeys.forEach(trademarkKey => {
+        const groupResults = pageGroups[trademarkKey];
+        const monitoredTrademark = groupResults[0].monitoredTrademark || 'Bilinmeyen Marka';
         
-        const resultId = hit.objectID || hit.applicationNo;
+        // ✅ GRUP BAŞLIĞI: Her grup için sadece bir kez
+        // Tüm sonuçlardaki bu markaya ait toplam sayıyı bul
+        const totalCountForThisMark = allSimilarResults.filter(
+            item => (item.monitoredTrademarkId || 'unknown') === trademarkKey
+        ).length;
 
-        const row = document.createElement('tr');
-        row.innerHTML = `
-            <td>${startIndex + index + 1}</td> 
-            <td>${hit.applicationNo || '-'}</td>
-            <td><strong>${hit.markName || '-'}</strong></td>
-            <td>${holders}</td>
-            <td>${niceClassHtml}</td>
-            <td>${similarityScore}</td>
-            <td>
-                <button class="action-btn ${similarityBtnClass}" 
-                        data-result-id="${resultId}" 
-                        data-monitored-trademark-id="${hit.monitoredTrademarkId}" 
-                        data-bulletin-id="${bulletinSelect.value}">
-                    ${similarityBtnText}
-                </button>
-            </td>
-            <td>
-                <select class="bs-select" 
-                        data-result-id="${resultId}" 
-                        data-monitored-trademark-id="${hit.monitoredTrademarkId}" 
-                        data-bulletin-id="${bulletinSelect.value}">
-                    <option value="">B.Ş</option>
-                    <option value="%0" ${hit.bs === '%0' ? 'selected' : ''}>%0</option>
-                    <option value="%20" ${hit.bs === '%20' ? 'selected' : ''}>%20</option>
-                    <option value="%30" ${hit.bs === '%30' ? 'selected' : ''}>%30</option>
-                    <option value="%40" ${hit.bs === '%40' ? 'selected' : ''}>%40</option>
-                    <option value="%45" ${hit.bs === '%45' ? 'selected' : ''}>%45</option>
-                    <option value="%50" ${hit.bs === '%50' ? 'selected' : ''}>%50</option>
-                    <option value="%55" ${hit.bs === '%55' ? 'selected' : ''}>%55</option>
-                    <option value="%60" ${hit.bs === '%60' ? 'selected' : ''}>%60</option>
-                    <option value="%70" ${hit.bs === '%70' ? 'selected' : ''}>%70</option>
-                    <option value="%80" ${hit.bs === '%80' ? 'selected' : ''}>%80</option>
-                </select>
-            </td>
-            <td class="note-cell" 
-                data-result-id="${resultId}" 
-                data-monitored-trademark-id="${hit.monitoredTrademarkId}" 
-                data-bulletin-id="${bulletinSelect.value}">
-                <div class="note-cell-content">
-                    <span class="note-icon">📝</span>
-                    ${hit.note 
-                        ? `<span class="note-text">${hit.note}</span>` 
-                        : `<span class="note-placeholder">Not ekle</span>`}
-                </div>
+        const groupHeaderRow = document.createElement('tr');
+        groupHeaderRow.classList.add('group-header');
+        groupHeaderRow.innerHTML = `
+            <td colspan="9">
+                📋 <strong>${monitoredTrademark}</strong> markası için bulunan benzer sonuçlar (${totalCountForThisMark} adet)
             </td>
         `;
-        resultsTableBody.appendChild(row);
+        resultsTableBody.appendChild(groupHeaderRow);
+
+        // ✅ GRUP İÇERİĞİ: Bu gruptaki tüm sonuçlar
+        groupResults.forEach((hit, index) => {
+            currentRowIndex++;
+
+            const holders = Array.isArray(hit.holders) ? hit.holders.map(h => h.name || h.id).filter(Boolean).join(', ') : (hit.holders || '');
+
+            const monitoredNice = hit.monitoredNiceClasses || [];
+            const niceClassHtml = Array.isArray(hit.niceClasses) 
+                ? hit.niceClasses.map(cls => `<span class="nice-class-badge ${monitoredNice.includes(cls) ? 'match' : ''}">${cls}</span>`).join('') 
+                : (hit.niceClasses || '');
+            const similarityScore = hit.similarityScore ? `${(hit.similarityScore * 100).toFixed(0)}%` : '-';
+
+            const isSimilar = hit.isSimilar;
+            let similarityBtnClass = 'not-similar';
+            let similarityBtnText = 'Benzemez';
+
+            if (isSimilar === true) {
+                similarityBtnClass = 'similar';
+                similarityBtnText = 'Benzer';
+            }
+            
+            const resultId = hit.objectID || hit.applicationNo;
+
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${currentRowIndex}</td> 
+                <td>${hit.applicationNo || '-'}</td>
+                <td><strong>${hit.markName || '-'}</strong></td>
+                <td>${holders}</td>
+                <td>${niceClassHtml}</td>
+                <td>${similarityScore}</td>
+                <td>
+                    <button class="action-btn ${similarityBtnClass}" 
+                            data-result-id="${resultId}" 
+                            data-monitored-trademark-id="${hit.monitoredTrademarkId}" 
+                            data-bulletin-id="${bulletinSelect.value}">
+                        ${similarityBtnText}
+                    </button>
+                </td>
+                <td>
+                    <select class="bs-select" 
+                            data-result-id="${resultId}" 
+                            data-monitored-trademark-id="${hit.monitoredTrademarkId}" 
+                            data-bulletin-id="${bulletinSelect.value}">
+                        <option value="">B.Ş</option>
+                        <option value="%0" ${hit.bs === '%0' ? 'selected' : ''}>%0</option>
+                        <option value="%20" ${hit.bs === '%20' ? 'selected' : ''}>%20</option>
+                        <option value="%30" ${hit.bs === '%30' ? 'selected' : ''}>%30</option>
+                        <option value="%40" ${hit.bs === '%40' ? 'selected' : ''}>%40</option>
+                        <option value="%45" ${hit.bs === '%45' ? 'selected' : ''}>%45</option>
+                        <option value="%50" ${hit.bs === '%50' ? 'selected' : ''}>%50</option>
+                        <option value="%55" ${hit.bs === '%55' ? 'selected' : ''}>%55</option>
+                        <option value="%60" ${hit.bs === '%60' ? 'selected' : ''}>%60</option>
+                        <option value="%70" ${hit.bs === '%70' ? 'selected' : ''}>%70</option>
+                        <option value="%80" ${hit.bs === '%80' ? 'selected' : ''}>%80</option>
+                    </select>
+                </td>
+                <td class="note-cell" 
+                    data-result-id="${resultId}" 
+                    data-monitored-trademark-id="${hit.monitoredTrademarkId}" 
+                    data-bulletin-id="${bulletinSelect.value}">
+                    <div class="note-cell-content">
+                        <span class="note-icon">📝</span>
+                        ${hit.note 
+                            ? `<span class="note-text">${hit.note}</span>` 
+                            : `<span class="note-placeholder">Not ekle</span>`}
+                    </div>
+                </td>
+            `;
+            resultsTableBody.appendChild(row);
+        });
     });
 
     // Event listeners
