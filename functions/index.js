@@ -1872,7 +1872,6 @@ export const performTrademarkSimilaritySearch = onCall(
             // *** FRONTEND İÇİN GEREKLİ ALANLAR ***
             monitoredTrademark: markName, // Frontend'in eşleştirme için kullandığı alan
             monitoredNiceClasses: niceClasses, //
-            monitoredMarkId: monitoredMark.id, // Yeni alan adı
             monitoredTrademarkId: monitoredMark.id // Eski uyumluluk için
           });
         }
