@@ -260,23 +260,23 @@ async function loadCachedResultsOnly() {
 
         querySnapshot.forEach((docSnap) => {
             const data = docSnap.data();
-            const monitoredTrademarkId = data.monitoredTrademarkId;
-            if (!monitoredTrademarkId) return;
-
-            const matchedTrademark = filteredMonitoringTrademarks.find(tm => tm.id === monitoredTrademarkId);
-            if (!matchedTrademark) return;
+            if (!Array.isArray(data.results) || data.results.length === 0) return;
 
             foundRecords++;
-            console.log(`✅ Kayıt bulundu: ${docSnap.id}, sonuç sayısı: ${data.results?.length || 0}`);
+            console.log(`✅ Kayıt bulundu: ${docSnap.id}, sonuç sayısı: ${data.results.length}`);
 
-            if (Array.isArray(data.results) && data.results.length > 0) {
-                cachedResults.push(...data.results.map(r => ({
+            data.results.forEach(r => {
+                const monitoredTrademarkId = r.monitoredMarkId || r.monitoredTrademarkId;
+                const matchedTrademark = filteredMonitoringTrademarks.find(tm => tm.id === monitoredTrademarkId);
+                if (!matchedTrademark) return;
+
+                cachedResults.push({
                     ...r,
                     source: 'cache',
                     monitoredTrademarkId,
                     monitoredTrademark: matchedTrademark.title || matchedTrademark.markName || 'BELİRSİZ_MARKA'
-                })));
-            }
+                });
+            });
         });
 
     } catch (error) {
@@ -316,6 +316,7 @@ async function loadCachedResultsOnly() {
         pagination.update(0);
     }
 }
+
 
 async function checkCacheAndToggleButtonStates() {
     const selectedBulletinId = bulletinSelect.value;
