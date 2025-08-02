@@ -316,42 +316,92 @@
         #monitoringListBody td:nth-child(1) {
             text-align: left; /* Sola yasla */
         }
-        /* Bilgilendirme mesajları için stiller */
+
+        /* Bülten seçim kutusu için özel stiller */
+        .form-select option[data-source="registered"] {
+            background-color: #e8f5e8;
+            color: #2d5a2d;
+            font-weight: 500;
+        }
+
+        .form-select option[data-source="searchOnly"] {
+            background-color: #fff3cd;
+            color: #856404;
+            font-style: italic;
+        }
+
+        /* Bilgi mesajları için geliştirilmiş stiller */
         .info-message {
             padding: 12px 16px;
             border-radius: 6px;
             margin: 10px 0;
+            border-left: 4px solid;
             font-size: 14px;
             line-height: 1.4;
         }
 
-        .info-message.warning {
-            background-color: #fff3cd;
-            border: 1px solid #ffeaa7;
-            color: #856404;
+        .info-message.success {
+            background-color: #d4edda;
+            color: #155724;
+            border-left-color: #28a745;
         }
 
         .info-message.info {
             background-color: #d1ecf1;
-            border: 1px solid #74c0fc;
             color: #0c5460;
+            border-left-color: #17a2b8;
         }
 
-        .info-message.success {
-            background-color: #d4edda;
-            border: 1px solid #95f985;
-            color: #155724;
+        .info-message.warning {
+            background-color: #fff3cd;
+            color: #856404;
+            border-left-color: #ffc107;
+        }
+
+        .info-message.error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border-left-color: #dc3545;
         }
 
         .info-message strong {
             font-weight: 600;
+            margin-right: 4px;
         }
 
-        /* Buton devre dışı durumu için ek stiller */
-        .btn:disabled {
-            opacity: 0.6;
+        /* Buton durumları için tooltip ekleme */
+        .btn[disabled] {
             cursor: not-allowed;
-            background-color: #6c757d !important;
+            opacity: 0.6;
+            position: relative;
+        }
+
+        .btn[disabled]:hover::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #333;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            white-space: nowrap;
+            z-index: 1000;
+            margin-bottom: 5px;
+        }
+
+        .btn[disabled]:hover::before {
+            content: '';
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            border: 5px solid transparent;
+            border-top-color: #333;
+            z-index: 1000;
+            margin-bottom: -5px;
         }
     </style>
 </head>
