@@ -103,12 +103,12 @@ async function loadBulletinOptions() {
             }
         });
 
-        // 3) Tüm bültenleri birleştir
+        // 3) Tüm bültenleri birleştir - AYNI BÜLTEN NUMARASINI TEK KEZ GÖSTER
         const allBulletins = new Map();
 
         // Önce mevcut bültenleri ekle
         existingBulletins.forEach(bulletin => {
-            allBulletins.set(bulletin.id, {
+            allBulletins.set(bulletin.bulletinNo, {
                 id: bulletin.id,
                 bulletinNo: bulletin.bulletinNo,
                 createdAt: bulletin.createdAt,
@@ -116,10 +116,10 @@ async function loadBulletinOptions() {
             });
         });
 
-        // Monitoring'deki bültenleri ekle (mevcut olmayanları)
+        // Monitoring'deki bültenleri ekle (sadece mevcut olmayan bülten numaraları için)
         monitoringBulletinMap.forEach((value, key) => {
-            if (!allBulletins.has(key)) {
-                allBulletins.set(key, {
+            if (!allBulletins.has(value.bulletinNo)) {
+                allBulletins.set(value.bulletinNo, {
                     id: key,
                     bulletinNo: value.bulletinNo,
                     createdAt: null,
@@ -148,6 +148,7 @@ async function loadBulletinOptions() {
             const option = document.createElement('option');
             option.value = bulletin.id;
             option.dataset.hasOriginalBulletin = bulletin.hasOriginalBulletin;
+            option.dataset.bulletinNo = bulletin.bulletinNo;
             
             if (bulletin.hasOriginalBulletin) {
                 let dateText = 'Tarih yok';
@@ -157,7 +158,7 @@ async function loadBulletinOptions() {
                 }
                 option.textContent = `${bulletin.bulletinNo} - ${dateText}`;
             } else {
-                option.textContent = `${bulletin.bulletinNo} (Sadece İzleme Kayıtları)`;
+                option.textContent = `${bulletin.bulletinNo}`;
             }
             
             bulletinSelect.appendChild(option);
@@ -166,7 +167,8 @@ async function loadBulletinOptions() {
         console.log('✅ Bülten seçenekleri yüklendi:', {
             mevcutBultenler: existingBulletins.length,
             izlemeKayitlari: monitoringBulletinMap.size,
-            toplam: allBulletins.size
+            toplam: allBulletins.size,
+            uniqueBulletinNumbers: Array.from(allBulletins.keys())
         });
 
     } catch (error) {
@@ -246,11 +248,14 @@ async function checkCacheAndToggleButtonStates() {
         startSearchBtn.disabled = true;
         researchBtn.disabled = true;
         
+        // Seçilen bülten numarasını al
+        const selectedOption = bulletinSelect.querySelector(`option[value="${selectedBulletin}"]`);
+        const bulletinNo = selectedOption?.dataset.bulletinNo || 'Bilinmeyen';
+        
         // Bilgi mesajı göster
         infoMessageContainer.innerHTML = `
             <div class="info-message" style="background-color: #fff3cd; color: #856404; border: 1px solid #ffeaa7;">
-                ⚠️ Bu bülten sistemde kayıtlı değil. Yalnızca mevcut izleme kayıtlarınızı görüntüleyebilirsiniz.
-                Yeni arama yapmak için önce bülteni sisteme yüklemelisiniz.
+                ⚠️ <strong>${bulletinNo}</strong> bülteni sistemde kayıtlı değil. Yalnızca mevcut izleme kayıtlarınızı görüntüleyebilirsiniz.
             </div>
         `;
         
