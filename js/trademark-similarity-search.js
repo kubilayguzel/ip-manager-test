@@ -47,21 +47,36 @@ function initializePagination() {
 
 async function loadInitialData() {
     console.log(">>> loadInitialData başladı");
+    
     await loadSharedLayout({ activeMenuLink: 'trademark-similarity-search.html' });
+    
     const personsResult = await personService.getPersons();
-    if (personsResult.success) allPersons = personsResult.data;
+    if (personsResult.success) {
+        allPersons = personsResult.data;
+        console.log("👥 Persons yüklendi:", allPersons.length);
+    }
 
     await loadBulletinOptions();
+    
     const snapshot = await getDocs(collection(db, 'monitoringTrademarks'));
     monitoringTrademarks = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     filteredMonitoringTrademarks = [...monitoringTrademarks];
+    
+    console.log("🏷️ Monitoring trademarks yüklendi:", monitoringTrademarks.length);
 
     renderMonitoringList();
     updateMonitoringCount();
-    checkCacheAndToggleButtonStates();
+    
+    // İlk yüklenmede buton kontrolü yapma - kullanıcı seçim yapana kadar bekle
+    // checkCacheAndToggleButtonStates(); // <- Bu satırı kaldırdık
+    
+    // Butonları başlangıçta devre dışı bırak
+    startSearchBtn.disabled = true;
+    researchBtn.disabled = true;
 
-    console.log(">>> loadInitialData tamamlandı");
+    console.log("✅ loadInitialData tamamlandı");
 }
+
 
 // Bu debug kodunu loadBulletinOptions() fonksiyonuna ekleyin
 async function loadBulletinOptions() {
@@ -76,26 +91,11 @@ async function loadBulletinOptions() {
             hasOriginalBulletin: true 
         }));
 
-        // DEBUG: Bülten verilerini logla
-        console.log("🔍 DEBUG: existingBulletins:", existingBulletins);
-        existingBulletins.forEach((bulletin, index) => {
-            console.log(`📋 Bülten ${index}:`, {
-                id: bulletin.id,
-                bulletinNo: bulletin.bulletinNo,
-                bulletinDate: bulletin.bulletinDate,
-                type: typeof bulletin.bulletinDate,
-                createdAt: bulletin.createdAt
-            });
-        });
-
         const monitoringSnap = await getDocs(collection(db, 'monitoringTrademarkRecords'));
         const monitoringBulletinMap = new Map();
         
-        console.log("🔍 DEBUG: monitoringTrademarkRecords docs:", monitoringSnap.docs.length);
-        
         monitoringSnap.forEach(doc => {
             const data = doc.data();
-            console.log("📊 Monitoring doc:", doc.id, "data:", data);
             if (data.bulletinNo && data.bulletinDate) {
                 const key = `${data.bulletinNo}_${data.bulletinDate}`;
                 if (!monitoringBulletinMap.has(key)) {
@@ -112,10 +112,7 @@ async function loadBulletinOptions() {
         
         // MEVCUT BÜLTENLER İÇİN BULLETİN KEY OLUŞTUR
         existingBulletins.forEach(bulletin => {
-            console.log("🔧 Processing bulletin:", bulletin);
-            
             const bulletinDate = bulletin.bulletinDate || '';
-            console.log("📅 bulletinDate:", bulletinDate, "type:", typeof bulletinDate);
             
             // Tarihi farklı formatlardan temizle
             let dateFormatted = '';
@@ -136,7 +133,6 @@ async function loadBulletinOptions() {
             }
             
             const bulletinKey = `${bulletin.bulletinNo}_${dateFormatted}`;
-            console.log("🔑 Oluşturulan bulletinKey:", bulletinKey);
             
             allBulletins.set(bulletin.bulletinNo, {
                 id: bulletin.id,
@@ -162,8 +158,6 @@ async function loadBulletinOptions() {
             }
         });
 
-        console.log("🗂️ allBulletins Map:", allBulletins);
-
         // Sıralama
         const sortedBulletins = Array.from(allBulletins.values()).sort((a, b) => {
             if (a.createdAt && b.createdAt) {
@@ -176,41 +170,21 @@ async function loadBulletinOptions() {
             return b.bulletinNo.localeCompare(a.bulletinNo);
         });
 
-        console.log("📋 sortedBulletins:", sortedBulletins);
-
-        // Option'ları oluştur
-        sortedBulletins.forEach((bulletin, index) => {
-            console.log(`🔧 Option ${index} oluşturuluyor:`, {
-                value: bulletin.bulletinKey,
-                text: `${bulletin.bulletinNo} - ${bulletin.bulletinDate || ''}`,
-                hasOriginal: bulletin.hasOriginalBulletin
-            });
-            
+        // Option'ları oluştur - VALUE olarak bulletinKey kullan
+        sortedBulletins.forEach(bulletin => {
             const option = document.createElement('option');
-            option.value = bulletin.bulletinKey || `${bulletin.bulletinNo}_${(bulletin.bulletinDate || '').replace(/[\/\.\-]/g, '')}`;
+            option.value = bulletin.bulletinKey; // 469_27052025 formatı
             option.dataset.hasOriginalBulletin = bulletin.hasOriginalBulletin;
             option.dataset.bulletinNo = bulletin.bulletinNo;
             option.dataset.bulletinDate = bulletin.bulletinDate;
             option.textContent = `${bulletin.bulletinNo} - ${bulletin.bulletinDate || ''}`;
             bulletinSelect.appendChild(option);
-            
-            console.log("✅ Option eklendi, value:", option.value);
         });
 
         console.log('✅ Bülten seçenekleri yüklendi:', {
             mevcutBultenler: existingBulletins.length,
             izlemeKayitlari: monitoringBulletinMap.size,
             toplam: allBulletins.size
-        });
-
-        // DEBUG: Select'teki tüm option'ları logla
-        console.log("🔍 SELECT OPTIONS:");
-        Array.from(bulletinSelect.options).forEach((option, index) => {
-            console.log(`Option ${index}:`, {
-                value: option.value,
-                text: option.textContent,
-                datasets: option.dataset
-            });
         });
 
     } catch (error) {
@@ -272,7 +246,7 @@ function getOwnerNames(item) {
 async function checkCacheAndToggleButtonStates() {
     console.log("🔍 checkCacheAndToggleButtonStates çağrıldı");
     
-    const bulletinKey = bulletinSelect.value; // Artık doğrudan doğru format: "469_27052025"
+    const bulletinKey = bulletinSelect.value;
     
     console.log("🔑 Seçilen bulletinKey:", bulletinKey);
     console.log("👥 Filtrelenmiş izlenen markalar sayısı:", filteredMonitoringTrademarks.length);
@@ -282,6 +256,11 @@ async function checkCacheAndToggleButtonStates() {
         console.log("❌ Bülten seçilmemiş - butonlar devre dışı");
         startSearchBtn.disabled = true;
         researchBtn.disabled = true;
+        
+        // Bilgilendirme mesajını temizle
+        if (infoMessageContainer) {
+            infoMessageContainer.innerHTML = '';
+        }
         return;
     }
     
@@ -328,7 +307,7 @@ async function checkCacheAndToggleButtonStates() {
         // Cache varsa verileri yükle
         if (hasCache) {
             console.log("📊 Cache'ten veriler yükleniyor...");
-            loadDataFromCache(bulletinKey);
+            await loadDataFromCache(bulletinKey);
         } else {
             console.log("ℹ️ Cache yok - bilgilendirme mesajı gösteriliyor");
             if (infoMessageContainer) {
