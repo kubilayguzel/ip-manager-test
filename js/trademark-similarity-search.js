@@ -63,6 +63,7 @@ async function loadInitialData() {
     console.log(">>> loadInitialData tamamlandı");
 }
 
+// Bu debug kodunu loadBulletinOptions() fonksiyonuna ekleyin
 async function loadBulletinOptions() {
     try {
         const bulletinSelect = document.getElementById('bulletinSelect');
@@ -75,11 +76,26 @@ async function loadBulletinOptions() {
             hasOriginalBulletin: true 
         }));
 
+        // DEBUG: Bülten verilerini logla
+        console.log("🔍 DEBUG: existingBulletins:", existingBulletins);
+        existingBulletins.forEach((bulletin, index) => {
+            console.log(`📋 Bülten ${index}:`, {
+                id: bulletin.id,
+                bulletinNo: bulletin.bulletinNo,
+                bulletinDate: bulletin.bulletinDate,
+                type: typeof bulletin.bulletinDate,
+                createdAt: bulletin.createdAt
+            });
+        });
+
         const monitoringSnap = await getDocs(collection(db, 'monitoringTrademarkRecords'));
         const monitoringBulletinMap = new Map();
         
+        console.log("🔍 DEBUG: monitoringTrademarkRecords docs:", monitoringSnap.docs.length);
+        
         monitoringSnap.forEach(doc => {
             const data = doc.data();
+            console.log("📊 Monitoring doc:", doc.id, "data:", data);
             if (data.bulletinNo && data.bulletinDate) {
                 const key = `${data.bulletinNo}_${data.bulletinDate}`;
                 if (!monitoringBulletinMap.has(key)) {
@@ -94,18 +110,39 @@ async function loadBulletinOptions() {
 
         const allBulletins = new Map();
         
-        // Mevcut bültenler için bulletinKey oluştur
+        // MEVCUT BÜLTENLER İÇİN BULLETİN KEY OLUŞTUR
         existingBulletins.forEach(bulletin => {
-            // Tarihi "27/05/2025" -> "27052025" formatına çevir
+            console.log("🔧 Processing bulletin:", bulletin);
+            
             const bulletinDate = bulletin.bulletinDate || '';
-            const dateFormatted = bulletinDate.replace(/\//g, '');
+            console.log("📅 bulletinDate:", bulletinDate, "type:", typeof bulletinDate);
+            
+            // Tarihi farklı formatlardan temizle
+            let dateFormatted = '';
+            if (bulletinDate) {
+                if (bulletinDate.includes('/')) {
+                    // "27/05/2025" -> "27052025"
+                    dateFormatted = bulletinDate.replace(/\//g, '');
+                } else if (bulletinDate.includes('.')) {
+                    // "27.05.2025" -> "27052025"
+                    dateFormatted = bulletinDate.replace(/\./g, '');
+                } else if (bulletinDate.includes('-')) {
+                    // "27-05-2025" -> "27052025"
+                    dateFormatted = bulletinDate.replace(/\-/g, '');
+                } else {
+                    // Zaten temiz format
+                    dateFormatted = bulletinDate;
+                }
+            }
+            
             const bulletinKey = `${bulletin.bulletinNo}_${dateFormatted}`;
+            console.log("🔑 Oluşturulan bulletinKey:", bulletinKey);
             
             allBulletins.set(bulletin.bulletinNo, {
                 id: bulletin.id,
                 bulletinNo: bulletin.bulletinNo,
                 bulletinDate: bulletin.bulletinDate,
-                bulletinKey: bulletinKey, // Firestore path için kullanılacak
+                bulletinKey: bulletinKey,
                 createdAt: bulletin.createdAt,
                 hasOriginalBulletin: true
             });
@@ -118,12 +155,14 @@ async function loadBulletinOptions() {
                     id: key,
                     bulletinNo: value.bulletinNo,
                     bulletinDate: value.bulletinDate,
-                    bulletinKey: key, // Zaten doğru formatta
+                    bulletinKey: key,
                     createdAt: null,
                     hasOriginalBulletin: false
                 });
             }
         });
+
+        console.log("🗂️ allBulletins Map:", allBulletins);
 
         // Sıralama
         const sortedBulletins = Array.from(allBulletins.values()).sort((a, b) => {
@@ -137,21 +176,41 @@ async function loadBulletinOptions() {
             return b.bulletinNo.localeCompare(a.bulletinNo);
         });
 
-        // Option'ları oluştur - VALUE olarak bulletinKey kullan
-        sortedBulletins.forEach(bulletin => {
+        console.log("📋 sortedBulletins:", sortedBulletins);
+
+        // Option'ları oluştur
+        sortedBulletins.forEach((bulletin, index) => {
+            console.log(`🔧 Option ${index} oluşturuluyor:`, {
+                value: bulletin.bulletinKey,
+                text: `${bulletin.bulletinNo} - ${bulletin.bulletinDate || ''}`,
+                hasOriginal: bulletin.hasOriginalBulletin
+            });
+            
             const option = document.createElement('option');
-            option.value = bulletin.bulletinKey; // ÖNEMLİ: bulletinKey kullan (469_27052025)
+            option.value = bulletin.bulletinKey || `${bulletin.bulletinNo}_${(bulletin.bulletinDate || '').replace(/[\/\.\-]/g, '')}`;
             option.dataset.hasOriginalBulletin = bulletin.hasOriginalBulletin;
             option.dataset.bulletinNo = bulletin.bulletinNo;
             option.dataset.bulletinDate = bulletin.bulletinDate;
             option.textContent = `${bulletin.bulletinNo} - ${bulletin.bulletinDate || ''}`;
             bulletinSelect.appendChild(option);
+            
+            console.log("✅ Option eklendi, value:", option.value);
         });
 
         console.log('✅ Bülten seçenekleri yüklendi:', {
             mevcutBultenler: existingBulletins.length,
             izlemeKayitlari: monitoringBulletinMap.size,
             toplam: allBulletins.size
+        });
+
+        // DEBUG: Select'teki tüm option'ları logla
+        console.log("🔍 SELECT OPTIONS:");
+        Array.from(bulletinSelect.options).forEach((option, index) => {
+            console.log(`Option ${index}:`, {
+                value: option.value,
+                text: option.textContent,
+                datasets: option.dataset
+            });
         });
 
     } catch (error) {
