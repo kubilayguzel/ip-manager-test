@@ -655,7 +655,72 @@ async function performSearch(fromCacheOnly = false) {
     researchBtn.disabled = allSimilarResults.length === 0;
     console.log("📊 Tüm benzer sonuçlar (render öncesi):", allSimilarResults);
 }
+async function loadBulletinOptions() {
+        try {
+            const bulletinSelect = document.getElementById('bulletinSelect');
+            bulletinSelect.innerHTML = '<option value="">Bülten seçin...</option>';
 
+            // 1) Mevcut bültenleri al
+            const snapshot = await getDocs(collection(db, 'trademarkBulletins'));
+            const bulletins = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+            bulletins.sort((a, b) => {
+                const dateA = (a.createdAt && typeof a.createdAt.toDate === 'function') ? a.createdAt.toDate() : new Date(0);
+                const dateB = (b.createdAt && typeof b.createdAt.toDate === 'function') ? b.createdAt.toDate() : new Date(0);
+                return dateB - dateA;
+            });
+
+            // 2) `monitoringTrademarkRecords` koleksiyonundan distinct bültenleri çek
+            const monitoringSnap = await getDocs(collection(db, 'monitoringTrademarkRecords'));
+            const extraBulletins = {};
+            monitoringSnap.forEach(doc => {
+                const data = doc.data();
+                if (data.bulletinId && data.bulletinNo) {
+                    extraBulletins[data.bulletinId] = data.bulletinNo;
+                }
+            });
+
+            // 3) Bültenleri ekle (mevcut olanlar)
+            bulletins.forEach(bulletin => {
+                let dateText = 'Tarih yok';
+                if (bulletin.createdAt && typeof bulletin.createdAt.toDate === 'function') {
+                    const dateObj = bulletin.createdAt.toDate();
+                    if (!isNaN(dateObj.getTime())) dateText = dateObj.toLocaleDateString('tr-TR');
+                }
+                const option = document.createElement('option');
+                option.value = bulletin.id;
+                option.textContent = `${bulletin.bulletinNo} - ${dateText}`;
+                bulletinSelect.appendChild(option);
+            });
+
+            // 4) Silinmiş bültenleri ekle
+            Object.entries(extraBulletins).forEach(([bulletinId, bulletinNo]) => {
+                const alreadyExists = bulletins.some(b => b.id === bulletinId);
+                if (!alreadyExists) {
+                    const option = document.createElement('option');
+                    option.value = bulletinId;
+                    option.textContent = `${bulletinNo} (Silinmiş)`;
+                    bulletinSelect.appendChild(option);
+                }
+            });
+
+            console.log('✅ Bülten seçenekleri yüklendi:', bulletins.length, 'adet');
+
+        } catch (error) {
+            console.error('❌ Bülten seçenekleri yüklenirken hata:', error);
+        }
+    }
+
+    // ✅ Ve sayfa yüklendiğinde bu fonksiyonu çağır:
+    document.addEventListener('DOMContentLoaded', async () => {
+        console.log('🚀 Sayfa yüklendi, bülten seçenekleri yükleniyor...');
+        await loadBulletinOptions();
+        
+        // Diğer başlangıç kodları da buraya gelecek
+        if (typeof loadInitialData === 'function') {
+            await loadInitialData();
+        }
+    });
 function renderCurrentPageOfResults() {
     resultsTableBody.innerHTML = '';
     if(!pagination) {
