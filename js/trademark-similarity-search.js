@@ -4,9 +4,9 @@
 import { db, personService, searchRecordService, similarityService } from './firebase-config.js';
 import { collection, getDocs, doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 import { getFunctions, httpsCallable } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-functions.js';
-import { runTrademarkSearch } from './js/trademark-similarity/run-search.js';
-import Pagination from './js/pagination.js';
-import { loadSharedLayout } from './js/layout-loader.js';
+import { runTrademarkSearch } from './trademark-similarity/run-search.js';
+import Pagination from './pagination.js';
+import { loadSharedLayout } from './layout-loader.js';
 
 console.log("### trademark-similarity-search.js yüklendi ###");
 
