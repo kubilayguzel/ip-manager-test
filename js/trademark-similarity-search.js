@@ -436,8 +436,9 @@ async function performSearch(fromCacheOnly = false) {
     if (!fromCacheOnly && trademarksToSearch.length > 0) {
         loadingIndicator.textContent = `${trademarksToSearch.length} marka için arama yapılıyor...`;
 
+        // DÜZELTME 1: Cloud Function'ın beklediği format ile uyumlu payload
         const monitoredMarksPayload = trademarksToSearch.map(tm => ({
-            id: tm.id,
+            id: tm.id,  // Cloud Function'da monitoredMark.id kullanılıyor
             markName: (tm.title || tm.markName || '').trim() || 'BELİRSİZ_MARKA',
             applicationDate: tm.applicationDate || '',
             niceClasses: Array.isArray(tm.niceClass) ? tm.niceClass : (tm.niceClass ? [tm.niceClass] : [])
@@ -446,8 +447,35 @@ async function performSearch(fromCacheOnly = false) {
         console.log("Cloud Function'a gönderilen markalar:", monitoredMarksPayload);
 
         try {
+            // DÜZELTME 2: bulletinId parametresi - bulletinKey'den actual bulletinId'yi al
             const bulletinInfo = parseBulletinKey(selectedBulletinKey);
-            const resultsFromCF = await runTrademarkSearch(monitoredMarksPayload, bulletinInfo.bulletinNo);
+            
+            // Gerçek bulletinId'yi almak için trademarkBulletins'ten sorgula
+            let actualBulletinId = null;
+            
+            // Önce mevcut bültenlerde ara
+            const selectedOption = bulletinSelect.querySelector(`option[value="${selectedBulletinKey}"]`);
+            const hasOriginalBulletin = selectedOption?.dataset.hasOriginalBulletin === 'true';
+            
+            if (hasOriginalBulletin) {
+                // Mevcut bülten - bulletinKey'in kendisi bulletinId
+                const bulletinQuery = await getDocs(
+                    query(collection(db, 'trademarkBulletins'), 
+                          where('bulletinNo', '==', bulletinInfo.bulletinNo))
+                );
+                
+                if (!bulletinQuery.empty) {
+                    actualBulletinId = bulletinQuery.docs[0].id;
+                    console.log('✅ Actual bulletinId bulundu:', actualBulletinId);
+                } else {
+                    throw new Error(`Bülten ID bulunamadı: ${bulletinInfo.bulletinNo}`);
+                }
+            } else {
+                throw new Error('Yeni arama sadece sistemde kayıtlı bültenler için yapılabilir');
+            }
+
+            // DÜZELTME 3: Cloud Function'a doğru parametreleri gönder
+            const resultsFromCF = await runTrademarkSearch(monitoredMarksPayload, actualBulletinId);
 
             if (resultsFromCF && resultsFromCF.length > 0) {
                 newSearchResults = resultsFromCF.map(hit => {
@@ -476,14 +504,24 @@ async function performSearch(fromCacheOnly = false) {
                         { 
                             results: results, 
                             searchDate: new Date().toISOString(),
-                            bulletinNo: bulletinInfo.bulletinNo
+                            bulletinNo: bulletinInfo.bulletinNo,
+                            actualBulletinId: actualBulletinId // Debug için
                         }, 
                         selectedBulletinKey
                     );
                 }
+                
+                console.log('✅ Yeni sonuçlar kaydedildi:', {
+                    bulletinNo: bulletinInfo.bulletinNo,
+                    actualBulletinId: actualBulletinId,
+                    resultCount: newSearchResults.length
+                });
+            } else {
+                console.log('⚠️ Cloud Function sonuç döndürmedi');
             }
         } catch (error) {
             console.error("Arama işlemi sırasında hata:", error);
+            alert('Arama hatası: ' + error.message);
             loadingIndicator.style.display = 'none';
             startSearchBtn.disabled = false;
             researchBtn.disabled = false;
