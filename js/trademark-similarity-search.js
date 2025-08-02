@@ -244,6 +244,7 @@ function getOwnerNames(item) {
 }
 
 async function checkCacheAndToggleButtonStates() {
+    window.checkCacheAndToggleButtonStates = checkCacheAndToggleButtonStates;
     console.log("🔍 checkCacheAndToggleButtonStates çağrıldı");
     
     const bulletinKey = bulletinSelect.value;
