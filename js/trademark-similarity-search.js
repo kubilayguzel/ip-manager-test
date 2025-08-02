@@ -261,6 +261,7 @@ async function loadCachedResultsOnly() {
 
         querySnapshot.forEach((docSnap) => {
             const data = docSnap.data();
+            console.log(">>> Doc data:", data);
             if (!Array.isArray(data.results) || data.results.length === 0) return;
 
             foundRecords++;
