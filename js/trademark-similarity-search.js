@@ -126,7 +126,7 @@ async function loadBulletinOptions() {
 
         sortedBulletins.forEach(bulletin => {
             const option = document.createElement('option');
-            option.value = `${bulletin.bulletinNo}_${bulletin.bulletinDate || ''}`;
+            option.value = bulletin.bulletinNo;
             option.dataset.hasOriginalBulletin = bulletin.hasOriginalBulletin;
             option.dataset.bulletinNo = bulletin.bulletinNo;
             option.textContent = `${bulletin.bulletinNo} - ${bulletin.bulletinDate || ''}`;
