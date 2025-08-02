@@ -1756,10 +1756,27 @@ export const performTrademarkSimilaritySearch = onCall(
     });
 
     try {
-      const trademarkRecordsRef = db.collection('trademarkBulletinRecords');
-      const bulletinRecordsSnapshot = await trademarkRecordsRef
+      let bulletinRecordsSnapshot;
+
+      // Önce doğrudan bulletinId ile dene
+      bulletinRecordsSnapshot = await db.collection('trademarkBulletinRecords')
         .where('bulletinId', '==', selectedBulletinId)
         .get();
+
+      // Eğer sonuç yoksa veya hiç kayıt yoksa bulletinNo üzerinden bülten ID'sini bul
+      if (!bulletinRecordsSnapshot || bulletinRecordsSnapshot.empty) {
+        const bulletinDoc = await db.collection('trademarkBulletins')
+          .where('bulletinNo', '==', selectedBulletinId)
+          .limit(1)
+          .get();
+
+        if (!bulletinDoc.empty) {
+          const bulletinIdFromNo = bulletinDoc.docs[0].id;
+          bulletinRecordsSnapshot = await db.collection('trademarkBulletinRecords')
+            .where('bulletinId', '==', bulletinIdFromNo)
+            .get();
+        }
+      }
 
       const bulletinRecords = bulletinRecordsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       logger.log(`✅ ${bulletinRecords.length} kayıt bulundu.`);
