@@ -1693,41 +1693,64 @@ export const searchRecordService = {
             return { success: false, error: error.message };
         }
     },
-
-   async saveRecord(recordId, data, bulletinNo = null) {
-        if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor." };
+async saveRecord(recordId, data, bulletinId = null) {
+    if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor." };
+    
+    console.log('🔍 DEBUG saveRecord çağrıldı:', {
+        recordId,
+        dataKeys: Object.keys(data),
+        bulletinId,
+        bulletinIdType: typeof bulletinId
+    });
+    
+    try {
+        const docRef = doc(db, 'monitoringTrademarkRecords', recordId);
         
-        // DEBUG LOG'LARI
-        console.log('🔍 DEBUG saveRecord çağrıldı:', {
-            recordId,
-            dataKeys: Object.keys(data),
-            bulletinNo,
-            bulletinNoType: typeof bulletinNo,
-            bulletinNoIsNull: bulletinNo === null,
-            bulletinNoIsUndefined: bulletinNo === undefined
+        // ✅ BULLETINID VAR İSE DİREKT TRADEMARKBULLETINS'DEN BULLETINNO'YU ÇEK
+        let finalBulletinNo = null;
+        
+        if (bulletinId) {
+            console.log('🔍 DEBUG: bulletinId ile trademarkBulletins\'den bulletinNo çekiliyor:', bulletinId);
+            
+            try {
+                const bulletinDocRef = doc(db, 'trademarkBulletins', bulletinId);
+                const bulletinDocSnap = await getDoc(bulletinDocRef);
+                
+                console.log('🔍 DEBUG: Bülten dokümanı var mı?', bulletinDocSnap.exists());
+                
+                if (bulletinDocSnap.exists()) {
+                    const bulletinData = bulletinDocSnap.data();
+                    finalBulletinNo = bulletinData.bulletinNo;
+                    console.log('🔍 DEBUG: Firebase\'den bulletinNo alındı:', finalBulletinNo);
+                    console.log('🔍 DEBUG: Tam bülten datası:', bulletinData);
+                } else {
+                    console.warn('⚠️ Bülten dokümanı bulunamadı:', bulletinId);
+                }
+            } catch (error) {
+                console.error('❌ bulletinNo alınamadı:', error);
+            }
+        } else {
+            console.log('🔍 DEBUG: bulletinId null, bulletinNo eklenmeyecek');
+        }
+        
+        const dataToSave = finalBulletinNo ? { ...data, bulletinNo: finalBulletinNo } : data;
+        
+        console.log('🔍 DEBUG dataToSave:', {
+            hasOwnBulletinNo: dataToSave.hasOwnProperty('bulletinNo'),
+            bulletinNoInData: dataToSave.bulletinNo,
+            finalBulletinNoValue: finalBulletinNo,
+            allKeys: Object.keys(dataToSave)
         });
         
-        try {
-            const docRef = doc(db, 'monitoringTrademarkRecords', recordId);
-            
-            // Eğer bulletinNo parametre olarak gönderilmişse, data'ya ekle
-            const dataToSave = bulletinNo ? { ...data, bulletinNo } : data;
-            
-            console.log('🔍 DEBUG dataToSave:', {
-                hasOwnBulletinNo: dataToSave.hasOwnProperty('bulletinNo'),
-                bulletinNoInData: dataToSave.bulletinNo,
-                allKeys: Object.keys(dataToSave)
-            });
-            
-            await setDoc(docRef, dataToSave);
-            
-            console.log('✅ DEBUG: Firestore kayıt başarılı');
-            return { success: true };
-        } catch (error) {
-            console.error("❌ Arama kaydı kaydedilirken hata:", error);
-            return { success: false, error: error.message };
-        }
-    },
+        await setDoc(docRef, dataToSave);
+        
+        console.log('✅ DEBUG: Firestore kayıt başarılı - bulletinNo eklendi!');
+        return { success: true };
+    } catch (error) {
+        console.error("❌ Arama kaydı kaydedilirken hata:", error);
+        return { success: false, error: error.message };
+    }
+},
 
     // YENİ EKLENEN FONKSİYON: Mevcut arama kaydını siler
     async deleteRecord(recordId) {
