@@ -338,6 +338,7 @@ async function performSearch(fromCacheOnly = false) {
                     : (tm.niceClass ? [tm.niceClass] : [])
             };
         });
+        console.log("Cloud Function'a gönderilen markalar:", monitoredMarksPayload);
 
         // ✅ BÜLTEN NO'YU ÇEK (Cloud Function çağrısından önce)
         let bulletinNo = null;
@@ -429,6 +430,12 @@ async function performSearch(fromCacheOnly = false) {
                         results: [], 
                         searchDate: new Date().toISOString() 
                     };
+                    
+                    console.log('🔍 DEBUG: Boş kayıt saveRecord çağrılıyor:', {
+                        recordId,
+                        bulletinNo,
+                        bulletinNoType: typeof bulletinNo
+                    });
                     
                     await searchRecordService.saveRecord(recordId, saveData, bulletinNo);
                     console.log(`✅ Boş kayıt: ${recordId}`);
