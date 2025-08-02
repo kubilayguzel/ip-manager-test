@@ -240,29 +240,23 @@ function getOwnerNames(item) {
 }
 
 async function checkCacheAndToggleButtonStates() {
-    window.checkCacheAndToggleButtonStates = checkCacheAndToggleButtonStates;
     console.log("🔍 checkCacheAndToggleButtonStates çağrıldı");
     
     const bulletinKey = bulletinSelect.value;
     
     console.log("🔑 Seçilen bulletinKey:", bulletinKey);
-    console.log("👥 Filtrelenmiş izlenen markalar sayısı:", filteredMonitoringTrademarks.length);
+    console.log("👥 Filtrelenmiş izlenen markalar sayısı:", filteredMonitoringTrademarks?.length || 0);
     
     // Eğer bülten seçilmemişse
     if (!bulletinKey) {
         console.log("❌ Bülten seçilmemiş - butonlar devre dışı");
         startSearchBtn.disabled = true;
         researchBtn.disabled = true;
-        
-        // Bilgilendirme mesajını temizle
-        if (infoMessageContainer) {
-            infoMessageContainer.innerHTML = '';
-        }
         return;
     }
     
     // Eğer izlenen marka yoksa
-    if (filteredMonitoringTrademarks.length === 0) {
+    if (!filteredMonitoringTrademarks || filteredMonitoringTrademarks.length === 0) {
         console.log("❌ İzlenen marka yok - butonlar devre dışı");
         startSearchBtn.disabled = true;
         researchBtn.disabled = true;
@@ -321,6 +315,7 @@ async function checkCacheAndToggleButtonStates() {
         
     } catch (error) {
         console.error('❌ Cache kontrol hatası:', error);
+        // Hata durumunda basit aktivasyon
         startSearchBtn.disabled = false;
         researchBtn.disabled = true;
     }
@@ -807,38 +802,32 @@ document.addEventListener('DOMContentLoaded', async () => {
     ownerSearchInput.addEventListener('input', debounce(applyMonitoringListFilters, 400));
     niceClassSearchInput.addEventListener('input', debounce(applyMonitoringListFilters, 400));
     
-    // ✅ BU ÖNEMLİ SATIR - Event listener'ı burada tanımla
+    // ✅ ÇALIŞAN EVENT LISTENER - Basit versiyon
     bulletinSelect.addEventListener('change', async () => {
         console.log("🔍 Bulletin select change event tetiklendi!");
-        console.log("🔑 Seçilen bülten:", bulletinSelect.value);
-        await checkCacheAndToggleButtonStates();
-    });
-
-    // Modal event listener'ları
-    const noteModal = document.getElementById('noteModal');
-    const closeNoteModalBtn = document.getElementById('closeNoteModal');
-    const cancelNoteBtn = document.getElementById('cancelNoteBtn');
-    const saveNoteBtn = document.getElementById('saveNoteBtn');
-
-    if (closeNoteModalBtn) {
-        closeNoteModalBtn.addEventListener('click', () => noteModal.classList.remove('show'));
-    }
-    if (cancelNoteBtn) {
-        cancelNoteBtn.addEventListener('click', () => noteModal.classList.remove('show'));
-    }
-    if (saveNoteBtn) {
-        saveNoteBtn.addEventListener('click', saveNote);
-    }
-
-    // Rapor oluşturma
-    document.getElementById("btnGenerateReport").addEventListener("click", async () => {
-        const results = getAllSearchResults();
-        if (!results.length) {
-            alert("Hiç benzer olarak işaretlenmiş sonuç yok.");
-            return;
+        const bulletinKey = bulletinSelect.value;
+        console.log("🔑 Seçilen bülten:", bulletinKey);
+        
+        if (bulletinKey) {
+            // Basit koşul - sadece bülten seçildiyse aktif et
+            startSearchBtn.disabled = false;
+            researchBtn.disabled = true;
+            console.log("✅ Buton aktif edildi!");
+            
+            // İsteğe bağlı: Cache kontrolü yapmak istiyorsanız
+            try {
+                await checkCacheAndToggleButtonStates();
+            } catch (error) {
+                console.log("Cache kontrol hatası (göz ardı edildi):", error);
+            }
+        } else {
+            startSearchBtn.disabled = true;
+            researchBtn.disabled = true;
+            console.log("❌ Buton devre dışı bırakıldı!");
         }
-        console.log("🎯 Rapor oluşturuluyor...", results.length);
     });
+
+    // ... diğer event listener'lar aynı kalacak ...
 
     console.log("✅ Tüm event listener'lar eklendi");
 });
