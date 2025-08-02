@@ -377,33 +377,29 @@ async function performSearch(fromCacheOnly = false) {
 
                 // Seçili bültenin bulletinNo'sunu al
                 let bulletinNo = null;
+                console.log('🔍 DEBUG: selectedBulletin ID:', selectedBulletin);
+
                 try {
                     const bulletinDocRef = doc(db, 'trademarkBulletins', selectedBulletin);
                     const bulletinDocSnap = await getDoc(bulletinDocRef);
+                    
+                    console.log('🔍 DEBUG: bulletinDocSnap.exists():', bulletinDocSnap.exists());
+                    
                     if (bulletinDocSnap.exists()) {
-                        bulletinNo = bulletinDocSnap.data().bulletinNo;
+                        const bulletinData = bulletinDocSnap.data();
+                        console.log('🔍 DEBUG: bulletinData:', bulletinData);
+                        bulletinNo = bulletinData.bulletinNo;
+                        console.log('🔍 DEBUG: bulletinNo:', bulletinNo);
+                    } else {
+                        console.warn('⚠️ Bülten dokümanı bulunamadı:', selectedBulletin);
                     }
                 } catch (error) {
-                    console.warn('bulletinNo alınamadı:', error);
+                    console.error('❌ bulletinNo alınırken hata:', error);
                 }
 
-                // Her marka için önbelleğe kaydet
-                for (const tm of trademarksToSearch) {
-                    const recordId = `${tm.id}_${selectedBulletin}`;
-                    const specificResults = groupedResults[tm.id] || [];
-                    
-                    const saveData = { 
-                        results: specificResults.map(r => {
-                            const { source, ...rest } = r; 
-                            return rest;
-                        }), 
-                        searchDate: new Date().toISOString() 
-                    };
-                    
-                    await searchRecordService.saveRecord(recordId, saveData, bulletinNo);
-                    console.log(`✅ Kayıt: ${recordId} (${specificResults.length} sonuç)`);
-                }
-            } else {
+                console.log('🔍 DEBUG: Final bulletinNo value:', bulletinNo);
+
+                } else {
                 // Seçili bültenin bulletinNo'sunu al
                 let bulletinNo = null;
                 try {
@@ -423,7 +419,12 @@ async function performSearch(fromCacheOnly = false) {
                         results: [], 
                         searchDate: new Date().toISOString() 
                     };
-                    
+                    console.log('🔍 DEBUG: saveRecord çağrılıyor:', {
+                        recordId,
+                        saveData,
+                        bulletinNo,
+                        bulletinNoType: typeof bulletinNo
+                    });
                     await searchRecordService.saveRecord(recordId, saveData, bulletinNo);
                     console.log(`✅ Boş kayıt: ${recordId}`);
                 }
