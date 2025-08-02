@@ -453,35 +453,52 @@ async function performSearch(fromCacheOnly = false) {
             return;
         }
     }
-
+}
+    // Sonuçları birleştir
     allSimilarResults = [...cachedResults, ...newSearchResults];
-    // ✅ SIRALAMAYI DÜZELT: Önce marka adına göre grupla, sonra her grup içinde benzerlik skoruna göre sırala
-    allSimilarResults.sort((a, b) => {
-        const markA = a.monitoredTrademark || 'Bilinmeyen Marka';
-        const markB = b.monitoredTrademark || 'Bilinmeyen Marka';
-        
-        // Önce marka adına göre sırala
-        if (markA !== markB) {
-            return markA.localeCompare(markB);
+    
+    // ✅ TAM GRUPLANDIRMA: Marka ID'sine göre grupla, sonra birleştir
+    const groupedByTrademark = {};
+    
+    // Önce gruplara ayır
+    allSimilarResults.forEach(result => {
+        const trademarkId = result.monitoredTrademarkId || 'unknown';
+        if (!groupedByTrademark[trademarkId]) {
+            groupedByTrademark[trademarkId] = [];
         }
-        
-        // Aynı marka içinde benzerlik skoruna göre sırala (yüksekten düşüğe)
-        const scoreA = a.similarityScore || 0;
-        const scoreB = b.similarityScore || 0;
-        return scoreB - scoreA;
+        groupedByTrademark[trademarkId].push(result);
+    });
+    
+    // Her grup içinde benzerlik skoruna göre sırala
+    Object.keys(groupedByTrademark).forEach(trademarkId => {
+        groupedByTrademark[trademarkId].sort((a, b) => {
+            const scoreA = a.similarityScore || 0;
+            const scoreB = b.similarityScore || 0;
+            return scoreB - scoreA; // Yüksekten düşüğe
+        });
+    });
+    
+    // Grupları tekrar birleştir (marka adına göre alfabetik sıralayarak)
+    const sortedTrademarkIds = Object.keys(groupedByTrademark).sort((a, b) => {
+        const markA = groupedByTrademark[a][0]?.monitoredTrademark || 'Bilinmeyen Marka';
+        const markB = groupedByTrademark[b][0]?.monitoredTrademark || 'Bilinmeyen Marka';
+        return markA.localeCompare(markB);
+    });
+    
+    // Final sonucu oluştur
+    allSimilarResults = [];
+    sortedTrademarkIds.forEach(trademarkId => {
+        allSimilarResults.push(...groupedByTrademark[trademarkId]);
+    });
+    
+    console.log("📊 Gruplandırılmış sonuçlar:");
+    sortedTrademarkIds.forEach(trademarkId => {
+        const group = groupedByTrademark[trademarkId];
+        console.log(`- ${group[0].monitoredTrademark}: ${group.length} sonuç`);
+        group.forEach((r, i) => console.log(`  ${i+1}. ${r.markName} (${(r.similarityScore * 100).toFixed(0)}%)`));
     });
     
     loadingIndicator.style.display = 'none';
-    
-    const infoMessage = `Toplam ${allSimilarResults.length} benzer sonuç bulundu. (${cachedResults.length} önbellekten, ${newSearchResults.length} yeni arama ile)`;
-    infoMessageContainer.innerHTML = `<div class="info-message">${infoMessage}</div>`;
-
-    pagination.update(allSimilarResults.length);
-    renderCurrentPageOfResults();
-
-    startSearchBtn.disabled = true;
-    researchBtn.disabled = allSimilarResults.length === 0;
-    console.log("📊 Tüm benzer sonuçlar (render öncesi):", allSimilarResults);
 
 function renderCurrentPageOfResults() {
     resultsTableBody.innerHTML = '';
