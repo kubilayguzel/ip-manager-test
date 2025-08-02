@@ -555,25 +555,6 @@ async function checkCacheAndToggleButtonStates() {
     }
 }
 
-async function performResearch() {
-    const selectedBulletin = bulletinSelect.value;
-    if (!selectedBulletin) return alert('Lütfen bir bülten seçin.');
-    if (filteredMonitoringTrademarks.length === 0) return alert('Filtreye uygun izlenen marka bulunamadı.');
-
-    const confirmMsg = `Seçili bülten için filtrelenmiş ${filteredMonitoringTrademarks.length} markanın mevcut arama sonuçları silinecek ve yeniden arama yapılacaktır. Onaylıyor musunuz?`;
-    if (!confirm(confirmMsg)) return;
-
-    loadingIndicator.textContent = 'Eski kayıtlar siliniyor...';
-    loadingIndicator.style.display = 'block';
-    startSearchBtn.disabled = true;
-    researchBtn.disabled = true;
-
-    const deletePromises = filteredMonitoringTrademarks.map(tm => searchRecordService.deleteRecord(`${tm.id}_${selectedBulletin}`));
-    await Promise.all(deletePromises);
-    
-    await performSearch(false);
-}
-
 async function performSearch(fromCacheOnly = false) {
     const selectedBulletin = bulletinSelect.value;
     if (!selectedBulletin) return;
@@ -609,30 +590,16 @@ async function performSearch(fromCacheOnly = false) {
 
     let newSearchResults = [];
     if (!fromCacheOnly && trademarksToSearch.length > 0) {
-        if (!runTrademarkSearch) {
-            alert("Arama modülü henüz yüklenmedi, lütfen bekleyin.");
-            loadingIndicator.style.display = 'none';
-            checkCacheAndToggleButtonStates();
-            return;
-        }
-        loadingIndicator.textContent = `${trademarksToSearch.length} marka için arama yapılıyor... (Bu biraz zaman alabilir)`;
+        loadingIndicator.textContent = `${trademarksToSearch.length} marka için arama yapılıyor...`;
 
-        // --- EK: Cloud Function’a giden veriyi kontrol etmek için log ekledik ---
-        const monitoredMarksPayload = trademarksToSearch.map(tm => {
-            const markName = (tm.title || tm.markName || '').trim();
-            if (!markName) {
-                console.warn(`⚠️ Bu markanın adı eksik (ID: ${tm.id})`, tm);
-            }
-            return {
-                id: tm.id,
-                markName: markName || 'BELİRSİZ_MARKA',
-                applicationDate: tm.applicationDate || '',
-                niceClasses: Array.isArray(tm.niceClass)
-                    ? tm.niceClass
-                    : (tm.niceClass ? [tm.niceClass] : [])
-            };
-        });
-        console.log("Cloud Function’a gönderilen markalar:", monitoredMarksPayload);
+        const monitoredMarksPayload = trademarksToSearch.map(tm => ({
+            id: tm.id,
+            markName: (tm.title || tm.markName || '').trim() || 'BELİRSİZ_MARKA',
+            applicationDate: tm.applicationDate || '',
+            niceClasses: Array.isArray(tm.niceClass) ? tm.niceClass : (tm.niceClass ? [tm.niceClass] : [])
+        }));
+
+        console.log("Cloud Function'a gönderilen markalar:", monitoredMarksPayload);
 
         try {
             const resultsFromCF = await runTrademarkSearch(monitoredMarksPayload, selectedBulletin);
@@ -658,12 +625,16 @@ async function performSearch(fromCacheOnly = false) {
 
                 for (const [monitoredTrademarkId, results] of Object.entries(groupedResults)) {
                     const recordId = `${monitoredTrademarkId}_${selectedBulletin}`;
-                    await searchRecordService.saveRecord(recordId, { results: results, searchDate: new Date().toISOString() });
+                    
+                    // ✅ EN ÖNEMLİ DÜZELTME: selectedBulletin parametresi eklendi
+                    await searchRecordService.saveRecord(recordId, { 
+                        results: results, 
+                        searchDate: new Date().toISOString() 
+                    }, selectedBulletin); // ← Bu parametre eksikti!
                 }
             }
         } catch (error) {
             console.error("Arama işlemi sırasında hata:", error);
-            infoMessageContainer.innerHTML = `<div class="error-message">Arama işlemi sırasında hata oluştu: ${error.message}. Detaylar için konsolu kontrol edin.</div>`;
             loadingIndicator.style.display = 'none';
             startSearchBtn.disabled = false;
             researchBtn.disabled = false;
