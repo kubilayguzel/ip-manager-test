@@ -1758,15 +1758,21 @@ export const performTrademarkSimilaritySearch = onCall(
     try {
       let bulletinRecordsSnapshot;
 
-      // Önce doğrudan bulletinId ile dene
+      // Önce bulletinId olarak direkt ara
       bulletinRecordsSnapshot = await db.collection('trademarkBulletinRecords')
         .where('bulletinId', '==', selectedBulletinId)
         .get();
 
-      // Eğer sonuç yoksa veya hiç kayıt yoksa bulletinNo üzerinden bülten ID'sini bul
+      // Eğer sonuç yoksa veya gönderilen değer "469_27052025" gibi ise → bulletinNo ile ara
       if (!bulletinRecordsSnapshot || bulletinRecordsSnapshot.empty) {
+        // "_" içeriyorsa sadece ilk kısmı al
+        let selectedBulletinNo = selectedBulletinId;
+        if (selectedBulletinId.includes('_')) {
+          selectedBulletinNo = selectedBulletinId.split('_')[0];
+        }
+
         const bulletinDoc = await db.collection('trademarkBulletins')
-          .where('bulletinNo', '==', selectedBulletinId)
+          .where('bulletinNo', '==', selectedBulletinNo)
           .limit(1)
           .get();
 
