@@ -34,6 +34,23 @@ const infoMessageContainer = document.getElementById('infoMessageContainer');
 const functions = getFunctions(undefined, "europe-west1");
 
 // === UTILITY FUNCTIONS ===
+
+// Bulletin key oluşturmak için yardımcı fonksiyon
+function createBulletinKey(bulletinNo, bulletinDate) {
+    // Format: "2024-123_20241201" 
+    const dateStr = bulletinDate ? bulletinDate.replace(/[\/\-\.]/g, '') : '';
+    return `${bulletinNo}_${dateStr}`;
+}
+
+// Bulletin bilgilerini parse etmek için fonksiyon
+function parseBulletinKey(bulletinKey) {
+    const parts = bulletinKey.split('_');
+    return {
+        bulletinNo: parts[0],
+        bulletinDate: parts[1] || ''
+    };
+}
+
 const debounce = (func, delay) => {
     let timeout;
     return (...args) => {
@@ -85,46 +102,42 @@ async function loadBulletinOptions() {
             hasOriginalBulletin: true 
         }));
 
-        // 2) monitoringTrademarkRecords'dan bulletinNo'ları çek
-        const monitoringSnap = await getDocs(collection(db, 'monitoringTrademarkRecords'));
-        const monitoringBulletinMap = new Map();
-
-        monitoringSnap.forEach(doc => {
-            const data = doc.data();
-            if (data.bulletinNo) {
-                const bulletinKey = data.bulletinId || data.bulletinNo;
-                if (!monitoringBulletinMap.has(bulletinKey)) {
-                    monitoringBulletinMap.set(bulletinKey, {
-                        bulletinNo: data.bulletinNo,
-                        bulletinId: data.bulletinId || data.bulletinNo,
-                        hasOriginalBulletin: false
-                    });
-                }
-            }
-        });
+        // 2) monitoringTrademarkRecords'dan bulletin key'lerini çek
+        const monitoringBulletinKeys = await searchRecordService.getAllBulletinKeys();
+        const monitoringBulletins = monitoringBulletinKeys.success ? 
+            monitoringBulletinKeys.data.map(key => {
+                const parsed = parseBulletinKey(key);
+                return {
+                    id: key,
+                    bulletinNo: parsed.bulletinNo,
+                    bulletinKey: key,
+                    hasOriginalBulletin: false
+                };
+            }) : [];
 
         // 3) Tüm bültenleri birleştir - AYNI BÜLTEN NUMARASINI TEK KEZ GÖSTER
         const allBulletins = new Map();
 
         // Önce mevcut bültenleri ekle
         existingBulletins.forEach(bulletin => {
+            const bulletinKey = createBulletinKey(
+                bulletin.bulletinNo, 
+                bulletin.createdAt ? bulletin.createdAt.toDate().toISOString().slice(0,10).replace(/-/g, '') : ''
+            );
+            
             allBulletins.set(bulletin.bulletinNo, {
                 id: bulletin.id,
                 bulletinNo: bulletin.bulletinNo,
+                bulletinKey: bulletinKey,
                 createdAt: bulletin.createdAt,
                 hasOriginalBulletin: true
             });
         });
 
         // Monitoring'deki bültenleri ekle (sadece mevcut olmayan bülten numaraları için)
-        monitoringBulletinMap.forEach((value, key) => {
-            if (!allBulletins.has(value.bulletinNo)) {
-                allBulletins.set(value.bulletinNo, {
-                    id: key,
-                    bulletinNo: value.bulletinNo,
-                    createdAt: null,
-                    hasOriginalBulletin: false
-                });
+        monitoringBulletins.forEach(bulletin => {
+            if (!allBulletins.has(bulletin.bulletinNo)) {
+                allBulletins.set(bulletin.bulletinNo, bulletin);
             }
         });
 
@@ -146,9 +159,10 @@ async function loadBulletinOptions() {
         // 5) Options'ları ekle
         sortedBulletins.forEach(bulletin => {
             const option = document.createElement('option');
-            option.value = bulletin.id;
+            option.value = bulletin.bulletinKey; // bulletinKey kullan
             option.dataset.hasOriginalBulletin = bulletin.hasOriginalBulletin;
             option.dataset.bulletinNo = bulletin.bulletinNo;
+            option.dataset.bulletinKey = bulletin.bulletinKey;
             
             if (bulletin.hasOriginalBulletin) {
                 let dateText = 'Tarih yok';
@@ -166,9 +180,8 @@ async function loadBulletinOptions() {
 
         console.log('✅ Bülten seçenekleri yüklendi:', {
             mevcutBultenler: existingBulletins.length,
-            izlemeKayitlari: monitoringBulletinMap.size,
-            toplam: allBulletins.size,
-            uniqueBulletinNumbers: Array.from(allBulletins.keys())
+            izlemeKayitlari: monitoringBulletins.length,
+            toplam: allBulletins.size
         });
 
     } catch (error) {
@@ -225,23 +238,18 @@ function getOwnerNames(item) {
 
 // === CACHE AND STATE MANAGEMENT ===
 
-// Yeni fonksiyon: Sadece cache'den sonuçları yükle
+// loadCachedResultsOnly fonksiyonunu güncelle
 async function loadCachedResultsOnly() {
-    const selectedBulletinId = bulletinSelect.value;
-    if (!selectedBulletinId || filteredMonitoringTrademarks.length === 0) {
+    const selectedBulletinKey = bulletinSelect.value;
+    if (!selectedBulletinKey || filteredMonitoringTrademarks.length === 0) {
         console.log('❌ loadCachedResultsOnly: selectedBulletin veya filteredMonitoringTrademarks boş');
         return;
     }
 
-    const selectedOption = bulletinSelect.querySelector(`option[value="${selectedBulletinId}"]`);
-    const selectedBulletinNo = selectedOption?.dataset.bulletinNo || selectedBulletinId;
-    console.log(">>> selectedBulletinId:", selectedBulletinId);
-    console.log(">>> selectedBulletinNo:", selectedBulletinNo);
-    console.log(">>> selectedOption.dataset:", selectedOption?.dataset);
-
+    const bulletinInfo = parseBulletinKey(selectedBulletinKey);
     console.log('🔍 loadCachedResultsOnly başladı:', {
-        selectedBulletinId,
-        selectedBulletinNo,
+        selectedBulletinKey,
+        bulletinNo: bulletinInfo.bulletinNo,
         monitoringCount: filteredMonitoringTrademarks.length
     });
 
@@ -251,73 +259,39 @@ async function loadCachedResultsOnly() {
     resultsTableBody.innerHTML = '';
     allSimilarResults = [];
 
-    let cachedResults = [];
-    let foundRecords = 0;
-
-    try {
-        const q = query(
-            collection(db, 'monitoringTrademarkRecords'),
-            where('bulletinNo', '==', selectedBulletinNo)
-        );
-        const querySnapshot = await getDocs(q);
-        console.log('>>> Sorgudan dönen doküman sayısı:', querySnapshot.size);
-
-        querySnapshot.forEach((docSnap) => {
-            const data = docSnap.data();
-            console.log(">>> Doc data:", data);
-            if (!Array.isArray(data.results) || data.results.length === 0) return;
-
-            foundRecords++;
-            console.log(`✅ Doküman bulundu: ${docSnap.id}, sonuç sayısı: ${data.results.length}`);
-
-            data.results.forEach(r => {
-                const monitoredTrademarkId = r.monitoredTrademarkId;
-                console.log(">>> filteredMonitoringTrademarks:", filteredMonitoringTrademarks.map(t => t.id));
-                console.log(">>> result.monitoredTrademarkId:", monitoredTrademarkId);
-                console.log(">>> result item:", r);
-                const matchedTrademark = filteredMonitoringTrademarks.find(tm => tm.id === monitoredTrademarkId);
-
-                if (!matchedTrademark) {
-                    console.log('❌ Eşleşme yok:', monitoredTrademarkId);
-                    return;
-                }
-
-                cachedResults.push({
-                    ...r,
-                    source: 'cache',
-                    monitoredTrademarkId,
-                    monitoredTrademark: matchedTrademark.title || matchedTrademark.markName || 'BELİRSİZ_MARKA'
+    // Yeni format ile sonuçları getir
+    const allRecordsResult = await searchRecordService.getAllRecordsForBulletin(selectedBulletinKey);
+    
+    if (allRecordsResult.success && allRecordsResult.data.length > 0) {
+        let cachedResults = [];
+        
+        allRecordsResult.data.forEach(record => {
+            const matchedTrademark = filteredMonitoringTrademarks.find(tm => tm.id === record.monitoredTrademarkId);
+            
+            if (matchedTrademark && record.results) {
+                record.results.forEach(r => {
+                    cachedResults.push({
+                        ...r,
+                        source: 'cache',
+                        monitoredTrademarkId: record.monitoredTrademarkId,
+                        monitoredTrademark: matchedTrademark.title || matchedTrademark.markName || 'BELİRSİZ_MARKA'
+                    });
                 });
-            });
+            }
         });
 
-    } catch (error) {
-        console.error('❌ Kayıt arama hatası:', error);
-    }
+        allSimilarResults = cachedResults;
 
-    console.log('📊 Cache sonuçları:', {
-        foundRecords,
-        totalCachedResults: cachedResults.length,
-        monitoringTrademarks: filteredMonitoringTrademarks.map(tm => ({
-            id: tm.id,
-            name: tm.title || tm.markName
-        }))
-    });
-
-    allSimilarResults = cachedResults;
-
-    if (allSimilarResults.length > 0) {
-        groupAndSortResults();
+        if (allSimilarResults.length > 0) {
+            groupAndSortResults();
+        }
     }
 
     loadingIndicator.style.display = 'none';
 
     if (allSimilarResults.length > 0) {
         const infoMessage = `${allSimilarResults.length} mevcut izleme kaydı bulundu. (Yeni arama yapılamaz - bülten sistemde yok)`;
-        const currentMessage = infoMessageContainer.innerHTML;
-        infoMessageContainer.innerHTML =
-            currentMessage +
-            `<div class="info-message" style="background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; margin-top: 10px;">${infoMessage}</div>`;
+        infoMessageContainer.innerHTML = `<div class="info-message" style="background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; margin-top: 10px;">${infoMessage}</div>`;
 
         pagination.update(allSimilarResults.length);
         renderCurrentPageOfResults();
@@ -329,21 +303,22 @@ async function loadCachedResultsOnly() {
     }
 }
 
+// checkCacheAndToggleButtonStates fonksiyonunu güncelle
 async function checkCacheAndToggleButtonStates() {
-    const selectedBulletinId = bulletinSelect.value;
+    const selectedBulletinKey = bulletinSelect.value;
     startSearchBtn.disabled = true;
     researchBtn.disabled = true;
 
-    if (!selectedBulletinId || filteredMonitoringTrademarks.length === 0) {
+    if (!selectedBulletinKey || filteredMonitoringTrademarks.length === 0) {
         return;
     }
 
-    const selectedOption = bulletinSelect.querySelector(`option[value="${selectedBulletinId}"]`);
+    const selectedOption = bulletinSelect.querySelector(`option[value="${selectedBulletinKey}"]`);
     const hasOriginalBulletin = selectedOption?.dataset.hasOriginalBulletin === 'true';
-    const selectedBulletinNo = selectedOption?.dataset.bulletinNo || selectedBulletinId;
+    const selectedBulletinNo = selectedOption?.dataset.bulletinNo || '';
 
     console.log('🔍 Seçilen bülten kontrol:', {
-        bulletinId: selectedBulletinId,
+        bulletinKey: selectedBulletinKey,
         bulletinNo: selectedBulletinNo,
         hasOriginalBulletin,
         optionText: selectedOption?.textContent
@@ -366,12 +341,10 @@ async function checkCacheAndToggleButtonStates() {
 
     infoMessageContainer.innerHTML = '';
 
-    // Cache kontrolü (her marka için)
-    const checkPromises = filteredMonitoringTrademarks.map(tm =>
-        searchRecordService.getRecord(`${tm.id}_${selectedBulletinId}`)
-    );
-    const results = await Promise.all(checkPromises);
-    const cachedCount = results.filter(r => r.success && r.data).length;
+    // Cache kontrolü - yeni format
+    const monitoredTrademarkIds = filteredMonitoringTrademarks.map(tm => tm.id);
+    const batchResults = await searchRecordService.getBatchRecords(monitoredTrademarkIds, selectedBulletinKey);
+    const cachedCount = batchResults.success ? batchResults.data.length : 0;
 
     if (cachedCount > 0) {
         researchBtn.disabled = false;
@@ -380,7 +353,10 @@ async function checkCacheAndToggleButtonStates() {
 
     if (cachedCount === filteredMonitoringTrademarks.length && filteredMonitoringTrademarks.length > 0) {
         startSearchBtn.disabled = true;
-        infoMessageContainer.innerHTML = `<div class="info-message">Bu bülten için tüm sonuçlar önbellekte mevcut. Sonuçlar otomatik olarak yükleniyor...</div>`;
+        infoMessageContainer.innerHTML = `<div class="info-message">Bu bülten için tüm sonuçlar önbellekte mevcut. Sonuçları görmek için aşağıya bakın.</div>`;
+        
+        console.log('🚀 performSearch çağrılıyor (fromCacheOnly=true)...');
+        loadingIndicator.textContent = 'Sonuçlar otomatik olarak yükleniyor...';
         await performSearch(true);
     } else {
         startSearchBtn.disabled = false;
@@ -390,8 +366,8 @@ async function checkCacheAndToggleButtonStates() {
 
 // === SEARCH FUNCTIONS ===
 async function performResearch() {
-    const selectedBulletin = bulletinSelect.value;
-    if (!selectedBulletin) return alert('Lütfen bir bülten seçin.');
+    const selectedBulletinKey = bulletinSelect.value;
+    if (!selectedBulletinKey) return alert('Lütfen bir bülten seçin.');
     if (filteredMonitoringTrademarks.length === 0) return alert('Filtreye uygun izlenen marka bulunamadı.');
 
     const confirmMsg = `Seçili bülten için filtrelenmiş ${filteredMonitoringTrademarks.length} markanın mevcut arama sonuçları silinecek ve yeniden arama yapılacaktır. Onaylıyor musunuz?`;
@@ -402,8 +378,9 @@ async function performResearch() {
     startSearchBtn.disabled = true;
     researchBtn.disabled = true;
 
+    // Yeni formatta silme işlemi
     const deletePromises = filteredMonitoringTrademarks.map(tm => 
-        searchRecordService.deleteRecord(`${tm.id}_${selectedBulletin}`)
+        searchRecordService.deleteRecord(tm.id, selectedBulletinKey)
     );
     await Promise.all(deletePromises);
     
@@ -411,8 +388,8 @@ async function performResearch() {
 }
 
 async function performSearch(fromCacheOnly = false) {
-    const selectedBulletin = bulletinSelect.value;
-    if (!selectedBulletin || filteredMonitoringTrademarks.length === 0) return;
+    const selectedBulletinKey = bulletinSelect.value;
+    if (!selectedBulletinKey || filteredMonitoringTrademarks.length === 0) return;
 
     // UI'yi hazırla
     loadingIndicator.textContent = 'Arama yapılıyor...';
@@ -428,19 +405,29 @@ async function performSearch(fromCacheOnly = false) {
     let trademarksToSearch = [];
 
     // Önbellekten veri çek
-    for (const tm of filteredMonitoringTrademarks) {
-        const recordId = `${tm.id}_${selectedBulletin}`;
-        const result = await searchRecordService.getRecord(recordId);
-        if (result.success && result.data) {
-            cachedResults.push(...result.data.results.map(r => ({
-                ...r,
-                source: 'cache',
-                monitoredTrademarkId: tm.id,
-                monitoredTrademark: tm.title || tm.markName || 'BELİRSİZ_MARKA'
-            })));
-        } else {
-            trademarksToSearch.push(tm);
-        }
+    const monitoredTrademarkIds = filteredMonitoringTrademarks.map(tm => tm.id);
+    const batchResults = await searchRecordService.getBatchRecords(monitoredTrademarkIds, selectedBulletinKey);
+    
+    if (batchResults.success) {
+        batchResults.data.forEach(record => {
+            const tm = filteredMonitoringTrademarks.find(t => t.id === record.monitoredTrademarkId);
+            if (tm && record.results) {
+                cachedResults.push(...record.results.map(r => ({
+                    ...r,
+                    source: 'cache',
+                    monitoredTrademarkId: tm.id,
+                    monitoredTrademark: tm.title || tm.markName || 'BELİRSİZ_MARKA'
+                })));
+            }
+        });
+        
+        // Cache'de olmayan markaları belirle
+        const cachedTrademarkIds = batchResults.data.map(r => r.monitoredTrademarkId);
+        trademarksToSearch = filteredMonitoringTrademarks.filter(tm => 
+            !cachedTrademarkIds.includes(tm.id)
+        );
+    } else {
+        trademarksToSearch = [...filteredMonitoringTrademarks];
     }
 
     let newSearchResults = [];
@@ -459,7 +446,8 @@ async function performSearch(fromCacheOnly = false) {
         console.log("Cloud Function'a gönderilen markalar:", monitoredMarksPayload);
 
         try {
-            const resultsFromCF = await runTrademarkSearch(monitoredMarksPayload, selectedBulletin);
+            const bulletinInfo = parseBulletinKey(selectedBulletinKey);
+            const resultsFromCF = await runTrademarkSearch(monitoredMarksPayload, bulletinInfo.bulletinNo);
 
             if (resultsFromCF && resultsFromCF.length > 0) {
                 newSearchResults = resultsFromCF.map(hit => {
@@ -471,7 +459,7 @@ async function performSearch(fromCacheOnly = false) {
                     };
                 });
 
-                // Sonuçları grupla ve kaydet
+                // Sonuçları grupla ve kaydet - YENİ FORMAT
                 const groupedResults = newSearchResults.reduce((acc, currentResult) => {
                     const monitoredTrademarkId = currentResult.monitoredTrademarkId;
                     if (!acc[monitoredTrademarkId]) {
@@ -481,13 +469,17 @@ async function performSearch(fromCacheOnly = false) {
                     return acc;
                 }, {});
 
-                // Her marka için önbelleğe kaydet
+                // Her marka için yeni formatta kaydet
                 for (const [monitoredTrademarkId, results] of Object.entries(groupedResults)) {
-                    const recordId = `${monitoredTrademarkId}_${selectedBulletin}`;
-                    await searchRecordService.saveRecord(recordId, { 
-                        results: results, 
-                        searchDate: new Date().toISOString() 
-                    }, selectedBulletin);
+                    await searchRecordService.saveRecord(
+                        monitoredTrademarkId, 
+                        { 
+                            results: results, 
+                            searchDate: new Date().toISOString(),
+                            bulletinNo: bulletinInfo.bulletinNo
+                        }, 
+                        selectedBulletinKey
+                    );
                 }
             }
         } catch (error) {
@@ -505,14 +497,22 @@ async function performSearch(fromCacheOnly = false) {
     
     loadingIndicator.style.display = 'none';
 
-    const infoMessage = `Toplam ${allSimilarResults.length} benzer sonuç bulundu. (${cachedResults.length} önbellekten, ${newSearchResults.length} yeni arama ile)`;
+    const infoMessage = `Toplam ${allSimilarResults.length} benzer sonuç bulundu (${cachedResults.length} önbellekten, ${newSearchResults.length} yeni arama ile)`;
     infoMessageContainer.innerHTML = `<div class="info-message">${infoMessage}</div>`;
 
-    pagination.update(allSimilarResults.length);
-    renderCurrentPageOfResults();
+    if (allSimilarResults.length > 0) {
+        pagination.update(allSimilarResults.length);
+        renderCurrentPageOfResults();
+        noRecordsMessage.style.display = 'none';
+    } else {
+        noRecordsMessage.textContent = 'Hiçbir benzer sonuç bulunamadı.';
+        noRecordsMessage.style.display = 'block';
+        pagination.update(0);
+    }
 
-    startSearchBtn.disabled = true;
-    researchBtn.disabled = allSimilarResults.length === 0;
+    // Butonları yeniden aktifleştir
+    startSearchBtn.disabled = false;
+    researchBtn.disabled = false;
 }
 
 function groupAndSortResults() {
@@ -570,381 +570,197 @@ function renderCurrentPageOfResults() {
     }
 
     noRecordsMessage.style.display = 'none';
-    updateSearchResultsHeader();
 
-    // Grup bazlı render
-    const pageGroups = {};
-    currentPageData.forEach(hit => {
-        const trademarkKey = hit.monitoredTrademarkId || 'unknown';
-        if (!pageGroups[trademarkKey]) {
-            pageGroups[trademarkKey] = [];
-        }
-        pageGroups[trademarkKey].push(hit);
+    currentPageData.forEach((result, index) => {
+        const actualIndex = startIndex + index;
+        const row = createResultRow(result, actualIndex);
+        resultsTableBody.appendChild(row);
     });
-
-    const sortedGroupKeys = Object.keys(pageGroups).sort((a, b) => {
-        const markA = pageGroups[a][0]?.monitoredTrademark || 'Bilinmeyen Marka';
-        const markB = pageGroups[b][0]?.monitoredTrademark || 'Bilinmeyen Marka';
-        return markA.localeCompare(markB);
-    });
-
-    let currentRowIndex = startIndex;
-
-    sortedGroupKeys.forEach(trademarkKey => {
-        const groupResults = pageGroups[trademarkKey];
-        const monitoredTrademark = groupResults[0].monitoredTrademark || 'Bilinmeyen Marka';
-        
-        // Grup başlığı
-        const totalCountForThisMark = allSimilarResults.filter(
-            item => (item.monitoredTrademarkId || 'unknown') === trademarkKey
-        ).length;
-
-        const groupHeaderRow = document.createElement('tr');
-        groupHeaderRow.classList.add('group-header');
-        groupHeaderRow.innerHTML = `
-            <td colspan="9">
-                📋 <strong>${monitoredTrademark}</strong> markası için bulunan benzer sonuçlar (${totalCountForThisMark} adet)
-            </td>
-        `;
-        resultsTableBody.appendChild(groupHeaderRow);
-
-        // Grup içeriği
-        groupResults.forEach((hit) => {
-            currentRowIndex++;
-            const row = createResultRow(hit, currentRowIndex);
-            resultsTableBody.appendChild(row);
-        });
-    });
-
-    // Event listener'ları ekle
-    attachEventListeners();
 }
 
-function createResultRow(hit, rowIndex) {
-    const holders = Array.isArray(hit.holders) 
-        ? hit.holders.map(h => h.name || h.id).filter(Boolean).join(', ') 
-        : (hit.holders || '');
-
-    const monitoredNice = hit.monitoredNiceClasses || [];
-    const niceClassHtml = Array.isArray(hit.niceClasses) 
-        ? hit.niceClasses.map(cls => 
-            `<span class="nice-class-badge ${monitoredNice.includes(cls) ? 'match' : ''}">${cls}</span>`
-          ).join('') 
-        : (hit.niceClasses || '');
-
-    const similarityScore = hit.similarityScore ? `${(hit.similarityScore * 100).toFixed(0)}%` : '-';
-
-    const isSimilar = hit.isSimilar;
-    let similarityBtnClass = 'not-similar';
-    let similarityBtnText = 'Benzemez';
-
-    if (isSimilar === true) {
-        similarityBtnClass = 'similar';
-        similarityBtnText = 'Benzer';
-    }
-    
-    const resultId = hit.objectID || hit.applicationNo;
-
+function createResultRow(result, index) {
     const row = document.createElement('tr');
     row.innerHTML = `
-        <td>${rowIndex}</td> 
-        <td>${hit.applicationNo || '-'}</td>
-        <td><strong>${hit.markName || '-'}</strong></td>
-        <td>${holders}</td>
-        <td>${niceClassHtml}</td>
-        <td>${similarityScore}</td>
+        <td>${index + 1}</td>
+        <td style="text-align: left;">
+            <strong>${result.monitoredTrademark || 'Bilinmeyen Marka'}</strong>
+        </td>
+        <td style="text-align: left;">
+            <div class="result-mark-name">${result.markName || '-'}</div>
+            ${result.imagePath ? `<img src="${result.imagePath}" alt="Marka Görseli" style="max-width: 50px; max-height: 50px; margin-top: 5px;">` : ''}
+        </td>
+        <td>${result.applicationNo || '-'}</td>
+        <td>${result.applicationDate || '-'}</td>
+        <td>${result.holders || '-'}</td>
+        <td>${Array.isArray(result.niceClasses) ? result.niceClasses.join(', ') : (result.niceClasses || '-')}</td>
         <td>
-            <button class="action-btn ${similarityBtnClass}" 
-                    data-result-id="${resultId}" 
-                    data-monitored-trademark-id="${hit.monitoredTrademarkId}" 
-                    data-bulletin-id="${bulletinSelect.value}">
-                ${similarityBtnText}
-            </button>
+            <span class="similarity-score">${(result.similarityScore || 0).toFixed(2)}</span>
         </td>
         <td>
-            <select class="bs-select" 
-                    data-result-id="${resultId}" 
-                    data-monitored-trademark-id="${hit.monitoredTrademarkId}" 
-                    data-bulletin-id="${bulletinSelect.value}">
-                <option value="">B.Ş</option>
-                <option value="%0" ${hit.bs === '%0' ? 'selected' : ''}>%0</option>
-                <option value="%20" ${hit.bs === '%20' ? 'selected' : ''}>%20</option>
-                <option value="%30" ${hit.bs === '%30' ? 'selected' : ''}>%30</option>
-                <option value="%40" ${hit.bs === '%40' ? 'selected' : ''}>%40</option>
-                <option value="%45" ${hit.bs === '%45' ? 'selected' : ''}>%45</option>
-                <option value="%50" ${hit.bs === '%50' ? 'selected' : ''}>%50</option>
-                <option value="%55" ${hit.bs === '%55' ? 'selected' : ''}>%55</option>
-                <option value="%60" ${hit.bs === '%60' ? 'selected' : ''}>%60</option>
-                <option value="%70" ${hit.bs === '%70' ? 'selected' : ''}>%70</option>
-                <option value="%80" ${hit.bs === '%80' ? 'selected' : ''}>%80</option>
-            </select>
-        </td>
-        <td class="note-cell" 
-            data-result-id="${resultId}" 
-            data-monitored-trademark-id="${hit.monitoredTrademarkId}" 
-            data-bulletin-id="${bulletinSelect.value}">
-            <div class="note-cell-content">
-                <span class="note-icon">📝</span>
-                ${hit.note 
-                    ? `<span class="note-text">${hit.note}</span>` 
-                    : `<span class="note-placeholder">Not ekle</span>`}
+            <div class="similarity-controls">
+                <button class="btn-similar ${result.isSimilar === true ? 'active' : ''}" 
+                        onclick="toggleSimilarity(this, '${result.monitoredTrademarkId}', '${bulletinSelect.value}', '${result.objectID}', true)">
+                    Benzer
+                </button>
+                <button class="btn-not-similar ${result.isSimilar === false ? 'active' : ''}" 
+                        onclick="toggleSimilarity(this, '${result.monitoredTrademarkId}', '${bulletinSelect.value}', '${result.objectID}', false)">
+                    Benzemez
+                </button>
             </div>
         </td>
+        <td>
+            <button class="btn-note" onclick="openNoteModal('${result.monitoredTrademarkId}', '${bulletinSelect.value}', '${result.objectID}', '${result.note || ''}')">
+                ${result.note ? '📝' : '📝➕'}
+            </button>
+        </td>
+        <td><span class="source-badge source-${result.source}">${result.source === 'cache' ? 'Önbellek' : 'Yeni'}</span></td>
     `;
     return row;
 }
 
-// === EVENT HANDLERS ===
-function attachEventListeners() {
-    // Benzerlik butonları
-    resultsTableBody.querySelectorAll('.action-btn').forEach(button => {
-        button.addEventListener('click', handleSimilarityToggle);
-    });
+// === SIMILARITY TOGGLE FUNCTIONS ===
+window.toggleSimilarity = async function(button, monitoredTrademarkId, bulletinKey, resultId, isSimilar) {
+    try {
+        const result = await similarityService.updateSimilarityFields(
+            monitoredTrademarkId, 
+            bulletinKey, 
+            resultId, 
+            { isSimilar }
+        );
 
-    // B.Ş. select'leri
-    resultsTableBody.querySelectorAll('.bs-select').forEach(select => {
-        select.addEventListener('change', handleBsChange);
-    });
-
-    // Not hücreleri
-    resultsTableBody.querySelectorAll('.note-cell').forEach(cell => {
-        const contentDiv = cell.querySelector('.note-cell-content');
-        contentDiv.addEventListener('click', () => {
-            const resultId = cell.dataset.resultId;
-            const monitoredTrademarkId = cell.dataset.monitoredTrademarkId;
-            const bulletinId = cell.dataset.bulletinId;
-            const noteTextSpan = cell.querySelector('.note-text') || cell.querySelector('.note-placeholder');
+        if (result.success) {
+            // UI'yi güncelle
+            const row = button.closest('tr');
+            const similarBtn = row.querySelector('.btn-similar');
+            const notSimilarBtn = row.querySelector('.btn-not-similar');
             
-            openNoteModal(resultId, monitoredTrademarkId, bulletinId, 
-                noteTextSpan.textContent === 'Not ekle' ? '' : noteTextSpan.textContent);
-        });
-    });
-}
+            similarBtn.classList.toggle('active', isSimilar === true);
+            notSimilarBtn.classList.toggle('active', isSimilar === false);
+            
+            // allSimilarResults array'ini de güncelle
+            const resultIndex = allSimilarResults.findIndex(r => 
+                r.monitoredTrademarkId === monitoredTrademarkId && 
+                (r.objectID === resultId || r.applicationNo === resultId)
+            );
+            if (resultIndex !== -1) {
+                allSimilarResults[resultIndex].isSimilar = isSimilar;
+            }
+            
+            console.log(`✅ Benzerlik durumu güncellendi: ${resultId} -> ${isSimilar ? 'Benzer' : 'Benzemez'}`);
+        } else {
+            console.error('Benzerlik durumu güncellenemedi:', result.error);
+            alert('Benzerlik durumu güncellenemedi: ' + result.error);
+        }
+    } catch (error) {
+        console.error('Benzerlik durumu güncelleme hatası:', error);
+        alert('Bir hata oluştu!');
+    }
+};
 
-async function handleSimilarityToggle(event) {
-    const resultId = event.target.dataset.resultId;
-    const monitoredTrademarkId = event.target.dataset.monitoredTrademarkId;
-    const bulletinId = event.target.dataset.bulletinId;
+// === NOTE MODAL FUNCTIONS ===
+window.openNoteModal = function(monitoredTrademarkId, bulletinKey, resultId, currentNote) {
+    currentNoteModalData = { monitoredTrademarkId, bulletinKey, resultId };
+    
+    const modal = document.getElementById('noteModal');
+    const textarea = document.getElementById('noteTextarea');
+    
+    textarea.value = currentNote || '';
+    modal.style.display = 'block';
+    textarea.focus();
+};
 
-    const currentHit = allSimilarResults.find(r => 
-        (r.objectID === resultId || r.applicationNo === resultId) &&
-        r.monitoredTrademarkId === monitoredTrademarkId
-    );
+window.closeNoteModal = function() {
+    document.getElementById('noteModal').style.display = 'none';
+    currentNoteModalData = {};
+};
 
-    if (!currentHit) {
-        console.error('Eşleşen sonuç bulunamadı:', resultId, monitoredTrademarkId);
-        alert('Sonuç bilgileri bulunamadı, lütfen sayfayı yenileyin.');
+window.saveNote = async function() {
+    const note = document.getElementById('noteTextarea').value.trim();
+    const { monitoredTrademarkId, bulletinKey, resultId } = currentNoteModalData;
+    
+    if (!monitoredTrademarkId || !bulletinKey || !resultId) {
+        alert('Not kaydedilemedi: Gerekli bilgiler eksik');
         return;
     }
-
-    const newSimilarityStatus = currentHit.isSimilar === true ? false : true;
     
-    // UI'yi güncelle
-    event.target.classList.remove('similar', 'not-similar');
-    if (newSimilarityStatus === true) {
-        event.target.classList.add('similar');
-        event.target.textContent = 'Benzer';
-    } else {
-        event.target.classList.add('not-similar');
-        event.target.textContent = 'Benzemez';
-    }
-
-    // Veritabanını güncelle
-    const updateResult = await similarityService.updateSimilarityFields(
-        monitoredTrademarkId, 
-        bulletinId, 
-        resultId, 
-        { isSimilar: newSimilarityStatus }
-    );
-
-    if (updateResult.success) {
-        const rIndex = allSimilarResults.findIndex(r => 
-            (r.objectID === resultId || r.applicationNo === resultId) &&
-            r.monitoredTrademarkId === monitoredTrademarkId
+    try {
+        const result = await similarityService.updateSimilarityFields(
+            monitoredTrademarkId, 
+            bulletinKey, 
+            resultId, 
+            { note }
         );
-        if (rIndex !== -1) {
-            allSimilarResults[rIndex].isSimilar = newSimilarityStatus;
-            allSimilarResults[rIndex].similarityUpdatedAt = new Date().toISOString();
-        }
-        console.log(`✅ Benzerlik durumu güncellendi: ${resultId} -> ${newSimilarityStatus ? 'Benzer' : 'Benzemez'}`);
-    } else {
-        // Hata durumunda UI'yi geri al
-        event.target.classList.remove('similar', 'not-similar');
-        if (currentHit.isSimilar === true) {
-            event.target.classList.add('similar');
-            event.target.textContent = 'Benzer';
-        } else {
-            event.target.classList.add('not-similar');
-            event.target.textContent = 'Benzemez';
-        }
-        console.error('❌ Benzerlik durumu güncellenemedi:', updateResult.error);
-        alert('Benzerlik durumu güncellenirken hata oluştu.');
-    }
-}
-
-async function handleBsChange(event) {
-    const resultId = event.target.dataset.resultId;
-    const monitoredTrademarkId = event.target.dataset.monitoredTrademarkId;
-    const bulletinId = event.target.dataset.bulletinId;
-    const newValue = event.target.value;
-
-    const updateResult = await similarityService.updateSimilarityFields(
-        monitoredTrademarkId, 
-        bulletinId, 
-        resultId, 
-        { bs: newValue }
-    );
-
-    if (updateResult.success) {
-        const rIndex = allSimilarResults.findIndex(r => 
-            (r.objectID === resultId || r.applicationNo === resultId) &&
-            r.monitoredTrademarkId === monitoredTrademarkId
-        );
-        if (rIndex !== -1) {
-            allSimilarResults[rIndex].bs = newValue;
-        }
-        console.log(`✅ B.Ş. güncellendi: ${resultId} -> ${newValue}`);
-    } else {
-        console.error('❌ B.Ş. güncellenemedi:', updateResult.error);
-        alert('B.Ş. güncellenirken hata oluştu.');
-    }
-}
-
-// === MODAL FUNCTIONS ===
-function openNoteModal(resultId, monitoredTrademarkId, bulletinId, currentNote) {
-    const noteModal = document.getElementById('noteModal');
-    const noteInputModal = document.getElementById('noteInputModal');
-    
-    noteInputModal.value = currentNote;
-    currentNoteModalData = { resultId, monitoredTrademarkId, bulletinId };
-
-    noteModal.classList.add('show');
-    noteInputModal.focus();
-}
-
-async function saveNote() {
-    const { resultId, monitoredTrademarkId, bulletinId } = currentNoteModalData;
-    const noteInputModal = document.getElementById('noteInputModal');
-    const newNoteValue = noteInputModal.value;
-
-    const updateResult = await similarityService.updateSimilarityFields(
-        monitoredTrademarkId,
-        bulletinId,
-        resultId,
-        { note: newNoteValue }
-    );
-
-    if (updateResult.success) {
-        const hit = allSimilarResults.find(r =>
-            (r.objectID === resultId || r.applicationNo === resultId) &&
-            r.monitoredTrademarkId === monitoredTrademarkId
-        );
-        if (hit) hit.note = newNoteValue;
-
-        const cell = resultsTableBody.querySelector(
-            `td.note-cell[data-result-id="${resultId}"][data-monitored-trademark-id="${monitoredTrademarkId}"]`
-        );
-        if (cell) {
-            const span = cell.querySelector('.note-text') || cell.querySelector('.note-placeholder');
-            span.textContent = newNoteValue || 'Not ekle';
-            span.className = newNoteValue ? 'note-text' : 'note-placeholder';
-        }
-        console.log(`✅ Not güncellendi: ${resultId} -> ${newNoteValue}`);
-        document.getElementById('noteModal').classList.remove('show');
-    } else {
-        console.error('❌ Not güncellenemedi:', updateResult.error);
-        alert('Not güncellenirken hata oluştu.');
-    }
-}
-
-// === UTILITY FUNCTIONS ===
-function updateSearchResultsHeader() {
-    const resultsHeader = document.querySelector('.results-header h3');
-    if (resultsHeader) {
-        resultsHeader.innerHTML = `Arama Sonuçları`;
-    }
-}
-
-function getAllSearchResults() {
-    return allSimilarResults
-        .filter(r => r.isSimilar === true)
-        .map(r => {
-            const monitoredTrademark = filteredMonitoringTrademarks.find(mt => mt.id === r.monitoredTrademarkId);
+        
+        if (result.success) {
+            // allSimilarResults array'ini güncelle
+            const resultIndex = allSimilarResults.findIndex(r => 
+                r.monitoredTrademarkId === monitoredTrademarkId && 
+                (r.objectID === resultId || r.applicationNo === resultId)
+            );
+            if (resultIndex !== -1) {
+                allSimilarResults[resultIndex].note = note;
+            }
             
-            return {
-                monitoredMark: {
-                    applicationNo: monitoredTrademark?.applicationNumber || r.monitoredTrademark || '-',
-                    date: monitoredTrademark?.applicationDate || '-',
-                    niceClass: Array.isArray(monitoredTrademark?.niceClass) 
-                        ? monitoredTrademark.niceClass.join(', ') 
-                        : (monitoredTrademark?.niceClass || '-'),
-                    ownerName: getOwnerNames(monitoredTrademark) || 'Bilinmeyen Sahip',
-                    imagePath: monitoredTrademark?.imagePath || null
-                },
-                similarMark: {
-                    applicationNo: r.applicationNo || '-',
-                    date: r.applicationDate || '-',
-                    niceClass: Array.isArray(r.niceClasses) 
-                        ? r.niceClasses.join(', ') 
-                        : (r.niceClasses || '-'),
-                    name: r.markName || '-',
-                    imagePath: r.imagePath || null,
-                    similarity: r.similarityScore ? `${(r.similarityScore * 100).toFixed(0)}%` : null,
-                    note: r.note || null
-                }
-            };
-        });
-}
+            // UI'yi güncelle
+            renderCurrentPageOfResults();
+            closeNoteModal();
+            
+            console.log(`✅ Not güncellendi: ${resultId}`);
+        } else {
+            alert('Not kaydedilemedi: ' + result.error);
+        }
+    } catch (error) {
+        console.error('Not kaydetme hatası:', error);
+        alert('Bir hata oluştu!');
+    }
+};
 
-// === INITIALIZATION ===
+// === EVENT LISTENERS ===
 document.addEventListener('DOMContentLoaded', async () => {
-    console.log(">>> DOM yüklendi, başlatılıyor...");
+    console.log(">>> DOM Content Loaded");
     
     initializePagination();
     await loadInitialData();
-
-    // Ana buton event listener'ları
+    
+    // Event Listeners
     startSearchBtn.addEventListener('click', () => performSearch(false));
     researchBtn.addEventListener('click', performResearch);
     clearFiltersBtn.addEventListener('click', () => {
         ownerSearchInput.value = '';
         niceClassSearchInput.value = '';
-        bulletinSelect.selectedIndex = 0;
         applyMonitoringListFilters();
     });
-
-    // Filter event listener'ları
-    ownerSearchInput.addEventListener('input', debounce(applyMonitoringListFilters, 400));
-    niceClassSearchInput.addEventListener('input', debounce(applyMonitoringListFilters, 400));
+    
+    const debouncedFilter = debounce(applyMonitoringListFilters, 300);
+    ownerSearchInput.addEventListener('input', debouncedFilter);
+    niceClassSearchInput.addEventListener('input', debouncedFilter);
     bulletinSelect.addEventListener('change', checkCacheAndToggleButtonStates);
-
-    // Modal event listener'ları
-    const noteModal = document.getElementById('noteModal');
-    const closeNoteModalBtn = document.getElementById('closeNoteModal');
-    const cancelNoteBtn = document.getElementById('cancelNoteBtn');
-    const saveNoteBtn = document.getElementById('saveNoteBtn');
-
-    if (closeNoteModalBtn) {
-        closeNoteModalBtn.addEventListener('click', () => noteModal.classList.remove('show'));
-    }
-    if (cancelNoteBtn) {
-        cancelNoteBtn.addEventListener('click', () => noteModal.classList.remove('show'));
-    }
-    if (saveNoteBtn) {
-        saveNoteBtn.addEventListener('click', saveNote);
-    }
-
-    // Rapor oluşturma
-    document.getElementById("btnGenerateReport").addEventListener("click", async () => {
-        const results = getAllSearchResults();
-        if (!results.length) {
-            alert("Hiç benzer olarak işaretlenmiş sonuç yok.");
+    
+    // Modal kapatma event'leri
+    window.addEventListener('click', (event) => {
+        const modal = document.getElementById('noteModal');
+        if (event.target === modal) {
+            closeNoteModal();
+        }
+    });
+    
+    // Escape tuşu ile modal kapatma
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') {
+            closeNoteModal();
+        }
+    });
+    
+    // Rapor oluşturma butonu
+    document.getElementById('generateReportBtn').addEventListener('click', async () => {
+        if (allSimilarResults.length === 0) {
+            alert("Rapor oluşturmak için önce arama yapın.");
             return;
         }
 
         try {
             const generateSimilarityReport = httpsCallable(functions, "generateSimilarityReport");
-            const response = await generateSimilarityReport({ results });
+            const response = await generateSimilarityReport({ results: allSimilarResults });
 
             if (!response.data.success) {
                 alert("Rapor oluşturulamadı: " + (response.data.error || ""));
