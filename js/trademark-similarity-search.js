@@ -267,12 +267,8 @@ async function loadCachedResultsOnly() {
             console.log(`✅ Doküman bulundu: ${docSnap.id}, sonuç sayısı: ${data.results.length}`);
 
             data.results.forEach(r => {
-                const monitoredTrademarkId = r.monitoredMarkId || r.monitoredTrademarkId;
-
-                // İzleme listesindeki markayı bul
-                const matchedTrademark = filteredMonitoringTrademarks.find(tm =>
-                    tm.id === monitoredTrademarkId || tm.applicationNumber === r.applicationNo
-                );
+            const monitoredTrademarkId = r.monitoredTrademarkId;
+            const matchedTrademark = filteredMonitoringTrademarks.find(tm => tm.id === monitoredTrademarkId);
 
                 if (!matchedTrademark) {
                     console.log('❌ Eşleşme bulunamadı ->', { monitoredTrademarkId, applicationNo: r.applicationNo });
