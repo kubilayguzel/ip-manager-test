@@ -852,18 +852,24 @@ async function performResearch() {
     }
     
     try {
-        // Önce mevcut cache'i temizle (opsiyonel)
-        console.log("🗑️ Mevcut cache temizleniyor...");
+        loadingIndicator.textContent = 'Cache temizleniyor...';
+        loadingIndicator.style.display = 'block';
+        noRecordsMessage.style.display = 'none';
+        infoMessageContainer.innerHTML = '';
+        resultsTableBody.innerHTML = '';
         
-        // Cache'i silmek isterseniz:
-        /*
+        // ✅ ÖNCELİKLE CACHE'İ TEMİZLE
+        console.log("🗑️ Cache temizleniyor...");
         for (const tm of filteredMonitoringTrademarks) {
-            await searchRecordService.deleteRecord(bulletinKey, tm.id);
+            console.log(`🗑️ Cache siliniyor: ${bulletinKey}/${tm.id}`);
+            const deleteResult = await searchRecordService.deleteRecord(bulletinKey, tm.id);
+            console.log(`🗑️ Silme sonucu:`, deleteResult);
         }
-        */
         
-        // Arama yapın (cache'ten değil, yeni arama)
-        await performSearch(false);
+        console.log("✅ Cache temizlendi, yeni arama başlatılıyor...");
+        
+        // ✅ SONRA YENİ ARAMA YAP
+        await performSearch(false); // false = cache'ten değil, yeni arama yap
         
         console.log("✅ Yeniden arama tamamlandı!");
         
