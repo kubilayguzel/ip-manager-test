@@ -424,7 +424,7 @@ async function performSearch(fromCacheOnly = false) {
                         bulletinNoType: typeof bulletinNo
                     });
                     
-                    await searchRecordService.saveRecord(recordId, saveData, bulletinNo);
+                    await searchRecordService.saveRecord(recordId, saveData, selectedBulletin);
                     console.log(`✅ Kayıt: ${recordId} (${specificResults.length} sonuç)`);
                 }
             } else {
