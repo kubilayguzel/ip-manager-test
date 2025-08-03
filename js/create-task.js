@@ -13,7 +13,7 @@ class CreateTaskModule {
         this.selectedTpInvoiceParty = null;
         this.selectedServiceInvoiceParty = null;
         this.pendingChildTransactionData = null;
-        this.activeTab = 'brand-info'; // Yeni: Aktif sekmeyi takip etmek için
+        this.activeTab = 'brand-info'; 
     }
 
     async init() {
@@ -31,9 +31,6 @@ class CreateTaskModule {
             this.allPersons = personsResult.data || [];
             this.allUsers = usersResult.data || [];
             this.allTransactionTypes = transactionTypesResult.data || [];
-            
-            console.log('Kullanıcılar yüklendi:', this.allUsers.length);
-            console.log('Tüm işlem tipleri yüklendi:', this.allTransactionTypes.length);
             
         } catch (error) {
             console.error("Veri yüklenirken hata oluştu:", error);
@@ -63,7 +60,17 @@ class CreateTaskModule {
         document.getElementById('mainIpType').addEventListener('change', (e) => this.handleMainTypeChange(e));
         document.getElementById('specificTaskType').addEventListener('change', (e) => this.handleSpecificTypeChange(e));
         document.getElementById('createTaskForm').addEventListener('submit', (e) => this.handleFormSubmit(e));
-        document.getElementById('cancelBtn').addEventListener('click', () => { window.location.href = 'task-management.html'; });
+        
+        // Dinamik olarak eklenecek butonlar için olay dinleyicileri
+        document.addEventListener('click', (e) => {
+            if (e.target.id === 'cancelBtn') {
+                window.location.href = 'task-management.html';
+            }
+            if (e.target.id === 'nextTabBtn') {
+                this.handleNextTab();
+            }
+        });
+        
         const closeAddPersonModalBtn = document.getElementById('closeAddPersonModal');
         if(closeAddPersonModalBtn) closeAddPersonModalBtn.addEventListener('click', () => this.hideAddPersonModal());
         const cancelPersonBtn = document.getElementById('cancelPersonBtn');
@@ -75,19 +82,13 @@ class CreateTaskModule {
         const cancelParentSelectionBtn = document.getElementById('cancelParentSelectionBtn');
         if(cancelParentSelectionBtn) cancelParentSelectionBtn.addEventListener('click', () => this.hideParentSelectionModal());
 
-        // Yeni eklenen Bootstrap tab listener'ı (geliştirilmiş)
+        // Sekmelerin serbestçe gezilebilmesi için olay dinleyicisi
         $(document).on('click', '#myTaskTabs a', (e) => {
             e.preventDefault();
-            this.activeTab = e.target.getAttribute('href').substring(1);
+            const targetTabId = e.target.getAttribute('href').substring(1);
+            this.activeTab = targetTabId;
             $(e.target).tab('show');
             this.updateButtonsAndTabs();
-        });
-        
-        // Dinamik olarak eklenecek buton için olay dinleyicileri
-        document.addEventListener('click', (e) => {
-            if (e.target.id === 'nextTabBtn') {
-                this.handleNextTab();
-            }
         });
     }
 
@@ -102,21 +103,21 @@ class CreateTaskModule {
     }
 
     updateButtonsAndTabs() {
-        const formActions = document.querySelector('#conditionalFieldsContainer .form-actions');
-        if (!formActions) return;
+        const formActionsContainer = document.getElementById('formActionsContainer');
+        if (!formActionsContainer) return;
 
-        formActions.innerHTML = '';
+        formActionsContainer.innerHTML = '';
         
         const tabs = document.querySelectorAll('#myTaskTabs .nav-item');
         const activeTabIndex = Array.from(tabs).findIndex(tab => tab.querySelector('.nav-link.active'));
 
         if (activeTabIndex < tabs.length - 1) {
-            formActions.innerHTML = `
+            formActionsContainer.innerHTML = `
                 <button type="button" id="cancelBtn" class="btn btn-secondary">İptal</button>
                 <button type="button" id="nextTabBtn" class="btn btn-primary">İlerle</button>
             `;
         } else {
-            formActions.innerHTML = `
+            formActionsContainer.innerHTML = `
                 <button type="button" id="cancelBtn" class="btn btn-secondary">İptal</button>
                 <button type="submit" id="saveTaskBtn" class="btn btn-primary" disabled>İşi Oluştur ve Kaydet</button>
             `;
@@ -129,7 +130,9 @@ class CreateTaskModule {
         const specificTypeSelect = document.getElementById('specificTaskType');
         const conditionalFieldsContainer = document.getElementById('conditionalFieldsContainer');
         conditionalFieldsContainer.innerHTML = '';
-        document.getElementById('saveTaskBtn')?.disabled = true;
+        
+        const saveTaskBtn = document.getElementById('saveTaskBtn');
+        if(saveTaskBtn) saveTaskBtn.disabled = true;
 
         specificTypeSelect.innerHTML = '<option value="">Önce İşin Ana Türünü Seçin</option>';
         if (mainType) {
@@ -163,7 +166,9 @@ class CreateTaskModule {
         const container = document.getElementById('conditionalFieldsContainer');
         container.innerHTML = '';
         this.resetSelections();
-        document.getElementById('saveTaskBtn')?.disabled = true;
+        
+        const saveTaskBtn = document.getElementById('saveTaskBtn');
+        if(saveTaskBtn) saveTaskBtn.disabled = true;
 
         if (!selectedTaskType) return;
         
@@ -370,19 +375,11 @@ class CreateTaskModule {
                         </div>
                     </div>
                 </div>
-                <div class="form-actions"><button type="button" id="cancelBtn" class="btn btn-secondary">İptal</button><button type="submit" id="saveTaskBtn" class="btn btn-primary" disabled>İşi Oluştur ve Kaydet</button></div>
             </div>
+            <div id="formActionsContainer" class="form-actions"></div>
         `;
         this.setupDynamicFormListeners();
         this.updateButtonsAndTabs();
-        
-        // Tabları etkinleştirmek için gerekli kod
-        $('#myTaskTabs a').on('click', (e) => {
-            e.preventDefault();
-            this.activeTab = e.target.getAttribute('href').substring(1);
-            $(e.target).tab('show');
-            this.updateButtonsAndTabs();
-        });
     }
 
     renderBaseForm(container, taskTypeName, taskTypeId) {
@@ -565,8 +562,12 @@ class CreateTaskModule {
         if (file && file.type.startsWith('image/')) {
             const reader = new FileReader();
             reader.onload = function(event) {
-                previewImage.src = event.target.result;
-                previewContainer.style.display = 'block';
+                if (previewImage) {
+                    previewImage.src = event.target.result;
+                }
+                if (previewContainer) {
+                    previewContainer.style.display = 'block';
+                }
             };
             reader.readAsDataURL(file);
         } else {
@@ -792,7 +793,7 @@ class CreateTaskModule {
             transactionHierarchy: "child"
         };
 
-        const addResult = await ipRecordsService.addTransactionToRecord(this.selectedIpRecord.id, childTransactionData);
+        const addResult = await ipRecordsService.addTransactionToRecord(this.selectedIpRecord?.id, childTransactionData);
         if (addResult.success) {
             alert('İş ve ilgili alt işlem başarıyla oluşturuldu!');
             this.hideParentSelectionModal();
@@ -835,15 +836,25 @@ class CreateTaskModule {
     }
     
     checkFormCompleteness() {
-        const specificTaskTypeId = document.getElementById('specificTaskType').value;
+        const specificTaskTypeId = document.getElementById('specificTaskType')?.value;
         const selectedTaskType = this.allTransactionTypes.find(type => type.id === specificTaskTypeId);
 
         let isComplete = false;
         
         if (selectedTaskType && selectedTaskType.alias === 'Başvuru' && selectedTaskType.ipType === 'trademark') {
-            isComplete = this.selectedIpRecord && 
-                         document.getElementById('brandExample')?.files?.length > 0;
-            // Diğer zorunlu alanlar da buraya eklenebilir
+            const requiredFields = [
+                this.selectedIpRecord, 
+                document.getElementById('brandType')?.value,
+                document.getElementById('brandCategory')?.value,
+                document.getElementById('brandExample')?.files?.length > 0,
+                document.getElementById('brandExampleText')?.value,
+                document.getElementById('nonLatinAlphabet')?.value,
+                document.querySelector('input[name="coverLetterRequest"]:checked')?.value,
+                document.querySelector('input[name="consentRequest"]:checked')?.value,
+                document.getElementById('taskPriority')?.value,
+                document.getElementById('assignedTo')?.value,
+            ];
+            isComplete = requiredFields.every(field => !!field);
         } else if (selectedTaskType) {
             const transactionLikeTasks = ['Devir', 'Lisans', 'Birleşme', 'Veraset ile İntikal', 'Rehin/Teminat'];
             if (transactionLikeTasks.includes(selectedTaskType.name)) {
@@ -859,7 +870,7 @@ class CreateTaskModule {
 
     async handleFormSubmit(e) {
         e.preventDefault();
-        const specificTaskTypeId = document.getElementById('specificTaskType').value;
+        const specificTaskTypeId = document.getElementById('specificTaskType')?.value;
         const selectedTransactionType = this.allTransactionTypes.find(type => type.id === specificTaskTypeId);
 
         if (!selectedTransactionType) {
@@ -872,7 +883,7 @@ class CreateTaskModule {
         let taskData = {
             taskType: selectedTransactionType.id,
             title: selectedTransactionType.alias || selectedTransactionType.name,
-            description: `'${this.selectedIpRecord?.title}' adlı varlık için ${selectedTransactionType.alias || selectedTransactionType.name} işlemi.`,
+            description: document.getElementById('taskDescription')?.value || `'${this.selectedIpRecord?.title}' adlı varlık için ${selectedTransactionType.alias || selectedTransactionType.name} işlemi.`,
             priority: document.getElementById('taskPriority')?.value || 'medium',
             assignedTo_uid: assignedToUser ? assignedToUser.id : null, 
             assignedTo_email: assignedToUser ? assignedToUser.email : null, 
