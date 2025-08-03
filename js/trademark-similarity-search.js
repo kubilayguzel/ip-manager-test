@@ -97,23 +97,22 @@ async function loadBulletinOptions() {
         console.log(`📋 Kayıtlı bültenler: ${registeredBulletins.size}`);
 
         // 2️⃣ Arama sonuçları olan bültenler (monitoringTrademarkRecords)
+        console.log("DEBUG → monitoringTrademarkRecords altındaki bültenler okunuyor...");
         const searchResultBulletins = new Map();
         const monitoringSnapshot = await getDocs(collection(db, 'monitoringTrademarkRecords'));
-        console.log("DEBUG → monitoringTrademarkRecords snapshot size:", monitoringSnapshot.size);
-        monitoringSnapshot.docs.forEach(d => console.log("  DOC:", d.id));
-
+        console.log("DEBUG → monitoringSnapshot size:", monitoringSnapshot.size);
 
         for (const bulletinDoc of monitoringSnapshot.docs) {
             const bulletinKey = bulletinDoc.id;
-            console.log("DEBUG → monitoringTrademarkRecords doc.id:", bulletinKey);
+            console.log(`DEBUG → Bülten doc bulundu: ${bulletinKey}`);
             try {
-                const trademarksSnapshot = await getDocs(
-                    collection(db, 'monitoringTrademarkRecords', bulletinKey, 'trademarks')
-                );
+                // Alt koleksiyon "trademarks"
+                const trademarksRef = collection(db, 'monitoringTrademarkRecords', bulletinKey, 'trademarks');
+                const trademarksSnapshot = await getDocs(trademarksRef);
+                console.log(`DEBUG → ${bulletinKey} altındaki trademarks size:`, trademarksSnapshot.size);
 
                 if (trademarksSnapshot.docs.length > 0) {
                     if (!registeredBulletins.has(bulletinKey)) {
-                        // Toleranslı split
                         const parts = bulletinKey.split('_');
                         const bulletinNo = parts[0] || bulletinKey;
                         const bulletinDateRaw = parts[1] || '';
@@ -131,20 +130,19 @@ async function loadBulletinOptions() {
                         };
 
                         searchResultBulletins.set(bulletinKey, searchBulletin);
-                        console.log("  📝 EKLENEN BÜLTEN:", searchBulletin);
+                        console.log(`DEBUG → Sadece Arama bülten eklendi:`, searchBulletin);
                     } else {
-                        console.log(`  ⏭️ ${bulletinKey} zaten kayıtlı bültenler arasında`);
+                        console.log(`DEBUG → ${bulletinKey} zaten kayıtlı bültenler arasında`);
                     }
                 } else {
-                    console.log(`  ❌ ${bulletinKey} için sonuç yok`);
+                    console.log(`DEBUG → ${bulletinKey} için trademarks boş`);
                 }
             } catch (subcollectionError) {
-                console.error(`  ❌ ${bulletinKey} subcollection hatası:`, subcollectionError);
+                console.error(`DEBUG → ${bulletinKey} alt koleksiyon hatası:`, subcollectionError);
             }
         }
 
-        console.log(`🔍 Sadece arama sonucu olan bültenler: ${searchResultBulletins.size}`);
-        console.log("📝 searchResultBulletins içeriği:");
+        console.log(`DEBUG → Sadece arama sonucu olan bülten sayısı: ${searchResultBulletins.size}`);
         searchResultBulletins.forEach((bulletin, key) => {
             console.log(`  ${key}: ${bulletin.displayName}`);
         });
