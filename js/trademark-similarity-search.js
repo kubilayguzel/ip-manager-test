@@ -96,7 +96,7 @@ async function loadBulletinOptions() {
         });
         console.log(`📋 Kayıtlı bültenler: ${registeredBulletins.size}`);
 
-        // 2️⃣ Arama sonuçları olan bültenler (monitoringTrademarkRecords)
+        // 2️⃣ Sadece arama sonucu olan bültenler (monitoringTrademarkRecords)
         console.log("DEBUG → monitoringTrademarkRecords altındaki bültenler okunuyor...");
         const searchResultBulletins = new Map();
         const monitoringSnapshot = await getDocs(collection(db, 'monitoringTrademarkRecords'));
@@ -106,7 +106,6 @@ async function loadBulletinOptions() {
             const bulletinKey = bulletinDoc.id;
             console.log(`DEBUG → Bülten doc bulundu: ${bulletinKey}`);
             try {
-                // Alt koleksiyon "trademarks"
                 const trademarksRef = collection(db, 'monitoringTrademarkRecords', bulletinKey, 'trademarks');
                 const trademarksSnapshot = await getDocs(trademarksRef);
                 console.log(`DEBUG → ${bulletinKey} altındaki trademarks size:`, trademarksSnapshot.size);
@@ -147,10 +146,17 @@ async function loadBulletinOptions() {
             console.log(`  ${key}: ${bulletin.displayName}`);
         });
 
-        // 3️⃣ Tüm bültenleri birleştir ve sırala
-        const allBulletins = new Map([...registeredBulletins, ...searchResultBulletins]);
+        // 3️⃣ Tüm bültenleri birleştir (duplicate fix: kayıtlı varsa searchOnly eklenmez)
+        const allBulletins = new Map();
+        registeredBulletins.forEach((v, k) => allBulletins.set(k, v));
+        searchResultBulletins.forEach((v, k) => {
+            if (!allBulletins.has(k)) {
+                allBulletins.set(k, v);
+            }
+        });
         console.log(`📊 Toplam bülten sayısı: ${allBulletins.size}`);
 
+        // 4️⃣ Sıralama
         const sortedBulletins = Array.from(allBulletins.values()).sort((a, b) => {
             if (a.source === 'registered' && b.source === 'searchOnly') return -1;
             if (a.source === 'searchOnly' && b.source === 'registered') return 1;
@@ -158,7 +164,7 @@ async function loadBulletinOptions() {
         });
         console.log("📝 sortedBulletins:", sortedBulletins);
 
-        // 4️⃣ Option oluştur
+        // 5️⃣ Selectbox'a ekleme
         sortedBulletins.forEach(bulletin => {
             const option = document.createElement('option');
             option.value = bulletin.bulletinKey;
@@ -179,7 +185,6 @@ async function loadBulletinOptions() {
         console.error('❌ Bülten seçenekleri yüklenirken hata:', error);
     }
 }
-
 
 function updateMonitoringCount() {
     document.getElementById('monitoringCount').textContent = filteredMonitoringTrademarks.length;
