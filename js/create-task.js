@@ -242,8 +242,8 @@ class CreateTaskModule {
                                     <div id="dropZone" class="border border-secondary p-3 text-center" style="cursor: pointer;">
                                         Marka örneği dosyasını buraya sürükleyin veya <a href="#" onclick="document.getElementById('brandExample').click(); return false;">tıklayarak seçin</a>.
                                     </div>
-                                    <input type="file" class="form-control-file d-none" id="brandExample">
-                                    <small class="form-text text-muted">Yüklenen marka örneği 591x591 px ve 300 DPI özelliklerinde olmalıdır.</small>
+                                    <input type="file" class="form-control-file d-none" id="brandExample" accept="image/jpeg,image/png">
+                                    <small class="form-text text-muted">Yüklenen marka örneği 591x591 px ve 300 DPI özelliklerinde olmalıdır. Aksi halde otomatik olarak dönüştürülecektir.</small>
                                 </div>
                             </div>
                             <div class="form-group row" id="brandExamplePreviewContainer" style="display:none;">
@@ -255,6 +255,12 @@ class CreateTaskModule {
                                 <label for="brandExampleText" class="col-sm-3 col-form-label">Marka Örneği Yazılı İfadesi</label>
                                 <div class="col-sm-9">
                                     <input type="text" class="form-control" id="brandExampleText">
+                                </div>
+                            </div>
+                            <div class="form-group row">
+                                <label for="nonLatinAlphabet" class="col-sm-3 col-form-label">Marka Örneğinde Latin Alfabesi Haricinde Harf Var Mı?</label>
+                                <div class="col-sm-9">
+                                    <input type="text" class="form-control" id="nonLatinAlphabet">
                                 </div>
                             </div>
                             <div class="form-group row">
@@ -371,10 +377,6 @@ class CreateTaskModule {
                                     <label for="taskDueDate" class="form-label">Operasyonel Son Tarih</label>
                                     <input type="date" id="taskDueDate" class="form-input">
                                 </div>
-                                <div class="form-group full-width">
-                                    <label for="taskDescription" class="form-label">İş Açıklaması:</label>
-                                    <textarea id="taskDescription" class="form-textarea"></textarea>
-                                </div>
                             </div>
                         </div>
                     </div>
@@ -399,25 +401,28 @@ class CreateTaskModule {
         let specificFieldsHtml = '';
         if (taskTypeId === 'litigation_yidk_annulment') {
             specificFieldsHtml = `
-                <div class="form-group full-width">
-                    <label for="subjectOfLawsuit" class="form-label">Dava Konusu</label>
-                    <textarea id="subjectOfLawsuit" name="subjectOfLawsuit" class="form-textarea"></textarea>
-                </div>
-                <div class="form-group">
-                    <label for="courtName" class="form-label">Mahkeme Adı</label>
-                    <input type="text" id="courtName" name="courtName" class="form-input">
-                </div>
-                <div class="form-group">
-                    <label for="courtFileNumber" class="form-label">Dava Dosya Numarası</label>
-                    <input type="text" id="courtFileNumber" name="courtFileNumber" class="form-input">
-                </div>
-                <div class="form-group date-picker-group">
-                    <label for="lawsuitDate" class="form-label">Dava Tarihi</label>
-                    <input type="date" id="lawsuitDate" name="lawsuitDate" class="form-input">
+                <div class="form-section">
+                    <h3 class="section-title">2. Dava Bilgileri</h3>
+                    <div class="form-group full-width">
+                        <label for="subjectOfLawsuit" class="form-label">Dava Konusu</label>
+                        <textarea id="subjectOfLawsuit" name="subjectOfLawsuit" class="form-textarea"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="courtName" class="form-label">Mahkeme Adı</label>
+                        <input type="text" id="courtName" name="courtName" class="form-input">
+                    </div>
+                    <div class="form-group">
+                        <label for="courtFileNumber" class="form-label">Dava Dosya Numarası</label>
+                        <input type="text" id="courtFileNumber" name="courtFileNumber" class="form-input">
+                    </div>
+                    <div class="form-group date-picker-group">
+                        <label for="lawsuitDate" class="form-label">Dava Tarihi</label>
+                        <input type="date" id="lawsuitDate" name="lawsuitDate" class="form-input">
+                    </div>
                 </div>
             `;
         }
-
+        
         container.innerHTML = `
             <div class="form-section">
                 <h3 class="section-title">2. İşleme Konu Varlık</h3>
@@ -602,7 +607,6 @@ class CreateTaskModule {
             };
             reader.readAsDataURL(file);
 
-            // Dosyayı inputa atayalım ki form gönderildiğinde yakalanabilsin
             const dataTransfer = new DataTransfer();
             dataTransfer.items.add(file);
             brandExampleInput.files = dataTransfer.files;
@@ -941,7 +945,6 @@ class CreateTaskModule {
                 brandType: document.getElementById('brandType')?.value,
                 brandCategory: document.getElementById('brandCategory')?.value,
                 brandExampleText: document.getElementById('brandExampleText')?.value,
-                // nonLatinAlphabet input'u yoksa değeri boş bırak.
                 nonLatinAlphabet: document.getElementById('nonLatinAlphabet') ? document.getElementById('nonLatinAlphabet').value : null,
                 coverLetterRequest: document.querySelector('input[name="coverLetterRequest"]:checked')?.value,
                 consentRequest: document.querySelector('input[name="consentRequest"]:checked')?.value,
