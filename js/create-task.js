@@ -61,7 +61,6 @@ class CreateTaskModule {
         document.getElementById('specificTaskType').addEventListener('change', (e) => this.handleSpecificTypeChange(e));
         document.getElementById('createTaskForm').addEventListener('submit', (e) => this.handleFormSubmit(e));
         
-        // Dinamik olarak eklenecek butonlar için olay dinleyicileri
         document.addEventListener('click', (e) => {
             if (e.target.id === 'cancelBtn') {
                 window.location.href = 'task-management.html';
@@ -82,7 +81,6 @@ class CreateTaskModule {
         const cancelParentSelectionBtn = document.getElementById('cancelParentSelectionBtn');
         if(cancelParentSelectionBtn) cancelParentSelectionBtn.addEventListener('click', () => this.hideParentSelectionModal());
 
-        // Sekmelerin serbestçe gezilebilmesi için olay dinleyicisi
         $(document).on('click', '#myTaskTabs a', (e) => {
             e.preventDefault();
             const targetTabId = e.target.getAttribute('href').substring(1);
@@ -842,19 +840,8 @@ class CreateTaskModule {
         let isComplete = false;
         
         if (selectedTaskType && selectedTaskType.alias === 'Başvuru' && selectedTaskType.ipType === 'trademark') {
-            const requiredFields = [
-                this.selectedIpRecord, 
-                document.getElementById('brandType')?.value,
-                document.getElementById('brandCategory')?.value,
-                document.getElementById('brandExample')?.files?.length > 0,
-                document.getElementById('brandExampleText')?.value,
-                document.getElementById('nonLatinAlphabet')?.value,
-                document.querySelector('input[name="coverLetterRequest"]:checked')?.value,
-                document.querySelector('input[name="consentRequest"]:checked')?.value,
-                document.getElementById('taskPriority')?.value,
-                document.getElementById('assignedTo')?.value,
-            ];
-            isComplete = requiredFields.every(field => !!field);
+            isComplete = this.selectedIpRecord && 
+                         document.getElementById('brandExample')?.files?.length > 0;
         } else if (selectedTaskType) {
             const transactionLikeTasks = ['Devir', 'Lisans', 'Birleşme', 'Veraset ile İntikal', 'Rehin/Teminat'];
             if (transactionLikeTasks.includes(selectedTaskType.name)) {
