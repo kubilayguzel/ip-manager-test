@@ -71,17 +71,17 @@ setupEventListeners() {
     });
 
     const closeAddPersonModalBtn = document.getElementById('closeAddPersonModal');
-    if (closeAddPersonModalBtn) closeAddPersonModalBtn.addEventListener('click', () => this.hideAddPersonModal());
+    if(closeAddPersonModalBtn) closeAddPersonModalBtn.addEventListener('click', () => this.hideAddPersonModal());
     const cancelPersonBtn = document.getElementById('cancelPersonBtn');
-    if (cancelPersonBtn) cancelPersonBtn.addEventListener('click', () => this.hideAddPersonModal());
+    if(cancelPersonBtn) cancelPersonBtn.addEventListener('click', () => this.hideAddPersonModal());
     const savePersonBtn = document.getElementById('savePersonBtn');
-    if (savePersonBtn) savePersonBtn.addEventListener('click', () => this.saveNewPerson());
+    if(savePersonBtn) savePersonBtn.addEventListener('click', () => this.saveNewPerson());
     const closeParentModalBtn = document.getElementById('closeSelectParentModal');
-    if (closeParentModalBtn) closeParentModalBtn.addEventListener('click', () => this.hideParentSelectionModal());
+    if(closeParentModalBtn) closeParentModalBtn.addEventListener('click', () => this.hideParentSelectionModal());
     const cancelParentSelectionBtn = document.getElementById('cancelParentSelectionBtn');
-    if (cancelParentSelectionBtn) cancelParentSelectionBtn.addEventListener('click', () => this.hideParentSelectionModal());
+    if(cancelParentSelectionBtn) cancelParentSelectionBtn.addEventListener('click', () => this.hideParentSelectionModal());
 
-    // ⬇️ Yeni eklendi: tab gösterildikten sonra butonları güncelle
+    // ⬇️ Yeni eklenen kısım: Tab gösterildikten sonra butonları güncelle
     $(document).on('shown.bs.tab', '#myTaskTabs a', () => {
         this.updateButtonsAndTabs();
     });
@@ -376,15 +376,15 @@ setupEventListeners() {
         <div id="formActionsContainer" class="form-actions"></div>
     `;
 
-    // Dinamik form olaylarını bağla
     this.setupDynamicFormListeners();
 
     // İlk tab aktif hale getir
     this.activeTab = 'brand-info';
     $('#brand-info-tab').tab('show');
 
-    // Butonları hemen güncelle
+    // Butonları hemen ve kısa gecikmeyle güncelle
     this.updateButtonsAndTabs();
+    setTimeout(() => this.updateButtonsAndTabs(), 50);
 }
 
     renderBaseForm(container, taskTypeName, taskTypeId) {
