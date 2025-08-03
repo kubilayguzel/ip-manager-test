@@ -61,7 +61,6 @@ class CreateTaskModule {
         document.getElementById('specificTaskType').addEventListener('change', (e) => this.handleSpecificTypeChange(e));
         document.getElementById('createTaskForm').addEventListener('submit', (e) => this.handleFormSubmit(e));
         
-        // Dinamik olarak eklenecek butonlar için olay dinleyicileri
         document.addEventListener('click', (e) => {
             if (e.target.id === 'cancelBtn') {
                 window.location.href = 'task-management.html';
@@ -82,11 +81,16 @@ class CreateTaskModule {
         const cancelParentSelectionBtn = document.getElementById('cancelParentSelectionBtn');
         if(cancelParentSelectionBtn) cancelParentSelectionBtn.addEventListener('click', () => this.hideParentSelectionModal());
 
+        // Sekmelerin serbestçe gezilebilmesi için olay dinleyicisi
         $(document).on('click', '#myTaskTabs a', (e) => {
             e.preventDefault();
             const targetTabId = e.target.getAttribute('href').substring(1);
             this.activeTab = targetTabId;
             $(e.target).tab('show');
+        });
+
+        // Tab değişimini dinleyip butonları güncelleyen listener
+        $(document).on('shown.bs.tab', '#myTaskTabs a', () => {
             this.updateButtonsAndTabs();
         });
     }
@@ -97,7 +101,6 @@ class CreateTaskModule {
         if (nextTab.length) {
             this.activeTab = nextTab.attr('href').substring(1);
             nextTab.tab('show');
-            this.updateButtonsAndTabs();
         }
     }
 
@@ -173,6 +176,8 @@ class CreateTaskModule {
         
         if (selectedTaskType.alias === 'Başvuru' && selectedTaskType.ipType === 'trademark') {
             this.renderTrademarkApplicationForm(container);
+            // İlk tab aktifken butonları güncelle
+            this.updateButtonsAndTabs();
         } else {
             this.renderBaseForm(container, selectedTaskType.name, selectedTaskType.id);
         }
@@ -372,6 +377,7 @@ class CreateTaskModule {
             <div id="formActionsContainer" class="form-actions"></div>
         `;
         this.setupDynamicFormListeners();
+        // İlk render sonrası butonları güncellemek için çağırıyoruz
         this.updateButtonsAndTabs();
     }
 
