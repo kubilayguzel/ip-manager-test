@@ -1156,18 +1156,35 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (btnGenerateReport) {
                 btnGenerateReport.addEventListener('click', async () => {
                     try {
+                        const reportData = getAllSearchResults();
+                        if (!reportData || reportData.length === 0) {
+                            alert("Rapor oluşturmak için uygun veri bulunamadı!");
+                            return;
+                        }
+
                         const generateReportFn = httpsCallable(functions, 'generateSimilarityReport');
-                        const response = await generateReportFn({
-                            // gerekli payload (örneğin seçili bulletinId vs.)
-                            bulletinKey: bulletinSelect.value
-                        });
-                        console.log("Rapor oluşturma sonucu:", response.data);
-                        alert("Rapor oluşturma isteği gönderildi!");
+                        const response = await generateReportFn({ results: reportData });
+                        console.log("Rapor sonucu:", response.data);
+
+                        if (response.data.success) {
+                            // base64 -> Blob -> download
+                            const byteArray = Uint8Array.from(atob(response.data.file), c => c.charCodeAt(0));
+                            const blob = new Blob([byteArray], { type: 'application/zip' });
+                            const link = document.createElement('a');
+                            link.href = URL.createObjectURL(blob);
+                            link.download = "Benzer_Markalar_Raporu.zip";
+                            document.body.appendChild(link);
+                            link.click();
+                            document.body.removeChild(link);
+                        } else {
+                            alert("Rapor oluşturulamadı: " + (response.data.error || 'Bilinmeyen hata'));
+                        }
                     } catch (err) {
                         console.error("Rapor oluşturma hatası:", err);
                         alert("Rapor oluşturulurken bir hata oluştu!");
                     }
                 });
             }
+
        }
     });
