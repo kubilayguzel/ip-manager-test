@@ -13,6 +13,7 @@ class CreateTaskModule {
         this.selectedTpInvoiceParty = null;
         this.selectedServiceInvoiceParty = null;
         this.pendingChildTransactionData = null;
+        this.activeTab = 'brand-info'; // Yeni: Aktif sekmeyi takip etmek için
     }
 
     async init() {
@@ -30,6 +31,9 @@ class CreateTaskModule {
             this.allPersons = personsResult.data || [];
             this.allUsers = usersResult.data || [];
             this.allTransactionTypes = transactionTypesResult.data || [];
+            
+            console.log('Kullanıcılar yüklendi:', this.allUsers.length);
+            console.log('Tüm işlem tipleri yüklendi:', this.allTransactionTypes.length);
             
         } catch (error) {
             console.error("Veri yüklenirken hata oluştu:", error);
@@ -71,11 +75,53 @@ class CreateTaskModule {
         const cancelParentSelectionBtn = document.getElementById('cancelParentSelectionBtn');
         if(cancelParentSelectionBtn) cancelParentSelectionBtn.addEventListener('click', () => this.hideParentSelectionModal());
 
-        // Yeni eklenen Bootstrap tab listener'ı
-        $(document).on('click', '#myTaskTabs a', function (e) {
+        // Yeni eklenen Bootstrap tab listener'ı (geliştirilmiş)
+        $(document).on('click', '#myTaskTabs a', (e) => {
             e.preventDefault();
-            $(this).tab('show');
+            this.activeTab = e.target.getAttribute('href').substring(1);
+            $(e.target).tab('show');
+            this.updateButtonsAndTabs();
         });
+        
+        // Dinamik olarak eklenecek buton için olay dinleyicileri
+        document.addEventListener('click', (e) => {
+            if (e.target.id === 'nextTabBtn') {
+                this.handleNextTab();
+            }
+        });
+    }
+
+    handleNextTab() {
+        const currentTab = $(`#myTaskTabs a[href="#${this.activeTab}"]`);
+        const nextTab = currentTab.parent().next().find('a');
+        if (nextTab.length) {
+            this.activeTab = nextTab.attr('href').substring(1);
+            nextTab.tab('show');
+            this.updateButtonsAndTabs();
+        }
+    }
+
+    updateButtonsAndTabs() {
+        const formActions = document.querySelector('#conditionalFieldsContainer .form-actions');
+        if (!formActions) return;
+
+        formActions.innerHTML = '';
+        
+        const tabs = document.querySelectorAll('#myTaskTabs .nav-item');
+        const activeTabIndex = Array.from(tabs).findIndex(tab => tab.querySelector('.nav-link.active'));
+
+        if (activeTabIndex < tabs.length - 1) {
+            formActions.innerHTML = `
+                <button type="button" id="cancelBtn" class="btn btn-secondary">İptal</button>
+                <button type="button" id="nextTabBtn" class="btn btn-primary">İlerle</button>
+            `;
+        } else {
+            formActions.innerHTML = `
+                <button type="button" id="cancelBtn" class="btn btn-secondary">İptal</button>
+                <button type="submit" id="saveTaskBtn" class="btn btn-primary" disabled>İşi Oluştur ve Kaydet</button>
+            `;
+             this.checkFormCompleteness();
+        }
     }
 
     async handleMainTypeChange(e) {
@@ -83,7 +129,7 @@ class CreateTaskModule {
         const specificTypeSelect = document.getElementById('specificTaskType');
         const conditionalFieldsContainer = document.getElementById('conditionalFieldsContainer');
         conditionalFieldsContainer.innerHTML = '';
-        document.getElementById('saveTaskBtn').disabled = true;
+        document.getElementById('saveTaskBtn')?.disabled = true;
 
         specificTypeSelect.innerHTML = '<option value="">Önce İşin Ana Türünü Seçin</option>';
         if (mainType) {
@@ -117,7 +163,7 @@ class CreateTaskModule {
         const container = document.getElementById('conditionalFieldsContainer');
         container.innerHTML = '';
         this.resetSelections();
-        document.getElementById('saveTaskBtn').disabled = true;
+        document.getElementById('saveTaskBtn')?.disabled = true;
 
         if (!selectedTaskType) return;
         
@@ -140,11 +186,20 @@ class CreateTaskModule {
                     <li class="nav-item">
                         <a class="nav-link" id="goods-services-tab" data-toggle="tab" href="#goods-services" role="tab" aria-controls="goods-services" aria-selected="false">Mal/Hizmet Seçimi</a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link" id="applicants-tab" data-toggle="tab" href="#applicants" role="tab" aria-controls="applicants" aria-selected="false">Başvuru Sahibi</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" id="priority-tab" data-toggle="tab" href="#priority" role="tab" aria-controls="priority" aria-selected="false">Rüçhan</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" id="accrual-tab" data-toggle="tab" href="#accrual" role="tab" aria-controls="accrual" aria-selected="false">Tahakkuk/Diğer</a>
+                    </li>
                 </ul>
                 <div class="tab-content mt-3" id="myTaskTabContent">
                     <div class="tab-pane fade show active" id="brand-info" role="tabpanel" aria-labelledby="brand-info-tab">
                         <div class="form-section">
-                            <h3 class="section-title">2. Marka Bilgileri</h3>
+                            <h3 class="section-title">Marka Bilgileri</h3>
                             <div class="form-group row">
                                 <label for="brandType" class="col-sm-3 col-form-label">Marka Tipi</label>
                                 <div class="col-sm-9">
@@ -173,7 +228,7 @@ class CreateTaskModule {
                                 <label for="brandExample" class="col-sm-3 col-form-label">Marka Örneği</label>
                                 <div class="col-sm-9">
                                     <input type="file" class="form-control-file" id="brandExample">
-                                    <small class="form-text text-muted">Yüklenen marka örneği 591x591 px ve 300 DPI özelliklerinde olmalıdır. Aksi halde otomatik olarak dönüştürülecektir.</small>
+                                    <small class="form-text text-muted">Yüklenen marka örneği 591x591 px ve 300 DPI özelliklerinde olmalıdır.</small>
                                 </div>
                             </div>
                             <div class="form-group row" id="brandExamplePreviewContainer" style="display:none;">
@@ -224,10 +279,110 @@ class CreateTaskModule {
                     <div class="tab-pane fade" id="goods-services" role="tabpanel" aria-labelledby="goods-services-tab">
                         <p>Bu sekmedeki içerik henüz tanımlanmamıştır.</p>
                     </div>
+                    <div class="tab-pane fade" id="applicants" role="tabpanel" aria-labelledby="applicants-tab">
+                        <p>Bu sekmedeki içerik henüz tanımlanmamıştır.</p>
+                    </div>
+                     <div class="tab-pane fade" id="priority" role="tabpanel" aria-labelledby="priority-tab">
+                        <p>Bu sekmedeki içerik henüz tanımlanmamıştır.</p>
+                    </div>
+                    <div class="tab-pane fade" id="accrual" role="tabpanel" aria-labelledby="accrual-tab">
+                        <div class="form-section">
+                            <h3 class="section-title">Tahakkuk Bilgileri</h3>
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label for="officialFee" class="form-label">Resmi Ücret</label>
+                                    <div class="input-with-currency">
+                                        <input type="number" id="officialFee" class="form-input" placeholder="0.00" step="0.01">
+                                        <select id="officialFeeCurrency" class="currency-select">
+                                            <option value="TRY" selected>TL</option>
+                                            <option value="EUR">EUR</option>
+                                            <option value="USD">USD</option>
+                                            <option value="CHF">CHF</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="serviceFee" class="form-label">Hizmet Bedeli</label>
+                                    <div class="input-with-currency">
+                                        <input type="number" id="serviceFee" class="form-input" placeholder="0.00" step="0.01">
+                                        <select id="serviceFeeCurrency" class="currency-select">
+                                            <option value="TRY" selected>TL</option>
+                                            <option value="EUR">EUR</option>
+                                            <option value="USD">USD</option>
+                                            <option value="CHF">CHF</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="vatRate" class="form-label">KDV Oranı (%)</label>
+                                    <input type="number" id="vatRate" class="form-input" value="20">
+                                </div>
+                                <div class="form-group">
+                                    <label for="totalAmountDisplay" class="form-label">Toplam Tutar</label>
+                                    <div id="totalAmountDisplay" class="total-amount-display">0.00 TRY</div>
+                                </div>
+                                <div class="form-group full-width">
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" id="applyVatToOfficialFee" checked>
+                                        Resmi Ücrete KDV Uygula
+                                    </label>
+                                </div>
+                                <div class="form-group full-width">
+                                    <label for="tpInvoicePartySearch" class="form-label">Türk Patent Faturası Tarafı</label>
+                                    <input type="text" id="tpInvoicePartySearch" class="form-input" placeholder="Fatura tarafı arayın...">
+                                    <div id="tpInvoicePartyResults" class="search-results-list"></div>
+                                    <div id="selectedTpInvoicePartyDisplay" class="search-result-display" style="display:none;"></div>
+                                </div>
+                                <div class="form-group full-width">
+                                    <label for="serviceInvoicePartySearch" class="form-label">Hizmet Faturası Tarafı</label>
+                                    <input type="text" id="serviceInvoicePartySearch" class="form-input" placeholder="Fatura tarafı arayın...">
+                                    <div id="serviceInvoicePartyResults" class="search-results-list"></div>
+                                    <div id="selectedServiceInvoicePartyDisplay" class="search-result-display" style="display:none;"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-section">
+                            <h3 class="section-title">İş Detayları ve Atama</h3>
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label for="taskPriority" class="form-label">Öncelik</label>
+                                    <select id="taskPriority" class="form-select">
+                                        <option value="medium">Orta</option>
+                                        <option value="high">Yüksek</option>
+                                        <option value="low">Düşük</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="assignedTo" class="form-label">Atanacak Kullanıcı</label>
+                                    <select id="assignedTo" class="form-select">
+                                        <option value="">Seçiniz...</option>
+                                    </select>
+                                </div>
+                                <div class="form-group full-width">
+                                    <label for="taskDueDate" class="form-label">Operasyonel Son Tarih</label>
+                                    <input type="date" id="taskDueDate" class="form-input">
+                                </div>
+                                <div class="form-group full-width">
+                                    <label for="taskDescription" class="form-label">İş Açıklaması:</label>
+                                    <textarea id="taskDescription" class="form-textarea"></textarea>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
+                <div class="form-actions"><button type="button" id="cancelBtn" class="btn btn-secondary">İptal</button><button type="submit" id="saveTaskBtn" class="btn btn-primary" disabled>İşi Oluştur ve Kaydet</button></div>
             </div>
         `;
         this.setupDynamicFormListeners();
+        this.updateButtonsAndTabs();
+        
+        // Tabları etkinleştirmek için gerekli kod
+        $('#myTaskTabs a').on('click', (e) => {
+            e.preventDefault();
+            this.activeTab = e.target.getAttribute('href').substring(1);
+            $(e.target).tab('show');
+            this.updateButtonsAndTabs();
+        });
     }
 
     renderBaseForm(container, taskTypeName, taskTypeId) {
@@ -367,6 +522,7 @@ class CreateTaskModule {
                     </div>
                 </div>
             </div>
+            <div class="form-actions"><button type="button" id="cancelBtn" class="btn btn-secondary">İptal</button><button type="submit" id="saveTaskBtn" class="btn btn-primary" disabled>İşi Oluştur ve Kaydet</button></div>
         `;
         this.setupDynamicFormListeners();
         this.populateAssignedToDropdown();
@@ -685,7 +841,9 @@ class CreateTaskModule {
         let isComplete = false;
         
         if (selectedTaskType && selectedTaskType.alias === 'Başvuru' && selectedTaskType.ipType === 'trademark') {
-            isComplete = !!this.selectedIpRecord;
+            isComplete = this.selectedIpRecord && 
+                         document.getElementById('brandExample')?.files?.length > 0;
+            // Diğer zorunlu alanlar da buraya eklenebilir
         } else if (selectedTaskType) {
             const transactionLikeTasks = ['Devir', 'Lisans', 'Birleşme', 'Veraset ile İntikal', 'Rehin/Teminat'];
             if (transactionLikeTasks.includes(selectedTaskType.name)) {
@@ -709,30 +867,47 @@ class CreateTaskModule {
             return;
         }
         
-        const assignedToUser = this.allUsers.find(u => u.id === document.getElementById('assignedTo').value);
+        const assignedToUser = this.allUsers.find(u => u.id === document.getElementById('assignedTo')?.value);
         
         let taskData = {
             taskType: selectedTransactionType.id,
             title: selectedTransactionType.alias || selectedTransactionType.name,
-            description: `'${this.selectedIpRecord.title}' adlı varlık için ${selectedTransactionType.alias || selectedTransactionType.name} işlemi.`,
-            priority: document.getElementById('taskPriority').value,
+            description: `'${this.selectedIpRecord?.title}' adlı varlık için ${selectedTransactionType.alias || selectedTransactionType.name} işlemi.`,
+            priority: document.getElementById('taskPriority')?.value || 'medium',
             assignedTo_uid: assignedToUser ? assignedToUser.id : null, 
             assignedTo_email: assignedToUser ? assignedToUser.email : null, 
-            dueDate: document.getElementById('taskDueDate').value || null,
+            dueDate: document.getElementById('taskDueDate')?.value || null,
             status: 'open',
-            relatedIpRecordId: this.selectedIpRecord.id,
-            relatedIpRecordTitle: this.selectedIpRecord.title,
+            relatedIpRecordId: this.selectedIpRecord?.id,
+            relatedIpRecordTitle: this.selectedIpRecord?.title,
             details: {}
         };
         
         if (selectedTransactionType.alias === 'Başvuru' && selectedTransactionType.ipType === 'trademark') {
+            const brandExampleFile = document.getElementById('brandExample')?.files[0];
+            const reader = new FileReader();
+
+            const fileReadPromise = new Promise((resolve, reject) => {
+                if (brandExampleFile) {
+                    reader.onload = () => resolve(reader.result);
+                    reader.onerror = reject;
+                    reader.readAsDataURL(brandExampleFile);
+                } else {
+                    resolve(null);
+                }
+            });
+
+            const imageBase64 = await fileReadPromise;
+
             taskData.details.brandInfo = {
-                brandType: document.getElementById('brandType').value,
-                brandCategory: document.getElementById('brandCategory').value,
-                brandExampleText: document.getElementById('brandExampleText').value,
-                nonLatinAlphabet: document.getElementById('nonLatinAlphabet').value,
-                coverLetterRequest: document.querySelector('input[name="coverLetterRequest"]:checked').value,
-                consentRequest: document.querySelector('input[name="consentRequest"]:checked').value,
+                brandType: document.getElementById('brandType')?.value,
+                brandCategory: document.getElementById('brandCategory')?.value,
+                brandExampleText: document.getElementById('brandExampleText')?.value,
+                nonLatinAlphabet: document.getElementById('nonLatinAlphabet')?.value,
+                coverLetterRequest: document.querySelector('input[name="coverLetterRequest"]:checked')?.value,
+                consentRequest: document.querySelector('input[name="consentRequest"]:checked')?.value,
+                brandImage: imageBase64,
+                brandImageName: brandExampleFile ? brandExampleFile.name : null,
             };
         }
 
@@ -746,12 +921,12 @@ class CreateTaskModule {
             return;
         }
 
-        const officialFee = parseFloat(document.getElementById('officialFee').value) || 0;
-        const serviceFee = parseFloat(document.getElementById('serviceFee').value) || 0;
+        const officialFee = parseFloat(document.getElementById('officialFee')?.value) || 0;
+        const serviceFee = parseFloat(document.getElementById('serviceFee')?.value) || 0;
 
         if (officialFee > 0 || serviceFee > 0) {
-            const vatRate = parseFloat(document.getElementById('vatRate').value) || 0;
-            const applyVatToOfficial = document.getElementById('applyVatToOfficialFee').checked;
+            const vatRate = parseFloat(document.getElementById('vatRate')?.value) || 0;
+            const applyVatToOfficial = document.getElementById('applyVatToOfficialFee')?.checked;
             let totalAmount;
             if(applyVatToOfficial) {
                 totalAmount = (officialFee + serviceFee) * (1 + vatRate / 100);
@@ -764,11 +939,11 @@ class CreateTaskModule {
                 taskTitle: taskData.title,
                 officialFee: {
                     amount: officialFee,
-                    currency: document.getElementById('officialFeeCurrency').value
+                    currency: document.getElementById('officialFeeCurrency')?.value
                 },
                 serviceFee: {
                     amount: serviceFee,
-                    currency: document.getElementById('serviceFeeCurrency').value
+                    currency: document.getElementById('serviceFeeCurrency')?.value
                 },
                 vatRate,
                 applyVatToOfficialFee: applyVatToOfficial,
@@ -776,6 +951,8 @@ class CreateTaskModule {
                 totalAmountCurrency: 'TRY',
                 tpInvoiceParty: this.selectedTpInvoiceParty ? {id: this.selectedTpInvoiceParty.id, name: this.selectedTpInvoiceParty.name} : null,
                 serviceInvoiceParty: this.selectedServiceInvoiceParty ? {id: this.selectedServiceInvoiceParty.id, name: this.selectedServiceInvoiceParty.name} : null,
+                status: 'unpaid',
+                createdAt: new Date().toISOString()
             };
 
             const accrualResult = await accrualService.addAccrual(accrualData);
@@ -793,7 +970,7 @@ class CreateTaskModule {
                 transactionHierarchy: "parent"
             };
 
-            const addResult = await ipRecordsService.addTransactionToRecord(this.selectedIpRecord.id, transactionData);
+            const addResult = await ipRecordsService.addTransactionToRecord(this.selectedIpRecord?.id, transactionData);
 
             if (addResult.success) {
                 alert('İş ve ilgili tahakkuk başarıyla oluşturuldu!');
@@ -802,7 +979,7 @@ class CreateTaskModule {
                 alert('İş oluşturuldu ama işlem Firestore\'a kaydedilemedi.');
             }
         } else if (selectedTransactionType.hierarchy === 'child' && selectedTransactionType.isTopLevelSelectable) {
-            const recordTransactionsResult = await ipRecordsService.getRecordTransactions(this.selectedIpRecord.id);
+            const recordTransactionsResult = await ipRecordsService.getRecordTransactions(this.selectedIpRecord?.id);
             if (!recordTransactionsResult.success) {
                 alert('Portföy geçmişi yüklenirken hata oluştu: ' + recordTransactionsResult.error);
                 return;
@@ -825,7 +1002,7 @@ class CreateTaskModule {
             } else if (suitableParents.length === 1) {
                 childTransactionData.parentId = suitableParents[0].id;
                 childTransactionData.transactionHierarchy = "child";
-                await ipRecordsService.addTransactionToRecord(this.selectedIpRecord.id, childTransactionData);
+                await ipRecordsService.addTransactionToRecord(this.selectedIpRecord?.id, childTransactionData);
                 alert('İş ve ilgili alt işlem başarıyla oluşturuldu!');
                 window.location.href = 'task-management.html';
             } else {
