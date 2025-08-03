@@ -182,6 +182,11 @@ class CreateTaskModule {
                                     <small class="form-text text-muted">Yüklenen marka örneği 591x591 px ve 300 DPI özelliklerinde olmalıdır. Aksi halde otomatik olarak dönüştürülecektir.</small>
                                 </div>
                             </div>
+                            <div class="form-group row" id="brandExamplePreviewContainer" style="display:none;">
+                                <div class="col-sm-9 offset-sm-3">
+                                    <img id="brandExamplePreview" src="#" alt="Marka Örneği Önizlemesi" style="max-width: 200px; max-height: 200px; border: 1px solid #ddd; padding: 5px; margin-top: 10px;">
+                                </div>
+                            </div>
                             <div class="form-group row">
                                 <label for="brandExampleText" class="col-sm-3 col-form-label">Marka Örneği Yazılı İfadesi</label>
                                 <div class="col-sm-9">
@@ -380,6 +385,11 @@ class CreateTaskModule {
             portfolioSearchInput.addEventListener('input', (e) => this.searchPortfolio(e.target.value));
         }
 
+        const brandExampleInput = document.getElementById('brandExample');
+        if (brandExampleInput) {
+            brandExampleInput.addEventListener('change', (e) => this.handleBrandExampleChange(e));
+        }
+
         const personSearch = document.getElementById('personSearchInput');
         if (personSearch) personSearch.addEventListener('input', (e) => this.searchPersons(e.target.value, 'relatedParty'));
 
@@ -396,6 +406,24 @@ class CreateTaskModule {
             const el = document.getElementById(id);
             if (el) el.addEventListener('input', () => this.calculateTotalAmount());
         });
+    }
+
+    handleBrandExampleChange(e) {
+        const file = e.target.files[0];
+        const previewContainer = document.getElementById('brandExamplePreviewContainer');
+        const previewImage = document.getElementById('brandExamplePreview');
+
+        if (file && file.type.startsWith('image/')) {
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                previewImage.src = event.target.result;
+                previewContainer.style.display = 'block';
+            };
+            reader.readAsDataURL(file);
+        } else {
+            previewContainer.style.display = 'none';
+            previewImage.src = '';
+        }
     }
 
     calculateTotalAmount() {
