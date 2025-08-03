@@ -19,8 +19,7 @@ import fetch from 'node-fetch';
 import { PubSub } from '@google-cloud/pubsub';
 import archiver from 'archiver';
 import { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, 
-         WidthType, AlignmentType, HeadingLevel, BorderStyle, ShadingType, 
-         Media, ImageRun, PageBreak, TabStopPosition, TabStopType } from 'docx';
+         WidthType, AlignmentType, HeadingLevel, PageBreak } from 'docx';
 
 // Firebase Admin SDK'sını başlatın
 if (!admin.apps.length) {
@@ -1974,8 +1973,6 @@ export const generateSimilarityReport = onCall(
 
 // Ana rapor oluşturma fonksiyonu
 async function createProfessionalReport(ownerName, matches) {
-  const sections = [];
-  
   // --- Benzer marka bazında grupla ---
   const grouped = {};
   matches.forEach((m) => {
@@ -1992,10 +1989,10 @@ async function createProfessionalReport(ownerName, matches) {
   const reportContent = [];
 
   // === RAPOR BAŞLIĞI ===
-  reportContent.push(createReportHeader(ownerName, matches.length));
+  reportContent.push(...createReportHeader(ownerName, matches.length));
   
   // === ÖZ BİLGİLER ===
-  reportContent.push(createExecutiveSummary(grouped));
+  reportContent.push(...createExecutiveSummary(grouped));
   
   // === SAYFA KESME ===
   reportContent.push(new Paragraph({ 
@@ -2011,35 +2008,23 @@ async function createProfessionalReport(ownerName, matches) {
     }
     
     const [_, g] = group;
-    reportContent.push(...await createDetailedAnalysisSection(g, index + 1));
+    reportContent.push(...createDetailedAnalysisSection(g, index + 1));
   }
 
   // === SONUÇ VE ÖNERİLER ===
   reportContent.push(new Paragraph({ 
     children: [new PageBreak()]
   }));
-  reportContent.push(createConclusionSection(grouped));
-
-  sections.push({
-    properties: {
-      page: {
-        margin: {
-          top: 1440, // 1 inch = 1440 twips
-          right: 1440,
-          bottom: 1440,
-          left: 1440,
-        },
-      },
-    },
-    children: reportContent
-  });
+  reportContent.push(...createConclusionSection(grouped));
 
   return new Document({
-    creator: "IP Manager - Marka Analiz Sistemi",
-    description: `${ownerName} için Marka Benzerlik Analizi Raporu`,
-    title: `Marka Benzerlik Raporu - ${ownerName}`,
-    subject: "Marka Benzerlik Analizi",
-    sections: sections
+    creator: "IP Manager",
+    description: `${ownerName} Marka Benzerlik Raporu`,
+    title: `Marka Benzerlik Raporu`,
+    sections: [{
+      properties: {},
+      children: reportContent
+    }]
   });
 }
 
@@ -2198,7 +2183,7 @@ function createExecutiveSummary(grouped) {
 }
 
 // === DETAYLI ANALİZ BÖLÜMÜ ===
-async function createDetailedAnalysisSection(group, sectionIndex) {
+function createDetailedAnalysisSection(group, sectionIndex) {
   const elements = [];
   const similarMark = group.similarMark;
   const similarity = parseFloat(similarMark.similarity) || 0;
@@ -2244,7 +2229,7 @@ async function createDetailedAnalysisSection(group, sectionIndex) {
                     new TextRun({
                       text: "🎯 BENZER MARKA BİLGİLERİ",
                       bold: true,
-                      size: 16,
+                      size: 32,
                       color: "FFFFFF"
                     })
                   ],
@@ -2252,7 +2237,7 @@ async function createDetailedAnalysisSection(group, sectionIndex) {
                 })
               ],
               columnSpan: 2,
-              shading: { fill: "2E4BC7" }
+              shading: { fill: "2E4BC7", type: "clear", color: "auto" }
             })
           ]
         }),
@@ -2530,13 +2515,14 @@ function createSummaryHeaderCell(text) {
           new TextRun({
             text: text,
             bold: true,
-            color: "FFFFFF"
+            color: "FFFFFF",
+            size: 24
           })
         ],
         alignment: AlignmentType.CENTER
       })
     ],
-    shading: { fill: "2E4BC7" }
+    shading: { fill: "2E4BC7", type: "clear", color: "auto" }
   });
 }
 
@@ -2544,11 +2530,11 @@ function createSummaryCell(text) {
   return new TableCell({
     children: [
       new Paragraph({
-        children: [new TextRun({ text: text })],
+        children: [new TextRun({ text: text, size: 22 })],
         alignment: AlignmentType.CENTER
       })
     ],
-    shading: { fill: "F8F9FA" }
+    shading: { fill: "F8F9FA", type: "clear", color: "auto" }
   });
 }
 
@@ -2557,13 +2543,13 @@ function createDetailCell(label, value) {
     children: [
       new Paragraph({
         children: [
-          new TextRun({ text: label, bold: true }),
-          new TextRun({ text: ` ${value}` })
+          new TextRun({ text: label, bold: true, size: 22 }),
+          new TextRun({ text: ` ${value}`, size: 22 })
         ]
       })
     ],
     width: { size: 50, type: WidthType.PERCENTAGE },
-    shading: { fill: "F8F9FA" }
+    shading: { fill: "F8F9FA", type: "clear", color: "auto" }
   });
 }
 
@@ -2576,13 +2562,13 @@ function createTableHeaderCell(text) {
             text: text,
             bold: true,
             color: "FFFFFF",
-            size: 20
+            size: 24
           })
         ],
         alignment: AlignmentType.CENTER
       })
     ],
-    shading: { fill: "495057" }
+    shading: { fill: "495057", type: "clear", color: "auto" }
   });
 }
 
@@ -2590,7 +2576,7 @@ function createTableDataCell(text) {
   return new TableCell({
     children: [
       new Paragraph({
-        children: [new TextRun({ text: text, size: 20 })]
+        children: [new TextRun({ text: text || "-", size: 22 })]
       })
     ]
   });
