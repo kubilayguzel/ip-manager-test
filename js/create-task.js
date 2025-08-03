@@ -61,6 +61,7 @@ class CreateTaskModule {
         document.getElementById('specificTaskType').addEventListener('change', (e) => this.handleSpecificTypeChange(e));
         document.getElementById('createTaskForm').addEventListener('submit', (e) => this.handleFormSubmit(e));
         
+        // Dinamik olarak eklenecek butonlar için olay dinleyicileri
         document.addEventListener('click', (e) => {
             if (e.target.id === 'cancelBtn') {
                 window.location.href = 'task-management.html';
@@ -243,12 +244,6 @@ class CreateTaskModule {
                                 <label for="brandExampleText" class="col-sm-3 col-form-label">Marka Örneği Yazılı İfadesi</label>
                                 <div class="col-sm-9">
                                     <input type="text" class="form-control" id="brandExampleText">
-                                </div>
-                            </div>
-                            <div class="form-group row">
-                                <label for="nonLatinAlphabet" class="col-sm-3 col-form-label">Marka Örneğinde Latin Alfabesi Haricinde Harf Var Mı?</label>
-                                <div class="col-sm-9">
-                                    <input type="text" class="form-control" id="nonLatinAlphabet">
                                 </div>
                             </div>
                             <div class="form-group row">
@@ -840,8 +835,7 @@ class CreateTaskModule {
         let isComplete = false;
         
         if (selectedTaskType && selectedTaskType.alias === 'Başvuru' && selectedTaskType.ipType === 'trademark') {
-            isComplete = this.selectedIpRecord && 
-                         document.getElementById('brandExample')?.files?.length > 0;
+            isComplete = !!this.selectedIpRecord;
         } else if (selectedTaskType) {
             const transactionLikeTasks = ['Devir', 'Lisans', 'Birleşme', 'Veraset ile İntikal', 'Rehin/Teminat'];
             if (transactionLikeTasks.includes(selectedTaskType.name)) {
