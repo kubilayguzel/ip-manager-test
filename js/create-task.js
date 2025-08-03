@@ -533,7 +533,7 @@ class CreateTaskModule {
         this.setupDynamicFormListeners();
         this.populateAssignedToDropdown();
     }
-  
+
     setupDynamicFormListeners() {
         const portfolioSearchInput = document.getElementById('portfolioSearchInput');
         if (portfolioSearchInput) {
@@ -547,15 +547,6 @@ class CreateTaskModule {
         
         const dropZone = document.getElementById('dropZone');
         if (dropZone) {
-            // Tıklama ile dosya seçme
-            dropZone.addEventListener('click', () => {
-                const brandExampleInput = document.getElementById('brandExample');
-                if (brandExampleInput) {
-                    brandExampleInput.click();
-                }
-            });
-
-            // Drag ve drop event'lerini engelle
             ['dragover', 'dragleave', 'drop'].forEach(event => {
                 dropZone.addEventListener(event, (e) => {
                     e.preventDefault();
@@ -563,46 +554,23 @@ class CreateTaskModule {
                 }, false);
             });
 
-            // Drag over - dosya üzerinde olduğunda
-            dropZone.addEventListener('dragover', (e) => {
-                e.preventDefault();
-                dropZone.classList.add('drag-over');
-                dropZone.style.borderColor = '#1e3c72';
-                dropZone.style.background = '#e8f4fd';
+            dropZone.addEventListener('dragover', () => {
+                dropZone.classList.add('bg-light');
             });
 
-            // Drag leave - dosya alanından çıktığında
-            dropZone.addEventListener('dragleave', (e) => {
-                e.preventDefault();
-                dropZone.classList.remove('drag-over');
-                dropZone.style.borderColor = '#ccc';
-                dropZone.style.background = '#f9f9f9';
+            dropZone.addEventListener('dragleave', () => {
+                dropZone.classList.remove('bg-light');
             });
 
-            // Drop - dosya bırakıldığında
             dropZone.addEventListener('drop', (e) => {
-                e.preventDefault();
-                dropZone.classList.remove('drag-over');
-                dropZone.style.borderColor = '#ccc';
-                dropZone.style.background = '#f9f9f9';
-                
+                dropZone.classList.remove('bg-light');
                 const files = e.dataTransfer.files;
                 if (files.length > 0) {
                     this.handleBrandExampleFile(files);
-                    
-                    // Input'a da dosyayı ata
-                    const brandExampleInput = document.getElementById('brandExample');
-                    if (brandExampleInput) {
-                        const dataTransfer = new DataTransfer();
-                        dataTransfer.items.add(files[0]);
-                        brandExampleInput.files = dataTransfer.files;
-                        brandExampleInput.dispatchEvent(new Event('change', { bubbles: true }));
-                    }
                 }
             });
         }
 
-        // Diğer event listener'lar...
         const personSearch = document.getElementById('personSearchInput');
         if (personSearch) personSearch.addEventListener('input', (e) => this.searchPersons(e.target.value, 'relatedParty'));
 
