@@ -1153,16 +1153,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
             // Rapor oluşturma butonu
             const btnGenerateReport = document.getElementById('btnGenerateReport');
-        if (btnGenerateReport) {
-            btnGenerateReport.addEventListener('click', async () => {
-                try {
-                    await generateSimilarityReport(); // hazır fonksiyon kullanılıyor
-                } catch (err) {
-                    console.error("Rapor oluşturma hatası:", err);
-                    alert("Rapor oluşturulurken bir hata oluştu!");
-                }
-            });
-    
-        }
+            if (btnGenerateReport) {
+                btnGenerateReport.addEventListener('click', async () => {
+                    try {
+                        await window.generateSimilarityReport();
+                    } catch (err) {
+                        console.error("Rapor oluşturma hatası:", err);
+                        alert("Rapor oluşturulurken bir hata oluştu!");
+                    }
+                });
+            }
        }
     });
