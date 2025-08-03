@@ -1151,5 +1151,37 @@ document.addEventListener('DOMContentLoaded', async () => {
             console.log("🚀 Sayfa yüklendiğinde bülten zaten seçili, cache kontrol ediliyor...");
             await checkCacheAndToggleButtonStates();
         }
+            // Rapor oluşturma butonu
+    const btnGenerateReport = document.getElementById('btnGenerateReport');
+    if (btnGenerateReport) {
+        btnGenerateReport.addEventListener('click', () => {
+            const reportData = getAllSearchResults(); // zaten tanımlı fonksiyon
+            if (!reportData || reportData.length === 0) {
+                alert("Rapor oluşturmak için uygun veri bulunamadı!");
+                return;
+            }
+
+            // Basit CSV oluşturma
+            let csv = "İzlenen Marka;Başvuru No;Benzer Marka;Başvuru No;Benzerlik\n";
+            reportData.forEach(item => {
+                csv += `${item.monitoredMark.name || item.monitoredMark.applicationNo};` +
+                       `${item.monitoredMark.applicationNo};` +
+                       `${item.similarMark.name};` +
+                       `${item.similarMark.applicationNo};` +
+                       `${item.similarMark.similarity || ''}\n`;
+            });
+
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', 'benzerlik-raporu.csv');
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        });
+    }
+
     }
 });
