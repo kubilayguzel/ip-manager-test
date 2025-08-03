@@ -74,9 +74,6 @@ async function loadInitialData() {
     console.log("✅ loadInitialData tamamlandı");
 }
 
-// Bu debug kodunu loadBulletinOptions() fonksiyonuna ekleyin
-// ✅ loadBulletinOptions fonksiyonuna debug ekleyin:
-
 async function loadBulletinOptions() {
     try {
         const bulletinSelect = document.getElementById('bulletinSelect');
@@ -88,10 +85,12 @@ async function loadBulletinOptions() {
         const registeredBulletinsSnapshot = await getDocs(collection(db, 'trademarkBulletins'));
         const registeredBulletins = new Map();
         
-        console.log(`📋 trademarkBulletins sorgusu tamamlandı: ${registeredBulletinsSnapshot.size} doküman`);
+        console.log(`📋 trademarkBulletins: ${registeredBulletinsSnapshot.size} doküman`);
         
         registeredBulletinsSnapshot.forEach(doc => {
             const data = doc.data();
+            
+            // bulletinKey formatını düzelt - slash'ları kaldır
             const bulletinDateFormatted = data.bulletinDate?.replace(/\./g, '').replace(/\//g, '') || '';
             const bulletinKey = `${data.bulletinNo}_${bulletinDateFormatted}`;
             
@@ -111,7 +110,7 @@ async function loadBulletinOptions() {
             });
         });
 
-        console.log(`📋 Kayıtlı bültenler: ${registeredBulletins.size}`);
+        console.log(`📋 Kayıtlı bültenler map: ${registeredBulletins.size}`);
 
         // 2️⃣ Arama sonuçları olan bültenler (monitoringTrademarkRecords)
         const searchResultBulletins = new Map();
@@ -119,9 +118,35 @@ async function loadBulletinOptions() {
         console.log('🔍 monitoringTrademarkRecords sorgulanıyor...');
         const monitoringSnapshot = await getDocs(collection(db, 'monitoringTrademarkRecords'));
         
-        console.log(`🔍 monitoringTrademarkRecords sorgusu tamamlandı: ${monitoringSnapshot.size} doküman`);
+        console.log(`🔍 monitoringTrademarkRecords: ${monitoringSnapshot.size} doküman`);
+        console.log("📋 Monitoring doküman ID'leri:");
+        monitoringSnapshot.docs.forEach((doc, index) => {
+            console.log(`  ${index + 1}. "${doc.id}"`);
+        });
         
-        // ✅ HER DOKÜMANI DETAYLI KONTROL ET
+        // 469 özel kontrolü
+        const bulletin469 = monitoringSnapshot.docs.find(doc => doc.id.includes('469'));
+        if (bulletin469) {
+            console.log(`🎯 469 BULUNDU: "${bulletin469.id}"`);
+            
+            // Subcollection kontrol
+            const trademarksSnapshot = await getDocs(collection(db, 'monitoringTrademarkRecords', bulletin469.id, 'trademarks'));
+            console.log(`📊 ${bulletin469.id}/trademarks: ${trademarksSnapshot.docs.length} doküman`);
+            
+            let totalResults = 0;
+            trademarksSnapshot.docs.forEach(tmDoc => {
+                const data = tmDoc.data();
+                const results = data.results || [];
+                totalResults += results.length;
+                console.log(`  📈 ${tmDoc.id}: ${results.length} sonuç`);
+            });
+            
+            console.log(`✅ 469 toplam sonuç: ${totalResults}`);
+        } else {
+            console.log("❌ 469 BULUNAMADI!");
+        }
+        
+        // Her monitoring dokümanını kontrol et
         for (const bulletinDoc of monitoringSnapshot.docs) {
             const bulletinKey = bulletinDoc.id;
             
@@ -133,7 +158,7 @@ async function loadBulletinOptions() {
                 
                 console.log(`  📊 ${bulletinKey} için ${trademarksSnapshot.docs.length} trademark dokümanı bulundu`);
                 
-                // ✅ HER TRADEMARK DOKÜMANINI KONTROL ET
+                // Her trademark dokümanını kontrol et
                 let hasAnyResults = false;
                 let totalResults = 0;
                 
@@ -172,7 +197,7 @@ async function loadBulletinOptions() {
                         
                         searchResultBulletins.set(bulletinKey, searchBulletin);
                         
-                        console.log(`  📝 Eklenen bülten:`, searchBulletin);
+                        console.log(`  📝 EKLENEN BÜLTEN:`, searchBulletin);
                     } else {
                         console.log(`  ⏭️ ${bulletinKey} zaten kayıtlı bültenler arasında`);
                     }
@@ -187,7 +212,7 @@ async function loadBulletinOptions() {
 
         console.log(`🔍 Sadece arama sonucu olan bültenler: ${searchResultBulletins.size}`);
         
-        // ✅ SEARCH RESULT BULLETINS'I DETAYHI LOGLA
+        // searchResultBulletins içeriğini logla
         console.log("📝 searchResultBulletins içeriği:");
         searchResultBulletins.forEach((bulletin, key) => {
             console.log(`  ${key}: ${bulletin.displayName}`);
@@ -237,6 +262,13 @@ async function loadBulletinOptions() {
             toplam: allBulletins.size,
             selectBoxOptionSayisi: bulletinSelect.options.length - 1 // -1 for "Bülten seçin..."
         });
+
+        // Son kontrol: Select box'taki option'ları logla
+        console.log("🎯 FINAL: Select box'taki option'lar:");
+        for (let i = 0; i < bulletinSelect.options.length; i++) {
+            const option = bulletinSelect.options[i];
+            console.log(`  ${i}. Value: "${option.value}", Text: "${option.textContent}"`);
+        }
 
     } catch (error) {
         console.error('❌ Bülten seçenekleri yüklenirken hata:', error);
