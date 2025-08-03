@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>IP Manager - Yeni İş Oluştur</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <style>
         /* Bu sayfaya özel stiller */
         /* Genel body, page-wrapper, main-container stilleri shared-styles.css'ten gelecektir. */
@@ -112,6 +113,9 @@
             width: 18px;
             height: 18px;
         }
+        .nav-tabs .nav-link.active {
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
@@ -155,9 +159,13 @@
         </div>
     </div>
 
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
     <script type="module">
         import { authService, taskService, ipRecordsService, personService, accrualService, auth, transactionTypeService, generateUUID } from './firebase-config.js';
-        import { loadSharedLayout } from './js/layout-loader.js'; // loadSharedLayout import edildi
+        import { loadSharedLayout } from './js/layout-loader.js';
 
         class CreateTaskModule {
             constructor() {
@@ -170,28 +178,27 @@
                 this.selectedRelatedParty = null;
                 this.selectedTpInvoiceParty = null;
                 this.selectedServiceInvoiceParty = null;
-                this.selectedServiceInvoiceParty = null;
                 this.pendingChildTransactionData = null;
             }
 
             async init() {
                 this.currentUser = authService.getCurrentUser();
                 if (!this.currentUser) { window.location.href = 'index.html'; return; }
-                                
+                
                 try {
-                    const [ipRecordsResult, personsResult, usersResult, transactionTypesResult] = await Promise.all([ // transactionTypesResult eklendi
+                    const [ipRecordsResult, personsResult, usersResult, transactionTypesResult] = await Promise.all([
                         ipRecordsService.getRecords(), 
                         personService.getPersons(), 
                         taskService.getAllUsers(),
-                        transactionTypeService.getTransactionTypes() // Yeni: İşlem tiplerini çek
+                        transactionTypeService.getTransactionTypes()
                     ]);
                     this.allIpRecords = ipRecordsResult.data || [];
                     this.allPersons = personsResult.data || [];
                     this.allUsers = usersResult.data || [];
-                    this.allTransactionTypes = transactionTypesResult.data || []; // Yeni: İşlem tiplerini kaydet
-
+                    this.allTransactionTypes = transactionTypesResult.data || [];
+                    
                     console.log('Kullanıcılar yüklendi:', this.allUsers.length);
-                    console.log('Tüm işlem tipleri yüklendi:', this.allTransactionTypes.length); // Yeni log
+                    console.log('Tüm işlem tipleri yüklendi:', this.allTransactionTypes.length);
                     
                 } catch (error) {
                     console.error("Veri yüklenirken hata oluştu:", error);
@@ -232,78 +239,172 @@
                 document.getElementById('savePersonBtn').addEventListener('click', () => this.saveNewPerson());
                 document.getElementById('closeSelectParentModal').addEventListener('click', () => this.hideParentSelectionModal());
                 document.getElementById('cancelParentSelectionBtn').addEventListener('click', () => this.hideParentSelectionModal());
-                }
+            }
 
             async handleMainTypeChange(e) {
-            const mainType = e.target.value;
-            const specificTypeSelect = document.getElementById('specificTaskType');
-            const conditionalFieldsContainer = document.getElementById('conditionalFieldsContainer');
-            conditionalFieldsContainer.innerHTML = '';
-            document.getElementById('saveTaskBtn').disabled = true;
+                const mainType = e.target.value;
+                const specificTypeSelect = document.getElementById('specificTaskType');
+                const conditionalFieldsContainer = document.getElementById('conditionalFieldsContainer');
+                conditionalFieldsContainer.innerHTML = '';
+                document.getElementById('saveTaskBtn').disabled = true;
 
-            specificTypeSelect.innerHTML = '<option value="">Önce İşin Ana Türünü Seçin</option>';
-            if (mainType) {
-                specificTypeSelect.innerHTML = '<option value="">Seçiniz...</option>';
-                
-                const filteredTransactionTypes = this.allTransactionTypes.filter(type => {
-                    const isParentAndMatchesIpType = (type.hierarchy === 'parent' && type.ipType === mainType);
-                    const isTopLevelChildAndMatchesIpType = (
-                        type.hierarchy === 'child' &&
-                        type.isTopLevelSelectable &&
-                        (type.applicableToMainType.includes(mainType) || type.applicableToMainType.includes('all'))
-                    );
-                    return isParentAndMatchesIpType || isTopLevelChildAndMatchesIpType;
-                });
+                specificTypeSelect.innerHTML = '<option value="">Önce İşin Ana Türünü Seçin</option>';
+                if (mainType) {
+                    specificTypeSelect.innerHTML = '<option value="">Seçiniz...</option>';
+                    
+                    const filteredTransactionTypes = this.allTransactionTypes.filter(type => {
+                        const isParentAndMatchesIpType = (type.hierarchy === 'parent' && type.ipType === mainType);
+                        const isTopLevelChildAndMatchesIpType = (
+                            type.hierarchy === 'child' &&
+                            type.isTopLevelSelectable &&
+                            (type.applicableToMainType.includes(mainType) || type.applicableToMainType.includes('all'))
+                        );
+                        return isParentAndMatchesIpType || isTopLevelChildAndMatchesIpType;
+                    });
 
-                filteredTransactionTypes.sort((a, b) => (a.order || 999) - (b.order || 999));
+                    filteredTransactionTypes.sort((a, b) => (a.order || 999) - (b.order || 999));
 
-
-                filteredTransactionTypes.forEach(type => {
-                    specificTypeSelect.innerHTML += `<option value="${type.id}">${type.alias || type.name}</option>`;
-                });
-                specificTypeSelect.disabled = false;
-            } else {
-                specificTypeSelect.disabled = true;
+                    filteredTransactionTypes.forEach(type => {
+                        specificTypeSelect.innerHTML += `<option value="${type.id}">${type.alias || type.name}</option>`;
+                    });
+                    specificTypeSelect.disabled = false;
+                } else {
+                    specificTypeSelect.disabled = true;
+                }
             }
-        
-          }
-            // renderChildTransactionTypeSelect metodu artık kullanılmayacak veya kaldırılacak.
-            // çünkü alt işlemler artık handleSpecificTypeChange içindeki ayrı bir select box'ta değil,
-            // ana "Spesifik İş Tipi" select box'ında parent'larla birlikte listeleniyor.
-            // Bu yüzden önceki renderChildTransactionTypeSelect çağrılarını temizleyeceğiz.
-            // handleSpecificTypeChange metodu şimdi sadece base formu render edecek.
 
-            // handleSpecificTypeChange metodunu güncelliyoruz (Alt işlem tipi select box'ını artık kendisi render etmiyor)
+            async handleSpecificTypeChange(e) {
+                const taskTypeId = e.target.value;
+                const selectedTaskType = this.allTransactionTypes.find(type => type.id === taskTypeId);
+
+                const container = document.getElementById('conditionalFieldsContainer');
+                container.innerHTML = '';
+                this.resetSelections();
+                document.getElementById('saveTaskBtn').disabled = true;
+
+                if (!selectedTaskType) return;
+                
+                // Marka başvurusu için özel formu render etme
+                if (selectedTaskType.alias === 'Başvuru' && selectedTaskType.ipType === 'trademark') {
+                    this.renderTrademarkApplicationForm(container);
+                } else {
+                    this.renderBaseForm(container, selectedTaskType.name, selectedTaskType.id);
+                }
+
+                this.checkFormCompleteness();
+            }
             
-           async handleSpecificTypeChange(e) {
-            const taskTypeId = e.target.value;
-            const selectedTaskType = this.allTransactionTypes.find(type => type.id === taskTypeId);
+            renderTrademarkApplicationForm(container) {
+                container.innerHTML = `
+                    <div class="card-body">
+                        <ul class="nav nav-tabs" id="myTaskTabs" role="tablist">
+                            <li class="nav-item">
+                                <a class="nav-link active" id="brand-info-tab" data-toggle="tab" href="#brand-info" role="tab" aria-controls="brand-info" aria-selected="true">Marka Bilgileri</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" id="goods-services-tab" data-toggle="tab" href="#goods-services" role="tab" aria-controls="goods-services" aria-selected="false">Mal/Hizmet Seçimi</a>
+                            </li>
+                        </ul>
+                        <div class="tab-content mt-3" id="myTaskTabContent">
+                            <div class="tab-pane fade show active" id="brand-info" role="tabpanel" aria-labelledby="brand-info-tab">
+                                <div class="form-section">
+                                    <h3 class="section-title">2. Marka Bilgileri</h3>
+                                    <div class="form-group row">
+                                        <label for="brandType" class="col-sm-3 col-form-label">Marka Tipi</label>
+                                        <div class="col-sm-9">
+                                            <select class="form-control" id="brandType">
+                                                <option value="Sadece Kelime">Sadece Kelime</option>
+                                                <option value="Sadece Şekil">Sadece Şekil</option>
+                                                <option value="Şekil + Kelime" selected>Şekil + Kelime</option>
+                                                <option value="Ses">Ses</option>
+                                                <option value="Hareket">Hareket</option>
+                                                <option value="Renk">Renk</option>
+                                                <option value="Üç Boyutlu">Üç Boyutlu</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="form-group row">
+                                        <label for="brandCategory" class="col-sm-3 col-form-label">Marka Türü</label>
+                                        <div class="col-sm-9">
+                                            <select class="form-control" id="brandCategory">
+                                                <option value="Ticaret/Hizmet Markası" selected>Ticaret/Hizmet Markası</option>
+                                                <option value="Garanti Markası">Garanti Markası</option>
+                                                <option value="Ortak Marka">Ortak Marka</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="form-group row">
+                                        <label for="brandExample" class="col-sm-3 col-form-label">Marka Örneği</label>
+                                        <div class="col-sm-9">
+                                            <input type="file" class="form-control-file" id="brandExample">
+                                            <small class="form-text text-muted">Yüklenen marka örneği 591x591 px ve 300 DPI özelliklerinde olmalıdır. Aksi halde otomatik olarak dönüştürülecektir.</small>
+                                        </div>
+                                    </div>
+                                    <div class="form-group row">
+                                        <label for="brandExampleText" class="col-sm-3 col-form-label">Marka Örneği Yazılı İfadesi</label>
+                                        <div class="col-sm-9">
+                                            <input type="text" class="form-control" id="brandExampleText">
+                                        </div>
+                                    </div>
+                                    <div class="form-group row">
+                                        <label for="nonLatinAlphabet" class="col-sm-3 col-form-label">Marka Örneğinde Latin Alfabesi Haricinde Harf Var Mı?</label>
+                                        <div class="col-sm-9">
+                                            <input type="text" class="form-control" id="nonLatinAlphabet">
+                                        </div>
+                                    </div>
+                                    <div class="form-group row">
+                                        <label class="col-sm-3 col-form-label">Önyazı Talebi</label>
+                                        <div class="col-sm-9">
+                                            <div class="form-check form-check-inline">
+                                                <input class="form-check-input" type="radio" name="coverLetterRequest" id="coverLetterRequestVar" value="var">
+                                                <label class="form-check-label" for="coverLetterRequestVar">Var</label>
+                                            </div>
+                                            <div class="form-check form-check-inline">
+                                                <input class="form-check-input" type="radio" name="coverLetterRequest" id="coverLetterRequestYok" value="yok" checked>
+                                                <label class="form-check-label" for="coverLetterRequestYok">Yok</label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="form-group row">
+                                        <label class="col-sm-3 col-form-label">Muvafakat Talebi</label>
+                                        <div class="col-sm-9">
+                                            <div class="form-check form-check-inline">
+                                                <input class="form-check-input" type="radio" name="consentRequest" id="consentRequestVar" value="var">
+                                                <label class="form-check-label" for="consentRequestVar">Var</label>
+                                            </div>
+                                            <div class="form-check form-check-inline">
+                                                <input class="form-check-input" type="radio" name="consentRequest" id="consentRequestYok" value="yok" checked>
+                                                <label class="form-check-label" for="consentRequestYok">Yok</label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="tab-pane fade" id="goods-services" role="tabpanel" aria-labelledby="goods-services-tab">
+                                <p>Bu sekmedeki içerik henüz tanımlanmamıştır.</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                // Tabları etkinleştirmek için gerekli kod
+                $('#myTaskTabs a').on('click', function (e) {
+                    e.preventDefault();
+                    $(this).tab('show');
+                });
+            }
 
-            const container = document.getElementById('conditionalFieldsContainer');
-            container.innerHTML = '';
-            this.resetSelections();
-            document.getElementById('saveTaskBtn').disabled = true;
-
-            if (!selectedTaskType) return;
-
-            this.renderBaseForm(container, selectedTaskType.name, selectedTaskType.id); // Add selectedTaskType.id
-            
-            this.checkFormCompleteness();
-        }
-        // --- SON: handleSpecificTypeChange metodu ---
-
-            renderBaseForm(container, taskTypeName, taskTypeId) { // taskTypeName parametresi eklendi, taskTypeId eklendi
-                const transactionLikeTasks = ['Devir', 'Lisans', 'Birleşme', 'Veraset ile İntikal', 'Rehin/Teminat', 'YİDK Kararının İptali']; // 'YİDK Kararının İptali' eklendi
-                const needsRelatedParty = transactionLikeTasks.includes(taskTypeName); // taskTypeName kullanıldı
+            renderBaseForm(container, taskTypeName, taskTypeId) {
+                const transactionLikeTasks = ['Devir', 'Lisans', 'Birleşme', 'Veraset ile İntikal', 'Rehin/Teminat', 'YİDK Kararının İptali'];
+                const needsRelatedParty = transactionLikeTasks.includes(taskTypeName);
                 const partyLabels = { 
                     'Devir': 'Devralan Taraf', 'Lisans': 'Lisans Alan Taraf', 'Rehin': 'Rehin Alan Taraf', 
                     'Birleşme': 'Birleşilen Taraf', 'Veraset ile İntikal': 'Mirasçı', 'Rehin/Teminat': 'Rehin Alan Taraf',
-                    'YİDK Kararının İptali': 'Davacı/Davalı' // Yeni eklendi
+                    'YİDK Kararının İptali': 'Davacı/Davalı'
                 };
                 const partyLabel = partyLabels[taskTypeName] || 'İlgili Taraf';
 
                 let specificFieldsHtml = '';
-                if (taskTypeId === 'litigation_yidk_annulment') { // Yeni: YİDK Kararının İptali'ne özel alanlar
+                if (taskTypeId === 'litigation_yidk_annulment') {
                     specificFieldsHtml = `
                         <div class="form-group full-width">
                             <label for="subjectOfLawsuit" class="form-label">Dava Konusu</label>
@@ -431,7 +532,6 @@
                     </div>
                 `;
                 this.setupDynamicFormListeners();
-                // 'assignedTo' elementi render edildikten sonra doldurma fonksiyonunu çağırıyoruz
                 this.populateAssignedToDropdown();
             }
 
@@ -495,18 +595,12 @@
                     const rTypeLower = r.type ? r.type.toLowerCase() : '';
                     const mainIpTypeLower = mainIpType ? mainIpType.toLowerCase() : '';
                     
-                    // Eğer ana tür 'litigation' ise, ilgili IP kaydına bakma
                     if (mainIpTypeLower === 'litigation') {
-                        // Burada litigation için özel bir ip record eşleşmesi olmayabilir,
-                        // bu yüzden sadece genel arama terimine odaklanabiliriz.
-                        // Veya eğer litigation tasks doğrudan IP kayıtlarına bağlı değilse,
-                        // bu filtreyi tamamen kaldırabiliriz. Kullanım senaryosuna göre ayarla.
                         const rTitleLower = r.title ? r.title.toLowerCase() : '';
                         const rAppNumberLower = r.applicationNumber ? r.applicationNumber.toLowerCase() : '';
                         return rTitleLower.includes(searchLower) || rAppNumberLower.includes(searchLower);
                     }
 
-                    // Diğer IP türleri için mevcut mantığı koru
                     if (rTypeLower !== mainIpTypeLower) return false;
 
                     const rTitleLower = r.title ? r.title.toLowerCase() : '';
@@ -607,37 +701,36 @@
             hideAddPersonModal() { document.getElementById('addPersonModal').classList.remove('show'); }
             
             showParentSelectionModal(parentTransactions, childTransactionData) {
-            const modal = document.getElementById('selectParentModal');
-            const parentListContainer = document.getElementById('parentListContainer');
-            parentListContainer.innerHTML = ''; // Önceki listeyi temizle
+                const modal = document.getElementById('selectParentModal');
+                const parentListContainer = document.getElementById('parentListContainer');
+                parentListContainer.innerHTML = '';
+                this.pendingChildTransactionData = childTransactionData;
 
-            this.pendingChildTransactionData = childTransactionData; // Bekleyen veriyi sakla
-
-            if (parentTransactions.length === 0) {
-                parentListContainer.innerHTML = '<p>Uygun ana işlem bulunamadı.</p>';
-                document.getElementById('cancelParentSelectionBtn').textContent = 'Kapat'; // İptal butonu Kapat olsun
-            } else {
-                parentTransactions.forEach(parent => {
-                    const parentItem = document.createElement('div');
-                    parentItem.className = 'parent-selection-item';
-                    parentItem.style = 'border: 1px solid #ddd; padding: 10px; margin-bottom: 8px; border-radius: 8px; cursor: pointer; transition: background-color 0.2s;';
-                    parentItem.innerHTML = `
-                        <b>İşlem Tipi:</b> ${parent.type ? (this.allTransactionTypes.find(t => t.id === parent.type)?.name || parent.type) : 'Bilinmiyor'}<br>
-                        <b>Açıklama:</b> ${parent.description}<br>
-                        <b>Tarih:</b> ${new Date(parent.timestamp).toLocaleDateString('tr-TR')}
-                    `;
-                    parentItem.addEventListener('click', () => this.handleParentSelection(parent.id));
-                    parentListContainer.appendChild(parentItem);
-                });
-                document.getElementById('cancelParentSelectionBtn').textContent = 'İptal';
+                if (parentTransactions.length === 0) {
+                    parentListContainer.innerHTML = '<p>Uygun ana işlem bulunamadı.</p>';
+                    document.getElementById('cancelParentSelectionBtn').textContent = 'Kapat';
+                } else {
+                    parentTransactions.forEach(parent => {
+                        const parentItem = document.createElement('div');
+                        parentItem.className = 'parent-selection-item';
+                        parentItem.style = 'border: 1px solid #ddd; padding: 10px; margin-bottom: 8px; border-radius: 8px; cursor: pointer; transition: background-color 0.2s;';
+                        parentItem.innerHTML = `
+                            <b>İşlem Tipi:</b> ${parent.type ? (this.allTransactionTypes.find(t => t.id === parent.type)?.name || parent.type) : 'Bilinmiyor'}<br>
+                            <b>Açıklama:</b> ${parent.description}<br>
+                            <b>Tarih:</b> ${new Date(parent.timestamp).toLocaleDateString('tr-TR')}
+                        `;
+                        parentItem.addEventListener('click', () => this.handleParentSelection(parent.id));
+                        parentListContainer.appendChild(parentItem);
+                    });
+                    document.getElementById('cancelParentSelectionBtn').textContent = 'İptal';
+                }
+                modal.style.display = 'block';
             }
-            modal.style.display = 'block';
-        }
 
             hideParentSelectionModal() {
                 document.getElementById('selectParentModal').style.display = 'none';
-                this.pendingChildTransactionData = null; // Bekleyen veriyi temizle
-          }
+                this.pendingChildTransactionData = null;
+            }
 
             async handleParentSelection(selectedParentId) {
                 if (!this.pendingChildTransactionData) return;
@@ -658,6 +751,7 @@
                     this.hideParentSelectionModal();
                 }
             }
+
             async saveNewPerson() {
                 const name = document.getElementById('personName').value.trim();
                 const type = document.getElementById('personType').value;
@@ -685,29 +779,30 @@
             }
             
             checkFormCompleteness() {
-                const specificTaskTypeId = document.getElementById('specificTaskType').value; // ID'yi alıyoruz
-                const selectedTaskType = this.allTransactionTypes.find(type => type.id === specificTaskTypeId); // Objeyi buluyoruz
+                const specificTaskTypeId = document.getElementById('specificTaskType').value;
+                const selectedTaskType = this.allTransactionTypes.find(type => type.id === specificTaskTypeId);
 
-                const transactionLikeTasks = ['Devir', 'Lisans', 'Birleşme', 'Veraset ile İntikal', 'Rehin/Teminat']; // Burada isimlerle kontrol devam ediyor
                 let isComplete = false;
                 
-                // Kontrolü isim üzerinden yapmaya devam ediyoruz, çünkü renderBaseForm da isme bakıyor.
-                if (selectedTaskType && transactionLikeTasks.includes(selectedTaskType.name)) {
-                    isComplete = this.selectedIpRecord && this.selectedRelatedParty;
-                } else if (selectedTaskType) { // Sadece tip seçiliyse ve ilgili varlık seçilmişse
+                if (selectedTaskType && selectedTaskType.alias === 'Başvuru' && selectedTaskType.ipType === 'trademark') {
+                    // Marka başvurusu için tamamlanma kontrolü
+                    // Şimdilik sadece IP kaydı seçilmişse tamamlanmış kabul ediyoruz.
+                    // Gerekirse diğer alanlar için de kontrol eklenebilir.
                     isComplete = !!this.selectedIpRecord;
+                } else if (selectedTaskType) {
+                    const transactionLikeTasks = ['Devir', 'Lisans', 'Birleşme', 'Veraset ile İntikal', 'Rehin/Teminat'];
+                    if (transactionLikeTasks.includes(selectedTaskType.name)) {
+                        isComplete = this.selectedIpRecord && this.selectedRelatedParty;
+                    } else {
+                        isComplete = !!this.selectedIpRecord;
+                    }
                 }
                 
                 document.getElementById('saveTaskBtn').disabled = !isComplete;
             }
 
-                async handleFormSubmit(e) {
+            async handleFormSubmit(e) {
                 e.preventDefault();
-                if (!this.selectedIpRecord) {
-                    alert('Lütfen işleme konu bir varlık seçin.');
-                    return;
-                }
-
                 const specificTaskTypeId = document.getElementById('specificTaskType').value;
                 const selectedTransactionType = this.allTransactionTypes.find(type => type.id === specificTaskTypeId);
 
@@ -715,7 +810,7 @@
                     alert('Geçerli bir işlem tipi seçmediniz.');
                     return;
                 }
-
+                
                 const assignedToUser = this.allUsers.find(u => u.id === document.getElementById('assignedTo').value);
                 
                 let taskData = {
@@ -731,6 +826,19 @@
                     relatedIpRecordTitle: this.selectedIpRecord.title,
                     details: {}
                 };
+                
+                // Yeni marka başvuru alanlarını taskData.details objesine ekleme
+                if (selectedTransactionType.alias === 'Başvuru' && selectedTransactionType.ipType === 'trademark') {
+                    taskData.details.brandInfo = {
+                        brandType: document.getElementById('brandType').value,
+                        brandCategory: document.getElementById('brandCategory').value,
+                        brandExampleText: document.getElementById('brandExampleText').value,
+                        nonLatinAlphabet: document.getElementById('nonLatinAlphabet').value,
+                        coverLetterRequest: document.querySelector('input[name="coverLetterRequest"]:checked').value,
+                        consentRequest: document.querySelector('input[name="consentRequest"]:checked').value,
+                        // Not: Marka örneği dosyasını işleme ve kaydetme mantığı (Firebase Storage'a yükleme gibi) burada ayrıca yazılmalıdır.
+                    };
+                }
 
                 if (this.selectedRelatedParty) {
                     taskData.details.relatedParty = { id: this.selectedRelatedParty.id, name: this.selectedRelatedParty.name };
@@ -780,90 +888,61 @@
                         return;
                     }
                 }
+                
+                if (selectedTransactionType.hierarchy === 'parent') {
+                    const transactionData = {
+                        type: selectedTransactionType.id,
+                        description: `${selectedTransactionType.name} işlemi.`,
+                        parentId: null,
+                        transactionHierarchy: "parent"
+                    };
+                    console.log("📤 Firestore'a transaction ekleniyor:", transactionData);
 
-                // IP kaydına transaction ekleme mantığı
-                    if (selectedTransactionType.hierarchy === 'parent') {
-                        const transactionData = {
-                            type: selectedTransactionType.id,
-                            description: `${selectedTransactionType.name} işlemi.`,
-                            parentId: null,
-                            transactionHierarchy: "parent"
-                        };
-                        console.log("📤 Firestore'a transaction ekleniyor:", transactionData);
+                    const addResult = await ipRecordsService.addTransactionToRecord(this.selectedIpRecord.id, transactionData);
 
-                        const addResult = await ipRecordsService.addTransactionToRecord(this.selectedIpRecord.id, transactionData);
-
-                        if (addResult.success) {
-                            console.log("✅ Transaction Firestore'a kaydedildi:", addResult.data);
-                            alert('İş ve ilgili tahakkuk başarıyla oluşturuldu!');
-                            window.location.href = 'task-management.html';
-                        } else {
-                            console.error("❌ Transaction kaydı başarısız:", addResult.error);
-                            alert('İş oluşturuldu ama işlem Firestore\'a kaydedilemedi.');
-                        }
+                    if (addResult.success) {
+                        console.log("✅ Transaction Firestore'a kaydedildi:", addResult.data);
+                        alert('İş ve ilgili tahakkuk başarıyla oluşturuldu!');
+                        window.location.href = 'task-management.html';
+                    } else {
+                        console.error("❌ Transaction kaydı başarısız:", addResult.error);
+                        alert('İş oluşturuldu ama işlem Firestore\'a kaydedilemedi.');
                     }
-
-                else if (selectedTransactionType.hierarchy === 'child' && selectedTransactionType.isTopLevelSelectable) {
-                    // Eğer seçilen işlem tipi isTopLevelSelectable bir child ise
+                } else if (selectedTransactionType.hierarchy === 'child' && selectedTransactionType.isTopLevelSelectable) {
                     const recordTransactionsResult = await ipRecordsService.getRecordTransactions(this.selectedIpRecord.id);
                     if (!recordTransactionsResult.success) {
                         alert('Portföy geçmişi yüklenirken hata oluştu: ' + recordTransactionsResult.error);
                         return;
                     }
                     const existingTransactions = recordTransactionsResult.data;
-
-                    // 👉 HATALI EŞLEŞME LOG'UNU BURAYA EKLE
-                        console.log("DEBUG: Portföydeki Tüm İşlemler (existingTransactions):", existingTransactions);
-                        existingTransactions.forEach(t => {
-                            console.log("  -> t.type:", t.type);
-                        });
-                        console.log("DEBUG: expectedParentTypeIds:", selectedTransactionType.expectedParentTypeIds);
-
-                    console.log("DEBUG: handleFormSubmit - selected child transaction is top-level selectable.");
-                    console.log("DEBUG: Seçilen IP Kaydı ID (this.selectedIpRecord.id):", this.selectedIpRecord.id);
-                    console.log("DEBUG: Portföydeki Tüm İşlemler (existingTransactions):", existingTransactions);
-                    console.log("DEBUG: Seçilen Child İşlemi (selectedTransactionType.id):", selectedTransactionType.id);
-                    console.log("DEBUG: Seçilen Child İşlemi Adı (selectedTransactionType.name):", selectedTransactionType.name);
-                    console.log("DEBUG: Beklenen Parent Tipleri (selectedTransactionType.expectedParentTypeIds):", selectedTransactionType.expectedParentTypeIds);
-
-                    // expectedParentTypeIds'e uyan parent transaction'ları bul
                     const suitableParents = existingTransactions.filter(t =>
                         t.transactionHierarchy === 'parent' &&
-                        selectedTransactionType.expectedParentTypeIds && // expectedParentTypeIds mevcut mu?
-                        selectedTransactionType.expectedParentTypeIds.includes(t.type) // Parent'ın tipi, child'ın beklediği tipler arasında mı?
+                        selectedTransactionType.expectedParentTypeIds &&
+                        selectedTransactionType.expectedParentTypeIds.includes(t.type)
                     );
-
-                    console.log("DEBUG: Bulunan Uygun Parentlar (suitableParents):", suitableParents);
 
                     const childTransactionData = {
                         type: selectedTransactionType.id,
                         description: `${selectedTransactionType.name} alt işlemi.`,
-                        // parentId ve transactionHierarchy burada belirlenecek
                     };
 
                     if (suitableParents.length === 0) {
-                        // Hiç uygun parent bulunamazsa
                         alert(`Bu alt işlem (${selectedTransactionType.name}) için portföyde uygun bir ana işlem bulunamadı. Lütfen önce ilgili ana işlemi oluşturun.`);
-                        // Kullanıcıya işin kaydedilmediğini belirtmek için formu temizleyebiliriz veya başka bir işlem yapabiliriz
-                        // Şimdilik işlemi tamamlamasına izin verme
                         return;
                     } else if (suitableParents.length === 1) {
-                        // Tek bir uygun parent bulunursa, otomatik olarak altına bağla
                         childTransactionData.parentId = suitableParents[0].id;
                         childTransactionData.transactionHierarchy = "child";
                         await ipRecordsService.addTransactionToRecord(this.selectedIpRecord.id, childTransactionData);
                         alert('İş ve ilgili alt işlem başarıyla oluşturuldu!');
                         window.location.href = 'task-management.html';
                     } else {
-                        // Birden fazla uygun parent bulunursa, kullanıcıya seçtir
                         this.showParentSelectionModal(suitableParents, childTransactionData);
                     }
                 } else {
-                    // Geçersiz bir durum, olmaması gereken bir seçim
                     alert('Geçersiz işlem tipi seçimi. Lütfen geçerli bir ana veya alt işlem tipi seçin.');
                 }
             }
-    }
+        }
         const module = new CreateTaskModule();
         auth.onAuthStateChanged(user => {
             if(user || authService.getCurrentUser()) {
@@ -873,12 +952,12 @@
         });
     </script>
     <script type="module">
-    import { loadSharedLayout } from './js/layout-loader.js';
-    document.addEventListener('DOMContentLoaded', async () => {
-        await loadSharedLayout({ activeMenuLink: 'create-task.html' });
-    });
-</script>
- <div class="modal" id="selectParentModal" style="display: none;">
+        import { loadSharedLayout } from './js/layout-loader.js';
+        document.addEventListener('DOMContentLoaded', async () => {
+            await loadSharedLayout({ activeMenuLink: 'create-task.html' });
+        });
+    </script>
+    <div class="modal" id="selectParentModal" style="display: none;">
         <div class="modal-content">
             <div class="modal-header">
                 <h3 class="modal-title">İlgili Ana İşlemi Seçin</h3>
@@ -887,7 +966,7 @@
             <div class="modal-body">
                 <p>Seçtiğiniz işlem için portföyde birden fazla uygun ana işlem bulundu. Lütfen işlemi bağlamak istediğiniz ana işlemi seçin:</p>
                 <div id="parentListContainer">
-                    </div>
+                </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" id="cancelParentSelectionBtn">İptal</button>
