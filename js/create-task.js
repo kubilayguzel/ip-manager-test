@@ -239,7 +239,10 @@ class CreateTaskModule {
                             <div class="form-group row">
                                 <label for="brandExample" class="col-sm-3 col-form-label">Marka Örneği</label>
                                 <div class="col-sm-9">
-                                    <input type="file" class="form-control-file" id="brandExample">
+                                    <div id="dropZone" class="border border-secondary p-3 text-center" style="cursor: pointer;">
+                                        Marka örneği dosyasını buraya sürükleyin veya <a href="#" onclick="document.getElementById('brandExample').click(); return false;">tıklayarak seçin</a>.
+                                    </div>
+                                    <input type="file" class="form-control-file d-none" id="brandExample">
                                     <small class="form-text text-muted">Yüklenen marka örneği 591x591 px ve 300 DPI özelliklerinde olmalıdır.</small>
                                 </div>
                             </div>
@@ -534,7 +537,33 @@ class CreateTaskModule {
 
         const brandExampleInput = document.getElementById('brandExample');
         if (brandExampleInput) {
-            brandExampleInput.addEventListener('change', (e) => this.handleBrandExampleChange(e));
+            brandExampleInput.addEventListener('change', (e) => this.handleBrandExampleFile(e.target.files));
+        }
+        
+        const dropZone = document.getElementById('dropZone');
+        if (dropZone) {
+            ['dragover', 'dragleave', 'drop'].forEach(event => {
+                dropZone.addEventListener(event, (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }, false);
+            });
+
+            dropZone.addEventListener('dragover', () => {
+                dropZone.classList.add('bg-light');
+            });
+
+            dropZone.addEventListener('dragleave', () => {
+                dropZone.classList.remove('bg-light');
+            });
+
+            dropZone.addEventListener('drop', (e) => {
+                dropZone.classList.remove('bg-light');
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    this.handleBrandExampleFile(files);
+                }
+            });
         }
 
         const personSearch = document.getElementById('personSearchInput');
@@ -555,10 +584,11 @@ class CreateTaskModule {
         });
     }
 
-    handleBrandExampleChange(e) {
-        const file = e.target.files[0];
+    handleBrandExampleFile(files) {
+        const file = files[0];
         const previewContainer = document.getElementById('brandExamplePreviewContainer');
         const previewImage = document.getElementById('brandExamplePreview');
+        const brandExampleInput = document.getElementById('brandExample');
 
         if (file && file.type.startsWith('image/')) {
             const reader = new FileReader();
@@ -571,12 +601,20 @@ class CreateTaskModule {
                 }
             };
             reader.readAsDataURL(file);
+
+            // Dosyayı inputa atayalım ki form gönderildiğinde yakalanabilsin
+            const dataTransfer = new DataTransfer();
+            dataTransfer.items.add(file);
+            brandExampleInput.files = dataTransfer.files;
         } else {
             if (previewContainer) {
                  previewContainer.style.display = 'none';
             }
             if (previewImage) {
                 previewImage.src = '';
+            }
+             if (brandExampleInput) {
+                brandExampleInput.value = '';
             }
         }
     }
@@ -903,7 +941,8 @@ class CreateTaskModule {
                 brandType: document.getElementById('brandType')?.value,
                 brandCategory: document.getElementById('brandCategory')?.value,
                 brandExampleText: document.getElementById('brandExampleText')?.value,
-                nonLatinAlphabet: document.getElementById('nonLatinAlphabet')?.value,
+                // nonLatinAlphabet input'u yoksa değeri boş bırak.
+                nonLatinAlphabet: document.getElementById('nonLatinAlphabet') ? document.getElementById('nonLatinAlphabet').value : null,
                 coverLetterRequest: document.querySelector('input[name="coverLetterRequest"]:checked')?.value,
                 consentRequest: document.querySelector('input[name="consentRequest"]:checked')?.value,
                 brandImage: imageBase64,
