@@ -99,6 +99,9 @@ async function loadBulletinOptions() {
         // 2️⃣ Arama sonuçları olan bültenler (monitoringTrademarkRecords)
         const searchResultBulletins = new Map();
         const monitoringSnapshot = await getDocs(collection(db, 'monitoringTrademarkRecords'));
+        console.log("DEBUG → monitoringTrademarkRecords snapshot size:", monitoringSnapshot.size);
+        monitoringSnapshot.docs.forEach(d => console.log("  DOC:", d.id));
+
 
         for (const bulletinDoc of monitoringSnapshot.docs) {
             const bulletinKey = bulletinDoc.id;
