@@ -56,44 +56,43 @@ class CreateTaskModule {
         });
     }
     
-    setupEventListeners() {
-        document.getElementById('mainIpType').addEventListener('change', (e) => this.handleMainTypeChange(e));
-        document.getElementById('specificTaskType').addEventListener('change', (e) => this.handleSpecificTypeChange(e));
-        document.getElementById('createTaskForm').addEventListener('submit', (e) => this.handleFormSubmit(e));
-        
-        document.addEventListener('click', (e) => {
-            if (e.target.id === 'cancelBtn') {
-                window.location.href = 'task-management.html';
-            }
-            if (e.target.id === 'nextTabBtn') {
-                this.handleNextTab();
-            }
-        });
-        
-        const closeAddPersonModalBtn = document.getElementById('closeAddPersonModal');
-        if(closeAddPersonModalBtn) closeAddPersonModalBtn.addEventListener('click', () => this.hideAddPersonModal());
-        const cancelPersonBtn = document.getElementById('cancelPersonBtn');
-        if(cancelPersonBtn) cancelPersonBtn.addEventListener('click', () => this.hideAddPersonModal());
-        const savePersonBtn = document.getElementById('savePersonBtn');
-        if(savePersonBtn) savePersonBtn.addEventListener('click', () => this.saveNewPerson());
-        const closeParentModalBtn = document.getElementById('closeSelectParentModal');
-        if(closeParentModalBtn) closeParentModalBtn.addEventListener('click', () => this.hideParentSelectionModal());
-        const cancelParentSelectionBtn = document.getElementById('cancelParentSelectionBtn');
-        if(cancelParentSelectionBtn) cancelParentSelectionBtn.addEventListener('click', () => this.hideParentSelectionModal());
+setupEventListeners() {
+    document.getElementById('mainIpType').addEventListener('change', (e) => this.handleMainTypeChange(e));
+    document.getElementById('specificTaskType').addEventListener('change', (e) => this.handleSpecificTypeChange(e));
+    document.getElementById('createTaskForm').addEventListener('submit', (e) => this.handleFormSubmit(e));
 
-        // Sekmelerin serbestçe gezilebilmesi için olay dinleyicisi
-        $(document).on('click', '#myTaskTabs a', (e) => {
-            e.preventDefault();
-            const targetTabId = e.target.getAttribute('href').substring(1);
-            this.activeTab = targetTabId;
-            $(e.target).tab('show');
-        });
+    document.addEventListener('click', (e) => {
+        if (e.target.id === 'cancelBtn') {
+            window.location.href = 'task-management.html';
+        }
+        if (e.target.id === 'nextTabBtn') {
+            this.handleNextTab();
+        }
+    });
 
-        // Tab değişimini dinleyip butonları güncelleyen listener
-        $(document).on('shown.bs.tab', '#myTaskTabs a', () => {
-            this.updateButtonsAndTabs();
-        });
-    }
+    const closeAddPersonModalBtn = document.getElementById('closeAddPersonModal');
+    if (closeAddPersonModalBtn) closeAddPersonModalBtn.addEventListener('click', () => this.hideAddPersonModal());
+    const cancelPersonBtn = document.getElementById('cancelPersonBtn');
+    if (cancelPersonBtn) cancelPersonBtn.addEventListener('click', () => this.hideAddPersonModal());
+    const savePersonBtn = document.getElementById('savePersonBtn');
+    if (savePersonBtn) savePersonBtn.addEventListener('click', () => this.saveNewPerson());
+    const closeParentModalBtn = document.getElementById('closeSelectParentModal');
+    if (closeParentModalBtn) closeParentModalBtn.addEventListener('click', () => this.hideParentSelectionModal());
+    const cancelParentSelectionBtn = document.getElementById('cancelParentSelectionBtn');
+    if (cancelParentSelectionBtn) cancelParentSelectionBtn.addEventListener('click', () => this.hideParentSelectionModal());
+
+    // ⬇️ Yeni eklendi: tab gösterildikten sonra butonları güncelle
+    $(document).on('shown.bs.tab', '#myTaskTabs a', () => {
+        this.updateButtonsAndTabs();
+    });
+
+    $(document).on('click', '#myTaskTabs a', (e) => {
+        e.preventDefault();
+        const targetTabId = e.target.getAttribute('href').substring(1);
+        this.activeTab = targetTabId;
+        $(e.target).tab('show');
+    });
+}
 
     handleNextTab() {
         const currentTab = $(`#myTaskTabs a[href="#${this.activeTab}"]`);
@@ -186,200 +185,207 @@ class CreateTaskModule {
     }
     
     renderTrademarkApplicationForm(container) {
-        container.innerHTML = `
-            <div class="card-body">
-                <ul class="nav nav-tabs" id="myTaskTabs" role="tablist">
-                    <li class="nav-item">
-                        <a class="nav-link active" id="brand-info-tab" data-toggle="tab" href="#brand-info" role="tab" aria-controls="brand-info" aria-selected="true">Marka Bilgileri</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" id="goods-services-tab" data-toggle="tab" href="#goods-services" role="tab" aria-controls="goods-services" aria-selected="false">Mal/Hizmet Seçimi</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" id="applicants-tab" data-toggle="tab" href="#applicants" role="tab" aria-controls="applicants" aria-selected="false">Başvuru Sahibi</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" id="priority-tab" data-toggle="tab" href="#priority" role="tab" aria-controls="priority" aria-selected="false">Rüçhan</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" id="accrual-tab" data-toggle="tab" href="#accrual" role="tab" aria-controls="accrual" aria-selected="false">Tahakkuk/Diğer</a>
-                    </li>
-                </ul>
-                <div class="tab-content mt-3" id="myTaskTabContent">
-                    <div class="tab-pane fade show active" id="brand-info" role="tabpanel" aria-labelledby="brand-info-tab">
-                        <div class="form-section">
-                            <h3 class="section-title">Marka Bilgileri</h3>
-                            <div class="form-group row">
-                                <label for="brandType" class="col-sm-3 col-form-label">Marka Tipi</label>
-                                <div class="col-sm-9">
-                                    <select class="form-control" id="brandType">
-                                        <option value="Sadece Kelime">Sadece Kelime</option>
-                                        <option value="Sadece Şekil">Sadece Şekil</option>
-                                        <option value="Şekil + Kelime" selected>Şekil + Kelime</option>
-                                        <option value="Ses">Ses</option>
-                                        <option value="Hareket">Hareket</option>
-                                        <option value="Renk">Renk</option>
-                                        <option value="Üç Boyutlu">Üç Boyutlu</option>
-                                    </select>
-                                </div>
+    container.innerHTML = `
+        <div class="card-body">
+            <ul class="nav nav-tabs" id="myTaskTabs" role="tablist">
+                <li class="nav-item">
+                    <a class="nav-link active" id="brand-info-tab" data-toggle="tab" href="#brand-info" role="tab" aria-controls="brand-info" aria-selected="true">Marka Bilgileri</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" id="goods-services-tab" data-toggle="tab" href="#goods-services" role="tab" aria-controls="goods-services" aria-selected="false">Mal/Hizmet Seçimi</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" id="applicants-tab" data-toggle="tab" href="#applicants" role="tab" aria-controls="applicants" aria-selected="false">Başvuru Sahibi</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" id="priority-tab" data-toggle="tab" href="#priority" role="tab" aria-controls="priority" aria-selected="false">Rüçhan</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" id="accrual-tab" data-toggle="tab" href="#accrual" role="tab" aria-controls="accrual" aria-selected="false">Tahakkuk/Diğer</a>
+                </li>
+            </ul>
+            <div class="tab-content mt-3" id="myTaskTabContent">
+                <div class="tab-pane fade show active" id="brand-info" role="tabpanel" aria-labelledby="brand-info-tab">
+                    <div class="form-section">
+                        <h3 class="section-title">Marka Bilgileri</h3>
+                        <div class="form-group row">
+                            <label for="brandType" class="col-sm-3 col-form-label">Marka Tipi</label>
+                            <div class="col-sm-9">
+                                <select class="form-control" id="brandType">
+                                    <option value="Sadece Kelime">Sadece Kelime</option>
+                                    <option value="Sadece Şekil">Sadece Şekil</option>
+                                    <option value="Şekil + Kelime" selected>Şekil + Kelime</option>
+                                    <option value="Ses">Ses</option>
+                                    <option value="Hareket">Hareket</option>
+                                    <option value="Renk">Renk</option>
+                                    <option value="Üç Boyutlu">Üç Boyutlu</option>
+                                </select>
                             </div>
-                            <div class="form-group row">
-                                <label for="brandCategory" class="col-sm-3 col-form-label">Marka Türü</label>
-                                <div class="col-sm-9">
-                                    <select class="form-control" id="brandCategory">
-                                        <option value="Ticaret/Hizmet Markası" selected>Ticaret/Hizmet Markası</option>
-                                        <option value="Garanti Markası">Garanti Markası</option>
-                                        <option value="Ortak Marka">Ortak Marka</option>
-                                    </select>
-                                </div>
+                        </div>
+                        <div class="form-group row">
+                            <label for="brandCategory" class="col-sm-3 col-form-label">Marka Türü</label>
+                            <div class="col-sm-9">
+                                <select class="form-control" id="brandCategory">
+                                    <option value="Ticaret/Hizmet Markası" selected>Ticaret/Hizmet Markası</option>
+                                    <option value="Garanti Markası">Garanti Markası</option>
+                                    <option value="Ortak Marka">Ortak Marka</option>
+                                </select>
                             </div>
-                            <div class="form-group row">
-                                <label for="brandExample" class="col-sm-3 col-form-label">Marka Örneği</label>
-                                <div class="col-sm-9">
-                                    <input type="file" class="form-control-file" id="brandExample">
-                                    <small class="form-text text-muted">Yüklenen marka örneği 591x591 px ve 300 DPI özelliklerinde olmalıdır.</small>
-                                </div>
+                        </div>
+                        <div class="form-group row">
+                            <label for="brandExample" class="col-sm-3 col-form-label">Marka Örneği</label>
+                            <div class="col-sm-9">
+                                <input type="file" class="form-control-file" id="brandExample">
+                                <small class="form-text text-muted">Yüklenen marka örneği 591x591 px ve 300 DPI özelliklerinde olmalıdır.</small>
                             </div>
-                            <div class="form-group row" id="brandExamplePreviewContainer" style="display:none;">
-                                <div class="col-sm-9 offset-sm-3">
-                                    <img id="brandExamplePreview" src="#" alt="Marka Örneği Önizlemesi" style="max-width: 200px; max-height: 200px; border: 1px solid #ddd; padding: 5px; margin-top: 10px;">
-                                </div>
+                        </div>
+                        <div class="form-group row" id="brandExamplePreviewContainer" style="display:none;">
+                            <div class="col-sm-9 offset-sm-3">
+                                <img id="brandExamplePreview" src="#" alt="Marka Örneği Önizlemesi" style="max-width: 200px; max-height: 200px; border: 1px solid #ddd; padding: 5px; margin-top: 10px;">
                             </div>
-                            <div class="form-group row">
-                                <label for="brandExampleText" class="col-sm-3 col-form-label">Marka Örneği Yazılı İfadesi</label>
-                                <div class="col-sm-9">
-                                    <input type="text" class="form-control" id="brandExampleText">
-                                </div>
+                        </div>
+                        <div class="form-group row">
+                            <label for="brandExampleText" class="col-sm-3 col-form-label">Marka Örneği Yazılı İfadesi</label>
+                            <div class="col-sm-9">
+                                <input type="text" class="form-control" id="brandExampleText">
                             </div>
-                            <div class="form-group row">
-                                <label class="col-sm-3 col-form-label">Önyazı Talebi</label>
-                                <div class="col-sm-9">
-                                    <div class="form-check form-check-inline">
-                                        <input class="form-check-input" type="radio" name="coverLetterRequest" id="coverLetterRequestVar" value="var">
-                                        <label class="form-check-label" for="coverLetterRequestVar">Var</label>
-                                    </div>
-                                    <div class="form-check form-check-inline">
-                                        <input class="form-check-input" type="radio" name="coverLetterRequest" id="coverLetterRequestYok" value="yok" checked>
-                                        <label class="form-check-label" for="coverLetterRequestYok">Yok</label>
-                                    </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-sm-3 col-form-label">Önyazı Talebi</label>
+                            <div class="col-sm-9">
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="coverLetterRequest" id="coverLetterRequestVar" value="var">
+                                    <label class="form-check-label" for="coverLetterRequestVar">Var</label>
                                 </div>
-                            </div>
-                            <div class="form-group row">
-                                <label class="col-sm-3 col-form-label">Muvafakat Talebi</label>
-                                <div class="col-sm-9">
-                                    <div class="form-check form-check-inline">
-                                        <input class="form-check-input" type="radio" name="consentRequest" id="consentRequestVar" value="var">
-                                        <label class="form-check-label" for="consentRequestVar">Var</label>
-                                    </div>
-                                    <div class="form-check form-check-inline">
-                                        <input class="form-check-input" type="radio" name="consentRequest" id="consentRequestYok" value="yok" checked>
-                                        <label class="form-check-label" for="consentRequestYok">Yok</label>
-                                    </div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="coverLetterRequest" id="coverLetterRequestYok" value="yok" checked>
+                                    <label class="form-check-label" for="coverLetterRequestYok">Yok</label>
                                 </div>
                             </div>
                         </div>
-                    </div>
-                    <div class="tab-pane fade" id="goods-services" role="tabpanel" aria-labelledby="goods-services-tab">
-                        <p>Bu sekmedeki içerik henüz tanımlanmamıştır.</p>
-                    </div>
-                    <div class="tab-pane fade" id="applicants" role="tabpanel" aria-labelledby="applicants-tab">
-                        <p>Bu sekmedeki içerik henüz tanımlanmamıştır.</p>
-                    </div>
-                     <div class="tab-pane fade" id="priority" role="tabpanel" aria-labelledby="priority-tab">
-                        <p>Bu sekmedeki içerik henüz tanımlanmamıştır.</p>
-                    </div>
-                    <div class="tab-pane fade" id="accrual" role="tabpanel" aria-labelledby="accrual-tab">
-                        <div class="form-section">
-                            <h3 class="section-title">Tahakkuk Bilgileri</h3>
-                            <div class="form-grid">
-                                <div class="form-group">
-                                    <label for="officialFee" class="form-label">Resmi Ücret</label>
-                                    <div class="input-with-currency">
-                                        <input type="number" id="officialFee" class="form-input" placeholder="0.00" step="0.01">
-                                        <select id="officialFeeCurrency" class="currency-select">
-                                            <option value="TRY" selected>TL</option>
-                                            <option value="EUR">EUR</option>
-                                            <option value="USD">USD</option>
-                                            <option value="CHF">CHF</option>
-                                        </select>
-                                    </div>
+                        <div class="form-group row">
+                            <label class="col-sm-3 col-form-label">Muvafakat Talebi</label>
+                            <div class="col-sm-9">
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="consentRequest" id="consentRequestVar" value="var">
+                                    <label class="form-check-label" for="consentRequestVar">Var</label>
                                 </div>
-                                <div class="form-group">
-                                    <label for="serviceFee" class="form-label">Hizmet Bedeli</label>
-                                    <div class="input-with-currency">
-                                        <input type="number" id="serviceFee" class="form-input" placeholder="0.00" step="0.01">
-                                        <select id="serviceFeeCurrency" class="currency-select">
-                                            <option value="TRY" selected>TL</option>
-                                            <option value="EUR">EUR</option>
-                                            <option value="USD">USD</option>
-                                            <option value="CHF">CHF</option>
-                                        </select>
-                                    </div>
-                                </div>
-                                <div class="form-group">
-                                    <label for="vatRate" class="form-label">KDV Oranı (%)</label>
-                                    <input type="number" id="vatRate" class="form-input" value="20">
-                                </div>
-                                <div class="form-group">
-                                    <label for="totalAmountDisplay" class="form-label">Toplam Tutar</label>
-                                    <div id="totalAmountDisplay" class="total-amount-display">0.00 TRY</div>
-                                </div>
-                                <div class="form-group full-width">
-                                    <label class="checkbox-label">
-                                        <input type="checkbox" id="applyVatToOfficialFee" checked>
-                                        Resmi Ücrete KDV Uygula
-                                    </label>
-                                </div>
-                                <div class="form-group full-width">
-                                    <label for="tpInvoicePartySearch" class="form-label">Türk Patent Faturası Tarafı</label>
-                                    <input type="text" id="tpInvoicePartySearch" class="form-input" placeholder="Fatura tarafı arayın...">
-                                    <div id="tpInvoicePartyResults" class="search-results-list"></div>
-                                    <div id="selectedTpInvoicePartyDisplay" class="search-result-display" style="display:none;"></div>
-                                </div>
-                                <div class="form-group full-width">
-                                    <label for="serviceInvoicePartySearch" class="form-label">Hizmet Faturası Tarafı</label>
-                                    <input type="text" id="serviceInvoicePartySearch" class="form-input" placeholder="Fatura tarafı arayın...">
-                                    <div id="serviceInvoicePartyResults" class="search-results-list"></div>
-                                    <div id="selectedServiceInvoicePartyDisplay" class="search-result-display" style="display:none;"></div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="form-section">
-                            <h3 class="section-title">İş Detayları ve Atama</h3>
-                            <div class="form-grid">
-                                <div class="form-group">
-                                    <label for="taskPriority" class="form-label">Öncelik</label>
-                                    <select id="taskPriority" class="form-select">
-                                        <option value="medium">Orta</option>
-                                        <option value="high">Yüksek</option>
-                                        <option value="low">Düşük</option>
-                                    </select>
-                                </div>
-                                <div class="form-group">
-                                    <label for="assignedTo" class="form-label">Atanacak Kullanıcı</label>
-                                    <select id="assignedTo" class="form-select">
-                                        <option value="">Seçiniz...</option>
-                                    </select>
-                                </div>
-                                <div class="form-group full-width">
-                                    <label for="taskDueDate" class="form-label">Operasyonel Son Tarih</label>
-                                    <input type="date" id="taskDueDate" class="form-input">
-                                </div>
-                                <div class="form-group full-width">
-                                    <label for="taskDescription" class="form-label">İş Açıklaması:</label>
-                                    <textarea id="taskDescription" class="form-textarea"></textarea>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="consentRequest" id="consentRequestYok" value="yok" checked>
+                                    <label class="form-check-label" for="consentRequestYok">Yok</label>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
+                <div class="tab-pane fade" id="goods-services" role="tabpanel" aria-labelledby="goods-services-tab">
+                    <p>Bu sekmedeki içerik henüz tanımlanmamıştır.</p>
+                </div>
+                <div class="tab-pane fade" id="applicants" role="tabpanel" aria-labelledby="applicants-tab">
+                    <p>Bu sekmedeki içerik henüz tanımlanmamıştır.</p>
+                </div>
+                <div class="tab-pane fade" id="priority" role="tabpanel" aria-labelledby="priority-tab">
+                    <p>Bu sekmedeki içerik henüz tanımlanmamıştır.</p>
+                </div>
+                <div class="tab-pane fade" id="accrual" role="tabpanel" aria-labelledby="accrual-tab">
+                    <div class="form-section">
+                        <h3 class="section-title">Tahakkuk Bilgileri</h3>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="officialFee" class="form-label">Resmi Ücret</label>
+                                <div class="input-with-currency">
+                                    <input type="number" id="officialFee" class="form-input" placeholder="0.00" step="0.01">
+                                    <select id="officialFeeCurrency" class="currency-select">
+                                        <option value="TRY" selected>TL</option>
+                                        <option value="EUR">EUR</option>
+                                        <option value="USD">USD</option>
+                                        <option value="CHF">CHF</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="serviceFee" class="form-label">Hizmet Bedeli</label>
+                                <div class="input-with-currency">
+                                    <input type="number" id="serviceFee" class="form-input" placeholder="0.00" step="0.01">
+                                    <select id="serviceFeeCurrency" class="currency-select">
+                                        <option value="TRY" selected>TL</option>
+                                        <option value="EUR">EUR</option>
+                                        <option value="USD">USD</option>
+                                        <option value="CHF">CHF</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="vatRate" class="form-label">KDV Oranı (%)</label>
+                                <input type="number" id="vatRate" class="form-input" value="20">
+                            </div>
+                            <div class="form-group">
+                                <label for="totalAmountDisplay" class="form-label">Toplam Tutar</label>
+                                <div id="totalAmountDisplay" class="total-amount-display">0.00 TRY</div>
+                            </div>
+                            <div class="form-group full-width">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="applyVatToOfficialFee" checked>
+                                    Resmi Ücrete KDV Uygula
+                                </label>
+                            </div>
+                            <div class="form-group full-width">
+                                <label for="tpInvoicePartySearch" class="form-label">Türk Patent Faturası Tarafı</label>
+                                <input type="text" id="tpInvoicePartySearch" class="form-input" placeholder="Fatura tarafı arayın...">
+                                <div id="tpInvoicePartyResults" class="search-results-list"></div>
+                                <div id="selectedTpInvoicePartyDisplay" class="search-result-display" style="display:none;"></div>
+                            </div>
+                            <div class="form-group full-width">
+                                <label for="serviceInvoicePartySearch" class="form-label">Hizmet Faturası Tarafı</label>
+                                <input type="text" id="serviceInvoicePartySearch" class="form-input" placeholder="Fatura tarafı arayın...">
+                                <div id="serviceInvoicePartyResults" class="search-results-list"></div>
+                                <div id="selectedServiceInvoicePartyDisplay" class="search-result-display" style="display:none;"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-section">
+                        <h3 class="section-title">İş Detayları ve Atama</h3>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="taskPriority" class="form-label">Öncelik</label>
+                                <select id="taskPriority" class="form-select">
+                                    <option value="medium">Orta</option>
+                                    <option value="high">Yüksek</option>
+                                    <option value="low">Düşük</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="assignedTo" class="form-label">Atanacak Kullanıcı</label>
+                                <select id="assignedTo" class="form-select">
+                                    <option value="">Seçiniz...</option>
+                                </select>
+                            </div>
+                            <div class="form-group full-width">
+                                <label for="taskDueDate" class="form-label">Operasyonel Son Tarih</label>
+                                <input type="date" id="taskDueDate" class="form-input">
+                            </div>
+                            <div class="form-group full-width">
+                                <label for="taskDescription" class="form-label">İş Açıklaması:</label>
+                                <textarea id="taskDescription" class="form-textarea"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div id="formActionsContainer" class="form-actions"></div>
-        `;
-        this.setupDynamicFormListeners();
-        // İlk render sonrası butonları güncellemek için çağırıyoruz
-        this.updateButtonsAndTabs();
-    }
+        </div>
+        <div id="formActionsContainer" class="form-actions"></div>
+    `;
+
+    // Dinamik form olaylarını bağla
+    this.setupDynamicFormListeners();
+
+    // İlk tab aktif hale getir
+    this.activeTab = 'brand-info';
+    $('#brand-info-tab').tab('show');
+
+    // Butonları hemen güncelle
+    this.updateButtonsAndTabs();
+}
 
     renderBaseForm(container, taskTypeName, taskTypeId) {
         const transactionLikeTasks = ['Devir', 'Lisans', 'Birleşme', 'Veraset ile İntikal', 'Rehin/Teminat', 'YİDK Kararının İptali'];
