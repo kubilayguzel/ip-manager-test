@@ -73,7 +73,6 @@ async function loadInitialData() {
 
     console.log("✅ loadInitialData tamamlandı");
 }
-
 async function loadBulletinOptions() {
     try {
         const bulletinSelect = document.getElementById('bulletinSelect');
@@ -84,23 +83,9 @@ async function loadBulletinOptions() {
         // 1️⃣ Kayıtlı bültenler (trademarkBulletins)
         const registeredBulletinsSnapshot = await getDocs(collection(db, 'trademarkBulletins'));
         const registeredBulletins = new Map();
-        
-        console.log(`📋 trademarkBulletins: ${registeredBulletinsSnapshot.size} doküman`);
-        
         registeredBulletinsSnapshot.forEach(doc => {
             const data = doc.data();
-            
-            // bulletinKey formatını düzelt - slash'ları kaldır
-            const bulletinDateFormatted = data.bulletinDate?.replace(/\./g, '').replace(/\//g, '') || '';
-            const bulletinKey = `${data.bulletinNo}_${bulletinDateFormatted}`;
-            
-            console.log("🔑 Kayıtlı bülten ekleniyor:", {
-                bulletinNo: data.bulletinNo,
-                originalDate: data.bulletinDate,
-                formattedDate: bulletinDateFormatted,
-                finalKey: bulletinKey
-            });
-            
+            const bulletinKey = `${data.bulletinNo}_${data.bulletinDate?.replace(/\./g, '') || ''}`;
             registeredBulletins.set(bulletinKey, {
                 ...data,
                 bulletinKey,
@@ -109,110 +94,53 @@ async function loadBulletinOptions() {
                 displayName: `${data.bulletinNo} - ${data.bulletinDate || ''} (Kayıtlı)`
             });
         });
-
-        console.log(`📋 Kayıtlı bültenler map: ${registeredBulletins.size}`);
+        console.log(`📋 Kayıtlı bültenler: ${registeredBulletins.size}`);
 
         // 2️⃣ Arama sonuçları olan bültenler (monitoringTrademarkRecords)
         const searchResultBulletins = new Map();
-        
-        console.log('🔍 monitoringTrademarkRecords sorgulanıyor...');
         const monitoringSnapshot = await getDocs(collection(db, 'monitoringTrademarkRecords'));
-        
-        console.log(`🔍 monitoringTrademarkRecords: ${monitoringSnapshot.size} doküman`);
-        console.log("📋 Monitoring doküman ID'leri:");
-        monitoringSnapshot.docs.forEach((doc, index) => {
-            console.log(`  ${index + 1}. "${doc.id}"`);
-        });
-        
-        // 469 özel kontrolü
-        const bulletin469 = monitoringSnapshot.docs.find(doc => doc.id.includes('469'));
-        if (bulletin469) {
-            console.log(`🎯 469 BULUNDU: "${bulletin469.id}"`);
-            
-            // Subcollection kontrol
-            const trademarksSnapshot = await getDocs(collection(db, 'monitoringTrademarkRecords', bulletin469.id, 'trademarks'));
-            console.log(`📊 ${bulletin469.id}/trademarks: ${trademarksSnapshot.docs.length} doküman`);
-            
-            let totalResults = 0;
-            trademarksSnapshot.docs.forEach(tmDoc => {
-                const data = tmDoc.data();
-                const results = data.results || [];
-                totalResults += results.length;
-                console.log(`  📈 ${tmDoc.id}: ${results.length} sonuç`);
-            });
-            
-            console.log(`✅ 469 toplam sonuç: ${totalResults}`);
-        } else {
-            console.log("❌ 469 BULUNAMADI!");
-        }
-        
-        // Her monitoring dokümanını kontrol et
+
         for (const bulletinDoc of monitoringSnapshot.docs) {
             const bulletinKey = bulletinDoc.id;
-            
-            console.log(`🔍 Monitoring bülten kontrol ediliyor: "${bulletinKey}"`);
-            
+            console.log("DEBUG → monitoringTrademarkRecords doc.id:", bulletinKey);
             try {
-                // Bu bültene ait trademarks subcollection'ında kayıt var mı kontrol et
-                const trademarksSnapshot = await getDocs(collection(db, 'monitoringTrademarkRecords', bulletinKey, 'trademarks'));
-                
-                console.log(`  📊 ${bulletinKey} için ${trademarksSnapshot.docs.length} trademark dokümanı bulundu`);
-                
-                // Her trademark dokümanını kontrol et
-                let hasAnyResults = false;
-                let totalResults = 0;
-                
-                trademarksSnapshot.docs.forEach(tmDoc => {
-                    const data = tmDoc.data();
-                    const results = data.results || [];
-                    totalResults += results.length;
-                    if (results.length > 0) hasAnyResults = true;
-                    
-                    console.log(`    📈 ${tmDoc.id}: ${results.length} sonuç`);
-                });
-                
-                console.log(`  📊 ${bulletinKey} özeti: hasAnyResults=${hasAnyResults}, totalResults=${totalResults}`);
-                
-                if (hasAnyResults) {
-                    console.log(`  ✅ ${bulletinKey} için sonuçlar var!`);
-                    
-                    // Eğer bu bülten zaten kayıtlı bültenler arasında değilse ekle
+                const trademarksSnapshot = await getDocs(
+                    collection(db, 'monitoringTrademarkRecords', bulletinKey, 'trademarks')
+                );
+
+                if (trademarksSnapshot.docs.length > 0) {
                     if (!registeredBulletins.has(bulletinKey)) {
-                        console.log(`  ➕ ${bulletinKey} kayıtlı değil, sadece arama olarak ekleniyor`);
-                        
-                        const [bulletinNo, bulletinDate] = bulletinKey.split('_');
-                        
-                        // Tarihi display için formatla (27052025 -> 27.05.2025)
-                        const formattedDate = bulletinDate ? 
-                            bulletinDate.replace(/(\d{2})(\d{2})(\d{4})/, '$1.$2.$3') : '';
-                        
+                        // Toleranslı split
+                        const parts = bulletinKey.split('_');
+                        const bulletinNo = parts[0] || bulletinKey;
+                        const bulletinDateRaw = parts[1] || '';
+                        const bulletinDate = bulletinDateRaw.length === 8
+                            ? bulletinDateRaw.replace(/(\d{2})(\d{2})(\d{4})/, '$1.$2.$3')
+                            : (bulletinDateRaw || 'Tarih Yok');
+
                         const searchBulletin = {
                             bulletinNo,
-                            bulletinDate: formattedDate,
+                            bulletinDate,
                             bulletinKey,
                             source: 'searchOnly',
                             hasOriginalBulletin: false,
-                            displayName: `${bulletinNo} - ${formattedDate} (Sadece Arama)`
+                            displayName: `${bulletinNo} - ${bulletinDate} (Sadece Arama)`
                         };
-                        
+
                         searchResultBulletins.set(bulletinKey, searchBulletin);
-                        
-                        console.log(`  📝 EKLENEN BÜLTEN:`, searchBulletin);
+                        console.log("  📝 EKLENEN BÜLTEN:", searchBulletin);
                     } else {
                         console.log(`  ⏭️ ${bulletinKey} zaten kayıtlı bültenler arasında`);
                     }
                 } else {
                     console.log(`  ❌ ${bulletinKey} için sonuç yok`);
                 }
-                
             } catch (subcollectionError) {
                 console.error(`  ❌ ${bulletinKey} subcollection hatası:`, subcollectionError);
             }
         }
 
         console.log(`🔍 Sadece arama sonucu olan bültenler: ${searchResultBulletins.size}`);
-        
-        // searchResultBulletins içeriğini logla
         console.log("📝 searchResultBulletins içeriği:");
         searchResultBulletins.forEach((bulletin, key) => {
             console.log(`  ${key}: ${bulletin.displayName}`);
@@ -220,26 +148,17 @@ async function loadBulletinOptions() {
 
         // 3️⃣ Tüm bültenleri birleştir ve sırala
         const allBulletins = new Map([...registeredBulletins, ...searchResultBulletins]);
-        
         console.log(`📊 Toplam bülten sayısı: ${allBulletins.size}`);
-        console.log("📝 allBulletins içeriği:");
-        allBulletins.forEach((bulletin, key) => {
-            console.log(`  ${key}: ${bulletin.displayName} (${bulletin.source})`);
-        });
-        
+
         const sortedBulletins = Array.from(allBulletins.values()).sort((a, b) => {
-            // Önce kayıtlı bültenler, sonra sadece arama sonucu olanlar
             if (a.source === 'registered' && b.source === 'searchOnly') return -1;
             if (a.source === 'searchOnly' && b.source === 'registered') return 1;
-            
-            // Aynı tip içinde bülten numarasına göre sırala (büyükten küçüğe)
             return parseInt(b.bulletinNo) - parseInt(a.bulletinNo);
         });
+        console.log("📝 sortedBulletins:", sortedBulletins);
 
-        console.log(`📋 Sıralanmış bülten sayısı: ${sortedBulletins.length}`);
-
-        // 4️⃣ Option'ları oluştur
-        sortedBulletins.forEach((bulletin, index) => {
+        // 4️⃣ Option oluştur
+        sortedBulletins.forEach(bulletin => {
             const option = document.createElement('option');
             option.value = bulletin.bulletinKey;
             option.dataset.source = bulletin.source;
@@ -248,32 +167,18 @@ async function loadBulletinOptions() {
             option.dataset.bulletinDate = bulletin.bulletinDate;
             option.textContent = bulletin.displayName;
             bulletinSelect.appendChild(option);
-            
-            console.log(`📝 Option ${index + 1} eklendi:`, {
-                value: bulletin.bulletinKey,
-                text: bulletin.displayName,
-                source: bulletin.source
-            });
         });
 
         console.log('✅ Bülten seçenekleri yüklendi:', {
             kayitliBultenler: registeredBulletins.size,
             sadeceAramaSonucu: searchResultBulletins.size,
-            toplam: allBulletins.size,
-            selectBoxOptionSayisi: bulletinSelect.options.length - 1 // -1 for "Bülten seçin..."
+            toplam: allBulletins.size
         });
-
-        // Son kontrol: Select box'taki option'ları logla
-        console.log("🎯 FINAL: Select box'taki option'lar:");
-        for (let i = 0; i < bulletinSelect.options.length; i++) {
-            const option = bulletinSelect.options[i];
-            console.log(`  ${i}. Value: "${option.value}", Text: "${option.textContent}"`);
-        }
-
     } catch (error) {
         console.error('❌ Bülten seçenekleri yüklenirken hata:', error);
     }
 }
+
 
 function updateMonitoringCount() {
     document.getElementById('monitoringCount').textContent = filteredMonitoringTrademarks.length;
