@@ -84,11 +84,22 @@ async function loadBulletinOptions() {
 
         // 1️⃣ Kayıtlı bültenler (trademarkBulletins)
         const registeredBulletinsSnapshot = await getDocs(collection(db, 'trademarkBulletins'));
-        const registeredBulletins = new Map(); // bulletinKey -> bulletin data
+        const registeredBulletins = new Map();
         
         registeredBulletinsSnapshot.forEach(doc => {
             const data = doc.data();
-            const bulletinKey = `${data.bulletinNo}_${data.bulletinDate?.replace(/\./g, '') || ''}`;
+            
+            // ✅ BULLETINKEY FORMATINI DÜZELTİN - slash'ları kaldır
+            const bulletinDateFormatted = data.bulletinDate?.replace(/\./g, '').replace(/\//g, '') || '';
+            const bulletinKey = `${data.bulletinNo}_${bulletinDateFormatted}`;
+            
+            console.log("🔑 bulletinKey oluşturuluyor:", {
+                bulletinNo: data.bulletinNo,
+                originalDate: data.bulletinDate,
+                formattedDate: bulletinDateFormatted,
+                finalKey: bulletinKey
+            });
+            
             registeredBulletins.set(bulletinKey, {
                 ...data,
                 bulletinKey,
@@ -101,26 +112,40 @@ async function loadBulletinOptions() {
         console.log(`📋 Kayıtlı bültenler: ${registeredBulletins.size}`);
 
         // 2️⃣ Arama sonuçları olan bültenler (monitoringTrademarkRecords)
-        const searchResultBulletins = new Map(); // bulletinKey -> bulletin data
+        const searchResultBulletins = new Map();
         const monitoringSnapshot = await getDocs(collection(db, 'monitoringTrademarkRecords'));
         
         for (const bulletinDoc of monitoringSnapshot.docs) {
             const bulletinKey = bulletinDoc.id;
             
+            console.log("🔍 Monitoring bülten kontrol ediliyor:", bulletinKey);
+            
             // Bu bültene ait trademarks subcollection'ında kayıt var mı kontrol et
             const trademarksSnapshot = await getDocs(collection(db, 'monitoringTrademarkRecords', bulletinKey, 'trademarks'));
+            
+            console.log(`  📊 ${bulletinKey} için ${trademarksSnapshot.docs.length} trademark dokümanı bulundu`);
             
             if (trademarksSnapshot.docs.length > 0) {
                 // Eğer bu bülten zaten kayıtlı bültenler arasında değilse ekle
                 if (!registeredBulletins.has(bulletinKey)) {
                     const [bulletinNo, bulletinDate] = bulletinKey.split('_');
+                    
+                    // ✅ Tarihi display için formatla (27052025 -> 27.05.2025)
+                    const formattedDate = bulletinDate ? 
+                        bulletinDate.replace(/(\d{2})(\d{2})(\d{4})/, '$1.$2.$3') : '';
+                    
                     searchResultBulletins.set(bulletinKey, {
                         bulletinNo,
-                        bulletinDate: bulletinDate ? bulletinDate.replace(/(\d{2})(\d{2})(\d{4})/, '$1.$2.$3') : '',
+                        bulletinDate: formattedDate,
                         bulletinKey,
                         source: 'searchOnly',
                         hasOriginalBulletin: false,
-                        displayName: `${bulletinNo} - ${bulletinDate ? bulletinDate.replace(/(\d{2})(\d{2})(\d{4})/, '$1.$2.$3') : ''} (Sadece Arama)`
+                        displayName: `${bulletinNo} - ${formattedDate} (Sadece Arama)`
+                    });
+                    
+                    console.log("➕ Sadece arama sonucu bülten eklendi:", {
+                        bulletinKey,
+                        displayName: `${bulletinNo} - ${formattedDate} (Sadece Arama)`
                     });
                 }
             }
@@ -143,13 +168,18 @@ async function loadBulletinOptions() {
         // 4️⃣ Option'ları oluştur
         sortedBulletins.forEach(bulletin => {
             const option = document.createElement('option');
-            option.value = bulletin.bulletinKey;
+            option.value = bulletin.bulletinKey; // 469_27052025 formatında
             option.dataset.source = bulletin.source;
             option.dataset.hasOriginalBulletin = bulletin.hasOriginalBulletin;
             option.dataset.bulletinNo = bulletin.bulletinNo;
             option.dataset.bulletinDate = bulletin.bulletinDate;
             option.textContent = bulletin.displayName;
             bulletinSelect.appendChild(option);
+            
+            console.log("📝 Option eklendi:", {
+                value: bulletin.bulletinKey,
+                text: bulletin.displayName
+            });
         });
 
         console.log('✅ Bülten seçenekleri yüklendi:', {
