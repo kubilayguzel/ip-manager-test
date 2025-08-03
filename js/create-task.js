@@ -31,9 +31,6 @@ class CreateTaskModule {
             this.allUsers = usersResult.data || [];
             this.allTransactionTypes = transactionTypesResult.data || [];
             
-            console.log('Kullanıcılar yüklendi:', this.allUsers.length);
-            console.log('Tüm işlem tipleri yüklendi:', this.allTransactionTypes.length);
-            
         } catch (error) {
             console.error("Veri yüklenirken hata oluştu:", error);
             alert("Gerekli veriler yüklenemedi, lütfen sayfayı yenileyin.");
@@ -43,11 +40,8 @@ class CreateTaskModule {
     }
 
     populateAssignedToDropdown() {
-        console.log('populateAssignedToDropdown çağrıldı, kullanıcı sayısı:', this.allUsers.length);
-        
         const assignedToSelect = document.getElementById('assignedTo');
         if (!assignedToSelect) {
-            console.error('assignedTo select elementi bulunamadı - HTML\'de eksik olabilir');
             return;
         }
         
@@ -59,8 +53,6 @@ class CreateTaskModule {
             option.textContent = user.displayName || user.email;
             assignedToSelect.appendChild(option);
         });
-        
-        console.log('Dropdown başarıyla dolduruldu');
     }
     
     setupEventListeners() {
@@ -68,9 +60,12 @@ class CreateTaskModule {
         document.getElementById('specificTaskType').addEventListener('change', (e) => this.handleSpecificTypeChange(e));
         document.getElementById('createTaskForm').addEventListener('submit', (e) => this.handleFormSubmit(e));
         document.getElementById('cancelBtn').addEventListener('click', () => { window.location.href = 'task-management.html'; });
-        document.getElementById('closeAddPersonModal').addEventListener('click', () => this.hideAddPersonModal());
-        document.getElementById('cancelPersonBtn').addEventListener('click', () => this.hideAddPersonModal());
-        document.getElementById('savePersonBtn').addEventListener('click', () => this.saveNewPerson());
+        const closeAddPersonModalBtn = document.getElementById('closeAddPersonModal');
+        if(closeAddPersonModalBtn) closeAddPersonModalBtn.addEventListener('click', () => this.hideAddPersonModal());
+        const cancelPersonBtn = document.getElementById('cancelPersonBtn');
+        if(cancelPersonBtn) cancelPersonBtn.addEventListener('click', () => this.hideAddPersonModal());
+        const savePersonBtn = document.getElementById('savePersonBtn');
+        if(savePersonBtn) savePersonBtn.addEventListener('click', () => this.saveNewPerson());
         const closeParentModalBtn = document.getElementById('closeSelectParentModal');
         if(closeParentModalBtn) closeParentModalBtn.addEventListener('click', () => this.hideParentSelectionModal());
         const cancelParentSelectionBtn = document.getElementById('cancelParentSelectionBtn');
@@ -126,7 +121,6 @@ class CreateTaskModule {
 
         if (!selectedTaskType) return;
         
-        // Marka başvurusu için özel formu render etme
         if (selectedTaskType.alias === 'Başvuru' && selectedTaskType.ipType === 'trademark') {
             this.renderTrademarkApplicationForm(container);
         } else {
@@ -234,7 +228,6 @@ class CreateTaskModule {
             </div>
         `;
         this.setupDynamicFormListeners();
-        this.populateAssignedToDropdown();
     }
 
     renderBaseForm(container, taskTypeName, taskTypeId) {
@@ -421,8 +414,12 @@ class CreateTaskModule {
             };
             reader.readAsDataURL(file);
         } else {
-            previewContainer.style.display = 'none';
-            previewImage.src = '';
+            if (previewContainer) {
+                 previewContainer.style.display = 'none';
+            }
+            if (previewImage) {
+                previewImage.src = '';
+            }
         }
     }
 
@@ -795,16 +792,13 @@ class CreateTaskModule {
                 parentId: null,
                 transactionHierarchy: "parent"
             };
-            console.log("📤 Firestore'a transaction ekleniyor:", transactionData);
 
             const addResult = await ipRecordsService.addTransactionToRecord(this.selectedIpRecord.id, transactionData);
 
             if (addResult.success) {
-                console.log("✅ Transaction Firestore'a kaydedildi:", addResult.data);
                 alert('İş ve ilgili tahakkuk başarıyla oluşturuldu!');
                 window.location.href = 'task-management.html';
             } else {
-                console.error("❌ Transaction kaydı başarısız:", addResult.error);
                 alert('İş oluşturuldu ama işlem Firestore\'a kaydedilemedi.');
             }
         } else if (selectedTransactionType.hierarchy === 'child' && selectedTransactionType.isTopLevelSelectable) {
