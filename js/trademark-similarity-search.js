@@ -1156,7 +1156,13 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (btnGenerateReport) {
                 btnGenerateReport.addEventListener('click', async () => {
                     try {
-                        await window.generateSimilarityReport();
+                        const generateReportFn = httpsCallable(functions, 'generateSimilarityReport');
+                        const response = await generateReportFn({
+                            // gerekli payload (örneğin seçili bulletinId vs.)
+                            bulletinKey: bulletinSelect.value
+                        });
+                        console.log("Rapor oluşturma sonucu:", response.data);
+                        alert("Rapor oluşturma isteği gönderildi!");
                     } catch (err) {
                         console.error("Rapor oluşturma hatası:", err);
                         alert("Rapor oluşturulurken bir hata oluştu!");
