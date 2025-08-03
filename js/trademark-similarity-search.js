@@ -214,6 +214,8 @@ function getOwnerNames(item) {
     return '-';
 }
 
+// ✅ Cache kontrol problemini debug etmek için checkCacheAndToggleButtonStates fonksiyonunu güncelleyin:
+
 async function checkCacheAndToggleButtonStates() {
     console.log("🔍 checkCacheAndToggleButtonStates çağrıldı");
     
@@ -227,14 +229,6 @@ async function checkCacheAndToggleButtonStates() {
         console.log("❌ Bülten seçilmemiş - butonlar devre dışı");
         startSearchBtn.disabled = true;
         researchBtn.disabled = true;
-        
-        // Sonuçları temizle
-        allSimilarResults = [];
-        resultsTableBody.innerHTML = '';
-        noRecordsMessage.style.display = 'none';
-        infoMessageContainer.innerHTML = '';
-        if (pagination) pagination.update(0);
-        
         return;
     }
     
@@ -243,20 +237,12 @@ async function checkCacheAndToggleButtonStates() {
         console.log("❌ İzlenen marka yok - butonlar devre dışı");
         startSearchBtn.disabled = true;
         researchBtn.disabled = true;
-        
-        if (infoMessageContainer) {
-            infoMessageContainer.innerHTML = `
-                <div class="info-message warning">
-                    <strong>Uyarı:</strong> İzlenen marka bulunamadı. Önce izlenecek markalar ekleyin.
-                </div>
-            `;
-        }
         return;
     }
     
     console.log("✅ Koşullar sağlandı, bülten kontrolü yapılıyor...");
     
-    // 🔍 Seçilen bülteni analiz et
+    // Seçilen bülteni analiz et
     const selectedOption = bulletinSelect.options[bulletinSelect.selectedIndex];
     const bulletinSource = selectedOption?.dataset?.source;
     const hasOriginalBulletin = selectedOption?.dataset?.hasOriginalBulletin === 'true';
@@ -268,52 +254,68 @@ async function checkCacheAndToggleButtonStates() {
     });
     
     try {
-        // Cache kontrolü yap
+        // ✅ DETAYLI CACHE KONTROLÜ
         console.log("🔍 Firestore path:", `monitoringTrademarkRecords/${bulletinKey}/trademarks`);
         const snapshot = await getDocs(collection(db, 'monitoringTrademarkRecords', bulletinKey, 'trademarks'));
         console.log("💾 Cache snapshot:", snapshot.docs.length, "doküman bulundu");
         
-        const hasCache = snapshot.docs.some(docSnap => {
+        // Her dokümanı detaylı incele
+        let totalResults = 0;
+        let hasAnyResults = false;
+        
+        snapshot.docs.forEach((docSnap, index) => {
             const data = docSnap.data();
-            const hasResults = data.results && data.results.length > 0;
-            console.log(`📄 Doküman ${docSnap.id}:`, hasResults ? `${data.results.length} sonuç var` : "sonuç yok");
-            return hasResults;
+            const results = data.results || [];
+            totalResults += results.length;
+            
+            console.log(`📄 Doküman ${index + 1}:`, {
+                id: docSnap.id,
+                resultsCount: results.length,
+                hasResults: results.length > 0,
+                sampleResult: results[0] ? {
+                    applicationNo: results[0].applicationNo,
+                    markName: results[0].markName
+                } : null
+            });
+            
+            if (results.length > 0) {
+                hasAnyResults = true;
+            }
         });
         
+        console.log("📊 Cache özeti:", {
+            totalDocuments: snapshot.docs.length,
+            totalResults: totalResults,
+            hasAnyResults: hasAnyResults
+        });
+        
+        // ✅ CACHE DURUMUNU DOĞRU BELIRLE
+        const hasCache = hasAnyResults;
         console.log("🗂️ Cache durumu:", hasCache ? "VAR" : "YOK");
         
-        // 🎯 Durum analizine göre buton ve mesaj ayarları
+        // ✅ CACHE VARSA VERILERI YÜKLE - DEBUG İLE
+        if (hasCache) {
+            console.log("📊 Cache'ten veriler yükleniyor...");
+            await loadDataFromCacheWithDebug(bulletinKey);
+        }
+        
+        // Buton durumlarını ayarla
         if (hasOriginalBulletin) {
-            // DURUM 1: Kayıtlı bülten
             if (hasCache) {
-                // Cache var, normal işleyiş
                 startSearchBtn.disabled = true;
                 researchBtn.disabled = false;
-                startSearchBtn.setAttribute('data-tooltip', 'Bu bülten için arama sonuçları mevcut');
-                researchBtn.removeAttribute('data-tooltip');
-                startSearchBtn.setAttribute('title', 'Bu bülten için arama sonuçları mevcut');
-                researchBtn.setAttribute('title', 'Cache\'i temizleyerek yeniden ara');
-                
                 console.log("✅ [Kayıtlı Bülten] Cache VAR - Arama Başlat: DEVRE DIŞI, Yeniden Ara: AKTİF");
-                
-                await loadDataFromCache(bulletinKey);
                 
                 if (infoMessageContainer) {
                     infoMessageContainer.innerHTML = `
                         <div class="info-message success">
-                            <strong>Bilgi:</strong> Bu bülten sistemde kayıtlı. Önbellekten ${allSimilarResults.length} arama sonucu yüklendi.
+                            <strong>Bilgi:</strong> Bu bülten sistemde kayıtlı. Önbellekten ${totalResults} arama sonucu yüklendi.
                         </div>
                     `;
                 }
             } else {
-                // Cache yok, arama yapılabilir
                 startSearchBtn.disabled = false;
                 researchBtn.disabled = true;
-                startSearchBtn.removeAttribute('data-tooltip');
-                researchBtn.setAttribute('data-tooltip', 'Önce arama yapmanız gerekiyor');
-                startSearchBtn.setAttribute('title', 'Bu bülten için arama yap');
-                researchBtn.setAttribute('title', 'Önce arama yapmanız gerekiyor');
-                
                 console.log("✅ [Kayıtlı Bülten] Cache YOK - Arama Başlat: AKTİF, Yeniden Ara: DEVRE DIŞI");
                 
                 if (infoMessageContainer) {
@@ -326,50 +328,27 @@ async function checkCacheAndToggleButtonStates() {
                 }
             }
         } else {
-            // DURUM 2: Sadece arama sonucu olan bülten (sistemde kayıtlı değil)
             if (hasCache) {
-                // Cache var ama yeni arama yapılamaz
                 startSearchBtn.disabled = true;
                 researchBtn.disabled = true;
-                startSearchBtn.setAttribute('data-tooltip', 'Bu bülten sistemde kayıtlı değil');
-                researchBtn.setAttribute('data-tooltip', 'Bu bülten sistemde kayıtlı değil');
-                startSearchBtn.setAttribute('title', 'Bu bülten sistemde kayıtlı değil, yeni arama yapılamaz');
-                researchBtn.setAttribute('title', 'Bu bülten sistemde kayıtlı değil, yeniden arama yapılamaz');
-                
                 console.log("⚠️ [Sadece Arama] Cache VAR - Her iki buton: DEVRE DIŞI");
-                
-                await loadDataFromCache(bulletinKey);
                 
                 if (infoMessageContainer) {
                     infoMessageContainer.innerHTML = `
                         <div class="info-message warning">
-                            <strong>Uyarı:</strong> Bu bülten sistemde kayıtlı değil. Sadece eski arama sonuçları gösterilmektedir. 
-                            Yeni arama yapmak için önce bülteni sisteme yüklemeniz gerekir.
+                            <strong>Uyarı:</strong> Bu bülten sistemde kayıtlı değil. Sadece eski arama sonuçları gösterilmektedir (${totalResults} sonuç).
                         </div>
                     `;
                 }
             } else {
-                // Ne cache var ne de yeni arama yapılabilir
                 startSearchBtn.disabled = true;
                 researchBtn.disabled = true;
-                startSearchBtn.setAttribute('data-tooltip', 'Bu bülten sistemde kayıtlı değil');
-                researchBtn.setAttribute('data-tooltip', 'Bu bülten sistemde kayıtlı değil');
-                startSearchBtn.setAttribute('title', 'Bu bülten sistemde kayıtlı değil ve arama sonucu da yok');
-                researchBtn.setAttribute('title', 'Bu bülten sistemde kayıtlı değil ve arama sonucu da yok');
-                
                 console.log("❌ [Sadece Arama] Cache YOK - Her iki buton: DEVRE DIŞI");
-                
-                // Sonuçları temizle
-                allSimilarResults = [];
-                resultsTableBody.innerHTML = '';
-                noRecordsMessage.style.display = 'block';
-                if (pagination) pagination.update(0);
                 
                 if (infoMessageContainer) {
                     infoMessageContainer.innerHTML = `
                         <div class="info-message error">
-                            <strong>Hata:</strong> Bu bülten sistemde kayıtlı değil ve arama sonucu da bulunamadı. 
-                            Lütfen geçerli bir bülten seçin.
+                            <strong>Hata:</strong> Bu bülten sistemde kayıtlı değil ve arama sonucu da bulunamadı.
                         </div>
                     `;
                 }
@@ -381,13 +360,8 @@ async function checkCacheAndToggleButtonStates() {
         
     } catch (error) {
         console.error('❌ Cache kontrol hatası:', error);
-        // Hata durumunda güvenli varsayılan
         startSearchBtn.disabled = true;
         researchBtn.disabled = true;
-        startSearchBtn.setAttribute('data-tooltip', 'Bir hata oluştu');
-        researchBtn.setAttribute('data-tooltip', 'Bir hata oluştu');
-        startSearchBtn.setAttribute('title', 'Bülten bilgileri kontrol edilirken hata oluştu');
-        researchBtn.setAttribute('title', 'Bülten bilgileri kontrol edilirken hata oluştu');
         
         if (infoMessageContainer) {
             infoMessageContainer.innerHTML = `
@@ -396,8 +370,90 @@ async function checkCacheAndToggleButtonStates() {
                 </div>
             `;
         }
+    }
+}
+
+// ✅ Debug versiyonu loadDataFromCache fonksiyonu ekleyin:
+async function loadDataFromCacheWithDebug(bulletinKey) {
+    console.log("📊 loadDataFromCacheWithDebug başladı:", bulletinKey);
+    
+    try {
+        const snapshot = await getDocs(collection(db, 'monitoringTrademarkRecords', bulletinKey, 'trademarks'));
+        console.log("💾 Snapshot alındı:", snapshot.docs.length, "doküman");
         
-        console.log("⚠️ Hata nedeniyle her iki buton devre dışı");
+        let cachedResults = [];
+        
+        snapshot.forEach((docSnap, index) => {
+            const data = docSnap.data();
+            const results = data.results || [];
+            
+            console.log(`🔄 İşleniyor ${index + 1}/${snapshot.docs.length}:`, {
+                docId: docSnap.id,
+                resultsCount: results.length,
+                dataKeys: Object.keys(data)
+            });
+            
+            // Her sonucu işle
+            results.forEach((r, resultIndex) => {
+                const processedResult = {
+                    ...r,
+                    source: 'cache',
+                    monitoredTrademarkId: docSnap.id,
+                    monitoredTrademark: filteredMonitoringTrademarks.find(tm => tm.id === docSnap.id)?.title || 'BELİRSİZ_MARKA'
+                };
+                
+                cachedResults.push(processedResult);
+                
+                if (resultIndex < 2) { // İlk 2 sonucu logla
+                    console.log(`  📄 Sonuç ${resultIndex + 1}:`, {
+                        applicationNo: r.applicationNo,
+                        markName: r.markName,
+                        monitoredTrademark: processedResult.monitoredTrademark
+                    });
+                }
+            });
+        });
+        
+        console.log("📊 Cache işleme tamamlandı:", {
+            totalResults: cachedResults.length,
+            sampleResult: cachedResults[0]
+        });
+        
+        // Global değişkeni güncelle
+        allSimilarResults = cachedResults;
+        console.log("🌍 allSimilarResults güncellendi:", allSimilarResults.length);
+        
+        if (allSimilarResults.length > 0) {
+            console.log("✅ Sonuçlar var, sayfalama ve render başlatılıyor...");
+            
+            if (infoMessageContainer) {
+                infoMessageContainer.innerHTML = `<div class="info-message">Önbellekten ${allSimilarResults.length} benzer sonuç yüklendi.</div>`;
+            }
+            
+            // Sayfalamayı güncelle
+            if (pagination) {
+                console.log("📄 Pagination güncelleniyor...");
+                pagination.update(allSimilarResults.length);
+            }
+            
+            // Sonuçları render et
+            console.log("🎨 Sonuçlar render ediliyor...");
+            renderCurrentPageOfResults();
+            
+            // No records mesajını gizle
+            noRecordsMessage.style.display = 'none';
+            
+            console.log("✅ Cache yükleme tamamlandı!");
+        } else {
+            console.log("❌ Sonuç bulunamadı");
+            noRecordsMessage.style.display = 'block';
+            resultsTableBody.innerHTML = '';
+            infoMessageContainer.innerHTML = '';
+            if (pagination) pagination.update(0);
+        }
+        
+    } catch (error) {
+        console.error("❌ loadDataFromCacheWithDebug hatası:", error);
     }
 }
 async function loadDataFromCache(bulletinKey) {
