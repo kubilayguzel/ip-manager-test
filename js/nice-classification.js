@@ -159,41 +159,33 @@ function updateVisualStates() {
     allNiceData.forEach(cls => {
         const classNumber = cls.classNumber;
         const mainClassCode = `${classNumber}-main`;
-        
-        // Ana sınıf seçili mi kontrol et
+
+        // Seçili durumları belirle
         const isMainSelected = selectedClasses[mainClassCode];
-        
-        // Alt sınıflardan kaç tanesi seçili
-        const selectedSubCount = cls.subClasses.filter((sc, index) => {
-            const code = `${classNumber}-${index + 1}`;
-            return selectedClasses[code];
-        }).length;
-        
+        const selectedSubCount = cls.subClasses.filter((sc, index) =>
+            selectedClasses[`${classNumber}-${index + 1}`]
+        ).length;
+
         const allSubClassesSelected = selectedSubCount === cls.subClasses.length && cls.subClasses.length > 0;
         const someSubClassesSelected = selectedSubCount > 0;
 
-        // Ana sınıf header'ını bul ve güncelle
+        // Ana sınıf header elementini bul
         const headerElement = document.querySelector(`.class-header[data-id="${classNumber}"]`);
         if (headerElement) {
-            headerElement.classList.remove('selected', 'partially-selected', 'fully-selected');
-            
+            headerElement.classList.remove('partially-selected', 'fully-selected');
             if (isMainSelected || allSubClassesSelected) {
-                headerElement.classList.add('selected', 'fully-selected');
+                headerElement.classList.add('fully-selected');
             } else if (someSubClassesSelected) {
-                headerElement.classList.add('selected', 'partially-selected');
+                headerElement.classList.add('partially-selected');
             }
         }
 
-        // Alt sınıfları güncelle
+        // Alt sınıf elemanlarının görsel durumunu güncelle
         cls.subClasses.forEach((sc, index) => {
             const code = `${classNumber}-${index + 1}`;
             const subElement = document.querySelector(`[data-code="${code}"]`);
             if (subElement) {
-                if (selectedClasses[code]) {
-                    subElement.classList.add('selected');
-                } else {
-                    subElement.classList.remove('selected');
-                }
+                subElement.classList.toggle('selected', !!selectedClasses[code]);
             }
         });
     });
