@@ -1,6 +1,6 @@
 // js/nice-classification.js
 import { db } from '../firebase-config.js';
-import { collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { collection, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 let allNiceData = [];
 let selectedClasses = {};
