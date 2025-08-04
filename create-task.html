@@ -356,6 +356,192 @@
                 height: 400px !important;
             }
         }
+        .class-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 20px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border-bottom: 1px solid #f1f3f4;
+    background: white;
+}
+
+.class-header:hover {
+    background: #f8f9fa;
+}
+
+.class-header-content {
+    display: flex;
+    align-items: center;
+    flex: 1;
+}
+
+.class-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* Seçili ana sınıf stilleri - YENİ */
+.class-header.selected.fully-selected {
+    background: linear-gradient(135deg, #e8f5e8 0%, #d4edda 100%);
+    border-left: 4px solid #28a745;
+}
+
+.class-header.selected.partially-selected {
+    background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+    border-left: 4px solid #ffc107;
+}
+
+/* Ana sınıf seç butonu - YENİ */
+.select-class-btn {
+    background: #6c757d;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 12px;
+}
+
+.select-class-btn:hover {
+    background: #5a6268;
+    transform: scale(1.1);
+}
+
+.class-header.selected .select-class-btn {
+    background: #28a745;
+    color: white;
+}
+
+.class-header.selected.partially-selected .select-class-btn {
+    background: #ffc107;
+    color: #333;
+}
+
+/* Alt sınıf seçimi stilleri - GÜNCELLENDİ */
+.subclass-item {
+    padding: 12px 20px 12px 50px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border-bottom: 1px solid #f8f9fa;
+    background: white;
+    position: relative;
+}
+
+.subclass-item:hover {
+    background: #f8f9fa;
+    transform: translateX(5px);
+}
+
+.subclass-item.selected {
+    background: linear-gradient(135deg, #e8f5e8 0%, #d4edda 100%);
+    color: #155724;
+    font-weight: 500;
+    border-left: 3px solid #28a745;
+}
+
+.subclass-item.selected::before {
+    content: "✓";
+    position: absolute;
+    left: 25px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #28a745;
+    font-weight: bold;
+    font-size: 14px;
+}
+
+.subclass-code {
+    font-weight: 600;
+    color: #495057;
+}
+
+.subclass-item.selected .subclass-code {
+    color: #155724;
+}
+
+/* Accordion animasyonu - GÜNCELLENDİ */
+.subclasses-container {
+    transition: all 0.3s ease;
+    overflow: hidden;
+}
+
+.subclasses-container:not(.show) {
+    display: none;
+}
+
+.subclasses-container.show {
+    display: block;
+}
+
+.class-header .toggle-icon {
+    transition: transform 0.3s ease;
+}
+
+.class-header.expanded .toggle-icon {
+    transform: rotate(180deg);
+}
+
+/* Seçilen sınıf sayacı - YENİ */
+#selectedClassCount {
+    background: #28a745;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); }
+}
+
+/* Mevcut class-number ve class-title stilleri - KORUNMUŞ */
+.class-number {
+    background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+    color: white;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 0.9em;
+    margin-right: 12px;
+    min-width: 35px;
+    text-align: center;
+}
+
+.class-title {
+    flex: 1;
+    font-weight: 500;
+    color: #333;
+}
+
+/* Responsive - GÜNCELLENDİ */
+@media (max-width: 768px) {
+    .class-header {
+        padding: 10px 15px;
+    }
+    
+    .subclass-item {
+        padding: 10px 15px 10px 40px;
+    }
+    
+    .select-class-btn {
+        width: 25px;
+        height: 25px;
+        font-size: 10px;
+    }
+    
+    .class-number {
+        padding: 4px 8px;
+        font-size: 0.8em;
+        margin-right: 8px;
+    }
+}
     </style>
 </head>
 <body>
