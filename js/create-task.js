@@ -444,7 +444,6 @@ class CreateTaskModule {
         this.setupBrandExampleUploader();
         this.updateButtonsAndTabs();
     }
-
     renderBaseForm(container, taskTypeName, taskTypeId) {
         const transactionLikeTasks = ['Devir', 'Lisans', 'Birleşme', 'Veraset ile İntikal', 'Rehin/Teminat', 'YİDK Kararının İptali'];
         const needsRelatedParty = transactionLikeTasks.includes(taskTypeName);
@@ -646,38 +645,31 @@ class CreateTaskModule {
         });
     }
 
-    handleBrandExampleFile(files) {
-        const file = files[0];
-        const previewContainer = document.getElementById('brandExamplePreviewContainer');
-        const previewImage = document.getElementById('brandExamplePreview');
-        const brandExampleInput = document.getElementById('brandExample');
+        async handleBrandExampleFile(file) {
+        if (!file || !file.type.startsWith('image/')) return;
 
-        if (file && file.type.startsWith('image/')) {
-            const reader = new FileReader();
-            reader.onload = function(event) {
-                if (previewImage) {
-                    previewImage.src = event.target.result;
-                }
-                if (previewContainer) {
-                    previewContainer.style.display = 'block';
-                }
-            };
-            reader.readAsDataURL(file);
+        const img = new Image();
+        img.src = URL.createObjectURL(file);
+        img.onload = async () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = 591;
+            canvas.height = 591;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, 591, 591);
 
-            const dataTransfer = new DataTransfer();
-            dataTransfer.items.add(file);
-            brandExampleInput.files = dataTransfer.files;
-        } else {
-            if (previewContainer) {
-                 previewContainer.style.display = 'none';
+            const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.92));
+            const newFile = new File([blob], 'brand-example.jpg', { type: 'image/jpeg' });
+
+            const previewImage = document.getElementById('brandExamplePreview');
+            const previewContainer = document.getElementById('brandExamplePreviewContainer');
+            if (previewImage && previewContainer) {
+                previewImage.src = URL.createObjectURL(blob);
+                previewContainer.style.display = 'block';
             }
-            if (previewImage) {
-                previewImage.src = '';
-            }
-             if (brandExampleInput) {
-                brandExampleInput.value = '';
-            }
-        }
+
+            // İstersen form verisine ekleyebilirsin:
+            this.uploadedFiles = [newFile];
+        };
     }
 
     calculateTotalAmount() {
@@ -1121,48 +1113,3 @@ auth.onAuthStateChanged(user => {
         loadSharedLayout({ activeMenuLink: 'create-task.html' });
     } else { window.location.href = 'index.html'; }
 });
-const brandExampleInput = document.getElementById('brandExampleUpload');
-const dropArea = document.getElementById('brandExampleDrop');
-
-['dragenter', 'dragover'].forEach(eventName => {
-    dropArea.addEventListener(eventName, e => {
-        e.preventDefault();
-        e.stopPropagation();
-        dropArea.classList.add('drag-over');
-    }, false);
-});
-['dragleave', 'drop'].forEach(eventName => {
-    dropArea.addEventListener(eventName, e => {
-        e.preventDefault();
-        e.stopPropagation();
-        dropArea.classList.remove('drag-over');
-    }, false);
-});
-dropArea.addEventListener('drop', e => {
-    if (e.dataTransfer.files.length > 0) {
-        handleBrandExampleFile(e.dataTransfer.files[0]);
-    }
-});
-brandExampleInput.addEventListener('change', e => {
-    if (e.target.files.length > 0) {
-        handleBrandExampleFile(e.target.files[0]);
-    }
-});
-
-async function handleBrandExampleFile(file) {
-    const img = new Image();
-    img.src = URL.createObjectURL(file);
-    img.onload = async () => {
-        const canvas = document.createElement('canvas');
-        canvas.width = 591;
-        canvas.height = 591;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, 591, 591);
-
-        const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.92));
-        const newFile = new File([blob], 'brand-example.jpg', { type: 'image/jpeg' });
-
-        document.getElementById('brandExamplePreview').src = URL.createObjectURL(blob);
-        document.getElementById('brandExamplePreviewContainer').style.display = 'block';
-    };
-}
