@@ -908,6 +908,18 @@
     background: #6c757d !important; /* Seçili olsa da gri kalsın */
     color: white;
 }
+.nice-classification-container .row {
+    display: flex;
+    align-items: stretch; /* Tüm kolonları eşit yükseklikte yapar */
+}
+.nice-classification-container .col-lg-8,
+.nice-classification-container .col-lg-4 {
+    display: flex;
+    flex-direction: column;
+}
+.selected-classes-panel {
+    flex: 1; /* Yüksekliği sol panel ile eşitler */
+}
     </style>
 </head>
 <body>
