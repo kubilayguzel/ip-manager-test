@@ -46,9 +46,17 @@
             background: white;
             border: 1px solid #dee2e6;
             border-radius: 12px;
-            overflow: hidden;
-            height: fit-content;
             box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            position: sticky;  /* sayfayı kaydırınca sağ panel sabit kalır */
+            top: 20px;         /* üstten biraz boşluk */
+            max-height: 500px; /* sağ panelin maksimum yüksekliği */
+            display: flex;
+            flex-direction: column;
+        }
+        #selectedNiceClasses {
+            flex: 1;
+            overflow-y: auto;
+            max-height: 400px; /* seçilenlerin kendine ait scroll alanı */
         }
 
         .panel-header {
