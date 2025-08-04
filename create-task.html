@@ -99,6 +99,41 @@ body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333
   .selected-classes-panel { margin-top: 20px; }
   .class-35-5-modal .row { flex-direction: column; }
 }
+/* Ana sınıf seçili değil (varsayılan) -> beyaz */
+.class-header {
+    background: white;
+}
+
+/* En az 1 alt sınıf seçili ama hepsi değil -> sarı */
+.class-header.partially-selected {
+    background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+    border-left: 4px solid #ffc107;
+}
+
+/* Tüm alt sınıflar veya ana sınıf seçili -> yeşil */
+.class-header.fully-selected {
+    background: linear-gradient(135deg, #e8f5e8 0%, #d4edda 100%);
+    border-left: 4px solid #28a745;
+}
+
+/* Tik butonu varsayılan gri */
+.select-class-btn {
+    background: #6c757d;
+    color: white;
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+}
+.select-class-btn:hover { background: #5a6268; transform: scale(1.1); }
+
+/* Duruma göre tik rengi değişsin */
+.class-header.fully-selected .select-class-btn { background: #28a745; }
+.class-header.partially-selected .select-class-btn { background: #ffc107; color: #333; }
+
 </style>
 </head>
 <body>
