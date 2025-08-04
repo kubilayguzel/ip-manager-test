@@ -160,27 +160,34 @@ function updateVisualStates() {
         const classNumber = cls.classNumber;
         const mainClassCode = `${classNumber}-main`;
 
-        // Seçili durumları belirle
         const isMainSelected = selectedClasses[mainClassCode];
-        const selectedSubCount = cls.subClasses.filter((sc, index) =>
-            selectedClasses[`${classNumber}-${index + 1}`]
-        ).length;
+        const selectedSubCount = cls.subClasses.filter((sc, index) => {
+            const code = `${classNumber}-${index + 1}`;
+            return selectedClasses[code];
+        }).length;
 
         const allSubClassesSelected = selectedSubCount === cls.subClasses.length && cls.subClasses.length > 0;
         const someSubClassesSelected = selectedSubCount > 0;
 
-        // Ana sınıf header elementini bul
         const headerElement = document.querySelector(`.class-header[data-id="${classNumber}"]`);
+        const accordionElement = document.getElementById(`subclasses-${classNumber}`);
+
         if (headerElement) {
-            headerElement.classList.remove('partially-selected', 'fully-selected');
+            headerElement.classList.remove('selected', 'partially-selected', 'fully-selected');
+
             if (isMainSelected || allSubClassesSelected) {
-                headerElement.classList.add('fully-selected');
+                headerElement.classList.add('selected', 'fully-selected');
+                if (accordionElement) accordionElement.classList.add('show');
             } else if (someSubClassesSelected) {
-                headerElement.classList.add('partially-selected');
+                headerElement.classList.add('selected', 'partially-selected');
+                if (accordionElement) accordionElement.classList.add('show');
+            } else {
+                // hiçbir seçim yok → accordion'u kapat
+                if (accordionElement) accordionElement.classList.remove('show');
+                headerElement.classList.remove('expanded');
             }
         }
 
-        // Alt sınıf elemanlarının görsel durumunu güncelle
         cls.subClasses.forEach((sc, index) => {
             const code = `${classNumber}-${index + 1}`;
             const subElement = document.querySelector(`[data-code="${code}"]`);
