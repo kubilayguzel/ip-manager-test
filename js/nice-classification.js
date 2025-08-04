@@ -324,12 +324,23 @@ function openClass35_5Modal() {
 }
 
 function closeClass35_5Modal() {
-    const modal = document.getElementById('class35-5-modal');
-    if (modal) {
-        modal.remove();
+    try {
+        console.log('Modal kapatılıyor...');
+        console.log('Kapanma öncesi seçimler:', Object.keys(class35_5_modalSelectedItems).length);
+        
+        const modal = document.getElementById('class35-5-modal');
+        if (modal) {
+            modal.remove();
+            console.log('Modal DOM\'dan kaldırıldı');
+        }
+        
+        // Seçimleri temizle
+        class35_5_modalSelectedItems = {};
+        console.log('Modal seçimleri temizlendi');
+        console.log('Temizleme sonrası:', Object.keys(class35_5_modalSelectedItems).length);
+    } catch (error) {
+        console.error('Modal kapatma hatası:', error);
     }
-    // Seçimleri temizle
-    class35_5_modalSelectedItems = {};
 }
 
 async function loadClass35_5ModalContent() {
@@ -632,32 +643,66 @@ function updateClass35_5VisualStates() {
 }
 
 function saveClass35_5Selection() {
-    if (Object.keys(class35_5_modalSelectedItems).length === 0) {
-        alert('Lütfen en az bir mal seçin.');
-        return;
+    try {
+        console.log('=== KAYDETME BAŞLIYOR ===');
+        console.log('class35_5_modalSelectedItems içeriği:', class35_5_modalSelectedItems);
+        
+        const itemCount = Object.keys(class35_5_modalSelectedItems).length;
+        console.log('Seçili item sayısı:', itemCount);
+        
+        if (itemCount === 0) {
+            console.log('❌ Hiç mal seçilmemiş');
+            alert('Lütfen en az bir mal seçin.');
+            return;
+        }
+
+        console.log('✅ Mallar bulundu, kaydetme devam ediyor...');
+
+        // Seçilen malları metin olarak birleştir
+        const selectedTexts = Object.values(class35_5_modalSelectedItems)
+            .map(item => {
+                console.log('İşlenen item:', item);
+                return item.text || item;
+            })
+            .join(', ');
+
+        console.log('Birleştirilmiş metin:', selectedTexts);
+
+        // 35-5 metnini güncelle
+        const originalText = "(35-5) Müşterilerin malları elverişli bir şekilde görüp satın alabilmeleri için … mallarının bir araya getirilmesi hizmetleri (belirtilen hizmetler perakende satış mağazaları, toptan satış mağazaları, elektronik ortamlar, katalog ve benzeri diğer yöntemler ile sağlanabilir)";
+        const updatedText = originalText.replace('…', selectedTexts);
+
+        // Ana sistemdeki 35-5 kaydını güncelle
+        const code35_5 = "35-5";
+        
+        if (selectedClasses && selectedClasses[code35_5]) {
+            selectedClasses[code35_5].text = updatedText;
+            renderSelectedClasses();
+            console.log('✅ 35-5 kaydı güncellendi');
+        } else {
+            console.log('35-5 kaydı bulunamadı, yeni kayıt oluşturuluyor...');
+            if (selectedClasses) {
+                selectedClasses[code35_5] = {
+                    classNum: '35',
+                    text: updatedText
+                };
+                renderSelectedClasses();
+            }
+        }
+
+        // ÖNEMLİ: Modal'ı kapatmadan ÖNCE sayıyı kaydet
+        const finalCount = itemCount;
+        
+        // Modal'ı kapat (bu seçimleri siler)
+        closeClass35_5Modal();
+        
+        // Başarı mesajı - KAYDEDILEN SAYIYI KULLAN
+        alert(`✅ 35-5 hizmeti başarıyla güncellendi!\n${finalCount} mal kategorisi eklendi.`);
+        
+    } catch (error) {
+        console.error('❌ Kaydetme hatası:', error);
+        alert('Kaydetme sırasında hata oluştu:\n' + error.message);
     }
-
-    // Seçilen malları metin olarak birleştir
-    const selectedTexts = Object.values(class35_5_modalSelectedItems)
-        .map(item => item.text)
-        .join(', ');
-
-    // 35-5 metnini güncelle
-    const originalText = "(35-5) Müşterilerin malları elverişli bir şekilde görüp satın alabilmeleri için … mallarının bir araya getirilmesi hizmetleri (belirtilen hizmetler perakende satış mağazaları, toptan satış mağazaları, elektronik ortamlar, katalog ve benzeri diğer yöntemler ile sağlanabilir)";
-    const updatedText = originalText.replace('…', selectedTexts);
-
-    // Ana sistemdeki 35-5 kaydını güncelle
-    const code35_5 = "35-5";
-    if (selectedClasses[code35_5]) {
-        selectedClasses[code35_5].text = updatedText;
-        renderSelectedClasses();
-    }
-
-    // Modal'ı kapat
-    closeClass35_5Modal();
-    
-    // Başarı mesajı
-    alert(`35-5 hizmeti güncellendi! ${Object.keys(class35_5_modalSelectedItems).length} mal eklendi.`);
 }
 
 function clearClass35_5Search() {
