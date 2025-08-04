@@ -8,12 +8,10 @@ let selectedClasses = {};  // { key: { classNum, text } }
 function renderSelectedClasses() {
     const container = document.getElementById('selectedNiceClasses');
     const countBadge = document.getElementById('selectedClassCount');
-
     if (!container) return;
-    if (countBadge) countBadge.textContent = Object.keys(selectedClasses).length;
 
-    const selectedKeys = Object.keys(selectedClasses);
-    if (selectedKeys.length === 0) {
+    countBadge.textContent = Object.keys(selectedClasses).length;
+    if (Object.keys(selectedClasses).length === 0) {
         container.innerHTML = `
             <div class="empty-state">
                 <i class="fas fa-list-alt fa-3x text-muted mb-3"></i>
@@ -26,22 +24,23 @@ function renderSelectedClasses() {
     }
 
     const grouped = {};
-    selectedKeys.forEach(key => {
-        const item = selectedClasses[key];
+    Object.entries(selectedClasses).forEach(([code, item]) => {
         if (!grouped[item.classNum]) grouped[item.classNum] = [];
-        grouped[item.classNum].push({ key, text: item.text });
+        grouped[item.classNum].push({ code, text: item.text });
     });
 
     let html = '';
     Object.keys(grouped).sort((a, b) => parseInt(a) - parseInt(b)).forEach(classNum => {
         grouped[classNum].forEach(item => {
             const isCustom = classNum === '99';
+            // ALT SINIF KODU GÖSTER - 99. sınıf için sadece sınıf numarası, diğerleri için tam kod
+            const displayCode = isCustom ? classNum : item.code;
             html += `
-                <div class="selected-class-item ${isCustom ? 'custom' : ''}">
-                    <div class="selected-class-number">Sınıf ${classNum}</div>
-                    <p class="selected-class-description">${item.text}</p>
-                    <button class="remove-selected-btn" data-key="${item.key}" title="Kaldır">&times;</button>
-                </div>`;
+            <div class="selected-class-item ${isCustom ? 'custom' : ''}">
+                <div class="selected-class-number">Sınıf ${displayCode}</div>
+                <p class="selected-class-description">${item.text}</p>
+                <button class="remove-selected-btn" data-key="${item.code}" title="Kaldır">&times;</button>
+            </div>`;
         });
     });
     container.innerHTML = html;
@@ -78,11 +77,16 @@ export async function initializeNiceClassification() {
     const addCustomBtn = document.getElementById('addCustomClassBtn');
     const customInput = document.getElementById('customClassInput');
     const selectedContainer = document.getElementById('selectedNiceClasses');
+    const charCountElement = document.getElementById('customClassCharCount');
 
-    if (!listContainer || !searchInput || !addCustomBtn || !customInput || !selectedContainer) {
-        console.error('Nice Classification için gerekli HTML elementleri yok');
-        return;
-    }
+    if (!listContainer) return;
+
+    // KARAKTER SAYACI EKLEME
+    customInput?.addEventListener('input', (e) => {
+        if (charCountElement) {
+            charCountElement.textContent = e.target.value.length.toLocaleString('tr-TR');
+        }
+    });
 
     listContainer.innerHTML = `
         <div class="loading-spinner">
