@@ -1,219 +1,217 @@
-// Firebase servislerini projenizin ana yapılandırma dosyasından alıyoruz.
 import { db } from '../firebase-config.js';
 import { collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-// Bu modülün durumunu (state) yönetecek değişkenler
+// Modülün durumunu (state) yöneten değişkenler
 let allNiceData = [];
-// Seçilen sınıfları ve alt sınıfları saklamak için nesne yapısı.
-// Örnek: { '01': { '01-1': 'Kimyasallar...', '01-2': 'Gübreler...' }, '99': {'99-12345': 'Özel metin'} }
+// Seçilen sınıfları saklamak için nesne yapısı. Anahtar: subclass-kodu, Değer: { classNum, text }
+// Örnek: { '01-1': { classNum: '01', text: 'Kimyasallar...' }, '99-12345': { classNum: '99', text: 'Özel metin' } }
 let selectedClasses = {};
 
 /**
  * Seçilen sınıfları sağdaki panelde görüntüler.
  */
 function renderSelectedClasses() {
-    const container = document.getElementById('selected-classes-list-container');
-    if (!container) return;
+    const container = document.getElementById('selectedNiceClasses');
+    const countBadge = document.getElementById('selectedClassCount');
+    if (!container || !countBadge) return;
+
+    const selectedKeys = Object.keys(selectedClasses);
+    countBadge.textContent = selectedKeys.length;
+
+    if (selectedKeys.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state">
+                <i class="fas fa-list-alt fa-3x text-muted mb-3"></i>
+                <p class="text-muted">
+                    Henüz hiçbir sınıf seçilmedi.<br>
+                    Sol panelden sınıf ve alt sınıfları seçin.
+                </p>
+            </div>`;
+        return;
+    }
+
+    // Seçilenleri sınıf numarasına göre gruplayalım
+    const grouped = {};
+    selectedKeys.forEach(key => {
+        const item = selectedClasses[key];
+        if (!grouped[item.classNum]) {
+            grouped[item.classNum] = [];
+        }
+        grouped[item.classNum].push({ key, text: item.text });
+    });
 
     let html = '';
-    // Sınıf numaralarına göre sıralama yapıyoruz (01, 02, ..., 45, 99)
-    const sortedClassNumbers = Object.keys(selectedClasses).sort((a, b) => a - b);
+    // Ana sınıf numarasına göre sırala
+    Object.keys(grouped).sort((a,b) => parseInt(a) - parseInt(b)).forEach(classNum => {
+        const items = grouped[classNum];
+        items.forEach(item => {
+            const isCustom = classNum === '99';
+            html += `
+            <div class="selected-class-item ${isCustom ? 'custom' : ''}">
+                <div class="selected-class-number">Sınıf ${classNum}</div>
+                <p class="selected-class-description">${item.text}</p>
+                <button class="remove-selected-btn" data-key="${item.key}" title="Kaldır">&times;</button>
+            </div>`;
+        });
+    });
 
-    for (const classNum of sortedClassNumbers) {
-        const subClasses = selectedClasses[classNum];
-        // Sadece içinde en az bir alt sınıf seçilmiş olan ana sınıfları göster
-        if (Object.keys(subClasses).length > 0) {
-            html += `<div class="selected-class-group">`;
-            html += `<h6>Sınıf ${classNum}</h6>`;
-            html += `<ul>`;
-            for (const subClassCode in subClasses) {
-                html += `<li>(${subClassCode}) ${subClasses[subClassCode]}</li>`;
-            }
-            html += `</ul>`;
-            html += `</div>`;
-        }
-    }
     container.innerHTML = html;
 }
 
 /**
- * Checkbox durum değişikliklerini yönetir ve seçilenleri günceller.
- * @param {Event} event - Checkbox'ın change event'i
+ * Bir alt sınıf seçildiğinde veya seçimi kaldırıldığında tetiklenir.
+ * @param {string} subClassCode - Benzersiz alt sınıf kodu (örn: "03-2")
+ * @param {string} classNum - Ana sınıf numarası (örn: "03")
+ * @param {string} text - Alt sınıfın tam metni
  */
-function handleCheckboxChange(event) {
-    const checkbox = event.target;
-    const classNum = checkbox.dataset.classNum;
-    const subClassCode = checkbox.dataset.subclassCode;
-    const subClassText = checkbox.dataset.subclassText;
-
-    // Eğer bu sınıfa ait ilk seçim yapılıyorsa, ana sınıf için bir nesne oluştur.
-    if (!selectedClasses[classNum]) {
-        selectedClasses[classNum] = {};
+function selectSubClass(subClassCode, classNum, text) {
+    if (selectedClasses[subClassCode]) {
+        // Zaten seçiliyse bir şey yapma (kaldırma butonu ayrı)
+        return;
     }
-
-    // Tıklanan bir ana sınıf checkbox'ı ise (Sınıf 01, Sınıf 02 gibi)
-    if (!subClassCode) {
-        const subClassCheckboxes = document.querySelectorAll(`input[data-class-num='${classNum}'][data-subclass-code]`);
-        // Ana checkbox seçiliyse, tüm alt checkbox'ları seç ve listeye ekle.
-        if (checkbox.checked) {
-            subClassCheckboxes.forEach(subCheckbox => {
-                subCheckbox.checked = true;
-                selectedClasses[classNum][subCheckbox.dataset.subclassCode] = subCheckbox.dataset.subclassText;
-            });
-        } else { // Seçim kaldırılıyorsa, tüm alt checkbox'ların seçimini kaldır ve ana sınıfı listeden sil.
-            subClassCheckboxes.forEach(subCheckbox => {
-                subCheckbox.checked = false;
-            });
-            delete selectedClasses[classNum];
-        }
-    }
-    // Tıklanan bir alt sınıf checkbox'ı ise
-    else {
-        if (checkbox.checked) {
-            selectedClasses[classNum][subClassCode] = subClassText;
-        } else {
-            delete selectedClasses[classNum][subClassCode];
-            // Eğer bir ana sınıfın tüm alt sınıflarının seçimi kaldırıldıysa, ana sınıfı da listeden sil.
-            if (Object.keys(selectedClasses[classNum]).length === 0) {
-                delete selectedClasses[classNum];
-            }
-        }
-        // Alt sınıflardaki değişime göre ana checkbox'ın durumunu güncelle (hepsi seçiliyse ana da seçili olsun).
-        const allSubCheckboxes = document.querySelectorAll(`input[data-class-num='${classNum}'][data-subclass-code]`);
-        const allChecked = Array.from(allSubCheckboxes).every(cb => cb.checked);
-        document.querySelector(`input[data-class-num='${classNum}']:not([data-subclass-code])`).checked = allChecked;
-    }
-
+    selectedClasses[subClassCode] = { classNum, text };
     renderSelectedClasses();
 }
 
 /**
- * Arama kutusuna yazılan metne göre sınıf listesini filtreler.
- * @param {Event} event - Arama kutusunun input event'i
+ * Seçilen bir sınıfı listeden kaldırır.
+ * @param {string} subClassCode - Kaldırılacak alt sınıfın kodu
  */
-function handleSearch(event) {
-    const searchTerm = event.target.value.toLowerCase().trim();
-    const classItems = document.querySelectorAll('.nice-class-item');
-
-    classItems.forEach(item => {
-        const classTitle = item.querySelector('label').textContent.toLowerCase();
-        const subClassItems = item.querySelectorAll('.nice-subclass-item');
-        let hasMatchInSubClasses = false;
-
-        subClassItems.forEach(subItem => {
-            const subClassText = subItem.querySelector('label').textContent.toLowerCase();
-            if (subClassText.includes(searchTerm)) {
-                subItem.style.display = '';
-                hasMatchInSubClasses = true;
-            } else {
-                subItem.style.display = 'none';
-            }
-        });
-
-        // Eğer arama metni ana sınıf başlığında veya herhangi bir alt sınıf metninde geçiyorsa, ana sınıfı göster.
-        if (classTitle.includes(searchTerm) || hasMatchInSubClasses) {
-            item.style.display = '';
-        } else {
-            item.style.display = 'none';
-        }
-    });
+function removeSelectedClass(subClassCode) {
+    if (selectedClasses[subClassCode]) {
+        delete selectedClasses[subClassCode];
+        renderSelectedClasses();
+    }
 }
 
 /**
- * Nice sınıflandırma bileşenini başlatır, verileri Firestore'dan çeker ve HTML'i oluşturur.
+ * Nice sınıflandırma bileşenini başlatır.
  */
 export async function initializeNiceClassification() {
-    const listContainer = document.getElementById('nice-classes-list-container');
-    if (!listContainer) {
-        console.error('Nice sınıflandırma listesi konteyneri bulunamadı!');
+    const listContainer = document.getElementById('niceClassificationList');
+    const searchInput = document.getElementById('niceClassSearch');
+    const addCustomBtn = document.getElementById('addCustomClassBtn');
+    const customInput = document.getElementById('customClassInput');
+    const selectedContainer = document.getElementById('selectedNiceClasses');
+
+    if (!listContainer || !searchInput || !addCustomBtn || !customInput || !selectedContainer) {
+        console.error('Nice Classification için gerekli HTML elementleri bulunamadı.');
         return;
     }
-    listContainer.innerHTML = '<p>Sınıflar yükleniyor...</p>';
+
+    listContainer.innerHTML = `
+        <div class="loading-spinner">
+            <div class="spinner-border text-primary" role="status"><span class="sr-only">Yükleniyor...</span></div>
+            <p class="mt-2 text-muted">Nice sınıfları yükleniyor...</p>
+        </div>`;
 
     try {
-        // 'niceclassification' koleksiyonundan verileri çekiyoruz.
         const querySnapshot = await getDocs(collection(db, "niceclassification"));
         allNiceData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        // Sınıf numarasına göre sıralıyoruz.
         allNiceData.sort((a, b) => parseInt(a.id) - parseInt(b.id));
 
         let html = '';
         allNiceData.forEach(classData => {
-            html += `<div class="nice-class-item">`;
-            html += `<div class="form-check">
-                        <input class="form-check-input" type="checkbox" value="" id="class-${classData.id}" data-class-num="${classData.id}">
-                        <label class="form-check-label fw-bold" for="class-${classData.id}">Sınıf ${classData.id}</label>
-                     </div>`;
+            const title = classData.title || `Sınıf ${classData.id} Başlıkları`;
+            const searchableText = `${classData.id} ${title} ${Object.values(classData.subclasses || {}).join(' ')}`.toLowerCase();
 
+            html += `
+            <div class="class-item" data-search-text="${searchableText}">
+                <div class="class-header" data-toggle="collapse" data-target="#subclasses-${classData.id}">
+                    <span class="class-number">${classData.id}</span>
+                    <span class="class-title">${title}</span>
+                    <i class="fas fa-chevron-down toggle-icon"></i>
+                </div>
+                <div id="subclasses-${classData.id}" class="subclasses-container collapse">`;
+            
             if (classData.subclasses) {
-                // Alt sınıfları kodlarına göre sıralayarak ekliyoruz.
                 const sortedSubclasses = Object.entries(classData.subclasses).sort((a, b) => a[0].localeCompare(b[0]));
                 for (const [subClassCode, subClassText] of sortedSubclasses) {
-                    html += `<div class="nice-subclass-item form-check">
-                                <input class="form-check-input" type="checkbox" value="" id="subclass-${subClassCode}" data-class-num="${classData.id}" data-subclass-code="${subClassCode}" data-subclass-text="${subClassText}">
-                                <label class="form-check-label" for="subclass-${subClassCode}">(${subClassCode}) ${subClassText}</label>
+                    html += `<div class="subclass-item" data-code="${subClassCode}" data-class-num="${classData.id}" data-text="${subClassText}">
+                                <span class="subclass-code">(${subClassCode})</span> ${subClassText}
                              </div>`;
                 }
             }
-            html += `</div>`;
+            html += `</div></div>`;
         });
         listContainer.innerHTML = html;
 
-        // Event Listeners (Olay Dinleyicileri)
-        listContainer.addEventListener('change', handleCheckboxChange);
-        document.getElementById('nice-class-search').addEventListener('input', handleSearch);
+        // Event Listeners
+        listContainer.addEventListener('click', (e) => {
+            const subclass = e.target.closest('.subclass-item');
+            if (subclass) {
+                selectSubClass(subclass.dataset.code, subclass.dataset.classNum, subclass.dataset.text);
+            }
+            
+            const header = e.target.closest('.class-header');
+            if(header) {
+                header.classList.toggle('expanded');
+            }
+        });
 
-        const add99Btn = document.getElementById('add-class-99-btn');
-        const class99Container = document.getElementById('class-99-input-container');
-        const save99Btn = document.getElementById('save-class-99-btn');
-        const cancel99Btn = document.getElementById('cancel-class-99-btn');
-        const text99Area = document.getElementById('class-99-text');
-
-        add99Btn.addEventListener('click', () => { class99Container.style.display = 'block'; });
-        cancel99Btn.addEventListener('click', () => { class99Container.style.display = 'none'; });
-
-        save99Btn.addEventListener('click', () => {
-            const text = text99Area.value.trim();
-            if (text) {
-                if (!selectedClasses['99']) {
-                    selectedClasses['99'] = {};
+        searchInput.addEventListener('input', (e) => {
+            const searchTerm = e.target.value.toLowerCase().trim();
+            listContainer.querySelectorAll('.class-item').forEach(item => {
+                const searchableText = item.dataset.searchText;
+                if (searchableText.includes(searchTerm)) {
+                    item.style.display = '';
+                } else {
+                    item.style.display = 'none';
                 }
-                // Benzersiz bir anahtar kullanıyoruz ki birden fazla 99. sınıf metni eklenebilsin.
-                const uniqueKey = `99-${Date.now()}`;
-                selectedClasses['99'][uniqueKey] = text;
-                renderSelectedClasses();
-                text99Area.value = '';
-                class99Container.style.display = 'none';
+            });
+        });
+
+        addCustomBtn.addEventListener('click', () => {
+            const text = customInput.value.trim();
+            if (text) {
+                const key = `99-${Date.now()}`;
+                selectSubClass(key, '99', text);
+                customInput.value = '';
+            }
+        });
+
+        selectedContainer.addEventListener('click', (e) => {
+            const removeBtn = e.target.closest('.remove-selected-btn');
+            if (removeBtn) {
+                removeSelectedClass(removeBtn.dataset.key);
             }
         });
 
     } catch (error) {
         console.error("Nice sınıfları yüklenirken hata oluştu: ", error);
-        listContainer.innerHTML = '<p class="text-danger">Sınıflar yüklenemedi. Lütfen tekrar deneyin.</p>';
+        listContainer.innerHTML = `<div class="error-state">Sınıflar yüklenemedi. Lütfen tekrar deneyin.</div>`;
     }
 }
 
 /**
+ * Tüm seçilen sınıfları temizler.
+ */
+export function clearAllSelectedClasses() {
+    selectedClasses = {};
+    renderSelectedClasses();
+}
+
+/**
  * Kaydetme işlemi için seçilen sınıfları formatlanmış bir dizi olarak döndürür.
- * @returns {string[]} Seçilen mal ve hizmetlerin listesi. Örn: ["(01-1) Kimyasallar...", "(99) Özel metin"]
+ * @returns {string[]} Seçilen mal ve hizmetlerin listesi.
  */
 export function getSelectedNiceClasses() {
-    const goodsAndServices = [];
-    const sortedClassNumbers = Object.keys(selectedClasses).sort((a, b) => a - b);
-
-    for (const classNum of sortedClassNumbers) {
-        const subClasses = selectedClasses[classNum];
-        const sortedSubClassCodes = Object.keys(subClasses).sort();
-
-        for (const subClassCode of sortedSubClassCodes) {
-            const subClassText = subClasses[subClassCode];
-            // 99. sınıf için özel formatlama
-            if (classNum === '99') {
-                 goodsAndServices.push(`(99) ${subClassText}`);
-            } else {
-                 goodsAndServices.push(`(${subClassCode}) ${subClassText}`);
-            }
+    return Object.entries(selectedClasses).map(([key, value]) => {
+        // 99. sınıfın özel metni için formatlama
+        if (value.classNum === '99') {
+            return `(99) ${value.text}`;
         }
-    }
-    return goodsAndServices;
+        return `(${key}) ${value.text}`;
+    });
 }
+
+// Butonların global scope'ta erişilebilir olması için window'a ekliyoruz.
+window.clearAllSelectedClasses = clearAllSelectedClasses;
+window.clearNiceSearch = () => {
+    const searchInput = document.getElementById('niceClassSearch');
+    if (searchInput) {
+        searchInput.value = '';
+        // Arama olayını manuel tetikle
+        searchInput.dispatchEvent(new Event('input'));
+    }
+};
