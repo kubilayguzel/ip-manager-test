@@ -268,71 +268,56 @@ class CreateTaskModule {
                 <div class="tab-pane fade" id="goods-services" role="tabpanel" aria-labelledby="goods-services-tab">
                     <div class="nice-classification-container mt-3">
                         <div class="row">
-                            <!-- Sol Panel -->
-                            <div class="col-lg-8">
-                                <div class="classification-panel">
-                                    <div class="panel-header">
-                                        <h5 class="mb-0">
-                                            <i class="fas fa-list-ul mr-2"></i>
-                                            Nice Classification - Mal ve Hizmet Sınıfları
-                                        </h5>
-                                        <small class="text-white-50">1-45 arası sınıflardan seçim yapın</small>
-                                    </div>
-
-                                    <!-- Arama -->
-                                    <div class="search-section">
-                                        <div class="input-group">
-                                            <div class="input-group-prepend">
-                                                <span class="input-group-text"><i class="fas fa-search"></i></span>
-                                            </div>
-                                            <input type="text" class="form-control" id="niceClassSearch" placeholder="Sınıf ara... (örn: kozmetik, teknoloji)">
-                                            <div class="input-group-append">
-                                                <button class="btn btn-outline-secondary" type="button" onclick="clearNiceSearch()">
-                                                    <i class="fas fa-times"></i>
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <!-- Sınıflar Listesi -->
-                                    <div class="classes-list" id="niceClassificationList"
-                                         style="height: 450px; overflow-y: auto; background: #fafafa;">
-                                        <div class="loading-spinner">
-                                            <div class="spinner-border text-primary" role="status"></div>
-                                            <p class="mt-2 text-muted">Nice sınıfları yükleniyor...</p>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- 99. Özel Sınıf Ayrı Kart -->
-                                <div class="custom-class-wrapper mt-4">
-                                    <div class="card border-danger">
-                                        <div class="card-header bg-danger text-white">
-                                            <h6 class="mb-0">99. Özel Mal/Hizmet Tanımı</h6>
-                                        </div>
-                                        <div class="card-body">
-                                            <p class="small text-muted mb-2">
-                                                <i class="fas fa-info-circle mr-1"></i>
-                                                Yukarıdaki sınıflarda yer almayan özel mal/hizmetler için kullanın.
-                                            </p>
-                                            <div class="input-group mb-2">
-                                                <textarea class="form-control" id="customClassInput"
-                                                    placeholder="Özel mal/hizmet tanımınızı yazın..."
-                                                    maxlength="50000" rows="3" style="resize: vertical;"></textarea>
-                                                <div class="input-group-append">
-                                                    <button class="btn btn-danger" type="button" id="addCustomClassBtn">
-                                                        <i class="fas fa-plus mr-1"></i>99. Sınıfa Ekle
-                                                    </button>
-                                                </div>
-                                            </div>
-                                            <small class="form-text text-muted">
-                                                <span id="customClassCharCount">0</span> / 50.000 karakter
-                                            </small>
-                                        </div>
-                                    </div>
+                    <!-- Sol Panel -->
+                    <div class="col-lg-8 d-flex flex-column">
+                        <div class="classification-panel flex-grow-1">
+                            <div class="panel-header">
+                                <h5 class="mb-0">
+                                    <i class="fas fa-list-ul mr-2"></i>
+                                    Nice Classification - Mal ve Hizmet Sınıfları
+                                </h5>
+                                <small class="text-white-50">1-45 arası sınıflardan seçim yapın</small>
+                            </div>
+                            <!-- Arama -->
+                            <div class="search-section">
+                                ...
+                            </div>
+                            <!-- Liste -->
+                            <div class="classes-list" id="niceClassificationList"
+                                style="height: 450px; overflow-y: auto; background: #fafafa;">
+                                <div class="loading-spinner">
+                                    <div class="spinner-border text-primary" role="status"></div>
+                                    <p class="mt-2 text-muted">Nice sınıfları yükleniyor...</p>
                                 </div>
                             </div>
+                        </div>
 
+                        <!-- 99. Sınıf Ayrı Kart (panel dışında) -->
+                        <div class="card mt-4 border-danger">
+                            <div class="card-header bg-danger text-white">
+                                <h6 class="mb-0">99. Özel Mal/Hizmet Tanımı</h6>
+                            </div>
+                            <div class="card-body">
+                                <p class="small text-muted mb-2">
+                                    <i class="fas fa-info-circle mr-1"></i>
+                                    Yukarıdaki sınıflarda yer almayan özel mal/hizmetler için kullanın.
+                                </p>
+                                <div class="input-group mb-2">
+                                    <textarea class="form-control" id="customClassInput"
+                                            placeholder="Özel mal/hizmet tanımınızı yazın..."
+                                            maxlength="50000" rows="3" style="resize: vertical;"></textarea>
+                                    <div class="input-group-append">
+                                        <button class="btn btn-danger" type="button" id="addCustomClassBtn">
+                                            <i class="fas fa-plus mr-1"></i>99. Sınıfa Ekle
+                                        </button>
+                                    </div>
+                                </div>
+                                <small class="form-text text-muted">
+                                    <span id="customClassCharCount">0</span> / 50.000 karakter
+                                </small>
+                            </div>
+                        </div>
+                    </div>
                             <!-- Sağ Panel -->
                             <div class="col-lg-4">
                                 <div class="selected-classes-panel">
