@@ -1,24 +1,17 @@
+// js/nice-classification.js
 import { db } from '../firebase-config.js';
 import { collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-// Modülün durumunu (state) yöneten değişkenler
 let allNiceData = [];
-// Seçilen sınıfları saklamak için nesne yapısı. Anahtar: subclass-kodu, Değer: { classNum, text }
-// Örnek: { '01-1': { classNum: '01', text: 'Kimyasallar...' }, '99-12345': { classNum: '99', text: 'Özel metin' } }
 let selectedClasses = {};
 
-/**
- * Seçilen sınıfları sağdaki panelde görüntüler.
- */
 function renderSelectedClasses() {
     const container = document.getElementById('selectedNiceClasses');
     const countBadge = document.getElementById('selectedClassCount');
-    if (!container || !countBadge) return;
+    if (!container) return;
 
-    const selectedKeys = Object.keys(selectedClasses);
-    countBadge.textContent = selectedKeys.length;
-
-    if (selectedKeys.length === 0) {
+    countBadge.textContent = Object.keys(selectedClasses).length;
+    if (Object.keys(selectedClasses).length === 0) {
         container.innerHTML = `
             <div class="empty-state">
                 <i class="fas fa-list-alt fa-3x text-muted mb-3"></i>
@@ -30,63 +23,41 @@ function renderSelectedClasses() {
         return;
     }
 
-    // Seçilenleri sınıf numarasına göre gruplayalım
     const grouped = {};
-    selectedKeys.forEach(key => {
-        const item = selectedClasses[key];
-        if (!grouped[item.classNum]) {
-            grouped[item.classNum] = [];
-        }
-        grouped[item.classNum].push({ key, text: item.text });
+    Object.entries(selectedClasses).forEach(([code, item]) => {
+        if (!grouped[item.classNum]) grouped[item.classNum] = [];
+        grouped[item.classNum].push({ code, text: item.text });
     });
 
     let html = '';
-    // Ana sınıf numarasına göre sırala
-    Object.keys(grouped).sort((a,b) => parseInt(a) - parseInt(b)).forEach(classNum => {
-        const items = grouped[classNum];
-        items.forEach(item => {
+    Object.keys(grouped).sort((a, b) => parseInt(a) - parseInt(b)).forEach(classNum => {
+        grouped[classNum].forEach(item => {
             const isCustom = classNum === '99';
             html += `
             <div class="selected-class-item ${isCustom ? 'custom' : ''}">
                 <div class="selected-class-number">Sınıf ${classNum}</div>
                 <p class="selected-class-description">${item.text}</p>
-                <button class="remove-selected-btn" data-key="${item.key}" title="Kaldır">&times;</button>
+                <button class="remove-selected-btn" data-key="${item.code}" title="Kaldır">&times;</button>
             </div>`;
         });
     });
-
     container.innerHTML = html;
 }
 
-/**
- * Bir alt sınıf seçildiğinde veya seçimi kaldırıldığında tetiklenir.
- * @param {string} subClassCode - Benzersiz alt sınıf kodu (örn: "03-2")
- * @param {string} classNum - Ana sınıf numarası (örn: "03")
- * @param {string} text - Alt sınıfın tam metni
- */
-function selectSubClass(subClassCode, classNum, text) {
-    if (selectedClasses[subClassCode]) {
-        // Zaten seçiliyse bir şey yapma (kaldırma butonu ayrı)
-        return;
-    }
-    selectedClasses[subClassCode] = { classNum, text };
+function selectSubClass(code, classNum, text) {
+    if (selectedClasses[code]) return;
+    selectedClasses[code] = { classNum, text };
     renderSelectedClasses();
+    document.querySelector(`[data-code="${code}"]`)?.classList.add('selected');
 }
 
-/**
- * Seçilen bir sınıfı listeden kaldırır.
- * @param {string} subClassCode - Kaldırılacak alt sınıfın kodu
- */
-function removeSelectedClass(subClassCode) {
-    if (selectedClasses[subClassCode]) {
-        delete selectedClasses[subClassCode];
-        renderSelectedClasses();
-    }
+function removeSelectedClass(code) {
+    if (!selectedClasses[code]) return;
+    delete selectedClasses[code];
+    renderSelectedClasses();
+    document.querySelector(`[data-code="${code}"]`)?.classList.remove('selected');
 }
 
-/**
- * Nice sınıflandırma bileşenini başlatır.
- */
 export async function initializeNiceClassification() {
     const listContainer = document.getElementById('niceClassificationList');
     const searchInput = document.getElementById('niceClassSearch');
@@ -94,124 +65,112 @@ export async function initializeNiceClassification() {
     const customInput = document.getElementById('customClassInput');
     const selectedContainer = document.getElementById('selectedNiceClasses');
 
-    if (!listContainer || !searchInput || !addCustomBtn || !customInput || !selectedContainer) {
-        console.error('Nice Classification için gerekli HTML elementleri bulunamadı.');
-        return;
-    }
+    if (!listContainer) return;
 
     listContainer.innerHTML = `
-        <div class="loading-spinner">
-            <div class="spinner-border text-primary" role="status"><span class="sr-only">Yükleniyor...</span></div>
+        <div class="loading-spinner text-center p-4">
+            <div class="spinner-border text-primary"></div>
             <p class="mt-2 text-muted">Nice sınıfları yükleniyor...</p>
         </div>`;
 
     try {
         const querySnapshot = await getDocs(collection(db, "niceClassification"));
-        allNiceData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        allNiceData.sort((a, b) => parseInt(a.id) - parseInt(b.id));
+        if (querySnapshot.empty) throw new Error('Nice sınıfları bulunamadı');
+
+        allNiceData = querySnapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+                classNumber: data.classNumber,
+                classTitle: data.classTitle,
+                subClasses: (data.subClasses || []).map((sc, idx) => ({
+                    code: `${data.classNumber.toString().padStart(2, "0")}-${idx + 1}`,
+                    description: sc.subClassDescription
+                }))
+            };
+        }).sort((a, b) => a.classNumber - b.classNumber);
 
         let html = '';
-        allNiceData.forEach(classData => {
-            const title = classData.title || `Sınıf ${classData.id} Başlıkları`;
-            const searchableText = `${classData.id} ${title} ${Object.values(classData.subclasses || {}).join(' ')}`.toLowerCase();
-
+        allNiceData.forEach(cls => {
             html += `
-            <div class="class-item" data-search-text="${searchableText}">
-                <div class="class-header" data-toggle="collapse" data-target="#subclasses-${classData.id}">
-                    <span class="class-number">${classData.id}</span>
-                    <span class="class-title">${title}</span>
+            <div class="class-item" data-search-text="${(cls.classTitle || '').toLowerCase()}">
+                <div class="class-header" data-bs-toggle="collapse" data-bs-target="#subclasses-${cls.classNumber}">
+                    <span class="class-number">${cls.classNumber}</span>
+                    <span class="class-title">${cls.classTitle}</span>
                     <i class="fas fa-chevron-down toggle-icon"></i>
                 </div>
-                <div id="subclasses-${classData.id}" class="subclasses-container collapse">`;
-            
-            if (classData.subclasses) {
-                const sortedSubclasses = Object.entries(classData.subclasses).sort((a, b) => a[0].localeCompare(b[0]));
-                for (const [subClassCode, subClassText] of sortedSubclasses) {
-                    html += `<div class="subclass-item" data-code="${subClassCode}" data-class-num="${classData.id}" data-text="${subClassText}">
-                                <span class="subclass-code">(${subClassCode})</span> ${subClassText}
-                             </div>`;
-                }
+                <div id="subclasses-${cls.classNumber}" class="subclasses-container collapse">`;
+
+            if (cls.subClasses.length > 0) {
+                cls.subClasses.forEach(sc => {
+                    html += `
+                        <div class="subclass-item" data-code="${sc.code}" data-class-num="${cls.classNumber}" data-text="${sc.description}">
+                            <span class="subclass-code">(${sc.code})</span> ${sc.description}
+                        </div>`;
+                });
+            } else {
+                html += `<div class="text-muted p-3">Bu sınıfta alt kategori bulunmuyor</div>`;
             }
             html += `</div></div>`;
         });
+
         listContainer.innerHTML = html;
 
-        // Event Listeners
         listContainer.addEventListener('click', (e) => {
             const subclass = e.target.closest('.subclass-item');
             if (subclass) {
                 selectSubClass(subclass.dataset.code, subclass.dataset.classNum, subclass.dataset.text);
+                return;
             }
-            
             const header = e.target.closest('.class-header');
-            if(header) {
-                header.classList.toggle('expanded');
-            }
+            if (header) header.classList.toggle('expanded');
         });
 
-        searchInput.addEventListener('input', (e) => {
-            const searchTerm = e.target.value.toLowerCase().trim();
+        searchInput?.addEventListener('input', (e) => {
+            const term = e.target.value.toLowerCase();
             listContainer.querySelectorAll('.class-item').forEach(item => {
-                const searchableText = item.dataset.searchText;
-                if (searchableText.includes(searchTerm)) {
-                    item.style.display = '';
-                } else {
-                    item.style.display = 'none';
-                }
+                item.style.display = item.dataset.searchText.includes(term) ? '' : 'none';
             });
         });
 
-        addCustomBtn.addEventListener('click', () => {
+        addCustomBtn?.addEventListener('click', () => {
             const text = customInput.value.trim();
-            if (text) {
-                const key = `99-${Date.now()}`;
-                selectSubClass(key, '99', text);
-                customInput.value = '';
-            }
+            if (!text) return alert('Lütfen özel sınıf metnini girin');
+            const code = `99-${Date.now()}`;
+            selectSubClass(code, '99', text);
+            customInput.value = '';
+        });
+
+        customInput?.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') addCustomBtn.click();
         });
 
         selectedContainer.addEventListener('click', (e) => {
             const removeBtn = e.target.closest('.remove-selected-btn');
-            if (removeBtn) {
-                removeSelectedClass(removeBtn.dataset.key);
-            }
+            if (removeBtn) removeSelectedClass(removeBtn.dataset.key);
         });
-
     } catch (error) {
-        console.error("Nice sınıfları yüklenirken hata oluştu: ", error);
-        listContainer.innerHTML = `<div class="error-state">Sınıflar yüklenemedi. Lütfen tekrar deneyin.</div>`;
+        listContainer.innerHTML = `<div class="alert alert-danger">Sınıflar yüklenemedi: ${error.message}</div>`;
+        console.error(error);
     }
 }
 
-/**
- * Tüm seçilen sınıfları temizler.
- */
 export function clearAllSelectedClasses() {
     selectedClasses = {};
     renderSelectedClasses();
+    document.querySelectorAll('.subclass-item.selected').forEach(el => el.classList.remove('selected'));
 }
 
-/**
- * Kaydetme işlemi için seçilen sınıfları formatlanmış bir dizi olarak döndürür.
- * @returns {string[]} Seçilen mal ve hizmetlerin listesi.
- */
 export function getSelectedNiceClasses() {
-    return Object.entries(selectedClasses).map(([key, value]) => {
-        // 99. sınıfın özel metni için formatlama
-        if (value.classNum === '99') {
-            return `(99) ${value.text}`;
-        }
-        return `(${key}) ${value.text}`;
-    });
+    return Object.entries(selectedClasses).map(([code, val]) =>
+        val.classNum === '99' ? `(99) ${val.text}` : `(${code}) ${val.text}`
+    );
 }
 
-// Butonların global scope'ta erişilebilir olması için window'a ekliyoruz.
 window.clearAllSelectedClasses = clearAllSelectedClasses;
 window.clearNiceSearch = () => {
     const searchInput = document.getElementById('niceClassSearch');
     if (searchInput) {
         searchInput.value = '';
-        // Arama olayını manuel tetikle
         searchInput.dispatchEvent(new Event('input'));
     }
 };
