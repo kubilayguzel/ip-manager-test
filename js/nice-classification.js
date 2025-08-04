@@ -214,7 +214,7 @@ function openClass35_5Modal() {
                 </div>
                 
                 <div class="class-35-5-modal-body">
-                    <div class="row">
+                    <div class="row align-items-stretch">
                         <!-- Sol Panel - Mal Sınıfları (1-34) -->
                         <div class="col-lg-8">
                             <div class="classification-panel">
