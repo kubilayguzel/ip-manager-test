@@ -350,26 +350,19 @@ class CreateTaskModule {
                         </div>
                     </div>
                     <div class="tab-pane fade" id="goods-services" role="tabpanel" aria-labelledby="goods-services-tab">
-                        <!-- YENİ: Mal/Hizmet Seçim Arayüzü -->
                         <div class="nice-classification-container mt-3">
                             <div class="nice-class-selector">
                                 <h5>Mal ve Hizmet Sınıfları</h5>
-                                <input type="text" id="nice-class-search" class="form-control mb-2" placeholder="Sınıf veya metin içinde ara...">
-                                <div id="nice-classes-list-container">
-                                    <!-- nice-classification.js bu alanı dolduracak -->
-                                </div>
-                                <button type="button" id="add-class-99-btn" class="btn btn-info mt-2">+ 99 SINIF EKLE</button>
-                                <div id="class-99-input-container" class="mt-2" style="display:none;">
-                                     <textarea id="class-99-text" class="form-control" rows="3" placeholder="99. sınıf için özel metni girin..."></textarea>
-                                     <button type="button" id="save-class-99-btn" class="btn btn-primary btn-sm mt-1">Ekle</button>
-                                     <button type="button" id="cancel-class-99-btn" class="btn btn-secondary btn-sm mt-1">İptal</button>
+                                <input type="text" id="niceClassSearch" class="form-control mb-2" placeholder="Sınıf veya metin içinde ara...">
+                                <div id="niceClassificationList"></div>
+                                <div class="mt-2">
+                                    <textarea id="customClassInput" class="form-control" rows="2" placeholder="99. sınıf için özel metin girin..."></textarea>
+                                    <button type="button" id="addCustomClassBtn" class="btn btn-primary btn-sm mt-1">+ 99 Sınıf Ekle</button>
                                 </div>
                             </div>
                             <div class="nice-class-selected">
-                                <h5>SEÇİLEN SINIFLAR</h5>
-                                <div id="selected-classes-list-container">
-                                    <!-- Seçilen sınıflar buraya eklenecek -->
-                                </div>
+                                <h5>Seçilen Sınıflar <span id="selectedClassCount" class="badge badge-primary">0</span></h5>
+                                <div id="selectedNiceClasses"></div>
                             </div>
                         </div>
                     </div>
