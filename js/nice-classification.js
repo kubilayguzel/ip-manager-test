@@ -203,114 +203,115 @@ function updateVisualStates() {
 function openClass35_5Modal() {
     // Modal HTML'ini oluştur
     const modalHTML = `
-        <div id="class35-5-modal" class="class-35-5-modal">
-            <div class="class-35-5-modal-content">
-                <div class="class-35-5-modal-header">
-                    <h3>
-                        <i class="fas fa-shopping-cart mr-2"></i>
-                        (35-5) Müşterilerin Malları - Mal Seçimi
-                    </h3>
-                    <button class="close-modal-btn" onclick="closeClass35_5Modal()">&times;</button>
-                </div>
-                
-                <div class="class-35-5-modal-body">
-                    <div class="row align-items-stretch">
-                        <!-- Sol Panel - Mal Sınıfları (1-34) -->
-                        <div class="col-lg-8">
-                            <div class="classification-panel">
-                                <div class="panel-header">
-                                    <h5 class="mb-0">
-                                        <i class="fas fa-list-ul mr-2"></i>
-                                        Mal Sınıfları (1-34)
-                                    </h5>
-                                    <small class="text-white-50">35-5 hizmeti için uygun mal sınıflarını seçin</small>
+<div id="class35-5-modal" class="class-35-5-modal">
+    <div class="class-35-5-modal-content">
+        <div class="class-35-5-modal-header">
+            <h3>
+                <i class="fas fa-shopping-cart mr-2"></i>
+                (35-5) Müşterilerin Malları - Mal Seçimi
+            </h3>
+            <button class="close-modal-btn" onclick="closeClass35_5Modal()">&times;</button>
+        </div>
+        
+        <div class="class-35-5-modal-body">
+            <div class="row align-items-stretch">
+                <!-- Sol Panel - Mal Sınıfları (1-34) -->
+                <div class="col-lg-8">
+                    <div class="classification-panel">
+                        <div class="panel-header">
+                            <h5 class="mb-0">
+                                <i class="fas fa-list-ul mr-2"></i>
+                                Mal Sınıfları (1-34)
+                            </h5>
+                            <small class="text-white-50">35-5 hizmeti için uygun mal sınıflarını seçin</small>
+                        </div>
+                        
+                        <!-- Arama Kutusu -->
+                        <div class="search-section">
+                            <div class="input-group">
+                                <div class="input-group-prepend">
+                                    <span class="input-group-text">
+                                        <i class="fas fa-search"></i>
+                                    </span>
                                 </div>
-                                
-                                <!-- Arama Kutusu -->
-                                <div class="search-section">
-                                    <div class="input-group">
-                                        <div class="input-group-prepend">
-                                            <span class="input-group-text">
-                                                <i class="fas fa-search"></i>
-                                            </span>
-                                        </div>
-                                        <input type="text" class="form-control" id="class35-5-search" 
-                                               placeholder="Mal sınıfı ara...">
-                                        <div class="input-group-append">
-                                            <button class="btn btn-outline-secondary" type="button" onclick="clearClass35_5Search()">
-                                                <i class="fas fa-times"></i>
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- Sınıflar Listesi -->
-                                <div class="classes-list" id="class35-5-list" style="height: 450px; overflow-y: auto; background: #fafafa;">
-                                    <div class="loading-spinner text-center p-4">
-                                        <div class="spinner-border text-primary"></div>
-                                        <p class="mt-2 text-muted">Mal sınıfları yükleniyor...</p>
-                                    </div>
-                                </div>
-
-                                <!-- 99. Özel Mal -->
-                                <div class="custom-class-section">
-                                    <div class="d-flex align-items-center mb-2">
-                                        <span class="badge badge-danger mr-2" style="font-size: 11px;">99</span>
-                                        <strong class="text-danger">Özel Mal Tanımı</strong>
-                                    </div>
-                                    <div class="input-group">
-                                        <textarea class="form-control" id="class35-5-custom-input" 
-                                               placeholder="Özel mal tanımınızı yazın..."
-                                               maxlength="1000" rows="2"></textarea>
-                                        <div class="input-group-append">
-                                            <button class="btn btn-danger" type="button" id="class35-5-add-custom">
-                                                <i class="fas fa-plus mr-1"></i>Ekle
-                                            </button>
-                                        </div>
-                                    </div>
-                                    <small class="form-text text-muted">
-                                        <span id="class35-5-char-count">0</span> / 1.000 karakter
-                                    </small>
+                                <input type="text" class="form-control" id="class35-5-search" 
+                                       placeholder="Mal sınıfı ara...">
+                                <div class="input-group-append">
+                                    <button class="btn btn-outline-secondary" type="button" onclick="clearClass35_5Search()">
+                                        <i class="fas fa-times"></i>
+                                    </button>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Sağ Panel - Seçilen Mallar -->
-                        <div class="col-lg-4">
-                            <div class="selected-classes-panel">
-                                <div class="panel-header d-flex justify-content-between align-items-center">
-                                    <h5 class="mb-0">
-                                        <i class="fas fa-check-circle mr-2"></i>
-                                        Seçilen Mallar
-                                    </h5>
-                                    <span class="badge badge-light" id="class35-5-selected-count">0</span>
+                        <!-- Sınıflar Listesi -->
+                        <div class="classes-list" id="class35-5-list" 
+                             style="height: 450px; overflow-y: auto; background: #fafafa;">
+                            <div class="loading-spinner text-center p-4">
+                                <div class="spinner-border text-primary"></div>
+                                <p class="mt-2 text-muted">Mal sınıfları yükleniyor...</p>
+                            </div>
+                        </div>
+
+                        <!-- 99. Özel Mal -->
+                        <div class="custom-class-section">
+                            <div class="d-flex align-items-center mb-2">
+                                <span class="badge badge-danger mr-2" style="font-size: 11px;">99</span>
+                                <strong class="text-danger">Özel Mal Tanımı</strong>
+                            </div>
+                            <div class="input-group">
+                                <textarea class="form-control" id="class35-5-custom-input" 
+                                       placeholder="Özel mal tanımınızı yazın..."
+                                       maxlength="1000" rows="2"></textarea>
+                                <div class="input-group-append">
+                                    <button class="btn btn-danger" type="button" id="class35-5-add-custom">
+                                        <i class="fas fa-plus mr-1"></i>Ekle
+                                    </button>
                                 </div>
-                                
-                                <div class="selected-classes-content" id="class35-5-selected-items" 
-                                    </div> class="empty-state">
-                                        <i class="fas fa-shopping-basket fa-3x text-muted mb-3"></i>
-                                        <p class="text-muted">
-                                            Henüz mal seçilmedi.<br>
-                                            Sol panelden mal sınıflarını seçin.
-                                        </p>
-                                    </div>
-                                </div>
+                            </div>
+                            <small class="form-text text-muted">
+                                <span id="class35-5-char-count">0</span> / 1.000 karakter
+                            </small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sağ Panel - Seçilen Mallar -->
+                <div class="col-lg-4">
+                    <div class="selected-classes-panel">
+                        <div class="panel-header d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">
+                                <i class="fas fa-check-circle mr-2"></i>
+                                Seçilen Mallar
+                            </h5>
+                            <span class="badge badge-light" id="class35-5-selected-count">0</span>
+                        </div>
+                        <div class="selected-classes-content" id="class35-5-selected-items">
+                            <div class="empty-state">
+                                <i class="fas fa-shopping-basket fa-3x text-muted mb-3"></i>
+                                <p class="text-muted">
+                                    Henüz mal seçilmedi.<br>
+                                    Sol panelden mal sınıflarını seçin.
+                                </p>
                             </div>
                         </div>
                     </div>
                 </div>
-                
-                <div class="class-35-5-modal-footer">
-                    <button type="button" class="btn btn-secondary" onclick="closeClass35_5Modal()">
-                        <i class="fas fa-times mr-1"></i>İptal
-                    </button>
-                    <button type="button" class="btn btn-primary" id="class35-5-save-btn">
-                        <i class="fas fa-save mr-1"></i>Kaydet
-                    </button>
-                </div>
             </div>
         </div>
-    `;
+
+        <!-- Footer body’nin DIŞINDA -->
+        <div class="class-35-5-modal-footer">
+            <button type="button" class="btn btn-secondary" onclick="closeClass35_5Modal()">
+                <i class="fas fa-times mr-1"></i>İptal
+            </button>
+            <button type="button" class="btn btn-primary" id="class35-5-save-btn">
+                <i class="fas fa-save mr-1"></i>Kaydet
+            </button>
+        </div>
+    </div>
+</div>
+`;
 
     // Modal'ı DOM'a ekle
     document.body.insertAdjacentHTML('beforeend', modalHTML);
