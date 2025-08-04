@@ -33,7 +33,7 @@ function renderSelectedClasses() {
     Object.keys(grouped).sort((a, b) => parseInt(a) - parseInt(b)).forEach(classNum => {
         grouped[classNum].forEach(item => {
             const isCustom = classNum === '99';
-            // ALT SINIF KODU GÖSTER - 99. sınıf için sadece sınıf numarası, diğerleri için tam kod
+            // ALT SINIF KODU GÖSTERME - DÜZELTİLDİ
             const displayCode = isCustom ? classNum : item.code;
             html += `
             <div class="selected-class-item ${isCustom ? 'custom' : ''}">
@@ -81,18 +81,16 @@ export async function initializeNiceClassification() {
 
     if (!listContainer) return;
 
-    // KARAKTER SAYACI EKLEME
-    customInput?.addEventListener('input', (e) => {
-        if (charCountElement) {
+    // KARAKTER SAYACI EKLEME - YENİ
+    if (customInput && charCountElement) {
+        customInput.addEventListener('input', (e) => {
             charCountElement.textContent = e.target.value.length.toLocaleString('tr-TR');
-        }
-    });
+        });
+    }
 
     listContainer.innerHTML = `
-        <div class="loading-spinner">
-            <div class="spinner-border text-primary" role="status">
-                <span class="sr-only">Yükleniyor...</span>
-            </div>
+        <div class="loading-spinner text-center p-4">
+            <div class="spinner-border text-primary"></div>
             <p class="mt-2 text-muted">Nice sınıfları yükleniyor...</p>
         </div>`;
 
@@ -152,19 +150,18 @@ export async function initializeNiceClassification() {
             });
         });
 
-        addCustomBtn.addEventListener('click', () => {
+        addCustomBtn?.addEventListener('click', () => {
             const text = customInput.value.trim();
-            if (text) {
-                const key = `99-${Date.now()}`;
-                selectItem(key, '99', text);
-                customInput.value = '';
-            } else {
-                alert('Özel sınıf metni giriniz');
-            }
+            if (!text) return alert('Lütfen özel sınıf metnini girin');
+            const code = `99-${Date.now()}`;
+            selectSubClass(code, '99', text);
+            customInput.value = '';
+            // Karakter sayacını sıfırla
+            if (charCountElement) charCountElement.textContent = '0';
         });
 
-        customInput.addEventListener('keypress', e => {
-            if (e.key === 'Enter') {
+        customInput?.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
                 addCustomBtn.click();
             }
