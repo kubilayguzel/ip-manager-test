@@ -212,7 +212,7 @@ body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333
                         1-45 arası sınıflardan seçim yapın veya 99. sınıfta özel tanım ekleyin
                     </small>
                 </div>
-
+                
                 <!-- Arama Kutusu -->
                 <div class="search-section">
                     <div class="input-group">
@@ -222,7 +222,7 @@ body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333
                             </span>
                         </div>
                         <input type="text" class="form-control" id="niceClassSearch"
-                               placeholder="Sınıf ara... (örn: kozmetik, kimyasal, teknoloji)">
+                            placeholder="Sınıf ara... (örn: kozmetik, kimyasal, teknoloji)">
                         <div class="input-group-append">
                             <button class="btn btn-outline-secondary" type="button" onclick="clearNiceSearch()">
                                 <i class="fas fa-times"></i>
@@ -242,8 +242,8 @@ body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333
                 </div>
             </div>
 
-            <!-- 99. Özel Sınıf (Ayrı Panel) -->
-            <div class="custom-class-frame mt-3">
+            <!-- 99. Özel Sınıf (AYRI FRAME) -->
+            <div class="custom-class-wrapper">
                 <div class="custom-class-section">
                     <div class="d-flex align-items-center mb-2">
                         <span class="badge badge-danger mr-2" style="font-size: 11px;">99</span>
@@ -254,8 +254,8 @@ body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333
                         Yukarıdaki sınıflarda yer almayan özel mal/hizmetler için kullanın.
                     </p>
                     <div class="input-group">
-                        <input type="text" class="form-control" id="customClassInput"
-                               placeholder="Özel mal/hizmet tanımınızı yazın..." maxlength="500">
+                        <input type="text" class="form-control" id="customClassInput" 
+                            placeholder="Özel mal/hizmet tanımınızı yazın..." maxlength="500">
                         <div class="input-group-append">
                             <button class="btn btn-danger" type="button" id="addCustomClassBtn">
                                 <i class="fas fa-plus mr-1"></i>99. Sınıfa Ekle
@@ -266,7 +266,6 @@ body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333
                 </div>
             </div>
         </div>
-
         <!-- Sağ Panel - Seçilen Sınıflar -->
         <div class="col-lg-4 d-flex flex-column">
             <div class="selected-classes-panel flex-grow-1 d-flex flex-column">
