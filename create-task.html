@@ -1,186 +1,155 @@
 <!DOCTYPE html>
 <html lang="tr">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>IP Manager - Yeni İş Oluştur</title>
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-    <style>
-        /* Bu sayfaya özel stiller */
-        /* Genel body, page-wrapper, main-container stilleri shared-styles.css'ten gelecektir. */
-        /* Sadece bu sayfaya özgü ve çakışmayan stilleri burada tutun */
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333; display: flex; }
-        
-        .page-wrapper { flex-grow: 1; display: flex; flex-direction: column; height: 100vh; overflow-y: auto; background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); }
-        .main-container { 
-            width: 100%;
-            padding: 30px;
-            margin: 0;
-        }
-        
-        .page-header { background: rgba(255, 255, 255, 0.95); padding: 30px; border-radius: 20px; margin-bottom: 30px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1); }
-        .page-title { font-size: 2em; color: #1e3c72; margin-bottom: 10px; }
-        .page-subtitle { color: #666; font-size: 1.1em; }
-        .form-container { background: rgba(255, 255, 255, 0.95); padding: 40px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1); }
-        .form-section { border-bottom: 1px solid #e1e8ed; padding-bottom: 25px; margin-bottom: 25px; }
-        .form-section:last-child { border-bottom: none; }
-        .section-title { font-size: 1.3em; color: #1e3c72; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
-        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 25px; }
-        .form-group { display: flex; flex-direction: column; }
-        .form-group.full-width { grid-column: 1 / -1; }
-        .form-label { display: block; margin-bottom: 8px; color: #333; font-weight: 500; }
-        .form-input, .form-select, .form-textarea { 
-            width: 100%; 
-            padding: 12px 15px; 
-            border: 2px solid #e1e8ed; 
-            border-radius: 10px; 
-            font-size: 1em; 
-            transition: all 0.3s ease; 
-            background: white;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-        .form-actions { display: flex; justify-content: flex-end; gap: 15px; margin-top: 30px; }
-        .btn { padding: 12px 25px; border: none; border-radius: 8px; font-size: 1em; font-weight: 600; cursor: pointer; }
-        .btn-primary { background: #1e3c72; color: white; }
-        .btn-primary:disabled { background: #ccc; cursor: not-allowed; }
-        .btn-secondary { background: #6c757d; color: white; }
-        
-        .btn-add-person {
-            background: linear-gradient(45deg, #4CAF50, #66BB6A);
-            color: white;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 0.9em;
-            font-weight: 600;
-            transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            gap: 5px;
-            box-shadow: 0 4px 8px rgba(0, 123, 255, 0.2);
-        }
-        .btn-add-person:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 12px rgba(0, 123, 255, 0.3);
-            background: linear-gradient(45deg, #388E3C, #4CAF50);
-        }
-
-        .search-results-list { max-height: 200px; overflow-y: auto; border: 1px solid #ccc; border-radius: 8px; margin-top: 5px; }
-        .search-result-item { padding: 10px; cursor: pointer; border-bottom: 1px solid #eee; }
-        .search-result-item:hover { background-color: #f0f4f8; }
-        .search-result-display { background: #e9f5ff; border: 1px solid #bde0fe; padding: 15px; border-radius: 8px; margin-top: 10px; display: flex; gap: 15px; align-items: center;}
-        
-        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.6); z-index: 1003; align-items: center; justify-content: center; }
-        .modal.show { display: flex; }
-        .modal-content { background: white; padding: 30px; border-radius: 20px; max-width: 500px; width: 90%; }
-        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-        .modal-title { font-size: 1.3em; color: #1e3c72; }
-        .close-btn { background: none; border: none; font-size: 1.5em; cursor: pointer; color: #666; }
-
-        .person-form-grid { display: grid; grid-template-columns: 1fr; gap: 15px; }
-        .person-form-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; padding-top: 15px; border-top: 1px solid #e1e8ed; }
-        .person-form-actions .btn { padding: 8px 16px; font-size: 0.9em; }
-        
-        .total-amount-display {
-            font-size: 1.2em;
-            font-weight: bold;
-            color: #1e3c72;
-            text-align: right;
-            margin-top: 10px;
-            padding: 12px 15px;
-            background-color: #f0f4f8;
-            border-radius: 10px;
-        }
-        .input-with-currency { display: flex; gap: 10px; }
-        .input-with-currency .form-input { flex-grow: 1; }
-        .currency-select {
-            padding: 12px 8px;
-            border: 2px solid #e1e8ed;
-            border-radius: 10px;
-            background-color: #f8f9fa;
-            font-weight: bold;
-        }
-        .checkbox-label {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            cursor: pointer;
-            font-weight: 500;
-        }
-        .checkbox-label input {
-            width: 18px;
-            height: 18px;
-        }
-        .nav-tabs .nav-link.active {
-            font-weight: bold;
-        }
-    </style>
+    <title>Yeni Görev Oluştur</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/create-task.css">
 </head>
+
 <body>
-    <div id="layout-placeholder"></div>
-    <div class="page-wrapper">
-        <main class="main-container">
-            <section class="page-header">
-                <h1 class="page-title">Yeni İş Oluştur</h1>
-                <p class="page-subtitle">Oluşturmak istediğiniz işin türünü ve tipini seçerek devam edin.</p>
-            </section>
-            
-            <div class="form-container">
-                <form id="createTaskForm" onsubmit="return false;">
-                    <div class="form-section">
-                        <h3 class="section-title">1. İş Tipi Seçimi</h3>
-                        <div class="form-grid">
-                            <div class="form-group"><label for="mainIpType" class="form-label">İşin Ana Türü</label><select id="mainIpType" class="form-select"><option value="">Seçiniz...</option><option value="patent">Patent</option><option value="trademark">Marka</option><option value="design">Tasarım</option><option value="litigation">Dava</option></select></div>
-                            <div class="form-group"><label for="specificTaskType" class="form-label">Spesifik İş Tipi</label><select id="specificTaskType" class="form-select" disabled><option value="">Önce İşin Ana Türünü Seçin</option></select></div>
+    <div class="container-fluid">
+        <div class="row">
+            <nav class="col-md-2 d-none d-md-block bg-light sidebar">
+                <div class="sidebar-sticky">
+                    <div class="sidebar-header">
+                        <a href="index.html" class="logo">IP MANAGER</a>
+                    </div>
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link" href="index.html">
+                                <i class="fas fa-home"></i> Anasayfa
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="bulk-indexing-page.html">
+                                <i class="fas fa-bolt"></i> Hızlı Tarama
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link active" href="create-task.html">
+                                <i class="fas fa-plus-circle"></i> Görev Oluştur
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="tasks-page.html">
+                                <i class="fas fa-tasks"></i> Görevler
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </nav>
+
+            <main role="main" class="col-md-9 ml-sm-auto col-lg-10 px-4">
+                <div
+                    class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                    <h1 class="h2">Yeni Görev Oluştur</h1>
+                </div>
+
+                <form id="createTaskForm">
+                    <ul class="nav nav-tabs" id="taskTabs" role="tablist">
+                        <li class="nav-item">
+                            <a class="nav-link active" id="brand-info-tab" data-toggle="tab" href="#brand-info"
+                                role="tab" aria-controls="brand-info" aria-selected="true">Marka Bilgileri</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" id="scan-options-tab" data-toggle="tab" href="#scan-options" role="tab"
+                                aria-controls="scan-options" aria-selected="false">Tarama Seçenekleri</a>
+                        </li>
+                    </ul>
+
+                    <div class="tab-content" id="taskTabsContent">
+                        <div class="tab-pane fade show active" id="brand-info" role="tabpanel"
+                            aria-labelledby="brand-info-tab">
+                            <div class="form-group row">
+                                <label for="brandName" class="col-sm-3 col-form-label">Marka Adı</label>
+                                <div class="col-sm-9">
+                                    <input type="text" class="form-control" id="brandName"
+                                        placeholder="Taranacak marka adını girin">
+                                </div>
+                            </div>
+                            <div class="form-group row">
+                                <label for="brandOwner" class="col-sm-3 col-form-label">Marka Sahibi</label>
+                                <div class="col-sm-9">
+                                    <input type="text" class="form-control" id="brandOwner"
+                                        placeholder="Marka sahibinin adını girin">
+                                </div>
+                            </div>
+                            <div class="form-group row">
+                                <label for="brandClass" class="col-sm-3 col-form-label">Marka Sınıfı</label>
+                                <div class="col-sm-9">
+                                    <input type="text" class="form-control" id="brandClass"
+                                        placeholder="Örn: 35. Sınıf">
+                                </div>
+                            </div>
+                            
+                            <div class="form-group row">
+                                <label for="brandExample" class="col-sm-3 col-form-label">Marka Örneği</label>
+                                <div class="col-sm-9">
+                                    <div class="file-upload-wrapper" id="brand-example-drop-zone">
+                                        <input type="file" id="brandExample" accept="image/jpeg,image/png,image/gif,image/bmp,image/webp" style="display:none;">
+                                        <div class="file-upload-button" id="brandExampleButton">
+                                            <div class="upload-icon" style="font-size: 2.5em; color: #1e3c72;">🖼️</div>
+                                            <div style="font-weight: 500;">Marka örneğini buraya sürükleyin veya seçmek için tıklayın</div>
+                                        </div>
+                                        <div class="file-upload-info" id="brandExampleInfo">
+                                            İstenen format: 591x591px, 300 DPI, JPEG. Yüklenen dosya otomatik olarak dönüştürülecektir.
+                                        </div>
+                                    </div>
+                                    <div id="brandExamplePreviewContainer" class="mt-3 text-center" style="display:none;">
+                                        <img id="brandExamplePreview" src="#" alt="Marka Örneği Önizlemesi" style="max-width: 200px; max-height: 200px; border: 1px solid #ddd; padding: 5px; border-radius: 8px;">
+                                        <div id="image-processing-status" class="mt-2 text-muted" style="font-size: 0.9em;"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            </div>
+
+                        <div class="tab-pane fade" id="scan-options" role="tabpanel"
+                            aria-labelledby="scan-options-tab">
+                            <div class="form-group">
+                                <label>Taranacak Mecralar</label>
+                                <div class="custom-control custom-checkbox">
+                                    <input type="checkbox" class="custom-control-input" id="scanGoogle">
+                                    <label class="custom-control-label" for="scanGoogle">Google</label>
+                                </div>
+                                <div class="custom-control custom-checkbox">
+                                    <input type="checkbox" class="custom-control-input" id="scanSocialMedia">
+                                    <label class="custom-control-label" for="scanSocialMedia">Sosyal Medya</label>
+                                </div>
+                                <div class="custom-control custom-checkbox">
+                                    <input type="checkbox" class="custom-control-input" id="scanMarketplaces">
+                                    <label class="custom-control-label" for="scanMarketplaces">Pazaryerleri</label>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="scanInterval">Tarama Sıklığı</label>
+                                <select class="form-control" id="scanInterval">
+                                    <option>Günlük</option>
+                                    <option>Haftalık</option>
+                                    <option>Aylık</option>
+                                </select>
+                            </div>
                         </div>
                     </div>
-                    <div id="conditionalFieldsContainer"></div>
-                    <div id="formActionsContainer" class="form-actions"></div>
+
+                    <div class="form-group mt-4">
+                        <button type="button" class="btn btn-secondary">İptal</button>
+                        <button type="submit" class="btn btn-primary">Görevi Oluştur</button>
+                    </div>
                 </form>
-            </div>
-        </main>
-    </div>
-    
-    <div class="modal" id="addPersonModal">
-        <div class="modal-content">
-            <div class="modal-header"><h3 class="modal-title">Yeni Kişi Ekle</h3><button class="close-btn" id="closeAddPersonModal">&times;</button></div>
-            <form id="personForm" onsubmit="return false;">
-                <div class="person-form-grid">
-                    <div class="form-group"><label class="form-label" for="personName">Ad Soyad *</label><input type="text" id="personName" class="form-input" required></div>
-                    <div class="form-group"><label class="form-label" for="personEmail">E-posta</label><input type="email" id="personEmail" class="form-input"></div>
-                    <div class="form-group"><label class="form-label" for="personPhone">Telefon</label><input type="tel" id="personPhone" class="form-input"></div>
-                    <div class="form-group"><label class="form-label" for="personType">Kişi Türü *</label><select id="personType" class="form-select" required><option value="">Seçiniz</option><option value="individual">Bireysel</option><option value="company">Şirket</option><option value="institution">Kurum</option></select></div>
-                    <div class="form-group"><label class="form-label" for="personAddress">Adres</label><textarea id="personAddress" class="form-input" rows="3"></textarea></div>
-                </div>
-                <div class="person-form-actions"><button type="button" class="btn btn-secondary" id="cancelPersonBtn">İptal</button><button type="button" class="btn btn-primary" id="savePersonBtn">Kaydet</button></div>
-            </form>
+
+            </main>
         </div>
     </div>
 
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
-    
-    <script type="module" src="./js/create-task.js"></script>
-    <script type="module" src="./js/layout-loader.js"></script>
-
-    <div class="modal" id="selectParentModal" style="display: none;">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3 class="modal-title">İlgili Ana İşlemi Seçin</h3>
-                <button class="close-btn" id="closeSelectParentModal">&times;</button>
-            </div>
-            <div class="modal-body">
-                <p>Seçtiğiniz işlem için portföyde birden fazla uygun ana işlem bulundu. Lütfen işlemi bağlamak istediğiniz ana işlemi seçin:</p>
-                <div id="parentListContainer">
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" id="cancelParentSelectionBtn">İptal</button>
-            </div>
-        </div>
-    </div>
+    <script src="js/create-task.js" type="module"></script>
 </body>
+
 </html>
