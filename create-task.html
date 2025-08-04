@@ -48,19 +48,33 @@
                     <div class="form-section">
                         <h3 class="section-title">1. İş Tipi Seçimi</h3>
                         <div class="form-grid">
-                            <div class="form-group"><label for="mainIpType" class="form-label">İşin Ana Türü</label><select id="mainIpType" class="form-select"><option value="">Seçiniz...</option><option value="patent">Patent</option><option value="trademark">Marka</option><option value="design">Tasarım</option><option value="litigation">Dava</option></select></div>
-                            <div class="form-group"><label for="specificTaskType" class="form-label">Spesifik İş Tipi</label><select id="specificTaskType" class="form-select" disabled><option value="">Önce İşin Ana Türünü Seçin</option></select></div>
+                            <div class="form-group">
+                                <label for="mainIpType" class="form-label">İşin Ana Türü</label>
+                                <select id="mainIpType" class="form-select">
+                                    <option value="">Seçiniz...</option>
+                                    <option value="patent">Patent</option>
+                                    <option value="trademark">Marka</option>
+                                    <option value="design">Tasarım</option>
+                                    <option value="litigation">Dava</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="specificTaskType" class="form-label">Spesifik İş Tipi</label>
+                                <select id="specificTaskType" class="form-select" disabled>
+                                    <option value="">Önce İşin Ana Türünü Seçin</option>
+                                </select>
+                            </div>
                         </div>
                     </div>
 
                     <div id="conditionalFieldsContainer"></div>
 
-                    <!-- Yeni eklenen marka örneği yükleme alanı -->
+                    <!-- Yeni marka örneği yükleme alanı -->
                     <div class="form-group row">
-                        <label for="brandExampleUpload" class="col-sm-3 col-form-label">Marka Örneği</label>
+                        <label for="brandExample" class="col-sm-3 col-form-label">Marka Örneği</label>
                         <div class="col-sm-9">
-                            <div class="file-upload-wrapper" id="brandExampleDrop">
-                                <input type="file" id="brandExampleUpload" accept="image/*" style="display:none;" />
+                            <div class="file-upload-wrapper" id="brand-example-drop-zone">
+                                <input type="file" id="brandExample" accept="image/*" style="display:none;" />
                                 <div class="file-upload-button">Dosyayı buraya sürükleyin veya tıklayın</div>
                                 <div class="file-upload-info">Yüklenen marka otomatik olarak 591x591 px, 300 DPI, JPEG formatına dönüştürülecektir.</div>
                             </div>
