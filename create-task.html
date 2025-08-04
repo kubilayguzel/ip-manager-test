@@ -1007,6 +1007,46 @@
     flex: 1; /* Listelerin, panel içindeki boş alanı doldurmasını sağlar */
     overflow-y: auto; /* İçerik taştığında kaydırma çubuğu ekler */
 }
+/* Genel container (yüksekliği sabitlemek için) */
+.nice-classification-container .classification-panel,
+.nice-classification-container .selected-classes-panel {
+    display: flex;
+    flex-direction: column;
+    height: 500px; /* eşit yükseklik için (istediğin değeri seç) */
+}
+
+/* Sol taraftaki sınıf listesi scroll */
+#niceClassificationList {
+    flex: 1;
+    overflow-y: auto;
+}
+
+/* Sağ taraftaki seçilen sınıflar scroll */
+#selectedNiceClasses {
+    flex: 1;
+    overflow-y: auto;
+    padding: 15px;
+}
+/* Modal içindeki panelleri eşitle */
+.class-35-5-modal-body .classification-panel,
+.class-35-5-modal-body .selected-classes-panel {
+    display: flex;
+    flex-direction: column;
+    height: 520px; /* modal yüksekliği */
+}
+
+/* Modal sol listesi scroll */
+#class35-5-list {
+    flex: 1;
+    overflow-y: auto;
+}
+
+/* Modal sağ listesi scroll */
+#class35-5-selected-items {
+    flex: 1;
+    overflow-y: auto;
+    padding: 15px;
+}
     </style>
 </head>
 <body>
