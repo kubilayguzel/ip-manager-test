@@ -42,18 +42,7 @@
             box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         }
 
-        .selected-classes-panel {
-            background: white;
-            border: 1px solid #dee2e6;
-            border-radius: 12px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-            position: sticky;
-            top: 20px;
-            display: flex;
-            flex-direction: column;
-            height: 100%;  /* yeni eklenen */
-        }
-                #selectedNiceClasses {
+        #selectedNiceClasses {
             flex: 1;
             overflow-y: auto;
             max-height: 400px; /* seçilenlerin kendine ait scroll alanı */
@@ -326,7 +315,7 @@
             box-shadow: 0 4px 12px rgba(0,0,0,0.1);
             position: sticky;  /* kaydırınca sabit */
             top: 20px;
-            height: 100%;      /* Yükseklik satırın geri kalanıyla aynı olacak */
+            height: 100%;      /* Sağ panel kolonun tamamını kaplar */
             display: flex;
             flex-direction: column;
         }
@@ -1044,7 +1033,6 @@
                                         </div>
                                         
                                         <div class="selected-classes-content" id="selectedNiceClasses" 
-                                             style="height: 450px; overflow-y: auto; padding: 15px;">
                                             <div class="empty-state">
                                                 <i class="fas fa-list-alt fa-3x text-muted mb-3"></i>
                                                 <p class="text-muted">
