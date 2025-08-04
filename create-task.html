@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>IP Manager - Yeni İş Oluştur</title>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333; display: flex; }
@@ -27,6 +28,267 @@
         .btn-primary { background: #1e3c72; color: white; }
         .btn-primary:disabled { background: #ccc; cursor: not-allowed; }
         .btn-secondary { background: #6c757d; color: white; }
+
+        /* Nice Classification Özel Stilleri */
+        .nice-classification-container {
+            margin-top: 20px;
+        }
+
+        .classification-panel {
+            background: white;
+            border: 1px solid #dee2e6;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .selected-classes-panel {
+            background: white;
+            border: 1px solid #dee2e6;
+            border-radius: 12px;
+            overflow: hidden;
+            height: fit-content;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .panel-header {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            padding: 15px 20px;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .panel-header h5 {
+            color: white;
+            margin-bottom: 4px;
+            font-weight: 600;
+        }
+
+        .panel-header small {
+            color: rgba(255,255,255,0.8);
+        }
+
+        .search-section {
+            background: #f8f9fa;
+            padding: 15px 20px;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .class-item {
+            border-bottom: 1px solid #f1f3f4;
+        }
+
+        .class-header {
+            padding: 12px 20px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: white;
+        }
+
+        .class-header:hover {
+            background: #f8f9fa;
+            box-shadow: inset 3px 0 0 #1e3c72;
+        }
+
+        .class-header.expanded {
+            background: #e3f2fd;
+            border-left: 4px solid #1e3c72;
+            box-shadow: none;
+        }
+
+        .class-number {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            padding: 6px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-right: 12px;
+            min-width: 40px;
+            text-align: center;
+        }
+
+        .class-title {
+            flex: 1;
+            font-size: 14px;
+            line-height: 1.4;
+            font-weight: 500;
+        }
+
+        .toggle-icon {
+            color: #6c757d;
+            transition: transform 0.2s ease;
+            font-size: 12px;
+        }
+
+        .class-header.expanded .toggle-icon {
+            transform: rotate(180deg);
+        }
+
+        .subclasses-container {
+            display: none;
+            background: #fafafa;
+            border-top: 1px solid #e9ecef;
+        }
+
+        .subclasses-container.show {
+            display: block;
+        }
+
+        .subclass-item {
+            padding: 12px 20px 12px 60px;
+            border-bottom: 1px solid #f1f3f4;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 13px;
+            line-height: 1.4;
+            position: relative;
+        }
+
+        .subclass-item::before {
+            content: '→';
+            position: absolute;
+            left: 40px;
+            color: #1e3c72;
+            font-weight: bold;
+        }
+
+        .subclass-item:hover {
+            background: #e8f4fd;
+            border-left: 3px solid #1e3c72;
+        }
+
+        .subclass-item:last-child {
+            border-bottom: none;
+        }
+
+        .subclass-code {
+            color: #1e3c72;
+            font-weight: 600;
+            margin-right: 8px;
+        }
+
+        .selected-class-item {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 12px 15px;
+            margin-bottom: 12px;
+            position: relative;
+            transition: all 0.2s ease;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .selected-class-item:hover {
+            box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+        }
+
+        .selected-class-item.custom {
+            background: linear-gradient(135deg, #fff5f5 0%, #fed7d7 100%);
+            border-color: #feb2b2;
+        }
+
+        .selected-class-number {
+            font-weight: 600;
+            color: #495057;
+            margin-bottom: 6px;
+            font-size: 13px;
+        }
+
+        .selected-class-item.custom .selected-class-number {
+            color: #dc3545;
+            font-weight: 700;
+        }
+
+        .selected-class-description {
+            font-size: 12px;
+            color: #6c757d;
+            line-height: 1.4;
+            margin-bottom: 0;
+            padding-right: 30px;
+        }
+
+        .remove-selected-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #dc3545;
+            color: white;
+            border: none;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            font-size: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+        }
+
+        .remove-selected-btn:hover {
+            background: #c82333;
+            transform: scale(1.1);
+        }
+
+        .empty-state {
+            color: #6c757d;
+            text-align: center;
+            padding: 40px 20px;
+        }
+
+        .custom-class-section {
+            border-top: 3px solid #dc3545;
+            background: linear-gradient(135deg, #fff5f5 0%, #fed7d7 100%);
+            padding: 20px;
+        }
+
+        .badge-primary {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+        }
+
+        .badge-danger {
+            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+        }
+
+        .loading-spinner {
+            text-align: center;
+            padding: 40px;
+        }
+
+        .error-state {
+            text-align: center;
+            padding: 40px;
+            color: #dc3545;
+        }
+
+        @media (max-width: 991px) {
+            .nice-classification-container .row {
+                flex-direction: column;
+            }
+            
+            .selected-classes-panel {
+                margin-top: 20px;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .class-header {
+                padding: 10px 15px;
+            }
+            
+            .subclass-item {
+                padding: 10px 15px 10px 45px;
+            }
+            
+            .subclass-item::before {
+                left: 30px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -63,6 +325,117 @@
                     </div>
 
                     <div id="conditionalFieldsContainer"></div>
+
+                    <!-- Nice Classification Bölümü -->
+                    <div class="form-section" id="goodsServicesSection" style="display:none;">
+                        <h3 class="section-title">
+                            <i class="fas fa-list-ul mr-2"></i>
+                            Mal ve Hizmet Sınıfları
+                        </h3>
+                        <p class="text-muted mb-4">Nice Classification sistemi kullanılarak mal ve hizmet sınıflarınızı seçin. Birden fazla sınıf seçebilirsiniz.</p>
+                        
+                        <div class="nice-classification-container">
+                            <div class="row">
+                                <!-- Sol Panel - Sınıf Seçimi -->
+                                <div class="col-lg-8">
+                                    <div class="classification-panel">
+                                        <div class="panel-header">
+                                            <h5 class="mb-0">
+                                                <i class="fas fa-list-ul mr-2"></i>
+                                                Nice Classification - Mal ve Hizmet Sınıfları
+                                            </h5>
+                                            <small class="text-white-50">1-45 arası sınıflardan seçim yapın veya 99. sınıfta özel tanım ekleyin</small>
+                                        </div>
+                                        
+                                        <!-- Arama Kutusu -->
+                                        <div class="search-section">
+                                            <div class="input-group">
+                                                <div class="input-group-prepend">
+                                                    <span class="input-group-text">
+                                                        <i class="fas fa-search"></i>
+                                                    </span>
+                                                </div>
+                                                <input type="text" class="form-control" id="niceClassSearch" 
+                                                       placeholder="Sınıf ara... (örn: kozmetik, kimyasal, teknoloji)">
+                                                <div class="input-group-append">
+                                                    <button class="btn btn-outline-secondary" type="button" onclick="clearNiceSearch()">
+                                                        <i class="fas fa-times"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Sınıflar Listesi -->
+                                        <div class="classes-list" id="niceClassificationList" style="height: 400px; overflow-y: auto; background: #fafafa;">
+                                            <div class="loading-spinner">
+                                                <div class="spinner-border text-primary" role="status">
+                                                    <span class="sr-only">Yükleniyor...</span>
+                                                </div>
+                                                <p class="mt-2 text-muted">Nice sınıfları yükleniyor...</p>
+                                            </div>
+                                        </div>
+
+                                        <!-- 99. Özel Sınıf -->
+                                        <div class="custom-class-section">
+                                            <div class="d-flex align-items-center mb-2">
+                                                <span class="badge badge-danger mr-2" style="font-size: 11px;">99</span>
+                                                <strong class="text-danger">Özel Mal/Hizmet Tanımı</strong>
+                                            </div>
+                                            <p class="small text-muted mb-2">
+                                                <i class="fas fa-info-circle mr-1"></i>
+                                                Yukarıdaki sınıflarda yer almayan özel mal/hizmetler için kullanın.
+                                            </p>
+                                            <div class="input-group">
+                                                <input type="text" class="form-control" id="customClassInput" 
+                                                       placeholder="Özel mal/hizmet tanımınızı yazın..."
+                                                       maxlength="500">
+                                                <div class="input-group-append">
+                                                    <button class="btn btn-danger" type="button" id="addCustomClassBtn">
+                                                        <i class="fas fa-plus mr-1"></i>99. Sınıfa Ekle
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            <small class="form-text text-muted">
+                                                Maksimum 500 karakter
+                                            </small>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Sağ Panel - Seçilen Sınıflar -->
+                                <div class="col-lg-4">
+                                    <div class="selected-classes-panel">
+                                        <div class="panel-header d-flex justify-content-between align-items-center">
+                                            <h5 class="mb-0">
+                                                <i class="fas fa-check-circle mr-2"></i>
+                                                Seçilen Mal/Hizmet
+                                            </h5>
+                                            <span class="badge badge-light" id="selectedClassCount">0</span>
+                                        </div>
+                                        
+                                        <div class="selected-classes-content" id="selectedNiceClasses" 
+                                             style="height: 450px; overflow-y: auto; padding: 15px;">
+                                            <div class="empty-state">
+                                                <i class="fas fa-list-alt fa-3x text-muted mb-3"></i>
+                                                <p class="text-muted">
+                                                    Henüz hiçbir sınıf seçilmedi.<br>
+                                                    Sol panelden sınıf ve alt sınıfları seçin.
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        <div class="border-top p-3">
+                                            <button type="button" class="btn btn-outline-danger btn-sm btn-block" 
+                                                    onclick="clearAllSelectedClasses()">
+                                                <i class="fas fa-trash mr-1"></i>Tümünü Temizle
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <div id="formActionsContainer" class="form-actions"></div>
                 </form>
             </div>
