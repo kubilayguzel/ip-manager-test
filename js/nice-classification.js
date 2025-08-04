@@ -287,7 +287,7 @@ function openClass35_5Modal() {
                                 </div>
                                 
                                 <div class="selected-classes-content" id="class35-5-selected-items" 
-                                    <div class="empty-state">
+                                    </div> class="empty-state">
                                         <i class="fas fa-shopping-basket fa-3x text-muted mb-3"></i>
                                         <p class="text-muted">
                                             Henüz mal seçilmedi.<br>
