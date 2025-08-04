@@ -350,22 +350,100 @@ class CreateTaskModule {
                         </div>
                     </div>
                     <div class="tab-pane fade" id="goods-services" role="tabpanel" aria-labelledby="goods-services-tab">
-                        <div class="nice-classification-container mt-3">
-                            <div class="nice-class-selector">
-                                <h5>Mal ve Hizmet Sınıfları</h5>
-                                <input type="text" id="niceClassSearch" class="form-control mb-2" placeholder="Sınıf veya metin içinde ara...">
-                                <div id="niceClassificationList"></div>
-                                <div class="mt-2">
-                                    <textarea id="customClassInput" class="form-control" rows="2" placeholder="99. sınıf için özel metin girin..."></textarea>
-                                    <button type="button" id="addCustomClassBtn" class="btn btn-primary btn-sm mt-1">+ 99 Sınıf Ekle</button>
+                    <div class="nice-classification-container mt-3">
+                        <div class="row">
+                            <!-- Sol Panel - Sınıf Seçimi -->
+                            <div class="col-lg-8">
+                                <div class="classification-panel">
+                                    <div class="panel-header">
+                                        <h5 class="mb-0">
+                                            <i class="fas fa-list-ul mr-2"></i>
+                                            Nice Classification - Mal ve Hizmet Sınıfları
+                                        </h5>
+                                        <small class="text-white-50">1-45 arası sınıflardan seçim yapın veya 99. sınıfta özel tanım ekleyin</small>
+                                    </div>
+                                    
+                                    <!-- Arama Kutusu -->
+                                    <div class="search-section">
+                                        <div class="input-group">
+                                            <div class="input-group-prepend">
+                                                <span class="input-group-text">
+                                                    <i class="fas fa-search"></i>
+                                                </span>
+                                            </div>
+                                            <input type="text" class="form-control" id="niceClassSearch" 
+                                                placeholder="Sınıf ara... (örn: kozmetik, kimyasal, teknoloji)">
+                                            <div class="input-group-append">
+                                                <button class="btn btn-outline-secondary" type="button" onclick="clearNiceSearch()">
+                                                    <i class="fas fa-times"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Sınıflar Listesi -->
+                                    <div class="classes-list" id="niceClassificationList" style="height: 400px; overflow-y: auto; background: #fafafa;">
+                                        <div class="loading-spinner">
+                                            <div class="spinner-border text-primary" role="status">
+                                                <span class="sr-only">Yükleniyor...</span>
+                                            </div>
+                                            <p class="mt-2 text-muted">Nice sınıfları yükleniyor...</p>
+                                        </div>
+                                    </div>
+
+                                    <!-- 99. Özel Sınıf -->
+                                    <div class="custom-class-section">
+                                        <div class="d-flex align-items-center mb-2">
+                                            <span class="badge badge-danger mr-2" style="font-size: 11px;">99</span>
+                                            <strong class="text-danger">Özel Mal/Hizmet Tanımı</strong>
+                                        </div>
+                                        <p class="small text-muted mb-2">
+                                            <i class="fas fa-info-circle mr-1"></i>
+                                            Yukarıdaki sınıflarda yer almayan özel mal/hizmetler için kullanın.
+                                        </p>
+                                        <div class="input-group">
+                                            <input type="text" class="form-control" id="customClassInput" 
+                                                placeholder="Özel mal/hizmet tanımınızı yazın..."
+                                                maxlength="500">
+                                            <div class="input-group-append">
+                                                <button class="btn btn-danger" type="button" id="addCustomClassBtn">
+                                                    <i class="fas fa-plus mr-1"></i>99. Sınıfa Ekle
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <small class="form-text text-muted">
+                                            Maksimum 500 karakter
+                                        </small>
+                                    </div>
                                 </div>
                             </div>
-                            <div class="nice-class-selected">
-                                <h5>Seçilen Sınıflar <span id="selectedClassCount" class="badge badge-primary">0</span></h5>
-                                <div id="selectedNiceClasses"></div>
+
+                            <!-- Sağ Panel - Seçilen Sınıflar -->
+                            <div class="col-lg-4">
+                                <div class="selected-classes-panel">
+                                    <div class="panel-header d-flex justify-content-between align-items-center">
+                                        <h5 class="mb-0">
+                                            <i class="fas fa-check-circle mr-2"></i>
+                                            Seçilen Mal/Hizmet
+                                        </h5>
+                                        <span class="badge badge-light" id="selectedClassCount">0</span>
+                                    </div>
+                                    
+                                    <div class="selected-classes-content" id="selectedNiceClasses" 
+                                        style="height: 450px; overflow-y: auto; padding: 15px;">
+                                        <div class="empty-state">
+                                            <i class="fas fa-list-alt fa-3x text-muted mb-3"></i>
+                                            <p class="text-muted">
+                                                Henüz hiçbir sınıf seçilmedi.<br>
+                                                Sol panelden sınıf ve alt sınıfları seçin.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
+                </div>
                     <div class="tab-pane fade" id="applicants" role="tabpanel" aria-labelledby="applicants-tab">
                         <p>Bu sekmedeki içerik henüz tanımlanmamıştır.</p>
                     </div>
