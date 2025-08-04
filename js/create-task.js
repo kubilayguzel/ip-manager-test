@@ -141,6 +141,18 @@ class CreateTaskModule {
                 this.handleBrandExampleFile(e.target.files[0]);
             }
         });
+        const removeBtn = document.getElementById('removeBrandExampleBtn');
+        if (removeBtn) {
+            removeBtn.addEventListener('click', () => {
+                const previewContainer = document.getElementById('brandExamplePreviewContainer');
+                const previewImage = document.getElementById('brandExamplePreview');
+                const fileInput = document.getElementById('brandExample');
+                
+                if (previewContainer) previewContainer.style.display = 'none';
+                if (previewImage) previewImage.src = '';
+                if (fileInput) fileInput.value = '';  // dosya seçimini temizle
+            });
+        }
     }
 
     handleNextTab() {
@@ -287,23 +299,29 @@ class CreateTaskModule {
                                 </div>
                             </div>
                             <div class="form-group row">
-                                <label for="brandExample" class="col-sm-3 col-form-label">Marka Örneği</label>
-                                <div class="col-sm-9">
-                                    <div class="file-upload-wrapper" id="brand-example-drop-zone">
-                                        <input type="file" id="brandExample" accept="image/jpeg,image/png,image/gif,image/bmp,image/webp" style="display:none;">
-                                        <div class="file-upload-button" id="brandExampleButton">
-                                            <div class="upload-icon" style="font-size: 2.5em; color: #1e3c72;">🖼️</div>
-                                            <div style="font-weight: 500;">Marka örneğini buraya sürükleyin veya seçmek için tıklayın</div>
-                                        </div>
-                                        <div class="file-upload-info" id="brandExampleInfo">
-                                            İstenen format: 591x591px, 300 DPI, JPEG. Yüklenen dosya otomatik olarak dönüştürülecektir.
-                                        </div>
-                                    </div>
-                                    <div id="brandExamplePreviewContainer" class="mt-3 text-center" style="display:none;">
-                                        <img id="brandExamplePreview" src="#" alt="Marka Örneği Önizlemesi" style="max-width: 200px; max-height: 200px; border: 1px solid #ddd; padding: 5px; border-radius: 8px;">
-                                        <div id="image-processing-status" class="mt-2 text-muted" style="font-size: 0.9em;"></div>
-                                    </div>
+                            <label for="brandExample" class="col-sm-3 col-form-label">Marka Örneği</label>
+                            <div class="col-sm-9">
+                                <div id="brand-example-drop-zone" class="file-upload-wrapper">
+                                <input type="file" id="brandExample" accept="image/*" style="display:none;">
+                                <div class="file-upload-button">
+                                    <div class="upload-icon" style="font-size: 2.5em; color: #1e3c72;">🖼️</div>
+                                    <div style="font-weight: 500;">Marka örneğini buraya sürükleyin veya seçmek için tıklayın</div>
                                 </div>
+                                <div class="file-upload-info">
+                                    İstenen format: 591x591px, 300 DPI, JPEG. Yüklenen dosya otomatik olarak dönüştürülecektir.
+                                </div>
+                                </div>
+
+                                <!-- Önizleme alanı -->
+                                <div id="brandExamplePreviewContainer" class="mt-3 text-center" style="display:none;">
+                                <img id="brandExamplePreview" src="#" alt="Marka Örneği Önizlemesi"
+                                    style="max-width:200px; max-height:200px; border:1px solid #ddd; padding:5px; border-radius:8px;">
+                                <button id="removeBrandExampleBtn" type="button" class="btn btn-sm btn-danger mt-2">
+                                    Kaldır
+                                </button>
+                                <div id="image-processing-status" class="mt-2 text-muted" style="font-size: 0.9em;"></div>
+                                </div>
+                            </div>
                             </div>
                             <div class="form-group row">
                                 <label for="brandExampleText" class="col-sm-3 col-form-label">Marka Örneği Yazılı İfadesi</label>
