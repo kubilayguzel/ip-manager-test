@@ -6,7 +6,6 @@
     <title>IP Manager - Yeni İş Oluştur</title>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <style>
-        /* Bu sayfaya özel stiller */
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333; display: flex; }
         .page-wrapper { flex-grow: 1; display: flex; flex-direction: column; height: 100vh; overflow-y: auto; background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); }
@@ -28,10 +27,6 @@
         .btn-primary { background: #1e3c72; color: white; }
         .btn-primary:disabled { background: #ccc; cursor: not-allowed; }
         .btn-secondary { background: #6c757d; color: white; }
-        .file-upload-wrapper { border: 2px dashed #ccc; border-radius: 10px; padding: 20px; text-align: center; cursor: pointer; transition: background-color 0.3s; }
-        .file-upload-wrapper.drag-over { background-color: #f0f0f0; border-color: #007bff; }
-        .file-upload-button { font-weight: 500; margin-top: 5px; }
-        .file-upload-info { font-size: 0.9em; color: #777; margin-top: 10px; }
     </style>
 </head>
 <body>
@@ -68,22 +63,6 @@
                     </div>
 
                     <div id="conditionalFieldsContainer"></div>
-
-                    <!-- Yeni marka örneği yükleme alanı -->
-                    <div class="form-group row">
-                        <label for="brandExample" class="col-sm-3 col-form-label">Marka Örneği</label>
-                        <div class="col-sm-9">
-                            <div class="file-upload-wrapper" id="brand-example-drop-zone">
-                                <input type="file" id="brandExample" accept="image/*" style="display:none;" />
-                                <div class="file-upload-button">Dosyayı buraya sürükleyin veya tıklayın</div>
-                                <div class="file-upload-info">Yüklenen marka otomatik olarak 591x591 px, 300 DPI, JPEG formatına dönüştürülecektir.</div>
-                            </div>
-                            <div id="brandExamplePreviewContainer" style="display:none; margin-top:10px;">
-                                <img id="brandExamplePreview" src="#" alt="Marka Örneği" style="max-width:200px; max-height:200px; border:1px solid #ddd; padding:5px;">
-                            </div>
-                        </div>
-                    </div>
-
                     <div id="formActionsContainer" class="form-actions"></div>
                 </form>
             </div>
