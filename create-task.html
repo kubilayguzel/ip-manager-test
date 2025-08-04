@@ -116,19 +116,6 @@
         .nav-tabs .nav-link.active {
             font-weight: bold;
         }
-
-        .dropZone {
-            border: 2px dashed #ccc;
-            border-radius: 10px;
-            padding: 20px;
-            text-align: center;
-            cursor: pointer;
-            transition: background-color 0.3s;
-        }
-        .dropZone.drag-over {
-            background-color: #f0f0f0;
-            border-color: #007bff;
-        }
     </style>
 </head>
 <body>
@@ -142,7 +129,6 @@
             
             <div class="form-container">
                 <form id="createTaskForm" onsubmit="return false;">
-                    
                     <div class="form-section">
                         <h3 class="section-title">1. İş Tipi Seçimi</h3>
                         <div class="form-grid">
@@ -152,28 +138,12 @@
                     </div>
                     <div id="conditionalFieldsContainer"></div>
                     <div id="formActionsContainer" class="form-actions"></div>
-                    <div class="form-group row">
-                    <label for="brandExampleUpload" class="col-sm-3 col-form-label">Marka Örneği</label>
-                    <div class="col-sm-9">
-                        <div class="file-upload-wrapper" id="brandExampleDrop">
-                            <input type="file" id="brandExampleUpload" accept="image/*" />
-                            <div class="file-upload-button">
-                                Dosyayı buraya sürükleyin veya tıklayın
-                            </div>
-                            <div class="file-upload-info">
-                                Yüklenen marka otomatik olarak 591x591 px, 300 DPI, JPEG formatına dönüştürülecektir.
-                            </div>
-                        </div>
-                        <div id="brandExamplePreviewContainer" style="display:none; margin-top:10px;">
-                            <img id="brandExamplePreview" src="#" alt="Marka Örneği" style="max-width:200px; max-height:200px; border:1px solid #ddd; padding:5px;">
-                        </div>
-                    </div>
-                </div>
                 </form>
             </div>
         </main>
     </div>
-        <div class="modal" id="addPersonModal">
+    
+    <div class="modal" id="addPersonModal">
         <div class="modal-content">
             <div class="modal-header"><h3 class="modal-title">Yeni Kişi Ekle</h3><button class="close-btn" id="closeAddPersonModal">&times;</button></div>
             <form id="personForm" onsubmit="return false;">
