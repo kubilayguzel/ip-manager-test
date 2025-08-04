@@ -297,6 +297,49 @@
                 left: 30px;
             }
         }
+        .custom-class-section textarea {
+            min-height: 80px;
+            max-height: 200px;
+        }
+
+        .selected-classes-panel,
+        .classification-panel {
+            height: fit-content;
+            max-height: 650px; /* Maksimum yükseklik sınırı */
+        }
+
+        .classes-list {
+            border-radius: 0 0 8px 8px;
+        }
+
+        .selected-classes-content {
+            border-radius: 0 0 8px 8px;
+        }
+
+        /* Karakter sayacı için stil */
+        #customClassCharCount {
+            font-weight: 600;
+            color: #495057;
+        }
+
+        /* Responsive ayarları */
+        @media (max-width: 991px) {
+            .nice-classification-container .row {
+                flex-direction: column;
+            }
+            
+            .selected-classes-panel {
+                margin-top: 20px;
+            }
+            
+            .selected-classes-content {
+                height: 400px !important;
+            }
+            
+            .classes-list {
+                height: 400px !important;
+            }
+        }
     </style>
 </head>
 <body>
