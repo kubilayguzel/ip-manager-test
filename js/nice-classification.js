@@ -3,15 +3,17 @@ import { db } from '../firebase-config.js';
 import { collection, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 let allNiceData = [];
-let selectedClasses = {};
+let selectedClasses = {};  // { key: { classNum, text } }
 
 function renderSelectedClasses() {
     const container = document.getElementById('selectedNiceClasses');
     const countBadge = document.getElementById('selectedClassCount');
-    if (!container) return;
 
-    countBadge.textContent = Object.keys(selectedClasses).length;
-    if (Object.keys(selectedClasses).length === 0) {
+    if (!container) return;
+    if (countBadge) countBadge.textContent = Object.keys(selectedClasses).length;
+
+    const selectedKeys = Object.keys(selectedClasses);
+    if (selectedKeys.length === 0) {
         container.innerHTML = `
             <div class="empty-state">
                 <i class="fas fa-list-alt fa-3x text-muted mb-3"></i>
@@ -24,9 +26,10 @@ function renderSelectedClasses() {
     }
 
     const grouped = {};
-    Object.entries(selectedClasses).forEach(([code, item]) => {
+    selectedKeys.forEach(key => {
+        const item = selectedClasses[key];
         if (!grouped[item.classNum]) grouped[item.classNum] = [];
-        grouped[item.classNum].push({ code, text: item.text });
+        grouped[item.classNum].push({ key, text: item.text });
     });
 
     let html = '';
@@ -34,28 +37,39 @@ function renderSelectedClasses() {
         grouped[classNum].forEach(item => {
             const isCustom = classNum === '99';
             html += `
-            <div class="selected-class-item ${isCustom ? 'custom' : ''}">
-                <div class="selected-class-number">Sınıf ${classNum}</div>
-                <p class="selected-class-description">${item.text}</p>
-                <button class="remove-selected-btn" data-key="${item.code}" title="Kaldır">&times;</button>
-            </div>`;
+                <div class="selected-class-item ${isCustom ? 'custom' : ''}">
+                    <div class="selected-class-number">Sınıf ${classNum}</div>
+                    <p class="selected-class-description">${item.text}</p>
+                    <button class="remove-selected-btn" data-key="${item.key}" title="Kaldır">&times;</button>
+                </div>`;
         });
     });
     container.innerHTML = html;
 }
 
-function selectSubClass(code, classNum, text) {
-    if (selectedClasses[code]) return;
-    selectedClasses[code] = { classNum, text };
-    renderSelectedClasses();
-    document.querySelector(`[data-code="${code}"]`)?.classList.add('selected');
+function toggleAccordion(id) {
+    const el = document.getElementById(`subclasses-${id}`);
+    if (!el) return;
+    el.classList.toggle('show');
+    const header = document.querySelector(`.class-header[data-id="${id}"]`);
+    if (header) header.classList.toggle('expanded');
 }
 
-function removeSelectedClass(code) {
-    if (!selectedClasses[code]) return;
-    delete selectedClasses[code];
+function selectItem(key, classNum, text) {
+    if (selectedClasses[key]) return; // zaten seçili
+    selectedClasses[key] = { classNum, text };
     renderSelectedClasses();
-    document.querySelector(`[data-code="${code}"]`)?.classList.remove('selected');
+
+    const el = document.querySelector(`[data-code="${key}"]`);
+    if (el) el.classList.add('selected');
+}
+
+function removeSelectedClass(key) {
+    if (!selectedClasses[key]) return;
+    delete selectedClasses[key];
+    renderSelectedClasses();
+    const el = document.querySelector(`[data-code="${key}"]`);
+    if (el) el.classList.remove('selected');
 }
 
 export async function initializeNiceClassification() {
@@ -65,92 +79,96 @@ export async function initializeNiceClassification() {
     const customInput = document.getElementById('customClassInput');
     const selectedContainer = document.getElementById('selectedNiceClasses');
 
-    if (!listContainer) return;
+    if (!listContainer || !searchInput || !addCustomBtn || !customInput || !selectedContainer) {
+        console.error('Nice Classification için gerekli HTML elementleri yok');
+        return;
+    }
 
     listContainer.innerHTML = `
-        <div class="loading-spinner text-center p-4">
-            <div class="spinner-border text-primary"></div>
+        <div class="loading-spinner">
+            <div class="spinner-border text-primary" role="status">
+                <span class="sr-only">Yükleniyor...</span>
+            </div>
             <p class="mt-2 text-muted">Nice sınıfları yükleniyor...</p>
         </div>`;
 
     try {
-        const querySnapshot = await getDocs(collection(db, "niceClassification"));
-        if (querySnapshot.empty) throw new Error('Nice sınıfları bulunamadı');
-
-        allNiceData = querySnapshot.docs.map(doc => {
+        const snapshot = await getDocs(collection(db, "niceClassification"));
+        allNiceData = snapshot.docs.map(doc => {
             const data = doc.data();
             return {
                 classNumber: data.classNumber,
                 classTitle: data.classTitle,
-                subClasses: (data.subClasses || []).map((sc, idx) => ({
-                    code: `${data.classNumber.toString().padStart(2, "0")}-${idx + 1}`,
-                    description: sc.subClassDescription
-                }))
+                subClasses: data.subClasses || []
             };
-        }).sort((a, b) => a.classNumber - b.classNumber);
+        }).sort((a, b) => parseInt(a.classNumber) - parseInt(b.classNumber));
 
         let html = '';
-        allNiceData.forEach(cls => {
+        allNiceData.forEach(c => {
             html += `
-            <div class="class-item" data-search-text="${(cls.classTitle || '').toLowerCase()}">
-                <div class="class-header" data-bs-toggle="collapse" data-bs-target="#subclasses-${cls.classNumber}">
-                    <span class="class-number">${cls.classNumber}</span>
-                    <span class="class-title">${cls.classTitle}</span>
-                    <i class="fas fa-chevron-down toggle-icon"></i>
-                </div>
-                <div id="subclasses-${cls.classNumber}" class="subclasses-container collapse">`;
-
-            if (cls.subClasses.length > 0) {
-                cls.subClasses.forEach(sc => {
+                <div class="class-item" data-search-text="${(c.classNumber + ' ' + c.classTitle).toLowerCase()}">
+                    <div class="class-header" data-id="${c.classNumber}">
+                        <span class="class-number">${c.classNumber}</span>
+                        <span class="class-title">${c.classTitle}</span>
+                        <i class="fas fa-chevron-down toggle-icon"></i>
+                    </div>
+                    <div class="subclasses-container" id="subclasses-${c.classNumber}">`;
+            if (c.subClasses.length > 0) {
+                c.subClasses.forEach((sc, index) => {
+                    const code = `${c.classNumber}-${index + 1}`;
                     html += `
-                        <div class="subclass-item" data-code="${sc.code}" data-class-num="${cls.classNumber}" data-text="${sc.description}">
-                            <span class="subclass-code">(${sc.code})</span> ${sc.description}
+                        <div class="subclass-item" data-code="${code}" data-class-num="${c.classNumber}" data-text="${sc.subClassDescription}">
+                            <span class="subclass-code">(${code})</span> ${sc.subClassDescription}
                         </div>`;
                 });
             } else {
-                html += `<div class="text-muted p-3">Bu sınıfta alt kategori bulunmuyor</div>`;
+                html += `<div class="p-3 text-muted">Bu sınıfta alt kategori bulunmuyor</div>`;
             }
             html += `</div></div>`;
         });
-
         listContainer.innerHTML = html;
 
-        listContainer.addEventListener('click', (e) => {
-            const subclass = e.target.closest('.subclass-item');
-            if (subclass) {
-                selectSubClass(subclass.dataset.code, subclass.dataset.classNum, subclass.dataset.text);
-                return;
-            }
+        // Eventler
+        listContainer.addEventListener('click', e => {
             const header = e.target.closest('.class-header');
-            if (header) header.classList.toggle('expanded');
+            const sub = e.target.closest('.subclass-item');
+            if (header) toggleAccordion(header.dataset.id);
+            if (sub) selectItem(sub.dataset.code, sub.dataset.classNum, sub.dataset.text);
         });
 
-        searchInput?.addEventListener('input', (e) => {
+        selectedContainer.addEventListener('click', e => {
+            const btn = e.target.closest('.remove-selected-btn');
+            if (btn) removeSelectedClass(btn.dataset.key);
+        });
+
+        searchInput.addEventListener('input', e => {
             const term = e.target.value.toLowerCase();
-            listContainer.querySelectorAll('.class-item').forEach(item => {
-                item.style.display = item.dataset.searchText.includes(term) ? '' : 'none';
+            document.querySelectorAll('#niceClassificationList .class-item').forEach(el => {
+                el.style.display = el.dataset.searchText.includes(term) ? '' : 'none';
             });
         });
 
-        addCustomBtn?.addEventListener('click', () => {
+        addCustomBtn.addEventListener('click', () => {
             const text = customInput.value.trim();
-            if (!text) return alert('Lütfen özel sınıf metnini girin');
-            const code = `99-${Date.now()}`;
-            selectSubClass(code, '99', text);
-            customInput.value = '';
+            if (text) {
+                const key = `99-${Date.now()}`;
+                selectItem(key, '99', text);
+                customInput.value = '';
+            } else {
+                alert('Özel sınıf metni giriniz');
+            }
         });
 
-        customInput?.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') addCustomBtn.click();
+        customInput.addEventListener('keypress', e => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                addCustomBtn.click();
+            }
         });
 
-        selectedContainer.addEventListener('click', (e) => {
-            const removeBtn = e.target.closest('.remove-selected-btn');
-            if (removeBtn) removeSelectedClass(removeBtn.dataset.key);
-        });
-    } catch (error) {
-        listContainer.innerHTML = `<div class="alert alert-danger">Sınıflar yüklenemedi: ${error.message}</div>`;
-        console.error(error);
+    } catch (err) {
+        console.error("Nice sınıfları yüklenirken hata:", err);
+        listContainer.innerHTML = `<div class="error-state">Sınıflar yüklenemedi: ${err.message}</div>`;
     }
 }
 
@@ -161,16 +179,16 @@ export function clearAllSelectedClasses() {
 }
 
 export function getSelectedNiceClasses() {
-    return Object.entries(selectedClasses).map(([code, val]) =>
-        val.classNum === '99' ? `(99) ${val.text}` : `(${code}) ${val.text}`
-    );
+    return Object.entries(selectedClasses).map(([k, v]) => {
+        return v.classNum === '99' ? `(99) ${v.text}` : `(${k}) ${v.text}`;
+    });
 }
 
 window.clearAllSelectedClasses = clearAllSelectedClasses;
 window.clearNiceSearch = () => {
-    const searchInput = document.getElementById('niceClassSearch');
-    if (searchInput) {
-        searchInput.value = '';
-        searchInput.dispatchEvent(new Event('input'));
+    const input = document.getElementById('niceClassSearch');
+    if (input) {
+        input.value = '';
+        input.dispatchEvent(new Event('input'));
     }
 };
