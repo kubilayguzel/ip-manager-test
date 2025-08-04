@@ -106,7 +106,7 @@ export async function initializeNiceClassification() {
         </div>`;
 
     try {
-        const querySnapshot = await getDocs(collection(db, "niceclassification"));
+        const querySnapshot = await getDocs(collection(db, "niceClassification"));
         allNiceData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         allNiceData.sort((a, b) => parseInt(a.id) - parseInt(b.id));
 
