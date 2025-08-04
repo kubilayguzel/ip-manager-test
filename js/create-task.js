@@ -1064,3 +1064,48 @@ auth.onAuthStateChanged(user => {
         loadSharedLayout({ activeMenuLink: 'create-task.html' });
     } else { window.location.href = 'index.html'; }
 });
+const brandExampleInput = document.getElementById('brandExampleUpload');
+const dropArea = document.getElementById('brandExampleDrop');
+
+['dragenter', 'dragover'].forEach(eventName => {
+    dropArea.addEventListener(eventName, e => {
+        e.preventDefault();
+        e.stopPropagation();
+        dropArea.classList.add('drag-over');
+    }, false);
+});
+['dragleave', 'drop'].forEach(eventName => {
+    dropArea.addEventListener(eventName, e => {
+        e.preventDefault();
+        e.stopPropagation();
+        dropArea.classList.remove('drag-over');
+    }, false);
+});
+dropArea.addEventListener('drop', e => {
+    if (e.dataTransfer.files.length > 0) {
+        handleBrandExampleFile(e.dataTransfer.files[0]);
+    }
+});
+brandExampleInput.addEventListener('change', e => {
+    if (e.target.files.length > 0) {
+        handleBrandExampleFile(e.target.files[0]);
+    }
+});
+
+async function handleBrandExampleFile(file) {
+    const img = new Image();
+    img.src = URL.createObjectURL(file);
+    img.onload = async () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = 591;
+        canvas.height = 591;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, 591, 591);
+
+        const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.92));
+        const newFile = new File([blob], 'brand-example.jpg', { type: 'image/jpeg' });
+
+        document.getElementById('brandExamplePreview').src = URL.createObjectURL(blob);
+        document.getElementById('brandExamplePreviewContainer').style.display = 'block';
+    };
+}
