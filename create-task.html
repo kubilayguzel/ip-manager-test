@@ -944,6 +944,35 @@
     display: flex;
     flex-direction: column;
     flex: 1; /* Bulunduğu kolonu doldurur */
+}/*
+ * Bu kural, sol paneldeki ana sınıf listesinin,
+ * içinde bulunduğu panelin alanını doldurmasını sağlar.
+ * `min-height` ile minimum bir yükseklik atayabiliriz.
+ */
+#niceClassificationList {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 350px; /* Listeye minimum bir yükseklik vererek boş kalmasını engeller */
+}
+
+/*
+ * Bu kural, sağ paneldeki seçilen mal/hizmet listesinin,
+ * içinde bulunduğu panelin alanını doldurmasını sağlar.
+ * `max-height` değeri, listenin sonsuz uzamasını engeller.
+ */
+.selected-classes-content {
+  flex: 1;
+  overflow-y: auto;
+  max-height: 400px; /* İçeriğin bu yüksekliği aştığında kaydırma çubuğu görünür */
+}
+
+/* Bu kural, her iki panelin de eşit yükseklikte olmasını ve
+   içindeki içeriğin dikey olarak düzenlenmesini sağlar. */
+.classification-panel,
+.selected-classes-panel {
+  display: flex;
+  flex-direction: column;
+  flex: 1; /* Bulunduğu kolonu doldurur */
 }
     </style>
 </head>
