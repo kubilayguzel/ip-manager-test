@@ -349,7 +349,7 @@ class CreateTaskModule {
                             </div>
                         </div>
                     </div>
-                    <div class="tab-pane fade" id="goods-services" role="tabpanel" aria-labelledby="goods-services-tab">
+<div class="tab-pane fade" id="goods-services" role="tabpanel" aria-labelledby="goods-services-tab">
     <div class="nice-classification-container mt-3">
         <div class="row">
             <!-- Sol Panel - Sınıf Seçimi -->
@@ -381,8 +381,8 @@ class CreateTaskModule {
                         </div>
                     </div>
 
-                    <!-- Sınıflar Listesi - SOL PANEL YÜKSEKLİĞİ ARTIRILDI -->
-                    <div class="classes-list" id="niceClassificationList" style="height: 500px; overflow-y: auto; background: #fafafa;">
+                    <!-- Sınıflar Listesi -->
+                    <div class="classes-list" id="niceClassificationList" style="height: 450px; overflow-y: auto; background: #fafafa;">
                         <div class="loading-spinner">
                             <div class="spinner-border text-primary" role="status">
                                 <span class="sr-only">Yükleniyor...</span>
@@ -391,7 +391,7 @@ class CreateTaskModule {
                         </div>
                     </div>
 
-                    <!-- 99. Özel Sınıf - TEXTAREA VE SINIR ARTIRILDI -->
+                    <!-- 99. Özel Sınıf Bölümü - EKSİK OLAN BÖLÜM -->
                     <div class="custom-class-section">
                         <div class="d-flex align-items-center mb-2">
                             <span class="badge badge-danger mr-2" style="font-size: 11px;">99</span>
@@ -402,7 +402,6 @@ class CreateTaskModule {
                             Yukarıdaki sınıflarda yer almayan özel mal/hizmetler için kullanın.
                         </p>
                         <div class="input-group">
-                            <!-- INPUT DEĞİL TEXTAREA KULLANIK VE SINIR 50000 KARAKTER -->
                             <textarea class="form-control" id="customClassInput" 
                                    placeholder="Özel mal/hizmet tanımınızı yazın..."
                                    maxlength="50000" rows="3" style="resize: vertical;"></textarea>
@@ -419,7 +418,7 @@ class CreateTaskModule {
                 </div>
             </div>
 
-            <!-- Sağ Panel - Seçilen Sınıflar - YÜKSEKLİK EŞİTLENDİ -->
+            <!-- Sağ Panel - Seçilen Sınıflar -->
             <div class="col-lg-4">
                 <div class="selected-classes-panel">
                     <div class="panel-header d-flex justify-content-between align-items-center">
@@ -430,9 +429,9 @@ class CreateTaskModule {
                         <span class="badge badge-light" id="selectedClassCount">0</span>
                     </div>
                     
-                    <!-- SAĞ PANEL YÜKSEKLİĞİ SOL PANEL İLE EŞİTLENDİ -->
+                    <!-- Sağ Panel İçeriği - YÜKSEKLİK EŞİTLENDİ -->
                     <div class="selected-classes-content" id="selectedNiceClasses" 
-                         style="height: 550px; overflow-y: auto; padding: 15px;">
+                         style="height: 570px; overflow-y: auto; padding: 15px;">
                         <div class="empty-state">
                             <i class="fas fa-list-alt fa-3x text-muted mb-3"></i>
                             <p class="text-muted">
@@ -446,6 +445,7 @@ class CreateTaskModule {
         </div>
     </div>
 </div>
+
                     <div class="tab-pane fade" id="applicants" role="tabpanel" aria-labelledby="applicants-tab">
                         <p>Bu sekmedeki içerik henüz tanımlanmamıştır.</p>
                     </div>
