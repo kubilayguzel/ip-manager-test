@@ -91,6 +91,56 @@ class CreateTaskModule {
         $(document).on('shown.bs.tab', '#myTaskTabs a', () => {
             this.updateButtonsAndTabs();
         });
+
+        // NOT: setupDynamicFormListeners içindeki marka yükleme kodları buraya taşındı ve güncellendi.
+        // Eğer başka bir yerde çağırılıyorsa, bu merkezileştirilmiş dinleyiciler kullanılmalı.
+        this.setupBrandExampleUploader();
+    }
+    
+    // YENİ: Marka örneği yükleyici için özel kurulum fonksiyonu
+    setupBrandExampleUploader() {
+        const dropZone = document.getElementById('brand-example-drop-zone');
+        const fileInput = document.getElementById('brandExample');
+
+        if (!dropZone || !fileInput) {
+            // Bu elementler renderBaseForm içinde olmadığı için null olabilir, sorun değil.
+            return;
+        }
+
+        // Tıklama olayı ile gizli input'u tetikle
+        dropZone.addEventListener('click', () => fileInput.click());
+
+        // Sürükleme olayları
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropZone.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                dropZone.classList.add('drag-over'); // Stili CSS'te tanımlayın
+            }, false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                dropZone.classList.remove('drag-over');
+            }, false);
+        });
+
+        // Dosya bırakıldığında
+        dropZone.addEventListener('drop', (e) => {
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                this.handleBrandExampleFile(files[0]);
+            }
+        });
+
+        // Dosya seçildiğinde
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                this.handleBrandExampleFile(e.target.files[0]);
+            }
+        });
     }
 
     handleNextTab() {
@@ -239,16 +289,20 @@ class CreateTaskModule {
                             <div class="form-group row">
                                 <label for="brandExample" class="col-sm-3 col-form-label">Marka Örneği</label>
                                 <div class="col-sm-9">
-                                    <div id="dropZone" class="border border-secondary p-3 text-center" style="cursor: pointer;">
-                                        Marka örneği dosyasını buraya sürükleyin veya <a href="#" onclick="document.getElementById('brandExample').click(); return false;">tıklayarak seçin</a>.
+                                    <div class="file-upload-wrapper" id="brand-example-drop-zone">
+                                        <input type="file" id="brandExample" accept="image/jpeg,image/png,image/gif,image/bmp,image/webp" style="display:none;">
+                                        <div class="file-upload-button" id="brandExampleButton">
+                                            <div class="upload-icon" style="font-size: 2.5em; color: #1e3c72;">🖼️</div>
+                                            <div style="font-weight: 500;">Marka örneğini buraya sürükleyin veya seçmek için tıklayın</div>
+                                        </div>
+                                        <div class="file-upload-info" id="brandExampleInfo">
+                                            İstenen format: 591x591px, 300 DPI, JPEG. Yüklenen dosya otomatik olarak dönüştürülecektir.
+                                        </div>
                                     </div>
-                                    <input type="file" class="form-control-file d-none" id="brandExample" accept="image/jpeg,image/png">
-                                    <small class="form-text text-muted">Yüklenen marka örneği 591x591 px ve 300 DPI özelliklerinde olmalıdır. Aksi halde otomatik olarak dönüştürülecektir.</small>
-                                </div>
-                            </div>
-                            <div class="form-group row" id="brandExamplePreviewContainer" style="display:none;">
-                                <div class="col-sm-9 offset-sm-3">
-                                    <img id="brandExamplePreview" src="#" alt="Marka Örneği Önizlemesi" style="max-width: 200px; max-height: 200px; border: 1px solid #ddd; padding: 5px; margin-top: 10px;">
+                                    <div id="brandExamplePreviewContainer" class="mt-3 text-center" style="display:none;">
+                                        <img id="brandExamplePreview" src="#" alt="Marka Örneği Önizlemesi" style="max-width: 200px; max-height: 200px; border: 1px solid #ddd; padding: 5px; border-radius: 8px;">
+                                        <div id="image-processing-status" class="mt-2 text-muted" style="font-size: 0.9em;"></div>
+                                    </div>
                                 </div>
                             </div>
                             <div class="form-group row">
@@ -384,7 +438,10 @@ class CreateTaskModule {
             </div>
             <div id="formActionsContainer" class="form-actions"></div>
         `;
+        // Dinamik olarak oluşturulan form elemanları için dinleyicileri yeniden kur
         this.setupDynamicFormListeners();
+        // Marka yükleyiciyi de kur
+        this.setupBrandExampleUploader();
         this.updateButtonsAndTabs();
     }
 
