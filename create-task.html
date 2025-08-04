@@ -974,6 +974,39 @@
   flex-direction: column;
   flex: 1; /* Bulunduğu kolonu doldurur */
 }
+/* Nice Classification Özel Stilleri */
+.nice-classification-container {
+    margin-top: 20px;
+    height: 70vh; /* Bu, panellerin ekranın %70'i kadar bir alanda kalmasını sağlar */
+    display: flex;
+    flex-direction: column;
+}
+
+.nice-classification-container .row {
+    display: flex;
+    flex: 1; /* Satırın, ana kapsayıcının tamamını doldurmasını sağlar */
+    align-items: stretch; /* Kolonların eşit yükseklikte olmasını sağlar */
+}
+
+/* Sol ve sağ panel kapsayıcıları */
+.classification-panel,
+.selected-classes-panel {
+    background: white;
+    border: 1px solid #dee2e6;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    display: flex;
+    flex-direction: column; /* İçeriklerini dikey olarak düzenle */
+    flex: 1; /* Bulundukları kolonu doldurarak uzasın */
+}
+
+/* Her iki paneldeki kaydırılabilir listeler */
+#niceClassificationList,
+.selected-classes-content {
+    flex: 1; /* Listelerin, panel içindeki boş alanı doldurmasını sağlar */
+    overflow-y: auto; /* İçerik taştığında kaydırma çubuğu ekler */
+}
     </style>
 </head>
 <body>
