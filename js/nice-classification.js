@@ -401,85 +401,131 @@ function setupClass35_5ModalEvents() {
         });
     }
 
-    // Liste tıklamaları
-    listContainer.addEventListener('click', (e) => {
-        // Ana sınıf seç butonu
-        const selectBtn = e.target.closest('.select-class-btn');
-        if (selectBtn) {
-            e.preventDefault();
-            e.stopPropagation();
-            const classNumber = parseInt(selectBtn.dataset.classNumber);
-            selectWholeClass35_5(classNumber);
-            return;
-        }
-
-        // Alt sınıf seçimi
-        const subclass = e.target.closest('.subclass-item');
-        if (subclass) {
-            const code = subclass.dataset.code;
-            if (class35_5_modalSelectedItems[code]) {
-                removeClass35_5(code);
-            } else {
-                addClass35_5(code, subclass.dataset.classNum, subclass.dataset.text);
-            }
-            return;
-        }
-
-        // Header tıklama (accordion)
-        const header = e.target.closest('.class-header');
-        if (header && !e.target.closest('.select-class-btn')) {
-            const classNumber = header.dataset.classNumber;
-            const container = document.getElementById(`modal-subclasses-${classNumber}`);
-            if (container) {
-                container.classList.toggle('show');
-                header.classList.toggle('expanded');
-            }
-        }
-    });
-
-    // Arama
-    searchInput.addEventListener('input', (e) => {
-        const term = e.target.value.toLowerCase();
-        listContainer.querySelectorAll('.class-item').forEach(item => {
-            const shouldShow = item.dataset.searchText.includes(term);
-            item.style.display = shouldShow ? '' : 'none';
+    // Liste tıklamaları - BASİT VE NET
+    if (listContainer) {
+        listContainer.addEventListener('click', (e) => {
+            console.log('Liste tıklama eventi:', e.target);
             
-            if (shouldShow && term.length > 2) {
-                const container = item.querySelector('.subclasses-container');
-                if (container) container.classList.add('show');
-                const header = item.querySelector('.class-header');
-                if (header) header.classList.add('expanded');
+            // Ana sınıf seç butonu
+            const selectBtn = e.target.closest('.select-class-btn');
+            if (selectBtn) {
+                e.preventDefault();
+                e.stopPropagation();
+                const classNumber = parseInt(selectBtn.dataset.classNumber);
+                console.log('Ana sınıf seç butonu tıklandı:', classNumber);
+                selectWholeClass35_5(classNumber);
+                return;
+            }
+
+            // Alt sınıf seçimi
+            const subclass = e.target.closest('.subclass-item');
+            if (subclass) {
+                e.preventDefault();
+                e.stopPropagation();
+                const code = subclass.dataset.code;
+                const classNum = subclass.dataset.classNum;
+                const text = subclass.dataset.text;
+                
+                console.log('Alt sınıf tıklandı:', { code, classNum, text });
+                
+                if (class35_5_modalSelectedItems[code]) {
+                    removeClass35_5(code);
+                } else {
+                    addClass35_5(code, classNum, text);
+                }
+                return;
+            }
+
+            // Header tıklama (accordion)
+            const header = e.target.closest('.class-header');
+            if (header && !e.target.closest('.select-class-btn')) {
+                const classNumber = header.dataset.classNumber;
+                const container = document.getElementById(`modal-subclasses-${classNumber}`);
+                if (container) {
+                    container.classList.toggle('show');
+                    header.classList.toggle('expanded');
+                }
             }
         });
-    });
+    }
+
+    // Arama
+    if (searchInput) {
+        searchInput.addEventListener('input', (e) => {
+            const term = e.target.value.toLowerCase();
+            listContainer.querySelectorAll('.class-item').forEach(item => {
+                const shouldShow = item.dataset.searchText.includes(term);
+                item.style.display = shouldShow ? '' : 'none';
+                
+                if (shouldShow && term.length > 2) {
+                    const container = item.querySelector('.subclasses-container');
+                    if (container) container.classList.add('show');
+                    const header = item.querySelector('.class-header');
+                    if (header) header.classList.add('expanded');
+                }
+            });
+        });
+    }
 
     // Özel mal ekleme
-    addCustomBtn.addEventListener('click', () => {
-        const text = customInput.value.trim();
-        if (!text) return alert('Lütfen özel mal tanımını girin');
-        const code = `99-${Date.now()}`;
-        addClass35_5(code, '99', text);
-        customInput.value = '';
-        charCount.textContent = '0';
-    });
+    if (addCustomBtn) {
+        addCustomBtn.addEventListener('click', () => {
+            const text = customInput.value.trim();
+            if (!text) return alert('Lütfen özel mal tanımını girin');
+            const code = `99-${Date.now()}`;
+            addClass35_5(code, '99', text);
+            customInput.value = '';
+            if (charCount) charCount.textContent = '0';
+        });
+    }
 
     // Kaydet butonu
-    saveBtn.addEventListener('click', saveClass35_5Selection);
+    if (saveBtn) {
+        saveBtn.addEventListener('click', () => {
+            console.log('Kaydet butonu tıklandı');
+            console.log('Kaydetme öncesi class35_5_modalSelectedItems:', class35_5_modalSelectedItems);
+            saveClass35_5Selection();
+        });
+    }
 }
-
 // 35-5 modal yardımcı fonksiyonları
 function addClass35_5(code, classNum, text) {
-    if (class35_5_modalSelectedItems[code]) return;
-    class35_5_modalSelectedItems[code] = { classNum, text };
-    renderClass35_5Selected();
-    updateClass35_5VisualStates();
+    try {
+        if (class35_5_modalSelectedItems[code]) {
+            console.log('Zaten seçili:', code);
+            return;
+        }
+        
+        console.log('Mal ekleniyor:', { code, classNum, text });
+        class35_5_modalSelectedItems[code] = { classNum, text };
+        
+        renderClass35_5Selected();
+        updateClass35_5VisualStates();
+        
+        console.log('Mal başarıyla eklendi. Toplam:', Object.keys(class35_5_modalSelectedItems).length);
+        console.log('Güncel class35_5_modalSelectedItems:', class35_5_modalSelectedItems);
+    } catch (error) {
+        console.error('Mal ekleme hatası:', error);
+    }
 }
 
 function removeClass35_5(code) {
-    if (!class35_5_modalSelectedItems[code]) return;
-    delete class35_5_modalSelectedItems[code];
-    renderClass35_5Selected();
-    updateClass35_5VisualStates();
+    try {
+        if (!class35_5_modalSelectedItems[code]) {
+            console.log('Zaten seçili değil:', code);
+            return;
+        }
+        
+        console.log('Mal kaldırılıyor:', code);
+        delete class35_5_modalSelectedItems[code];
+        
+        renderClass35_5Selected();
+        updateClass35_5VisualStates();
+        
+        console.log('Mal başarıyla kaldırıldı. Kalan:', Object.keys(class35_5_modalSelectedItems).length);
+    } catch (error) {
+        console.error('Mal kaldırma hatası:', error);
+    }
 }
 
 function selectWholeClass35_5(classNumber) {
@@ -537,18 +583,12 @@ function renderClass35_5Selected() {
             <div class="selected-class-item ${isCustom ? 'custom' : ''}">
                 <div class="selected-class-number">Sınıf ${displayCode}</div>
                 <p class="selected-class-description">${item.text}</p>
-                <button class="remove-selected-btn" data-key="${item.code}" title="Kaldır">&times;</button>
+                <button class="remove-selected-btn" data-key="${item.code}" title="Kaldır" onclick="removeClass35_5('${item.code}')">&times;</button>
             </div>`;
         });
     });
     
     container.innerHTML = html;
-
-    // Kaldırma event listener'ı
-    container.addEventListener('click', (e) => {
-        const removeBtn = e.target.closest('.remove-selected-btn');
-        if (removeBtn) removeClass35_5(removeBtn.dataset.key);
-    });
 }
 
 function updateClass35_5VisualStates() {
@@ -803,3 +843,5 @@ window.clearNiceSearch = () => {
 window.openClass35_5Modal = openClass35_5Modal;
 window.closeClass35_5Modal = closeClass35_5Modal;
 window.clearClass35_5Search = clearClass35_5Search;
+window.removeClass35_5 = removeClass35_5;
+window.addClass35_5 = addClass35_5;
