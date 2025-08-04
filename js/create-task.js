@@ -391,7 +391,7 @@ class CreateTaskModule {
                         </div>
                     </div>
 
-                    <!-- 99. Özel Sınıf Bölümü - EKSİK OLAN BÖLÜM -->
+                    <!-- 99. Özel Sınıf Bölümü -->
                     <div class="custom-class-section">
                         <div class="d-flex align-items-center mb-2">
                             <span class="badge badge-danger mr-2" style="font-size: 11px;">99</span>
@@ -429,7 +429,6 @@ class CreateTaskModule {
                         <span class="badge badge-light" id="selectedClassCount">0</span>
                     </div>
                     
-                    <!-- Sağ Panel İçeriği - YÜKSEKLİK EŞİTLENDİ -->
                     <div class="selected-classes-content" id="selectedNiceClasses" 
                          style="height: 570px; overflow-y: auto; padding: 15px;">
                         <div class="empty-state">
@@ -445,7 +444,6 @@ class CreateTaskModule {
         </div>
     </div>
 </div>
-
                     <div class="tab-pane fade" id="applicants" role="tabpanel" aria-labelledby="applicants-tab">
                         <p>Bu sekmedeki içerik henüz tanımlanmamıştır.</p>
                     </div>
