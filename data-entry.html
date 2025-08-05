@@ -122,7 +122,7 @@ body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333
 </head>
 <body>
     <div id="layout-placeholder"></div>
-    
+
     <div class="page-wrapper">
         <main class="main-container">
             <!-- Page Header -->
@@ -130,12 +130,93 @@ body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333
                 <h1 class="page-title">Portföye Yeni Marka Kaydı</h1>
                 <p class="page-subtitle">Yeni bir marka başvurusu oluşturun ve portföyünüze ekleyin.</p>
             </section>
-            
+
             <!-- Form Container -->
             <div class="form-container">
                 <!-- Bu container create-task.js tarafından doldurulacak -->
-                <div id="conditionalFieldsContainer"></div>
-                
+                <div id="conditionalFieldsContainer">
+                    <!-- Tabs -->
+                    <ul class="nav nav-tabs" id="myTaskTabs" role="tablist">
+                        <li class="nav-item">
+                            <a class="nav-link active" id="brand-info-tab" data-toggle="tab" href="#brand-info" role="tab">Marka Bilgileri</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" id="goods-services-tab" data-toggle="tab" href="#goods-services" role="tab">Mal/Hizmet Seçimi</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" id="applicants-tab" data-toggle="tab" href="#applicants" role="tab">Başvuru Sahipleri</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" id="priority-tab" data-toggle="tab" href="#priority" role="tab">Rüçhan</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" id="summary-tab" data-toggle="tab" href="#summary" role="tab">Özet</a>
+                        </li>
+                    </ul>
+
+                    <!-- Tab Content -->
+                    <div class="tab-content mt-3 tab-content-card" id="myTaskTabContent">
+                        <!-- Marka Bilgileri, Başvuru Sahibi, Rüçhan, Özet tabları create-task.js tarafından doldurulacak -->
+
+                        <!-- Mal/Hizmet Seçimi Tab -->
+                        <div class="tab-pane fade" id="goods-services" role="tabpanel">
+                            <div class="nice-classification-container mt-3">
+                                <div class="row">
+                                    <div class="col-lg-8">
+                                        <div class="classification-panel mb-3">
+                                            <div class="panel-header">
+                                                <h5 class="mb-0">
+                                                    <i class="fas fa-list-ul mr-2"></i>
+                                                    Nice Classification - Mal ve Hizmet Sınıfları
+                                                </h5>
+                                                <small class="text-white-50">1-45 arası sınıflardan seçim yapın</small>
+                                            </div>
+                                            <div class="search-section">
+                                                <div class="input-group">
+                                                    <div class="input-group-prepend">
+                                                        <span class="input-group-text"><i class="fas fa-search"></i></span>
+                                                    </div>
+                                                    <input type="text" class="form-control" id="niceClassSearch" placeholder="Sınıf ara... (örn: kozmetik, kimyasal, teknoloji)">
+                                                    <div class="input-group-append">
+                                                        <button class="btn btn-outline-secondary" type="button" onclick="clearNiceSearch()">
+                                                            <i class="fas fa-times"></i>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="classes-list" id="niceClassificationList" style="height: 450px; overflow-y: auto; background: #fafafa;">
+                                            <div class="loading-spinner text-center p-4">
+                                                <div class="spinner-border text-primary" role="status"></div>
+                                                <p class="mt-2 text-muted">Nice sınıfları yükleniyor...</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-lg-4">
+                                        <div class="selected-classes-panel">
+                                            <div class="panel-header text-center p-3 bg-success text-white">
+                                                <h6 class="mb-0">
+                                                    <i class="fas fa-check-circle mr-2"></i>
+                                                    Seçilen Sınıflar (<span id="selectedClassCount">0</span>)
+                                                </h6>
+                                            </div>
+                                            <div id="selectedNiceClasses" class="p-3" style="max-height: 400px; overflow-y: auto;">
+                                                <div class="empty-state">
+                                                    <i class="fas fa-list-alt fa-3x text-muted mb-3"></i>
+                                                    <p class="text-muted">
+                                                        Henüz hiçbir sınıf seçilmedi.<br>
+                                                        Sol panelden sınıf başlığına veya alt sınıfları seçin.
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Form Actions -->
                 <div class="form-actions">
                     <button type="button" class="btn btn-secondary" onclick="window.location.href='portfolio.html'">
@@ -149,9 +230,6 @@ body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333
         </main>
     </div>
 
-    <!-- Modals will be loaded by shared layout -->
-    
-    <!-- Scripts -->
     <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
