@@ -458,7 +458,7 @@ class CreateTaskModule {
                                 <label for="applicantSearchInput" class="form-label">Başvuru Sahibi Ara</label>
                                 <div style="display: flex; gap: 10px;">
                                     <input type="text" id="applicantSearchInput" class="form-input" placeholder="Aramak için en az 2 karakter...">
-                                    <button type="button" id="addNewApplicantBtn" class="btn-small btn-add-person"><span>&#x2795;</span> Yeni Kişi</button>
+                                    <button type="button" id="addNewApplicantBtn" class="btn-small btn-add-person" data-toggle="modal" data-target="#addPersonModal"><span>&#x2795;</span> Yeni Kişi</button>
                                 </div>
                                 <div id="applicantSearchResults" class="search-results-list"></div>
                             </div>
@@ -748,13 +748,11 @@ class CreateTaskModule {
         const addNewPersonBtn = document.getElementById('addNewPersonBtn');
         if (addNewPersonBtn) addNewPersonBtn.addEventListener('click', () => this.showAddPersonModal('relatedParty'));
 
-        // Başvuru sahibi arama ve ekleme butonları için dinleyiciler
         const applicantSearchInput = document.getElementById('applicantSearchInput');
         if (applicantSearchInput) applicantSearchInput.addEventListener('input', (e) => this.searchPersons(e.target.value, 'applicant'));
         const addNewApplicantBtn = document.getElementById('addNewApplicantBtn');
         if (addNewApplicantBtn) addNewApplicantBtn.addEventListener('click', () => this.showAddPersonModal('applicant'));
 
-        // Seçilen başvuru sahipleri listesindeki kaldır butonları için dinleyici
         const selectedApplicantsList = document.getElementById('selectedApplicantsList');
         if (selectedApplicantsList) {
             selectedApplicantsList.addEventListener('click', (e) => {
