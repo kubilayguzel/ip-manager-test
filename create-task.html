@@ -419,6 +419,50 @@ body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333
             </div>
         </main>
     </div>
+    <div id="addPersonModal" class="modal fade" tabindex="-1" role="dialog">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Yeni Kişi Ekle</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close" id="closeAddPersonModal">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <form id="personForm">
+                        <div class="form-group">
+                            <label for="personName">Ad Soyad / Unvan</label>
+                            <input type="text" class="form-control" id="personName" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="personType">Kişi Türü</label>
+                            <select class="form-control" id="personType" required>
+                                <option value="gercek">Gerçek Kişi</option>
+                                <option value="tuzel">Tüzel Kişi</option>
+                                <option value="avukat">Avukat</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="personEmail">E-posta</label>
+                            <input type="email" class="form-control" id="personEmail">
+                        </div>
+                        <div class="form-group">
+                            <label for="personPhone">Telefon</label>
+                            <input type="tel" class="form-control" id="personPhone">
+                        </div>
+                        <div class="form-group">
+                            <label for="personAddress">Adres</label>
+                            <textarea class="form-control" id="personAddress" rows="3"></textarea>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" id="cancelPersonBtn" data-dismiss="modal">İptal</button>
+                    <button type="button" class="btn btn-primary" id="savePersonBtn">Kaydet</button>
+                </div>
+            </div>
+        </div>
+    </div>
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
