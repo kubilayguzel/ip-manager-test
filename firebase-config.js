@@ -217,7 +217,21 @@ export const authService = {
 };
 
 // --- IP Records Service ---
-export const ipRecordsService = {
+const ipRecordsService = {
+    async createRecord(recordData) {
+        try {
+            const docRef = await addDoc(collection(db, "iprecords"), {
+                ...recordData,
+                createdAt: serverTimestamp(),
+                updatedAt: serverTimestamp(),
+            });
+            console.log("Yeni IP kaydı başarıyla oluşturuldu, ID:", docRef.id);
+            return { success: true, id: docRef.id };
+        } catch (error) {
+            console.error("IP kaydı oluşturulurken hata:", error);
+            return { success: false, error: error.message };
+        }
+    },
     async addRecord(record) {
         if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor." };
         try {
@@ -341,6 +355,7 @@ export const ipRecordsService = {
             return { success: false, error: error.message };
         }
     },
+    
 };
 
 // --- YENİ EKLENDİ: Persons Service ---
