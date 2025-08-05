@@ -1,4 +1,4 @@
-// data-entry.js - Düzeltilmiş ve genişletilmiş versiyon
+// data-entry.js - Basitleştirilmiş versiyon (tahakkuk olmadan)
 
 // create-task.js'den dışa aktarılan fonksiyonlar
 import { createTrademarkApplication, uploadFileToStorage } from './create-task.js';
@@ -19,8 +19,6 @@ class DataEntryModule {
         this.isNiceClassificationInitialized = false;
         this.selectedApplicants = [];
         this.priorities = [];
-        this.selectedTpInvoiceParty = null;
-        this.selectedServiceInvoiceParty = null;
     }
 
     async init() {
@@ -51,18 +49,9 @@ class DataEntryModule {
         }
 
         this.setupEventListeners();
-        this.setupInitialForm();
         this.setupFileUpload();
         
         console.log('🎉 DataEntry modülü başarıyla başlatıldı');
-    }
-
-    setupInitialForm() {
-        // İlk tab'ı aktif yap
-        this.activeTab = 'brand-info';
-        
-        // Toplam tutarı hesapla
-        this.calculateTotalAmount();
     }
 
     setupEventListeners() {
@@ -74,7 +63,7 @@ class DataEntryModule {
             form.addEventListener('submit', (e) => this.handleFormSubmit(e));
         }
 
-        // Tablar arası geçiş ve ilgili olaylar
+        // Tablar arası geçiş
         $(document).on('click', '#dataEntryTabs a', (e) => {
             e.preventDefault();
             const targetTabId = e.target.getAttribute('href').substring(1);
@@ -95,12 +84,9 @@ class DataEntryModule {
             if (targetTabId === 'priority') {
                 this.renderPriorities();
             }
-            if (targetTabId === 'accrual') {
-                this.setupAccrualTabListeners();
-            }
         });
 
-        // Diğer dinamik form olayları için event listener'ları ayarlıyoruz
+        // Dinamik form olayları
         this.setupDynamicFormListeners();
         
         console.log('✅ Event listeners kuruldu');
@@ -119,31 +105,15 @@ class DataEntryModule {
 
         // Seçilen başvuru sahiplerini silme
         $(document).on('click', '.remove-applicant-btn', (e) => {
-            const applicantId = e.target.dataset.id;
+            const applicantId = e.target.closest('button').dataset.id;
             this.removeApplicant(applicantId);
         });
 
         // Rüçhan silme
         $(document).on('click', '.remove-priority-btn', (e) => {
-            const priorityId = e.target.dataset.id;
+            const priorityId = e.target.closest('button').dataset.id;
             this.removePriority(priorityId);
         });
-    }
-
-    setupAccrualTabListeners() {
-        // Ücret hesaplama için event listener'lar
-        const feeInputs = ['officialFee', 'serviceFee', 'vatRate'];
-        feeInputs.forEach(inputId => {
-            const input = document.getElementById(inputId);
-            if (input) {
-                input.addEventListener('input', () => this.calculateTotalAmount());
-            }
-        });
-
-        const vatCheckbox = document.getElementById('applyVatToOfficialFee');
-        if (vatCheckbox) {
-            vatCheckbox.addEventListener('change', () => this.calculateTotalAmount());
-        }
     }
 
     setupFileUpload() {
@@ -229,16 +199,36 @@ class DataEntryModule {
     }
 
     showPersonSearchModal(target) {
-        // Kişi arama modalını göster (create-task.js'deki modal yapısını kullan)
-        console.log('👤 Kişi arama modalı açılıyor:', target);
-        // Bu bölümde person search modal implementasyonu gelecek
-        alert('Kişi arama modalı henüz implement edilmedi. Geliştirme devam ediyor...');
+        // Basit prompt ile geçici çözüm - sonra modal implement edilecek
+        const personName = prompt('Başvuru sahibinin adını girin:');
+        if (personName && personName.trim()) {
+            const newApplicant = {
+                id: Date.now().toString(), // Geçici ID
+                name: personName.trim(),
+                email: null
+            };
+            this.selectedApplicants.push(newApplicant);
+            this.renderSelectedApplicants();
+        }
     }
 
     showAddPriorityModal() {
-        console.log('🏴 Rüçhan ekleme modalı açılıyor');
-        // Bu bölümde priority add modal implementasyonu gelecek
-        alert('Rüçhan ekleme modalı henüz implement edilmedi. Geliştirme devam ediyor...');
+        // Basit prompt ile geçici çözüm - sonra modal implement edilecek
+        const priorityCountry = prompt('Rüçhan ülkesini girin:');
+        const priorityNumber = prompt('Rüçhan numarasını girin:');
+        const priorityDate = prompt('Rüçhan tarihini girin (YYYY-MM-DD):');
+        
+        if (priorityCountry && priorityNumber && priorityDate) {
+            const newPriority = {
+                id: Date.now().toString(), // Geçici ID
+                type: 'başvuru',
+                country: priorityCountry.trim(),
+                number: priorityNumber.trim(),
+                date: priorityDate.trim()
+            };
+            this.priorities.push(newPriority);
+            this.renderPriorities();
+        }
     }
 
     renderSelectedApplicants() {
@@ -246,20 +236,25 @@ class DataEntryModule {
         if (!container) return;
 
         if (this.selectedApplicants.length === 0) {
-            container.innerHTML = '<p class="text-muted text-center">Henüz başvuru sahibi seçilmedi</p>';
+            container.innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-user-plus"></i>
+                    <p>Henüz başvuru sahibi seçilmedi</p>
+                </div>
+            `;
             return;
         }
 
         let html = '';
         this.selectedApplicants.forEach(applicant => {
             html += `
-                <div class="d-flex justify-content-between align-items-center mb-2 p-2 bg-light rounded">
+                <div class="selected-item">
                     <div>
                         <strong>${applicant.name}</strong>
                         ${applicant.email ? `<br><small class="text-muted">${applicant.email}</small>` : ''}
                     </div>
-                    <button type="button" class="btn btn-sm btn-danger remove-applicant-btn" data-id="${applicant.id}">
-                        <i class="fas fa-trash-alt"></i>
+                    <button type="button" class="remove-item-btn remove-applicant-btn" data-id="${applicant.id}">
+                        <i class="fas fa-times"></i>
                     </button>
                 </div>
             `;
@@ -272,20 +267,25 @@ class DataEntryModule {
         if (!container) return;
 
         if (this.priorities.length === 0) {
-            container.innerHTML = '<p class="text-muted text-center">Henüz rüçhan eklenmedi</p>';
+            container.innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-flag"></i>
+                    <p>Henüz rüçhan eklenmedi</p>
+                </div>
+            `;
             return;
         }
 
         let html = '';
         this.priorities.forEach(priority => {
             html += `
-                <div class="d-flex justify-content-between align-items-center mb-2 p-2 bg-light rounded">
+                <div class="selected-item">
                     <div>
-                        <strong>${priority.type === 'sergi' ? 'Sergi' : 'Başvuru'}</strong>
+                        <strong>${priority.type === 'sergi' ? 'Sergi' : 'Başvuru'} Rüçhanı</strong>
                         <br><small>Tarih: ${priority.date} | Ülke: ${priority.country} | Numara: ${priority.number}</small>
                     </div>
-                    <button type="button" class="btn btn-sm btn-danger remove-priority-btn" data-id="${priority.id}">
-                        <i class="fas fa-trash-alt"></i>
+                    <button type="button" class="remove-item-btn remove-priority-btn" data-id="${priority.id}">
+                        <i class="fas fa-times"></i>
                     </button>
                 </div>
             `;
@@ -296,34 +296,13 @@ class DataEntryModule {
     removeApplicant(applicantId) {
         this.selectedApplicants = this.selectedApplicants.filter(a => a.id !== applicantId);
         this.renderSelectedApplicants();
+        console.log('👤 Başvuru sahibi silindi:', applicantId);
     }
 
     removePriority(priorityId) {
         this.priorities = this.priorities.filter(p => p.id !== priorityId);
         this.renderPriorities();
-    }
-
-    calculateTotalAmount() {
-        const officialFee = parseFloat(document.getElementById('officialFee')?.value) || 0;
-        const serviceFee = parseFloat(document.getElementById('serviceFee')?.value) || 0;
-        const vatRate = parseFloat(document.getElementById('vatRate')?.value) || 0;
-        const applyVatToOfficial = document.getElementById('applyVatToOfficialFee')?.checked || false;
-
-        let totalAmount;
-        if (applyVatToOfficial) {
-            // Hem resmi ücrete hem hizmet ücretine KDV uygula
-            totalAmount = (officialFee + serviceFee) * (1 + vatRate / 100);
-        } else {
-            // Sadece hizmet ücretine KDV uygula
-            totalAmount = officialFee + (serviceFee * (1 + vatRate / 100));
-        }
-
-        const displayElement = document.getElementById('totalAmountDisplay');
-        if (displayElement) {
-            displayElement.textContent = `${totalAmount.toFixed(2)} TRY`;
-        }
-
-        return totalAmount;
+        console.log('🏴 Rüçhan silindi:', priorityId);
     }
 
     async handleFormSubmit(e) {
@@ -362,14 +341,14 @@ class DataEntryModule {
             // Loading state'i kaldır
             const submitBtn = document.querySelector('button[type="submit"]');
             if (submitBtn) {
-                submitBtn.innerHTML = '<i class="fas fa-save mr-2"></i>Portföye Kaydet';
+                submitBtn.innerHTML = originalText;
                 submitBtn.disabled = false;
             }
         }
     }
 
     validateForm() {
-        // Temel validasyonlar
+        // Marka yazılı ifadesi kontrolü
         const brandExampleText = document.getElementById('brandExampleText')?.value?.trim();
         if (!brandExampleText) {
             alert('❌ Lütfen marka yazılı ifadesini girin.');
@@ -393,6 +372,7 @@ class DataEntryModule {
             return false;
         }
 
+        console.log('✅ Form validasyonu başarılı');
         return true;
     }
 
@@ -453,46 +433,12 @@ class DataEntryModule {
             }
         };
 
-        // 3. Tahakkuk verilerini toplama
-        let accrualData = null;
-        const officialFee = parseFloat(document.getElementById('officialFee')?.value) || 0;
-        const serviceFee = parseFloat(document.getElementById('serviceFee')?.value) || 0;
-
-        if (officialFee > 0 || serviceFee > 0) {
-            const vatRate = parseFloat(document.getElementById('vatRate')?.value) || 0;
-            const applyVatToOfficial = document.getElementById('applyVatToOfficialFee')?.checked;
-            const totalAmount = this.calculateTotalAmount();
-            
-            accrualData = {
-                officialFee: { 
-                    amount: officialFee, 
-                    currency: document.getElementById('officialFeeCurrency')?.value || 'TRY' 
-                },
-                serviceFee: { 
-                    amount: serviceFee, 
-                    currency: document.getElementById('serviceFeeCurrency')?.value || 'TRY' 
-                },
-                vatRate,
-                applyVatToOfficialFee: applyVatToOfficial,
-                totalAmount,
-                totalAmountCurrency: 'TRY',
-                tpInvoiceParty: this.selectedTpInvoiceParty ? {
-                    id: this.selectedTpInvoiceParty.id,
-                    name: this.selectedTpInvoiceParty.name
-                } : null,
-                serviceInvoiceParty: this.selectedServiceInvoiceParty ? {
-                    id: this.selectedServiceInvoiceParty.id,
-                    name: this.selectedServiceInvoiceParty.name
-                } : null,
-                status: 'unpaid',
-                createdAt: new Date().toISOString()
-            };
-        }
+        console.log('📋 Form verileri toplandı:', { taskData, newIpRecordData });
 
         return {
             taskData,
             newIpRecordData,
-            accrualData,
+            accrualData: null, // Tahakkuk kısmı kaldırıldı
             brandExampleFile: this.uploadedFiles[0] || null
         };
     }
