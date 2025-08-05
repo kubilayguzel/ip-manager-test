@@ -671,7 +671,16 @@ class CreateTaskModule {
         if (!container) return;
     
         let html = '';
-    
+        
+        // Marka görseli
+        const brandImage = document.getElementById('brandExamplePreview')?.src;
+        if (brandImage && brandImage !== window.location.href + '#') {
+            html += `<h4 class="section-title">Marka Örneği</h4>
+                     <div class="summary-card text-center mb-4">
+                        <img src="${brandImage}" alt="Marka Örneği" style="max-width:200px; border:1px solid #ddd; border-radius:8px;">
+                     </div>`;
+        }
+
         // 1. Marka Bilgileri
         html += `<h4 class="section-title">Marka Bilgileri</h4>`;
         html += `<div class="summary-card">
