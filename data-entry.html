@@ -1,3 +1,4 @@
+<!-- data-entry.html - Nice Classification container'ı düzeltildi -->
 <!DOCTYPE html>
 <html lang="tr">
 <head>
@@ -68,13 +69,48 @@ body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333
 .empty-state { text-align: center; padding: 30px; color: #666; }
 .empty-state i { font-size: 2em; color: #ccc; margin-bottom: 10px; }
 
-/* Nice Classification container */
-#niceClassificationContainer { min-height: 300px; border: 1px solid #e1e8ed; border-radius: 10px; padding: 20px; background: #fff; }
+/* Nice Classification - create-task.html stilinden kopyalandı */
+.nice-classification-container { 
+    min-height: 400px; 
+    border: 1px solid #e1e8ed; 
+    border-radius: 10px; 
+    background: #fff; 
+}
+
+.classification-panel {
+    background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+    color: white;
+    border-radius: 10px 10px 0 0;
+    overflow: hidden;
+}
+
+.panel-header {
+    padding: 20px;
+    text-align: center;
+}
+
+.search-section {
+    padding: 0 20px 20px;
+}
+
+.search-results-container {
+    max-height: 300px;
+    overflow-y: auto;
+    background: white;
+    border-radius: 0 0 10px 10px;
+}
 
 /* Add buttons */
 .add-item-btn { background: #4a90e2; color: white; border: none; border-radius: 8px; padding: 10px 20px; font-weight: 500; cursor: pointer; margin-bottom: 20px; }
 .add-item-btn:hover { background: #357abd; }
 .add-item-btn i { margin-right: 8px; }
+
+/* Person search results */
+.search-results-list { max-height: 200px; overflow-y: auto; border: 1px solid #e1e8ed; border-radius: 8px; background: white; margin-top: 10px; }
+.search-result-item { padding: 10px 15px; cursor: pointer; border-bottom: 1px solid #eee; transition: background-color 0.2s; }
+.search-result-item:hover { background-color: #f0f0f0; }
+.search-result-item:last-child { border-bottom: none; }
+.no-results-message { padding: 15px; color: #6c757d; text-align: center; }
     </style>
 </head>
 <body>
@@ -82,7 +118,7 @@ body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333
     
     <div class="page-wrapper">
         <main class="main-container">
-            <!-- Page Header - create-task.html ile aynı stil -->
+            <!-- Page Header -->
             <section class="page-header">
                 <h1 class="page-title">Portföye Yeni Marka Kaydı</h1>
                 <p class="page-subtitle">Yeni bir marka başvurusu oluşturun ve portföyünüze ekleyin.</p>
@@ -213,10 +249,61 @@ body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333
                                 </h3>
                                 <p class="text-muted mb-4">Nice Classification sistemi kullanılarak mal ve hizmet sınıflarınızı seçin. Birden fazla sınıf seçebilirsiniz.</p>
                                 
-                                <div id="niceClassificationContainer">
-                                    <div class="empty-state">
-                                        <i class="fas fa-spinner fa-spin fa-2x"></i>
-                                        <p>Nice Classification yükleniyor...</p>
+                                <!-- Nice Classification Container - create-task.html'den kopyalandı -->
+                                <div class="nice-classification-container">
+                                    <div class="row">
+                                        <div class="col-lg-8">
+                                            <div class="classification-panel mb-3">
+                                                <div class="panel-header">
+                                                    <h5 class="mb-0">
+                                                        <i class="fas fa-list-ul mr-2"></i>
+                                                        Nice Classification - Mal ve Hizmet Sınıfları
+                                                    </h5>
+                                                    <small class="text-white-50">1-45 arası sınıflardan seçim yapın</small>
+                                                </div>
+                                                
+                                                <div class="search-section">
+                                                    <div class="input-group">
+                                                        <div class="input-group-prepend">
+                                                            <span class="input-group-text">
+                                                                <i class="fas fa-search"></i>
+                                                            </span>
+                                                        </div>
+                                                        <input type="text" class="form-control" id="niceClassSearch" 
+                                                               placeholder="Sınıf ara... (örn: kozmetik, kimyasal, teknoloji)">
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            <div class="search-results-container">
+                                                <div id="niceClassificationList" class="p-3">
+                                                    <div class="text-center">
+                                                        <div class="spinner-border text-primary" role="status"></div>
+                                                        <p class="mt-2 text-muted">Nice sınıfları yükleniyor...</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="col-lg-4">
+                                            <div class="selected-classes-panel">
+                                                <div class="panel-header text-center p-3 bg-success text-white">
+                                                    <h6 class="mb-0">
+                                                        <i class="fas fa-check-circle mr-2"></i>
+                                                        Seçilen Sınıflar (<span id="selectedClassCount">0</span>)
+                                                    </h6>
+                                                </div>
+                                                <div id="selectedNiceClasses" class="p-3" style="max-height: 400px; overflow-y: auto;">
+                                                    <div class="empty-state">
+                                                        <i class="fas fa-list-alt fa-3x text-muted mb-3"></i>
+                                                        <p class="text-muted">
+                                                            Henüz hiçbir sınıf seçilmedi.<br>
+                                                            Sol panelden sınıf başlığına veya alt sınıfları seçin.
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -229,11 +316,21 @@ body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333
                                     <span><i class="fas fa-users mr-2"></i>Başvuru Sahibi</span>
                                 </h3>
                                 
-                                <button type="button" id="addApplicantBtn" class="add-item-btn">
-                                    <i class="fas fa-plus"></i>Başvuru Sahibi Ekle
-                                </button>
+                                <!-- Person Search Input -->
+                                <div class="form-group">
+                                    <label for="applicantSearchInput" class="form-label">Başvuru Sahibi Ara</label>
+                                    <input type="text" id="applicantSearchInput" class="form-input" 
+                                           placeholder="Ad, soyad veya şirket adı girin...">
+                                    <div id="applicantSearchResults" class="search-results-list" style="display: none;"></div>
+                                </div>
                                 
-                                <div id="selectedApplicantsContainer" class="selected-items-container">
+                                <div class="mb-3">
+                                    <button type="button" id="addNewApplicantBtn" class="add-item-btn">
+                                        <i class="fas fa-plus"></i>Yeni Kişi Oluştur
+                                    </button>
+                                </div>
+                                
+                                <div id="selectedApplicantsList" class="selected-items-container">
                                     <div class="empty-state">
                                         <i class="fas fa-user-plus"></i>
                                         <p>Henüz başvuru sahibi seçilmedi</p>
