@@ -1459,3 +1459,21 @@ class CreateTaskModule {
         }
     }
 }
+// CreateTaskModule class'ını initialize et
+document.addEventListener('DOMContentLoaded', async () => {
+    console.log('🚀 DOM Content Loaded - CreateTask initialize ediliyor...');
+    
+    // Shared layout'u yükle
+    await loadSharedLayout({ activeMenuLink: 'create-task.html' });
+    
+    // CreateTask instance'ını oluştur ve initialize et
+    const createTaskInstance = new CreateTaskModule();
+    
+    // Global erişim için (debugging amaçlı)
+    window.createTaskInstance = createTaskInstance;
+    
+    // Initialize et
+    await createTaskInstance.init();
+    
+    console.log('✅ CreateTask başarıyla initialize edildi');
+});
