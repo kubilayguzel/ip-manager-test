@@ -51,14 +51,12 @@ function renderSelectedClasses() {
 }
 
 function toggleAccordion(id) {
-    const safeId = parseInt(id).toString(); // stringleri normalize et
-    const el = document.getElementById(`subclasses-${safeId}`);
+    const el = document.getElementById(`subclasses-${id}`);
     if (!el) return;
     el.classList.toggle('show');
-    const header = document.querySelector(`.class-header[data-id="${safeId}"]`);
+    const header = document.querySelector(`.class-header[data-id="${id}"]`);
     if (header) header.classList.toggle('expanded');
 }
-
 
 // TEK selectItem FONKSIYONU - 35-5 DESTEKLİ
 function selectItem(key, classNum, text) {
