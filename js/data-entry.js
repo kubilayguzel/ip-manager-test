@@ -326,7 +326,7 @@ class DataEntryModule {
                 </div>
             </div>
         `;
-
+ 
         this.setupDynamicFormListeners();
         this.setupBrandExampleUploader();
         this.updateButtonsAndTabs();
@@ -383,6 +383,17 @@ class DataEntryModule {
             await initializeNiceClassification();
             this.isNiceClassificationInitialized = true;
             console.log('✅ Nice Classification başarıyla başlatıldı');
+            
+            // clearNiceSearch fonksiyonunu global scope'a ekle
+            window.clearNiceSearch = function() {
+                const searchInput = document.getElementById('niceClassSearch');
+                if (searchInput) {
+                    searchInput.value = '';
+                    searchInput.dispatchEvent(new Event('input'));
+                }
+            };
+            console.log('✅ clearNiceSearch fonksiyonu eklendi');
+            
         } catch (error) {
             console.error('❌ Nice Classification başlatılamadı:', error);
             const container = document.getElementById('niceClassificationList');
