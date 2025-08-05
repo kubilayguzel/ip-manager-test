@@ -1286,187 +1286,187 @@ class CreateTaskModule {
         }
     }
 
-    async handleFormSubmit(e) {
-        e.preventDefault();
-        const specificTaskTypeId = document.getElementById('specificTaskType')?.value;
-        const selectedTransactionType = this.allTransactionTypes.find(type => type.id === specificTaskTypeId);
+async handleFormSubmit(e) {
+    e.preventDefault();
+    const specificTaskTypeId = document.getElementById('specificTaskType')?.value;
+    const selectedTransactionType = this.allTransactionTypes.find(type => type.id === specificTaskTypeId);
 
-        if (!selectedTransactionType) {
-            alert('Geçerli bir işlem tipi seçmediniz.');
+    if (!selectedTransactionType) {
+        alert('Geçerli bir işlem tipi seçmediniz.');
+        return;
+    }
+
+    const assignedToUser = this.allUsers.find(u => u.id === document.getElementById('assignedTo')?.value);
+    let brandImageUrl = null;
+
+    if (selectedTransactionType.alias === 'Başvuru' && selectedTransactionType.ipType === 'trademark') {
+        const brandExampleFile = this.uploadedFiles[0];
+        
+        if (brandExampleFile) {
+            const storagePath = `brand-examples/${Date.now()}_${brandExampleFile.name}`;
+            brandImageUrl = await this.uploadFileToStorage(brandExampleFile, storagePath);
+            
+            if (!brandImageUrl) {
+                alert('Marka görseli yüklenirken bir hata oluştu.');
+                return;
+            }
+        }
+    }
+
+    let taskData = {
+        taskType: selectedTransactionType.id,
+        title: document.getElementById('brandExampleText')?.value || selectedTransactionType.alias || selectedTransactionType.name,
+        description: document.getElementById('taskDescription')?.value || `'${document.getElementById('brandExampleText')?.value || 'Yeni Başvuru'}' adlı marka için ${selectedTransactionType.alias || selectedTransactionType.name} işlemi.`,
+        priority: document.getElementById('taskPriority')?.value || 'medium',
+        assignedTo_uid: assignedToUser ? assignedToUser.id : null,
+        assignedTo_email: assignedToUser ? assignedToUser.email : null,
+        dueDate: document.getElementById('taskDueDate')?.value || null,
+        status: 'open',
+        // Hata düzeltme: relatedIpRecordId ve relatedIpRecordTitle için null kontrolü eklendi.
+        relatedIpRecordId: this.selectedIpRecord ? this.selectedIpRecord.id : null, 
+        relatedIpRecordTitle: this.selectedIpRecord ? this.selectedIpRecord.title : 'Yeni Başvuru', 
+        details: {}
+    };
+
+    if (selectedTransactionType.alias === 'Başvuru' && selectedTransactionType.ipType === 'trademark') {
+        const goodsAndServices = getSelectedNiceClasses();
+        if (goodsAndServices.length === 0) {
+            alert('Lütfen en az bir mal veya hizmet seçin.');
             return;
         }
 
-        const assignedToUser = this.allUsers.find(u => u.id === document.getElementById('assignedTo')?.value);
-        let brandImageUrl = null;
-
-        if (selectedTransactionType.alias === 'Başvuru' && selectedTransactionType.ipType === 'trademark') {
-            const brandExampleFile = this.uploadedFiles[0];
-            
-            if (brandExampleFile) {
-                // YENİ: Görseli Firebase Storage'a yükle
-                const storagePath = `brand-examples/${Date.now()}_${brandExampleFile.name}`;
-                brandImageUrl = await this.uploadFileToStorage(brandExampleFile, storagePath);
-                
-                if (!brandImageUrl) {
-                    alert('Marka görseli yüklenirken bir hata oluştu.');
-                    return;
-                }
-            }
+        if (this.selectedApplicants.length === 0) {
+            alert('Lütfen en az bir başvuru sahibi seçin.');
+            return;
         }
 
-        let taskData = {
-            taskType: selectedTransactionType.id,
-            title: document.getElementById('brandExampleText')?.value || selectedTransactionType.alias || selectedTransactionType.name,
-            description: document.getElementById('taskDescription')?.value || `'${document.getElementById('brandExampleText')?.value || 'Yeni Başvuru'}' adlı marka için ${selectedTransactionType.alias || selectedTransactionType.name} işlemi.`,
-            priority: document.getElementById('taskPriority')?.value || 'medium',
-            assignedTo_uid: assignedToUser ? assignedToUser.id : null,
-            assignedTo_email: assignedToUser ? assignedToUser.email : null,
-            dueDate: document.getElementById('taskDueDate')?.value || null,
-            status: 'open',
-            relatedIpRecordId: this.selectedIpRecord?.id,
-            relatedIpRecordTitle: this.selectedIpRecord?.title,
-            details: {}
+        taskData.details.brandInfo = {
+            brandType: document.getElementById('brandType')?.value,
+            brandCategory: document.getElementById('brandCategory')?.value,
+            brandExampleText: document.getElementById('brandExampleText')?.value,
+            nonLatinAlphabet: document.getElementById('nonLatinAlphabet') ? document.getElementById('nonLatinAlphabet').value : null,
+            coverLetterRequest: document.querySelector('input[name="coverLetterRequest"]:checked')?.value,
+            consentRequest: document.querySelector('input[name="consentRequest"]:checked')?.value,
+            brandImage: brandImageUrl,
+            brandImageName: this.uploadedFiles[0] ? this.uploadedFiles[0].name : null,
+            goodsAndServices: goodsAndServices
         };
 
-        if (selectedTransactionType.alias === 'Başvuru' && selectedTransactionType.ipType === 'trademark') {
-            const goodsAndServices = getSelectedNiceClasses();
-            if (goodsAndServices.length === 0) {
-                alert('Lütfen en az bir mal veya hizmet seçin.');
-                return;
-            }
+        taskData.details.applicants = this.selectedApplicants.map(p => ({
+            id: p.id,
+            name: p.name,
+            email: p.email || null
+        }));
 
-            if (this.selectedApplicants.length === 0) {
-                alert('Lütfen en az bir başvuru sahibi seçin.');
-                return;
-            }
-
-            taskData.details.brandInfo = {
-                brandType: document.getElementById('brandType')?.value,
-                brandCategory: document.getElementById('brandCategory')?.value,
-                brandExampleText: document.getElementById('brandExampleText')?.value,
-                nonLatinAlphabet: document.getElementById('nonLatinAlphabet') ? document.getElementById('nonLatinAlphabet').value : null,
-                coverLetterRequest: document.querySelector('input[name="coverLetterRequest"]:checked')?.value,
-                consentRequest: document.querySelector('input[name="consentRequest"]:checked')?.value,
-                brandImage: brandImageUrl, // YENİ: Storage URL'si kullanılıyor
-                brandImageName: this.uploadedFiles[0] ? this.uploadedFiles[0].name : null,
-                goodsAndServices: goodsAndServices
-            };
-
-            taskData.details.applicants = this.selectedApplicants.map(p => ({
-                id: p.id,
-                name: p.name,
-                email: p.email || null
-            }));
-
-            if (this.priorities.length > 0) {
-                taskData.details.priorities = this.priorities;
-            }
+        if (this.priorities.length > 0) {
+            taskData.details.priorities = this.priorities;
         }
+    }
 
-        if (this.selectedRelatedParty) {
-            taskData.details.relatedParty = {
-                id: this.selectedRelatedParty.id,
-                name: this.selectedRelatedParty.name
-            };
+    if (this.selectedRelatedParty) {
+        taskData.details.relatedParty = {
+            id: this.selectedRelatedParty.id,
+            name: this.selectedRelatedParty.name
+        };
+    }
+
+    const taskResult = await taskService.createTask(taskData);
+    if (!taskResult.success) {
+        alert('İş oluşturulurken hata oluştu: ' + taskResult.error);
+        return;
+    }
+
+    const officialFee = parseFloat(document.getElementById('officialFee')?.value) || 0;
+    const serviceFee = parseFloat(document.getElementById('serviceFee')?.value) || 0;
+    if (officialFee > 0 || serviceFee > 0) {
+        const vatRate = parseFloat(document.getElementById('vatRate')?.value) || 0;
+        const applyVatToOfficial = document.getElementById('applyVatToOfficialFee')?.checked;
+        let totalAmount;
+        if (applyVatToOfficial) {
+            totalAmount = (officialFee + serviceFee) * (1 + vatRate / 100);
+        } else {
+            totalAmount = officialFee + (serviceFee * (1 + vatRate / 100));
         }
-
-        const taskResult = await taskService.createTask(taskData);
-        if (!taskResult.success) {
-            alert('İş oluşturulurken hata oluştu: ' + taskResult.error);
+        const accrualData = {
+            taskId: taskResult.id,
+            taskTitle: taskData.title,
+            officialFee: {
+                amount: officialFee,
+                currency: document.getElementById('officialFeeCurrency')?.value
+            },
+            serviceFee: {
+                amount: serviceFee,
+                currency: document.getElementById('serviceFeeCurrency')?.value
+            },
+            vatRate,
+            applyVatToOfficialFee: applyVatToOfficial,
+            totalAmount,
+            totalAmountCurrency: 'TRY',
+            tpInvoiceParty: this.selectedTpInvoiceParty ? {
+                id: this.selectedTpInvoiceParty.id,
+                name: this.selectedTpInvoiceParty.name
+            } : null,
+            serviceInvoiceParty: this.selectedServiceInvoiceParty ? {
+                id: this.selectedServiceInvoiceParty.id,
+                name: this.selectedServiceInvoiceParty.name
+            } : null,
+            status: 'unpaid',
+            createdAt: new Date().toISOString()
+        };
+        const accrualResult = await accrualService.addAccrual(accrualData);
+        if (!accrualResult.success) {
+            alert('İş oluşturuldu ancak tahakkuk kaydedilirken bir hata oluştu: ' + accrualResult.error);
             return;
         }
-
-        const officialFee = parseFloat(document.getElementById('officialFee')?.value) || 0;
-        const serviceFee = parseFloat(document.getElementById('serviceFee')?.value) || 0;
-        if (officialFee > 0 || serviceFee > 0) {
-            const vatRate = parseFloat(document.getElementById('vatRate')?.value) || 0;
-            const applyVatToOfficial = document.getElementById('applyVatToOfficialFee')?.checked;
-            let totalAmount;
-            if (applyVatToOfficial) {
-                totalAmount = (officialFee + serviceFee) * (1 + vatRate / 100);
-            } else {
-                totalAmount = officialFee + (serviceFee * (1 + vatRate / 100));
-            }
-            const accrualData = {
-                taskId: taskResult.id,
-                taskTitle: taskData.title,
-                officialFee: {
-                    amount: officialFee,
-                    currency: document.getElementById('officialFeeCurrency')?.value
-                },
-                serviceFee: {
-                    amount: serviceFee,
-                    currency: document.getElementById('serviceFeeCurrency')?.value
-                },
-                vatRate,
-                applyVatToOfficialFee: applyVatToOfficial,
-                totalAmount,
-                totalAmountCurrency: 'TRY',
-                tpInvoiceParty: this.selectedTpInvoiceParty ? {
-                    id: this.selectedTpInvoiceParty.id,
-                    name: this.selectedTpInvoiceParty.name
-                } : null,
-                serviceInvoiceParty: this.selectedServiceInvoiceParty ? {
-                    id: this.selectedServiceInvoiceParty.id,
-                    name: this.selectedServiceInvoiceParty.name
-                } : null,
-                status: 'unpaid',
-                createdAt: new Date().toISOString()
-            };
-            const accrualResult = await accrualService.addAccrual(accrualData);
-            if (!accrualResult.success) {
-                alert('İş oluşturuldu ancak tahakkuk kaydedilirken bir hata oluştu: ' + accrualResult.error);
-                return;
-            }
-        }
-        if (selectedTransactionType.hierarchy === 'parent') {
-            const transactionData = {
-                type: selectedTransactionType.id,
-                description: `${selectedTransactionType.name} işlemi.`,
-                parentId: null,
-                transactionHierarchy: "parent"
-            };
-            const addResult = await ipRecordsService.addTransactionToRecord(this.selectedIpRecord?.id, transactionData);
-            if (addResult.success) {
-                alert('İş ve ilgili tahakkuk başarıyla oluşturuldu!');
-                window.location.href = 'task-management.html';
-            } else {
-                alert('İş oluşturuldu ama işlem Firestore\'a kaydedilemedi.');
-            }
-        } else if (selectedTransactionType.hierarchy === 'child' && selectedTransactionType.isTopLevelSelectable) {
-            const recordTransactionsResult = await ipRecordsService.getRecordTransactions(this.selectedIpRecord?.id);
-            if (!recordTransactionsResult.success) {
-                alert('Portföy geçmişi yüklenirken hata oluştu: ' + recordTransactionsResult.error);
-                return;
-            }
-            const existingTransactions = recordTransactionsResult.data;
-            const suitableParents = existingTransactions.filter(t =>
-                t.transactionHierarchy === 'parent' &&
-                selectedTransactionType.expectedParentTypeIds &&
-                selectedTransactionType.expectedParentTypeIds.includes(t.type)
-            );
-            const childTransactionData = {
-                type: selectedTransactionType.id,
-                description: `${selectedTransactionType.name} alt işlemi.`,
-            };
-            if (suitableParents.length === 0) {
-                alert(`Bu alt işlem (${selectedTransactionType.name}) için portföyde uygun bir ana işlem bulunamadı. Lütfen önce ilgili ana işlemi oluşturun.`);
-                return;
-            } else if (suitableParents.length === 1) {
-                childTransactionData.parentId = suitableParents[0].id;
-                childTransactionData.transactionHierarchy = "child";
-                await ipRecordsService.addTransactionToRecord(this.selectedIpRecord?.id, childTransactionData);
-                alert('İş ve ilgili alt işlem başarıyla oluşturuldu!');
-                window.location.href = 'task-management.html';
-            } else {
-                this.showParentSelectionModal(suitableParents, childTransactionData);
-            }
-        } else if (selectedTransactionType.alias !== 'Başvuru') {
-             alert('Geçersiz işlem tipi seçimi. Lütfen geçerli bir ana veya alt işlem tipi seçin.');
-        } else {
+    }
+    if (selectedTransactionType.hierarchy === 'parent') {
+        const transactionData = {
+            type: selectedTransactionType.id,
+            description: `${selectedTransactionType.name} işlemi.`,
+            parentId: null,
+            transactionHierarchy: "parent"
+        };
+        const addResult = await ipRecordsService.addTransactionToRecord(this.selectedIpRecord?.id, transactionData);
+        if (addResult.success) {
             alert('İş ve ilgili tahakkuk başarıyla oluşturuldu!');
             window.location.href = 'task-management.html';
+        } else {
+            alert('İş oluşturuldu ama işlem Firestore\'a kaydedilemedi.');
         }
+    } else if (selectedTransactionType.hierarchy === 'child' && selectedTransactionType.isTopLevelSelectable) {
+        const recordTransactionsResult = await ipRecordsService.getRecordTransactions(this.selectedIpRecord?.id);
+        if (!recordTransactionsResult.success) {
+            alert('Portföy geçmişi yüklenirken hata oluştu: ' + recordTransactionsResult.error);
+            return;
+        }
+        const existingTransactions = recordTransactionsResult.data;
+        const suitableParents = existingTransactions.filter(t =>
+            t.transactionHierarchy === 'parent' &&
+            selectedTransactionType.expectedParentTypeIds &&
+            selectedTransactionType.expectedParentTypeIds.includes(t.type)
+        );
+        const childTransactionData = {
+            type: selectedTransactionType.id,
+            description: `${selectedTransactionType.name} alt işlemi.`,
+        };
+        if (suitableParents.length === 0) {
+            alert(`Bu alt işlem (${selectedTransactionType.name}) için portföyde uygun bir ana işlem bulunamadı. Lütfen önce ilgili ana işlemi oluşturun.`);
+            return;
+        } else if (suitableParents.length === 1) {
+            childTransactionData.parentId = suitableParents[0].id;
+            childTransactionData.transactionHierarchy = "child";
+            await ipRecordsService.addTransactionToRecord(this.selectedIpRecord?.id, childTransactionData);
+            alert('İş ve ilgili alt işlem başarıyla oluşturuldu!');
+            window.location.href = 'task-management.html';
+        } else {
+            this.showParentSelectionModal(suitableParents, childTransactionData);
+        }
+    } else if (selectedTransactionType.alias !== 'Başvuru') {
+         alert('Geçersiz işlem tipi seçimi. Lütfen geçerli bir ana veya alt işlem tipi seçin.');
+    } else {
+        alert('İş ve ilgili tahakkuk başarıyla oluşturuldu!');
+        window.location.href = 'task-management.html';
+    }
     }
 }
 
