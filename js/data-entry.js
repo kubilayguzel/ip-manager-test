@@ -1,4 +1,4 @@
-// data-entry.js - Düzeltilmiş ve tam fonksiyonel versiyon
+// data-entry.js - create-task.js'den tam kopyalanmış ve uyarlanmış
 
 // create-task.js'den dışa aktarılan fonksiyonlar
 import { createTrademarkApplication, uploadFileToStorage } from './create-task.js';
@@ -19,6 +19,10 @@ class DataEntryModule {
         this.isNiceClassificationInitialized = false;
         this.selectedApplicants = [];
         this.priorities = [];
+        this.selectedTpInvoiceParty = null;
+        this.selectedServiceInvoiceParty = null;
+        this.selectedRelatedParty = null;
+        this.selectedIpRecord = null;
     }
 
     async init() {
@@ -48,35 +52,310 @@ class DataEntryModule {
             return;
         }
 
+        this.setupInitialForm();
         this.setupEventListeners();
-        this.setupFileUpload();
         
         console.log('🎉 DataEntry modülü başarıyla başlatıldı');
+    }
+
+    setupInitialForm() {
+        // Doğrudan marka başvuru formunu render et
+        const container = document.getElementById('conditionalFieldsContainer');
+        if (container) {
+            this.renderTrademarkApplicationForm(container);
+            this.updateButtonsAndTabs();
+        }
+    }
+
+    // create-task.js'den kopyalanan renderTrademarkApplicationForm metodu
+    renderTrademarkApplicationForm(container) {
+        container.innerHTML = `
+            <div class="card-body">
+                <ul class="nav nav-tabs" id="myTaskTabs" role="tablist">
+                    <li class="nav-item">
+                        <a class="nav-link active" id="brand-info-tab" data-toggle="tab" href="#brand-info" role="tab" aria-controls="brand-info" aria-selected="true">Marka Bilgileri</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" id="goods-services-tab" data-toggle="tab" href="#goods-services" role="tab" aria-controls="goods-services" aria-selected="false">Mal/Hizmet Seçimi</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" id="applicants-tab" data-toggle="tab" href="#applicants" role="tab" aria-controls="applicants" aria-selected="false">Başvuru Sahipleri</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" id="priority-tab" data-toggle="tab" href="#priority" role="tab" aria-controls="priority" aria-selected="false">Rüçhan</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" id="summary-tab" data-toggle="tab" href="#summary" role="tab" aria-controls="summary" aria-selected="false">Özet</a>
+                    </li>
+                </ul>
+
+                <div class="tab-content mt-3 tab-content-card" id="myTaskTabContent">
+                    <!-- Marka Bilgileri Tab -->
+                    <div class="tab-pane fade show active" id="brand-info" role="tabpanel" aria-labelledby="brand-info-tab">
+                        <div class="form-section">
+                            <h3 class="section-title">
+                                <span><i class="fas fa-info-circle mr-2"></i>Marka Bilgileri</span>
+                            </h3>
+                            
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label for="brandType" class="form-label">Marka Tipi</label>
+                                    <select id="brandType" class="form-select">
+                                        <option value="Sadece Kelime">Sadece Kelime</option>
+                                        <option value="Sadece Şekil">Sadece Şekil</option>
+                                        <option value="Şekil + Kelime" selected>Şekil + Kelime</option>
+                                        <option value="Ses">Ses</option>
+                                        <option value="Hareket">Hareket</option>
+                                        <option value="Renk">Renk</option>
+                                        <option value="Üç Boyutlu">Üç Boyutlu</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="brandCategory" class="form-label">Marka Türü</label>
+                                    <select id="brandCategory" class="form-select">
+                                        <option value="Ticaret/Hizmet Markası" selected>Ticaret/Hizmet Markası</option>
+                                        <option value="Garanti Markası">Garanti Markası</option>
+                                        <option value="Ortak Marka">Ortak Marka</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="brandExampleText" class="form-label">Yazılı İfadesi</label>
+                                    <input type="text" id="brandExampleText" class="form-input" placeholder="Marka metni">
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="nonLatinAlphabet" class="form-label">Latin Alfabesi Dışı Harf</label>
+                                    <input type="text" id="nonLatinAlphabet" class="form-input" placeholder="Varsa yazın">
+                                </div>
+                            </div>
+
+                            <!-- Marka Örneği Upload -->
+                            <div class="form-group full-width">
+                                <label class="form-label">Marka Örneği</label>
+                                <div id="brand-example-drop-zone" class="brand-upload-frame">
+                                    <input type="file" id="brandExample" accept="image/*" style="display:none;">
+                                    <div class="upload-icon">🖼️</div>
+                                    <h5>Marka örneğini buraya sürükleyin veya seçmek için tıklayın</h5>
+                                    <p class="text-muted">İstenen format: 591x591px, 300 DPI, JPEG. Yüklenen dosya otomatik olarak dönüştürülecektir.</p>
+                                </div>
+                                <div id="brandExamplePreviewContainer">
+                                    <img id="brandExamplePreview" alt="Marka Önizleme">
+                                </div>
+                            </div>
+
+                            <!-- Radio Button Groups -->
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label class="form-label">Önyazı Talebi</label>
+                                    <div class="radio-group">
+                                        <div class="radio-option">
+                                            <input type="radio" name="coverLetterRequest" id="coverLetterRequestVar" value="var">
+                                            <label for="coverLetterRequestVar">Var</label>
+                                        </div>
+                                        <div class="radio-option">
+                                            <input type="radio" name="coverLetterRequest" id="coverLetterRequestYok" value="yok" checked>
+                                            <label for="coverLetterRequestYok">Yok</label>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label class="form-label">Muvafakat Talebi</label>
+                                    <div class="radio-group">
+                                        <div class="radio-option">
+                                            <input type="radio" name="consentRequest" id="consentRequestVar" value="var">
+                                            <label for="consentRequestVar">Var</label>
+                                        </div>
+                                        <div class="radio-option">
+                                            <input type="radio" name="consentRequest" id="consentRequestYok" value="yok" checked>
+                                            <label for="consentRequestYok">Yok</label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Mal/Hizmet Seçimi Tab - create-task.html'den kopyalandı -->
+                    <div class="tab-pane fade" id="goods-services" role="tabpanel" aria-labelledby="goods-services-tab">
+                        <div class="nice-classification-container mt-3">
+                            <div class="row">
+                                <div class="col-lg-8">
+                                    <div class="classification-panel mb-3">
+                                        <div class="panel-header">
+                                            <h5 class="mb-0">
+                                                <i class="fas fa-list-ul mr-2"></i>
+                                                Nice Classification - Mal ve Hizmet Sınıfları
+                                            </h5>
+                                            <small class="text-white-50">1-45 arası sınıflardan seçim yapın</small>
+                                        </div>
+                                        
+                                        <div class="search-section">
+                                            <div class="input-group">
+                                                <div class="input-group-prepend">
+                                                    <span class="input-group-text">
+                                                        <i class="fas fa-search"></i>
+                                                    </span>
+                                                </div>
+                                                <input type="text" class="form-control" id="niceClassSearch" 
+                                                       placeholder="Sınıf ara... (örn: kozmetik, kimyasal, teknoloji)">
+                                                <div class="input-group-append">
+                                                    <button class="btn btn-outline-secondary" type="button" onclick="clearNiceSearch()">
+                                                        <i class="fas fa-times"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="search-results-container">
+                                        <div id="niceClassificationList" class="classes-list">
+                                            <div class="text-center p-4">
+                                                <div class="spinner-border text-primary" role="status"></div>
+                                                <p class="mt-2 text-muted">Nice sınıfları yükleniyor...</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="col-lg-4">
+                                    <div class="selected-classes-panel">
+                                        <div class="panel-header text-center p-3 bg-success text-white">
+                                            <h6 class="mb-0">
+                                                <i class="fas fa-check-circle mr-2"></i>
+                                                Seçilen Sınıflar (<span id="selectedClassCount">0</span>)
+                                            </h6>
+                                        </div>
+                                        <div id="selectedNiceClasses" class="p-3" style="max-height: 400px; overflow-y: auto;">
+                                            <div class="empty-state">
+                                                <i class="fas fa-list-alt fa-3x text-muted mb-3"></i>
+                                                <p class="text-muted">
+                                                    Henüz hiçbir sınıf seçilmedi.<br>
+                                                    Sol panelden sınıf başlığına veya alt sınıfları seçin.
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Başvuru Sahipleri Tab -->
+                    <div class="tab-pane fade" id="applicants" role="tabpanel" aria-labelledby="applicants-tab">
+                        <div class="form-section">
+                            <h3 class="section-title">
+                                <span><i class="fas fa-users mr-2"></i>Başvuru Sahipleri</span>
+                            </h3>
+                            
+                            <!-- Person Search Input -->
+                            <div class="form-group">
+                                <label for="applicantSearchInput" class="form-label">Başvuru Sahibi Ara</label>
+                                <input type="text" id="applicantSearchInput" class="form-input" 
+                                       placeholder="Ad, soyad veya şirket adı girin...">
+                                <div id="applicantSearchResults" class="search-results-list" style="display: none;"></div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <button type="button" id="addNewApplicantBtn" class="btn btn-primary">
+                                    <i class="fas fa-plus mr-2"></i>Yeni Kişi Oluştur
+                                </button>
+                            </div>
+                            
+                            <div id="selectedApplicantsList" class="selected-items-list">
+                                <div class="empty-state">
+                                    <i class="fas fa-user-plus fa-2x mb-2"></i>
+                                    <p>Henüz başvuru sahibi seçilmedi</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Rüçhan Tab -->
+                    <div class="tab-pane fade" id="priority" role="tabpanel" aria-labelledby="priority-tab">
+                        <div class="form-section">
+                            <h3 class="section-title">
+                                <span><i class="fas fa-flag mr-2"></i>Rüçhan Bilgileri</span>
+                            </h3>
+                            
+                            <!-- Rüçhan Ekleme Formu -->
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label for="priorityType" class="form-label">Rüçhan Tipi</label>
+                                    <select id="priorityType" class="form-select">
+                                        <option value="başvuru" selected>Başvuru</option>
+                                        <option value="sergi">Sergi</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label id="priorityDateLabel" for="priorityDate" class="form-label">Rüçhan Tarihi</label>
+                                    <input type="date" id="priorityDate" class="form-input">
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="priorityCountry" class="form-label">Ülke</label>
+                                    <input type="text" id="priorityCountry" class="form-input" placeholder="Örn: TR, US, GB">
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="priorityNumber" class="form-label">Başvuru/Sergi Numarası</label>
+                                    <input type="text" id="priorityNumber" class="form-input" placeholder="Rüçhan numarası">
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <button type="button" id="addPriorityBtn" class="btn btn-primary">
+                                    <i class="fas fa-plus mr-2"></i>Rüçhan Ekle
+                                </button>
+                            </div>
+                            
+                            <div id="prioritiesContainer" class="selected-items-list">
+                                <div class="empty-state">
+                                    <i class="fas fa-flag fa-2x mb-2"></i>
+                                    <p>Henüz rüçhan eklenmedi</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Özet Tab -->
+                    <div class="tab-pane fade" id="summary" role="tabpanel" aria-labelledby="summary-tab">
+                        <div id="summaryContent" class="form-section">
+                            <div class="empty-state">
+                                <i class="fas fa-search-plus fa-3x text-muted mb-3"></i>
+                                <p class="text-muted">Özet bilgileri yükleniyor...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div id="formActionsContainer" class="form-actions"></div>
+        `;
+        this.setupDynamicFormListeners();
+        this.setupBrandExampleUploader();
+        this.updateButtonsAndTabs();
     }
 
     setupEventListeners() {
         console.log('🔧 Event listeners kuruluyor...');
         
-        // Form submit olayını dinliyoruz
-        const form = document.getElementById('dataEntryForm');
-        if (form) {
-            form.addEventListener('submit', (e) => this.handleFormSubmit(e));
-        }
-
-        // Tablar arası geçiş
-        $(document).on('click', '#dataEntryTabs a', (e) => {
+        // Tab değişim event'leri
+        $(document).on('click', '#myTaskTabs a', (e) => {
             e.preventDefault();
             const targetTabId = e.target.getAttribute('href').substring(1);
             this.activeTab = targetTabId;
             $(e.target).tab('show');
         });
         
-        $(document).on('shown.bs.tab', '#dataEntryTabs a', (e) => {
+        $(document).on('shown.bs.tab', '#myTaskTabs a', (e) => {
+            this.updateButtonsAndTabs();
             const targetTabId = e.target.getAttribute('href').substring(1);
-            console.log('📑 Tab değişti:', targetTabId);
-            
             if (targetTabId === 'goods-services' && !this.isNiceClassificationInitialized) {
-                this.initializeNiceClassification();
+                initializeNiceClassification();
+                this.isNiceClassificationInitialized = true;
             }
             if (targetTabId === 'applicants') {
                 this.renderSelectedApplicants();
@@ -84,10 +363,18 @@ class DataEntryModule {
             if (targetTabId === 'priority') {
                 this.renderPriorities();
             }
+            if (targetTabId === 'summary') {
+                this.renderSummaryTab();
+            }
         });
 
-        // Dinamik form olayları
-        this.setupDynamicFormListeners();
+        // Form submit için saveTaskBtn
+        $(document).on('click', '#saveTaskBtn', (e) => {
+            e.preventDefault();
+            this.handleFormSubmit();
+        });
+
+        this.setupBrandExampleUploader();
         
         console.log('✅ Event listeners kuruldu');
     }
@@ -105,25 +392,40 @@ class DataEntryModule {
             addNewApplicantBtn.addEventListener('click', () => this.showAddPersonModal('applicant'));
         }
 
+        // Başvuru sahipleri listesi click eventi
+        const selectedApplicantsList = document.getElementById('selectedApplicantsList');
+        if (selectedApplicantsList) {
+            selectedApplicantsList.addEventListener('click', (e) => {
+                const removeBtn = e.target.closest('.remove-selected-item-btn');
+                if (removeBtn) {
+                    const personId = removeBtn.dataset.id;
+                    this.removeApplicant(personId);
+                }
+            });
+        }
+        
+        // Rüçhan type change
+        const priorityTypeSelect = document.getElementById('priorityType');
+        if (priorityTypeSelect) {
+            priorityTypeSelect.addEventListener('change', (e) => this.handlePriorityTypeChange(e.target.value));
+        }
+
         // Rüçhan ekleme butonu
-        $(document).on('click', '#addPriorityBtn', () => {
-            this.showAddPriorityModal();
-        });
+        const addPriorityBtn = document.getElementById('addPriorityBtn');
+        if (addPriorityBtn) {
+            addPriorityBtn.addEventListener('click', () => this.addPriority());
+        }
 
-        // Seçilen başvuru sahiplerini silme
-        $(document).on('click', '.remove-selected-item-btn', (e) => {
-            const personId = e.target.closest('button').dataset.id;
-            this.removeApplicant(personId);
-        });
-
-        // Rüçhan silme
-        $(document).on('click', '.remove-priority-btn', (e) => {
-            const priorityId = e.target.closest('button').dataset.id;
-            this.removePriority(priorityId);
-        });
+        // Modal event listeners
+        const closeAddPersonModalBtn = document.getElementById('closeAddPersonModal');
+        if (closeAddPersonModalBtn) closeAddPersonModalBtn.addEventListener('click', () => this.hideAddPersonModal());
+        const cancelPersonBtn = document.getElementById('cancelPersonBtn');
+        if (cancelPersonBtn) cancelPersonBtn.addEventListener('click', () => this.hideAddPersonModal());
+        const savePersonBtn = document.getElementById('savePersonBtn');
+        if (savePersonBtn) savePersonBtn.addEventListener('click', () => this.saveNewPerson());
     }
 
-    setupFileUpload() {
+    setupBrandExampleUploader() {
         const dropZone = document.getElementById('brand-example-drop-zone');
         const fileInput = document.getElementById('brandExample');
 
@@ -158,59 +460,29 @@ class DataEntryModule {
 
     handleBrandExampleFile(file) {
         if (!file || !file.type.startsWith('image/')) {
-            alert('Lütfen geçerli bir resim dosyası seçin.');
+            this.uploadedFiles = [];
+            const previewContainer = document.getElementById('brandExamplePreviewContainer');
+            if (previewContainer) previewContainer.style.display = 'none';
             return;
         }
-
-        console.log('🖼️ Dosya işleniyor:', file.name);
-
         const img = new Image();
         img.src = URL.createObjectURL(file);
         img.onload = async () => {
-            // Resmi 591x591 boyutuna ayarla
             const canvas = document.createElement('canvas');
             canvas.width = 591;
             canvas.height = 591;
             const ctx = canvas.getContext('2d');
             ctx.drawImage(img, 0, 0, 591, 591);
-            
             const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.92));
             const newFile = new File([blob], 'brand-example.jpg', { type: 'image/jpeg' });
-            
-            // Önizleme göster
             const previewImage = document.getElementById('brandExamplePreview');
             const previewContainer = document.getElementById('brandExamplePreviewContainer');
             if (previewImage && previewContainer) {
                 previewImage.src = URL.createObjectURL(blob);
                 previewContainer.style.display = 'block';
             }
-            
             this.uploadedFiles = [newFile];
-            console.log('✅ Dosya işlendi ve hazırlandı');
         };
-    }
-
-    async initializeNiceClassification() {
-        if (this.isNiceClassificationInitialized) return;
-        
-        console.log('🔄 Nice Classification başlatılıyor...');
-        
-        try {
-            await initializeNiceClassification();
-            this.isNiceClassificationInitialized = true;
-            console.log('✅ Nice Classification başlatıldı');
-        } catch (error) {
-            console.error('Nice Classification başlatılamadı:', error);
-            const container = document.getElementById('niceClassificationList');
-            if (container) {
-                container.innerHTML = `
-                    <div class="text-center text-danger p-4">
-                        <i class="fas fa-exclamation-triangle fa-2x mb-2"></i>
-                        <p>Nice Classification yüklenemedi. Lütfen sayfayı yenileyin.</p>
-                    </div>
-                `;
-            }
-        }
     }
 
     // Person search fonksiyonu - create-task.js'den kopyalandı
@@ -222,9 +494,9 @@ class DataEntryModule {
         const container = document.getElementById(resultsContainerId);
         if (!container) return;
 
+        container.innerHTML = '';
         if (query.length < 2) {
             container.style.display = 'none';
-            container.innerHTML = '';
             return;
         }
 
@@ -238,55 +510,228 @@ class DataEntryModule {
             return;
         }
 
-        let html = '';
         filtered.forEach(p => {
-            html += `
-                <div class="search-result-item" data-id="${p.id}">
-                    <div><b>${p.name}</b><br><small>${p.email || 'E-posta yok'}</small></div>
-                </div>
-            `;
+            const item = document.createElement('div');
+            item.className = 'search-result-item';
+            item.dataset.id = p.id;
+            item.innerHTML = `<div><b>${p.name}</b><br><small>${p.email || '-'}</small></div>`;
+            item.addEventListener('click', () => this.selectPerson(p, target));
+            container.appendChild(item);
         });
-        
-        container.innerHTML = html;
         container.style.display = 'block';
-
-        // Click event listeners
-        container.querySelectorAll('.search-result-item').forEach(item => {
-            item.addEventListener('click', () => {
-                const personId = item.dataset.id;
-                const person = this.allPersons.find(p => p.id === personId);
-                if (person) {
-                    this.selectPerson(person, target);
-                }
-            });
-        });
     }
 
     selectPerson(person, target) {
         if (target === 'applicant') {
             this.addApplicant(person);
-            // Arama alanını temizle
-            const searchInput = document.getElementById('applicantSearchInput');
-            const searchResults = document.getElementById('applicantSearchResults');
-            if (searchInput) searchInput.value = '';
-            if (searchResults) searchResults.style.display = 'none';
         }
+        
+        const resultsContainer = document.getElementById('applicantSearchResults');
+        if (resultsContainer) {
+            resultsContainer.innerHTML = '';
+            resultsContainer.style.display = 'none';
+        }
+        const inputField = document.getElementById('applicantSearchInput');
+        if (inputField) inputField.value = '';
+        this.checkFormCompleteness();
     }
-
+    
     addApplicant(person) {
-        // Zaten eklenmiş mi kontrol et
         if (this.selectedApplicants.some(p => p.id === person.id)) {
             alert('Bu başvuru sahibi zaten eklenmiş.');
             return;
         }
-
         this.selectedApplicants.push(person);
         this.renderSelectedApplicants();
-        console.log('👤 Başvuru sahibi eklendi:', person.name);
+        this.checkFormCompleteness();
+    }
+
+    removeApplicant(personId) {
+        this.selectedApplicants = this.selectedApplicants.filter(p => p.id !== personId);
+        this.renderSelectedApplicants();
+        this.checkFormCompleteness();
+    }
+
+    renderSelectedApplicants() {
+        const container = document.getElementById('selectedApplicantsList');
+        if (!container) return;
+
+        if (this.selectedApplicants.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-user-plus fa-2x mb-2"></i>
+                    <p>Henüz başvuru sahibi seçilmedi</p>
+                </div>
+            `;
+            return;
+        }
+
+        let html = '';
+        this.selectedApplicants.forEach(applicant => {
+            html += `
+                <div class="selected-item">
+                    <span><strong>${applicant.name}</strong>${applicant.email ? `<br><small class="text-muted">${applicant.email}</small>` : ''}</span>
+                    <button type="button" class="remove-selected-item-btn" data-id="${applicant.id}">×</button>
+                </div>
+            `;
+        });
+        container.innerHTML = html;
+    }
+
+    handlePriorityTypeChange(value) {
+        const priorityDateLabel = document.getElementById('priorityDateLabel');
+        if (priorityDateLabel) {
+            priorityDateLabel.textContent = value === 'sergi' ? 'Sergi Tarihi' : 'Rüçhan Tarihi';
+        }
+    }
+
+    addPriority() {
+        const type = document.getElementById('priorityType')?.value;
+        const date = document.getElementById('priorityDate')?.value;
+        const country = document.getElementById('priorityCountry')?.value?.trim();
+        const number = document.getElementById('priorityNumber')?.value?.trim();
+
+        if (!date || !country || !number) {
+            alert('Lütfen tüm rüçhan bilgilerini girin.');
+            return;
+        }
+
+        const newPriority = {
+            id: Date.now().toString(),
+            type,
+            date,
+            country,
+            number
+        };
+
+        this.priorities.push(newPriority);
+        this.renderPriorities();
+        
+        // Formu temizle
+        document.getElementById('priorityDate').value = '';
+        document.getElementById('priorityCountry').value = '';
+        document.getElementById('priorityNumber').value = '';
+    }
+
+    renderPriorities() {
+        const container = document.getElementById('prioritiesContainer');
+        if (!container) return;
+
+        if (this.priorities.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-flag fa-2x mb-2"></i>
+                    <p>Henüz rüçhan eklenmedi</p>
+                </div>
+            `;
+            return;
+        }
+
+        let html = '';
+        this.priorities.forEach(priority => {
+            html += `
+                <div class="selected-item">
+                    <span><b>${priority.type === 'sergi' ? 'Sergi' : 'Başvuru'}</b> | <b>Tarih:</b> ${priority.date} | <b>Ülke:</b> ${priority.country} | <b>Numara:</b> ${priority.number}</span>
+                    <button type="button" class="remove-selected-item-btn" data-id="${priority.id}" onclick="dataEntryInstance.removePriority('${priority.id}')">×</button>
+                </div>
+            `;
+        });
+        container.innerHTML = html;
+    }
+
+    removePriority(priorityId) {
+        this.priorities = this.priorities.filter(p => p.id !== priorityId);
+        this.renderPriorities();
+    }
+
+    renderSummaryTab() {
+        const container = document.getElementById('summaryContent');
+        if (!container) return;
+    
+        let html = '';
+        
+        // Marka görseli
+        const brandImage = document.getElementById('brandExamplePreview')?.src;
+        if (brandImage && brandImage !== window.location.href + '#') {
+            html += `<h4 class="section-title">Marka Örneği</h4>
+                     <div class="summary-card text-center mb-4">
+                        <img src="${brandImage}" alt="Marka Örneği" style="max-width:200px; border:1px solid #ddd; border-radius:8px;">
+                     </div>`;
+        }
+
+        // 1. Marka Bilgileri
+        html += `<h4 class="section-title">Marka Bilgileri</h4>`;
+        html += `<div class="summary-card">
+            <div class="summary-item">
+                <span class="summary-label">Marka Tipi:</span>
+                <span class="summary-value">${document.getElementById('brandType')?.value || '-'}</span>
+            </div>
+            <div class="summary-item">
+                <span class="summary-label">Marka Türü:</span>
+                <span class="summary-value">${document.getElementById('brandCategory')?.value || '-'}</span>
+            </div>
+            <div class="summary-item">
+                <span class="summary-label">Yazılı İfadesi:</span>
+                <span class="summary-value">${document.getElementById('brandExampleText')?.value || '-'}</span>
+            </div>
+            <div class="summary-item">
+                <span class="summary-label">Latin Alfabesi Dışı Harf:</span>
+                <span class="summary-value">${document.getElementById('nonLatinAlphabet')?.value || '-'}</span>
+            </div>
+            <div class="summary-item">
+                <span class="summary-label">Önyazı Talebi:</span>
+                <span class="summary-value">${document.querySelector('input[name="coverLetterRequest"]:checked')?.value || '-'}</span>
+            </div>
+            <div class="summary-item">
+                <span class="summary-label">Muvafakat Talebi:</span>
+                <span class="summary-value">${document.querySelector('input[name="consentRequest"]:checked')?.value || '-'}</span>
+            </div>
+        </div>`;
+    
+        // 2. Mal ve Hizmet Sınıfları
+        const goodsAndServices = getSelectedNiceClasses();
+        html += `<h4 class="section-title mt-4">Mal ve Hizmet Sınıfları</h4>`;
+        if (goodsAndServices.length > 0) {
+            html += `<div class="summary-card">
+                <ul class="summary-list">`;
+            goodsAndServices.forEach(item => {
+                html += `<li>${item}</li>`;
+            });
+            html += `</ul></div>`;
+        } else {
+            html += `<p class="text-muted">Mal ve hizmet sınıfı seçilmedi.</p>`;
+        }
+    
+        // 3. Başvuru Sahipleri
+        html += `<h4 class="section-title mt-4">Başvuru Sahipleri</h4>`;
+        if (this.selectedApplicants.length > 0) {
+            html += `<div class="summary-card">
+                <ul class="summary-list">`;
+            this.selectedApplicants.forEach(applicant => {
+                html += `<li>${applicant.name} (${applicant.email || '-'})</li>`;
+            });
+            html += `</ul></div>`;
+        } else {
+            html += `<p class="text-muted">Başvuru sahibi seçilmedi.</p>`;
+        }
+    
+        // 4. Rüçhan Bilgileri
+        html += `<h4 class="section-title mt-4">Rüçhan Bilgileri</h4>`;
+        if (this.priorities.length > 0) {
+            html += `<div class="summary-card">
+                <ul class="summary-list">`;
+            this.priorities.forEach(priority => {
+                html += `<li><b>Tip:</b> ${priority.type === 'sergi' ? 'Sergi' : 'Başvuru'} | <b>Tarih:</b> ${priority.date} | <b>Ülke:</b> ${priority.country} | <b>Numara:</b> ${priority.number}</li>`;
+            });
+            html += `</ul></div>`;
+        } else {
+            html += `<p class="text-muted">Rüçhan bilgisi eklenmedi.</p>`;
+        }
+    
+        container.innerHTML = html;
     }
 
     showAddPersonModal(target = null) {
-        // Modal'ı göster ve target'ı sakla
         const modal = document.getElementById('addPersonModal');
         if (modal) {
             $(modal).modal('show');
@@ -347,119 +792,99 @@ class DataEntryModule {
         }
     }
 
-    showAddPriorityModal() {
-        // Basit prompt ile geçici çözüm - sonra modal implement edilecek
-        const priorityCountry = prompt('Rüçhan ülkesini girin:');
-        const priorityNumber = prompt('Rüçhan numarasını girin:');
-        const priorityDate = prompt('Rüçhan tarihini girin (YYYY-MM-DD):');
-        
-        if (priorityCountry && priorityNumber && priorityDate) {
-            const newPriority = {
-                id: Date.now().toString(), // Geçici ID
-                type: 'başvuru',
-                country: priorityCountry.trim(),
-                number: priorityNumber.trim(),
-                date: priorityDate.trim()
-            };
-            this.priorities.push(newPriority);
-            this.renderPriorities();
-        }
+    checkFormCompleteness() {
+        const isComplete = this.selectedApplicants.length > 0;
+        const saveTaskBtn = document.getElementById('saveTaskBtn');
+        if (saveTaskBtn) saveTaskBtn.disabled = !isComplete;
     }
 
-    renderSelectedApplicants() {
-        const container = document.getElementById('selectedApplicantsList');
-        if (!container) return;
-
-        if (this.selectedApplicants.length === 0) {
-            container.innerHTML = `
-                <div class="empty-state">
-                    <i class="fas fa-user-plus"></i>
-                    <p>Henüz başvuru sahibi seçilmedi</p>
-                </div>
-            `;
-            return;
-        }
-
-        let html = '';
-        this.selectedApplicants.forEach(applicant => {
-            html += `
-                <div class="selected-item">
-                    <div>
-                        <strong>${applicant.name}</strong>
-                        ${applicant.email ? `<br><small class="text-muted">${applicant.email}</small>` : ''}
-                    </div>
-                    <button type="button" class="remove-item-btn remove-selected-item-btn" data-id="${applicant.id}">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-            `;
-        });
-        container.innerHTML = html;
+    updateButtonsAndTabs() {
+        // Bu fonksiyon create-task.js'den kopyalandı, gerekirse ayarlanabilir
+        this.checkFormCompleteness();
     }
 
-    renderPriorities() {
-        const container = document.getElementById('prioritiesContainer');
-        if (!container) return;
-
-        if (this.priorities.length === 0) {
-            container.innerHTML = `
-                <div class="empty-state">
-                    <i class="fas fa-flag"></i>
-                    <p>Henüz rüçhan eklenmedi</p>
-                </div>
-            `;
-            return;
-        }
-
-        let html = '';
-        this.priorities.forEach(priority => {
-            html += `
-                <div class="selected-item">
-                    <div>
-                        <strong>${priority.type === 'sergi' ? 'Sergi' : 'Başvuru'} Rüçhanı</strong>
-                        <br><small>Tarih: ${priority.date} | Ülke: ${priority.country} | Numara: ${priority.number}</small>
-                    </div>
-                    <button type="button" class="remove-item-btn remove-priority-btn" data-id="${priority.id}">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-            `;
-        });
-        container.innerHTML = html;
-    }
-
-    removeApplicant(applicantId) {
-        this.selectedApplicants = this.selectedApplicants.filter(a => a.id !== applicantId);
-        this.renderSelectedApplicants();
-        console.log('👤 Başvuru sahibi silindi:', applicantId);
-    }
-
-    removePriority(priorityId) {
-        this.priorities = this.priorities.filter(p => p.id !== priorityId);
-        this.renderPriorities();
-        console.log('🏴 Rüçhan silindi:', priorityId);
-    }
-
-    async handleFormSubmit(e) {
-        e.preventDefault();
+    async handleFormSubmit() {
         console.log('📤 Form gönderiliyor...');
 
-        // Validasyonlar
-        if (!this.validateForm()) {
+        const goodsAndServices = getSelectedNiceClasses();
+        if (goodsAndServices.length === 0) {
+            alert('Lütfen en az bir mal veya hizmet seçin.');
+            return;
+        }
+
+        if (this.selectedApplicants.length === 0) {
+            alert('Lütfen en az bir başvuru sahibi seçin.');
+            return;
+        }
+
+        // Transaction Type bilgisini al
+        const selectedTransactionType = this.allTransactionTypes.find(
+            type => type.alias === 'Başvuru' && type.ipType === 'trademark'
+        );
+        
+        if (!selectedTransactionType) {
+            alert('Marka başvuru işlem tipi bulunamadı.');
             return;
         }
 
         try {
             // Loading state
-            const submitBtn = document.querySelector('button[type="submit"]');
+            const submitBtn = document.getElementById('saveTaskBtn');
             const originalText = submitBtn.innerHTML;
             submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Kaydediliyor...';
             submitBtn.disabled = true;
 
-            // Form verilerini topla
-            const formData = this.collectFormData();
-            
-            // Marka başvurusu oluştur
+            const title = document.getElementById('brandExampleText')?.value || selectedTransactionType.alias || selectedTransactionType.name;
+
+            let taskData = {
+                taskType: selectedTransactionType.id,
+                title: title,
+                description: `'${title}' adlı marka için ${selectedTransactionType.alias || selectedTransactionType.name} işlemi.`,
+                priority: 'medium',
+                assignedTo_uid: this.currentUser.uid,
+                assignedTo_email: this.currentUser.email,
+                dueDate: null,
+                status: 'open',
+                relatedIpRecordId: null,
+                relatedIpRecordTitle: null,
+                details: {}
+            };
+
+            const newIpRecordData = {
+                title: taskData.title,
+                type: selectedTransactionType.ipType,
+                status: 'application_filed',
+                details: {
+                    brandInfo: {
+                        brandType: document.getElementById('brandType')?.value,
+                        brandCategory: document.getElementById('brandCategory')?.value,
+                        brandExampleText: document.getElementById('brandExampleText')?.value,
+                        nonLatinAlphabet: document.getElementById('nonLatinAlphabet')?.value || null,
+                        coverLetterRequest: document.querySelector('input[name="coverLetterRequest"]:checked')?.value,
+                        consentRequest: document.querySelector('input[name="consentRequest"]:checked')?.value,
+                        goodsAndServices: goodsAndServices
+                    },
+                    applicants: this.selectedApplicants.map(p => ({
+                        id: p.id,
+                        name: p.name,
+                        email: p.email || null
+                    })),
+                    priorities: this.priorities.length > 0 ? this.priorities : null,
+                    transactionType: {
+                        id: selectedTransactionType.id,
+                        name: selectedTransactionType.name,
+                        alias: selectedTransactionType.alias
+                    }
+                }
+            };
+
+            const formData = {
+                taskData,
+                newIpRecordData,
+                accrualData: null,
+                brandExampleFile: this.uploadedFiles[0]
+            };
+
             const result = await createTrademarkApplication(formData);
 
             if (result.success) {
@@ -474,108 +899,12 @@ class DataEntryModule {
             alert('❌ Portföy kaydı sırasında bir hata oluştu: ' + error.message);
         } finally {
             // Loading state'i kaldır
-            const submitBtn = document.querySelector('button[type="submit"]');
+            const submitBtn = document.getElementById('saveTaskBtn');
             if (submitBtn) {
                 submitBtn.innerHTML = '<i class="fas fa-save mr-2"></i>Portföye Kaydet';
                 submitBtn.disabled = false;
             }
         }
-    }
-
-    validateForm() {
-        // Marka yazılı ifadesi kontrolü
-        const brandExampleText = document.getElementById('brandExampleText')?.value?.trim();
-        if (!brandExampleText) {
-            alert('❌ Lütfen marka yazılı ifadesini girin.');
-            $('#dataEntryTabs a[href="#brand-info"]').tab('show');
-            document.getElementById('brandExampleText')?.focus();
-            return false;
-        }
-
-        // Mal ve hizmet sınıfları kontrolü
-        const goodsAndServices = getSelectedNiceClasses();
-        if (goodsAndServices.length === 0) {
-            alert('❌ Lütfen en az bir mal veya hizmet sınıfı seçin.');
-            $('#dataEntryTabs a[href="#goods-services"]').tab('show');
-            return false;
-        }
-
-        // Başvuru sahibi kontrolü
-        if (this.selectedApplicants.length === 0) {
-            alert('❌ Lütfen en az bir başvuru sahibi seçin.');
-            $('#dataEntryTabs a[href="#applicants"]').tab('show');
-            return false;
-        }
-
-        console.log('✅ Form validasyonu başarılı');
-        return true;
-    }
-
-    collectFormData() {
-        // Transaction Type bilgisini al
-        const selectedTransactionType = this.allTransactionTypes.find(
-            type => type.alias === 'Başvuru' && type.ipType === 'trademark'
-        );
-        
-        if (!selectedTransactionType) {
-            throw new Error('Marka başvuru işlem tipi bulunamadı.');
-        }
-
-        const title = document.getElementById('brandExampleText')?.value || 'Yeni Marka Başvurusu';
-        const goodsAndServices = getSelectedNiceClasses();
-
-        // 1. Task verilerini toplama
-        const taskData = {
-            taskType: selectedTransactionType.id,
-            title: title,
-            description: `'${title}' adlı marka için ${selectedTransactionType.alias} işlemi.`,
-            priority: 'medium',
-            assignedTo_uid: this.currentUser.uid,
-            assignedTo_email: this.currentUser.email,
-            dueDate: null,
-            status: 'open',
-            relatedIpRecordId: null,
-            relatedIpRecordTitle: null,
-            details: {}
-        };
-
-        // 2. IP kaydı verilerini toplama
-        const newIpRecordData = {
-            title: title,
-            type: selectedTransactionType.ipType,
-            status: 'application_filed',
-            details: {
-                brandInfo: {
-                    brandType: document.getElementById('brandType')?.value,
-                    brandCategory: document.getElementById('brandCategory')?.value,
-                    brandExampleText: document.getElementById('brandExampleText')?.value,
-                    nonLatinAlphabet: document.getElementById('nonLatinAlphabet')?.value || null,
-                    coverLetterRequest: document.querySelector('input[name="coverLetterRequest"]:checked')?.value,
-                    consentRequest: document.querySelector('input[name="consentRequest"]:checked')?.value,
-                    goodsAndServices: goodsAndServices,
-                },
-                applicants: this.selectedApplicants.map(p => ({
-                    id: p.id,
-                    name: p.name,
-                    email: p.email || null
-                })),
-                priorities: this.priorities.length > 0 ? this.priorities : null,
-                transactionType: {
-                    id: selectedTransactionType.id,
-                    name: selectedTransactionType.name,
-                    alias: selectedTransactionType.alias
-                }
-            }
-        };
-
-        console.log('📋 Form verileri toplandı:', { taskData, newIpRecordData });
-
-        return {
-            taskData,
-            newIpRecordData,
-            accrualData: null, // Tahakkuk kısmı kaldırıldı
-            brandExampleFile: this.uploadedFiles[0] || null
-        };
     }
 }
 
@@ -591,23 +920,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     // Global erişim için (debugging amaçlı)
     window.dataEntryInstance = dataEntryInstance;
-    
-    // Modal event listeners'ları kur (shared layout yüklendikten sonra)
-    const setupModalListeners = () => {
-        // Add Person Modal event listeners
-        const savePersonBtn = document.getElementById('savePersonBtn');
-        if (savePersonBtn) {
-            savePersonBtn.addEventListener('click', () => dataEntryInstance.saveNewPerson());
-        }
-
-        const cancelPersonBtn = document.getElementById('cancelPersonBtn');
-        if (cancelPersonBtn) {
-            cancelPersonBtn.addEventListener('click', () => dataEntryInstance.hideAddPersonModal());
-        }
-    };
-
-    // Modal listener'ları kurma (layout yüklendikten sonra)
-    setTimeout(setupModalListeners, 1000);
     
     // Initialize et
     await dataEntryInstance.init();
