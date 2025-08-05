@@ -217,7 +217,7 @@ export const authService = {
 };
 
 // --- IP Records Service ---
-const ipRecordsService = {
+export const ipRecordsService = {
     async createRecord(recordData) {
         try {
             const docRef = await addDoc(collection(db, "iprecords"), {
