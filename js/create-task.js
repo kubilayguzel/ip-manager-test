@@ -238,6 +238,7 @@ class CreateTaskModule {
         this.checkFormCompleteness();
     }
     renderTrademarkApplicationForm(container) {
+    // YENİ: Mal/Hizmet sekmesinin içeriğini güncelliyoruz.
     container.innerHTML = `
         <div class="card-body">
             <ul class="nav nav-tabs" id="myTaskTabs" role="tablist">
@@ -257,7 +258,7 @@ class CreateTaskModule {
                     <a class="nav-link" id="accrual-tab" data-toggle="tab" href="#accrual" role="tab" aria-controls="accrual" aria-selected="false">Tahakkuk/Diğer</a>
                 </li>
             </ul>
-            <div class="tab-content mt-3 p-4 border rounded shadow-sm" id="myTaskTabContent">
+            <div class="tab-content mt-3 tab-content-card" id="myTaskTabContent">
                 <div class="tab-pane fade show active" id="brand-info" role="tabpanel" aria-labelledby="brand-info-tab">
                     <div class="form-section">
                         <h3 class="section-title">Marka Bilgileri</h3>
@@ -288,7 +289,7 @@ class CreateTaskModule {
                         <div class="form-group row">
                         <label for="brandExample" class="col-sm-3 col-form-label">Marka Örneği</label>
                         <div class="col-sm-9">
-                            <div id="brand-example-drop-zone" class="file-upload-wrapper p-4 border rounded shadow-sm">
+                            <div id="brand-example-drop-zone" class="file-upload-wrapper brand-upload-frame">
                             <input type="file" id="brandExample" accept="image/*" style="display:none;">
                             <div class="file-upload-button">
                                 <div class="upload-icon" style="font-size: 2.5em; color: #1e3c72;">🖼️</div>
