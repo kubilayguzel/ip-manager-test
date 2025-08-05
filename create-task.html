@@ -171,7 +171,7 @@ body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333
         background-color: #fff;
         box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.05);
     }
-    
+
     /* Marka görseli yükleme alanını çerçeve içine alan stil */
     .brand-upload-frame {
         border: 2px dashed #a0a7b0;
@@ -180,10 +180,23 @@ body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333
         padding: 1rem;
         transition: background-color 0.2s ease, border-color 0.2s ease;
     }
-    
+
     .brand-upload-frame:hover {
         background-color: #e9ecef;
         border-color: #6c757d;
+    }
+    
+    /* Tab başlıklarını daha belirgin hale getiren stil */
+    #myTaskTabs .nav-link {
+        font-weight: 600; /* Yazıyı daha kalın yapar */
+        font-size: 1.1rem; /* Yazı boyutunu artırır */
+        color: #495057; /* Pasif tabların rengini ayarlar */
+    }
+    
+    #myTaskTabs .nav-link.active {
+        color: #1e3c72; /* Aktif tabın rengini maviye çevirir */
+        background-color: #fff; /* Aktif tabın arka plan rengini beyaz yapar */
+        border-color: #dee2e6 #dee2e6 #fff; /* Alt kenar çizgisi olmadan daha belirgin bir görünüm sağlar */
     }
 </style>
 </head>
