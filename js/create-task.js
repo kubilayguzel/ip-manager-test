@@ -18,7 +18,7 @@ class CreateTaskModule {
         this.activeTab = 'brand-info';
         this.isNiceClassificationInitialized = false;
         this.selectedApplicants = [];
-        this.priorities = []; // YENİ: Rüçhan bilgilerini tutacak dizi
+        this.priorities = [];
     }
 
     async init() {
@@ -108,9 +108,42 @@ class CreateTaskModule {
             if (targetTabId === 'priority') {
                 this.renderPriorities();
             }
+            if (targetTabId === 'accrual') {
+                this.setupAccrualTabListeners();
+            }
+            // YENİ: Özet sekmesi açıldığında özet içeriğini render et
+            if (targetTabId === 'summary') {
+                this.renderSummaryTab();
+            }
         });
 
         this.setupBrandExampleUploader();
+    }
+
+    setupAccrualTabListeners() {
+        this.populateAssignedToDropdown();
+        this.calculateTotalAmount();
+        
+        const officialFeeInput = document.getElementById('officialFee');
+        const serviceFeeInput = document.getElementById('serviceFee');
+        const vatRateInput = document.getElementById('vatRate');
+        const applyVatCheckbox = document.getElementById('applyVatToOfficialFee');
+        
+        if (officialFeeInput) officialFeeInput.addEventListener('input', () => this.calculateTotalAmount());
+        if (serviceFeeInput) serviceFeeInput.addEventListener('input', () => this.calculateTotalAmount());
+        if (vatRateInput) vatRateInput.addEventListener('input', () => this.calculateTotalAmount());
+        if (applyVatCheckbox) applyVatCheckbox.addEventListener('change', () => this.calculateTotalAmount());
+        
+        const tpInvoicePartySearch = document.getElementById('tpInvoicePartySearch');
+        if (tpInvoicePartySearch) tpInvoicePartySearch.addEventListener('input', (e) => this.searchPersons(e.target.value, 'tpInvoiceParty'));
+        
+        const serviceInvoicePartySearch = document.getElementById('serviceInvoicePartySearch');
+        if (serviceInvoicePartySearch) serviceInvoicePartySearch.addEventListener('input', (e) => this.searchPersons(e.target.value, 'serviceInvoiceParty'));
+
+        const assignedToSelect = document.getElementById('assignedTo');
+        if (assignedToSelect) {
+            assignedToSelect.addEventListener('change', () => this.checkFormCompleteness());
+        }
     }
 
     setupBrandExampleUploader() {
@@ -260,6 +293,9 @@ class CreateTaskModule {
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" id="accrual-tab" data-toggle="tab" href="#accrual" role="tab" aria-controls="accrual" aria-selected="false">Tahakkuk/Diğer</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" id="summary-tab" data-toggle="tab" href="#summary" role="tab" aria-controls="summary" aria-selected="false">Özet</a>
                     </li>
                 </ul>
                 <div class="tab-content mt-3 tab-content-card" id="myTaskTabContent">
@@ -614,6 +650,14 @@ class CreateTaskModule {
                             </div>
                         </div>
                     </div>
+                    <div class="tab-pane fade" id="summary" role="tabpanel" aria-labelledby="summary-tab">
+                        <div id="summaryContent" class="form-section">
+                            <div class="empty-state">
+                                <i class="fas fa-search-plus fa-3x text-muted mb-3"></i>
+                                <p class="text-muted">Özet bilgileri yükleniyor...</p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
             <div id="formActionsContainer" class="form-actions"></div>
@@ -621,6 +665,113 @@ class CreateTaskModule {
         this.setupDynamicFormListeners();
         this.setupBrandExampleUploader();
         this.updateButtonsAndTabs();
+    }
+    renderSummaryTab() {
+        const container = document.getElementById('summaryContent');
+        if (!container) return;
+    
+        let html = '';
+    
+        // 1. Marka Bilgileri
+        html += `<h4 class="section-title">Marka Bilgileri</h4>`;
+        html += `<div class="summary-card">
+            <div class="summary-item">
+                <span class="summary-label">Marka Tipi:</span>
+                <span class="summary-value">${document.getElementById('brandType')?.value || '-'}</span>
+            </div>
+            <div class="summary-item">
+                <span class="summary-label">Marka Türü:</span>
+                <span class="summary-value">${document.getElementById('brandCategory')?.value || '-'}</span>
+            </div>
+            <div class="summary-item">
+                <span class="summary-label">Yazılı İfadesi:</span>
+                <span class="summary-value">${document.getElementById('brandExampleText')?.value || '-'}</span>
+            </div>
+            <div class="summary-item">
+                <span class="summary-label">Latin Alfabesi Dışı Harf:</span>
+                <span class="summary-value">${document.getElementById('nonLatinAlphabet')?.value || '-'}</span>
+            </div>
+            <div class="summary-item">
+                <span class="summary-label">Önyazı Talebi:</span>
+                <span class="summary-value">${document.querySelector('input[name="coverLetterRequest"]:checked')?.value || '-'}</span>
+            </div>
+            <div class="summary-item">
+                <span class="summary-label">Muvafakat Talebi:</span>
+                <span class="summary-value">${document.querySelector('input[name="consentRequest"]:checked')?.value || '-'}</span>
+            </div>
+        </div>`;
+    
+        // 2. Mal ve Hizmet Sınıfları
+        const goodsAndServices = getSelectedNiceClasses();
+        html += `<h4 class="section-title mt-4">Mal ve Hizmet Sınıfları</h4>`;
+        if (goodsAndServices.length > 0) {
+            html += `<div class="summary-card">
+                <ul class="summary-list">`;
+            goodsAndServices.forEach(item => {
+                html += `<li>${item}</li>`;
+            });
+            html += `</ul></div>`;
+        } else {
+            html += `<p class="text-muted">Mal ve hizmet sınıfı seçilmedi.</p>`;
+        }
+    
+        // 3. Başvuru Sahipleri
+        html += `<h4 class="section-title mt-4">Başvuru Sahipleri</h4>`;
+        if (this.selectedApplicants.length > 0) {
+            html += `<div class="summary-card">
+                <ul class="summary-list">`;
+            this.selectedApplicants.forEach(applicant => {
+                html += `<li>${applicant.name} (${applicant.email || '-'})</li>`;
+            });
+            html += `</ul></div>`;
+        } else {
+            html += `<p class="text-muted">Başvuru sahibi seçilmedi.</p>`;
+        }
+    
+        // 4. Rüçhan Bilgileri
+        html += `<h4 class="section-title mt-4">Rüçhan Bilgileri</h4>`;
+        if (this.priorities.length > 0) {
+            html += `<div class="summary-card">
+                <ul class="summary-list">`;
+            this.priorities.forEach(priority => {
+                html += `<li><b>Tip:</b> ${priority.type === 'sergi' ? 'Sergi' : 'Başvuru'} | <b>Tarih:</b> ${priority.date} | <b>Ülke:</b> ${priority.country} | <b>Numara:</b> ${priority.number}</li>`;
+            });
+            html += `</ul></div>`;
+        } else {
+            html += `<p class="text-muted">Rüçhan bilgisi eklenmedi.</p>`;
+        }
+    
+        // 5. Tahakkuk ve Diğer Bilgiler
+        const assignedToUser = this.allUsers.find(u => u.id === document.getElementById('assignedTo')?.value);
+        html += `<h4 class="section-title mt-4">Tahakkuk ve Diğer Bilgiler</h4>`;
+        html += `<div class="summary-card">
+            <div class="summary-item">
+                <span class="summary-label">Resmi Ücret:</span>
+                <span class="summary-value">${document.getElementById('officialFee')?.value || '0.00'} ${document.getElementById('officialFeeCurrency')?.value || 'TRY'}</span>
+            </div>
+            <div class="summary-item">
+                <span class="summary-label">Hizmet Bedeli:</span>
+                <span class="summary-value">${document.getElementById('serviceFee')?.value || '0.00'} ${document.getElementById('serviceFeeCurrency')?.value || 'TRY'}</span>
+            </div>
+            <div class="summary-item">
+                <span class="summary-label">KDV Oranı (%):</span>
+                <span class="summary-value">${document.getElementById('vatRate')?.value || '0'}%</span>
+            </div>
+            <div class="summary-item">
+                <span class="summary-label">Toplam Tutar:</span>
+                <span class="summary-value">${document.getElementById('totalAmountDisplay')?.textContent || '-'}</span>
+            </div>
+            <div class="summary-item">
+                <span class="summary-label">Atanan Kullanıcı:</span>
+                <span class="summary-value">${assignedToUser?.displayName || assignedToUser?.email || '-'}</span>
+            </div>
+            <div class="summary-item">
+                <span class="summary-label">Son Tarih:</span>
+                <span class="summary-value">${document.getElementById('taskDueDate')?.value || '-'}</span>
+            </div>
+        </div>`;
+    
+        container.innerHTML = html;
     }
     setupDynamicFormListeners() {
         const portfolioSearchInput = document.getElementById('portfolioSearchInput');
@@ -678,7 +829,6 @@ class CreateTaskModule {
             });
         }
         
-        // YENİ: Rüçhan tipi değişimi için olay dinleyici
         const priorityTypeSelect = document.getElementById('priorityType');
         if (priorityTypeSelect) {
             priorityTypeSelect.addEventListener('change', (e) => this.handlePriorityTypeChange(e.target.value));
@@ -703,7 +853,6 @@ class CreateTaskModule {
             if (el) el.addEventListener('input', () => this.calculateTotalAmount());
         });
     }
-    // YENİ: Rüçhan tipi değişimini yöneten fonksiyon
     handlePriorityTypeChange(value) {
         const priorityDateLabel = document.getElementById('priorityDateLabel');
         if (priorityDateLabel) {
@@ -726,7 +875,7 @@ class CreateTaskModule {
         }
 
         const newPriority = {
-            id: Date.now().toString(), // Benzersiz bir ID oluştur
+            id: Date.now().toString(),
             type: priorityType,
             date: priorityDate,
             country: priorityCountry,
@@ -736,7 +885,6 @@ class CreateTaskModule {
         this.priorities.push(newPriority);
         this.renderPriorities();
 
-        // Formu temizle
         document.getElementById('priorityDate').value = '';
         document.getElementById('priorityCountry').value = '';
         document.getElementById('priorityNumber').value = '';
@@ -830,7 +978,7 @@ class CreateTaskModule {
         this.selectedServiceInvoiceParty = null;
         this.uploadedFiles = [];
         this.selectedApplicants = [];
-        this.priorities = []; // YENİ: Rüçhan bilgilerini de sıfırla
+        this.priorities = [];
     }
     searchPortfolio(query) {
         const container = document.getElementById('portfolioSearchResults');
@@ -1185,8 +1333,6 @@ class CreateTaskModule {
                 alert('Lütfen en az bir başvuru sahibi seçin.');
                 return;
             }
-
-            // YENİ: Rüçhan bilgilerini taskData'ya ekle
             if (this.priorities.length > 0) {
                 taskData.details.priorities = this.priorities;
             }
