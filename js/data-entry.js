@@ -327,6 +327,9 @@ class DataEntryModule {
             </div>
         `;
         
+        console.log('✅ Form HTML'i oluşturuldu');
+        
+        // Hemen event listener'ları kur
         this.setupDynamicFormListeners();
         this.setupBrandExampleUploader();
         this.updateButtonsAndTabs();
@@ -968,20 +971,35 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         // Modal event listeners kurulması - layout yüklendikten sonra
         setTimeout(() => {
+            console.log('🔧 Modal event listeners kuruluyor...');
+            
             const savePersonBtn = document.getElementById('savePersonBtn');
             const cancelPersonBtn = document.getElementById('cancelPersonBtn');
+            const closeAddPersonModalBtn = document.getElementById('closeAddPersonModal');
+            
+            console.log('🔍 Modal elementleri:', {
+                savePersonBtn: !!savePersonBtn,
+                cancelPersonBtn: !!cancelPersonBtn,
+                closeAddPersonModalBtn: !!closeAddPersonModalBtn
+            });
             
             if (savePersonBtn) {
                 console.log('✅ Save person button bulundu, event listener ekleniyor');
                 savePersonBtn.addEventListener('click', () => dataEntryInstance.saveNewPerson());
             } else {
-                console.error('❌ savePersonBtn bulunamadı');
+                console.error('❌ savePersonBtn bulunamadı - shared layout yüklenmemiş olabilir');
             }
 
             if (cancelPersonBtn) {
+                console.log('✅ Cancel person button bulundu');
                 cancelPersonBtn.addEventListener('click', () => dataEntryInstance.hideAddPersonModal());
             }
-        }, 2000); // Modal'lar için daha uzun bekle
+            
+            if (closeAddPersonModalBtn) {
+                console.log('✅ Close modal button bulundu');
+                closeAddPersonModalBtn.addEventListener('click', () => dataEntryInstance.hideAddPersonModal());
+            }
+        }, 3000); // Daha uzun bekle - shared layout tam yüklensin
         
         // Initialize et
         await dataEntryInstance.init();
