@@ -439,6 +439,7 @@ class DataEntryModule {
                 e.stopPropagation();
                 const classNumber = selectBtn.dataset.classNumber;
                 console.log('✅ Sınıf seç butonu tıklandı:', classNumber);
+                this.selectWholeNiceClass(classNumber);
                 return;
             }
 
@@ -456,9 +457,9 @@ class DataEntryModule {
                 return;
             }
 
-            // Header tıklaması (accordion)
+            // Header tıklaması (accordion) - Sadece header alanında, buton veya subclass dışında
             const header = e.target.closest('.class-header');
-            if (header && !e.target.closest('.select-class-btn')) {
+            if (header && !e.target.closest('.select-class-btn') && !e.target.closest('.subclass-item')) {
                 const classId = header.dataset.id;
                 console.log('🔄 Accordion toggle:', classId);
                 const subContainer = document.getElementById(`subclasses-${classId}`);
@@ -484,6 +485,44 @@ class DataEntryModule {
         }
         
         console.log('✅ Nice Classification event listeners eklendi');
+    }
+
+    selectWholeNiceClass(classNumber) {
+        console.log('🔧 Tüm sınıf seçiliyor:', classNumber);
+        
+        // Önce sınıfın tüm alt sınıflarını bul
+        const classHeader = document.querySelector(`.class-header[data-id="${classNumber}"]`);
+        if (!classHeader) {
+            console.error('❌ Class header bulunamadı:', classNumber);
+            return;
+        }
+
+        // Sınıfı genişlet
+        const subContainer = document.getElementById(`subclasses-${classNumber}`);
+        if (subContainer) {
+            subContainer.classList.add('show');
+            classHeader.classList.add('expanded');
+        }
+
+        // Ana sınıf başlığını seç
+        const mainClassTitle = classHeader.querySelector('.class-title')?.textContent || `Sınıf ${classNumber}`;
+        const mainCode = `${classNumber}-main`;
+        this.addNiceSelection(mainCode, classNumber, mainClassTitle);
+
+        // Tüm alt sınıfları seç
+        const subclasses = document.querySelectorAll(`[data-class-num="${classNumber}"].subclass-item`);
+        console.log('🔍 Bulunan alt sınıflar:', subclasses.length);
+        
+        subclasses.forEach(subclass => {
+            const code = subclass.dataset.code;
+            const text = subclass.dataset.text;
+            
+            // Alt sınıfı seç
+            subclass.classList.add('selected');
+            this.addNiceSelection(code, classNumber, text);
+        });
+
+        console.log('✅ Tüm sınıf seçildi:', classNumber);
     }
 
     toggleNiceSubclass(code, classNum, text, element) {
@@ -854,7 +893,7 @@ class DataEntryModule {
                      </div>`;
         }
 
-        // 1. Marka Bilgileri
+        // Marka Bilgileri
         html += `<h4 class="section-title">Marka Bilgileri</h4>`;
         html += `<div class="summary-card">
             <div class="summary-item">
@@ -862,42 +901,26 @@ class DataEntryModule {
                 <span class="summary-value">${document.getElementById('brandType')?.value || '-'}</span>
             </div>
             <div class="summary-item">
-                <span class="summary-label">Marka Türü:</span>
-                <span class="summary-value">${document.getElementById('brandCategory')?.value || '-'}</span>
-            </div>
-            <div class="summary-item">
                 <span class="summary-label">Yazılı İfadesi:</span>
                 <span class="summary-value">${document.getElementById('brandExampleText')?.value || '-'}</span>
             </div>
-            <div class="summary-item">
-                <span class="summary-label">Latin Alfabesi Dışı Harf:</span>
-                <span class="summary-value">${document.getElementById('nonLatinAlphabet')?.value || '-'}</span>
-            </div>
-            <div class="summary-item">
-                <span class="summary-label">Önyazı Talebi:</span>
-                <span class="summary-value">${document.querySelector('input[name="coverLetterRequest"]:checked')?.value || '-'}</span>
-            </div>
-            <div class="summary-item">
-                <span class="summary-label">Muvafakat Talebi:</span>
-                <span class="summary-value">${document.querySelector('input[name="consentRequest"]:checked')?.value || '-'}</span>
-            </div>
         </div>`;
     
-        // 2. Mal ve Hizmet Sınıfları
-        const goodsAndServices = this.getSelectedNiceClassesLocal();
+        // Mal ve Hizmet Sınıfları
         html += `<h4 class="section-title mt-4">Mal ve Hizmet Sınıfları</h4>`;
-        if (goodsAndServices.length > 0) {
+        if (Object.keys(this.selectedNiceClasses).length > 0) {
             html += `<div class="summary-card">
                 <ul class="summary-list">`;
-            goodsAndServices.forEach(item => {
-                html += `<li>${item}</li>`;
+            Object.entries(this.selectedNiceClasses).forEach(([code, item]) => {
+                const displayCode = item.classNum === '99' ? item.classNum : code;
+                html += `<li>(${displayCode}) ${item.text}</li>`;
             });
             html += `</ul></div>`;
         } else {
             html += `<p class="text-muted">Mal ve hizmet sınıfı seçilmedi.</p>`;
         }
     
-        // 3. Başvuru Sahipleri
+        // Başvuru Sahipleri
         html += `<h4 class="section-title mt-4">Başvuru Sahipleri</h4>`;
         if (this.selectedApplicants.length > 0) {
             html += `<div class="summary-card">
@@ -910,26 +933,7 @@ class DataEntryModule {
             html += `<p class="text-muted">Başvuru sahibi seçilmedi.</p>`;
         }
     
-        // 4. Rüçhan Bilgileri
-        html += `<h4 class="section-title mt-4">Rüçhan Bilgileri</h4>`;
-        if (this.priorities.length > 0) {
-            html += `<div class="summary-card">
-                <ul class="summary-list">`;
-            this.priorities.forEach(priority => {
-                html += `<li><b>Tip:</b> ${priority.type === 'sergi' ? 'Sergi' : 'Başvuru'} | <b>Tarih:</b> ${priority.date} | <b>Ülke:</b> ${priority.country} | <b>Numara:</b> ${priority.number}</li>`;
-            });
-            html += `</ul></div>`;
-        } else {
-            html += `<p class="text-muted">Rüçhan bilgisi eklenmedi.</p>`;
-        }
-    
         container.innerHTML = html;
-    }
-
-    getSelectedNiceClassesLocal() {
-        return Object.entries(this.selectedNiceClasses).map(([code, item]) => {
-            return item.classNum === '99' ? `(99) ${item.text}` : `(${code}) ${item.text}`;
-        });
     }
 
     showAddPersonModal(target = null) {
@@ -1006,10 +1010,18 @@ class DataEntryModule {
         this.checkFormCompleteness();
     }
 
+    getMySelectedNiceClasses() {
+        // selectedNiceClasses'ı getSelectedNiceClasses formatına çevir
+        return Object.entries(this.selectedNiceClasses).map(([code, item]) => {
+            const displayCode = item.classNum === '99' ? item.classNum : code;
+            return `(${displayCode}) ${item.text}`;
+        });
+    }
+
     async handleFormSubmit() {
         console.log('📤 Form gönderiliyor...');
 
-        const goodsAndServices = this.getSelectedNiceClassesLocal();
+        const goodsAndServices = this.getMySelectedNiceClasses();
         if (goodsAndServices.length === 0) {
             alert('Lütfen en az bir mal veya hizmet seçin.');
             return;
@@ -1116,11 +1128,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.log('🚀 DOM Content Loaded - DataEntry initialize ediliyor...');
     
     try {
+        // Shared layout'u yükle
         await loadSharedLayout({ activeMenuLink: 'data-entry.html' });
         
+        // DataEntry instance'ını oluştur ve initialize et
         const dataEntryInstance = new DataEntryModule();
+        
+        // Global erişim için
         window.dataEntryInstance = dataEntryInstance;
         
+        // Modal event listeners kurulması - layout yüklendikten sonra
         setTimeout(() => {
             console.log('🔧 Modal event listeners kuruluyor...');
             
@@ -1152,6 +1169,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         }, 3000);
         
+        // Initialize et
         await dataEntryInstance.init();
         
         console.log('✅ DataEntry başarıyla initialize edildi');
