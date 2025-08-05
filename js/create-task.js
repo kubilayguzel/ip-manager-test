@@ -18,6 +18,7 @@ class CreateTaskModule {
         this.activeTab = 'brand-info';
         this.isNiceClassificationInitialized = false;
         this.selectedApplicants = [];
+        this.priorities = []; // YENİ: Rüçhan bilgilerini tutacak dizi
     }
 
     async init() {
@@ -96,15 +97,16 @@ class CreateTaskModule {
         // Bir sekme gösterildiğinde tetiklenen olay.
         $(document).on('shown.bs.tab', '#myTaskTabs a', (e) => {
             this.updateButtonsAndTabs();
-            // Eğer "Mal/Hizmet" sekmesi açıldıysa ve daha önce yüklenmediyse, Nice modülünü başlat.
             const targetTabId = e.target.getAttribute('href').substring(1);
             if (targetTabId === 'goods-services' && !this.isNiceClassificationInitialized) {
-                initializeNiceClassification(); // db parametresine gerek yok, modül kendi alıyor.
-                this.isNiceClassificationInitialized = true; // Yüklendi olarak işaretle.
+                initializeNiceClassification();
+                this.isNiceClassificationInitialized = true;
             }
-            // Başvuru Sahibi sekmesi açıldığında seçilenleri render et
             if (targetTabId === 'applicants') {
                 this.renderSelectedApplicants();
+            }
+            if (targetTabId === 'priority') {
+                this.renderPriorities();
             }
         });
 
@@ -458,7 +460,7 @@ class CreateTaskModule {
                                 <label for="applicantSearchInput" class="form-label">Başvuru Sahibi Ara</label>
                                 <div style="display: flex; gap: 10px;">
                                     <input type="text" id="applicantSearchInput" class="form-input" placeholder="Aramak için en az 2 karakter...">
-                                    <button type="button" id="addNewApplicantBtn" class="btn-small btn-add-person" data-toggle="modal" data-target="#addPersonModal"><span>&#x2795;</span> Yeni Kişi</button>
+                                    <button type="button" id="addNewApplicantBtn" class="btn-small btn-add-person"><span>&#x2795;</span> Yeni Kişi</button>
                                 </div>
                                 <div id="applicantSearchResults" class="search-results-list"></div>
                             </div>
@@ -475,7 +477,62 @@ class CreateTaskModule {
                         </div>
                     </div>
                     <div class="tab-pane fade" id="priority" role="tabpanel" aria-labelledby="priority-tab">
-                        <p>Bu sekmedeki içerik henüz tanımlanmamıştır.</p>
+                        <div class="form-section">
+                            <h3 class="section-title">Rüçhan Bilgileri</h3>
+                            <p class="text-muted mb-3">Birden fazla rüçhan hakkı ekleyebilirsiniz.</p>
+                            
+                            <div class="form-group row">
+                                <label for="priorityType" class="col-sm-3 col-form-label">Rüçhan Tipi</label>
+                                <div class="col-sm-9">
+                                    <select class="form-control" id="priorityType" onchange="window.createTaskModule.handlePriorityTypeChange(this.value)">
+                                        <option value="başvuru" selected>Başvuru</option>
+                                        <option value="sergi">Sergi</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="form-group row">
+                                <label for="priorityDate" class="col-sm-3 col-form-label" id="priorityDateLabel">Rüçhan Tarihi</label>
+                                <div class="col-sm-9">
+                                    <input type="date" class="form-control" id="priorityDate">
+                                </div>
+                            </div>
+                            <div class="form-group row">
+                                <label for="priorityCountry" class="col-sm-3 col-form-label">Rüçhan Ülkesi</label>
+                                <div class="col-sm-9">
+                                    <select class="form-control" id="priorityCountry">
+                                        <option value="">Seçiniz...</option>
+                                        <option value="TR">Türkiye</option>
+                                        <option value="US">Amerika Birleşik Devletleri</option>
+                                        <option value="DE">Almanya</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="form-group row">
+                                <label for="priorityNumber" class="col-sm-3 col-form-label">Rüçhan Numarası</label>
+                                <div class="col-sm-9">
+                                    <input type="text" class="form-control" id="priorityNumber" placeholder="Örn: 2023/12345">
+                                </div>
+                            </div>
+                            
+                            <div class="form-group full-width text-right mt-3">
+                                <button type="button" id="addPriorityBtn" class="btn btn-secondary">
+                                    <i class="fas fa-plus mr-1"></i> Rüçhan Ekle
+                                </button>
+                            </div>
+                            
+                            <hr class="my-4">
+                            
+                            <div class="form-group full-width">
+                                <label class="form-label">Eklenen Rüçhan Hakları</label>
+                                <div id="addedPrioritiesList" class="selected-items-list">
+                                    <div class="empty-state">
+                                        <i class="fas fa-info-circle fa-3x text-muted mb-3"></i>
+                                        <p class="text-muted">Henüz rüçhan bilgisi eklenmedi.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     <div class="tab-pane fade" id="accrual" role="tabpanel" aria-labelledby="accrual-tab">
                         <div class="form-section">
@@ -561,152 +618,9 @@ class CreateTaskModule {
             </div>
             <div id="formActionsContainer" class="form-actions"></div>
     `;
-        // Dinamik olarak oluşturulan form elemanları için dinleyicileri yeniden kur
         this.setupDynamicFormListeners();
-        // Marka yükleyiciyi de kur
         this.setupBrandExampleUploader();
         this.updateButtonsAndTabs();
-    }
-
-    renderBaseForm(container, taskTypeName, taskTypeId) {
-        const transactionLikeTasks = ['Devir', 'Lisans', 'Birleşme', 'Veraset ile İntikal', 'Rehin/Teminat', 'YİDK Kararının İptali'];
-        const needsRelatedParty = transactionLikeTasks.includes(taskTypeName);
-        const partyLabels = {
-            'Devir': 'Devralan Taraf', 'Lisans': 'Lisans Alan Taraf', 'Rehin': 'Rehin Alan Taraf',
-            'Birleşme': 'Birleşilen Taraf', 'Veraset ile İntikal': 'Mirasçı', 'Rehin/Teminat': 'Rehin Alan Taraf',
-            'YİDK Kararının İptali': 'Davacı/Davalı'
-        };
-        const partyLabel = partyLabels[taskTypeName] || 'İlgili Taraf';
-        let specificFieldsHtml = '';
-        if (taskTypeId === 'litigation_yidk_annulment') {
-            specificFieldsHtml = `
-                <div class="form-section">
-                    <h3 class="section-title">2. Dava Bilgileri</h3>
-                    <div class="form-group full-width">
-                        <label for="subjectOfLawsuit" class="form-label">Dava Konusu</label>
-                        <textarea id="subjectOfLawsuit" name="subjectOfLawsuit" class="form-textarea"></textarea>
-                    </div>
-                    <div class="form-group">
-                        <label for="courtName" class="form-label">Mahkeme Adı</label>
-                        <input type="text" id="courtName" name="courtName" class="form-input">
-                    </div>
-                    <div class="form-group">
-                        <label for="courtFileNumber" class="form-label">Dava Dosya Numarası</label>
-                        <input type="text" id="courtFileNumber" name="courtFileNumber" class="form-input">
-                    </div>
-                    <div class="form-group date-picker-group">
-                        <label for="lawsuitDate" class="form-label">Dava Tarihi</label>
-                        <input type="date" id="lawsuitDate" name="lawsuitDate" class="form-input">
-                    </div>
-                </div>
-            `;
-        }
-        container.innerHTML = `
-            <div class="form-section">
-                <h3 class="section-title">2. İşleme Konu Varlık</h3>
-                <div class="form-group full-width">
-                    <label for="portfolioSearchInput" class="form-label">Portföyden Ara</label>
-                    <input type="text" id="portfolioSearchInput" class="form-input" placeholder="Aramak için en az 3 karakter...">
-                    <div id="portfolioSearchResults" class="search-results-list"></div>
-                    <div id="selectedIpRecordDisplay" class="search-result-display" style="display:none; align-items: center;"></div>
-                </div>
-            </div>
-            ${needsRelatedParty ? `
-            <div class="form-section">
-                <h3 class="section-title">3. ${partyLabel}</h3>
-                <div class="form-group full-width">
-                    <label for="personSearchInput" class="form-label">Sistemdeki Kişilerden Ara</label>
-                    <div style="display: flex; gap: 10px;">
-                        <input type="text" id="personSearchInput" class="form-input" placeholder="Aramak için en az 2 karakter...">
-                        <button type="button" id="addNewPersonBtn" class="btn-small btn-add-person" data-toggle="modal" data-target="#addPersonModal"><span>&#x2795;</span> Yeni Kişi</button>
-                    </div>
-                    <div id="personSearchResults" class="search-results-list"></div>
-                    <div id="selectedRelatedPartyDisplay" class="search-result-display" style="display:none;"></div>
-                </div>
-            </div>
-            ` : ''}
-            ${specificFieldsHtml} <div class="form-section">
-                <h3 class="section-title">Tahakkuk Bilgileri</h3>
-                <div class="form-grid">
-                    <div class="form-group">
-                        <label for="officialFee" class="form-label">Resmi Ücret</label>
-                        <div class="input-with-currency">
-                            <input type="number" id="officialFee" class="form-input" placeholder="0.00" step="0.01">
-                            <select id="officialFeeCurrency" class="currency-select">
-                                <option value="TRY" selected>TL</option>
-                                <option value="EUR">EUR</option>
-                                <option value="USD">USD</option>
-                                <option value="CHF">CHF</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label for="serviceFee" class="form-label">Hizmet Bedeli</label>
-                        <div class="input-with-currency">
-                            <input type="number" id="serviceFee" class="form-input" placeholder="0.00" step="0.01">
-                            <select id="serviceFeeCurrency" class="currency-select">
-                                <option value="TRY" selected>TL</option>
-                                <option value="EUR">EUR</option>
-                                <option value="USD">USD</option>
-                                <option value="CHF">CHF</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label for="vatRate" class="form-label">KDV Oranı (%)</label>
-                        <input type="number" id="vatRate" class="form-input" value="20">
-                    </div>
-                    <div class="form-group">
-                        <label for="totalAmountDisplay" class="form-label">Toplam Tutar</label>
-                        <div id="totalAmountDisplay" class="total-amount-display">0.00 TRY</div>
-                    </div>
-                    <div class="form-group full-width">
-                        <label class="checkbox-label">
-                            <input type="checkbox" id="applyVatToOfficialFee" checked>
-                            Resmi Ücrete KDV Uygula
-                        </label>
-                    </div>
-                    <div class="form-group full-width">
-                        <label for="tpInvoicePartySearch" class="form-label">Türk Patent Faturası Tarafı</label>
-                        <input type="text" id="tpInvoicePartySearch" class="form-input" placeholder="Fatura tarafı arayın...">
-                        <div id="tpInvoicePartyResults" class="search-results-list"></div>
-                        <div id="selectedTpInvoicePartyDisplay" class="search-result-display" style="display:none;"></div>
-                    </div>
-                    <div class="form-group full-width">
-                        <label for="serviceInvoicePartySearch" class="form-label">Hizmet Faturası Tarafı</label>
-                        <input type="text" id="serviceInvoicePartySearch" class="form-input" placeholder="Fatura tarafı arayın...">
-                        <div id="serviceInvoicePartyResults" class="search-results-list"></div>
-                        <div id="selectedServiceInvoicePartyDisplay" class="search-result-display" style="display:none;"></div>
-                    </div>
-                </div>
-            </div>
-            <div class="form-section">
-                <h3 class="section-title">İş Detayları ve Atama</h3>
-                <div class="form-grid">
-                    <div class="form-group">
-                        <label for="taskPriority" class="form-label">Öncelik</label>
-                        <select id="taskPriority" class="form-select">
-                            <option value="medium">Orta</option>
-                            <option value="high">Yüksek</option>
-                            <option value="low">Düşük</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="assignedTo" class="form-label">Atanacak Kullanıcı</label>
-                        <select id="assignedTo" class="form-select">
-                            <option value="">Seçiniz...</option>
-                        </select>
-                    </div>
-                    <div class="form-group full-width">
-                        <label for="taskDueDate" class="form-label">Operasyonel Son Tarih</label>
-                        <input type="date" id="taskDueDate" class="form-input">
-                    </div>
-                </div>
-            </div>
-            <div class="form-actions"><button type="button" id="cancelBtn" class="btn btn-secondary">İptal</button><button type="submit" id="saveTaskBtn" class="btn btn-primary" disabled>İşi Oluştur ve Kaydet</button></div>
-        `;
-        this.setupDynamicFormListeners();
-        this.populateAssignedToDropdown();
     }
     setupDynamicFormListeners() {
         const portfolioSearchInput = document.getElementById('portfolioSearchInput');
@@ -763,11 +677,104 @@ class CreateTaskModule {
                 }
             });
         }
+        
+        // YENİ: Rüçhan tipi değişimi için olay dinleyici
+        const priorityTypeSelect = document.getElementById('priorityType');
+        if (priorityTypeSelect) {
+            priorityTypeSelect.addEventListener('change', (e) => this.handlePriorityTypeChange(e.target.value));
+        }
+
+        const addPriorityBtn = document.getElementById('addPriorityBtn');
+        if (addPriorityBtn) addPriorityBtn.addEventListener('click', () => this.addPriority());
+
+        const addedPrioritiesList = document.getElementById('addedPrioritiesList');
+        if (addedPrioritiesList) {
+            addedPrioritiesList.addEventListener('click', (e) => {
+                const removeBtn = e.target.closest('.remove-priority-btn');
+                if (removeBtn) {
+                    const priorityId = removeBtn.dataset.id;
+                    this.removePriority(priorityId);
+                }
+            });
+        }
 
         ['officialFee', 'serviceFee', 'vatRate', 'applyVatToOfficialFee'].forEach(id => {
             const el = document.getElementById(id);
             if (el) el.addEventListener('input', () => this.calculateTotalAmount());
         });
+    }
+    // YENİ: Rüçhan tipi değişimini yöneten fonksiyon
+    handlePriorityTypeChange(value) {
+        const priorityDateLabel = document.getElementById('priorityDateLabel');
+        if (priorityDateLabel) {
+            if (value === 'sergi') {
+                priorityDateLabel.textContent = 'Sergi Tarihi';
+            } else {
+                priorityDateLabel.textContent = 'Rüçhan Tarihi';
+            }
+        }
+    }
+    addPriority() {
+        const priorityType = document.getElementById('priorityType')?.value;
+        const priorityDate = document.getElementById('priorityDate')?.value;
+        const priorityCountry = document.getElementById('priorityCountry')?.value;
+        const priorityNumber = document.getElementById('priorityNumber')?.value;
+
+        if (!priorityDate || !priorityCountry || !priorityNumber) {
+            alert('Lütfen tüm rüçhan bilgilerini doldurun.');
+            return;
+        }
+
+        const newPriority = {
+            id: Date.now().toString(), // Benzersiz bir ID oluştur
+            type: priorityType,
+            date: priorityDate,
+            country: priorityCountry,
+            number: priorityNumber
+        };
+
+        this.priorities.push(newPriority);
+        this.renderPriorities();
+
+        // Formu temizle
+        document.getElementById('priorityDate').value = '';
+        document.getElementById('priorityCountry').value = '';
+        document.getElementById('priorityNumber').value = '';
+    }
+    removePriority(priorityId) {
+        this.priorities = this.priorities.filter(p => p.id !== priorityId);
+        this.renderPriorities();
+    }
+    renderPriorities() {
+        const container = document.getElementById('addedPrioritiesList');
+        if (!container) return;
+
+        if (this.priorities.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-info-circle fa-3x text-muted mb-3"></i>
+                    <p class="text-muted">Henüz rüçhan bilgisi eklenmedi.</p>
+                </div>`;
+            return;
+        }
+
+        let html = '';
+        this.priorities.forEach(priority => {
+            html += `
+                <div class="selected-item d-flex justify-content-between align-items-center p-2 mb-2 border rounded">
+                    <span>
+                        <b>Tip:</b> ${priority.type === 'sergi' ? 'Sergi' : 'Başvuru'} | 
+                        <b>Tarih:</b> ${priority.date} | 
+                        <b>Ülke:</b> ${priority.country} | 
+                        <b>Numara:</b> ${priority.number}
+                    </span>
+                    <button type="button" class="btn btn-sm btn-danger remove-priority-btn" data-id="${priority.id}">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
+                </div>
+            `;
+        });
+        container.innerHTML = html;
     }
     async handleBrandExampleFile(file) {
         if (!file || !file.type.startsWith('image/')) return;
@@ -823,6 +830,7 @@ class CreateTaskModule {
         this.selectedServiceInvoiceParty = null;
         this.uploadedFiles = [];
         this.selectedApplicants = [];
+        this.priorities = []; // YENİ: Rüçhan bilgilerini de sıfırla
     }
     searchPortfolio(query) {
         const container = document.getElementById('portfolioSearchResults');
@@ -1178,6 +1186,10 @@ class CreateTaskModule {
                 return;
             }
 
+            // YENİ: Rüçhan bilgilerini taskData'ya ekle
+            if (this.priorities.length > 0) {
+                taskData.details.priorities = this.priorities;
+            }
         }
 
         if (this.selectedRelatedParty) {
