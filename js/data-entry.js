@@ -1,14 +1,10 @@
-// data-entry.js - create-task.js'den tam kopyalanmış ve uyarlanmış
+// data-entry.js - Debug edilmiş versiyon
 
-// create-task.js'den dışa aktarılan fonksiyonlar
 import { createTrademarkApplication, uploadFileToStorage } from './create-task.js';
-
-// Gerekli diğer servisler ve modüller
 import { authService, personService, transactionTypeService } from '../firebase-config.js';
 import { initializeNiceClassification, getSelectedNiceClasses } from './nice-classification.js';
 import { loadSharedLayout } from './layout-loader.js';
 
-// Bu sınıf, portföy veri girişi sayfasının tüm mantığını yönetir.
 class DataEntryModule {
     constructor() {
         this.currentUser = null;
@@ -30,11 +26,13 @@ class DataEntryModule {
         
         this.currentUser = authService.getCurrentUser();
         if (!this.currentUser) {
+            console.error('❌ Kullanıcı oturum açmamış');
             window.location.href = 'index.html';
             return;
         }
 
         try {
+            console.log('📊 Veriler yükleniyor...');
             const [personsResult, transactionTypesResult] = await Promise.all([
                 personService.getPersons(),
                 transactionTypeService.getTransactionTypes()
@@ -47,7 +45,7 @@ class DataEntryModule {
                 transactionTypes: this.allTransactionTypes.length
             });
         } catch (error) {
-            console.error("Veri yüklenirken hata oluştu:", error);
+            console.error("❌ Veri yüklenirken hata oluştu:", error);
             alert("Gerekli veriler yüklenemedi, lütfen sayfayı yenileyin.");
             return;
         }
@@ -59,39 +57,41 @@ class DataEntryModule {
     }
 
     setupInitialForm() {
-        // Doğrudan marka başvuru formunu render et
+        console.log('🏗️ Form oluşturuluyor...');
         const container = document.getElementById('conditionalFieldsContainer');
         if (container) {
             this.renderTrademarkApplicationForm(container);
             this.updateButtonsAndTabs();
+        } else {
+            console.error('❌ conditionalFieldsContainer bulunamadı');
         }
     }
 
-    // create-task.js'den kopyalanan renderTrademarkApplicationForm metodu
     renderTrademarkApplicationForm(container) {
+        console.log('📝 Marka başvuru formu render ediliyor...');
         container.innerHTML = `
             <div class="card-body">
                 <ul class="nav nav-tabs" id="myTaskTabs" role="tablist">
                     <li class="nav-item">
-                        <a class="nav-link active" id="brand-info-tab" data-toggle="tab" href="#brand-info" role="tab" aria-controls="brand-info" aria-selected="true">Marka Bilgileri</a>
+                        <a class="nav-link active" id="brand-info-tab" data-toggle="tab" href="#brand-info" role="tab">Marka Bilgileri</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" id="goods-services-tab" data-toggle="tab" href="#goods-services" role="tab" aria-controls="goods-services" aria-selected="false">Mal/Hizmet Seçimi</a>
+                        <a class="nav-link" id="goods-services-tab" data-toggle="tab" href="#goods-services" role="tab">Mal/Hizmet Seçimi</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" id="applicants-tab" data-toggle="tab" href="#applicants" role="tab" aria-controls="applicants" aria-selected="false">Başvuru Sahipleri</a>
+                        <a class="nav-link" id="applicants-tab" data-toggle="tab" href="#applicants" role="tab">Başvuru Sahipleri</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" id="priority-tab" data-toggle="tab" href="#priority" role="tab" aria-controls="priority" aria-selected="false">Rüçhan</a>
+                        <a class="nav-link" id="priority-tab" data-toggle="tab" href="#priority" role="tab">Rüçhan</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" id="summary-tab" data-toggle="tab" href="#summary" role="tab" aria-controls="summary" aria-selected="false">Özet</a>
+                        <a class="nav-link" id="summary-tab" data-toggle="tab" href="#summary" role="tab">Özet</a>
                     </li>
                 </ul>
 
                 <div class="tab-content mt-3 tab-content-card" id="myTaskTabContent">
                     <!-- Marka Bilgileri Tab -->
-                    <div class="tab-pane fade show active" id="brand-info" role="tabpanel" aria-labelledby="brand-info-tab">
+                    <div class="tab-pane fade show active" id="brand-info" role="tabpanel">
                         <div class="form-section">
                             <h3 class="section-title">
                                 <span><i class="fas fa-info-circle mr-2"></i>Marka Bilgileri</span>
@@ -138,7 +138,7 @@ class DataEntryModule {
                                     <input type="file" id="brandExample" accept="image/*" style="display:none;">
                                     <div class="upload-icon">🖼️</div>
                                     <h5>Marka örneğini buraya sürükleyin veya seçmek için tıklayın</h5>
-                                    <p class="text-muted">İstenen format: 591x591px, 300 DPI, JPEG. Yüklenen dosya otomatik olarak dönüştürülecektir.</p>
+                                    <p class="text-muted">İstenen format: 591x591px, 300 DPI, JPEG</p>
                                 </div>
                                 <div id="brandExamplePreviewContainer">
                                     <img id="brandExamplePreview" alt="Marka Önizleme">
@@ -178,8 +178,8 @@ class DataEntryModule {
                         </div>
                     </div>
 
-                    <!-- Mal/Hizmet Seçimi Tab - create-task.html'den kopyalandı -->
-                    <div class="tab-pane fade" id="goods-services" role="tabpanel" aria-labelledby="goods-services-tab">
+                    <!-- Mal/Hizmet Seçimi Tab -->
+                    <div class="tab-pane fade" id="goods-services" role="tabpanel">
                         <div class="nice-classification-container mt-3">
                             <div class="row">
                                 <div class="col-lg-8">
@@ -201,11 +201,6 @@ class DataEntryModule {
                                                 </div>
                                                 <input type="text" class="form-control" id="niceClassSearch" 
                                                        placeholder="Sınıf ara... (örn: kozmetik, kimyasal, teknoloji)">
-                                                <div class="input-group-append">
-                                                    <button class="btn btn-outline-secondary" type="button" onclick="clearNiceSearch()">
-                                                        <i class="fas fa-times"></i>
-                                                    </button>
-                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -244,13 +239,12 @@ class DataEntryModule {
                     </div>
 
                     <!-- Başvuru Sahipleri Tab -->
-                    <div class="tab-pane fade" id="applicants" role="tabpanel" aria-labelledby="applicants-tab">
+                    <div class="tab-pane fade" id="applicants" role="tabpanel">
                         <div class="form-section">
                             <h3 class="section-title">
                                 <span><i class="fas fa-users mr-2"></i>Başvuru Sahipleri</span>
                             </h3>
                             
-                            <!-- Person Search Input -->
                             <div class="form-group">
                                 <label for="applicantSearchInput" class="form-label">Başvuru Sahibi Ara</label>
                                 <input type="text" id="applicantSearchInput" class="form-input" 
@@ -274,13 +268,12 @@ class DataEntryModule {
                     </div>
 
                     <!-- Rüçhan Tab -->
-                    <div class="tab-pane fade" id="priority" role="tabpanel" aria-labelledby="priority-tab">
+                    <div class="tab-pane fade" id="priority" role="tabpanel">
                         <div class="form-section">
                             <h3 class="section-title">
                                 <span><i class="fas fa-flag mr-2"></i>Rüçhan Bilgileri</span>
                             </h3>
                             
-                            <!-- Rüçhan Ekleme Formu -->
                             <div class="form-grid">
                                 <div class="form-group">
                                     <label for="priorityType" class="form-label">Rüçhan Tipi</label>
@@ -322,7 +315,7 @@ class DataEntryModule {
                     </div>
 
                     <!-- Özet Tab -->
-                    <div class="tab-pane fade" id="summary" role="tabpanel" aria-labelledby="summary-tab">
+                    <div class="tab-pane fade" id="summary" role="tabpanel">
                         <div id="summaryContent" class="form-section">
                             <div class="empty-state">
                                 <i class="fas fa-search-plus fa-3x text-muted mb-3"></i>
@@ -332,15 +325,20 @@ class DataEntryModule {
                     </div>
                 </div>
             </div>
-            <div id="formActionsContainer" class="form-actions"></div>
         `;
+        
+        console.log('✅ Form HTML'i oluşturuldu');
+        
+        // Hemen event listener'ları kur
         this.setupDynamicFormListeners();
         this.setupBrandExampleUploader();
         this.updateButtonsAndTabs();
+        
+        console.log('✅ Form hazır');
     }
 
     setupEventListeners() {
-        console.log('🔧 Event listeners kuruluyor...');
+        console.log('🔧 Ana event listeners kuruluyor...');
         
         // Tab değişim event'leri
         $(document).on('click', '#myTaskTabs a', (e) => {
@@ -353,9 +351,11 @@ class DataEntryModule {
         $(document).on('shown.bs.tab', '#myTaskTabs a', (e) => {
             this.updateButtonsAndTabs();
             const targetTabId = e.target.getAttribute('href').substring(1);
+            console.log('📑 Tab değişti:', targetTabId);
+            
             if (targetTabId === 'goods-services' && !this.isNiceClassificationInitialized) {
-                initializeNiceClassification();
-                this.isNiceClassificationInitialized = true;
+                console.log('🔄 Nice Classification başlatılıyor...');
+                this.initializeNiceClassificationWithDebug();
             }
             if (targetTabId === 'applicants') {
                 this.renderSelectedApplicants();
@@ -368,61 +368,205 @@ class DataEntryModule {
             }
         });
 
-        // Form submit için saveTaskBtn
+        // Save button
         $(document).on('click', '#saveTaskBtn', (e) => {
             e.preventDefault();
             this.handleFormSubmit();
         });
-
-        this.setupBrandExampleUploader();
         
-        console.log('✅ Event listeners kuruldu');
+        console.log('✅ Ana event listeners kuruldu');
+    }
+
+    async initializeNiceClassificationWithDebug() {
+        try {
+            console.log('🔄 Nice Classification debug ile başlatılıyor...');
+            console.log('🔍 niceClassificationList elementi:', document.getElementById('niceClassificationList'));
+            console.log('🔍 selectedNiceClasses elementi:', document.getElementById('selectedNiceClasses'));
+            
+            await initializeNiceClassification();
+            this.isNiceClassificationInitialized = true;
+            console.log('✅ Nice Classification başarıyla başlatıldı');
+        } catch (error) {
+            console.error('❌ Nice Classification başlatılamadı:', error);
+            const container = document.getElementById('niceClassificationList');
+            if (container) {
+                container.innerHTML = `
+                    <div class="text-center text-danger p-4">
+                        <i class="fas fa-exclamation-triangle fa-2x mb-2"></i>
+                        <p>Nice Classification yüklenemedi</p>
+                        <small>Hata: ${error.message}</small>
+                        <br><button class="btn btn-sm btn-primary mt-2" onclick="dataEntryInstance.initializeNiceClassificationWithDebug()">Tekrar Dene</button>
+                    </div>
+                `;
+            }
+        }
     }
 
     setupDynamicFormListeners() {
-        // Başvuru sahibi arama
-        const applicantSearchInput = document.getElementById('applicantSearchInput');
-        if (applicantSearchInput) {
-            applicantSearchInput.addEventListener('input', (e) => this.searchPersons(e.target.value, 'applicant'));
+        console.log('🔧 Dinamik form listeners kuruluyor...');
+        
+        // Başvuru sahibi arama - HEMEN KURULACAK
+        setTimeout(() => {
+            const applicantSearchInput = document.getElementById('applicantSearchInput');
+            console.log('🔍 applicantSearchInput elementi:', applicantSearchInput);
+            
+            if (applicantSearchInput) {
+                console.log('✅ Başvuru sahibi arama input bulundu, event listener ekleniyor');
+                applicantSearchInput.addEventListener('input', (e) => {
+                    console.log('🔍 Arama yapılıyor:', e.target.value);
+                    this.searchPersons(e.target.value, 'applicant');
+                });
+            } else {
+                console.error('❌ applicantSearchInput elementi bulunamadı');
+            }
+
+            // Yeni başvuru sahibi ekleme butonu
+            const addNewApplicantBtn = document.getElementById('addNewApplicantBtn');
+            if (addNewApplicantBtn) {
+                console.log('✅ Yeni kişi ekleme butonu bulundu');
+                addNewApplicantBtn.addEventListener('click', () => {
+                    console.log('👤 Yeni kişi ekleme modalı açılıyor');
+                    this.showAddPersonModal('applicant');
+                });
+            }
+
+            // Başvuru sahipleri listesi click eventi
+            const selectedApplicantsList = document.getElementById('selectedApplicantsList');
+            if (selectedApplicantsList) {
+                selectedApplicantsList.addEventListener('click', (e) => {
+                    const removeBtn = e.target.closest('.remove-selected-item-btn');
+                    if (removeBtn) {
+                        const personId = removeBtn.dataset.id;
+                        this.removeApplicant(personId);
+                    }
+                });
+            }
+        }, 100); // 100ms bekle ki DOM tamamen hazır olsun
+
+        // Rüçhan event listeners
+        setTimeout(() => {
+            const priorityTypeSelect = document.getElementById('priorityType');
+            if (priorityTypeSelect) {
+                priorityTypeSelect.addEventListener('change', (e) => this.handlePriorityTypeChange(e.target.value));
+            }
+
+            const addPriorityBtn = document.getElementById('addPriorityBtn');
+            if (addPriorityBtn) {
+                addPriorityBtn.addEventListener('click', () => this.addPriority());
+            }
+        }, 100);
+        
+        console.log('✅ Dinamik form listeners kuruldu');
+    }
+
+    searchPersons(query, target) {
+        console.log('🔍 Person search çağrıldı:', { query, target, personsCount: this.allPersons.length });
+        
+        const resultsContainerId = {
+            'applicant': 'applicantSearchResults'
+        }[target];
+        
+        const container = document.getElementById(resultsContainerId);
+        console.log('📦 Results container:', container);
+        
+        if (!container) {
+            console.error('❌ Results container bulunamadı:', resultsContainerId);
+            return;
         }
 
-        // Yeni başvuru sahibi ekleme butonu
-        const addNewApplicantBtn = document.getElementById('addNewApplicantBtn');
-        if (addNewApplicantBtn) {
-            addNewApplicantBtn.addEventListener('click', () => this.showAddPersonModal('applicant'));
+        container.innerHTML = '';
+        if (query.length < 2) {
+            console.log('🔍 Query çok kısa, gizleniyor');
+            container.style.display = 'none';
+            return;
         }
 
-        // Başvuru sahipleri listesi click eventi
-        const selectedApplicantsList = document.getElementById('selectedApplicantsList');
-        if (selectedApplicantsList) {
-            selectedApplicantsList.addEventListener('click', (e) => {
-                const removeBtn = e.target.closest('.remove-selected-item-btn');
-                if (removeBtn) {
-                    const personId = removeBtn.dataset.id;
-                    this.removeApplicant(personId);
-                }
+        const filtered = this.allPersons.filter(p => 
+            p.name.toLowerCase().includes(query.toLowerCase())
+        );
+        
+        console.log('🔍 Filtrelenen kişiler:', filtered.length);
+
+        if (filtered.length === 0) {
+            container.innerHTML = '<p class="no-results-message">Kişi bulunamadı.</p>';
+            container.style.display = 'block';
+            return;
+        }
+
+        filtered.forEach(p => {
+            const item = document.createElement('div');
+            item.className = 'search-result-item';
+            item.dataset.id = p.id;
+            item.innerHTML = `<div><b>${p.name}</b><br><small>${p.email || '-'}</small></div>`;
+            item.addEventListener('click', () => {
+                console.log('👤 Kişi seçildi:', p.name);
+                this.selectPerson(p, target);
             });
+            container.appendChild(item);
+        });
+        container.style.display = 'block';
+        console.log('✅ Arama sonuçları gösterildi');
+    }
+
+    selectPerson(person, target) {
+        console.log('👤 Kişi seçildi:', person.name, 'için', target);
+        
+        if (target === 'applicant') {
+            this.addApplicant(person);
         }
         
-        // Rüçhan type change
-        const priorityTypeSelect = document.getElementById('priorityType');
-        if (priorityTypeSelect) {
-            priorityTypeSelect.addEventListener('change', (e) => this.handlePriorityTypeChange(e.target.value));
+        const resultsContainer = document.getElementById('applicantSearchResults');
+        if (resultsContainer) {
+            resultsContainer.innerHTML = '';
+            resultsContainer.style.display = 'none';
+        }
+        const inputField = document.getElementById('applicantSearchInput');
+        if (inputField) inputField.value = '';
+        this.checkFormCompleteness();
+    }
+    
+    addApplicant(person) {
+        if (this.selectedApplicants.some(p => p.id === person.id)) {
+            alert('Bu başvuru sahibi zaten eklenmiş.');
+            return;
+        }
+        this.selectedApplicants.push(person);
+        console.log('👤 Başvuru sahibi eklendi:', person.name);
+        this.renderSelectedApplicants();
+        this.checkFormCompleteness();
+    }
+
+    removeApplicant(personId) {
+        this.selectedApplicants = this.selectedApplicants.filter(p => p.id !== personId);
+        console.log('👤 Başvuru sahibi silindi:', personId);
+        this.renderSelectedApplicants();
+        this.checkFormCompleteness();
+    }
+
+    renderSelectedApplicants() {
+        const container = document.getElementById('selectedApplicantsList');
+        if (!container) return;
+
+        if (this.selectedApplicants.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-user-plus fa-2x mb-2"></i>
+                    <p>Henüz başvuru sahibi seçilmedi</p>
+                </div>
+            `;
+            return;
         }
 
-        // Rüçhan ekleme butonu
-        const addPriorityBtn = document.getElementById('addPriorityBtn');
-        if (addPriorityBtn) {
-            addPriorityBtn.addEventListener('click', () => this.addPriority());
-        }
-
-        // Modal event listeners
-        const closeAddPersonModalBtn = document.getElementById('closeAddPersonModal');
-        if (closeAddPersonModalBtn) closeAddPersonModalBtn.addEventListener('click', () => this.hideAddPersonModal());
-        const cancelPersonBtn = document.getElementById('cancelPersonBtn');
-        if (cancelPersonBtn) cancelPersonBtn.addEventListener('click', () => this.hideAddPersonModal());
-        const savePersonBtn = document.getElementById('savePersonBtn');
-        if (savePersonBtn) savePersonBtn.addEventListener('click', () => this.saveNewPerson());
+        let html = '';
+        this.selectedApplicants.forEach(applicant => {
+            html += `
+                <div class="selected-item">
+                    <span><strong>${applicant.name}</strong>${applicant.email ? `<br><small class="text-muted">${applicant.email}</small>` : ''}</span>
+                    <button type="button" class="remove-selected-item-btn" data-id="${applicant.id}">×</button>
+                </div>
+            `;
+        });
+        container.innerHTML = html;
     }
 
     setupBrandExampleUploader() {
@@ -430,25 +574,19 @@ class DataEntryModule {
         const fileInput = document.getElementById('brandExample');
 
         if (dropZone && fileInput) {
-            // Click to upload
             dropZone.addEventListener('click', () => fileInput.click());
-
-            // File input change
             fileInput.addEventListener('change', (e) => {
                 const file = e.target.files[0];
                 if (file) this.handleBrandExampleFile(file);
             });
 
-            // Drag & drop
             dropZone.addEventListener('dragover', (e) => {
                 e.preventDefault();
                 dropZone.classList.add('drag-over');
             });
-
             dropZone.addEventListener('dragleave', () => {
                 dropZone.classList.remove('drag-over');
             });
-
             dropZone.addEventListener('drop', (e) => {
                 e.preventDefault();
                 dropZone.classList.remove('drag-over');
@@ -483,99 +621,6 @@ class DataEntryModule {
             }
             this.uploadedFiles = [newFile];
         };
-    }
-
-    // Person search fonksiyonu - create-task.js'den kopyalandı
-    searchPersons(query, target) {
-        const resultsContainerId = {
-            'applicant': 'applicantSearchResults'
-        }[target];
-        
-        const container = document.getElementById(resultsContainerId);
-        if (!container) return;
-
-        container.innerHTML = '';
-        if (query.length < 2) {
-            container.style.display = 'none';
-            return;
-        }
-
-        const filtered = this.allPersons.filter(p => 
-            p.name.toLowerCase().includes(query.toLowerCase())
-        );
-
-        if (filtered.length === 0) {
-            container.innerHTML = '<p class="no-results-message">Kişi bulunamadı.</p>';
-            container.style.display = 'block';
-            return;
-        }
-
-        filtered.forEach(p => {
-            const item = document.createElement('div');
-            item.className = 'search-result-item';
-            item.dataset.id = p.id;
-            item.innerHTML = `<div><b>${p.name}</b><br><small>${p.email || '-'}</small></div>`;
-            item.addEventListener('click', () => this.selectPerson(p, target));
-            container.appendChild(item);
-        });
-        container.style.display = 'block';
-    }
-
-    selectPerson(person, target) {
-        if (target === 'applicant') {
-            this.addApplicant(person);
-        }
-        
-        const resultsContainer = document.getElementById('applicantSearchResults');
-        if (resultsContainer) {
-            resultsContainer.innerHTML = '';
-            resultsContainer.style.display = 'none';
-        }
-        const inputField = document.getElementById('applicantSearchInput');
-        if (inputField) inputField.value = '';
-        this.checkFormCompleteness();
-    }
-    
-    addApplicant(person) {
-        if (this.selectedApplicants.some(p => p.id === person.id)) {
-            alert('Bu başvuru sahibi zaten eklenmiş.');
-            return;
-        }
-        this.selectedApplicants.push(person);
-        this.renderSelectedApplicants();
-        this.checkFormCompleteness();
-    }
-
-    removeApplicant(personId) {
-        this.selectedApplicants = this.selectedApplicants.filter(p => p.id !== personId);
-        this.renderSelectedApplicants();
-        this.checkFormCompleteness();
-    }
-
-    renderSelectedApplicants() {
-        const container = document.getElementById('selectedApplicantsList');
-        if (!container) return;
-
-        if (this.selectedApplicants.length === 0) {
-            container.innerHTML = `
-                <div class="empty-state">
-                    <i class="fas fa-user-plus fa-2x mb-2"></i>
-                    <p>Henüz başvuru sahibi seçilmedi</p>
-                </div>
-            `;
-            return;
-        }
-
-        let html = '';
-        this.selectedApplicants.forEach(applicant => {
-            html += `
-                <div class="selected-item">
-                    <span><strong>${applicant.name}</strong>${applicant.email ? `<br><small class="text-muted">${applicant.email}</small>` : ''}</span>
-                    <button type="button" class="remove-selected-item-btn" data-id="${applicant.id}">×</button>
-                </div>
-            `;
-        });
-        container.innerHTML = html;
     }
 
     handlePriorityTypeChange(value) {
@@ -732,12 +777,15 @@ class DataEntryModule {
     }
 
     showAddPersonModal(target = null) {
+        console.log('🔧 Person modal açılıyor:', target);
         const modal = document.getElementById('addPersonModal');
         if (modal) {
             $(modal).modal('show');
             const form = document.getElementById('personForm');
             if (form) form.reset();
             modal.dataset.targetField = target;
+        } else {
+            console.error('❌ addPersonModal bulunamadı');
         }
     }
 
@@ -799,7 +847,6 @@ class DataEntryModule {
     }
 
     updateButtonsAndTabs() {
-        // Bu fonksiyon create-task.js'den kopyalandı, gerekirse ayarlanabilir
         this.checkFormCompleteness();
     }
 
@@ -817,7 +864,6 @@ class DataEntryModule {
             return;
         }
 
-        // Transaction Type bilgisini al
         const selectedTransactionType = this.allTransactionTypes.find(
             type => type.alias === 'Başvuru' && type.ipType === 'trademark'
         );
@@ -828,7 +874,6 @@ class DataEntryModule {
         }
 
         try {
-            // Loading state
             const submitBtn = document.getElementById('saveTaskBtn');
             const originalText = submitBtn.innerHTML;
             submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Kaydediliyor...';
@@ -898,7 +943,6 @@ class DataEntryModule {
             console.error('Form submit hatası:', error);
             alert('❌ Portföy kaydı sırasında bir hata oluştu: ' + error.message);
         } finally {
-            // Loading state'i kaldır
             const submitBtn = document.getElementById('saveTaskBtn');
             if (submitBtn) {
                 submitBtn.innerHTML = '<i class="fas fa-save mr-2"></i>Portföye Kaydet';
@@ -908,21 +952,45 @@ class DataEntryModule {
     }
 }
 
+// Global scope'a erişim için
+window.dataEntryInstance = null;
+
 // DataEntryModule class'ını başlatma
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('🚀 DOM Content Loaded - DataEntry initialize ediliyor...');
     
-    // Shared layout'u yükle
-    await loadSharedLayout({ activeMenuLink: 'data-entry.html' });
-    
-    // DataEntry instance'ını oluştur ve initialize et
-    const dataEntryInstance = new DataEntryModule();
-    
-    // Global erişim için (debugging amaçlı)
-    window.dataEntryInstance = dataEntryInstance;
-    
-    // Initialize et
-    await dataEntryInstance.init();
-    
-    console.log('✅ DataEntry başarıyla initialize edildi');
+    try {
+        // Shared layout'u yükle
+        await loadSharedLayout({ activeMenuLink: 'data-entry.html' });
+        
+        // DataEntry instance'ını oluştur ve initialize et
+        const dataEntryInstance = new DataEntryModule();
+        
+        // Global erişim için (debugging amaçlı)
+        window.dataEntryInstance = dataEntryInstance;
+        
+        // Modal event listeners kurulması - layout yüklendikten sonra
+        setTimeout(() => {
+            const savePersonBtn = document.getElementById('savePersonBtn');
+            const cancelPersonBtn = document.getElementById('cancelPersonBtn');
+            
+            if (savePersonBtn) {
+                console.log('✅ Save person button bulundu, event listener ekleniyor');
+                savePersonBtn.addEventListener('click', () => dataEntryInstance.saveNewPerson());
+            } else {
+                console.error('❌ savePersonBtn bulunamadı');
+            }
+
+            if (cancelPersonBtn) {
+                cancelPersonBtn.addEventListener('click', () => dataEntryInstance.hideAddPersonModal());
+            }
+        }, 2000); // Modal'lar için daha uzun bekle
+        
+        // Initialize et
+        await dataEntryInstance.init();
+        
+        console.log('✅ DataEntry başarıyla initialize edildi');
+    } catch (error) {
+        console.error('❌ DataEntry initialization hatası:', error);
+    }
 });
