@@ -9,7 +9,7 @@ import {
 } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
 import {getFirestore, collection, addDoc, 
         getDocs, doc, updateDoc, deleteDoc, 
-        query, orderBy, where, getDoc, setDoc, arrayUnion, writeBatch, documentId, Timestamp, FieldValue } 
+        query, orderBy, where, getDoc, setDoc, arrayUnion, writeBatch, documentId, serverTimestamp, Timestamp, FieldValue } 
 from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 import { getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js';
 
