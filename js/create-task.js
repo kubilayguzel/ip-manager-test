@@ -931,28 +931,35 @@ class CreateTaskModule {
         });
         container.innerHTML = html;
     }
-    async handleBrandExampleFile(file) {
-        if (!file || !file.type.startsWith('image/')) return;
-        const img = new Image();
-        img.src = URL.createObjectURL(file);
-        img.onload = async () => {
-            const canvas = document.createElement('canvas');
-            canvas.width = 591;
-            canvas.height = 591;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(img, 0, 0, 591, 591);
-            const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.92));
-            const newFile = new File([blob], 'brand-example.jpg', {
-                type: 'image/jpeg'
-            });
-            const previewImage = document.getElementById('brandExamplePreview');
-            const previewContainer = document.getElementById('brandExamplePreviewContainer');
-            if (previewImage && previewContainer) {
-                previewImage.src = URL.createObjectURL(blob);
-                previewContainer.style.display = 'block';
-            }
-            this.uploadedFiles = [newFile];
-        };
+    handleBrandExampleFile(file) {
+    // Dosya yoksa veya resim değilse işlemi durdur
+    if (!file || !file.type.startsWith('image/')) {
+        this.uploadedFiles = [];
+        const previewContainer = document.getElementById('brandExamplePreviewContainer');
+        if (previewContainer) previewContainer.style.display = 'none';
+        return;
+    }
+
+    const img = new Image();
+    img.src = URL.createObjectURL(file);
+    img.onload = async () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = 591;
+        canvas.height = 591;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, 591, 591);
+        const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.92));
+        const newFile = new File([blob], 'brand-example.jpg', {
+            type: 'image/jpeg'
+        });
+        const previewImage = document.getElementById('brandExamplePreview');
+        const previewContainer = document.getElementById('brandExamplePreviewContainer');
+        if (previewImage && previewContainer) {
+            previewImage.src = URL.createObjectURL(blob);
+            previewContainer.style.display = 'block';
+        }
+        this.uploadedFiles = [newFile];
+    };
     }
     calculateTotalAmount() {
         const officialFeeInput = document.getElementById('officialFee');
