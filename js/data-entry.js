@@ -1,3 +1,5 @@
+// data-entry.js - Temiz ve çalışır versiyon
+
 import { createTrademarkApplication, uploadFileToStorage } from './create-task.js';
 import { authService, personService, transactionTypeService } from '../firebase-config.js';
 import { initializeNiceClassification, getSelectedNiceClasses } from './nice-classification.js';
@@ -17,10 +19,12 @@ class DataEntryModule {
         this.selectedServiceInvoiceParty = null;
         this.selectedRelatedParty = null;
         this.selectedIpRecord = null;
+        this.selectedNiceClasses = {};
     }
 
     async init() {
         console.log('📋 DataEntry modülü başlatılıyor...');
+        
         this.currentUser = authService.getCurrentUser();
         if (!this.currentUser) {
             console.error('❌ Kullanıcı oturum açmamış');
@@ -29,12 +33,14 @@ class DataEntryModule {
         }
 
         try {
+            console.log('📊 Veriler yükleniyor...');
             const [personsResult, transactionTypesResult] = await Promise.all([
                 personService.getPersons(),
                 transactionTypeService.getTransactionTypes()
             ]);
             this.allPersons = personsResult.data || [];
             this.allTransactionTypes = transactionTypesResult.data || [];
+            
             console.log('✅ Veriler yüklendi:', {
                 persons: this.allPersons.length,
                 transactionTypes: this.allTransactionTypes.length
@@ -47,16 +53,21 @@ class DataEntryModule {
 
         this.setupInitialForm();
         this.setupEventListeners();
+        
         console.log('🎉 DataEntry modülü başarıyla başlatıldı');
     }
 
     setupInitialForm() {
+        console.log('🏗️ Form oluşturuluyor...');
         const container = document.getElementById('conditionalFieldsContainer');
         if (container) {
             this.renderTrademarkApplicationForm(container);
             this.updateButtonsAndTabs();
+        } else {
+            console.error('❌ conditionalFieldsContainer bulunamadı');
         }
     }
+
     renderTrademarkApplicationForm(container) {
         console.log('📝 Marka başvuru formu render ediliyor...');
         container.innerHTML = `
@@ -191,6 +202,11 @@ class DataEntryModule {
                                                 </div>
                                                 <input type="text" class="form-control" id="niceClassSearch" 
                                                        placeholder="Sınıf ara... (örn: kozmetik, kimyasal, teknoloji)">
+                                                <div class="input-group-append">
+                                                    <button class="btn btn-outline-secondary" type="button" onclick="clearNiceSearch()">
+                                                        <i class="fas fa-times"></i>
+                                                    </button>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -317,14 +333,16 @@ class DataEntryModule {
             </div>
         `;
         
+        console.log('✅ Form HTML\'i oluşturuldu');
         this.setupDynamicFormListeners();
         this.setupBrandExampleUploader();
         this.updateButtonsAndTabs();
-        
         console.log('✅ Form hazır');
     }
 
     setupEventListeners() {
+        console.log('🔧 Ana event listeners kuruluyor...');
+        
         // Tab değişim event'leri
         $(document).on('click', '#myTaskTabs a', (e) => {
             e.preventDefault();
@@ -332,21 +350,25 @@ class DataEntryModule {
             this.activeTab = targetTabId;
             $(e.target).tab('show');
         });
-
-        $(document).on('shown.bs.tab', '#myTaskTabs a', async (e) => {
+        
+        $(document).on('shown.bs.tab', '#myTaskTabs a', (e) => {
             this.updateButtonsAndTabs();
             const targetTabId = e.target.getAttribute('href').substring(1);
             console.log('📑 Tab değişti:', targetTabId);
-
+            
             if (targetTabId === 'goods-services' && !this.isNiceClassificationInitialized) {
                 console.log('🔄 Nice Classification başlatılıyor...');
-                await initializeNiceClassification();
-                this.isNiceClassificationInitialized = true;
-                console.log('✅ Nice Classification başlatıldı');
+                this.initializeNiceClassificationWithDebug();
             }
-            if (targetTabId === 'applicants') this.renderSelectedApplicants();
-            if (targetTabId === 'priority') this.renderPriorities();
-            if (targetTabId === 'summary') this.renderSummaryTab();
+            if (targetTabId === 'applicants') {
+                this.renderSelectedApplicants();
+            }
+            if (targetTabId === 'priority') {
+                this.renderPriorities();
+            }
+            if (targetTabId === 'summary') {
+                this.renderSummaryTab();
+            }
         });
 
         // Save button
@@ -354,46 +376,239 @@ class DataEntryModule {
             e.preventDefault();
             this.handleFormSubmit();
         });
+        
+        console.log('✅ Ana event listeners kuruldu');
+    }
+
+    async initializeNiceClassificationWithDebug() {
+        try {
+            console.log('🔄 Nice Classification debug ile başlatılıyor...');
+            
+            await initializeNiceClassification();
+            this.isNiceClassificationInitialized = true;
+            console.log('✅ Nice Classification başarıyla başlatıldı');
+            
+            // clearNiceSearch fonksiyonunu global scope'a ekle
+            window.clearNiceSearch = function() {
+                const searchInput = document.getElementById('niceClassSearch');
+                if (searchInput) {
+                    searchInput.value = '';
+                    searchInput.dispatchEvent(new Event('input'));
+                }
+            };
+            console.log('✅ clearNiceSearch fonksiyonu eklendi');
+            
+            // Event listener ekleme
+            setTimeout(() => {
+                this.setupNiceClassificationEvents();
+            }, 1000);
+            
+        } catch (error) {
+            console.error('❌ Nice Classification başlatılamadı:', error);
+            const container = document.getElementById('niceClassificationList');
+            if (container) {
+                container.innerHTML = `
+                    <div class="text-center text-danger p-4">
+                        <i class="fas fa-exclamation-triangle fa-2x mb-2"></i>
+                        <p>Nice Classification yüklenemedi</p>
+                        <small>Hata: ${error.message}</small>
+                        <br><button class="btn btn-sm btn-primary mt-2" onclick="dataEntryInstance.initializeNiceClassificationWithDebug()">Tekrar Dene</button>
+                    </div>
+                `;
+            }
+        }
+    }
+
+    setupNiceClassificationEvents() {
+        console.log('🔧 Nice Classification event listeners kuruluyor...');
+        
+        const listContainer = document.getElementById('niceClassificationList');
+        const selectedContainer = document.getElementById('selectedNiceClasses');
+        
+        if (!listContainer) {
+            console.error('❌ List container bulunamadı');
+            return;
+        }
+
+        // Ana list container'a event listener ekle
+        listContainer.addEventListener('click', (e) => {
+            // Select class button tıklaması
+            const selectBtn = e.target.closest('.select-class-btn');
+            if (selectBtn) {
+                e.preventDefault();
+                e.stopPropagation();
+                const classNumber = selectBtn.dataset.classNumber;
+                console.log('✅ Sınıf seç butonu tıklandı:', classNumber);
+                return;
+            }
+
+            // Subclass tıklaması
+            const subclass = e.target.closest('.subclass-item');
+            if (subclass) {
+                e.preventDefault();
+                e.stopPropagation();
+                const code = subclass.dataset.code;
+                const classNum = subclass.dataset.classNum;
+                const text = subclass.dataset.text;
+                console.log('✅ Alt sınıf tıklandı:', {code, classNum, text});
+                
+                this.toggleNiceSubclass(code, classNum, text, subclass);
+                return;
+            }
+
+            // Header tıklaması (accordion)
+            const header = e.target.closest('.class-header');
+            if (header && !e.target.closest('.select-class-btn')) {
+                const classId = header.dataset.id;
+                console.log('🔄 Accordion toggle:', classId);
+                const subContainer = document.getElementById(`subclasses-${classId}`);
+                if (subContainer) {
+                    subContainer.classList.toggle('show');
+                    header.classList.toggle('expanded');
+                    console.log('✅ Accordion toggled');
+                }
+            }
+        });
+        
+        // Selected classes container'a event listener ekle
+        if (selectedContainer) {
+            selectedContainer.addEventListener('click', (e) => {
+                const removeBtn = e.target.closest('.remove-selected-class-btn');
+                if (removeBtn) {
+                    e.preventDefault();
+                    const key = removeBtn.dataset.key;
+                    console.log('🗑️ Seçim kaldırılıyor:', key);
+                    this.removeNiceSelection(key);
+                }
+            });
+        }
+        
+        console.log('✅ Nice Classification event listeners eklendi');
+    }
+
+    toggleNiceSubclass(code, classNum, text, element) {
+        const isSelected = element.classList.contains('selected');
+        
+        if (isSelected) {
+            element.classList.remove('selected');
+            this.removeNiceSelection(code);
+        } else {
+            element.classList.add('selected');
+            this.addNiceSelection(code, classNum, text);
+        }
+    }
+
+    addNiceSelection(code, classNum, text) {
+        console.log('➕ Nice seçim ekleniyor:', {code, classNum, text});
+        
+        this.selectedNiceClasses[code] = {classNum, text};
+        this.renderSelectedNiceClasses();
+    }
+
+    removeNiceSelection(key) {
+        console.log('🗑️ Nice seçim kaldırılıyor:', key);
+        
+        delete this.selectedNiceClasses[key];
+        this.renderSelectedNiceClasses();
+        
+        // Element'ten de selected class'ını kaldır
+        const element = document.querySelector(`[data-code="${key}"]`);
+        if (element) {
+            element.classList.remove('selected');
+        }
+    }
+
+    renderSelectedNiceClasses() {
+        const container = document.getElementById('selectedNiceClasses');
+        if (!container) return;
+
+        if (Object.keys(this.selectedNiceClasses).length === 0) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-list-alt fa-3x text-muted mb-3"></i>
+                    <p class="text-muted">
+                        Henüz hiçbir sınıf seçilmedi.<br>
+                        Sol panelden sınıf başlığına veya alt sınıfları seçin.
+                    </p>
+                </div>
+            `;
+            
+            const countElement = document.getElementById('selectedClassCount');
+            if (countElement) countElement.textContent = '0';
+            return;
+        }
+
+        let html = '';
+        Object.entries(this.selectedNiceClasses).forEach(([code, item]) => {
+            const displayCode = item.classNum === '99' ? item.classNum : code;
+            html += `
+                <div class="selected-class-item">
+                    <div class="selected-class-number">Sınıf ${displayCode}</div>
+                    <p class="selected-class-description">${item.text}</p>
+                    <button class="remove-selected-class-btn" data-key="${code}" title="Kaldır">&times;</button>
+                </div>
+            `;
+        });
+        
+        container.innerHTML = html;
+        
+        const countElement = document.getElementById('selectedClassCount');
+        if (countElement) countElement.textContent = Object.keys(this.selectedNiceClasses).length;
     }
 
     setupDynamicFormListeners() {
-        // Başvuru sahibi arama
+        console.log('🔧 Dinamik form listeners kuruluyor...');
+        
         setTimeout(() => {
             const applicantSearchInput = document.getElementById('applicantSearchInput');
+            console.log('🔍 applicantSearchInput elementi:', applicantSearchInput);
+            
             if (applicantSearchInput) {
+                console.log('✅ Başvuru sahibi arama input bulundu, event listener ekleniyor');
                 applicantSearchInput.addEventListener('input', (e) => {
+                    console.log('🔍 Arama yapılıyor:', e.target.value);
                     this.searchPersons(e.target.value, 'applicant');
                 });
+            } else {
+                console.error('❌ applicantSearchInput elementi bulunamadı');
             }
+
             const addNewApplicantBtn = document.getElementById('addNewApplicantBtn');
             if (addNewApplicantBtn) {
+                console.log('✅ Yeni kişi ekleme butonu bulundu');
                 addNewApplicantBtn.addEventListener('click', () => {
+                    console.log('👤 Yeni kişi ekleme modalı açılıyor');
                     this.showAddPersonModal('applicant');
                 });
             }
+
             const selectedApplicantsList = document.getElementById('selectedApplicantsList');
             if (selectedApplicantsList) {
                 selectedApplicantsList.addEventListener('click', (e) => {
                     const removeBtn = e.target.closest('.remove-selected-item-btn');
-                    if (removeBtn) this.removeApplicant(removeBtn.dataset.id);
+                    if (removeBtn) {
+                        const personId = removeBtn.dataset.id;
+                        this.removeApplicant(personId);
+                    }
                 });
             }
         }, 100);
 
-    // Rüçhan eventleri
         setTimeout(() => {
             const priorityTypeSelect = document.getElementById('priorityType');
             if (priorityTypeSelect) {
-                priorityTypeSelect.addEventListener('change', (e) =>
-                    this.handlePriorityTypeChange(e.target.value)
-                );
+                priorityTypeSelect.addEventListener('change', (e) => this.handlePriorityTypeChange(e.target.value));
             }
+
             const addPriorityBtn = document.getElementById('addPriorityBtn');
             if (addPriorityBtn) {
                 addPriorityBtn.addEventListener('click', () => this.addPriority());
             }
         }, 100);
+        
+        console.log('✅ Dinamik form listeners kuruldu');
     }
+
     searchPersons(query, target) {
         console.log('🔍 Person search çağrıldı:', { query, target, personsCount: this.allPersons.length });
         
@@ -669,7 +884,7 @@ class DataEntryModule {
         </div>`;
     
         // 2. Mal ve Hizmet Sınıfları
-        const goodsAndServices = getSelectedNiceClasses();
+        const goodsAndServices = this.getSelectedNiceClassesLocal();
         html += `<h4 class="section-title mt-4">Mal ve Hizmet Sınıfları</h4>`;
         if (goodsAndServices.length > 0) {
             html += `<div class="summary-card">
@@ -709,6 +924,12 @@ class DataEntryModule {
         }
     
         container.innerHTML = html;
+    }
+
+    getSelectedNiceClassesLocal() {
+        return Object.entries(this.selectedNiceClasses).map(([code, item]) => {
+            return item.classNum === '99' ? `(99) ${item.text}` : `(${code}) ${item.text}`;
+        });
     }
 
     showAddPersonModal(target = null) {
@@ -788,7 +1009,7 @@ class DataEntryModule {
     async handleFormSubmit() {
         console.log('📤 Form gönderiliyor...');
 
-        const goodsAndServices = getSelectedNiceClasses();
+        const goodsAndServices = this.getSelectedNiceClassesLocal();
         if (goodsAndServices.length === 0) {
             alert('Lütfen en az bir mal veya hizmet seçin.');
             return;
@@ -886,26 +1107,53 @@ class DataEntryModule {
         }
     }
 }
-// Global erişim
+
+// Global scope'a erişim için
 window.dataEntryInstance = null;
 
-// Başlatma
+// DataEntryModule class'ını başlatma
 document.addEventListener('DOMContentLoaded', async () => {
+    console.log('🚀 DOM Content Loaded - DataEntry initialize ediliyor...');
+    
     try {
         await loadSharedLayout({ activeMenuLink: 'data-entry.html' });
+        
         const dataEntryInstance = new DataEntryModule();
         window.dataEntryInstance = dataEntryInstance;
-
+        
         setTimeout(() => {
+            console.log('🔧 Modal event listeners kuruluyor...');
+            
             const savePersonBtn = document.getElementById('savePersonBtn');
-            if (savePersonBtn) savePersonBtn.addEventListener('click', () => dataEntryInstance.saveNewPerson());
             const cancelPersonBtn = document.getElementById('cancelPersonBtn');
-            if (cancelPersonBtn) cancelPersonBtn.addEventListener('click', () => dataEntryInstance.hideAddPersonModal());
             const closeAddPersonModalBtn = document.getElementById('closeAddPersonModal');
-            if (closeAddPersonModalBtn) closeAddPersonModalBtn.addEventListener('click', () => dataEntryInstance.hideAddPersonModal());
-        }, 3000);
+            
+            console.log('🔍 Modal elementleri:', {
+                savePersonBtn: !!savePersonBtn,
+                cancelPersonBtn: !!cancelPersonBtn,
+                closeAddPersonModalBtn: !!closeAddPersonModalBtn
+            });
+            
+            if (savePersonBtn) {
+                console.log('✅ Save person button bulundu, event listener ekleniyor');
+                savePersonBtn.addEventListener('click', () => dataEntryInstance.saveNewPerson());
+            } else {
+                console.error('❌ savePersonBtn bulunamadı - shared layout yüklenmemiş olabilir');
+            }
 
+            if (cancelPersonBtn) {
+                console.log('✅ Cancel person button bulundu');
+                cancelPersonBtn.addEventListener('click', () => dataEntryInstance.hideAddPersonModal());
+            }
+            
+            if (closeAddPersonModalBtn) {
+                console.log('✅ Close modal button bulundu');
+                closeAddPersonModalBtn.addEventListener('click', () => dataEntryInstance.hideAddPersonModal());
+            }
+        }, 3000);
+        
         await dataEntryInstance.init();
+        
         console.log('✅ DataEntry başarıyla initialize edildi');
     } catch (error) {
         console.error('❌ DataEntry initialization hatası:', error);
