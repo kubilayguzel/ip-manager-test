@@ -1,386 +1,420 @@
+<!-- data-entry.html - Düzeltilmiş versiyon -->
 <!DOCTYPE html>
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Portföye Marka Kaydı</title>
+    <title>Portföye Marka Kaydı - IP Manager</title>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.1/css/all.min.css">
-    <link rel="stylesheet" href="assets/css/style.css"> <style>
-        .form-section { margin-bottom: 25px; padding: 15px; border: 1px solid #e0e0e0; border-radius: 8px; background-color: #f9f9f9; }
-        .section-title { font-size: 1.25rem; font-weight: 600; color: #1e3c72; border-bottom: 2px solid #1e3c72; padding-bottom: 5px; margin-bottom: 15px; }
-        .tab-content-card { padding: 20px; border: 1px solid #ddd; border-top: none; border-radius: 0 0 8px 8px; }
-        .selected-items-list { min-height: 100px; border: 1px dashed #ccc; padding: 10px; border-radius: 8px; background-color: #fcfcfc; }
-        .selected-item { background-color: #e9ecef; }
-        .search-result-item { cursor: pointer; padding: 8px; border-bottom: 1px solid #eee; }
-        .search-result-item:hover { background-color: #f0f0f0; }
-        .empty-state { text-align: center; color: #a0a0a0; padding: 20px; }
-        .form-input, .form-select, .form-textarea { display: block; width: 100%; padding: 0.375rem 0.75rem; font-size: 1rem; line-height: 1.5; color: #495057; background-color: #fff; background-clip: padding-box; border: 1px solid #ced4da; border-radius: 0.25rem; transition: border-color .15s ease-in-out,box-shadow .15s ease-in-out; }
-        .input-with-currency { display: flex; align-items: center; }
-        .input-with-currency .currency-select { flex-shrink: 0; margin-left: 5px; }
-        .total-amount-display { font-size: 1.5rem; font-weight: bold; color: #28a745; padding: 5px; border: 1px solid #28a745; border-radius: 5px; background-color: #e2f9e7; }
-        .file-upload-wrapper { border: 2px dashed #007bff; border-radius: 10px; padding: 20px; text-align: center; cursor: pointer; transition: background-color 0.3s; }
-        .file-upload-wrapper.drag-over { background-color: #e9f5ff; }
-        .brand-upload-frame { height: 250px; display: flex; flex-direction: column; justify-content: center; align-items: center; }
-        .upload-icon { font-size: 4em; color: #007bff; }
-        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; }
-        .form-grid .full-width { grid-column: 1 / -1; }
-        .form-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
-        .form-label { font-weight: 500; }
-        .checkbox-label { display: flex; align-items: center; }
-        .checkbox-label input { margin-right: 8px; }
+    <link rel="stylesheet" href="css/shared-styles.css">
+    <style>
+        /* Sayfa özel stilleri */
+        .main-content {
+            margin-top: 20px;
+            padding: 20px;
+        }
+        
+        .page-header {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        
+        .form-section { 
+            margin-bottom: 25px; 
+            padding: 20px; 
+            border: 1px solid #e0e0e0; 
+            border-radius: 10px; 
+            background-color: #f9f9f9; 
+        }
+        
+        .section-title { 
+            font-size: 1.25rem; 
+            font-weight: 600; 
+            color: #1e3c72; 
+            border-bottom: 2px solid #1e3c72; 
+            padding-bottom: 5px; 
+            margin-bottom: 15px; 
+        }
+        
+        .tab-content-card { 
+            padding: 25px; 
+            border: 1px solid #ddd; 
+            border-top: none; 
+            border-radius: 0 0 10px 10px; 
+            background: white;
+        }
+        
+        .form-actions { 
+            display: flex; 
+            justify-content: flex-end; 
+            gap: 15px; 
+            margin-top: 30px; 
+            padding-top: 20px;
+            border-top: 2px solid #e0e0e0;
+        }
+        
+        .btn {
+            padding: 12px 25px;
+            border-radius: 8px;
+            font-weight: 600;
+        }
+        
+        /* File upload stili */
+        .file-upload-wrapper { 
+            border: 2px dashed #007bff; 
+            border-radius: 10px; 
+            padding: 30px; 
+            text-align: center; 
+            cursor: pointer; 
+            transition: all 0.3s ease;
+            background: #f8f9fa;
+        }
+        
+        .file-upload-wrapper:hover,
+        .file-upload-wrapper.drag-over { 
+            background-color: #e9f5ff; 
+            border-color: #0056b3;
+        }
+        
+        .brand-upload-frame { 
+            height: 200px; 
+            display: flex; 
+            flex-direction: column; 
+            justify-content: center; 
+            align-items: center; 
+        }
+        
+        .upload-icon { 
+            font-size: 3em; 
+            color: #007bff; 
+            margin-bottom: 15px;
+        }
+        
+        /* Image preview */
+        #brandExamplePreviewContainer {
+            margin-top: 15px;
+            text-align: center;
+            display: none;
+        }
+        
+        #brandExamplePreview {
+            max-width: 200px;
+            max-height: 200px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+        }
+        
+        /* Tab stili geliştirmesi */
+        .nav-tabs .nav-link {
+            border-radius: 10px 10px 0 0;
+            margin-right: 5px;
+            font-weight: 500;
+            color: #666;
+        }
+        
+        .nav-tabs .nav-link.active {
+            background-color: white;
+            border-color: #ddd #ddd white;
+            color: #1e3c72;
+            font-weight: 600;
+        }
     </style>
 </head>
 <body>
+    <!-- Layout placeholder - shared layout yüklenecek -->
     <div id="layout-placeholder"></div>
     
-    <div id="main-content" class="container mt-5">
-        <h1>Portföye Yeni Marka Kaydı</h1>
+    <!-- Ana içerik alanı -->
+    <div class="main-content">
+        <!-- Sayfa başlığı -->
+        <div class="page-header">
+            <h1><i class="fas fa-plus-circle mr-3"></i>Portföye Yeni Marka Kaydı</h1>
+            <p class="mb-0">Yeni bir marka başvurusu oluşturun ve portföyünüze ekleyin</p>
+        </div>
 
+        <!-- Ana form -->
         <form id="dataEntryForm">
-            <div class="card">
-                <div class="card-body">
+            <div class="card shadow">
+                <div class="card-body p-0">
+                    <!-- Tab navigasyonu -->
                     <ul class="nav nav-tabs" id="dataEntryTabs" role="tablist">
                         <li class="nav-item">
-                            <a class="nav-link active" id="brand-info-tab" data-toggle="tab" href="#brand-info" role="tab" aria-controls="brand-info" aria-selected="true">Marka Bilgileri</a>
+                            <a class="nav-link active" id="brand-info-tab" data-toggle="tab" href="#brand-info" 
+                               role="tab" aria-controls="brand-info" aria-selected="true">
+                               <i class="fas fa-tag mr-2"></i>Marka Bilgileri
+                            </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" id="goods-services-tab" data-toggle="tab" href="#goods-services" role="tab" aria-controls="goods-services" aria-selected="false">Mal/Hizmet Seçimi</a>
+                            <a class="nav-link" id="goods-services-tab" data-toggle="tab" href="#goods-services" 
+                               role="tab" aria-controls="goods-services" aria-selected="false">
+                               <i class="fas fa-list-ul mr-2"></i>Mal/Hizmet Seçimi
+                            </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" id="applicants-tab" data-toggle="tab" href="#applicants" role="tab" aria-controls="applicants" aria-selected="false">Başvuru Sahibi</a>
+                            <a class="nav-link" id="applicants-tab" data-toggle="tab" href="#applicants" 
+                               role="tab" aria-controls="applicants" aria-selected="false">
+                               <i class="fas fa-users mr-2"></i>Başvuru Sahibi
+                            </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" id="priority-tab" data-toggle="tab" href="#priority" role="tab" aria-controls="priority" aria-selected="false">Rüçhan</a>
+                            <a class="nav-link" id="priority-tab" data-toggle="tab" href="#priority" 
+                               role="tab" aria-controls="priority" aria-selected="false">
+                               <i class="fas fa-flag mr-2"></i>Rüçhan
+                            </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" id="accrual-tab" data-toggle="tab" href="#accrual" role="tab" aria-controls="accrual" aria-selected="false">Tahakkuk</a>
+                            <a class="nav-link" id="accrual-tab" data-toggle="tab" href="#accrual" 
+                               role="tab" aria-controls="accrual" aria-selected="false">
+                               <i class="fas fa-calculator mr-2"></i>Tahakkuk
+                            </a>
                         </li>
                     </ul>
 
-                    <div class="tab-content mt-3 tab-content-card" id="dataEntryTabContent">
+                    <!-- Tab içeriği -->
+                    <div class="tab-content tab-content-card" id="dataEntryTabContent">
+                        <!-- 1. Marka Bilgileri -->
                         <div class="tab-pane fade show active" id="brand-info" role="tabpanel" aria-labelledby="brand-info-tab">
                             <div class="form-section">
-                                <h3 class="section-title">Marka Bilgileri</h3>
-                                <div class="form-group row">
-                                    <label for="brandType" class="col-sm-3 col-form-label">Marka Tipi</label>
-                                    <div class="col-sm-9">
-                                        <select class="form-control" id="brandType">
-                                            <option value="Sadece Kelime">Sadece Kelime</option>
-                                            <option value="Sadece Şekil">Sadece Şekil</option>
-                                            <option value="Şekil + Kelime" selected>Şekil + Kelime</option>
-                                            <option value="Ses">Ses</option>
-                                            <option value="Hareket">Hareket</option>
-                                            <option value="Renk">Renk</option>
-                                            <option value="Üç Boyutlu">Üç Boyutlu</option>
-                                        </select>
-                                    </div>
-                                </div>
-                                <div class="form-group row">
-                                    <label for="brandCategory" class="col-sm-3 col-form-label">Marka Türü</label>
-                                    <div class="col-sm-9">
-                                        <select class="form-control" id="brandCategory">
-                                            <option value="Ticaret/Hizmet Markası" selected>Ticaret/Hizmet Markası</option>
-                                            <option value="Garanti Markası">Garanti Markası</option>
-                                            <option value="Ortak Marka">Ortak Marka</option>
-                                        </select>
-                                    </div>
-                                </div>
-                                <div class="form-group row">
-                                    <label for="brandExample" class="col-sm-3 col-form-label">Marka Örneği</label>
-                                    <div class="col-sm-9">
-                                        <div id="brand-example-drop-zone" class="file-upload-wrapper brand-upload-frame">
-                                            <input type="file" id="brandExample" accept="image/*" style="display:none;">
-                                            <div class="file-upload-button">
-                                                <div class="upload-icon" style="font-size: 2.5em; color: #1e3c72;">🖼️</div>
-                                                <div style="font-weight: 500;">Marka örneğini buraya sürükleyin veya seçmek için tıklayın</div>
-                                            </div>
-                                            <div class="file-upload-info">
-                                                İstenen format: 591x591px, 300 DPI, JPEG. Yüklenen dosya otomatik olarak dönüştürülecektir.
-                                            </div>
-                                        </div>
-                                        <div id="brandExamplePreviewContainer" class="mt-3 text-center" style="display:none;">
-                                            <img id="brandExamplePreview" src="#" alt="Marka Örneği Önizlemesi"
-                                                style="max-width:200px; max-height:200px; border:1px solid #ddd; padding:5px; border-radius:8px;">
-                                            <button id="removeBrandExampleBtn" type="button" class="btn btn-sm btn-danger mt-2">Kaldır</button>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="form-group row">
-                                    <label for="brandExampleText" class="col-sm-3 col-form-label">Marka Örneği Yazılı İfadesi</label>
-                                    <div class="col-sm-9">
-                                        <input type="text" class="form-control" id="brandExampleText">
-                                    </div>
-                                </div>
-                                <div class="form-group row">
-                                    <label for="nonLatinAlphabet" class="col-sm-3 col-form-label">Marka Örneğinde Latin Alfabesi Haricinde Harf Var Mı?</label>
-                                    <div class="col-sm-9">
-                                        <input type="text" class="form-control" id="nonLatinAlphabet">
-                                    </div>
-                                </div>
-                                <div class="form-group row">
-                                    <label class="col-sm-3 col-form-label">Önyazı Talebi</label>
-                                    <div class="col-sm-9">
-                                        <div class="form-check form-check-inline">
-                                            <input class="form-check-input" type="radio" name="coverLetterRequest" id="coverLetterRequestVar" value="var">
-                                            <label class="form-check-label" for="coverLetterRequestVar">Var</label>
-                                        </div>
-                                        <div class="form-check form-check-inline">
-                                            <input class="form-check-input" type="radio" name="coverLetterRequest" id="coverLetterRequestYok" value="yok" checked>
-                                            <label class="form-check-label" for="coverLetterRequestYok">Yok</label>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="form-group row">
-                                    <label class="col-sm-3 col-form-label">Muvafakat Talebi</label>
-                                    <div class="col-sm-9">
-                                        <div class="form-check form-check-inline">
-                                            <input class="form-check-input" type="radio" name="consentRequest" id="consentRequestVar" value="var">
-                                            <label class="form-check-label" for="consentRequestVar">Var</label>
-                                        </div>
-                                        <div class="form-check form-check-inline">
-                                            <input class="form-check-input" type="radio" name="consentRequest" id="consentRequestYok" value="yok" checked>
-                                            <label class="form-check-label" for="consentRequestYok">Yok</label>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="tab-pane fade" id="goods-services" role="tabpanel" aria-labelledby="goods-services-tab">
-                            <div class="nice-classification-container mt-3">
+                                <h3 class="section-title"><i class="fas fa-info-circle mr-2"></i>Marka Bilgileri</h3>
+                                
                                 <div class="row">
-                                    <div class="col-lg-8">
-                                        <div class="classification-panel mb-3">
-                                            <div class="panel-header">
-                                                <h5 class="mb-0"><i class="fas fa-list-ul mr-2"></i>Nice Classification - Mal ve Hizmet Sınıfları</h5>
-                                                <small class="text-white-50">1-45 arası sınıflardan seçim yapın</small>
-                                            </div>
-                                            <div class="search-section">
-                                                <div class="input-group">
-                                                    <div class="input-group-prepend"><span class="input-group-text"><i class="fas fa-search"></i></span></div>
-                                                    <input type="text" class="form-control" id="niceClassSearch" placeholder="Sınıf ara... (örn: kozmetik, kimyasal, teknoloji)">
-                                                    <div class="input-group-append"><button class="btn btn-outline-secondary" type="button" onclick="clearNiceSearch()"><i class="fas fa-times"></i></button></div>
-                                                </div>
-                                            </div>
-                                            <div class="classes-list" id="niceClassificationList" style="height: 450px; overflow-y: auto; background: #fafafa;">
-                                                <div class="loading-spinner">
-                                                    <div class="spinner-border text-primary" role="status"><span class="sr-only">Yükleniyor...</span></div>
-                                                    <p class="mt-2 text-muted">Nice sınıfları yükleniyor...</p>
-                                                </div>
-                                            </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label for="brandType" class="font-weight-bold">Marka Tipi</label>
+                                            <select class="form-control" id="brandType">
+                                                <option value="Sadece Kelime">Sadece Kelime</option>
+                                                <option value="Sadece Şekil">Sadece Şekil</option>
+                                                <option value="Şekil + Kelime" selected>Şekil + Kelime</option>
+                                                <option value="Ses">Ses</option>
+                                                <option value="Hareket">Hareket</option>
+                                                <option value="Renk">Renk</option>
+                                                <option value="Üç Boyutlu">Üç Boyutlu</option>
+                                            </select>
                                         </div>
-                                        <div class="custom-class-frame">
-                                            <div class="custom-class-section">
-                                                <div class="d-flex align-items-center mb-2"><span class="badge badge-danger mr-2" style="font-size: 11px;">99</span><strong class="text-danger">Özel Mal/Hizmet Tanımı</strong></div>
-                                                <p class="small text-muted mb-2"><i class="fas fa-info-circle mr-1"></i>Yukarıdaki sınıflarda yer almayan özel mal/hizmetler için kullanın.</p>
-                                                <div class="input-group">
-                                                    <textarea class="form-control" id="customClassInput" placeholder="Özel mal/hizmet tanımınızı yazın..." maxlength="50000" rows="3" style="resize: vertical;"></textarea>
-                                                    <div class="input-group-append"><button class="btn btn-danger" type="button" id="addCustomClassBtn"><i class="fas fa-plus mr-1"></i>99. Sınıfa Ekle</button></div>
-                                                </div>
-                                                <small class="form-text text-muted"><span id="customClassCharCount">0</span> / 50.000 karakter</small>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label for="brandCategory" class="font-weight-bold">Marka Türü</label>
+                                            <select class="form-control" id="brandCategory">
+                                                <option value="Ticaret/Hizmet Markası" selected>Ticaret/Hizmet Markası</option>
+                                                <option value="Garanti Markası">Garanti Markası</option>
+                                                <option value="Ortak Marka">Ortak Marka</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Marka Örneği Upload -->
+                                <div class="form-group">
+                                    <label class="font-weight-bold">Marka Örneği</label>
+                                    <div id="brand-example-drop-zone" class="file-upload-wrapper brand-upload-frame">
+                                        <input type="file" id="brandExample" accept="image/*" style="display:none;">
+                                        <div class="upload-icon">🖼️</div>
+                                        <h5>Marka örneğini buraya sürükleyin veya seçmek için tıklayın</h5>
+                                        <p class="text-muted">İstenen format: 591x591px, 300 DPI, JPEG</p>
+                                    </div>
+                                    <div id="brandExamplePreviewContainer">
+                                        <img id="brandExamplePreview" alt="Marka Önizleme">
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label for="brandExampleText" class="font-weight-bold">Yazılı İfadesi</label>
+                                            <input type="text" class="form-control" id="brandExampleText" 
+                                                   placeholder="Marka metni varsa yazın">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label for="nonLatinAlphabet" class="font-weight-bold">Latin Alfabesi Dışı Harf</label>
+                                            <input type="text" class="form-control" id="nonLatinAlphabet" 
+                                                   placeholder="Varsa yazın">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Radio buttonlar -->
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label class="font-weight-bold">Önyazı Talebi</label>
+                                            <div class="form-check-inline">
+                                                <input class="form-check-input" type="radio" name="coverLetterRequest" 
+                                                       id="coverLetterRequestVar" value="var">
+                                                <label class="form-check-label mr-4" for="coverLetterRequestVar">Var</label>
+                                                
+                                                <input class="form-check-input" type="radio" name="coverLetterRequest" 
+                                                       id="coverLetterRequestYok" value="yok" checked>
+                                                <label class="form-check-label" for="coverLetterRequestYok">Yok</label>
                                             </div>
                                         </div>
                                     </div>
-                                    <div class="col-lg-4 d-flex flex-column">
-                                        <div class="selected-classes-panel flex-grow-1 d-flex flex-column">
-                                            <div class="panel-header d-flex justify-content-between align-items-center"><h5 class="mb-0"><i class="fas fa-check-circle mr-2"></i>Seçilen Mal/Hizmet</h5><span class="badge badge-light" id="selectedClassCount">0</span></div>
-                                            <div class="selected-classes-content" id="selectedNiceClasses" style="height: 570px; overflow-y: auto; padding: 15px;">
-                                                <div class="empty-state"><i class="fas fa-list-alt fa-3x text-muted mb-3"></i><p class="text-muted">Henüz hiçbir sınıf seçilmedi.<br>Sol panelden sınıf ve alt sınıfları seçin.</p></div>
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label class="font-weight-bold">Muvafakat Talebi</label>
+                                            <div class="form-check-inline">
+                                                <input class="form-check-input" type="radio" name="consentRequest" 
+                                                       id="consentRequestVar" value="var">
+                                                <label class="form-check-label mr-4" for="consentRequestVar">Var</label>
+                                                
+                                                <input class="form-check-input" type="radio" name="consentRequest" 
+                                                       id="consentRequestYok" value="yok" checked>
+                                                <label class="form-check-label" for="consentRequestYok">Yok</label>
                                             </div>
-                                            <div class="border-top p-3"><button type="button" class="btn btn-outline-danger btn-sm btn-block" onclick="clearAllSelectedClasses()"><i class="fas fa-trash mr-1"></i>Tümünü Temizle</button></div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
+                        <!-- 2. Mal/Hizmet Seçimi -->
+                        <div class="tab-pane fade" id="goods-services" role="tabpanel" aria-labelledby="goods-services-tab">
+                            <div class="form-section">
+                                <h3 class="section-title"><i class="fas fa-list-ul mr-2"></i>Mal ve Hizmet Sınıfları</h3>
+                                <p class="text-muted">Nice Classification sistemi kullanılarak mal ve hizmet sınıflarınızı seçin.</p>
+                                
+                                <!-- Nice Classification container - nice-classification.js tarafından doldurulacak -->
+                                <div id="niceClassificationContainer">
+                                    <div class="text-center p-4">
+                                        <i class="fas fa-spinner fa-spin fa-2x text-primary"></i>
+                                        <p class="mt-2">Nice Classification yükleniyor...</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 3. Başvuru Sahibi -->
                         <div class="tab-pane fade" id="applicants" role="tabpanel" aria-labelledby="applicants-tab">
                             <div class="form-section">
-                                <h3 class="section-title">Başvuru Sahibi Bilgileri</h3>
-                                <p class="text-muted mb-3">İlgili başvuru sahiplerini arayarak ekleyebilir veya yeni bir kişi oluşturabilirsiniz.</p>
-                                <div class="form-group full-width">
-                                    <label for="applicantSearchInput" class="form-label">Başvuru Sahibi Ara</label>
-                                    <div style="display: flex; gap: 10px;">
-                                        <input type="text" id="applicantSearchInput" class="form-input" placeholder="Aramak için en az 2 karakter...">
-                                        <button type="button" id="addNewApplicantBtn" class="btn-small btn-add-person"><span>&#x2795;</span> Yeni Kişi</button>
-                                    </div>
-                                    <div id="applicantSearchResults" class="search-results-list"></div>
+                                <h3 class="section-title"><i class="fas fa-users mr-2"></i>Başvuru Sahibi</h3>
+                                
+                                <div class="mb-3">
+                                    <button type="button" class="btn btn-primary" id="addApplicantBtn">
+                                        <i class="fas fa-plus mr-2"></i>Başvuru Sahibi Ekle
+                                    </button>
                                 </div>
-                                <div class="form-group full-width mt-4">
-                                    <label class="form-label">Seçilen Başvuru Sahipleri</label>
-                                    <div id="selectedApplicantsList" class="selected-items-list">
-                                        <div class="empty-state"><i class="fas fa-user-plus fa-3x text-muted mb-3"></i><p class="text-muted">Henüz başvuru sahibi seçilmedi.</p></div>
-                                    </div>
+                                
+                                <div id="selectedApplicantsContainer" class="border rounded p-3" style="min-height: 100px;">
+                                    <p class="text-muted text-center">Henüz başvuru sahibi seçilmedi</p>
                                 </div>
                             </div>
                         </div>
 
+                        <!-- 4. Rüçhan -->
                         <div class="tab-pane fade" id="priority" role="tabpanel" aria-labelledby="priority-tab">
                             <div class="form-section">
-                                <h3 class="section-title">Rüçhan Bilgileri</h3>
-                                <p class="text-muted mb-3">Birden fazla rüçhan hakkı ekleyebilirsiniz.</p>
-                                <div class="form-group row">
-                                    <label for="priorityType" class="col-sm-3 col-form-label">Rüçhan Tipi</label>
-                                    <div class="col-sm-9">
-                                        <select class="form-control" id="priorityType">
-                                            <option value="başvuru" selected>Başvuru</option>
-                                            <option value="sergi">Sergi</option>
-                                        </select>
-                                    </div>
+                                <h3 class="section-title"><i class="fas fa-flag mr-2"></i>Rüçhan Bilgileri</h3>
+                                
+                                <div class="mb-3">
+                                    <button type="button" class="btn btn-primary" id="addPriorityBtn">
+                                        <i class="fas fa-plus mr-2"></i>Rüçhan Ekle
+                                    </button>
                                 </div>
-                                <div class="form-group row">
-                                    <label for="priorityDate" class="col-sm-3 col-form-label" id="priorityDateLabel">Rüçhan Tarihi</label>
-                                    <div class="col-sm-9">
-                                        <input type="date" class="form-control" id="priorityDate">
-                                    </div>
-                                </div>
-                                <div class="form-group row">
-                                    <label for="priorityCountry" class="col-sm-3 col-form-label">Rüçhan Ülkesi</label>
-                                    <div class="col-sm-9">
-                                        <select class="form-control" id="priorityCountry">
-                                            <option value="">Seçiniz...</option>
-                                            <option value="TR">Türkiye</option>
-                                            <option value="US">Amerika Birleşik Devletleri</option>
-                                            <option value="DE">Almanya</option>
-                                        </select>
-                                    </div>
-                                </div>
-                                <div class="form-group row">
-                                    <label for="priorityNumber" class="col-sm-3 col-form-label">Rüçhan Numarası</label>
-                                    <div class="col-sm-9">
-                                        <input type="text" class="form-control" id="priorityNumber" placeholder="Örn: 2023/12345">
-                                    </div>
-                                </div>
-                                <div class="form-group full-width text-right mt-3">
-                                    <button type="button" id="addPriorityBtn" class="btn btn-secondary"><i class="fas fa-plus mr-1"></i> Rüçhan Ekle</button>
-                                </div>
-                                <hr class="my-4">
-                                <div class="form-group full-width">
-                                    <label class="form-label">Eklenen Rüçhan Hakları</label>
-                                    <div id="addedPrioritiesList" class="selected-items-list">
-                                        <div class="empty-state"><i class="fas fa-info-circle fa-3x text-muted mb-3"></i><p class="text-muted">Henüz rüçhan bilgisi eklenmedi.</p></div>
-                                    </div>
+                                
+                                <div id="prioritiesContainer" class="border rounded p-3" style="min-height: 100px;">
+                                    <p class="text-muted text-center">Henüz rüçhan eklenmedi</p>
                                 </div>
                             </div>
                         </div>
-                        
+
+                        <!-- 5. Tahakkuk -->
                         <div class="tab-pane fade" id="accrual" role="tabpanel" aria-labelledby="accrual-tab">
                             <div class="form-section">
-                                <h3 class="section-title">Tahakkuk Bilgileri</h3>
-                                <div class="form-grid">
-                                    <div class="form-group">
-                                        <label for="officialFee" class="form-label">Resmi Ücret</label>
-                                        <div class="input-with-currency">
-                                            <input type="number" id="officialFee" class="form-input" placeholder="0.00" step="0.01">
-                                            <select id="officialFeeCurrency" class="currency-select">
-                                                <option value="TRY" selected>TL</option>
-                                                <option value="EUR">EUR</option>
-                                                <option value="USD">USD</option>
-                                                <option value="CHF">CHF</option>
-                                            </select>
+                                <h3 class="section-title"><i class="fas fa-calculator mr-2"></i>Tahakkuk Bilgileri</h3>
+                                
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label for="officialFee" class="font-weight-bold">Resmi Ücret</label>
+                                            <div class="input-group">
+                                                <input type="number" class="form-control" id="officialFee" 
+                                                       placeholder="0.00" step="0.01" min="0">
+                                                <div class="input-group-append">
+                                                    <select class="form-control" id="officialFeeCurrency">
+                                                        <option value="TRY">TRY</option>
+                                                        <option value="USD">USD</option>
+                                                        <option value="EUR">EUR</option>
+                                                    </select>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
-                                    <div class="form-group">
-                                        <label for="serviceFee" class="form-label">Hizmet Bedeli</label>
-                                        <div class="input-with-currency">
-                                            <input type="number" id="serviceFee" class="form-input" placeholder="0.00" step="0.01">
-                                            <select id="serviceFeeCurrency" class="currency-select">
-                                                <option value="TRY" selected>TL</option>
-                                                <option value="EUR">EUR</option>
-                                                <option value="USD">USD</option>
-                                                <option value="CHF">CHF</option>
-                                            </select>
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label for="serviceFee" class="font-weight-bold">Hizmet Ücreti</label>
+                                            <div class="input-group">
+                                                <input type="number" class="form-control" id="serviceFee" 
+                                                       placeholder="0.00" step="0.01" min="0">
+                                                <div class="input-group-append">
+                                                    <select class="form-control" id="serviceFeeCurrency">
+                                                        <option value="TRY">TRY</option>
+                                                        <option value="USD">USD</option>
+                                                        <option value="EUR">EUR</option>
+                                                    </select>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
-                                    <div class="form-group">
-                                        <label for="vatRate" class="form-label">KDV Oranı (%)</label>
-                                        <input type="number" id="vatRate" class="form-input" value="20">
+                                </div>
+                                
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label for="vatRate" class="font-weight-bold">KDV Oranı (%)</label>
+                                            <input type="number" class="form-control" id="vatRate" 
+                                                   placeholder="20" step="0.01" min="0" value="20">
+                                        </div>
                                     </div>
-                                    <div class="form-group">
-                                        <label for="totalAmountDisplay" class="form-label">Toplam Tutar</label>
-                                        <div id="totalAmountDisplay" class="total-amount-display">0.00 TRY</div>
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <div class="form-check mt-4">
+                                                <input class="form-check-input" type="checkbox" id="applyVatToOfficialFee">
+                                                <label class="form-check-label" for="applyVatToOfficialFee">
+                                                    Resmi ücrete de KDV uygula
+                                                </label>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div class="form-group full-width">
-                                        <label class="checkbox-label">
-                                            <input type="checkbox" id="applyVatToOfficialFee" checked>
-                                            Resmi Ücrete KDV Uygula
-                                        </label>
-                                    </div>
-                                    <div class="form-group full-width">
-                                        <label for="tpInvoicePartySearch" class="form-label">Türk Patent Faturası Tarafı</label>
-                                        <input type="text" id="tpInvoicePartySearch" class="form-input" placeholder="Fatura tarafı arayın...">
-                                        <div id="tpInvoicePartyResults" class="search-results-list"></div>
-                                        <div id="selectedTpInvoicePartyDisplay" class="search-result-display" style="display:none;"></div>
-                                    </div>
-                                    <div class="form-group full-width">
-                                        <label for="serviceInvoicePartySearch" class="form-label">Hizmet Faturası Tarafı</label>
-                                        <input type="text" id="serviceInvoicePartySearch" class="form-input" placeholder="Fatura tarafı arayın...">
-                                        <div id="serviceInvoicePartyResults" class="search-results-list"></div>
-                                        <div id="selectedServiceInvoicePartyDisplay" class="search-result-display" style="display:none;"></div>
-                                    </div>
+                                </div>
+                                
+                                <!-- Toplam tutar gösterimi -->
+                                <div class="alert alert-info mt-3">
+                                    <strong>Toplam Tutar: </strong>
+                                    <span id="totalAmountDisplay" class="h5 text-primary">0.00 TRY</span>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-            
-            <div class="form-actions mt-3 text-right">
-                <button type="submit" id="savePortfolioBtn" class="btn btn-primary">Kaydı Oluştur</button>
+
+            <!-- Form butonları -->
+            <div class="form-actions">
+                <button type="button" class="btn btn-secondary" onclick="window.location.href='portfolio.html'">
+                    <i class="fas fa-times mr-2"></i>İptal
+                </button>
+                <button type="submit" class="btn btn-success">
+                    <i class="fas fa-save mr-2"></i>Portföye Kaydet
+                </button>
             </div>
         </form>
     </div>
 
-    <div class="modal fade" id="addPersonModal" tabindex="-1" role="dialog" aria-labelledby="addPersonModalLabel" aria-hidden="true">
-        <div class="modal-dialog" role="document">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="addPersonModalLabel">Yeni Kişi Oluştur</h5>
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
-                </div>
-                <div class="modal-body">
-                    <form id="personForm">
-                        <div class="form-group">
-                            <label for="personName">Ad Soyad / Şirket Adı</label>
-                            <input type="text" class="form-control" id="personName" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="personType">Kişi Türü</label>
-                            <select class="form-control" id="personType" required>
-                                <option value="private">Gerçek Kişi</option>
-                                <option value="legal">Tüzel Kişi</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label for="personEmail">E-posta</label>
-                            <input type="email" class="form-control" id="personEmail">
-                        </div>
-                        <div class="form-group">
-                            <label for="personPhone">Telefon</label>
-                            <input type="tel" class="form-control" id="personPhone">
-                        </div>
-                        <div class="form-group">
-                            <label for="personAddress">Adres</label>
-                            <textarea class="form-control" id="personAddress" rows="3"></textarea>
-                        </div>
-                    </form>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" id="cancelPersonBtn">İptal</button>
-                    <button type="button" class="btn btn-primary" id="savePersonBtn">Kaydet</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-
-    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <!-- Modals will be loaded by shared layout -->
+    
+    <!-- Bootstrap & jQuery -->
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
 
+    <!-- Custom scripts -->
     <script type="module" src="./js/data-entry.js"></script>
 </body>
 </html>
