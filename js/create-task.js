@@ -1,6 +1,7 @@
-import { authService, taskService, ipRecordsService, personService, accrualService, auth, transactionTypeService, db } from '../firebase-config.js';
+import { authService, taskService, ipRecordsService, personService, accrualService, auth, transactionTypeService, db, storage } from '../firebase-config.js';
 import { loadSharedLayout } from './layout-loader.js';
 import { initializeNiceClassification, getSelectedNiceClasses } from './nice-classification.js';
+import { ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 
 
 class CreateTaskModule {
@@ -86,7 +87,6 @@ class CreateTaskModule {
         const cancelParentSelectionBtn = document.getElementById('cancelParentSelectionBtn');
         if (cancelParentSelectionBtn) cancelParentSelectionBtn.addEventListener('click', () => this.hideParentSelectionModal());
 
-        // jQuery ile sekme değiştirme olayını dinliyoruz.
         $(document).on('click', '#myTaskTabs a', (e) => {
             e.preventDefault();
             const targetTabId = e.target.getAttribute('href').substring(1);
@@ -94,7 +94,6 @@ class CreateTaskModule {
             $(e.target).tab('show');
         });
 
-        // Bir sekme gösterildiğinde tetiklenen olay.
         $(document).on('shown.bs.tab', '#myTaskTabs a', (e) => {
             this.updateButtonsAndTabs();
             const targetTabId = e.target.getAttribute('href').substring(1);
@@ -111,7 +110,6 @@ class CreateTaskModule {
             if (targetTabId === 'accrual') {
                 this.setupAccrualTabListeners();
             }
-            // YENİ: Özet sekmesi açıldığında özet içeriğini render et
             if (targetTabId === 'summary') {
                 this.renderSummaryTab();
             }
@@ -1272,6 +1270,22 @@ class CreateTaskModule {
         if (saveTaskBtn) saveTaskBtn.disabled = !isComplete;
     }
 
+    // YENİ: Firebase Storage'a dosya yükleme fonksiyonu
+    async uploadFileToStorage(file, path) {
+        if (!file || !path) {
+            return null;
+        }
+        const storageRef = ref(storage, path);
+        try {
+            const uploadResult = await uploadBytes(storageRef, file);
+            const downloadURL = await getDownloadURL(uploadResult.ref);
+            return downloadURL;
+        } catch (error) {
+            console.error("Dosya yüklenirken hata oluştu:", error);
+            return null;
+        }
+    }
+
     async handleFormSubmit(e) {
         e.preventDefault();
         const specificTaskTypeId = document.getElementById('specificTaskType')?.value;
@@ -1283,11 +1297,27 @@ class CreateTaskModule {
         }
 
         const assignedToUser = this.allUsers.find(u => u.id === document.getElementById('assignedTo')?.value);
+        let brandImageUrl = null;
+
+        if (selectedTransactionType.alias === 'Başvuru' && selectedTransactionType.ipType === 'trademark') {
+            const brandExampleFile = this.uploadedFiles[0];
+            
+            if (brandExampleFile) {
+                // YENİ: Görseli Firebase Storage'a yükle
+                const storagePath = `brand-examples/${Date.now()}_${brandExampleFile.name}`;
+                brandImageUrl = await this.uploadFileToStorage(brandExampleFile, storagePath);
+                
+                if (!brandImageUrl) {
+                    alert('Marka görseli yüklenirken bir hata oluştu.');
+                    return;
+                }
+            }
+        }
 
         let taskData = {
             taskType: selectedTransactionType.id,
-            title: selectedTransactionType.alias || selectedTransactionType.name,
-            description: document.getElementById('taskDescription')?.value || `'${this.selectedIpRecord?.title || 'Yeni Başvuru'}' adlı varlık için ${selectedTransactionType.alias || selectedTransactionType.name} işlemi.`,
+            title: document.getElementById('brandExampleText')?.value || selectedTransactionType.alias || selectedTransactionType.name,
+            description: document.getElementById('taskDescription')?.value || `'${document.getElementById('brandExampleText')?.value || 'Yeni Başvuru'}' adlı marka için ${selectedTransactionType.alias || selectedTransactionType.name} işlemi.`,
             priority: document.getElementById('taskPriority')?.value || 'medium',
             assignedTo_uid: assignedToUser ? assignedToUser.id : null,
             assignedTo_email: assignedToUser ? assignedToUser.email : null,
@@ -1299,24 +1329,14 @@ class CreateTaskModule {
         };
 
         if (selectedTransactionType.alias === 'Başvuru' && selectedTransactionType.ipType === 'trademark') {
-            const brandExampleFile = document.getElementById('brandExample')?.files[0];
-            const reader = new FileReader();
-
-            const fileReadPromise = new Promise((resolve, reject) => {
-                if (brandExampleFile) {
-                    reader.onload = () => resolve(reader.result);
-                    reader.onerror = reject;
-                    reader.readAsDataURL(brandExampleFile);
-                } else {
-                    resolve(null);
-                }
-            });
-
-            const imageBase64 = await fileReadPromise;
-
             const goodsAndServices = getSelectedNiceClasses();
             if (goodsAndServices.length === 0) {
                 alert('Lütfen en az bir mal veya hizmet seçin.');
+                return;
+            }
+
+            if (this.selectedApplicants.length === 0) {
+                alert('Lütfen en az bir başvuru sahibi seçin.');
                 return;
             }
 
@@ -1327,21 +1347,17 @@ class CreateTaskModule {
                 nonLatinAlphabet: document.getElementById('nonLatinAlphabet') ? document.getElementById('nonLatinAlphabet').value : null,
                 coverLetterRequest: document.querySelector('input[name="coverLetterRequest"]:checked')?.value,
                 consentRequest: document.querySelector('input[name="consentRequest"]:checked')?.value,
-                brandImage: imageBase64,
-                brandImageName: brandExampleFile ? brandExampleFile.name : null,
+                brandImage: brandImageUrl, // YENİ: Storage URL'si kullanılıyor
+                brandImageName: this.uploadedFiles[0] ? this.uploadedFiles[0].name : null,
                 goodsAndServices: goodsAndServices
             };
 
-            if (this.selectedApplicants.length > 0) {
-                taskData.details.applicants = this.selectedApplicants.map(p => ({
-                    id: p.id,
-                    name: p.name,
-                    email: p.email || null
-                }));
-            } else {
-                alert('Lütfen en az bir başvuru sahibi seçin.');
-                return;
-            }
+            taskData.details.applicants = this.selectedApplicants.map(p => ({
+                id: p.id,
+                name: p.name,
+                email: p.email || null
+            }));
+
             if (this.priorities.length > 0) {
                 taskData.details.priorities = this.priorities;
             }
