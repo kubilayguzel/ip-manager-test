@@ -198,6 +198,81 @@ body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333
         background-color: #fff; /* Aktif tabın arka plan rengini beyaz yapar */
         border-color: #dee2e6 #dee2e6 #fff; /* Alt kenar çizgisi olmadan daha belirgin bir görünüm sağlar */
     }
+
+    /* Seçilen öğeler listesi için genel stil */
+    .selected-items-list {
+        min-height: 100px; /* En azından boşken de bir alanı olsun */
+        border: 1px dashed #ced4da;
+        border-radius: 0.25rem;
+        padding: 10px;
+        background-color: #f8f9fa;
+        overflow-y: auto;
+        max-height: 300px; /* Çok fazla öğe olduğunda kaydırma çubuğu çıksın */
+    }
+
+    /* Seçilen her bir öğe için stil */
+    .selected-item {
+        background-color: #e2f0ff; /* Açık mavi arka plan */
+        border: 1px solid #a7d9ff; /* Mavi kenarlık */
+        border-radius: 0.25rem;
+        padding: 8px 12px;
+        margin-bottom: 8px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 0.95rem;
+        color: #343a40;
+    }
+
+    .selected-item .remove-selected-item-btn {
+        background: none;
+        border: none;
+        color: #dc3545; /* Kırmızı renk */
+        font-size: 1.2rem;
+        cursor: pointer;
+        padding: 0 5px;
+        transition: color 0.2s ease;
+    }
+
+    .selected-item .remove-selected-item-btn:hover {
+        color: #c82333;
+    }
+
+    /* Arama sonuçları listesi için stil */
+    .search-results-list {
+        max-height: 200px;
+        overflow-y: auto;
+        border: 1px solid #ced4da;
+        border-top: none;
+        border-bottom-left-radius: 0.25rem;
+        border-bottom-right-radius: 0.25rem;
+        background-color: #fff;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        position: relative; /* Z-index için */
+        z-index: 1000; /* Diğer elemanların üstünde görünmesini sağlar */
+    }
+
+    .search-result-item {
+        padding: 10px 15px;
+        cursor: pointer;
+        border-bottom: 1px solid #eee;
+        transition: background-color 0.2s ease;
+    }
+
+    .search-result-item:hover {
+        background-color: #f0f0f0;
+    }
+
+    .search-result-item:last-child {
+        border-bottom: none;
+    }
+
+    .no-results-message {
+        padding: 15px;
+        color: #6c757d;
+        text-align: center;
+    }
+</style>
 </style>
 </head>
 <body>
