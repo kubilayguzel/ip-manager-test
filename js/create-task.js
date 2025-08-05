@@ -135,9 +135,15 @@ class CreateTaskModule {
     }
 
     setupEventListeners() {
-        document.getElementById('mainIpType').addEventListener('change', (e) => this.handleMainTypeChange(e));
-        document.getElementById('specificTaskType').addEventListener('change', (e) => this.handleSpecificTypeChange(e));
-        document.getElementById('createTaskForm').addEventListener('submit', (e) => this.handleFormSubmit(e));
+
+    const mainIpType = document.getElementById('mainIpType');
+    if (mainIpType) mainIpType.addEventListener('change', (e) => this.handleMainTypeChange(e));
+    
+    const specificTaskType = document.getElementById('specificTaskType');
+    if (specificTaskType) specificTaskType.addEventListener('change', (e) => this.handleSpecificTypeChange(e));
+    
+    const createTaskForm = document.getElementById('createTaskForm');
+    if (createTaskForm) createTaskForm.addEventListener('submit', (e) => this.handleFormSubmit(e));
 
         document.addEventListener('click', (e) => {
             if (e.target.id === 'cancelBtn') {
