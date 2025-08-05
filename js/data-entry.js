@@ -326,7 +326,7 @@ class DataEntryModule {
                 </div>
             </div>
         `;
- 
+        
         this.setupDynamicFormListeners();
         this.setupBrandExampleUploader();
         this.updateButtonsAndTabs();
@@ -393,6 +393,60 @@ class DataEntryModule {
                 }
             };
             console.log('✅ clearNiceSearch fonksiyonu eklendi');
+            
+            // Event listener debug
+            setTimeout(() => {
+                console.log('🔍 Nice Classification event listener testi...');
+                const listContainer = document.getElementById('niceClassificationList');
+                if (listContainer) {
+                    console.log('📋 List container bulundu');
+                    
+                    // Test: İlk class-header'ı bul
+                    const firstHeader = listContainer.querySelector('.class-header');
+                    console.log('🔍 İlk class header:', firstHeader);
+                    
+                    // Test: İlk subclass'ı bul  
+                    const firstSubclass = listContainer.querySelector('.subclass-item');
+                    console.log('🔍 İlk subclass:', firstSubclass);
+                    
+                    // Manual event listener ekle (debug için)
+                    if (firstHeader) {
+                        console.log('🔧 Manual header click listener ekleniyor...');
+                        firstHeader.addEventListener('click', (e) => {
+                            console.log('🖱️ Header tıklandı!', e.target);
+                            if (!e.target.closest('.select-class-btn')) {
+                                const classId = firstHeader.dataset.id;
+                                console.log('🔄 Accordion toggle:', classId);
+                                const subContainer = document.getElementById(`subclasses-${classId}`);
+                                if (subContainer) {
+                                    subContainer.classList.toggle('show');
+                                    firstHeader.classList.toggle('expanded');
+                                    console.log('✅ Accordion toggled');
+                                } else {
+                                    console.error('❌ Subclasses container bulunamadı:', `subclasses-${classId}`);
+                                }
+                            }
+                        });
+                    }
+                    
+                    if (firstSubclass) {
+                        console.log('🔧 Manual subclass click listener ekleniyor...');
+                        firstSubclass.addEventListener('click', (e) => {
+                            console.log('🖱️ Subclass tıklandı!', e.target);
+                            const code = firstSubclass.dataset.code;
+                            const classNum = firstSubclass.dataset.classNum;
+                            const text = firstSubclass.dataset.text;
+                            console.log('📋 Subclass bilgileri:', {code, classNum, text});
+                            
+                            // Seçimi toggle et
+                            firstSubclass.classList.toggle('selected');
+                            console.log('✅ Subclass selection toggled');
+                        });
+                    }
+                } else {
+                    console.error('❌ List container bulunamadı');
+                }
+            }, 2000);
             
         } catch (error) {
             console.error('❌ Nice Classification başlatılamadı:', error);
