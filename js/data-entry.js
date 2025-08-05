@@ -326,10 +326,7 @@ class DataEntryModule {
                 </div>
             </div>
         `;
-        
-        console.log('✅ Form HTML'i oluşturuldu');
-        
-        // Hemen event listener'ları kur
+
         this.setupDynamicFormListeners();
         this.setupBrandExampleUploader();
         this.updateButtonsAndTabs();
