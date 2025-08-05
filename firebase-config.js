@@ -2,14 +2,14 @@ import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebas
 import {
     getAuth,
     signInWithEmailAndPassword,
-    createUserWithEmailAndPassword, // Hata düzeltildi: createUserWithAuthAndEmail yerine createUserWithEmailAndPassword
+    createUserWithEmailAndPassword,
     signOut,
     onAuthStateChanged,
     updateProfile
 } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
-import {getFirestore, collection, addDoc, 
-        getDocs, doc, updateDoc, deleteDoc, 
-        query, orderBy, where, getDoc, setDoc, arrayUnion, writeBatch, documentId, Timestamp, FieldValue } 
+import { getFirestore, collection, addDoc,
+    getDocs, doc, updateDoc, deleteDoc,
+    query, orderBy, where, getDoc, setDoc, arrayUnion, writeBatch, documentId, serverTimestamp, Timestamp, FieldValue }
 from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 import { getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js';
 
@@ -314,19 +314,19 @@ export const ipRecordsService = {
             const recordRef = doc(db, 'ipRecords', recordId);
             const transactionsCollectionRef = collection(recordRef, 'transactions');
 
-            const currentUser = auth.currentUser; 
-            let userName = 'Bilinmeyen Kullanıcı'; 
+            const currentUser = auth.currentUser;
+            let userName = 'Bilinmeyen Kullanıcı';
 
             if (currentUser) {
-                userName = currentUser.displayName || currentUser.email; 
+                userName = currentUser.displayName || currentUser.email;
             }
 
             const transactionToAdd = {
                 ...transactionData,
                 timestamp: new Date().toISOString(),
-                userId: currentUser ? currentUser.uid : 'anonymous', 
+                userId: currentUser ? currentUser.uid : 'anonymous',
                 userEmail: currentUser ? currentUser.email : 'anonymous@example.com',
-                userName: userName 
+                userName: userName
             };
 
             const docRef = await addDoc(transactionsCollectionRef, transactionToAdd);
@@ -340,22 +340,21 @@ export const ipRecordsService = {
         if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor." };
         try {
             const recordRef = doc(db, 'ipRecords', recordId);
-            const user = authService.getCurrentUser(); 
-            const userEmail = user ? user.email : 'anonymous@example.com'; 
+            const user = authService.getCurrentUser();
+            const userEmail = user ? user.email : 'anonymous@example.com';
             const newFile = {
                 ...fileData,
                 id: generateUUID(),
                 uploadedAt: new Date().toISOString(),
-                userEmail: userEmail 
+                userEmail: userEmail
             };
             await updateDoc(recordRef, { files: arrayUnion(newFile) });
             return { success: true, data: newFile };
         } catch (error) {
-            console.error("Error in addFileToRecord:", error); 
+            console.error("Error in addFileToRecord:", error);
             return { success: false, error: error.message };
         }
     },
-    
 };
 
 // --- YENİ EKLENDİ: Persons Service ---
