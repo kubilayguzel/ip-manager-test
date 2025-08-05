@@ -237,7 +237,7 @@ class CreateTaskModule {
 
         this.checkFormCompleteness();
     }
-    renderTrademarkApplicationForm(container) {
+renderTrademarkApplicationForm(container) {
     // YENİ: Mal/Hizmet sekmesinin içeriğini güncelliyoruz.
     container.innerHTML = `
         <div class="card-body">
