@@ -1,4 +1,4 @@
-// data-entry.js - Basitleştirilmiş versiyon (tahakkuk olmadan)
+// data-entry.js - Düzeltilmiş ve tam fonksiyonel versiyon
 
 // create-task.js'den dışa aktarılan fonksiyonlar
 import { createTrademarkApplication, uploadFileToStorage } from './create-task.js';
@@ -93,10 +93,17 @@ class DataEntryModule {
     }
 
     setupDynamicFormListeners() {
-        // Başvuru sahibi ekleme butonu
-        $(document).on('click', '#addApplicantBtn', () => {
-            this.showPersonSearchModal('applicant');
-        });
+        // Başvuru sahibi arama
+        const applicantSearchInput = document.getElementById('applicantSearchInput');
+        if (applicantSearchInput) {
+            applicantSearchInput.addEventListener('input', (e) => this.searchPersons(e.target.value, 'applicant'));
+        }
+
+        // Yeni başvuru sahibi ekleme butonu
+        const addNewApplicantBtn = document.getElementById('addNewApplicantBtn');
+        if (addNewApplicantBtn) {
+            addNewApplicantBtn.addEventListener('click', () => this.showAddPersonModal('applicant'));
+        }
 
         // Rüçhan ekleme butonu
         $(document).on('click', '#addPriorityBtn', () => {
@@ -104,9 +111,9 @@ class DataEntryModule {
         });
 
         // Seçilen başvuru sahiplerini silme
-        $(document).on('click', '.remove-applicant-btn', (e) => {
-            const applicantId = e.target.closest('button').dataset.id;
-            this.removeApplicant(applicantId);
+        $(document).on('click', '.remove-selected-item-btn', (e) => {
+            const personId = e.target.closest('button').dataset.id;
+            this.removeApplicant(personId);
         });
 
         // Rüçhan silme
@@ -194,21 +201,149 @@ class DataEntryModule {
             console.log('✅ Nice Classification başlatıldı');
         } catch (error) {
             console.error('Nice Classification başlatılamadı:', error);
-            alert('Mal ve hizmet sınıfları yüklenemedi. Lütfen sayfayı yenileyin.');
+            const container = document.getElementById('niceClassificationList');
+            if (container) {
+                container.innerHTML = `
+                    <div class="text-center text-danger p-4">
+                        <i class="fas fa-exclamation-triangle fa-2x mb-2"></i>
+                        <p>Nice Classification yüklenemedi. Lütfen sayfayı yenileyin.</p>
+                    </div>
+                `;
+            }
         }
     }
 
-    showPersonSearchModal(target) {
-        // Basit prompt ile geçici çözüm - sonra modal implement edilecek
-        const personName = prompt('Başvuru sahibinin adını girin:');
-        if (personName && personName.trim()) {
-            const newApplicant = {
-                id: Date.now().toString(), // Geçici ID
-                name: personName.trim(),
-                email: null
-            };
-            this.selectedApplicants.push(newApplicant);
-            this.renderSelectedApplicants();
+    // Person search fonksiyonu - create-task.js'den kopyalandı
+    searchPersons(query, target) {
+        const resultsContainerId = {
+            'applicant': 'applicantSearchResults'
+        }[target];
+        
+        const container = document.getElementById(resultsContainerId);
+        if (!container) return;
+
+        if (query.length < 2) {
+            container.style.display = 'none';
+            container.innerHTML = '';
+            return;
+        }
+
+        const filtered = this.allPersons.filter(p => 
+            p.name.toLowerCase().includes(query.toLowerCase())
+        );
+
+        if (filtered.length === 0) {
+            container.innerHTML = '<p class="no-results-message">Kişi bulunamadı.</p>';
+            container.style.display = 'block';
+            return;
+        }
+
+        let html = '';
+        filtered.forEach(p => {
+            html += `
+                <div class="search-result-item" data-id="${p.id}">
+                    <div><b>${p.name}</b><br><small>${p.email || 'E-posta yok'}</small></div>
+                </div>
+            `;
+        });
+        
+        container.innerHTML = html;
+        container.style.display = 'block';
+
+        // Click event listeners
+        container.querySelectorAll('.search-result-item').forEach(item => {
+            item.addEventListener('click', () => {
+                const personId = item.dataset.id;
+                const person = this.allPersons.find(p => p.id === personId);
+                if (person) {
+                    this.selectPerson(person, target);
+                }
+            });
+        });
+    }
+
+    selectPerson(person, target) {
+        if (target === 'applicant') {
+            this.addApplicant(person);
+            // Arama alanını temizle
+            const searchInput = document.getElementById('applicantSearchInput');
+            const searchResults = document.getElementById('applicantSearchResults');
+            if (searchInput) searchInput.value = '';
+            if (searchResults) searchResults.style.display = 'none';
+        }
+    }
+
+    addApplicant(person) {
+        // Zaten eklenmiş mi kontrol et
+        if (this.selectedApplicants.some(p => p.id === person.id)) {
+            alert('Bu başvuru sahibi zaten eklenmiş.');
+            return;
+        }
+
+        this.selectedApplicants.push(person);
+        this.renderSelectedApplicants();
+        console.log('👤 Başvuru sahibi eklendi:', person.name);
+    }
+
+    showAddPersonModal(target = null) {
+        // Modal'ı göster ve target'ı sakla
+        const modal = document.getElementById('addPersonModal');
+        if (modal) {
+            $(modal).modal('show');
+            const form = document.getElementById('personForm');
+            if (form) form.reset();
+            modal.dataset.targetField = target;
+        }
+    }
+
+    hideAddPersonModal() {
+        const modal = document.getElementById('addPersonModal');
+        if (modal) {
+            $(modal).modal('hide');
+        }
+    }
+
+    async saveNewPerson() {
+        const personNameInput = document.getElementById('personName');
+        const personTypeSelect = document.getElementById('personType');
+        const modal = document.getElementById('addPersonModal');
+        const targetField = modal ? modal.dataset.targetField : null;
+
+        if (!personNameInput || !personTypeSelect) return;
+
+        const name = personNameInput.value.trim();
+        const type = personTypeSelect.value;
+
+        if (!name || !type) {
+            alert('Ad Soyad ve Kişi Türü zorunludur.');
+            return;
+        }
+
+        const personData = {
+            name,
+            type,
+            email: document.getElementById('personEmail')?.value.trim(),
+            phone: document.getElementById('personPhone')?.value.trim(),
+            address: document.getElementById('personAddress')?.value.trim()
+        };
+
+        try {
+            const result = await personService.addPerson(personData);
+            if (result.success) {
+                alert('Yeni kişi başarıyla eklendi.');
+                this.allPersons.push({ ...result.data });
+                
+                if (targetField === 'applicant') {
+                    this.addApplicant(result.data);
+                }
+                
+                this.hideAddPersonModal();
+            } else {
+                alert('Hata: ' + result.error);
+            }
+        } catch (error) {
+            console.error('Kişi kaydetme hatası:', error);
+            alert("Kişi kaydedilirken beklenmeyen bir hata oluştu.");
         }
     }
 
@@ -232,7 +367,7 @@ class DataEntryModule {
     }
 
     renderSelectedApplicants() {
-        const container = document.getElementById('selectedApplicantsContainer');
+        const container = document.getElementById('selectedApplicantsList');
         if (!container) return;
 
         if (this.selectedApplicants.length === 0) {
@@ -253,7 +388,7 @@ class DataEntryModule {
                         <strong>${applicant.name}</strong>
                         ${applicant.email ? `<br><small class="text-muted">${applicant.email}</small>` : ''}
                     </div>
-                    <button type="button" class="remove-item-btn remove-applicant-btn" data-id="${applicant.id}">
+                    <button type="button" class="remove-item-btn remove-selected-item-btn" data-id="${applicant.id}">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
@@ -341,7 +476,7 @@ class DataEntryModule {
             // Loading state'i kaldır
             const submitBtn = document.querySelector('button[type="submit"]');
             if (submitBtn) {
-                submitBtn.innerHTML = originalText;
+                submitBtn.innerHTML = '<i class="fas fa-save mr-2"></i>Portföye Kaydet';
                 submitBtn.disabled = false;
             }
         }
@@ -456,6 +591,23 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     // Global erişim için (debugging amaçlı)
     window.dataEntryInstance = dataEntryInstance;
+    
+    // Modal event listeners'ları kur (shared layout yüklendikten sonra)
+    const setupModalListeners = () => {
+        // Add Person Modal event listeners
+        const savePersonBtn = document.getElementById('savePersonBtn');
+        if (savePersonBtn) {
+            savePersonBtn.addEventListener('click', () => dataEntryInstance.saveNewPerson());
+        }
+
+        const cancelPersonBtn = document.getElementById('cancelPersonBtn');
+        if (cancelPersonBtn) {
+            cancelPersonBtn.addEventListener('click', () => dataEntryInstance.hideAddPersonModal());
+        }
+    };
+
+    // Modal listener'ları kurma (layout yüklendikten sonra)
+    setTimeout(setupModalListeners, 1000);
     
     // Initialize et
     await dataEntryInstance.init();
