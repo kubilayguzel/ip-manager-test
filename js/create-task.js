@@ -17,7 +17,7 @@ class CreateTaskModule {
         this.pendingChildTransactionData = null;
         this.activeTab = 'brand-info';
         this.isNiceClassificationInitialized = false;
-        this.selectedApplicants = []; // YENİ: Başvuru sahiplerini tutacak dizi
+        this.selectedApplicants = [];
     }
 
     async init() {
@@ -96,13 +96,13 @@ class CreateTaskModule {
         // Bir sekme gösterildiğinde tetiklenen olay.
         $(document).on('shown.bs.tab', '#myTaskTabs a', (e) => {
             this.updateButtonsAndTabs();
-            // YENİ: Eğer "Mal/Hizmet" sekmesi açıldıysa ve daha önce yüklenmediyse, Nice modülünü başlat.
+            // Eğer "Mal/Hizmet" sekmesi açıldıysa ve daha önce yüklenmediyse, Nice modülünü başlat.
             const targetTabId = e.target.getAttribute('href').substring(1);
             if (targetTabId === 'goods-services' && !this.isNiceClassificationInitialized) {
                 initializeNiceClassification(); // db parametresine gerek yok, modül kendi alıyor.
                 this.isNiceClassificationInitialized = true; // Yüklendi olarak işaretle.
             }
-            // YENİ: Başvuru Sahibi sekmesi açıldığında seçilenleri render et
+            // Başvuru Sahibi sekmesi açıldığında seçilenleri render et
             if (targetTabId === 'applicants') {
                 this.renderSelectedApplicants();
             }
@@ -241,7 +241,6 @@ class CreateTaskModule {
     }
 
     renderTrademarkApplicationForm(container) {
-        // YENİ: Mal/Hizmet sekmesinin içeriğini güncelliyoruz.
         container.innerHTML = `
             <div class="card-body">
                 <ul class="nav nav-tabs" id="myTaskTabs" role="tablist">
@@ -263,7 +262,6 @@ class CreateTaskModule {
                 </ul>
                 <div class="tab-content mt-3 tab-content-card" id="myTaskTabContent">
                     <div class="tab-pane fade show active" id="brand-info" role="tabpanel" aria-labelledby="brand-info-tab">
-                        <!-- Marka Bilgileri Formu -->
                         <div class="form-section">
                             <h3 class="section-title">Marka Bilgileri</h3>
                             <div class="form-group row">
@@ -354,10 +352,8 @@ class CreateTaskModule {
                     <div class="tab-pane fade" id="goods-services" role="tabpanel" aria-labelledby="goods-services-tab">
                         <div class="nice-classification-container mt-3">
                             <div class="row">
-                                <!-- Sol Panel - Ana Sınıflar ve Özel Tanım -->
                                 <div class="col-lg-8">
                                     
-                                    <!-- Ana Nice Sınıfları Bölümü -->
                                     <div class="classification-panel mb-3">
                                         <div class="panel-header">
                                             <h5 class="mb-0">
@@ -395,7 +391,6 @@ class CreateTaskModule {
                                         </div>
                                     </div>
                                     
-                                    <!-- Özel Mal/Hizmet Tanımı Bölümü (AYRI KUTU) -->
                                     <div class="custom-class-frame">
                                         <div class="custom-class-section">
                                             <div class="d-flex align-items-center mb-2">
@@ -423,7 +418,6 @@ class CreateTaskModule {
                                     </div>
                                 </div>
 
-                                <!-- Sağ Panel - Seçilen Sınıflar -->
                                 <div class="col-lg-4 d-flex flex-column">
                                     <div class="selected-classes-panel flex-grow-1 d-flex flex-column">
                                         <div class="panel-header d-flex justify-content-between align-items-center">
@@ -464,7 +458,7 @@ class CreateTaskModule {
                                 <label for="applicantSearchInput" class="form-label">Başvuru Sahibi Ara</label>
                                 <div style="display: flex; gap: 10px;">
                                     <input type="text" id="applicantSearchInput" class="form-input" placeholder="Aramak için en az 2 karakter...">
-                                    <button type="button" id="addNewApplicantBtn" class="btn-small btn-add-person"><span>&#x2795;</span> Yeni Kişi</button>
+                                    <button type="button" id="addNewApplicantBtn" class="btn-small btn-add-person" data-toggle="modal" data-target="#addPersonModal"><span>&#x2795;</span> Yeni Kişi</button>
                                 </div>
                                 <div id="applicantSearchResults" class="search-results-list"></div>
                             </div>
@@ -484,7 +478,6 @@ class CreateTaskModule {
                         <p>Bu sekmedeki içerik henüz tanımlanmamıştır.</p>
                     </div>
                     <div class="tab-pane fade" id="accrual" role="tabpanel" aria-labelledby="accrual-tab">
-                        <!-- Tahakkuk Formu (Değişiklik Yok) -->
                         <div class="form-section">
                             <h3 class="section-title">Tahakkuk Bilgileri</h3>
                             <div class="form-grid">
@@ -567,7 +560,7 @@ class CreateTaskModule {
                 </div>
             </div>
             <div id="formActionsContainer" class="form-actions"></div>
-        `;
+    `;
         // Dinamik olarak oluşturulan form elemanları için dinleyicileri yeniden kur
         this.setupDynamicFormListeners();
         // Marka yükleyiciyi de kur
@@ -625,7 +618,7 @@ class CreateTaskModule {
                     <label for="personSearchInput" class="form-label">Sistemdeki Kişilerden Ara</label>
                     <div style="display: flex; gap: 10px;">
                         <input type="text" id="personSearchInput" class="form-input" placeholder="Aramak için en az 2 karakter...">
-                        <button type="button" id="addNewPersonBtn" class="btn-small btn-add-person"><span>&#x2795;</span> Yeni Kişi</button>
+                        <button type="button" id="addNewPersonBtn" class="btn-small btn-add-person" data-toggle="modal" data-target="#addPersonModal"><span>&#x2795;</span> Yeni Kişi</button>
                     </div>
                     <div id="personSearchResults" class="search-results-list"></div>
                     <div id="selectedRelatedPartyDisplay" class="search-result-display" style="display:none;"></div>
@@ -753,20 +746,22 @@ class CreateTaskModule {
         const serviceInvoicePartySearch = document.getElementById('serviceInvoicePartySearch');
         if (serviceInvoicePartySearch) serviceInvoicePartySearch.addEventListener('input', (e) => this.searchPersons(e.target.value, 'serviceInvoiceParty'));
         const addNewPersonBtn = document.getElementById('addNewPersonBtn');
-        if (addNewPersonBtn) addNewPersonBtn.addEventListener('click', () => this.showAddPersonModal());
+        if (addNewPersonBtn) addNewPersonBtn.addEventListener('click', () => this.showAddPersonModal('relatedParty'));
 
         // YENİ: Başvuru sahibi arama ve ekleme butonları için dinleyiciler
         const applicantSearchInput = document.getElementById('applicantSearchInput');
         if (applicantSearchInput) applicantSearchInput.addEventListener('input', (e) => this.searchPersons(e.target.value, 'applicant'));
         const addNewApplicantBtn = document.getElementById('addNewApplicantBtn');
-        if (addNewApplicantBtn) addNewApplicantBtn.addEventListener('click', () => this.showAddPersonModal('applicant')); // 'applicant' parametresiyle modalı aç
+        if (addNewApplicantBtn) addNewApplicantBtn.addEventListener('click', () => this.showAddPersonModal('applicant'));
 
         // YENİ: Seçilen başvuru sahipleri listesindeki kaldır butonları için dinleyici
         const selectedApplicantsList = document.getElementById('selectedApplicantsList');
         if (selectedApplicantsList) {
             selectedApplicantsList.addEventListener('click', (e) => {
-                if (e.target.classList.contains('remove-selected-item-btn')) {
-                    const personId = e.target.dataset.id;
+                // Tıklanan öğe ve en yakın üst butonu kontrol et
+                const removeBtn = e.target.closest('.remove-selected-item-btn');
+                if (removeBtn) {
+                    const personId = removeBtn.dataset.id;
                     this.removeApplicant(personId);
                 }
             });
@@ -884,7 +879,7 @@ class CreateTaskModule {
             'relatedParty': 'personSearchResults',
             'tpInvoiceParty': 'tpInvoicePartyResults',
             'serviceInvoiceParty': 'serviceInvoicePartyResults',
-            'applicant': 'applicantSearchResults' // YENİ: applicant hedefi eklendi
+            'applicant': 'applicantSearchResults'
         } [target];
         const container = document.getElementById(resultsContainerId);
         if (!container) return;
@@ -912,30 +907,30 @@ class CreateTaskModule {
             'relatedParty': 'selectedRelatedPartyDisplay',
             'tpInvoiceParty': 'selectedTpInvoicePartyDisplay',
             'serviceInvoiceParty': 'selectedServiceInvoicePartyDisplay',
-            'applicant': 'selectedApplicantsList' // YENİ: applicant hedefi için doğrudan liste
+            'applicant': 'selectedApplicantsList'
         } [target];
         const inputId = {
             'relatedParty': 'personSearchInput',
             'tpInvoiceParty': 'tpInvoicePartySearch',
             'serviceInvoiceParty': 'serviceInvoicePartySearch',
-            'applicant': 'applicantSearchInput' // YENİ: applicant inputu
+            'applicant': 'applicantSearchInput'
         } [target];
         const resultsId = {
             'relatedParty': 'personSearchResults',
             'tpInvoiceParty': 'tpInvoicePartyResults',
             'serviceInvoiceParty': 'serviceInvoicePartyResults',
-            'applicant': 'applicantSearchResults' // YENİ: applicant sonuçları
+            'applicant': 'applicantSearchResults'
         } [target];
 
         if (target === 'relatedParty') this.selectedRelatedParty = person;
         else if (target === 'tpInvoiceParty') this.selectedTpInvoiceParty = person;
         else if (target === 'serviceInvoiceParty') this.selectedServiceInvoiceParty = person;
         else if (target === 'applicant') {
-            this.addApplicant(person); // YENİ: Başvuru sahibi ekleme fonksiyonunu çağır
+            this.addApplicant(person);
         }
 
         const display = document.getElementById(displayId);
-        if (display && target !== 'applicant') { // applicant için ayrı renderlama var
+        if (display && target !== 'applicant') {
             display.innerHTML = `<p><b>Seçilen:</b> ${person.name}</p>`;
             display.style.display = 'block';
         }
@@ -946,9 +941,7 @@ class CreateTaskModule {
         this.checkFormCompleteness();
     }
     
-    // YENİ: Başvuru sahibi ekleme fonksiyonu
     addApplicant(person) {
-        // Zaten eklenmişse tekrar ekleme
         if (this.selectedApplicants.some(p => p.id === person.id)) {
             alert('Bu başvuru sahibi zaten eklenmiş.');
             return;
@@ -957,13 +950,11 @@ class CreateTaskModule {
         this.renderSelectedApplicants();
     }
 
-    // YENİ: Başvuru sahibi kaldırma fonksiyonu
     removeApplicant(personId) {
         this.selectedApplicants = this.selectedApplicants.filter(p => p.id !== personId);
         this.renderSelectedApplicants();
     }
 
-    // YENİ: Seçilen başvuru sahiplerini render etme fonksiyonu
     renderSelectedApplicants() {
         const container = document.getElementById('selectedApplicantsList');
         if (!container) return;
@@ -991,24 +982,23 @@ class CreateTaskModule {
         container.innerHTML = html;
     }
 
-    showAddPersonModal(target = null) { // target parametresi eklendi
+    showAddPersonModal(target = null) {
         const modal = document.getElementById('addPersonModal');
         if (modal) {
-            modal.classList.add('show');
-            modal.style.display = 'block'; // Modal'ı görünür yap
+            $(modal).modal('show'); // jQuery modal fonksiyonunu kullan
             const form = document.getElementById('personForm');
             if (form) form.reset();
-            // Yeni kişi kaydedildiğinde hangi alana ekleneceğini tutmak için
             modal.dataset.targetField = target; 
         }
     }
+
     hideAddPersonModal() {
         const modal = document.getElementById('addPersonModal');
         if (modal) {
-            modal.classList.remove('show');
-            modal.style.display = 'none'; // Modal'ı gizle
+            $(modal).modal('hide'); // jQuery modal fonksiyonunu kullan
         }
     }
+    
     showParentSelectionModal(parentTransactions, childTransactionData) {
         const modal = document.getElementById('selectParentModal');
         const parentListContainer = document.getElementById('parentListContainer');
@@ -1062,8 +1052,8 @@ class CreateTaskModule {
     async saveNewPerson() {
         const personNameInput = document.getElementById('personName');
         const personTypeSelect = document.getElementById('personType');
-        const modal = document.getElementById('addPersonModal'); // Modalı al
-        const targetField = modal ? modal.dataset.targetField : null; // Hangi alandan açıldığını kontrol et
+        const modal = document.getElementById('addPersonModal');
+        const targetField = modal ? modal.dataset.targetField : null;
 
         if (!personNameInput || !personTypeSelect) return;
         const name = personNameInput.value.trim();
@@ -1085,7 +1075,6 @@ class CreateTaskModule {
                 alert('Yeni kişi başarıyla eklendi.');
                 this.allPersons.push({ ...result.data
                 });
-                // Yeni eklenen kişiyi, modalın açıldığı alana göre seç
                 if (targetField === 'applicant') {
                     this.addApplicant(result.data);
                 } else if (targetField === 'relatedParty') {
@@ -1108,9 +1097,7 @@ class CreateTaskModule {
         const selectedTaskType = this.allTransactionTypes.find(type => type.id === specificTaskTypeId);
         let isComplete = false;
         if (selectedTaskType && selectedTaskType.alias === 'Başvuru' && selectedTaskType.ipType === 'trademark') {
-            // Başvuru için en az bir başvuru sahibi seçimi zorunlu olabilir (isteğe bağlı)
-            isComplete = this.selectedApplicants.length > 0; // Eğer başvuru sahibi zorunlu ise
-            // isComplete = true; // Eğer başvuru sahibi zorunlu değilse
+            isComplete = this.selectedApplicants.length > 0;
         } else if (selectedTaskType) {
             const transactionLikeTasks = ['Devir', 'Lisans', 'Birleşme', 'Veraset ile İntikal', 'Rehin/Teminat'];
             if (transactionLikeTasks.includes(selectedTaskType.name)) {
@@ -1144,7 +1131,7 @@ class CreateTaskModule {
             assignedTo_email: assignedToUser ? assignedToUser.email : null,
             dueDate: document.getElementById('taskDueDate')?.value || null,
             status: 'open',
-            relatedIpRecordId: this.selectedIpRecord?.id, // Başvuru değilse dolu olacak
+            relatedIpRecordId: this.selectedIpRecord?.id,
             relatedIpRecordTitle: this.selectedIpRecord?.title,
             details: {}
         };
@@ -1165,7 +1152,6 @@ class CreateTaskModule {
 
             const imageBase64 = await fileReadPromise;
 
-            // Seçilen mal/hizmetleri alıp taskData'ya ekliyoruz.
             const goodsAndServices = getSelectedNiceClasses();
             if (goodsAndServices.length === 0) {
                 alert('Lütfen en az bir mal veya hizmet seçin.');
@@ -1181,23 +1167,19 @@ class CreateTaskModule {
                 consentRequest: document.querySelector('input[name="consentRequest"]:checked')?.value,
                 brandImage: imageBase64,
                 brandImageName: brandExampleFile ? brandExampleFile.name : null,
-                goodsAndServices: goodsAndServices // Seçilen sınıfları ekliyoruz.
+                goodsAndServices: goodsAndServices
             };
 
-            // YENİ: Seçilen başvuru sahiplerini taskData'ya ekle
             if (this.selectedApplicants.length > 0) {
                 taskData.details.applicants = this.selectedApplicants.map(p => ({
                     id: p.id,
                     name: p.name,
-                    email: p.email || null // E-posta varsa ekle
+                    email: p.email || null
                 }));
             } else {
                 alert('Lütfen en az bir başvuru sahibi seçin.');
                 return;
             }
-
-            // Başvuru işlemi yeni bir IP kaydı oluşturabilir, bu yüzden relatedIpRecordId'yi burada set etmiyoruz.
-            // Bu mantık sunucu tarafında veya burada daha detaylı ele alınmalı. Şimdilik task'a kaydediyoruz.
 
         }
 
@@ -1214,7 +1196,6 @@ class CreateTaskModule {
             return;
         }
 
-        // ... (Tahakkuk ve diğer işlemler - DEĞİŞİKLİK YOK) ...
         const officialFee = parseFloat(document.getElementById('officialFee')?.value) || 0;
         const serviceFee = parseFloat(document.getElementById('serviceFee')?.value) || 0;
         if (officialFee > 0 || serviceFee > 0) {
@@ -1300,7 +1281,7 @@ class CreateTaskModule {
             } else {
                 this.showParentSelectionModal(suitableParents, childTransactionData);
             }
-        } else if (selectedTransactionType.alias !== 'Başvuru') { // Başvuru işlemi zaten halledildi.
+        } else if (selectedTransactionType.alias !== 'Başvuru') {
              alert('Geçersiz işlem tipi seçimi. Lütfen geçerli bir ana veya alt işlem tipi seçin.');
         } else {
             alert('İş ve ilgili tahakkuk başarıyla oluşturuldu!');
