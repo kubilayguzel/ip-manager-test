@@ -458,7 +458,7 @@ class CreateTaskModule {
                                 <label for="applicantSearchInput" class="form-label">Başvuru Sahibi Ara</label>
                                 <div style="display: flex; gap: 10px;">
                                     <input type="text" id="applicantSearchInput" class="form-input" placeholder="Aramak için en az 2 karakter...">
-                                    <button type="button" id="addNewApplicantBtn" class="btn-small btn-add-person" data-toggle="modal" data-target="#addPersonModal"><span>&#x2795;</span> Yeni Kişi</button>
+                                    <button type="button" id="addNewApplicantBtn" class="btn-small btn-add-person"><span>&#x2795;</span> Yeni Kişi</button>
                                 </div>
                                 <div id="applicantSearchResults" class="search-results-list"></div>
                             </div>
@@ -748,17 +748,16 @@ class CreateTaskModule {
         const addNewPersonBtn = document.getElementById('addNewPersonBtn');
         if (addNewPersonBtn) addNewPersonBtn.addEventListener('click', () => this.showAddPersonModal('relatedParty'));
 
-        // YENİ: Başvuru sahibi arama ve ekleme butonları için dinleyiciler
+        // Başvuru sahibi arama ve ekleme butonları için dinleyiciler
         const applicantSearchInput = document.getElementById('applicantSearchInput');
         if (applicantSearchInput) applicantSearchInput.addEventListener('input', (e) => this.searchPersons(e.target.value, 'applicant'));
         const addNewApplicantBtn = document.getElementById('addNewApplicantBtn');
         if (addNewApplicantBtn) addNewApplicantBtn.addEventListener('click', () => this.showAddPersonModal('applicant'));
 
-        // YENİ: Seçilen başvuru sahipleri listesindeki kaldır butonları için dinleyici
+        // Seçilen başvuru sahipleri listesindeki kaldır butonları için dinleyici
         const selectedApplicantsList = document.getElementById('selectedApplicantsList');
         if (selectedApplicantsList) {
             selectedApplicantsList.addEventListener('click', (e) => {
-                // Tıklanan öğe ve en yakın üst butonu kontrol et
                 const removeBtn = e.target.closest('.remove-selected-item-btn');
                 if (removeBtn) {
                     const personId = removeBtn.dataset.id;
@@ -825,7 +824,7 @@ class CreateTaskModule {
         this.selectedTpInvoiceParty = null;
         this.selectedServiceInvoiceParty = null;
         this.uploadedFiles = [];
-        this.selectedApplicants = []; // YENİ: Başvuru sahiplerini de sıfırla
+        this.selectedApplicants = [];
     }
     searchPortfolio(query) {
         const container = document.getElementById('portfolioSearchResults');
@@ -985,7 +984,7 @@ class CreateTaskModule {
     showAddPersonModal(target = null) {
         const modal = document.getElementById('addPersonModal');
         if (modal) {
-            $(modal).modal('show'); // jQuery modal fonksiyonunu kullan
+            $(modal).modal('show');
             const form = document.getElementById('personForm');
             if (form) form.reset();
             modal.dataset.targetField = target; 
@@ -995,7 +994,7 @@ class CreateTaskModule {
     hideAddPersonModal() {
         const modal = document.getElementById('addPersonModal');
         if (modal) {
-            $(modal).modal('hide'); // jQuery modal fonksiyonunu kullan
+            $(modal).modal('hide');
         }
     }
     
