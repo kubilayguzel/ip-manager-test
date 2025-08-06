@@ -118,6 +118,107 @@ body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333
 .class-header.fully-selected { background: linear-gradient(135deg, #e8f5e8 0%, #d4edda 100%); border-left: 4px solid #28a745; }
 .class-header.fully-selected .select-class-btn { background: #28a745; }
 .class-header.partially-selected .select-class-btn { background: #ffc107; color: #333; }
+.custom-class-wrapper {
+    border-left: 4px solid #e74c3c !important;
+    transition: all 0.3s ease;
+}
+
+.custom-class-wrapper:hover {
+    box-shadow: 0 4px 12px rgba(231, 76, 60, 0.15);
+}
+
+/* Seçilen sınıfların görünümü */
+.selected-class-item {
+    background: #fff;
+    border: 1px solid #e1e8ed;
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 10px;
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+.selected-class-item:hover {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    transform: translateY(-1px);
+}
+
+.selected-class-item.custom {
+    background: linear-gradient(135deg, #fff5f5 0%, #ffeaa7 100%);
+    border-color: #e74c3c;
+}
+
+.selected-class-number {
+    background: #4a90e2;
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-weight: bold;
+    font-size: 0.85em;
+    display: inline-block;
+    margin-bottom: 5px;
+}
+
+.selected-class-item.custom .selected-class-number {
+    background: #e74c3c;
+}
+
+.selected-class-description {
+    margin: 8px 0 0 0;
+    font-size: 0.9em;
+    line-height: 1.4;
+    color: #333;
+}
+
+.remove-selected-btn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: #dc3545;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.remove-selected-btn:hover {
+    background: #c82333;
+    transform: scale(1.1);
+}
+
+/* Accordion düzeltmeleri */
+.subclasses-container.show {
+    max-height: 2000px !important;
+    overflow: visible;
+}
+
+.subclass-item {
+    transition: all 0.3s ease;
+}
+
+.subclass-item:hover {
+    background: #f8f9fa !important;
+    padding-left: 45px;
+}
+
+.subclass-item.selected {
+    background: linear-gradient(135deg, #e8f5e8 0%, #d4edda 100%) !important;
+    color: #155724;
+    font-weight: 500;
+    border-left: 3px solid #28a745;
+}
+
+.subclass-item.selected::before {
+    content: "✓";
+    position: absolute;
+    left: 20px;
+    color: #28a745;
+    font-weight: bold;
+}
     </style>
 </head>
 <body>
@@ -171,12 +272,16 @@ body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333
                                                 </h5>
                                                 <small class="text-white-50">1-45 arası sınıflardan seçim yapın</small>
                                             </div>
+                                            
                                             <div class="search-section">
                                                 <div class="input-group">
                                                     <div class="input-group-prepend">
-                                                        <span class="input-group-text"><i class="fas fa-search"></i></span>
+                                                        <span class="input-group-text">
+                                                            <i class="fas fa-search"></i>
+                                                        </span>
                                                     </div>
-                                                    <input type="text" class="form-control" id="niceClassSearch" placeholder="Sınıf ara... (örn: kozmetik, kimyasal, teknoloji)">
+                                                    <input type="text" class="form-control" id="niceClassSearch" 
+                                                        placeholder="Sınıf ara... (örn: kozmetik, kimyasal, teknoloji)">
                                                     <div class="input-group-append">
                                                         <button class="btn btn-outline-secondary" type="button" onclick="clearNiceSearch()">
                                                             <i class="fas fa-times"></i>
@@ -185,13 +290,54 @@ body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333
                                                 </div>
                                             </div>
                                         </div>
-                                        <div class="classes-list" id="niceClassificationList" style="height: 450px; overflow-y: auto; background: #fafafa;">
-                                            <div class="loading-spinner text-center p-4">
-                                                <div class="spinner-border text-primary" role="status"></div>
-                                                <p class="mt-2 text-muted">Nice sınıfları yükleniyor...</p>
+                                        
+                                        <div class="search-results-container">
+                                            <div id="niceClassificationList" class="classes-list">
+                                                <div class="text-center p-4">
+                                                    <div class="spinner-border text-primary" role="status"></div>
+                                                    <p class="mt-2 text-muted">Nice sınıfları yükleniyor...</p>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- 99. SINIF EKLEME BÖLÜMÜ - EKSIK OLAN KISIM -->
+                                        <div class="custom-class-wrapper mt-3" style="background: #fff5f5; border: 1px solid #feb2b2; border-radius: 8px; padding: 15px;">
+                                            <h6 class="mb-3" style="color: #e74c3c;">
+                                                <i class="fas fa-plus-circle mr-2"></i>
+                                                99. Sınıf - Özel Kategori Ekle
+                                            </h6>
+                                            <div class="form-group mb-3">
+                                                <label for="customClassInput" class="form-label">Özel Kategori Açıklaması</label>
+                                                <div class="input-group">
+                                                    <textarea 
+                                                        id="customClassInput" 
+                                                        class="form-control" 
+                                                        rows="2" 
+                                                        placeholder="Özel kategori açıklamanızı buraya yazın... (Maksimum 500 karakter)"
+                                                        maxlength="500"
+                                                        style="resize: vertical; min-height: 60px;"></textarea>
+                                                    <div class="input-group-append">
+                                                        <button 
+                                                            id="addCustomClassBtn" 
+                                                            class="btn btn-outline-danger" 
+                                                            type="button"
+                                                            title="99. Sınıf Ekle">
+                                                            <i class="fas fa-plus"></i>
+                                                            Ekle
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                                <small class="text-muted">
+                                                    <span id="customClassCharCount">0</span>/500 karakter
+                                                </small>
+                                            </div>
+                                            <div class="alert alert-info py-2 px-3 mb-0" style="font-size: 0.9em;">
+                                                <i class="fas fa-info-circle mr-1"></i>
+                                                99. sınıf, standart Nice sınıflarına girmeyen özel kategoriler için kullanılır.
                                             </div>
                                         </div>
                                     </div>
+                                    
                                     <div class="col-lg-4">
                                         <div class="selected-classes-panel">
                                             <div class="panel-header text-center p-3 bg-success text-white">
