@@ -55,29 +55,28 @@ class DataEntryModule {
 setupEventListeners() {
   console.log('🔧 Event listeners kuruluyor...');
 
-  // Tab değişimi ve ilgili yeniden-render çağrıları
+  // Tab değiştiğinde ilgili render’ları tetikle
   $('#myTaskTabs a')
     .off('shown.bs.tab')
     .on('shown.bs.tab', (e) => {
       const tabId = $(e.target).attr('href').substring(1);
       console.log('📂 Tab değişti:', tabId);
 
-      // Goods & Services sekmesine ilk geçişte NiceClassification başlat
+      // NiceClassification
       if (tabId === 'goods-services' && !this.isNiceClassificationInitialized) {
         initializeNiceClassification()
           .then(() => {
             this.isNiceClassificationInitialized = true;
             this._adjustSelectedListHeight();
-          })
-          .catch(err => console.error('❌ Nice init hatası:', err));
+          });
       }
 
-      // Applicants sekmesi açıldı → mevcut başvuru sahiplerini yeniden render et
+      // Applicants tab’ı açıldıysa her defasında yeniden çiz
       if (tabId === 'applicants') {
         this.renderSelectedApplicants();
       }
 
-      // Priority sekmesi açıldı → mevcut rüçhanları yeniden render et
+      // Priority tab’ı açıldıysa her defasında yeniden çiz
       if (tabId === 'priority') {
         this.renderPriorities();
       }
