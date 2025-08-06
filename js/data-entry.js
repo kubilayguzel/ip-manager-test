@@ -65,38 +65,37 @@ class DataEntryModule {
         }
     }
 
- setupEventListeners() {
-    console.log('🔧 Event listeners kuruluyor...');
-    
-    // Tab değişiklikleri
+setupEventListeners() {
+    console.log('🔧 Event listeners kuruluyor.');
+
     $('.nav-link[data-toggle="tab"]').on('shown.bs.tab', (e) => {
-        // 1) href'ten id al
+        // href üzerinden doğru sekme id'si
         const targetTabId = e.target.getAttribute('href').substring(1);
         this.activeTab = targetTabId;
         console.log('📂 Tab değişti:', targetTabId);
-        
-        // 2) goods-services için Nice başlat
+
+        // Goods & Services başlatma (örnek)
         if (targetTabId === 'goods-services' && !this.isNiceClassificationInitialized) {
             setTimeout(() => this.initializeNiceClassification(), 100);
         }
-        
-        // 3) applicants tab'ı gelince listeyi yeniden çiz
+
+        // Başvuru sahipleri tab'ına geçince listeleri yeniden render et
         if (targetTabId === 'applicants') {
             this.renderSelectedApplicants();
         }
-        
-        // 4) summary tab'ı gelince özet güncelle
+
+        // Özeti güncelleme (örnek)
         if (targetTabId === 'summary') {
             this.updateSummary();
         }
     });
 
-    // Form submit
+    // Diğer listener’lar...
     $(document).on('click', '#saveTaskBtn', (e) => {
         e.preventDefault();
         this.handleFormSubmit();
     });
-    
+
     console.log('✅ Ana event listeners kuruldu');
 }
     setupDynamicListeners() {
