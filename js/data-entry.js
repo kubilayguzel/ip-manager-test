@@ -423,7 +423,7 @@ class DataEntryModule {
  // data-entry.js içindeki setupNiceClassificationEvents fonksiyonu - düzeltilmiş versiyon
 
 setupNiceClassificationEvents() {
-    console.log('🔧 Nice Classification event listeners kuruluyor (düzeltilmiş versiyon)...');
+    console.log('🔧 Nice Classification event listeners kuruluyor (tam çözüm)...');
 
     const listContainer = document.getElementById('niceClassificationList');
     const selectedContainer = document.getElementById('selectedNiceClasses');
@@ -435,9 +435,19 @@ setupNiceClassificationEvents() {
         console.error('❌ niceClassificationList container bulunamadı');
         return;
     }
+
+    console.log('✅ DOM elementleri kontrol ediliyor:', {
+        listContainer: !!listContainer,
+        selectedContainer: !!selectedContainer,
+        customInput: !!customInput,
+        addCustomBtn: !!addCustomBtn,
+        charCountElement: !!charCountElement
+    });
     
-    // Ana click handler - accordion kapanma sorununu çözer
+    // 1. ANA CLICK HANDLER - ACCORDION SORUNU ÇÖZÜMÜ
     listContainer.addEventListener('click', e => {
+        console.log('🎯 Click event:', e.target);
+
         // Ana sınıf seç/kaldır butonu
         const selectBtn = e.target.closest('.select-class-btn');
         if (selectBtn) {
@@ -445,24 +455,31 @@ setupNiceClassificationEvents() {
             e.stopPropagation();
             const classNumber = selectBtn.dataset.classNumber;
             
-            // Global fonksiyonları kontrol et ve çağır
+            console.log('🔘 Ana sınıf butonu tıklandı:', classNumber);
+            
+            // Global fonksiyonları kontrol et
             if (window.isClassFullySelected && window.deselectWholeClass && window.selectWholeClass) {
                 if (window.isClassFullySelected(classNumber)) {
                     window.deselectWholeClass(classNumber);
                 } else {
                     window.selectWholeClass(classNumber);
                 }
+                console.log('✅ Ana sınıf işlemi tamamlandı');
             } else {
                 console.warn('⚠️ Global nice classification fonksiyonları yüklenmemiş');
+                // Fallback: Sayfayı yeniden yükle
+                setTimeout(() => {
+                    this.initializeNiceClassificationWithDebug();
+                }, 100);
             }
             return;
         }
 
-        // Alt sınıf seçimi - accordion kapanma sorunu burada çözülüyor
+        // Alt sınıf seçimi - ACCORDION KAPANMA SORUNU BURADA ÇÖZÜLÜYOR
         const subclass = e.target.closest('.subclass-item');
         if (subclass) {
             e.preventDefault();
-            e.stopPropagation(); // Bu çok önemli - accordion'un kapanmasını engelliyor
+            e.stopPropagation(); // ÇOK ÖNEMLİ: Bu accordion'un kapanmasını engelliyor
             
             const code = subclass.dataset.code;
             const classNum = subclass.dataset.classNum;
@@ -470,108 +487,192 @@ setupNiceClassificationEvents() {
             
             console.log('🎯 Alt sınıf seçimi:', { code, classNum, text });
             
-            // Global fonksiyonları ve yerel state'i senkronize et
-            if (window.selectItem && window.removeSelectedClass) {
-                if (this.selectedNiceClasses[code]) {
-                    // Kaldır
+            // İki yönlü state güncellemesi
+            if (this.selectedNiceClasses[code]) {
+                // KALDIRMA İŞLEMİ
+                console.log('🗑️ Alt sınıf kaldırılıyor:', code);
+                
+                // Global fonksiyonu çağır
+                if (window.removeSelectedClass) {
                     window.removeSelectedClass(code);
-                    delete this.selectedNiceClasses[code];
-                } else {
-                    // Ekle
-                    window.selectItem(code, classNum, text);
-                    this.selectedNiceClasses[code] = { classNum, text };
                 }
-                this.renderSelectedNiceClasses();
+                
+                // Yerel state'den kaldır
+                delete this.selectedNiceClasses[code];
+                
+                // Visual state güncelle
+                subclass.classList.remove('selected');
             } else {
-                console.warn('⚠️ selectItem/removeSelectedClass fonksiyonları bulunamadı');
+                // EKLEME İŞLEMİ
+                console.log('➕ Alt sınıf ekleniyor:', code);
+                
+                // Global fonksiyonu çağır
+                if (window.selectItem) {
+                    window.selectItem(code, classNum, text);
+                }
+                
+                // Yerel state'e ekle
+                this.selectedNiceClasses[code] = { classNum, text };
+                
+                // Visual state güncelle
+                subclass.classList.add('selected');
             }
+            
+            // Seçilen sınıfları yeniden render et
+            this.renderSelectedNiceClasses();
+            
+            console.log('✅ Alt sınıf işlemi tamamlandı, yeni state:', Object.keys(this.selectedNiceClasses).length);
             return;
         }
 
-        // Header tıklama (accordion toggle)
+        // Header tıklama (accordion toggle) - Sadece ana sınıf butonu değilse
         const header = e.target.closest('.class-header');
         if (header && !e.target.closest('.select-class-btn')) {
-            e.preventDefault();
+            const headerId = header.dataset.id;
+            console.log('📂 Accordion toggle:', headerId);
+            
             if (window.toggleAccordion) {
-                window.toggleAccordion(header.dataset.id);
+                window.toggleAccordion(headerId);
             } else {
-                console.warn('⚠️ toggleAccordion fonksiyonu bulunamadı');
+                // Fallback accordion toggle
+                const container = document.getElementById(`subclasses-${headerId}`);
+                if (container) {
+                    container.classList.toggle('show');
+                    header.classList.toggle('expanded');
+                }
             }
         }
     });
 
-    // 99. sınıf (özel sınıf) ekleme - SORUN BURADA ÇÖZÜLÜYOR
+    // 2. 99. SINIF EKLEME - ANA SORUNUN ÇÖZÜMÜ
     if (addCustomBtn) {
-        addCustomBtn.addEventListener('click', () => {
+        console.log('✅ 99. sınıf ekleme butonu bulundu, event listener ekleniyor');
+        
+        addCustomBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            
             const text = customInput.value.trim();
+            console.log('➕ 99. sınıf ekleme denemesi:', text);
+            
+            // Validasyonlar
             if (!text) {
                 alert('Lütfen özel sınıf metnini girin');
+                customInput.focus();
+                return;
+            }
+            
+            if (text.length < 5) {
+                alert('Özel sınıf metni en az 5 karakter olmalıdır');
+                customInput.focus();
                 return;
             }
             
             if (text.length > 500) {
                 alert('Özel sınıf metni maksimum 500 karakter olabilir');
+                customInput.focus();
                 return;
             }
             
+            // Unique code oluştur
             const code = `99-${Date.now()}`;
-            console.log('➕ 99. sınıf ekleniyor:', { code, text });
+            console.log('🆔 99. sınıf kodu oluşturuldu:', code);
             
-            // Global fonksiyonu çağır
-            if (window.selectItem) {
-                window.selectItem(code, '99', text);
+            try {
+                // Global fonksiyonu çağır
+                if (window.selectItem) {
+                    window.selectItem(code, '99', text);
+                    console.log('✅ Global selectItem çağrıldı');
+                } else {
+                    console.warn('⚠️ window.selectItem bulunamadı');
+                }
+                
+                // Yerel state'i güncelle
+                this.selectedNiceClasses[code] = { classNum: '99', text };
+                
+                // Seçilen sınıfları yeniden render et
+                this.renderSelectedNiceClasses();
+                
+                // Input'u temizle
+                customInput.value = '';
+                if (charCountElement) charCountElement.textContent = '0';
+                
+                console.log('✅ 99. sınıf başarıyla eklendi:', code);
+                
+                // Başarı mesajı (isteğe bağlı)
+                const successMsg = document.createElement('div');
+                successMsg.className = 'alert alert-success alert-dismissible fade show mt-2';
+                successMsg.style.fontSize = '0.9em';
+                successMsg.innerHTML = `
+                    <i class="fas fa-check-circle mr-1"></i>
+                    Özel sınıf başarıyla eklendi: "${text.substring(0, 50)}${text.length > 50 ? '...' : ''}"
+                    <button type="button" class="close" data-dismiss="alert">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                `;
+                addCustomBtn.parentNode.parentNode.appendChild(successMsg);
+                
+                // 3 saniye sonra mesajı kaldır
+                setTimeout(() => {
+                    if (successMsg.parentNode) {
+                        successMsg.parentNode.removeChild(successMsg);
+                    }
+                }, 3000);
+                
+            } catch (error) {
+                console.error('❌ 99. sınıf ekleme hatası:', error);
+                alert('99. sınıf eklenirken bir hata oluştu: ' + error.message);
             }
-            
-            // Yerel state'i güncelle
-            this.selectedNiceClasses[code] = { classNum: '99', text };
-            this.renderSelectedNiceClasses();
-            
-            // Input'u temizle
-            customInput.value = '';
-            if (charCountElement) charCountElement.textContent = '0';
-            
-            console.log('✅ 99. sınıf başarıyla eklendi');
         });
         
-        console.log('✅ 99. sınıf ekleme butonu event listener eklendi');
+        console.log('✅ 99. sınıf butonu event listener eklendi');
     } else {
-        console.error('❌ addCustomClassBtn bulunamadı');
+        console.error('❌ addCustomClassBtn bulunamadı - HTML\'de eksik element var');
     }
 
-    // Enter tuşu ile 99. sınıf ekleme
+    // 3. ENTER TUŞU İLE 99. SINIF EKLEME
     if (customInput) {
         customInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
-                if (addCustomBtn) addCustomBtn.click();
+                if (addCustomBtn) {
+                    addCustomBtn.click();
+                }
             }
         });
+        
+        console.log('✅ 99. sınıf Enter tuşu event listener eklendi');
     }
 
-    // Karakter sayacı
+    // 4. KARAKTER SAYACI
     if (customInput && charCountElement) {
         customInput.addEventListener('input', (e) => {
             const length = e.target.value.length;
             charCountElement.textContent = length.toLocaleString('tr-TR');
             
-            // Karakter sınırı uyarısı
+            // Karakter sınırı uyarı renkleri
             if (length > 450) {
-                charCountElement.style.color = length > 500 ? 'red' : 'orange';
+                charCountElement.style.color = length > 500 ? '#dc3545' : '#fd7e14';
+                charCountElement.style.fontWeight = 'bold';
             } else {
                 charCountElement.style.color = '#6c757d';
+                charCountElement.style.fontWeight = 'normal';
             }
         });
+        
+        console.log('✅ Karakter sayacı event listener eklendi');
     }
 
-    // Seçilen sınıfları kaldırma
+    // 5. SEÇİLEN SINIFLARI KALDIRMA
     if (selectedContainer) {
         selectedContainer.addEventListener('click', (e) => {
             const removeBtn = e.target.closest('.remove-selected-btn');
             if (removeBtn) {
                 e.preventDefault();
-                const key = removeBtn.dataset.key;
+                e.stopPropagation();
                 
-                console.log('🗑️ Sınıf kaldırılıyor:', key);
+                const key = removeBtn.dataset.key;
+                console.log('🗑️ Sınıf kaldırma işlemi:', key);
                 
                 // Global fonksiyonu çağır
                 if (window.removeSelectedClass) {
@@ -580,14 +681,44 @@ setupNiceClassificationEvents() {
                 
                 // Yerel state'den kaldır
                 delete this.selectedNiceClasses[key];
+                
+                // Yeniden render et
                 this.renderSelectedNiceClasses();
+                
+                // Visual element'i güncelle
+                const element = document.querySelector(`[data-code="${key}"]`);
+                if (element) {
+                    element.classList.remove('selected');
+                }
+                
+                console.log('✅ Sınıf başarıyla kaldırıldı:', key);
             }
         });
         
         console.log('✅ Seçilen sınıfları kaldırma event listener eklendi');
     }
+
+    // 6. GLOBAL FONKSİYON KONTROLÜ
+    const requiredGlobalFunctions = [
+        'selectItem', 'removeSelectedClass', 'toggleAccordion',
+        'selectWholeClass', 'deselectWholeClass', 'isClassFullySelected'
+    ];
     
-    console.log('✅ Nice Classification event listeners başarıyla kuruldu');
+    const missingFunctions = requiredGlobalFunctions.filter(fn => typeof window[fn] !== 'function');
+    
+    if (missingFunctions.length > 0) {
+        console.warn('⚠️ Eksik global fonksiyonlar:', missingFunctions);
+        console.log('🔄 nice-classification.js yeniden yüklenmeye çalışılıyor...');
+        
+        // Nice classification'ı yeniden başlat
+        setTimeout(() => {
+            this.initializeNiceClassificationWithDebug();
+        }, 500);
+    } else {
+        console.log('✅ Tüm global fonksiyonlar mevcut');
+    }
+    
+    console.log('🎉 Nice Classification event listeners başarıyla kuruldu!');
 }
 
     toggleNiceSubclass(code, classNum, text, element) {
@@ -623,42 +754,61 @@ setupNiceClassificationEvents() {
     }
 
     renderSelectedNiceClasses() {
-        const container = document.getElementById('selectedNiceClasses');
-        if (!container) return;
-
-        if (Object.keys(this.selectedNiceClasses).length === 0) {
-            container.innerHTML = `
-                <div class="empty-state">
-                    <i class="fas fa-list-alt fa-3x text-muted mb-3"></i>
-                    <p class="text-muted">
-                        Henüz hiçbir sınıf seçilmedi.<br>
-                        Sol panelden sınıf başlığına veya alt sınıfları seçin.
-                    </p>
-                </div>
-            `;
-            
-            const countElement = document.getElementById('selectedClassCount');
-            if (countElement) countElement.textContent = '0';
-            return;
-        }
-
-        let html = '';
-        Object.entries(this.selectedNiceClasses).forEach(([code, item]) => {
-            const displayCode = item.classNum === '99' ? item.classNum : code;
-            html += `
-                <div class="selected-class-item">
-                    <div class="selected-class-number">Sınıf ${displayCode}</div>
-                    <p class="selected-class-description">${item.text}</p>
-                    <button class="remove-selected-class-btn" data-key="${code}" title="Kaldır">&times;</button>
-                </div>
-            `;
-        });
-        
-        container.innerHTML = html;
-        
-        const countElement = document.getElementById('selectedClassCount');
-        if (countElement) countElement.textContent = Object.keys(this.selectedNiceClasses).length;
+    const container = document.getElementById('selectedNiceClasses');
+    const countElement = document.getElementById('selectedClassCount');
+    
+    if (!container) {
+        console.error('❌ selectedNiceClasses container bulunamadı');
+        return;
     }
+
+    const selectedCount = Object.keys(this.selectedNiceClasses).length;
+    
+    // Sayaç güncelle
+    if (countElement) {
+        countElement.textContent = selectedCount;
+    }
+
+    if (selectedCount === 0) {
+        container.innerHTML = `
+            <div class="empty-state text-center">
+                <i class="fas fa-list-alt fa-3x text-muted mb-3"></i>
+                <p class="text-muted">
+                    Henüz hiçbir sınıf seçilmedi.<br>
+                    Sol panelden sınıf başlığına veya alt sınıfları seçin.
+                </p>
+            </div>
+        `;
+        return;
+    }
+
+    let html = '';
+    
+    // Sınıfları numaraya göre sırala
+    const sortedEntries = Object.entries(this.selectedNiceClasses)
+        .sort(([, a], [, b]) => {
+            const numA = parseInt(a.classNum) || 99;
+            const numB = parseInt(b.classNum) || 99;
+            return numA - numB;
+        });
+
+    sortedEntries.forEach(([code, item]) => {
+        const isCustom = item.classNum === '99';
+        const displayCode = isCustom ? item.classNum : item.classNum;
+        
+        html += `
+            <div class="selected-class-item ${isCustom ? 'custom' : ''}">
+                <div class="selected-class-number">Sınıf ${displayCode}</div>
+                <p class="selected-class-description">${item.text}</p>
+                <button class="remove-selected-btn" data-key="${code}" title="Kaldır">&times;</button>
+            </div>
+        `;
+    });
+    
+    container.innerHTML = html;
+    
+    console.log('✅ Seçilen sınıflar render edildi:', selectedCount);
+}
 
     setupDynamicFormListeners() {
         console.log('🔧 Dinamik form listeners kuruluyor...');
