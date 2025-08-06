@@ -1,6 +1,5 @@
 // js/data-entry.js
 import { initializeNiceClassification, getSelectedNiceClasses } from './nice-classification.js';
-import { loadSharedLayout } from './layout-loader.js';
 import { personService } from '../firebase-config.js';
 
 class DataEntryModule {
@@ -509,19 +508,40 @@ class DataEntryModule {
                         initializeNiceClassification();
                         this.isNiceInitialized = true;
                         
-                        // Nice classification header'ını düzelt
+                        // Nice classification header'ını ve DOM elementlerini düzelt
                         setTimeout(() => {
                             const header = document.querySelector('.classification-panel .panel-header');
+                            const listContainer = document.getElementById('niceClassificationList');
+                            const selectedContainer = document.getElementById('selectedNiceClasses');
+                            
                             if (header) {
                                 header.style.display = 'block';
                                 header.style.visibility = 'visible';
+                                console.log('✅ Nice header düzeltildi');
                             }
-                        }, 200);
+                            
+                            if (listContainer) {
+                                console.log('✅ Nice list container bulundu');
+                            } else {
+                                console.error('❌ Nice list container bulunamadı!');
+                            }
+                            
+                            if (selectedContainer) {
+                                console.log('✅ Selected classes container bulundu');
+                            } else {
+                                console.error('❌ Selected classes container bulunamadı!');
+                            }
+                            
+                            // Debug için tüm nice elementlerini kontrol et
+                            const allNiceElements = document.querySelectorAll('[data-code]');
+                            console.log('🔍 Nice elements sayısı:', allNiceElements.length);
+                            
+                        }, 500); // Daha uzun timeout
                         
                     } catch (error) {
-                        console.error('Nice Classification başlatma hatası:', error);
+                        console.error('❌ Nice Classification başlatma hatası:', error);
                     }
-                }, 100);
+                }, 200); // Daha uzun initial timeout
             }
 
             // Başvuru sahibi sekmesi açıldığında arama setup'ını yap
@@ -661,6 +681,14 @@ class DataEntryModule {
 
         console.log('🎛️ Başvuru sahibi arama kurulumu yapılıyor...');
         console.log('🔧 PersonService durumu:', typeof personService, personService);
+        
+        // PersonService fonksiyonlarını listele
+        if (typeof personService === 'object' && personService) {
+            console.log('📋 PersonService fonksiyonları:', Object.keys(personService));
+            console.log('🔍 getPersons var mı?', typeof personService.getPersons === 'function');
+            console.log('➕ addPerson var mı?', typeof personService.addPerson === 'function');
+            console.log('🔍 searchApplicants var mı?', typeof personService.searchApplicants === 'function');
+        }
 
         // Search functionality
         searchInput.addEventListener('input', async (e) => {
@@ -676,16 +704,27 @@ class DataEntryModule {
             try {
                 let results = [];
                 
-                // Önce personService'i dene
-                if (typeof personService !== 'undefined' && personService.searchApplicants) {
-                    console.log('🔍 PersonService kullanılıyor...');
-                    results = await personService.searchApplicants(query);
-                    console.log('📋 PersonService sonuçları:', results);
+                // PersonService'den tüm kişileri al ve filtrele
+                if (typeof personService !== 'undefined' && personService.getPersons) {
+                    console.log('🔍 PersonService.getPersons kullanılıyor...');
+                    const allPersons = await personService.getPersons();
+                    console.log('📋 Tüm kişiler:', allPersons);
+                    
+                    // Array kontrolü ve filtreleme
+                    if (Array.isArray(allPersons)) {
+                        results = allPersons.filter(person => 
+                            (person.name && person.name.toLowerCase().includes(query.toLowerCase())) ||
+                            (person.email && person.email.toLowerCase().includes(query.toLowerCase()))
+                        );
+                        console.log('🎯 Filtrelenmiş sonuçlar:', results);
+                    } else {
+                        console.log('⚠️ PersonService array döndürmedi:', typeof allPersons);
+                    }
                 }
                 
-                // PersonService sonuç vermediyse veya hata verdiyse mock data kullan
+                // PersonService sonuç vermediyse mock data kullan
                 if (!results || results.length === 0) {
-                    console.log('⚠️ Mock data kullanılıyor, PersonService sonuç vermedi');
+                    console.log('⚠️ Mock data kullanılıyor');
                     results = [
                         { id: 1, name: 'Ahmet Yılmaz', email: 'ahmet@example.com', phone: '0532 123 4567' },
                         { id: 2, name: 'Ayşe Kaya', email: 'ayse@example.com', phone: '0533 987 6543' },
@@ -698,6 +737,7 @@ class DataEntryModule {
                     );
                 }
 
+                console.log('📤 Final sonuçlar:', results);
                 this.renderSearchResults(results, searchResults);
                 
             } catch (error) {
@@ -814,17 +854,30 @@ class DataEntryModule {
         };
 
         try {
-            // Backend'e kaydet
-            const savedPerson = await personService.createPerson(personData);
-            
-            // Kaydedilen kişiyi başvuru sahiplerine ekle
-            this.addApplicant(savedPerson);
+            // PersonService.addPerson kullan
+            if (typeof personService !== 'undefined' && personService.addPerson) {
+                console.log('💾 PersonService.addPerson kullanılıyor...', personData);
+                const savedPerson = await personService.addPerson(personData);
+                console.log('✅ Kişi kaydedildi:', savedPerson);
+                
+                // Kaydedilen kişiyi başvuru sahiplerine ekle
+                this.addApplicant(savedPerson);
+                
+            } else {
+                console.log('⚠️ PersonService.addPerson yok, geçici kişi ekleniyor');
+                // Geçici ID ile ekle
+                const tempPersonData = {
+                    id: Date.now().toString(),
+                    ...personData
+                };
+                this.addApplicant(tempPersonData);
+            }
             
             // Modal'ı kapat ve formu temizle
             $('#newPersonModal').modal('hide');
             document.getElementById('newPersonForm').reset();
             
-            console.log('✅ Yeni kişi eklendi:', savedPerson.name);
+            console.log('✅ Yeni kişi başarıyla eklendi!');
             alert('Kişi başarıyla eklendi!');
             
         } catch (error) {
@@ -833,10 +886,7 @@ class DataEntryModule {
             // Hata durumunda geçici ID ile ekle
             const tempPersonData = {
                 id: Date.now().toString(),
-                name: personName,
-                email: personEmail,
-                phone: personPhone,
-                address: personAddress
+                ...personData
             };
             
             this.addApplicant(tempPersonData);
