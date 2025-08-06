@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IP Manager - Portföy Kaydı</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <link rel="stylesheet" href="css/shared-styles.css">
+    <style>
+/* Genel Reset */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333; display: flex; }
+
+/* Sayfa Yapısı */
+.page-wrapper { flex-grow: 1; display: flex; flex-direction: column; height: 100vh; overflow-y: auto; background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); }
+.main-container { width: 100%; padding: 30px; }
+.page-header { background: rgba(255,255,255,0.95); padding: 30px; border-radius: 20px; margin-bottom: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+.page-title { font-size: 2em; color: #1e3c72; margin-bottom: 10px; }
+.page-subtitle { color: #666; font-size: 1.1em; }
+.form-container { background: rgba(255,255,255,0.95); padding: 40px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+.form-section { border-bottom: 1px solid #e1e8ed; padding-bottom: 25px; margin-bottom: 25px; }
+.form-section:last-child { border-bottom: none; }
+.section-title { font-size: 1.3em; color: #1e3c72; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 25px; }
+.form-group { display: flex; flex-direction: column; }
+.form-group.full-width { grid-column: 1 / -1; }
+.form-label { margin-bottom: 8px; font-weight: 500; color: #333; }
+.form-input, .form-select, .form-textarea { width: 100%; padding: 12px 15px; border: 2px solid #e1e8ed; border-radius: 10px; font-size: 1em; transition: all 0.3s ease; background: #fff; }
+
+/* Tab Stilleri */
+.nav-tabs {
+    border-bottom: 2px solid #e9ecef;
+    margin-bottom: 1.5rem;
+}
+.nav-tabs .nav-link {
+    border: none;
+    color: #495057;
+    font-weight: 600;
+    padding: 12px 20px;
+    transition: all 0.3s ease;
+}
+.nav-tabs .nav-link.active {
+    background-color: #1e3c72;
+    color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(30, 60, 114, 0.3);
+}
+.nav-tabs .nav-link:hover:not(.active) {
+    background-color: #f8f9fa;
+    border-radius: 8px;
+}
+
+/* Tab İçerik Alanı */
+.tab-content-card {
+    padding: 1.5rem;
+    border: 1px solid #dee2e6;
+    border-top: none;
+    border-bottom-left-radius: 0.25rem;
+    border-bottom-right-radius: 0.25rem;
+    background-color: #fff;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.05);
+}
+
+/* Nice Classification Stilleri */
+.nice-classification-container {
+    background: #f8f9fa;
+    border-radius: 10px;
+    padding: 20px;
+}
+.classification-panel {
+    background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+    color: white;
+    border-radius: 10px;
+    overflow: hidden;
+}
+.panel-header {
+    padding: 20px;
+    text-align: center;
+}
+.search-section {
+    padding: 0 20px 20px;
+}
+.classes-list {
+    background: #fff;
+    max-height: 400px;
+    overflow-y: auto;
+    border-radius: 0 0 10px 10px;
+}
+
+/* Selected Classes Stil */
+.selected-items-list {
+    min-height: 100px;
+    border: 2px dashed #ced4da;
+    border-radius: 0.25rem;
+    padding: 15px;
+    background-color: #f8f9fa;
+    overflow-y: auto;
+    max-height: 300px;
+}
+.selected-item {
+    background-color: #e2f0ff;
+    border: 1px solid #b3d9ff;
+    border-radius: 15px;
+    padding: 8px 12px;
+    margin: 3px;
+    display: inline-flex;
+    align-items: center;
+    font-size: 0.9em;
+}
+.selected-item .remove-item {
+    background: none;
+    border: none;
+    color: #dc3545;
+    margin-left: 8px;
+    cursor: pointer;
+}
+
+/* Empty State */
+.empty-state {
+    text-align: center;
+    padding: 2rem;
+    color: #6c757d;
+}
+.empty-state i {
+    display: block;
+    margin: 0 auto 1rem;
+    opacity: 0.5;
+}
+
+/* Arama sonuçları */
+.search-results-list {
+    max-height: 200px;
+    overflow-y: auto;
+    border: 1px solid #ced4da;
+    border-top: none;
+    border-bottom-left-radius: 0.25rem;
+    border-bottom-right-radius: 0.25rem;
+    background-color: #fff;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    position: relative;
+    z-index: 1000;
+}
+.search-result-item {
+    padding: 10px 15px;
+    cursor: pointer;
+    border-bottom: 1px solid #eee;
+    transition: background-color 0.2s ease;
+}
+.search-result-item:hover {
+    background-color: #f0f0f0;
+}
+.search-result-item:last-child {
+    border-bottom: none;
+}
+
+/* Nice Classification Item Styles */
+.class-header {
+    padding: 15px;
+    border-bottom: 1px solid #eee;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    justify-content: between;
+    align-items: center;
+}
+.class-header:hover {
+    background-color: #f8f9fa;
+}
+.class-header.selected {
+    background-color: #e3f2fd;
+    border-left: 4px solid #1976d2;
+}
+.class-number-badge {
+    background: #1976d2;
+    color: white;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-weight: bold;
+    margin-right: 10px;
+}
+
+/* Custom Class Section */
+.custom-class-frame {
+    background-color: #fff;
+    border: 2px dashed #ffc107;
+    border-radius: 8px;
+    padding: 15px;
+    margin-top: 15px;
+}
+.custom-class-section textarea {
+    height: 80px;
+    resize: vertical;
+}
+
+/* Form Actions */
+.form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 15px;
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid #e1e8ed;
+}
+.btn {
+    padding: 12px 25px;
+    border: none;
+    border-radius: 8px;
+    font-size: 1em;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+.btn-primary {
+    background: #1e3c72;
+    color: #fff;
+}
+.btn-primary:hover {
+    background: #2a5298;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(30, 60, 114, 0.3);
+}
+.btn-secondary {
+    background: #6c757d;
+    color: #fff;
+}
+.btn-secondary:hover {
+    background: #545b62;
+}
+
+/* Brand Upload Frame */
+.brand-upload-frame {
+    border: 2px dashed #a0a7b0;
+    border-radius: 0.5rem;
+    background-color: #f8f9fa;
+    padding: 1rem;
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+    text-align: center;
+}
+.brand-upload-frame:hover {
+    background-color: #e9ecef;
+    border-color: #6c757d;
+}
+
+/* Checkbox ve Radio Stili */
+.form-check {
+    margin-bottom: 10px;
+}
+.form-check-input {
+    margin-top: 0.3rem;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .form-grid {
+        grid-template-columns: 1fr;
+    }
+    .main-container {
+        padding: 15px;
+    }
+}
+    </style>
+</head>
+<body>
+    <div id="layout-placeholder"></div>
+    <div class="page-wrapper">
+        <main class="main-container">
+            <section class="page-header">
+                <h1 class="page-title">Portföy Kaydı Oluştur</h1>
+                <p class="page-subtitle">Yeni bir fikri mülkiyet kaydı ekleyin</p>
+            </section>
+
+            <div class="form-container">
+                <div class="form-section">
+                    <h3 class="section-title">IP Türü Seçimi</h3>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="ipTypeSelect" class="form-label">Fikri Mülkiyet Türü</label>
+                            <select id="ipTypeSelect" class="form-select">
+                                <option value="">Seçiniz...</option>
+                                <option value="patent">Patent</option>
+                                <option value="trademark">Marka</option>
+                                <option value="design">Tasarım</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Dinamik olarak oluşturulacak form alanı -->
+                <div id="dynamicFormContainer"></div>
+
+                <!-- Form Aksiyonları -->
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="window.location.href='portfolio.html'">İptal</button>
+                    <button type="button" id="savePortfolioBtn" class="btn btn-primary" disabled>Kaydet</button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Yeni Kişi Modal -->
+    <div class="modal fade" id="newPersonModal" tabindex="-1" role="dialog" aria-labelledby="newPersonModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="newPersonModalLabel">Yeni Kişi Ekle</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <form id="newPersonForm">
+                        <div class="form-group">
+                            <label for="personName">Ad Soyad *</label>
+                            <input type="text" class="form-control" id="personName" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="personEmail">E-posta</label>
+                            <input type="email" class="form-control" id="personEmail">
+                        </div>
+                        <div class="form-group">
+                            <label for="personPhone">Telefon</label>
+                            <input type="tel" class="form-control" id="personPhone">
+                        </div>
+                        <div class="form-group">
+                            <label for="personAddress">Adres</label>
+                            <textarea class="form-control" id="personAddress" rows="3"></textarea>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">İptal</button>
+                    <button type="button" class="btn btn-primary" id="savePersonBtn">Kaydet</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script type="module" src="./js/layout-loader.js"></script>
+    <script type="module" src="./js/nice-classification.js"></script>
+    <script type="module" src="./js/data-entry.js"></script>
+</body>
+</html>
