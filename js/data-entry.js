@@ -73,7 +73,9 @@ class DataEntryModule {
         
         // Tab değişiklikleri
         $('.nav-link[data-toggle="tab"]').on('shown.bs.tab', (e) => {
-            const targetTabId = e.target.getAttribute('aria-controls');
+        // href="#goods-services" → "goods-services"
+        const href = e.target.getAttribute('href');
+        const targetTabId = href ? href.slice(1) : null;
             this.activeTab = targetTabId;
             
             console.log('📂 Tab değişti:', targetTabId);
