@@ -57,31 +57,28 @@ setupEventListeners() {
 
   // 1) Tab değiştiğinde render tetikle
   $('#myTaskTabs a')
-    .off('shown.bs.tab')
-    .on('shown.bs.tab', (e) => {
-      const tabId = $(e.target).attr('href').substring(1);
-      console.log('📂 Tab değişti:', tabId);
+  .off('shown.bs.tab')
+  .on('shown.bs.tab', (e) => {
+    const tabId = e.target.getAttribute('aria-controls'); // href yerine aria-controls
+    console.log('📂 Tab değişti:', tabId);
 
-      // Goods & Services sekmesinde NiceClassification başlat
-      if (tabId === 'goods-services' && !this.isNiceClassificationInitialized) {
-        initializeNiceClassification()
-          .then(() => {
-            this.isNiceClassificationInitialized = true;
-            this._adjustSelectedListHeight();
-          })
-          .catch(err => console.error('❌ Nice init hatası:', err));
-      }
+    if (tabId === 'goods-services' && !this.isNiceClassificationInitialized) {
+      initializeNiceClassification()
+        .then(() => {
+          this.isNiceClassificationInitialized = true;
+          this._adjustSelectedListHeight();
+        })
+        .catch(err => console.error('❌ Nice init hatası:', err));
+    }
 
-      // Applicants sekmesine geçince listeyi yeniden çiz
-      if (tabId === 'applicants') {
-        this.renderSelectedApplicants();
-      }
+    if (tabId === 'applicants') {
+      this.renderSelectedApplicants();  // <<< applicant listesi her girişte yenilenir
+    }
 
-      // Priority sekmesine geçince rüçhanları yeniden çiz
-      if (tabId === 'priority') {
-        this.renderPriorities();
-      }
-    });
+    if (tabId === 'priority') {
+      this.renderPriorities();
+    }
+  });
 
   // 2) Rüçhan ekleme
   $('#addPriorityBtn')
