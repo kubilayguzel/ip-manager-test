@@ -536,21 +536,48 @@ class DataEntryModule {
                             const allNiceElements = document.querySelectorAll('[data-code]');
                             const classHeaders = document.querySelectorAll('.class-header');
                             const accordions = document.querySelectorAll('[id^="subclasses-"]');
+                            const selectButtons = document.querySelectorAll('.main-class-select-btn');
                             
                             console.log('🔍 Nice elements sayısı:', allNiceElements.length);
                             console.log('🔍 Class headers sayısı:', classHeaders.length);
                             console.log('🔍 Accordions sayısı:', accordions.length);
+                            console.log('🔍 Select buttons sayısı:', selectButtons.length);
                             
-                            // Accordion durumlarını kontrol et
+                            // Ana sınıf seçim butonları var mı kontrol et
+                            const checkIcons = document.querySelectorAll('.fas.fa-check');
+                            console.log('🔍 Check icons sayısı:', checkIcons.length);
+                            
+                            // Accordion durumlarını kontrol et - hem class hem style kontrolü
                             accordions.forEach((accordion, index) => {
                                 const hasShow = accordion.classList.contains('show');
-                                console.log(`📁 Accordion ${index + 1} açık mı?`, hasShow);
-                                if (hasShow) {
-                                    // Kapalı yap
+                                const displayStyle = window.getComputedStyle(accordion).display;
+                                const isVisible = displayStyle !== 'none';
+                                
+                                console.log(`📁 Accordion ${index + 1}:`, {
+                                    hasShowClass: hasShow,
+                                    displayStyle: displayStyle,
+                                    isVisible: isVisible,
+                                    classList: Array.from(accordion.classList)
+                                });
+                                
+                                // Accordionları gerçekten kapat
+                                if (hasShow || isVisible) {
                                     accordion.classList.remove('show');
-                                    console.log(`🔒 Accordion ${index + 1} kapatıldı`);
+                                    accordion.style.display = 'none';
+                                    console.log(`🔒 Accordion ${index + 1} zorla kapatıldı`);
                                 }
                             });
+                            
+                            // Window global fonksiyonlarını kontrol et
+                            const globalFunctions = ['selectWholeClass', 'deselectWholeClass', 'toggleAccordion'];
+                            globalFunctions.forEach(fn => {
+                                console.log(`🌐 window.${fn}:`, typeof window[fn] === 'function' ? '✅' : '❌');
+                            });
+                            
+                            // Ana sınıf seçimi için event delegation ekle
+                            setTimeout(() => {
+                                this.setupMainClassSelection();
+                            }, 1000);
                             
                         }, 500); // Daha uzun timeout
                         
@@ -939,6 +966,69 @@ class DataEntryModule {
                 });
             }
         });
+    }
+
+    setupMainClassSelection() {
+        console.log('🎯 Ana sınıf seçimi kurulumu başlatılıyor...');
+        
+        const listContainer = document.getElementById('niceClassificationList');
+        if (!listContainer) {
+            console.error('❌ Nice classification list container bulunamadı!');
+            return;
+        }
+
+        // Mevcut event listener'ı kaldır ve yenisini ekle
+        const newContainer = listContainer.cloneNode(true);
+        listContainer.parentNode.replaceChild(newContainer, listContainer);
+
+        // Ana sınıf başlığına özel event listener
+        newContainer.addEventListener('click', (e) => {
+            console.log('🖱️ Click event:', e.target.className);
+            
+            // Class header'a tıklanması
+            if (e.target.classList.contains('class-header') || 
+                e.target.closest('.class-header')) {
+                
+                const header = e.target.classList.contains('class-header') ? 
+                              e.target : e.target.closest('.class-header');
+                              
+                const classNum = header.dataset.id;
+                
+                if (!classNum) return;
+                
+                console.log('🎯 Ana sınıf header tıklandı:', classNum);
+                
+                // Shift tuşuna basılıysa ana sınıf seç
+                if (e.shiftKey) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log('⇧ Shift + click: Ana sınıf seçiliyor:', classNum);
+                    
+                    if (typeof window.selectWholeClass === 'function') {
+                        window.selectWholeClass(classNum);
+                    } else {
+                        console.error('❌ selectWholeClass fonksiyonu bulunamadı');
+                    }
+                    return;
+                }
+                
+                // Normal tıklama: accordion toggle
+                console.log('👆 Normal click: Accordion toggle:', classNum);
+                if (typeof window.toggleAccordion === 'function') {
+                    window.toggleAccordion(classNum);
+                } else {
+                    console.error('❌ toggleAccordion fonksiyonu bulunamadı');
+                }
+            }
+            
+            // Alt sınıf tıklanması - mevcut nice-classification.js'e bırak
+            if (e.target.classList.contains('subclass-item')) {
+                // Nice classification modülü handle edecek
+                return;
+            }
+        });
+
+        console.log('✅ Ana sınıf seçimi event listener kuruldu');
     }
 
     updateSaveButtonState() {
