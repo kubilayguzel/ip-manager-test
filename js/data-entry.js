@@ -1032,34 +1032,22 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log('🎯 DOM yüklendi, Data Entry Module başlatılıyor...');
     dataEntryInstance = new DataEntryModule();
     dataEntryInstance.init();
-    // --- 35-5 modal kapatma butonları ---
-const closeBtn = document.getElementById('closeClass355Modal');
-if (closeBtn) {
-    closeBtn.addEventListener('click', () => {
-        document.getElementById('class355Modal').style.display = 'none';
-    });
-}
 
-const cancelBtn = document.getElementById('cancel355Selection');
-if (cancelBtn) {
-    cancelBtn.addEventListener('click', () => {
-        document.getElementById('class355Modal').style.display = 'none';
-    });
-}
-   
+    // --- 35-5 modal kapatma butonları ---
+    const closeBtn = document.getElementById('closeClass355Modal');
+    if (closeBtn) {
+        closeBtn.addEventListener('click', () => {
+            document.getElementById('class355Modal').style.display = 'none';
+        });
+    }
+
+    const cancelBtn = document.getElementById('cancel355Selection');
+    if (cancelBtn) {
+        cancelBtn.addEventListener('click', () => {
+            document.getElementById('class355Modal').style.display = 'none';
+        });
+    }
+
     // Make instance globally accessible
     window.dataEntryInstance = dataEntryInstance;
-});
-// 35-5 alt grubu seçildiğinde
-if (code === '35-5') {
-    console.log('📢 35-5 alt grubu seçildi – özel modal açılıyor');
-    document.getElementById('class355Modal').style.display = 'block';
-}
-
-// Kapatma düğmesi
-document.getElementById('closeClass355Modal').addEventListener('click', () => {
-    document.getElementById('class355Modal').style.display = 'none';
-});
-document.getElementById('cancel355Selection').addEventListener('click', () => {
-    document.getElementById('class355Modal').style.display = 'none';
 });
