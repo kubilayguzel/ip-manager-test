@@ -118,6 +118,24 @@ class DataEntryModule {
     const lbl = document.getElementById('priorityDateLabel');
     lbl.textContent = e.target.value === 'sergi' ? 'Sergi Tarihi' : 'Rüçhan Tarihi';
     });
+
+    const dropZone = document.getElementById('brand-example-drop-zone');
+    const fileInput = document.getElementById('brandExample');
+    dropZone.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', e => this.handleBrandExampleUpload(e.target.files[0]));
+    document.getElementById('removeBrandExampleBtn')
+            .addEventListener('click', () => {
+    this.brandExampleFile = null;
+    document.getElementById('brandExamplePreviewContainer').style.display = 'none';
+    });
+    // — Rüçhan ekleme —
+        document.getElementById('addPriorityBtn')
+                .addEventListener('click', () => this.addPriority());
+        document.getElementById('priorityType')
+                .addEventListener('change', (e) => {
+        document.getElementById('priorityDateLabel').textContent =
+            e.target.value === 'sergi' ? 'Sergi Tarihi' : 'Rüçhan Tarihi';
+        });
   }
 
   searchPersons(query) {
@@ -173,7 +191,15 @@ class DataEntryModule {
     this.renderPriorities();
     $('#priorityDate,#priorityCountry,#priorityNumber').val('');
   }
-
+    async handleBrandExampleUpload(file) {
+    this.brandExampleFile = file;
+    const reader = new FileReader();
+    reader.onload = () => {
+        document.getElementById('brandExamplePreview').src = reader.result;
+        document.getElementById('brandExamplePreviewContainer').style.display = 'block';
+    };
+    reader.readAsDataURL(file);
+    }
   renderPriorities() {
     const $c = $('#addedPrioritiesList');
     if (this.priorities.length === 0) {
@@ -280,7 +306,16 @@ class DataEntryModule {
         transactionType: { id: tx.id, name: tx.name, alias: tx.alias }
       }
     };
-    const formData = { taskData, newIpRecordData, accrualData: null, brandExampleFile: null };
+    
+    // ===== Marka örneği dosya upload ve URL al =====
+    let brandUrl = null;
+    if (this.brandExampleFile) {
+        const uploadResult = await uploadFileToStorage(this.brandExampleFile, 'brand-examples');
+        brandUrl = uploadResult.url;
+    }
+    // URL’i record details’a ekle
+        newIpRecordData.details.brandInfo.brandExampleUrl = brandUrl;
+        const formData = { taskData, newIpRecordData, accrualData: null, brandExampleFile: brandUrl };
 
     const $btn = $('#saveTaskBtn');
     const orig = $btn.html();
