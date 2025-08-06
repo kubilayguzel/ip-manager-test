@@ -65,49 +65,40 @@ class DataEntryModule {
         }
     }
 
-    setupEventListeners() {
-        console.log('🔧 Event listeners kuruluyor...');
+ setupEventListeners() {
+    console.log('🔧 Event listeners kuruluyor...');
+    
+    // Tab değişiklikleri
+    $('.nav-link[data-toggle="tab"]').on('shown.bs.tab', (e) => {
+        // 1) href'ten id al
+        const targetTabId = e.target.getAttribute('href').substring(1);
+        this.activeTab = targetTabId;
+        console.log('📂 Tab değişti:', targetTabId);
         
-        // Tab değişiklikleri
-        $('.nav-link[data-toggle="tab"]').on('shown.bs.tab', (e) => {
-            const targetTabId = e.target.getAttribute('aria-controls');
-            this.activeTab = targetTabId;
-            
-            console.log('📂 Tab değişti:', targetTabId);
-            
-            if (targetTabId === 'applicants') {
-                this.renderSelectedApplicants();
-            }
-            if (targetTabId === 'goods-services' && !this.isNiceClassificationInitialized) {
-                setTimeout(() => {
-                    this.initializeNiceClassification();
-                }, 100);
-            }
-            if (targetTabId === 'summary') {
-                this.updateSummary();
-            }
-        });
+        // 2) goods-services için Nice başlat
+        if (targetTabId === 'goods-services' && !this.isNiceClassificationInitialized) {
+            setTimeout(() => this.initializeNiceClassification(), 100);
+        }
         
-        // Form submit
-        $(document).on('click', '#saveTaskBtn', (e) => {
-            e.preventDefault();
-            this.handleFormSubmit();
-        });
-
-        // Marka örneği upload
-        $(document).on('click', '#brand-example-drop-zone', () => $('#brandExample').trigger('click'));
-        $(document).on('change', '#brandExample', e => this.handleBrandExampleUpload(e.target.files[0]));
-        $(document).on('click', '#removeBrandExampleBtn', () => {
-            this.brandExampleFile = null;
-            $('#brandExamplePreviewContainer').hide();
-        });
+        // 3) applicants tab'ı gelince listeyi yeniden çiz
+        if (targetTabId === 'applicants') {
+            this.renderSelectedApplicants();
+        }
         
-        // Rüçhan ekleme
-        $(document).on('click', '#addPriorityBtn', () => this.addPriority());
+        // 4) summary tab'ı gelince özet güncelle
+        if (targetTabId === 'summary') {
+            this.updateSummary();
+        }
+    });
 
-        console.log('✅ Ana event listeners kuruldu');
-    }
-
+    // Form submit
+    $(document).on('click', '#saveTaskBtn', (e) => {
+        e.preventDefault();
+        this.handleFormSubmit();
+    });
+    
+    console.log('✅ Ana event listeners kuruldu');
+}
     setupDynamicListeners() {
         console.log('🔗 Dinamik element listeners kuruluyor...');
         
