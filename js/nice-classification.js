@@ -1,5 +1,4 @@
-// nice-classification.js - Tam çalışır versiyon
-// create-task.js'in çalışan kodundan uyarlandı
+// nice-classification.js - Debug ve seçim sorunları düzeltildi
 
 import { db } from '../firebase-config.js';
 import { collection, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
@@ -11,16 +10,32 @@ let selectedClasses = {};  // { key: { classNum, text } }
 let class35_5_modalSelectedItems = {};
 let class35_5_modalAllData = [];
 
+// DEBUG: Seçim durumunu takip et
+function debugSelection(action, key, classNum, text) {
+    console.log(`🎯 NICE DEBUG [${action}]:`, {
+        key,
+        classNum,
+        text: text?.substring(0, 50),
+        totalSelected: Object.keys(selectedClasses).length,
+        selectedClasses: Object.keys(selectedClasses)
+    });
+}
+
 // RENDER FONKSİYONLARI
 function renderSelectedClasses() {
     const container = document.getElementById('selectedNiceClasses');
     const countBadge = document.getElementById('selectedClassCount');
-    if (!container) return;
+    if (!container) {
+        console.error('❌ selectedNiceClasses container bulunamadı');
+        return;
+    }
 
     const selectedCount = Object.keys(selectedClasses).length;
     if (countBadge) {
         countBadge.textContent = selectedCount;
     }
+
+    console.log('🔄 renderSelectedClasses çalışıyor, toplam:', selectedCount);
 
     if (selectedCount === 0) {
         container.innerHTML = `
@@ -56,11 +71,16 @@ function renderSelectedClasses() {
     });
     
     container.innerHTML = html;
+    console.log('✅ Selected classes render edildi:', selectedCount);
 }
 
 function toggleAccordion(id) {
+    console.log('📂 toggleAccordion:', id);
     const el = document.getElementById(`subclasses-${id}`);
-    if (!el) return;
+    if (!el) {
+        console.error('❌ Accordion element bulunamadı:', `subclasses-${id}`);
+        return;
+    }
     el.classList.toggle('show');
     const header = document.querySelector(`.class-header[data-id="${id}"]`);
     if (header) header.classList.toggle('expanded');
@@ -68,9 +88,12 @@ function toggleAccordion(id) {
 
 // SEÇIM FONKSİYONLARI
 function selectItem(key, classNum, text) {
-    if (selectedClasses[key]) return; // zaten seçili
+    if (selectedClasses[key]) {
+        console.log('⚠️ Sınıf zaten seçili:', key);
+        return; // zaten seçili
+    }
     
-    console.log('➕ Sınıf ekleniyor:', { key, classNum, text });
+    debugSelection('SELECT', key, classNum, text);
     
     // 35-5 kontrolü - ÖZEL DURUM
     if (key === "35-5") {
@@ -97,28 +120,42 @@ function selectItem(key, classNum, text) {
     updateVisualStates();
 
     const el = document.querySelector(`[data-code="${key}"]`);
-    if (el) el.classList.add('selected');
+    if (el) {
+        el.classList.add('selected');
+        console.log('✅ Element selected class eklendi:', key);
+    } else {
+        console.warn('⚠️ Element bulunamadı:', key);
+    }
 }
 
 function removeSelectedClass(key) {
-    if (!selectedClasses[key]) return;
+    if (!selectedClasses[key]) {
+        console.log('⚠️ Sınıf zaten seçili değil:', key);
+        return;
+    }
     
-    console.log('🗑️ Sınıf kaldırılıyor:', key);
+    debugSelection('REMOVE', key, selectedClasses[key].classNum, selectedClasses[key].text);
     
     delete selectedClasses[key];
     renderSelectedClasses();
     updateVisualStates();
     
     const el = document.querySelector(`[data-code="${key}"]`);
-    if (el) el.classList.remove('selected');
+    if (el) {
+        el.classList.remove('selected');
+        console.log('✅ Element selected class kaldırıldı:', key);
+    }
 }
 
 // ANA SINIF SEÇİMİ FONKSİYONLARI
 function selectWholeClass(classNumber) {
     const classData = allNiceData.find(c => c.classNumber === parseInt(classNumber));
-    if (!classData) return;
+    if (!classData) {
+        console.error('❌ Class data bulunamadı:', classNumber);
+        return;
+    }
 
-    console.log('🔘 Ana sınıf seçiliyor:', classNumber);
+    console.log('🔘 Ana sınıf seçiliyor:', classNumber, 'alt sınıf sayısı:', classData.subClasses.length);
 
     // Ana sınıf başlığını seç
     const mainClassCode = `${classNumber}-main`;
@@ -256,7 +293,7 @@ export async function initializeNiceClassification() {
     const charCountElement = document.getElementById('customClassCharCount');
 
     console.log('🔄 Nice Classification başlatılıyor...');
-    console.log('📋 DOM Elementleri:', {
+    console.log('📋 DOM Elementleri kontrol:', {
         listContainer: !!listContainer,
         searchInput: !!searchInput,
         addCustomBtn: !!addCustomBtn,
@@ -296,6 +333,7 @@ export async function initializeNiceClassification() {
         </div>`;
 
     try {
+        console.log('🔄 Firebase\'dan nice sınıfları yükleniyor...');
         const snapshot = await getDocs(collection(db, "niceClassification"));
         allNiceData = snapshot.docs.map(doc => {
             const data = doc.data();
@@ -311,7 +349,7 @@ export async function initializeNiceClassification() {
             return;
         }
 
-        console.log('✅ Nice sınıfları yüklendi:', allNiceData.length);
+        console.log('✅ Nice sınıfları yüklendi:', allNiceData.length, 'sınıf');
 
         // HTML'i render et
         renderClassificationList();
@@ -328,6 +366,8 @@ export async function initializeNiceClassification() {
 function renderClassificationList() {
     const listContainer = document.getElementById('niceClassificationList');
     if (!listContainer) return;
+
+    console.log('🔄 Classification listesi render ediliyor...');
 
     let html = '';
     allNiceData.forEach(cls => {
@@ -377,10 +417,15 @@ function setupEventListeners() {
 
     console.log('🔧 Nice Classification event listeners kuruluyor...');
 
-    if (!listContainer) return;
+    if (!listContainer) {
+        console.error('❌ listContainer yok, event listeners kurulamıyor');
+        return;
+    }
 
     // ANA CLICK HANDLER - ACCORDION SORUNUNU ÇÖZER
     listContainer.addEventListener('click', e => {
+        console.log('🖱️ List container click:', e.target);
+
         // Ana sınıf seç/kaldır butonu
         const selectBtn = e.target.closest('.select-class-btn');
         if (selectBtn) {
@@ -408,7 +453,7 @@ function setupEventListeners() {
             const classNum = subclass.dataset.classNum;
             const text = subclass.dataset.text;
             
-            console.log('🎯 Alt sınıf tıklandı:', { code, classNum, text });
+            console.log('🎯 Alt sınıf tıklandı:', { code, classNum, text: text?.substring(0, 30) });
             
             if (selectedClasses[code]) {
                 removeSelectedClass(code);
@@ -421,7 +466,9 @@ function setupEventListeners() {
         // Header tıklama (accordion toggle)
         const header = e.target.closest('.class-header');
         if (header && !e.target.closest('.select-class-btn')) {
-            toggleAccordion(header.dataset.id);
+            const headerId = header.dataset.id;
+            console.log('📂 Header tıklandı, accordion toggle:', headerId);
+            toggleAccordion(headerId);
         }
     });
 
@@ -432,6 +479,7 @@ function setupEventListeners() {
             if (btn) {
                 e.preventDefault();
                 const key = btn.dataset.key;
+                console.log('🗑️ Remove button tıklandı:', key);
                 removeSelectedClass(key);
             }
         });
@@ -441,6 +489,7 @@ function setupEventListeners() {
     if (searchInput) {
         searchInput.addEventListener('input', e => {
             const term = e.target.value.toLowerCase();
+            console.log('🔍 Arama yapılıyor:', term);
             document.querySelectorAll('#niceClassificationList .class-item').forEach(el => {
                 const shouldShow = el.dataset.searchText.includes(term);
                 el.style.display = shouldShow ? '' : 'none';
@@ -464,7 +513,7 @@ function setupEventListeners() {
             e.preventDefault();
             
             const text = customInput.value.trim();
-            console.log('➕ 99. sınıf ekleme denemesi:', text);
+            console.log('➕ 99. sınıf ekleme denemesi:', text?.substring(0, 50));
             
             if (!text) {
                 alert('Lütfen özel sınıf metnini girin');
@@ -522,11 +571,12 @@ function setupEventListeners() {
 
 // EXPORT FONKSİYONLARI
 export function clearAllSelectedClasses() {
+    console.log('🧹 Tüm seçimler temizleniyor...');
     selectedClasses = {};
     renderSelectedClasses();
     updateVisualStates();
     document.querySelectorAll('.subclass-item.selected').forEach(el => el.classList.remove('selected'));
-    console.log('🧹 Tüm seçimler temizlendi');
+    console.log('✅ Tüm seçimler temizlendi');
 }
 
 export function getSelectedNiceClasses() {
@@ -534,7 +584,7 @@ export function getSelectedNiceClasses() {
         return v.classNum === '99' ? `(99) ${v.text}` : `(${k}) ${v.text}`;
     });
     
-    console.log('📋 Seçilen sınıflar alındı:', result.length, 'adet');
+    console.log('📋 getSelectedNiceClasses çağrıldı, sonuç:', result.length, 'adet');
     return result;
 }
 
@@ -565,17 +615,31 @@ window.addClass35_5 = addClass35_5;
 
 // Debug fonksiyonu
 window.debugNiceClassification = () => {
-    console.log('🔍 Nice Classification Debug:');
-    console.log('============================');
-    console.log('📊 Seçimler:', selectedClasses);
-    console.log('📋 Data:', allNiceData.length, 'sınıf');
-    console.log('🎯 Global fonksiyonlar:', [
+    console.log('🔍 === NICE CLASSIFICATION DEBUG ===');
+    console.log('📊 Seçili sınıflar:', selectedClasses);
+    console.log('📋 Toplam data:', allNiceData.length, 'sınıf');
+    console.log('🎯 getSelectedNiceClasses() sonucu:', getSelectedNiceClasses());
+    console.log('🌐 Global fonksiyonlar:', [
         'selectItem', 'removeSelectedClass', 'toggleAccordion',
         'selectWholeClass', 'deselectWholeClass', 'isClassFullySelected'
     ].map(fn => `${fn}: ${typeof window[fn] === 'function' ? '✅' : '❌'}`));
     
-    return { selectedClasses, allNiceData: allNiceData.length };
+    // DOM elementleri kontrol
+    const elements = [
+        'niceClassificationList', 'selectedNiceClasses', 
+        'customClassInput', 'addCustomClassBtn'
+    ];
+    console.log('🏗️ DOM elementleri:', elements.map(id => 
+        `${id}: ${document.getElementById(id) ? '✅' : '❌'}`
+    ));
+    
+    return { 
+        selectedClasses, 
+        allNiceData: allNiceData.length,
+        selectedCount: Object.keys(selectedClasses).length 
+    };
 };
 
+// İlk yükleme mesajı
 console.log('✅ Nice Classification modülü yüklendi');
-console.log('🔧 Debug: window.debugNiceClassification()');
+console.log('🔧 Debug için: window.debugNiceClassification()');
