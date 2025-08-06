@@ -534,7 +534,23 @@ class DataEntryModule {
                             
                             // Debug için tüm nice elementlerini kontrol et
                             const allNiceElements = document.querySelectorAll('[data-code]');
+                            const classHeaders = document.querySelectorAll('.class-header');
+                            const accordions = document.querySelectorAll('[id^="subclasses-"]');
+                            
                             console.log('🔍 Nice elements sayısı:', allNiceElements.length);
+                            console.log('🔍 Class headers sayısı:', classHeaders.length);
+                            console.log('🔍 Accordions sayısı:', accordions.length);
+                            
+                            // Accordion durumlarını kontrol et
+                            accordions.forEach((accordion, index) => {
+                                const hasShow = accordion.classList.contains('show');
+                                console.log(`📁 Accordion ${index + 1} açık mı?`, hasShow);
+                                if (hasShow) {
+                                    // Kapalı yap
+                                    accordion.classList.remove('show');
+                                    console.log(`🔒 Accordion ${index + 1} kapatıldı`);
+                                }
+                            });
                             
                         }, 500); // Daha uzun timeout
                         
@@ -707,18 +723,29 @@ class DataEntryModule {
                 // PersonService'den tüm kişileri al ve filtrele
                 if (typeof personService !== 'undefined' && personService.getPersons) {
                     console.log('🔍 PersonService.getPersons kullanılıyor...');
-                    const allPersons = await personService.getPersons();
-                    console.log('📋 Tüm kişiler:', allPersons);
+                    const response = await personService.getPersons();
+                    console.log('📋 PersonService response:', response);
+                    
+                    let allPersons = [];
+                    
+                    // Response formatını kontrol et
+                    if (response && response.success && Array.isArray(response.data)) {
+                        allPersons = response.data;
+                        console.log('✅ Success response, data kullanılıyor:', allPersons.length, 'kişi');
+                    } else if (Array.isArray(response)) {
+                        allPersons = response;
+                        console.log('✅ Direct array response:', allPersons.length, 'kişi');
+                    } else {
+                        console.log('⚠️ Unexpected response format:', typeof response, response);
+                    }
                     
                     // Array kontrolü ve filtreleme
-                    if (Array.isArray(allPersons)) {
+                    if (Array.isArray(allPersons) && allPersons.length > 0) {
                         results = allPersons.filter(person => 
                             (person.name && person.name.toLowerCase().includes(query.toLowerCase())) ||
                             (person.email && person.email.toLowerCase().includes(query.toLowerCase()))
                         );
-                        console.log('🎯 Filtrelenmiş sonuçlar:', results);
-                    } else {
-                        console.log('⚠️ PersonService array döndürmedi:', typeof allPersons);
+                        console.log('🎯 Filtrelenmiş sonuçlar:', results.length, 'kişi');
                     }
                 }
                 
