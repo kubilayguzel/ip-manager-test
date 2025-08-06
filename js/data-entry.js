@@ -1042,14 +1042,16 @@ document.addEventListener('DOMContentLoaded', () => {
     // Make instance globally accessible
     window.dataEntryInstance = dataEntryInstance;
 });
-// 📌 35-5 alt grubu seçilince modal aç
-document.addEventListener('click', (e) => {
-    const subclass = e.target.closest('.subclass-item');
-    if (!subclass) return;
+// 35-5 alt grubu seçildiğinde
+if (code === '35-5') {
+    console.log('📢 35-5 alt grubu seçildi – özel modal açılıyor');
+    document.getElementById('class355Modal').style.display = 'block';
+}
 
-    const code = subclass.dataset.code;
-    if (code === '35-5') {
-        console.log('📢 35-5 alt grubu seçildi – modal açılıyor');
-        $('#class355Modal').modal('show');  // Bootstrap modal açma
-    }
+// Kapatma düğmesi
+document.getElementById('closeClass355Modal').addEventListener('click', () => {
+    document.getElementById('class355Modal').style.display = 'none';
+});
+document.getElementById('cancel355Selection').addEventListener('click', () => {
+    document.getElementById('class355Modal').style.display = 'none';
 });
