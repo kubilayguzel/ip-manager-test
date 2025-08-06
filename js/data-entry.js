@@ -98,7 +98,32 @@ class DataEntryModule {
             e.preventDefault();
             this.handleFormSubmit();
         });
-        
+        // “Tümünü Sil” butonu
+        const clearBtn = document.getElementById('clearAllClassesBtn');
+        if (clearBtn) {
+            clearBtn.addEventListener('click', () => {
+                // NiceClassification modülündeki global temizleme fonksiyonunu çağır
+                if (window.clearAllSelectedClasses) {
+                    window.clearAllSelectedClasses();
+                }
+                // Sağ paneli sıfırla (empty-state mesajını geri koy)
+                const panel = document.getElementById('selectedNiceClasses');
+                panel.innerHTML = `
+                    <div class="empty-state text-center">
+                        <i class="fas fa-list-alt fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">
+                            Henüz hiçbir sınıf seçilmedi.<br>
+                            Sol panelden sınıf başlığına veya alt sınıfları seçin.
+                        </p>
+                    </div>
+                `;
+                // Sayaç sıfırla
+                document.getElementById('selectedClassCount').innerText = '0';
+            });
+    }
+
+    // Pencere boyutu değişince sağ panel yüksekliğini sol listeye eşitle
+    window.addEventListener('resize', () => this._adjustSelectedListHeight());
         console.log('✅ Ana event listeners kuruldu');
     }
 
@@ -160,6 +185,7 @@ class DataEntryModule {
             };
             
             console.log('✅ Nice Classification başarıyla başlatıldı');
+            this._adjustSelectedListHeight();
             
         } catch (error) {
             console.error('❌ Nice Classification başlatılamadı:', error);
@@ -616,7 +642,13 @@ class DataEntryModule {
             }
         }
     }
-
+    _adjustSelectedListHeight() {
+        const left = document.querySelector('.search-results-container');
+        const right = document.getElementById('selectedNiceClasses');
+        if (left && right) {
+            right.style.maxHeight = `${left.clientHeight}px`;
+        }
+    }
     resetForm() {
         console.log('🧹 Form sıfırlanıyor...');
         
