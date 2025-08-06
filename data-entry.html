@@ -370,7 +370,29 @@ body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333
   .selected-classes-panel .selected-list {
     overflow-y: auto;
   }
+.selected-classes-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
 
+/* Listeyi kalan tüm boşluğu kaplayacak şekilde ayarla */
+.selected-list {
+  overflow-y: auto;
+  flex: 1 1 auto;
+}
+
+/* (Opsiyonel) Daha rahat scroll için thumb genişliği */
+.selected-list::-webkit-scrollbar {
+  width: 8px;
+}
+.selected-list::-webkit-scrollbar-thumb {
+  background-color: rgba(0,0,0,0.2);
+  border-radius: 4px;
+}
+#selectedNiceClasses {
+  max-height: 500px !important;  /* sol paneldeki max-height ile aynı */
+}
 </style>
 </head>
 <body>
