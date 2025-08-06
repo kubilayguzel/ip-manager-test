@@ -12,7 +12,6 @@ class DataEntryModule {
         this.selectedApplicants = [];
         this.isNiceInitialized = false;
         this.uploadedBrandImage = null;
-        this.isFormComplete = false;
     }
 
     init() {
@@ -395,8 +394,6 @@ class DataEntryModule {
                 </div>
             </div>
         `;
-
-        // Event listener'ları setup et
         this.setupTrademarkFormListeners();
     }
 
@@ -439,7 +436,6 @@ class DataEntryModule {
                 </div>
             </div>
         `;
-
         this.updateSaveButtonState();
     }
 
@@ -482,128 +478,50 @@ class DataEntryModule {
                 </div>
             </div>
         `;
-
         this.updateSaveButtonState();
     }
-        setupTrademarkFormListeners() {
-            console.log('🎛️ Marka form listeners kuruluyor...');
 
-            // Tab geçişlerini dinle
-            $('#portfolioTabs a').on('shown.bs.tab', (e) => {
-                const tabId = e.target.getAttribute('href').substring(1);
-                console.log('📑 Tab değişti:', tabId);
+    setupTrademarkFormListeners() {
+        console.log('🎛️ Marka form listeners kuruluyor...');
+        $('#portfolioTabs a').on('shown.bs.tab', (e) => {
+            const tabId = e.target.getAttribute('href').substring(1);
+            console.log('📑 Tab değişti:', tabId);
 
-                // Mal/Hizmet sekmesi açıldığında Nice Classification'ı başlat
-                if (tabId === 'goods-services' && !this.isNiceInitialized) {
-                    console.log('🏷️ Nice Classification başlatılıyor...');
-                    setTimeout(() => {
-                        try {
-                            initializeNiceClassification();
-                            this.isNiceInitialized = true;
-                            console.log('✅ Nice Classification başlatıldı');
+            if (tabId === 'goods-services' && !this.isNiceInitialized) {
+                console.log('🏷️ Nice Classification başlatılıyor...');
+                setTimeout(() => {
+                    try {
+                        initializeNiceClassification();
+                        this.isNiceInitialized = true;
+                        console.log('✅ Nice Classification başlatıldı');
 
-                            // --- 35-5 alt grubu için modal açma event ---
-                            const niceList = document.getElementById('niceClassificationList');
-                            if (niceList) {
-                                niceList.addEventListener('click', (ev) => {
-                                    const subItem = ev.target.closest('.subclass-item');
-                                    if (subItem) {
-                                        const parentClass = subItem.dataset.parentClass;
-                                        const subGroup = subItem.dataset.subGroup;
-
-                                        if (parentClass === '35' && subGroup === '5') {
-                                            console.log('📢 35-5 alt grubu seçildi, özel modal açılıyor...');
-                                            document.getElementById('class355Modal').style.display = 'block';
-                                        }
+                        const niceList = document.getElementById('niceClassificationList');
+                        if (niceList) {
+                            niceList.addEventListener('click', (ev) => {
+                                const subItem = ev.target.closest('.subclass-item');
+                                if (subItem) {
+                                    const parentClass = subItem.dataset.parentClass;
+                                    const subGroup = subItem.dataset.subGroup;
+                                    if (parentClass === '35' && subGroup === '5') {
+                                        console.log('📢 35-5 alt grubu seçildi, modal açılıyor...');
+                                        document.getElementById('class355Modal').style.display = 'block';
                                     }
-                                });
-                            }
-
-                        } catch (error) {
-                            console.error('❌ Nice Classification başlatma hatası:', error);
+                                }
+                            });
                         }
-                    }, 100);
-                }
+                    } catch (error) {
+                        console.error('❌ Nice Classification başlatma hatası:', error);
+                    }
+                }, 100);
+            }
 
-            // Başvuru sahibi sekmesi açıldığında arama setup'ını yap
             if (tabId === 'applicants') {
                 this.setupApplicantSearch();
             }
         });
 
-        // Brand image upload
         this.setupBrandImageUpload();
-
-        // Disclaimer radio buttons
-        document.querySelectorAll('input[name="disclaimerRequest"]').forEach(radio => {
-            radio.addEventListener('change', (e) => {
-                const disclaimerTextRow = document.getElementById('disclaimerTextRow');
-                if (e.target.value === 'Evet') {
-                    disclaimerTextRow.style.display = 'flex';
-                } else {
-                    disclaimerTextRow.style.display = 'none';
-                }
-            });
-        });
-
-        // Color brand radio buttons
-        document.querySelectorAll('input[name="colorBrand"]').forEach(radio => {
-            radio.addEventListener('change', (e) => {
-                const colorDescriptionRow = document.getElementById('colorDescriptionRow');
-                if (e.target.value === 'Evet') {
-                    colorDescriptionRow.style.display = 'flex';
-                } else {
-                    colorDescriptionRow.style.display = 'none';
-                }
-            });
-        });
-
-        // Priority radio buttons
-        document.querySelectorAll('input[name="hasPriority"]').forEach(radio => {
-            radio.addEventListener('change', (e) => {
-                const priorityFields = document.getElementById('priorityFields');
-                if (e.target.value === 'Evet') {
-                    priorityFields.style.display = 'block';
-                } else {
-                    priorityFields.style.display = 'none';
-                }
-            });
-        });
-
-        // Priority type change
-        const priorityTypeSelect = document.getElementById('priorityType');
-        if (priorityTypeSelect) {
-            priorityTypeSelect.addEventListener('change', (e) => {
-                const priorityDateLabel = document.getElementById('priorityDateLabel');
-                if (e.target.value === 'Sergi') {
-                    priorityDateLabel.textContent = 'Sergi Tarihi';
-                } else {
-                    priorityDateLabel.textContent = 'Rüçhan Tarihi';
-                }
-            });
-        }
-        const priorityCountrySelect = document.getElementById('priorityCountry');
-        if (priorityCountrySelect) {
-            priorityCountrySelect.addEventListener('change', (e) => {
-                const otherCountryRow = document.getElementById('otherCountryRow');
-                if (e.target.value === 'Other') {
-                    otherCountryRow.style.display = 'flex';
-                } else {
-                    otherCountryRow.style.display = 'none';
-                }
-            });
-        }
-
-        // Custom class character count
-        const customClassInput = document.getElementById('customClassInput');
-        const charCountSpan = document.getElementById('customClassCharCount');
-        if (customClassInput && charCountSpan) {
-            customClassInput.addEventListener('input', (e) => {
-                charCountSpan.textContent = e.target.value.length;
-            });
-        }
-
-        // Form completion check
+        this.setupOtherFieldListeners();
         this.setupFormCompletionCheck();
     }
 
@@ -616,12 +534,8 @@ class DataEntryModule {
 
         if (!uploadArea || !fileInput) return;
 
-        // Upload area click
-        uploadArea.addEventListener('click', () => {
-            fileInput.click();
-        });
+        uploadArea.addEventListener('click', () => fileInput.click());
 
-        // File input change
         fileInput.addEventListener('change', (e) => {
             const file = e.target.files[0];
             if (file) {
@@ -637,7 +551,6 @@ class DataEntryModule {
             }
         });
 
-        // Remove button
         if (removeBtn) {
             removeBtn.addEventListener('click', () => {
                 previewImg.src = '#';
@@ -662,19 +575,9 @@ class DataEntryModule {
 
         console.log('🎛️ Başvuru sahibi arama kurulumu yapılıyor...');
         console.log('🔧 PersonService durumu:', typeof personService, personService);
-        
-        // PersonService fonksiyonlarını listele
-        if (typeof personService === 'object' && personService) {
-            console.log('📋 PersonService fonksiyonları:', Object.keys(personService));
-            console.log('🔍 getPersons var mı?', typeof personService.getPersons === 'function');
-            console.log('➕ addPerson var mı?', typeof personService.addPerson === 'function');
-            console.log('🔍 searchApplicants var mı?', typeof personService.searchApplicants === 'function');
-        }
 
-        // Search functionality
         searchInput.addEventListener('input', async (e) => {
             const query = e.target.value.trim();
-            
             if (query.length < 2) {
                 searchResults.style.display = 'none';
                 return;
@@ -684,39 +587,27 @@ class DataEntryModule {
 
             try {
                 let results = [];
-                
-                // PersonService'den tüm kişileri al ve filtrele
+
                 if (typeof personService !== 'undefined' && personService.getPersons) {
                     console.log('🔍 PersonService.getPersons kullanılıyor...');
                     const response = await personService.getPersons();
-                    console.log('📋 PersonService response:', response);
-                    
                     let allPersons = [];
-                    
-                    // Response formatını kontrol et
+
                     if (response && response.success && Array.isArray(response.data)) {
                         allPersons = response.data;
-                        console.log('✅ Success response, data kullanılıyor:', allPersons.length, 'kişi');
                     } else if (Array.isArray(response)) {
                         allPersons = response;
-                        console.log('✅ Direct array response:', allPersons.length, 'kişi');
-                    } else {
-                        console.log('⚠️ Unexpected response format:', typeof response, response);
                     }
-                    
-                    // Array kontrolü ve filtreleme
+
                     if (Array.isArray(allPersons) && allPersons.length > 0) {
                         results = allPersons.filter(person => 
                             (person.name && person.name.toLowerCase().includes(query.toLowerCase())) ||
                             (person.email && person.email.toLowerCase().includes(query.toLowerCase()))
                         );
-                        console.log('🎯 Filtrelenmiş sonuçlar:', results.length, 'kişi');
                     }
                 }
-                
-                // PersonService sonuç vermediyse mock data kullan
+
                 if (!results || results.length === 0) {
-                    console.log('⚠️ Mock data kullanılıyor');
                     results = [
                         { id: 1, name: 'Ahmet Yılmaz', email: 'ahmet@example.com', phone: '0532 123 4567' },
                         { id: 2, name: 'Ayşe Kaya', email: 'ayse@example.com', phone: '0533 987 6543' },
@@ -729,9 +620,7 @@ class DataEntryModule {
                     );
                 }
 
-                console.log('📤 Final sonuçlar:', results);
                 this.renderSearchResults(results, searchResults);
-                
             } catch (error) {
                 console.error('❌ Kişi arama hatası:', error);
                 searchResults.innerHTML = '<div class="search-result-item text-danger">Arama sırasında hata oluştu: ' + error.message + '</div>';
@@ -739,20 +628,13 @@ class DataEntryModule {
             }
         });
 
-        // Add new person button
         if (addNewBtn) {
-            addNewBtn.addEventListener('click', () => {
-                console.log('➕ Yeni kişi modal açılıyor...');
-                $('#newPersonModal').modal('show');
-            });
+            addNewBtn.addEventListener('click', () => $('#newPersonModal').modal('show'));
         }
 
-        // New person modal save
         const savePersonBtn = document.getElementById('savePersonBtn');
         if (savePersonBtn) {
-            savePersonBtn.addEventListener('click', () => {
-                this.handleSaveNewPerson();
-            });
+            savePersonBtn.addEventListener('click', () => this.handleSaveNewPerson());
         }
     }
 
@@ -767,7 +649,6 @@ class DataEntryModule {
                 </div>
             `).join('');
 
-            // Add click listeners
             container.querySelectorAll('.search-result-item').forEach(item => {
                 item.addEventListener('click', () => {
                     const personData = {
@@ -785,15 +666,12 @@ class DataEntryModule {
     }
 
     addApplicant(person) {
-        // Check if already added
         if (this.selectedApplicants.find(a => a.id === person.id)) {
             alert('Bu kişi zaten eklenmiş!');
             return;
         }
-
         this.selectedApplicants.push(person);
         this.renderSelectedApplicants();
-        console.log('👤 Başvuru sahibi eklendi:', person.name);
     }
 
     renderSelectedApplicants() {
@@ -824,7 +702,6 @@ class DataEntryModule {
     removeApplicant(personId) {
         this.selectedApplicants = this.selectedApplicants.filter(a => a.id !== personId);
         this.renderSelectedApplicants();
-        console.log('🗑️ Başvuru sahibi kaldırıldı:', personId);
     }
 
     async handleSaveNewPerson() {
@@ -838,70 +715,82 @@ class DataEntryModule {
             return;
         }
 
-        const personData = {
-            name: personName,
-            email: personEmail,
-            phone: personPhone,
-            address: personAddress
-        };
-
+        const personData = { name: personName, email: personEmail, phone: personPhone, address: personAddress };
         try {
-            // PersonService.addPerson kullan
             if (typeof personService !== 'undefined' && personService.addPerson) {
-                console.log('💾 PersonService.addPerson kullanılıyor...', personData);
                 const savedPerson = await personService.addPerson(personData);
-                console.log('✅ Kişi kaydedildi:', savedPerson);
-                
-                // Kaydedilen kişiyi başvuru sahiplerine ekle
                 this.addApplicant(savedPerson);
-                
             } else {
-                console.log('⚠️ PersonService.addPerson yok, geçici kişi ekleniyor');
-                // Geçici ID ile ekle
-                const tempPersonData = {
-                    id: Date.now().toString(),
-                    ...personData
-                };
+                const tempPersonData = { id: Date.now().toString(), ...personData };
                 this.addApplicant(tempPersonData);
             }
-            
-            // Modal'ı kapat ve formu temizle
             $('#newPersonModal').modal('hide');
             document.getElementById('newPersonForm').reset();
-            
-            console.log('✅ Yeni kişi başarıyla eklendi!');
             alert('Kişi başarıyla eklendi!');
-            
         } catch (error) {
             console.error('❌ Kişi kaydetme hatası:', error);
-            
-            // Hata durumunda geçici ID ile ekle
-            const tempPersonData = {
-                id: Date.now().toString(),
-                ...personData
-            };
-            
+            const tempPersonData = { id: Date.now().toString(), ...personData };
             this.addApplicant(tempPersonData);
             $('#newPersonModal').modal('hide');
             document.getElementById('newPersonForm').reset();
-            
             alert('Kişi geçici olarak eklendi. Kayıt sırasında backend hatası oluştu.');
         }
     }
 
+    setupOtherFieldListeners() {
+        document.querySelectorAll('input[name="disclaimerRequest"]').forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                document.getElementById('disclaimerTextRow').style.display = 
+                    e.target.value === 'Evet' ? 'flex' : 'none';
+            });
+        });
+
+        document.querySelectorAll('input[name="colorBrand"]').forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                document.getElementById('colorDescriptionRow').style.display =
+                    e.target.value === 'Evet' ? 'flex' : 'none';
+            });
+        });
+
+        document.querySelectorAll('input[name="hasPriority"]').forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                document.getElementById('priorityFields').style.display =
+                    e.target.value === 'Evet' ? 'block' : 'none';
+            });
+        });
+
+        const priorityTypeSelect = document.getElementById('priorityType');
+        if (priorityTypeSelect) {
+            priorityTypeSelect.addEventListener('change', (e) => {
+                document.getElementById('priorityDateLabel').textContent =
+                    e.target.value === 'Sergi' ? 'Sergi Tarihi' : 'Rüçhan Tarihi';
+            });
+        }
+
+        const priorityCountrySelect = document.getElementById('priorityCountry');
+        if (priorityCountrySelect) {
+            priorityCountrySelect.addEventListener('change', (e) => {
+                document.getElementById('otherCountryRow').style.display =
+                    e.target.value === 'Other' ? 'flex' : 'none';
+            });
+        }
+
+        const customClassInput = document.getElementById('customClassInput');
+        const charCountSpan = document.getElementById('customClassCharCount');
+        if (customClassInput && charCountSpan) {
+            customClassInput.addEventListener('input', (e) => {
+                charCountSpan.textContent = e.target.value.length;
+            });
+        }
+    }
+
     setupFormCompletionCheck() {
-        // Monitor form completion for save button state
         const requiredFields = ['brandType', 'applicationNumber'];
-        
         requiredFields.forEach(fieldId => {
             const field = document.getElementById(fieldId);
             if (field) {
-                field.addEventListener('input', () => {
-                    this.updateSaveButtonState();
-                });
-                field.addEventListener('change', () => {
-                    this.updateSaveButtonState();
-                });
+                field.addEventListener('input', () => this.updateSaveButtonState());
+                field.addEventListener('change', () => this.updateSaveButtonState());
             }
         });
     }
@@ -909,32 +798,21 @@ class DataEntryModule {
     updateSaveButtonState() {
         const ipType = this.ipTypeSelect.value;
         let isValid = false;
-
         if (ipType === 'trademark') {
-            const brandType = document.getElementById('brandType')?.value;
-            const applicationNumber = document.getElementById('applicationNumber')?.value;
-            isValid = brandType && applicationNumber;
+            isValid = document.getElementById('brandType')?.value &&
+                      document.getElementById('applicationNumber')?.value;
         } else if (ipType === 'patent') {
-            const patentTitle = document.getElementById('patentTitle')?.value;
-            isValid = patentTitle;
+            isValid = document.getElementById('patentTitle')?.value;
         } else if (ipType === 'design') {
-            const designTitle = document.getElementById('designTitle')?.value;
-            isValid = designTitle;
+            isValid = document.getElementById('designTitle')?.value;
         }
-
         this.saveBtn.disabled = !isValid;
-        console.log('💾 Kaydet butonu durumu:', isValid ? 'Aktif' : 'Pasif');
     }
 
     handleSavePortfolio() {
         console.log('💾 Portföy kaydı başlatılıyor...');
-
         const ipType = this.ipTypeSelect.value;
-        let portfolioData = {
-            ipType: ipType,
-            createdAt: new Date().toISOString(),
-            status: 'Aktif'
-        };
+        let portfolioData = { ipType, createdAt: new Date().toISOString(), status: 'Aktif' };
 
         try {
             if (ipType === 'trademark') {
@@ -944,12 +822,8 @@ class DataEntryModule {
             } else if (ipType === 'design') {
                 portfolioData.design = this.collectDesignData();
             }
-
             console.log('📄 Toplanan portföy verisi:', portfolioData);
-            
-            // Here you would typically save to Firebase or your backend
             this.saveToBackend(portfolioData);
-            
         } catch (error) {
             console.error('❌ Portföy kaydı hatası:', error);
             alert('Kayıt sırasında bir hata oluştu: ' + error.message);
@@ -958,7 +832,6 @@ class DataEntryModule {
 
     collectTrademarkData() {
         const selectedClasses = getSelectedNiceClasses ? getSelectedNiceClasses() : [];
-        
         return {
             brandType: document.getElementById('brandType')?.value,
             applicationNumber: document.getElementById('applicationNumber')?.value,
@@ -1006,17 +879,10 @@ class DataEntryModule {
 
     async saveToBackend(portfolioData) {
         try {
-            // Mock save operation
             console.log('🚀 Backend\'e kaydediliyor...', portfolioData);
-            
-            // Simulate API call
             await new Promise(resolve => setTimeout(resolve, 1000));
-            
             alert('✅ Portföy kaydı başarıyla oluşturuldu!');
-            
-            // Redirect to portfolio page
             window.location.href = 'portfolio.html';
-            
         } catch (error) {
             console.error('❌ Backend kayıt hatası:', error);
             throw new Error('Kayıt işlemi başarısız oldu');
@@ -1024,16 +890,12 @@ class DataEntryModule {
     }
 }
 
-// Global instance for remove functions
 let dataEntryInstance;
-
-// Initialize when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
     console.log('🎯 DOM yüklendi, Data Entry Module başlatılıyor...');
     dataEntryInstance = new DataEntryModule();
     dataEntryInstance.init();
 
-    // --- 35-5 modal kapatma butonları ---
     const closeBtn = document.getElementById('closeClass355Modal');
     if (closeBtn) {
         closeBtn.addEventListener('click', () => {
@@ -1048,6 +910,5 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Make instance globally accessible
     window.dataEntryInstance = dataEntryInstance;
 });
