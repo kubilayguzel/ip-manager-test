@@ -17,6 +17,7 @@ class DataEntryModule {
     init() {
         console.log('🚀 Data Entry Module başlatılıyor...');
         this.setupEventListeners();
+        this.setupModalCloseButtons();
     }
 
     setupEventListeners() {
@@ -495,9 +496,19 @@ class DataEntryModule {
                         this.isNiceInitialized = true;
                         console.log('✅ Nice Classification başlatıldı');
 
-                        const niceList = document.getElementById('niceClassificationList');
+                      const niceList = document.getElementById('niceClassificationList');
                         if (niceList) {
                             niceList.addEventListener('click', (ev) => {
+                                // 1. data-class="35-5" olan öğeye tıklandıysa
+                                const targetItem = ev.target.closest('[data-class="35-5"]');
+                                if (targetItem) {
+                                    console.log('📢 35-5 sınıfı tıklandı, modal açılıyor...');
+                                    document.getElementById('class355Modal').style.display = 'block';
+                                    bindClass355CheckboxEvents(); // ↩️ Seçim dinleyicilerini ekler
+                                    return;
+                                }
+
+                                // 2. Eski subclass desteği (gerekirse)
                                 const subItem = ev.target.closest('.subclass-item');
                                 if (subItem) {
                                     const parentClass = subItem.dataset.parentClass;
@@ -505,10 +516,12 @@ class DataEntryModule {
                                     if (parentClass === '35' && subGroup === '5') {
                                         console.log('📢 35-5 alt grubu seçildi, modal açılıyor...');
                                         document.getElementById('class355Modal').style.display = 'block';
+                                        bindClass355CheckboxEvents(); // ↩️ Seçim dinleyicilerini ekler
                                     }
                                 }
                             });
                         }
+
                     } catch (error) {
                         console.error('❌ Nice Classification başlatma hatası:', error);
                     }
@@ -895,6 +908,54 @@ class DataEntryModule {
             throw new Error('Kayıt işlemi başarısız oldu');
         }
     }
+    
+    setupModalCloseButtons() {
+    const closeBtn = document.getElementById('closeClass355Modal');
+    const cancelBtn = document.getElementById('cancel355Selection');
+
+    if (closeBtn) {
+        closeBtn.addEventListener('click', () => {
+            document.getElementById('class355Modal').style.display = 'none';
+        });
+    }
+
+    if (cancelBtn) {
+        cancelBtn.addEventListener('click', () => {
+            document.getElementById('class355Modal').style.display = 'none';
+        });
+    }
+}
+}
+
+function bindClass355CheckboxEvents() {
+    const selectedContainer = document.getElementById('selected355Classes');
+    const checkboxes = document.querySelectorAll('#class355List input[type="checkbox"]');
+
+    checkboxes.forEach((checkbox) => {
+        checkbox.addEventListener('change', () => {
+            const label = checkbox.parentElement.querySelector('label');
+            const title = label.querySelector('strong').textContent.trim();
+            const description = label.querySelector('small').textContent.trim();
+
+            if (checkbox.checked) {
+                if (selectedContainer.querySelector(`#selected-${checkbox.id}`)) return;
+
+                const item = document.createElement('div');
+                item.className = 'selected-355-item';
+                item.id = `selected-${checkbox.id}`;
+                item.innerHTML = `
+                    <div class="mb-2 p-2 border rounded bg-light">
+                        <strong>${title}</strong><br>
+                        <small class="text-muted">${description}</small>
+                    </div>
+                `;
+                selectedContainer.appendChild(item);
+            } else {
+                const existing = document.getElementById(`selected-${checkbox.id}`);
+                if (existing) selectedContainer.removeChild(existing);
+            }
+        });
+    });
 }
 
 let dataEntryInstance;
@@ -902,20 +963,6 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log('🎯 DOM yüklendi, Data Entry Module başlatılıyor...');
     dataEntryInstance = new DataEntryModule();
     dataEntryInstance.init();
-
-    const closeBtn = document.getElementById('closeClass355Modal');
-    if (closeBtn) {
-        closeBtn.addEventListener('click', () => {
-            document.getElementById('class355Modal').style.display = 'none';
-        });
-    }
-
-    const cancelBtn = document.getElementById('cancel355Selection');
-    if (cancelBtn) {
-        cancelBtn.addEventListener('click', () => {
-            document.getElementById('class355Modal').style.display = 'none';
-        });
-    }
 
     window.dataEntryInstance = dataEntryInstance;
 });
