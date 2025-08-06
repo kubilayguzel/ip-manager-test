@@ -1,43 +1,36 @@
-// portfolio-entry.js
+// js/data-entry.js
 import { initializeNiceClassification } from './nice-classification.js';
-import { createTrademarkApplication } from './create-task.js'; // eğer backend kaydı gerekiyorsa
-import { personService, transactionTypeService } from '../firebase-config.js'; // aynı yapıda import edebilirsiniz
+import { personService } from '../firebase-config.js'; // yolunuzu düzenleyin
 
-class PortfolioEntryModule {
+class DataEntryModule {
   constructor() {
-    this.ipTypeSelect    = document.getElementById('ipTypeSelect');
-    this.formContainer   = document.getElementById('formContainer');
-    this.isNiceInit      = false;
+    this.ipTypeSelect = document.getElementById('ipTypeSelect');
+    this.formContainer = document.getElementById('formContainer');
+
+    this.isNiceInitialized = false;
     this.selectedApplicants = [];
   }
 
-  async init() {
-    this.ipTypeSelect.addEventListener('change', e => this.handleTypeChange(e.target.value));
+  init() {
+    // IP türü değiştiğinde formu render et
+    this.ipTypeSelect.addEventListener('change', e =>
+      this.handleTypeChange(e.target.value)
+    );
   }
 
   handleTypeChange(type) {
     this.formContainer.innerHTML = '';
-    this.isNiceInit = false;
+    this.isNiceInitialized = false;
     this.selectedApplicants = [];
 
-    switch(type) {
-      case 'trademark':
-        this.renderTrademarkForm();
-        break;
-      case 'patent':
-        this.renderPatentForm();
-        break;
-      case 'design':
-        this.renderDesignForm();
-        break;
-      default:
-        // hiçbir şey
-    }
+    if (type === 'trademark') this.renderTrademarkForm();
+    else if (type === 'patent') this.renderPatentForm();
+    else if (type === 'design') this.renderDesignForm();
   }
 
   renderTrademarkForm() {
     this.formContainer.innerHTML = `
-      <ul class="nav nav-tabs" id="tabs" role="tablist">
+      <ul class="nav nav-tabs" id="dataTabs" role="tablist">
         <li class="nav-item">
           <a class="nav-link active" data-toggle="tab" href="#brand-info">Marka Bilgileri</a>
         </li>
@@ -51,140 +44,189 @@ class PortfolioEntryModule {
           <a class="nav-link" data-toggle="tab" href="#priority">Rüçhan</a>
         </li>
       </ul>
-      <div class="tab-content p-4 border">
-        <div id="brand-info" class="tab-pane fade show active">
-          <!-- marka bilgileri -->
+      <div class="tab-content border p-3">
+        <!-- Marka Bilgileri -->
+        <div class="tab-pane fade show active" id="brand-info">
           <div class="form-group">
-            <label>Marka Tipi</label>
+            <label for="brandType">Marka Tipi</label>
             <select id="brandType" class="form-control">
               <option value="Sadece Kelime">Sadece Kelime</option>
               <option value="Şekil + Kelime">Şekil + Kelime</option>
-              <!-- vs. -->
             </select>
           </div>
-          <!-- diğer alanlar... -->
+          <div class="form-group">
+            <label for="brandName">Marka Adı</label>
+            <input type="text" id="brandName" class="form-control" />
+          </div>
+          <!-- İhtiyaca göre diğer alanlar -->
         </div>
-        <div id="goods-services" class="tab-pane fade">
-          <div id="niceClassificationList"></div>
+
+        <!-- Mal/Hizmet -->
+        <div class="tab-pane fade" id="goods-services">
+          <div id="niceClassificationList" class="mb-2"></div>
           <div id="selectedNiceClasses"></div>
         </div>
-        <div id="applicants" class="tab-pane fade">
+
+        <!-- Başvuru Sahibi -->
+        <div class="tab-pane fade" id="applicants">
           <div class="form-group">
-            <label>Başvuru Sahibi Ara</label>
-            <input type="text" id="applicantSearch" class="form-control" placeholder="İsimle ara...">
-            <div id="applicantResults" class="border mt-1" style="display:none; max-height:200px; overflow:auto;"></div>
+            <label for="applicantSearch">Başvuru Sahibi Ara</label>
+            <input
+              type="text"
+              id="applicantSearch"
+              class="form-control"
+              placeholder="İsimle ara..."
+            />
+            <div
+              id="applicantResults"
+              class="list-group mt-1"
+              style="display:none; max-height:200px; overflow-y:auto;"
+            ></div>
           </div>
-          <div id="selectedApplicants"></div>
+          <div id="selectedApplicants" class="mt-2"></div>
         </div>
-        <div id="priority" class="tab-pane fade">
-          <!-- rüçhan tarihi vb. alanlar -->
+
+        <!-- Rüçhan -->
+        <div class="tab-pane fade" id="priority">
           <div class="form-group">
-            <label>Rüçhan Tarihi</label>
-            <input type="date" id="priorityDate" class="form-control">
+            <label for="priorityDate">Rüçhan Tarihi</label>
+            <input type="date" id="priorityDate" class="form-control" />
           </div>
         </div>
       </div>
-      <div class="mt-4 text-right">
-        <button id="saveBtn" class="btn btn-success">Kaydet</button>
+
+      <div class="text-right mt-3">
+        <button id="saveBtn" class="btn btn-primary">Kaydet</button>
       </div>
     `;
 
-    // Sekme event’leri
-    $('#tabs a').on('shown.bs.tab', e => {
-      const id = e.target.getAttribute('href').substring(1);
-      if (id === 'goods-services' && !this.isNiceInit) {
+    // Tab değişimlerinde gereken işlemler
+    $('#dataTabs a').on('shown.bs.tab', e => {
+      const tabId = e.target.getAttribute('href').substring(1);
+
+      // Mal/Hizmet sekmesi açıldığında Nice Classification
+      if (tabId === 'goods-services' && !this.isNiceInitialized) {
         initializeNiceClassification();
-        this.isNiceInit = true;
+        this.isNiceInitialized = true;
       }
-      if (id === 'applicants') {
+
+      // Başvuru Sahibi sekmesi açıldığında arama
+      if (tabId === 'applicants') {
         this.setupApplicantSearch();
       }
     });
 
-    // Kaydet butonu
-    document.getElementById('saveBtn').addEventListener('click', () => {
-      // form verilerini alıp backend’e yolla
-      // örn: createTrademarkApplication({...})
-      alert('Kaydetme işlemi burada yapılacak');
-    });
+    // Kaydet tuşu
+    document
+      .getElementById('saveBtn')
+      .addEventListener('click', () => this.handleSave());
   }
 
   renderPatentForm() {
     this.formContainer.innerHTML = `
-      <h5>Patent Başvurusu</h5>
+      <h5>Patent Kaydı</h5>
       <div class="form-group">
-        <label>Başvuru No</label>
-        <input type="text" id="patentNo" class="form-control">
+        <label for="patentNo">Başvuru No</label>
+        <input type="text" id="patentNo" class="form-control" />
       </div>
       <div class="form-group">
-        <label>Başlık</label>
-        <input type="text" id="patentTitle" class="form-control">
+        <label for="patentTitle">Başlık</label>
+        <input type="text" id="patentTitle" class="form-control" />
       </div>
       <div class="form-group">
-        <label>Başvuru Sahibi</label>
-        <input type="text" id="patentApplicant" class="form-control">
+        <label for="patentApplicant">Başvuru Sahibi</label>
+        <input type="text" id="patentApplicant" class="form-control" />
       </div>
       <div class="text-right">
-        <button id="savePatentBtn" class="btn btn-success">Kaydet</button>
+        <button id="savePatentBtn" class="btn btn-primary">Kaydet</button>
       </div>
     `;
-
-    document.getElementById('savePatentBtn').addEventListener('click', () => {
-      alert('Patent kaydı burada yapılacak');
-    });
+    document
+      .getElementById('savePatentBtn')
+      .addEventListener('click', () => this.handleSave());
   }
 
   renderDesignForm() {
     this.formContainer.innerHTML = `
-      <h5>Tasarım Başvurusu</h5>
+      <h5>Tasarım Kaydı</h5>
       <div class="form-group">
-        <label>Başvuru No</label>
-        <input type="text" id="designNo" class="form-control">
+        <label for="designNo">Başvuru No</label>
+        <input type="text" id="designNo" class="form-control" />
       </div>
       <div class="form-group">
-        <label>Açıklama</label>
+        <label for="designDesc">Açıklama</label>
         <textarea id="designDesc" class="form-control"></textarea>
       </div>
       <div class="text-right">
-        <button id="saveDesignBtn" class="btn btn-success">Kaydet</button>
+        <button id="saveDesignBtn" class="btn btn-primary">Kaydet</button>
       </div>
     `;
-
-    document.getElementById('saveDesignBtn').addEventListener('click', () => {
-      alert('Tasarım kaydı burada yapılacak');
-    });
+    document
+      .getElementById('saveDesignBtn')
+      .addEventListener('click', () => this.handleSave());
   }
 
   setupApplicantSearch() {
     const inp = document.getElementById('applicantSearch');
     const res = document.getElementById('applicantResults');
+
     inp.addEventListener('input', async e => {
       const q = e.target.value.trim();
-      if (q.length < 2) { res.style.display='none'; return; }
-      const list = await personService.getPersons({ query: q });
-      res.innerHTML = list.data.map(p =>
-        `<div class="p-2 search-item" data-id="${p.id}">${p.name}</div>`
-      ).join('');
-      res.style.display = 'block';
-      document.querySelectorAll('.search-item').forEach(el=>{
-        el.onclick = () => {
-          this.selectedApplicants.push({ id:el.dataset.id, name:el.textContent });
+      if (q.length < 2) {
+        res.style.display = 'none';
+        return;
+      }
+
+      const list = await personService.searchApplicants(q);
+      res.innerHTML = '';
+      list.forEach(p => {
+        const a = document.createElement('a');
+        a.href = '#';
+        a.className = 'list-group-item list-group-item-action';
+        a.textContent = p.name;
+        a.onclick = () => {
+          this.selectedApplicants.push(p);
           this.renderSelectedApplicants();
-          res.style.display='none';
-          inp.value='';
+          res.style.display = 'none';
+          inp.value = '';
         };
+        res.appendChild(a);
       });
+      res.style.display = 'block';
     });
   }
 
   renderSelectedApplicants() {
     const c = document.getElementById('selectedApplicants');
-    c.innerHTML = this.selectedApplicants.map(a=>{
-      return `<div class="badge badge-primary mr-1">${a.name}</div>`;
-    }).join('') || '<small>Henüz seçilmedi</small>';
+    c.innerHTML =
+      this.selectedApplicants
+        .map(a => `<span class="badge badge-info mr-1">${a.name}</span>`)
+        .join('') || '<small>Henüz seçilmedi</small>';
+  }
+
+  handleSave() {
+    // Tüm formlardan veri topla
+    const payload = {
+      type: this.ipTypeSelect.value,
+      // Örnek: marka
+      brand: {
+        type: document.getElementById('brandType')?.value,
+        name: document.getElementById('brandName')?.value,
+        niceClasses: Array.from(
+          document.querySelectorAll('#selectedNiceClasses .badge')
+        ).map(b => b.textContent),
+        applicants: this.selectedApplicants,
+        priorityDate: document.getElementById('priorityDate')?.value,
+      },
+      // patent/design için benzer
+    };
+
+    console.log('🗂 Kayıt verisi:', payload);
+    // TODO: Burada backend call yapılacak (Firebase, API vb.)
+    alert('Kayıt başarıyla işlendi.');
   }
 }
 
-window.addEventListener('DOMContentLoaded', ()=> {
-  new PortfolioEntryModule().init();
+window.addEventListener('DOMContentLoaded', () => {
+  new DataEntryModule().init();
 });
