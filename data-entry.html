@@ -154,18 +154,33 @@ body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333
     border-bottom: none;
 }
 
-/* Nice Classification Accordion Fix */
+/* Nice Classification Accordion Fix - Güçlendirilmiş */
 .collapse {
     display: none !important;
+    height: 0 !important;
+    overflow: hidden !important;
 }
 .collapse.show {
     display: block !important;
+    height: auto !important;
 }
 .collapse.collapsing {
     display: block !important;
-    height: 0;
-    overflow: hidden;
+    height: 0 !important;
+    overflow: hidden !important;
     transition: height 0.35s ease;
+}
+
+/* Subclasses container - default kapalı */
+[id^="subclasses-"] {
+    display: none !important;
+    height: 0 !important;
+    overflow: hidden !important;
+}
+[id^="subclasses-"].show {
+    display: block !important;
+    height: auto !important;
+    overflow: visible !important;
 }
 
 /* Nice Classification Item Styles */
