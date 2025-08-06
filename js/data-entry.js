@@ -36,7 +36,15 @@ class DataEntryModule {
       persons: this.allPersons.length,
       transactionTypes: this.allTransactionTypes.length
     });
-
+    // **Nice Classification'ı hemen init esnasında başlat**
+    try {
+        await initializeNiceClassification();
+        this.isNiceClassificationInitialized = true;
+        this._adjustSelectedListHeight();
+        console.log('✅ Nice Classification init esnasında yüklendi');
+    } catch (err) {
+        console.error('❌ Nice Classification init hatası:', err);
+    }
     this.setupEventListeners();
     this.renderTransactionTypes();
     this.setupApplicantListeners();
@@ -103,6 +111,12 @@ class DataEntryModule {
       }
       $('#applicantSearchResults').hide();
       $('#applicantSearchInput').val('');
+    });
+    // Rüçhan tab’ı için
+    $('#addPriorityBtn').on('click', () => this.addPriority());
+    $('#priorityType').on('change', (e) => {
+    const lbl = document.getElementById('priorityDateLabel');
+    lbl.textContent = e.target.value === 'sergi' ? 'Sergi Tarihi' : 'Rüçhan Tarihi';
     });
   }
 
