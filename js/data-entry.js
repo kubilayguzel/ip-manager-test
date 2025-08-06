@@ -136,29 +136,30 @@ class DataEntryModule {
     }
 
     setupApplicantListeners() {
-        console.log('🔍 Applicant dinleyicileri kuruluyor...');
+    console.log('🔍 Applicant dinleyicileri kuruluyor...');
 
-        // Arama kutusuna yazdıkça
-        $('#applicantSearchInput')
-            .off('input')
-            .on('input', e => this.searchPersons(e.target.value, 'applicant'));
+    // Arama kutusuna yazdıkça
+    $('#applicantSearchInput')
+        .off('input')
+        .on('input', e => this.searchPersons(e.target.value, 'applicant'));
     
-        // Arama sonuçlarından tıklayınca ekle
-        $('#applicantSearchResults')
-            .off('click')
-            .on('click', '.search-result-item', (e) => {
-                const id = $(e.currentTarget).data('id');
-                this.selectPerson(id, 'applicant');
-            });
+    // Arama sonuçlarından tıklayınca ekle
+    $('#applicantSearchResults')
+        .off('click')
+        .on('click', '.search-result-item', (e) => {
+            const id = $(e.currentTarget).data('id');
+            this.selectPerson(id, 'applicant');
+        });
 
-        // Başvuru sahibi listesinden kaldırma
-        $('#selectedApplicantsList')
-            .off('click', '.remove-selected-item-btn')
-            .on('click', '.remove-selected-item-btn', (e) => {
-                const id = $(e.currentTarget).data('id');
-                this.removeApplicant(id);
-            });
-    }
+    // **Bu dinleyiciyi eklememiz gerekiyor:** Başvuru sahibi listesinden kaldırma
+    // `selectedApplicantsList` ID'si içindeki `remove-selected-item-btn` class'ına sahip elemanlara tıklandığında çalışır.
+    $('#selectedApplicantsList')
+        .off('click', '.remove-selected-item-btn')
+        .on('click', '.remove-selected-item-btn', (e) => {
+            const id = $(e.currentTarget).data('id');
+            this.removeApplicant(id);
+        });
+}
 
     searchPersons(query) {
         if (query.length < 2) {
