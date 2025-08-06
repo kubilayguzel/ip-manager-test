@@ -1042,3 +1042,14 @@ document.addEventListener('DOMContentLoaded', () => {
     // Make instance globally accessible
     window.dataEntryInstance = dataEntryInstance;
 });
+// 📌 35-5 alt grubu seçilince modal aç
+document.addEventListener('click', (e) => {
+    const subclass = e.target.closest('.subclass-item');
+    if (!subclass) return;
+
+    const code = subclass.dataset.code;
+    if (code === '35-5') {
+        console.log('📢 35-5 alt grubu seçildi – modal açılıyor');
+        $('#class355Modal').modal('show');  // Bootstrap modal açma
+    }
+});
