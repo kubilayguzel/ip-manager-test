@@ -56,84 +56,42 @@ class DataEntryModule {
         console.log('✅ DataEntry modülü başarıyla başlatıldı');
     }
 
-    setupEventListeners() {
-        console.log('🔧 Event listeners kuruluyor...');
+setupEventListeners() {
+    console.log('🔧 Event listeners kuruluyor...');
+    
+    // Tab değişiklikleri
+    $('.nav-link[data-toggle="tab"]').on('shown.bs.tab', (e) => {
+        const targetTabId = e.target.getAttribute('aria-controls');
+        this.activeTab = targetTabId;
+        
+        console.log('📂 Tab değişti:', targetTabId);
+        
+        // Başvuru Sahipleri sekmesine geçildiğinde listeyi yeniden çiz
+        if (targetTabId === 'applicants') {
+            this.renderSelectedApplicants();
+        }
 
-        // 1) Tab değiştiğinde render tetikle
-        $('#myTaskTabs a')
-            .off('shown.bs.tab')
-            .on('shown.bs.tab', (e) => {
-                const tabId = e.target.getAttribute('aria-controls'); 
-                console.log('📂 Tab değişti:', tabId);
-                
-                if (tabId === 'applicants') {
-                    this.renderSelectedApplicants(); 
-                }
+        // Nice classification'ı sadece goods-services tab'ında başlat
+        if (targetTabId === 'goods-services' && !this.isNiceClassificationInitialized) {
+            setTimeout(() => {
+                this.initializeNiceClassification();
+            }, 100);
+        }
+        
+        // Summary tab'ına geçildiğinde özeti güncelle
+        if (targetTabId === 'summary') {
+            this.updateSummary();
+        }
+    });
 
-                if (tabId === 'priority') {
-                    this.renderPriorities();
-                }
-
-                if (tabId === 'goods-services' && !this.isNiceClassificationInitialized) {
-                    initializeNiceClassification()
-                        .then(() => {
-                            this.isNiceClassificationInitialized = true;
-                            this._adjustSelectedListHeight();
-                        })
-                        .catch(err => console.error('❌ Nice init hatası:', err));
-                }
-            });
-
-        // 2) Rüçhan ekleme
-        $('#addPriorityBtn')
-            .off('click')
-            .on('click', () => this.addPriority());
-        $('#priorityType')
-            .off('change')
-            .on('change', (e) => {
-                $('#priorityDateLabel').text(
-                    e.target.value === 'sergi' ? 'Sergi Tarihi' : 'Rüçhan Tarihi'
-                );
-            });
-
-        // 3) Marka örneği upload
-        $('#brand-example-drop-zone')
-            .off('click')
-            .on('click', () => $('#brandExample').trigger('click'));
-        $('#brandExample')
-            .off('change')
-            .on('change', e => this.handleBrandExampleUpload(e.target.files[0]));
-        $('#removeBrandExampleBtn')
-            .off('click')
-            .on('click', () => {
-                this.brandExampleFile = null;
-                $('#brandExamplePreviewContainer').hide();
-            });
-
-        // 4) 35-5 alt sınıfında modal açma
-        $('#niceClassificationList')
-            .off('click', '.subclass-item')
-            .on('click', '.subclass-item', (e) => {
-                const code = $(e.currentTarget).find('.subclass-code').text().trim();
-                if (code.startsWith('35-5')) {
-                    showGoodsModal(code, (selectedGoods) => {
-                        this.addCustomGoodsToClass(code, selectedGoods);
-                    });
-                    e.stopPropagation();
-                }
-            });
-
-        // 5) Kaydet / temizle / resize
-        $(document)
-            .off('click', '#saveTaskBtn')
-            .on('click', '#saveTaskBtn', e => this.handleFormSubmit(e));
-        $('#clearAllClassesBtn')
-            .off('click')
-            .on('click', () => this.clearAllClasses());
-        $(window)
-            .off('resize')
-            .on('resize', () => this._adjustSelectedListHeight());
-    }
+    // Form submit
+    $(document).on('click', '#saveTaskBtn', (e) => {
+        e.preventDefault();
+        this.handleFormSubmit();
+    });
+    
+    console.log('✅ Ana event listeners kuruldu');
+}
 
     setupApplicantListeners() {
     console.log('🔍 Applicant dinleyicileri kuruluyor...');
