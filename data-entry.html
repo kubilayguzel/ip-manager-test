@@ -353,6 +353,23 @@ body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333
 .classes-list .subclass-item {
   color: #212529 !important;
 }
+/* ---- Flex düzeni ---- */
+  .nice-classification-container {
+    display: flex;
+    gap: 20px;
+  }
+  .classification-panel {
+    flex: 2;
+  }
+  .selected-classes-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+  /* Sağ paneldeki listeyi taşırmak için */
+  .selected-classes-panel .selected-list {
+    overflow-y: auto;
+  }
 
 </style>
 </head>
@@ -557,23 +574,40 @@ body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333
                                 
                                 <!-- Sağ Panel: Seçilen Sınıflar -->
                                 <div class="col-lg-4">
-                                    <div class="selected-classes-panel">
-                                        <div class="panel-header text-center p-3 bg-success text-white">
-                                            <h6 class="mb-0">
-                                                <i class="fas fa-check-circle mr-2"></i>
-                                                Seçilen Sınıflar (<span id="selectedClassCount">0</span>)
-                                            </h6>
-                                        </div>
-                                        <div id="selectedNiceClasses" class="p-3" style="max-height: 600px; overflow-y: auto;">
-                                            <div class="empty-state text-center">
-                                                <i class="fas fa-list-alt fa-3x text-muted mb-3"></i>
-                                                <p class="text-muted">
-                                                    Henüz hiçbir sınıf seçilmedi.<br>
-                                                    Sol panelden sınıf başlığına veya alt sınıfları seçin.
-                                                </p>
-                                            </div>
-                                        </div>
+                                <div class="selected-classes-panel d-flex flex-column" style="height: 100%;">
+                                    <!-- Başlık ve "Tümünü Sil" butonu -->
+                                    <div
+                                    class="panel-header d-flex justify-content-between align-items-center p-3 bg-success text-white"
+                                    style="border-radius: 0.75rem 0.75rem 0 0;"
+                                    >
+                                    <h6 class="mb-0">
+                                        <i class="fas fa-check-circle mr-2"></i>
+                                        Seçilen Sınıflar (<span id="selectedClassCount">0</span>)
+                                    </h6>
+                                    <button
+                                        id="clearAllClassesBtn"
+                                        class="btn btn-outline-light btn-sm"
+                                        title="Tümünü Sil"
+                                    >
+                                        Tümünü Sil
+                                    </button>
                                     </div>
+
+                                    <!-- Seçilen sınıfların listeleneceği bölüm -->
+                                    <div
+                                    id="selectedNiceClasses"
+                                    class="selected-list flex-grow-1 p-3"
+                                    style="overflow-y: auto;"
+                                    >
+                                    <div class="empty-state text-center">
+                                        <i class="fas fa-list-alt fa-3x text-muted mb-3"></i>
+                                        <p class="text-muted">
+                                        Henüz hiçbir sınıf seçilmedi.<br>
+                                        Sol panelden sınıf başlığına veya alt sınıfları seçin.
+                                        </p>
+                                    </div>
+                                    </div>
+                                </div>
                                 </div>
                             </div>
                         </div>
