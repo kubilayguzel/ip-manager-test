@@ -56,30 +56,30 @@ setupEventListeners() {
   console.log('🔧 Event listeners kuruluyor...');
 
   // 1) Tab değiştiğinde render tetikle
-  $('#myTaskTabs a')
+  // 1) Tab değiştiğinde render tetikle
+$('#myTaskTabs a')
   .off('shown.bs.tab')
   .on('shown.bs.tab', (e) => {
     const tabId = e.target.getAttribute('aria-controls'); // href yerine aria-controls
     console.log('📂 Tab değişti:', tabId);
 
-    if (tabId === 'goods-services' && !this.isNiceClassificationInitialized) {
-      initializeNiceClassification()
-        .then(() => {
-          this.isNiceClassificationInitialized = true;
-          this._adjustSelectedListHeight();
-        })
-        .catch(err => console.error('❌ Nice init hatası:', err));
-    }
-
     if (tabId === 'applicants') {
-      this.renderSelectedApplicants();  // <<< applicant listesi her girişte yenilenir
+      this.renderSelectedApplicants(); // Artık burası listeyi doğru bir şekilde yenileyecek
     }
 
     if (tabId === 'priority') {
       this.renderPriorities();
     }
-  });
 
+    if (tabId === 'goods-services' && !this.isNiceClassificationInitialized) {
+        initializeNiceClassification()
+          .then(() => {
+            this.isNiceClassificationInitialized = true;
+            this._adjustSelectedListHeight();
+          })
+          .catch(err => console.error('❌ Nice init hatası:', err));
+      }
+  });
   // 2) Rüçhan ekleme
   $('#addPriorityBtn')
     .off('click')
@@ -129,15 +129,6 @@ setupEventListeners() {
   $(window)
     .off('resize')
     .on('resize', () => this._adjustSelectedListHeight());
-
-  console.log('✅ Ana event listeners kuruldu');
-   $('#myTaskTabs').on('shown.bs.tab', (e) => {
-    const tabId = $(e.target).attr('href').substring(1);
-    if (tabId === 'applicants') {
-        console.log('📋 Applicants sekmesi açıldı, liste yeniden çiziliyor...');
-        this.renderSelectedApplicants(true);  // force parametresiyle çağır
-    }
-  });
 }
 
 setupApplicantListeners() {
