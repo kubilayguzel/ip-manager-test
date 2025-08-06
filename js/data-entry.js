@@ -1,5 +1,6 @@
 // js/data-entry.js
 import { initializeNiceClassification, getSelectedNiceClasses } from './nice-classification.js';
+import { loadSharedLayout } from './layout-loader.js';
 import { personService } from '../firebase-config.js';
 
 class DataEntryModule {
