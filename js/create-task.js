@@ -496,12 +496,6 @@ class CreateTaskModule {
 
                                         <div class="classes-list" id="niceClassificationList" 
                                              style="height: 450px; overflow-y: auto; background: #fafafa;">
-                                            <div class="loading-spinner">
-                                                <div class="spinner-border text-primary" role="status">
-                                                    <span class="sr-only">Yükleniyor...</span>
-                                                </div>
-                                                <p class="mt-2 text-muted">Nice sınıfları yükleniyor...</p>
-                                            </div>
                                         </div>
                                     </div>
                                     
