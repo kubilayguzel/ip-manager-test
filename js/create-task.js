@@ -1,81 +1,9 @@
-// create-task.js
-
 import { authService, taskService, ipRecordsService, personService, accrualService, auth, transactionTypeService, db, storage } from '../firebase-config.js';
 import { loadSharedLayout } from './layout-loader.js';
 import { initializeNiceClassification, getSelectedNiceClasses } from './nice-classification.js';
 import { ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 
 
-// MARK: - Yeniden kullanılabilir fonksiyonlar
-// Bu fonksiyonlar, diğer JS dosyalarından import edilerek kullanılabilir.
-
-export async function uploadFileToStorage(file, path) {
-    if (!file || !path) {
-        return null;
-    }
-    const storageRef = ref(storage, path);
-    try {
-        const uploadResult = await uploadBytes(storageRef, file);
-        const downloadURL = await getDownloadURL(uploadResult.ref);
-        return downloadURL;
-    } catch (error) {
-        console.error("Dosya yüklenirken hata oluştu:", error);
-        return null;
-    }
-}
-
-export async function createTrademarkApplication(formData) {
-    const { taskData, newIpRecordData, accrualData, brandExampleFile } = formData;
-
-    let brandImageUrl = null;
-    if (brandExampleFile) {
-        const storagePath = `brand-examples/${Date.now()}_${brandExampleFile.name}`;
-        brandImageUrl = await uploadFileToStorage(brandExampleFile, storagePath);
-        if (!brandImageUrl) {
-            return { success: false, error: 'Marka görseli yüklenirken bir hata oluştu.' };
-        }
-    }
-    
-    newIpRecordData.details.brandInfo.brandImage = brandImageUrl;
-    newIpRecordData.details.brandInfo.brandImageName = brandExampleFile ? brandExampleFile.name : null;
-
-    const newRecordResult = await ipRecordsService.createRecord(newIpRecordData);
-    if (!newRecordResult.success) {
-        return { success: false, error: 'Yeni IP kaydı oluşturulurken bir hata oluştu: ' + newRecordResult.error };
-    }
-
-    taskData.relatedIpRecordId = newRecordResult.id;
-    taskData.relatedIpRecordTitle = newIpRecordData.title;
-
-    const taskResult = await taskService.createTask(taskData);
-    if (!taskResult.success) {
-        return { success: false, error: 'İş oluşturulurken hata oluştu: ' + taskResult.error };
-    }
-
-    if (accrualData) {
-        accrualData.taskId = taskResult.id;
-        accrualData.taskTitle = taskData.title;
-        const accrualResult = await accrualService.addAccrual(accrualData);
-        if (!accrualResult.success) {
-            console.error('İş oluşturuldu ancak tahakkuk kaydedilirken bir hata oluştu:', accrualResult.error);
-        }
-    }
-
-    const transactionData = {
-        type: newIpRecordData.details.transactionType.id,
-        description: `${newIpRecordData.details.transactionType.name} işlemi.`,
-        parentId: null,
-        transactionHierarchy: "parent"
-    };
-    const addTransactionResult = await ipRecordsService.addTransactionToRecord(newRecordResult.id, transactionData);
-    if (!addTransactionResult.success) {
-        console.error("Yeni IP kaydına işlem eklenirken hata oluştu:", addTransactionResult.error);
-    }
-    
-    return { success: true, id: newRecordResult.id };
-}
-
-// MARK: - CreateTaskModule Sınıfı
 class CreateTaskModule {
     constructor() {
         this.currentUser = null;
@@ -135,15 +63,9 @@ class CreateTaskModule {
     }
 
     setupEventListeners() {
-
-    const mainIpType = document.getElementById('mainIpType');
-    if (mainIpType) mainIpType.addEventListener('change', (e) => this.handleMainTypeChange(e));
-    
-    const specificTaskType = document.getElementById('specificTaskType');
-    if (specificTaskType) specificTaskType.addEventListener('change', (e) => this.handleSpecificTypeChange(e));
-    
-    const createTaskForm = document.getElementById('createTaskForm');
-    if (createTaskForm) createTaskForm.addEventListener('submit', (e) => this.handleFormSubmit(e));
+        document.getElementById('mainIpType').addEventListener('change', (e) => this.handleMainTypeChange(e));
+        document.getElementById('specificTaskType').addEventListener('change', (e) => this.handleSpecificTypeChange(e));
+        document.getElementById('createTaskForm').addEventListener('submit', (e) => this.handleFormSubmit(e));
 
         document.addEventListener('click', (e) => {
             if (e.target.id === 'cancelBtn') {
@@ -496,6 +418,12 @@ class CreateTaskModule {
 
                                         <div class="classes-list" id="niceClassificationList" 
                                              style="height: 450px; overflow-y: auto; background: #fafafa;">
+                                            <div class="loading-spinner">
+                                                <div class="spinner-border text-primary" role="status">
+                                                    <span class="sr-only">Yükleniyor...</span>
+                                                </div>
+                                                <p class="mt-2 text-muted">Nice sınıfları yükleniyor...</p>
+                                            </div>
                                         </div>
                                     </div>
                                     
@@ -1347,6 +1275,21 @@ class CreateTaskModule {
         if (saveTaskBtn) saveTaskBtn.disabled = !isComplete;
     }
 
+    async uploadFileToStorage(file, path) {
+        if (!file || !path) {
+            return null;
+        }
+        const storageRef = ref(storage, path);
+        try {
+            const uploadResult = await uploadBytes(storageRef, file);
+            const downloadURL = await getDownloadURL(uploadResult.ref);
+            return downloadURL;
+        } catch (error) {
+            console.error("Dosya yüklenirken hata oluştu:", error);
+            return null;
+        }
+    }
+
     async handleFormSubmit(e) {
         e.preventDefault();
         const specificTaskTypeId = document.getElementById('specificTaskType')?.value;
@@ -1356,6 +1299,22 @@ class CreateTaskModule {
             alert('Geçerli bir işlem tipi seçmediniz.');
             return;
         }
+
+        const assignedToUser = this.allUsers.find(u => u.id === document.getElementById('assignedTo')?.value);
+
+        let taskData = {
+            taskType: selectedTransactionType.id,
+            title: document.getElementById('brandExampleText')?.value || selectedTransactionType.alias || selectedTransactionType.name,
+            description: document.getElementById('taskDescription')?.value || `'${document.getElementById('brandExampleText')?.value || 'Yeni Başvuru'}' adlı marka için ${selectedTransactionType.alias || selectedTransactionType.name} işlemi.`,
+            priority: document.getElementById('taskPriority')?.value || 'medium',
+            assignedTo_uid: assignedToUser ? assignedToUser.id : null,
+            assignedTo_email: assignedToUser ? assignedToUser.email : null,
+            dueDate: document.getElementById('taskDueDate')?.value || null,
+            status: 'open',
+            relatedIpRecordId: this.selectedIpRecord ? this.selectedIpRecord.id : null,
+            relatedIpRecordTitle: this.selectedIpRecord ? this.selectedIpRecord.title : 'Yeni Başvuru',
+            details: {}
+        };
 
         if (selectedTransactionType.alias === 'Başvuru' && selectedTransactionType.ipType === 'trademark') {
             const goodsAndServices = getSelectedNiceClasses();
@@ -1368,22 +1327,17 @@ class CreateTaskModule {
                 alert('Lütfen en az bir başvuru sahibi seçin.');
                 return;
             }
-            
-            const assignedToUser = this.allUsers.find(u => u.id === document.getElementById('assignedTo')?.value);
 
-            let taskData = {
-                taskType: selectedTransactionType.id,
-                title: document.getElementById('brandExampleText')?.value || selectedTransactionType.alias || selectedTransactionType.name,
-                description: document.getElementById('taskDescription')?.value || `'${document.getElementById('brandExampleText')?.value || 'Yeni Başvuru'}' adlı marka için ${selectedTransactionType.alias || selectedTransactionType.name} işlemi.`,
-                priority: document.getElementById('taskPriority')?.value || 'medium',
-                assignedTo_uid: assignedToUser ? assignedToUser.id : null,
-                assignedTo_email: assignedToUser ? assignedToUser.email : null,
-                dueDate: document.getElementById('taskDueDate')?.value || null,
-                status: 'open',
-                relatedIpRecordId: null, // İlk etapta boş, fonksiyon dolduracak
-                relatedIpRecordTitle: null, // İlk etapta boş, fonksiyon dolduracak
-                details: {}
-            };
+            let brandImageUrl = null;
+            const brandExampleFile = this.uploadedFiles[0];
+            if (brandExampleFile) {
+                const storagePath = `brand-examples/${Date.now()}_${brandExampleFile.name}`;
+                brandImageUrl = await this.uploadFileToStorage(brandExampleFile, storagePath);
+                if (!brandImageUrl) {
+                    alert('Marka görseli yüklenirken bir hata oluştu.');
+                    return;
+                }
+            }
 
             const newIpRecordData = {
                 title: taskData.title,
@@ -1397,6 +1351,8 @@ class CreateTaskModule {
                         nonLatinAlphabet: document.getElementById('nonLatinAlphabet')?.value || null,
                         coverLetterRequest: document.querySelector('input[name="coverLetterRequest"]:checked')?.value,
                         consentRequest: document.querySelector('input[name="consentRequest"]:checked')?.value,
+                        brandImage: brandImageUrl,
+                        brandImageName: brandExampleFile ? brandExampleFile.name : null,
                         goodsAndServices: goodsAndServices
                     },
                     applicants: this.selectedApplicants.map(p => ({
@@ -1404,19 +1360,27 @@ class CreateTaskModule {
                         name: p.name,
                         email: p.email || null
                     })),
-                    priorities: this.priorities.length > 0 ? this.priorities : null,
-                    transactionType: {
-                      id: selectedTransactionType.id,
-                      name: selectedTransactionType.name,
-                      alias: selectedTransactionType.alias
-                    }
+                    priorities: this.priorities.length > 0 ? this.priorities : null
                 }
             };
-            
-            let accrualData = null;
+
+            const newRecordResult = await ipRecordsService.createRecord(newIpRecordData);
+            if (!newRecordResult.success) {
+                alert('Yeni IP kaydı oluşturulurken bir hata oluştu: ' + newRecordResult.error);
+                return;
+            }
+
+            taskData.relatedIpRecordId = newRecordResult.id;
+            taskData.relatedIpRecordTitle = newIpRecordData.title;
+
+            const taskResult = await taskService.createTask(taskData);
+            if (!taskResult.success) {
+                alert('İş oluşturulurken hata oluştu: ' + taskResult.error);
+                return;
+            }
+
             const officialFee = parseFloat(document.getElementById('officialFee')?.value) || 0;
             const serviceFee = parseFloat(document.getElementById('serviceFee')?.value) || 0;
-
             if (officialFee > 0 || serviceFee > 0) {
                 const vatRate = parseFloat(document.getElementById('vatRate')?.value) || 0;
                 const applyVatToOfficial = document.getElementById('applyVatToOfficialFee')?.checked;
@@ -1426,7 +1390,9 @@ class CreateTaskModule {
                 } else {
                     totalAmount = officialFee + (serviceFee * (1 + vatRate / 100));
                 }
-                accrualData = {
+                const accrualData = {
+                    taskId: taskResult.id,
+                    taskTitle: taskData.title,
                     officialFee: {
                         amount: officialFee,
                         currency: document.getElementById('officialFeeCurrency')?.value
@@ -1450,23 +1416,26 @@ class CreateTaskModule {
                     status: 'unpaid',
                     createdAt: new Date().toISOString()
                 };
+                const accrualResult = await accrualService.addAccrual(accrualData);
+                if (!accrualResult.success) {
+                    alert('İş oluşturuldu ancak tahakkuk kaydedilirken bir hata oluştu: ' + accrualResult.error);
+                    return;
+                }
             }
-
-            const formData = {
-                taskData,
-                newIpRecordData,
-                accrualData,
-                brandExampleFile: this.uploadedFiles[0]
+            
+            const transactionData = {
+                type: selectedTransactionType.id,
+                description: `${selectedTransactionType.name} işlemi.`,
+                parentId: null,
+                transactionHierarchy: "parent"
             };
-
-            const result = await createTrademarkApplication(formData);
-
-            if (result.success) {
-                alert('İş ve ilgili kayıt başarıyla oluşturuldu!');
-                window.location.href = 'task-management.html';
-            } else {
-                alert(result.error);
+            const addTransactionResult = await ipRecordsService.addTransactionToRecord(newRecordResult.id, transactionData);
+            if (!addTransactionResult.success) {
+                console.error("Yeni IP kaydına işlem eklenirken hata oluştu:", addTransactionResult.error);
             }
+            
+            alert('İş ve ilgili kayıt başarıyla oluşturuldu!');
+            window.location.href = 'task-management.html';
 
         } else {
             if (!this.selectedIpRecord) {
