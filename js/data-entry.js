@@ -421,81 +421,96 @@ class DataEntryModule {
     }
 
     setupNiceClassificationEvents() {
+    console.log('🔧 Nice Classification event listeners kuruluyor (güncellenmiş)...');
+
     const listContainer = document.getElementById('niceClassificationList');
     const selectedContainer = document.getElementById('selectedNiceClasses');
-    const addCustomBtn = document.getElementById('addCustomClassBtn');
     const customInput = document.getElementById('customClassInput');
+    const addCustomBtn = document.getElementById('addCustomClassBtn');
     const charCountElement = document.getElementById('customClassCharCount');
 
-    // 1. Akordiyon kapanma ve alt sınıf seçimi sorununu giderme
-    if (listContainer) {
-        listContainer.addEventListener('click', (e) => {
-            const selectBtn = e.target.closest('.select-class-btn');
-            const subclass = e.target.closest('.subclass-item');
-            const header = e.target.closest('.class-header');
-
-            if (selectBtn) {
-                // Ana sınıf seç/kaldır butonu
-                e.preventDefault();
-                e.stopPropagation(); // Olayın yayılmasını durdur
-                const classNumber = selectBtn.dataset.classNumber;
-                if (window.isClassFullySelected(classNumber)) {
-                    window.deselectWholeClass(classNumber);
-                } else {
-                    window.selectWholeClass(classNumber);
-                }
-                return;
-            }
-
-            if (subclass) {
-                // Alt sınıf seçimi
-                e.preventDefault();
-                e.stopPropagation(); // Olayın yayılmasını durdur
-                const code = subclass.dataset.code;
-                const classNum = subclass.dataset.classNum;
-                const text = subclass.dataset.text;
-                if (this.selectedNiceClasses[code]) {
-                    delete this.selectedNiceClasses[code];
-                } else {
-                    this.selectedNiceClasses[code] = { classNum, text };
-                }
-                this.renderSelectedNiceClasses();
-                this.updateNiceVisualStates();
-                return;
-            }
-
-            if (header && !e.target.closest('.select-class-btn')) {
-                // Header tıklama (accordion)
-                window.toggleAccordion(header.dataset.id);
-            }
-        });
+    if (!listContainer) {
+        console.error('❌ List container bulunamadı');
+        return;
     }
+    
+    // Akordiyonun kapanmasını ve seçimi düzeltmek için ana dinleyici
+    listContainer.addEventListener('click', e => {
+        // Ana sınıf seç/kaldır butonu
+        const selectBtn = e.target.closest('.select-class-btn');
+        if (selectBtn) {
+            e.preventDefault();
+            e.stopPropagation();
+            const classNumber = selectBtn.dataset.classNumber;
+            // `nice-classification.js`'in global fonksiyonlarını çağır
+            if (window.isClassFullySelected(classNumber)) {
+                window.deselectWholeClass(classNumber);
+            } else {
+                window.selectWholeClass(classNumber);
+            }
+            return;
+        }
 
-    // 2. 99. Sınıf ekleme işlemini düzeltme
+        // Alt sınıf tıklaması
+        const subclass = e.target.closest('.subclass-item');
+        if (subclass) {
+            e.preventDefault();
+            e.stopPropagation();
+            const code = subclass.dataset.code;
+            const classNum = subclass.dataset.classNum;
+            const text = subclass.dataset.text;
+            
+            // `nice-classification.js`'in global fonksiyonlarını çağır
+            if (this.selectedNiceClasses[code]) {
+                window.removeSelectedClass(code);
+                delete this.selectedNiceClasses[code];
+            } else {
+                window.selectItem(code, classNum, text);
+                this.selectedNiceClasses[code] = { classNum, text };
+            }
+            this.renderSelectedNiceClasses();
+            return;
+        }
+
+        // Header tıklaması (accordion)
+        const header = e.target.closest('.class-header');
+        if (header && !e.target.closest('.select-class-btn')) {
+            window.toggleAccordion(header.dataset.id);
+        }
+    });
+
+    // 99. Sınıf ekleme butonu için event listener
     if (addCustomBtn) {
         addCustomBtn.addEventListener('click', () => {
             const text = customInput.value.trim();
-            if (!text) {
-                alert('Lütfen özel sınıf metnini girin');
-                return;
-            }
+            if (!text) return alert('Lütfen özel sınıf metnini girin');
             const code = `99-${Date.now()}`;
-            this.addNiceSelection(code, '99', text);
+            // `nice-classification.js`'in global fonksiyonunu çağır
+            window.selectItem(code, '99', text);
+            // Kendi yerel state'ini de güncelle
+            this.selectedNiceClasses[code] = { classNum: '99', text };
+            this.renderSelectedNiceClasses();
+            
             customInput.value = '';
             if (charCountElement) charCountElement.textContent = '0';
         });
     }
-    
-    // Seçilenleri kaldırma butonu için olay dinleyicisi
-    if(selectedContainer) {
+
+    // Seçilenleri kaldırma butonu için dinleyici
+    if (selectedContainer) {
         selectedContainer.addEventListener('click', (e) => {
-            const removeBtn = e.target.closest('.remove-selected-class-btn');
+            const removeBtn = e.target.closest('.remove-selected-btn');
             if(removeBtn) {
+                e.preventDefault();
                 const key = removeBtn.dataset.key;
-                this.removeNiceSelection(key);
+                window.removeSelectedClass(key);
+                delete this.selectedNiceClasses[key];
+                this.renderSelectedNiceClasses();
             }
         });
     }
+    
+    console.log('✅ Nice Classification event listeners eklendi');
 }
 
     toggleNiceSubclass(code, classNum, text, element) {
