@@ -691,11 +691,18 @@ class DataEntryModule {
                 <div class="selected-item">
                     <span><strong>${applicant.name}</strong></span>
                     ${applicant.email ? `<br><small class="text-muted">${applicant.email}</small>` : ''}
-                    <button type="button" class="remove-item" onclick="dataEntryInstance.removeApplicant('${applicant.id}')">
+                    <button type="button" class="remove-item" data-person-id="${applicant.id}">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
             `).join('');
+
+            container.querySelectorAll('.remove-item').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const id = e.currentTarget.dataset.personId;
+                    this.removeApplicant(id);
+                });
+            });
         }
     }
 
