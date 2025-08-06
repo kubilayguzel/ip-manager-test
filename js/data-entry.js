@@ -55,53 +55,61 @@ class DataEntryModule {
 setupEventListeners() {
   console.log('🔧 Event listeners kuruluyor...');
 
-  // Tab değiştiğinde ilgili render’ları tetikle
+  // 1) Tab değiştiğinde render tetikle
   $('#myTaskTabs a')
     .off('shown.bs.tab')
     .on('shown.bs.tab', (e) => {
       const tabId = $(e.target).attr('href').substring(1);
       console.log('📂 Tab değişti:', tabId);
 
-      // NiceClassification
+      // Goods & Services sekmesinde NiceClassification başlat
       if (tabId === 'goods-services' && !this.isNiceClassificationInitialized) {
         initializeNiceClassification()
           .then(() => {
             this.isNiceClassificationInitialized = true;
             this._adjustSelectedListHeight();
-          });
+          })
+          .catch(err => console.error('❌ Nice init hatası:', err));
       }
 
-      // Applicants tab’ı açıldıysa her defasında yeniden çiz
+      // Applicants sekmesine geçince listeyi yeniden çiz
       if (tabId === 'applicants') {
         this.renderSelectedApplicants();
       }
 
-      // Priority tab’ı açıldıysa her defasında yeniden çiz
+      // Priority sekmesine geçince rüçhanları yeniden çiz
       if (tabId === 'priority') {
         this.renderPriorities();
       }
     });
 
-  // — Rüçhan Ekleme —
-  $('#addPriorityBtn').off('click').on('click', () => this.addPriority());
-  $('#priorityType').off('change').on('change', (e) => {
-    $('#priorityDateLabel').text(
-      e.target.value === 'sergi' ? 'Sergi Tarihi' : 'Rüçhan Tarihi'
-    );
-  });
+  // 2) Rüçhan ekleme
+  $('#addPriorityBtn')
+    .off('click')
+    .on('click', () => this.addPriority());
+  $('#priorityType')
+    .off('change')
+    .on('change', (e) => {
+      $('#priorityDateLabel').text(
+        e.target.value === 'sergi' ? 'Sergi Tarihi' : 'Rüçhan Tarihi'
+      );
+    });
 
-  // — Marka Örneği Upload —
-  $('#brand-example-drop-zone').off('click')
-    .on('click', () => $('#brandExample').click());
-  $('#brandExample').off('change')
+  // 3) Marka örneği upload
+  $('#brand-example-drop-zone')
+    .off('click')
+    .on('click', () => $('#brandExample').trigger('click'));
+  $('#brandExample')
+    .off('change')
     .on('change', e => this.handleBrandExampleUpload(e.target.files[0]));
-  $('#removeBrandExampleBtn').off('click')
+  $('#removeBrandExampleBtn')
+    .off('click')
     .on('click', () => {
       this.brandExampleFile = null;
       $('#brandExamplePreviewContainer').hide();
     });
 
-  // — Nice Classification 35-5 modal tetikleme —
+  // 4) 35-5 alt sınıfında modal açma
   $('#niceClassificationList')
     .off('click', '.subclass-item')
     .on('click', '.subclass-item', (e) => {
@@ -114,24 +122,29 @@ setupEventListeners() {
       }
     });
 
-  // Kaydet butonu, temizle, resize vb.
-  $(document).on('click', '#saveTaskBtn', (e) => this.handleFormSubmit(e));
-  $('#clearAllClassesBtn').off('click').on('click', () => this.clearAllClasses());
-  $(window).on('resize', () => this._adjustSelectedListHeight());
+  // 5) Kaydet / temizle / resize
+  $(document)
+    .off('click', '#saveTaskBtn')
+    .on('click', '#saveTaskBtn', e => this.handleFormSubmit(e));
+  $('#clearAllClassesBtn')
+    .off('click')
+    .on('click', () => this.clearAllClasses());
+  $(window)
+    .off('resize')
+    .on('resize', () => this._adjustSelectedListHeight());
 
   console.log('✅ Ana event listeners kuruldu');
 }
 
-// 1) Sadece başvuru sahibi dinleyicileri
 setupApplicantListeners() {
   console.log('🔍 Applicant dinleyicileri kuruluyor...');
-  
-  // Yazı girdikçe ara
+
+  // Arama kutusuna yazdıkça
   $('#applicantSearchInput')
     .off('input')
     .on('input', e => this.searchPersons(e.target.value, 'applicant'));
-  
-  // Sonuç satırına tıklandığında ekle
+
+  // Arama sonuçlarından tıklayınca ekle
   $('#applicantSearchResults')
     .off('click')
     .on('click', '.search-result-item', (e) => {
