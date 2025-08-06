@@ -1,738 +1,317 @@
-// data-entry.js - Tüm sorunlar düzeltildi
+// js/data-entry.js
 
-import { createTrademarkApplication, uploadFileToStorage } from './create-task.js';
+import { createTrademarkApplication } from './create-task.js';
 import { authService, personService, transactionTypeService } from '../firebase-config.js';
 import { initializeNiceClassification, getSelectedNiceClasses } from './nice-classification.js';
 import { loadSharedLayout } from './layout-loader.js';
 
 class DataEntryModule {
-    constructor() {
-        this.currentUser = null;
-        this.allPersons = [];
-        this.allTransactionTypes = [];
-        this.uploadedFiles = [];
-        this.activeTab = 'brand-info';
-        this.isNiceClassificationInitialized = false;
-        this.selectedApplicants = [];
-        this.priorities = [];
-        this.selectedTpInvoiceParty = null;
-        this.selectedServiceInvoiceParty = null;
-        this.selectedRelatedParty = null;
-        this.selectedIpRecord = null;
+  constructor() {
+    this.currentUser = null;
+    this.allPersons = [];
+    this.allTransactionTypes = [];
+    this.isNiceClassificationInitialized = false;
+    this.selectedApplicants = [];
+    this.priorities = [];
+  }
+
+  async init() {
+    console.log('📋 DataEntry modülü başlatılıyor...');
+    this.currentUser = authService.getCurrentUser();
+    if (!this.currentUser) {
+      console.error('❌ Kullanıcı oturum açmamış');
+      window.location.href = 'index.html';
+      return;
     }
 
-    async init() {
-        console.log('📋 DataEntry modülü başlatılıyor...');
-        
-        this.currentUser = authService.getCurrentUser();
-        if (!this.currentUser) {
-            console.error('❌ Kullanıcı oturum açmamış');
-            window.location.href = 'index.html';
-            return;
-        }
+    await loadSharedLayout();
+    console.log('📊 Veriler yükleniyor...');
+    const [personsResult, typesResult] = await Promise.all([
+      personService.getPersons(),
+      transactionTypeService.getTransactionTypes()
+    ]);
+    this.allPersons = personsResult.data || [];
+    this.allTransactionTypes = typesResult.data || [];
+    console.log('✅ Veriler yüklendi:', {
+      persons: this.allPersons.length,
+      transactionTypes: this.allTransactionTypes.length
+    });
 
-        try {
-            await loadSharedLayout();
-            
-            // Verileri yükle
-            console.log('📊 Veriler yükleniyor...');
-            const [personsResult, transactionTypesResult] = await Promise.all([
-                personService.getPersons(),
-                transactionTypeService.getTransactionTypes()
-            ]);
-            
-            this.allPersons = personsResult.data || [];
-            this.allTransactionTypes = transactionTypesResult.data || [];
-            
-            console.log('✅ Veriler yüklendi:', {
-                persons: this.allPersons.length,
-                transactionTypes: this.allTransactionTypes.length
-            });
-            
-            // UI'yi initialize et
-            this.setupEventListeners();
-            this.renderTransactionTypes();
-            this.setupPersonSearchListeners();
-            
-            // İlk render'lar
-            this.renderSelectedApplicants();
-            this.renderSelectedTpInvoiceParty();
-            this.renderSelectedServiceInvoiceParty();
-            this.renderSelectedRelatedParty();
-            
-            console.log('✅ DataEntry modülü başarıyla başlatıldı');
-            
-        } catch (error) {
-            console.error("❌ DataEntry başlatılamadı:", error);
-            alert("Uygulama başlatılamadı: " + error.message);
-        }
-    }
+    this.setupEventListeners();
+    this.renderTransactionTypes();
+    this.setupApplicantListeners();
+    this.renderSelectedApplicants();
+    this.renderPriorities();
+    console.log('✅ DataEntry modülü başarıyla başlatıldı');
+  }
 
-    setupEventListeners() {
-        console.log('🔧 Event listeners kuruluyor...');
-        
-        // Tab değişiklikleri
-        $('.nav-link[data-toggle="tab"]').on('shown.bs.tab', (e) => {
-        // href="#goods-services" → "goods-services"
-        const href = e.target.getAttribute('href');
-        const targetTabId = href ? href.slice(1) : null;
-            this.activeTab = targetTabId;
-            
-            console.log('📂 Tab değişti:', targetTabId);
-            
-            // Nice classification'ı sadece goods-services tab'ında başlat
-            if (targetTabId === 'goods-services' && !this.isNiceClassificationInitialized) {
-                setTimeout(() => {
-                    this.initializeNiceClassification();
-                }, 100);
-            }
-            
-            // Summary tab'ına geçildiğinde özeti güncelle
-            if (targetTabId === 'summary') {
-                this.updateSummary();
-            }
-        });
+  setupEventListeners() {
+    console.log('🔧 Event listeners kuruluyor...');
 
-        // Form submit
-        $(document).on('click', '#saveTaskBtn', (e) => {
-            e.preventDefault();
-            this.handleFormSubmit();
-        });
-        // “Tümünü Sil” butonu
-        const clearBtn = document.getElementById('clearAllClassesBtn');
-        if (clearBtn) {
-            clearBtn.addEventListener('click', () => {
-                // NiceClassification modülündeki global temizleme fonksiyonunu çağır
-                if (window.clearAllSelectedClasses) {
-                    window.clearAllSelectedClasses();
-                }
-                // Sağ paneli sıfırla (empty-state mesajını geri koy)
-                const panel = document.getElementById('selectedNiceClasses');
-                panel.innerHTML = `
-                    <div class="empty-state text-center">
-                        <i class="fas fa-list-alt fa-3x text-muted mb-3"></i>
-                        <p class="text-muted">
-                            Henüz hiçbir sınıf seçilmedi.<br>
-                            Sol panelden sınıf başlığına veya alt sınıfları seçin.
-                        </p>
-                    </div>
-                `;
-                // Sayaç sıfırla
-                document.getElementById('selectedClassCount').innerText = '0';
-            });
-    }
+    // Sekme değişiklikleri
+    $('#myTaskTabs a').on('shown.bs.tab', (e) => {
+      const tabId = $(e.target).attr('href').substring(1);
+      console.log('📂 Tab değişti:', tabId);
+
+      if (tabId === 'goods-services' && !this.isNiceClassificationInitialized) {
+        initializeNiceClassification()
+          .then(() => {
+            this.isNiceClassificationInitialized = true;
+            this._adjustSelectedListHeight();
+          })
+          .catch(err => console.error('❌ NiceClassification init hatası:', err));
+      }
+      if (tabId === 'applicants') this.renderSelectedApplicants();
+      if (tabId === 'priority') this.renderPriorities();
+    });
+
+    // “Tümünü Sil” butonu – seçili Nice sınıflarını temizle
+    $('#clearAllClassesBtn').on('click', () => {
+      if (window.clearAllSelectedClasses) window.clearAllSelectedClasses();
+      $('#selectedNiceClasses').html(`
+        <div class="empty-state text-center">
+          <i class="fas fa-list-alt fa-3x text-muted mb-3"></i>
+          <p class="text-muted">Henüz sınıf seçilmedi.</p>
+        </div>
+      `);
+      $('#selectedClassCount').text('0');
+    });
+
+    // Form kaydet
+    $(document).on('click', '#saveTaskBtn', (e) => {
+      e.preventDefault();
+      this.handleFormSubmit();
+    });
 
     // Pencere boyutu değişince sağ panel yüksekliğini sol listeye eşitle
-    window.addEventListener('resize', () => this._adjustSelectedListHeight());
-        console.log('✅ Ana event listeners kuruldu');
-    }
+    $(window).on('resize', () => this._adjustSelectedListHeight());
 
-    // PERSON SEARCH EVENT LISTENERS
-    setupPersonSearchListeners() {
-        console.log('🔍 Person search listeners kuruluyor...');
+    console.log('✅ Ana event listeners kuruldu');
+  }
 
-        // Search input event listeners
-        const searchTypes = ['applicant', 'tpInvoiceParty', 'serviceInvoiceParty', 'relatedParty'];
-        
-        searchTypes.forEach(type => {
-            const searchInput = document.getElementById(`${type}SearchInput`);
-            if (searchInput) {
-                // Input event
-                searchInput.addEventListener('input', (e) => {
-                    this.searchPersons(e.target.value, type);
-                });
-                
-                // Focus event - show results if there's a value
-                searchInput.addEventListener('focus', (e) => {
-                    if (e.target.value.trim().length >= 2) {
-                        this.searchPersons(e.target.value, type);
-                    }
-                });
-                
-                // Blur event - hide results after a delay
-                searchInput.addEventListener('blur', (e) => {
-                    setTimeout(() => {
-                        this.hidePersonSearchResults(type);
-                    }, 200);
-                });
-                
-                console.log(`✅ ${type} search listener eklendi`);
-            }
-        });
-    }
-
-    // NICE CLASSIFICATION İNİTİALİZATION
-    async initializeNiceClassification() {
-        if (this.isNiceClassificationInitialized) {
-            console.log('⚠️ Nice Classification zaten initialize edilmiş');
-            return;
-        }
-
-        console.log('🔄 Nice Classification başlatılıyor...');
-        
-        try {
-            // Nice classification'ı başlat
-            await initializeNiceClassification();
-            this.isNiceClassificationInitialized = true;
-            
-            // Global clearNiceSearch fonksiyonu
-            window.clearNiceSearch = function() {
-                const searchInput = document.getElementById('niceClassSearch');
-                if (searchInput) {
-                    searchInput.value = '';
-                    searchInput.dispatchEvent(new Event('input'));
-                }
-            };
-            
-            console.log('✅ Nice Classification başarıyla başlatıldı');
-            this._adjustSelectedListHeight();
-            
-        } catch (error) {
-            console.error('❌ Nice Classification başlatılamadı:', error);
-            const container = document.getElementById('niceClassificationList');
-            if (container) {
-                container.innerHTML = `
-                    <div class="text-center text-danger p-4">
-                        <i class="fas fa-exclamation-triangle fa-2x mb-2"></i>
-                        <p>Nice Classification yüklenemedi</p>
-                        <small>Hata: ${error.message}</small>
-                        <br><button class="btn btn-sm btn-primary mt-2" onclick="location.reload()">Sayfayı Yenile</button>
-                    </div>
-                `;
-            }
-        }
-    }
-
-    renderTransactionTypes() {
-        const transactionTypeSelect = document.getElementById('specificTaskType');
-        if (!transactionTypeSelect) {
-            console.error('❌ specificTaskType select elementi bulunamadı');
-            return;
-        }
-        
-        const trademarkTypes = this.allTransactionTypes.filter(t => t.ipType === 'trademark');
-        
-        transactionTypeSelect.innerHTML = '<option value="">Seçiniz...</option>';
-        trademarkTypes.forEach(type => {
-            const option = document.createElement('option');
-            option.value = type.id;
-            option.textContent = type.name || type.alias;
-            transactionTypeSelect.appendChild(option);
-        });
-        
-        console.log('✅ Transaction types render edildi:', trademarkTypes.length);
-    }
-
-    // PERSON SEARCH METHODS
-    searchPersons(query, type) {
-        console.log(`🔍 ${type} aranıyor:`, query);
-        
-        if (query.length < 2) {
-            this.hidePersonSearchResults(type);
-            return;
-        }
-        
-        const filtered = this.allPersons.filter(person => 
-            person.name.toLowerCase().includes(query.toLowerCase()) ||
-            (person.email && person.email.toLowerCase().includes(query.toLowerCase())) ||
-            (person.phone && person.phone.includes(query))
-        );
-        
-        this.showPersonSearchResults(filtered, type);
-    }
-
-    showPersonSearchResults(persons, type) {
-        const resultsContainer = document.getElementById(`${type}SearchResults`);
-        if (!resultsContainer) {
-            console.error(`❌ ${type}SearchResults container bulunamadı`);
-            return;
-        }
-        
-        if (persons.length === 0) {
-            resultsContainer.innerHTML = '<div class="search-result-item text-muted">Sonuç bulunamadı</div>';
-        } else {
-            resultsContainer.innerHTML = persons.slice(0, 10).map(person => `
-                <div class="search-result-item" data-person-id="${person.id}" data-type="${type}">
-                    <div class="result-name">${person.name}</div>
-                    <div class="result-details">${person.email || 'Email yok'} • ${person.phone || 'Telefon yok'}</div>
-                </div>
-            `).join('');
-        }
-        
-        resultsContainer.style.display = 'block';
-    }
-
-    hidePersonSearchResults(type) {
-        const resultsContainer = document.getElementById(`${type}SearchResults`);
-        if (resultsContainer) {
-            resultsContainer.style.display = 'none';
-        }
-    }
-
-    selectPerson(personId, type) {
-        const person = this.allPersons.find(p => p.id === personId);
-        if (!person) {
-            console.error(`❌ Person bulunamadı: ${personId}`);
-            return;
-        }
-        
-        console.log(`👤 ${type} seçildi:`, person);
-        
-        switch (type) {
-            case 'applicant':
-                if (!this.selectedApplicants.find(a => a.id === personId)) {
-                    this.selectedApplicants.push(person);
-                    this.renderSelectedApplicants();
-                    console.log('✅ Applicant eklendi, toplam:', this.selectedApplicants.length);
-                }
-                break;
-            case 'tpInvoiceParty':
-                this.selectedTpInvoiceParty = person;
-                this.renderSelectedTpInvoiceParty();
-                break;
-            case 'serviceInvoiceParty':
-                this.selectedServiceInvoiceParty = person;
-                this.renderSelectedServiceInvoiceParty();
-                break;
-            case 'relatedParty':
-                this.selectedRelatedParty = person;
-                this.renderSelectedRelatedParty();
-                break;
-        }
-        
-        this.hidePersonSearchResults(type);
-        
-        const searchInput = document.getElementById(`${type}SearchInput`);
-        if (searchInput) {
-            searchInput.value = '';
-        }
-    }
-
-    removeSelectedPerson(personId, type) {
-        console.log(`🗑️ ${type} kaldırılıyor:`, personId);
-        
-        switch (type) {
-            case 'applicant':
-                this.selectedApplicants = this.selectedApplicants.filter(a => a.id !== personId);
-                this.renderSelectedApplicants();
-                break;
-            case 'tpInvoiceParty':
-                this.selectedTpInvoiceParty = null;
-                this.renderSelectedTpInvoiceParty();
-                break;
-            case 'serviceInvoiceParty':
-                this.selectedServiceInvoiceParty = null;
-                this.renderSelectedServiceInvoiceParty();
-                break;
-            case 'relatedParty':
-                this.selectedRelatedParty = null;
-                this.renderSelectedRelatedParty();
-                break;
-        }
-    }
-
-    // RENDER METHODS
-    renderSelectedApplicants() {
-        const container = document.getElementById('selectedApplicants');
-        if (!container) {
-            console.error('❌ selectedApplicants container bulunamadı');
-            return;
-        }
-        
-        if (this.selectedApplicants.length === 0) {
-            container.innerHTML = '<div class="text-muted">Henüz başvuru sahibi seçilmedi</div>';
-            return;
-        }
-        
-        container.innerHTML = this.selectedApplicants.map(applicant => `
-            <div class="selected-person-item">
-                <div class="person-info">
-                    <strong>${applicant.name}</strong>
-                    <br><small class="text-muted">${applicant.email || 'Email yok'} • ${applicant.phone || 'Telefon yok'}</small>
-                </div>
-                <button class="remove-person-btn" data-person-id="${applicant.id}" data-type="applicant" title="Kaldır">×</button>
-            </div>
-        `).join('');
-        
-        console.log('✅ Selected applicants render edildi:', this.selectedApplicants.length);
-    }
-
-    renderSelectedTpInvoiceParty() {
-        const container = document.getElementById('selectedTpInvoiceParty');
-        if (!container) return;
-        
-        if (!this.selectedTpInvoiceParty) {
-            container.innerHTML = '<div class="text-muted">Henüz TP fatura tarafı seçilmedi</div>';
-            return;
-        }
-        
-        container.innerHTML = `
-            <div class="selected-person-item">
-                <div class="person-info">
-                    <strong>${this.selectedTpInvoiceParty.name}</strong>
-                    <br><small class="text-muted">${this.selectedTpInvoiceParty.email || 'Email yok'}</small>
-                </div>
-                <button class="remove-person-btn" data-person-id="${this.selectedTpInvoiceParty.id}" data-type="tpInvoiceParty" title="Kaldır">×</button>
-            </div>
-        `;
-    }
-
-    renderSelectedServiceInvoiceParty() {
-        const container = document.getElementById('selectedServiceInvoiceParty');
-        if (!container) return;
-        
-        if (!this.selectedServiceInvoiceParty) {
-            container.innerHTML = '<div class="text-muted">Henüz hizmet fatura tarafı seçilmedi</div>';
-            return;
-        }
-        
-        container.innerHTML = `
-            <div class="selected-person-item">
-                <div class="person-info">
-                    <strong>${this.selectedServiceInvoiceParty.name}</strong>
-                    <br><small class="text-muted">${this.selectedServiceInvoiceParty.email || 'Email yok'}</small>
-                </div>
-                <button class="remove-person-btn" data-person-id="${this.selectedServiceInvoiceParty.id}" data-type="serviceInvoiceParty" title="Kaldır">×</button>
-            </div>
-        `;
-    }
-
-    renderSelectedRelatedParty() {
-        const container = document.getElementById('selectedRelatedParty');
-        if (!container) return;
-        
-        if (!this.selectedRelatedParty) {
-            container.innerHTML = '<div class="text-muted">Henüz ilgili taraf seçilmedi</div>';
-            return;
-        }
-        
-        container.innerHTML = `
-            <div class="selected-person-item">
-                <div class="person-info">
-                    <strong>${this.selectedRelatedParty.name}</strong>
-                    <br><small class="text-muted">${this.selectedRelatedParty.email || 'Email yok'}</small>
-                </div>
-                <button class="remove-person-btn" data-person-id="${this.selectedRelatedParty.id}" data-type="relatedParty" title="Kaldır">×</button>
-            </div>
-        `;
-    }
-
-    // SUMMARY UPDATE
-    updateSummary() {
-        console.log('📋 Özet güncelleniyor...');
-        
-        // Marka bilgileri
-        const brandInfo = document.getElementById('summaryBrandInfo');
-        if (brandInfo) {
-            const brandName = document.getElementById('brandExampleText')?.value || 'Girilmedi';
-            const brandType = document.getElementById('brandType')?.value || 'Seçilmedi';
-            const brandCategory = document.getElementById('brandCategory')?.value || 'Seçilmedi';
-            
-            brandInfo.innerHTML = `
-                <strong>Marka Adı:</strong> ${brandName}<br>
-                <strong>Tür:</strong> ${brandType}<br>
-                <strong>Kategori:</strong> ${brandCategory}
-            `;
-        }
-        
-        // Seçilen sınıflar
-        const selectedClassesInfo = document.getElementById('summarySelectedClasses');
-        if (selectedClassesInfo) {
-            const selectedClasses = getSelectedNiceClasses();
-            if (selectedClasses.length === 0) {
-                selectedClassesInfo.innerHTML = '<span class="text-danger">Hiç sınıf seçilmedi!</span>';
-            } else {
-                selectedClassesInfo.innerHTML = `
-                    <strong>${selectedClasses.length} sınıf seçildi</strong><br>
-                    <small>${selectedClasses.slice(0, 3).join(', ')}${selectedClasses.length > 3 ? '...' : ''}</small>
-                `;
-            }
-        }
-        
-        // Başvuru sahipleri
-        const applicantsInfo = document.getElementById('summaryApplicants');
-        if (applicantsInfo) {
-            if (this.selectedApplicants.length === 0) {
-                applicantsInfo.innerHTML = '<span class="text-danger">Hiç başvuru sahibi seçilmedi!</span>';
-            } else {
-                applicantsInfo.innerHTML = `
-                    <strong>${this.selectedApplicants.length} başvuru sahibi</strong><br>
-                    <small>${this.selectedApplicants.map(a => a.name).join(', ')}</small>
-                `;
-            }
-        }
-        
-        // Status
-        const statusInfo = document.getElementById('summaryStatus');
-        if (statusInfo) {
-            const selectedClasses = getSelectedNiceClasses();
-            const hasRequiredFields = 
-                document.getElementById('brandExampleText')?.value &&
-                document.getElementById('specificTaskType')?.value &&
-                selectedClasses.length > 0 &&
-                this.selectedApplicants.length > 0;
-                
-            if (hasRequiredFields) {
-                statusInfo.className = 'badge badge-success';
-                statusInfo.textContent = 'Kayda Hazır';
-            } else {
-                statusInfo.className = 'badge badge-warning';
-                statusInfo.textContent = 'Eksik Bilgiler Var';
-            }
-        }
-    }
-
-    // FORM SUBMIT
-    async handleFormSubmit() {
-        console.log('💾 Form submit işlemi başlıyor...');
-        
-        try {
-            const selectedTransactionTypeId = document.getElementById('specificTaskType')?.value;
-            if (!selectedTransactionTypeId) {
-                alert('Lütfen işlem tipini seçin.');
-                // İlk tab'a geç
-                const firstTab = document.querySelector('a[href="#brand-info"]');
-                if (firstTab) $(firstTab).tab('show');
-                return;
-            }
-            
-            const selectedTransactionType = this.allTransactionTypes.find(t => t.id === selectedTransactionTypeId);
-            if (!selectedTransactionType) {
-                alert('Seçilen işlem tipi bulunamadı.');
-                return;
-            }
-
-            // Marka başvuru işlemi kontrolü
-            if (selectedTransactionType.alias === 'Başvuru' && selectedTransactionType.ipType === 'trademark') {
-                const goodsAndServices = getSelectedNiceClasses();
-                console.log('🎯 Seçilen sınıflar:', goodsAndServices);
-                
-                if (goodsAndServices.length === 0) {
-                    alert('Lütfen en az bir mal veya hizmet sınıfı seçin.');
-                    // Goods-services tab'ına geç
-                    const goodsServicesTab = document.querySelector('a[href="#goods-services"]');
-                    if (goodsServicesTab) $(goodsServicesTab).tab('show');
-                    return;
-                }
-
-                if (this.selectedApplicants.length === 0) {
-                    alert('Lütfen en az bir başvuru sahibi seçin.');
-                    // Applicants tab'ına geç
-                    const applicantsTab = document.querySelector('a[href="#applicants"]');
-                    if (applicantsTab) $(applicantsTab).tab('show');
-                    return;
-                }
-                
-                const brandExampleText = document.getElementById('brandExampleText')?.value;
-                if (!brandExampleText) {
-                    alert('Lütfen marka adını girin.');
-                    const firstTab = document.querySelector('a[href="#brand-info"]');
-                    if (firstTab) $(firstTab).tab('show');
-                    document.getElementById('brandExampleText')?.focus();
-                    return;
-                }
-                
-                // Onay
-                if (!confirm(`"${brandExampleText}" markası için ${goodsAndServices.length} sınıfta başvuru oluşturulacak. Devam etmek istiyor musunuz?`)) {
-                    return;
-                }
-                
-                // Form verilerini hazırla
-                const taskData = {
-                    taskType: selectedTransactionType.id,
-                    title: brandExampleText,
-                    description: `'${brandExampleText}' adlı marka için ${selectedTransactionType.alias} işlemi.`,
-                    priority: document.getElementById('taskPriority')?.value || 'medium',
-                    assignedTo_uid: null,
-                    assignedTo_email: null,
-                    dueDate: document.getElementById('taskDueDate')?.value || null,
-                    status: 'open',
-                    relatedIpRecordId: null,
-                    relatedIpRecordTitle: null,
-                    details: {}
-                };
-
-                const newIpRecordData = {
-                    title: taskData.title,
-                    type: selectedTransactionType.ipType,
-                    status: 'application_filed',
-                    details: {
-                        brandInfo: {
-                            brandType: document.getElementById('brandType')?.value,
-                            brandCategory: document.getElementById('brandCategory')?.value,
-                            brandExampleText: brandExampleText,
-                            nonLatinAlphabet: document.getElementById('nonLatinAlphabet')?.value || null,
-                            coverLetterRequest: document.querySelector('input[name="coverLetterRequest"]:checked')?.value,
-                            consentRequest: document.querySelector('input[name="consentRequest"]:checked')?.value,
-                            goodsAndServices: goodsAndServices
-                        },
-                        applicants: this.selectedApplicants.map(p => ({
-                            id: p.id,
-                            name: p.name,
-                            email: p.email || null
-                        })),
-                        priorities: this.priorities,
-                        tpInvoiceParty: this.selectedTpInvoiceParty ? {
-                            id: this.selectedTpInvoiceParty.id,
-                            name: this.selectedTpInvoiceParty.name,
-                            email: this.selectedTpInvoiceParty.email
-                        } : null,
-                        serviceInvoiceParty: this.selectedServiceInvoiceParty ? {
-                            id: this.selectedServiceInvoiceParty.id,
-                            name: this.selectedServiceInvoiceParty.name,
-                            email: this.selectedServiceInvoiceParty.email
-                        } : null,
-                        relatedParty: this.selectedRelatedParty ? {
-                            id: this.selectedRelatedParty.id,
-                            name: this.selectedRelatedParty.name,
-                            email: this.selectedRelatedParty.email
-                        } : null
-                    }
-                };
-
-                const formData = {
-                    taskData,
-                    newIpRecordData,
-                    accrualData: null,
-                    brandExampleFile: null
-                };
-
-                // Loading state
-                const saveBtn = document.getElementById('saveTaskBtn');
-                const originalText = saveBtn.innerHTML;
-                saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Kaydediliyor...';
-                saveBtn.disabled = true;
-
-                // Başvuruyu oluştur
-                const result = await createTrademarkApplication(formData);
-                
-                if (result.success) {
-                    console.log('✅ Başvuru başarıyla oluşturuldu:', result);
-                    alert('🎉 Marka başvurusu başarıyla oluşturuldu!');
-                    
-                    // Başarı sayfasına yönlendir veya formu sıfırla
-                    if (confirm('İşlem tamamlandı! Ana sayfaya dönmek ister misiniz?')) {
-                        window.location.href = 'dashboard.html';
-                    } else {
-                        this.resetForm();
-                    }
-                    
-                } else {
-                    console.error('❌ Başvuru oluşturulamadı:', result.error);
-                    alert('❌ Başvuru oluşturulurken hata oluştu:\n' + result.error);
-                }
-                
-                // Loading state'i kaldır
-                saveBtn.innerHTML = originalText;
-                saveBtn.disabled = false;
-                
-            } else {
-                alert('Sadece marka başvuru işlemleri desteklenmektedir.');
-            }
-            
-        } catch (error) {
-            console.error('❌ Form submit hatası:', error);
-            alert('Form gönderilirken hata oluştu:\n' + error.message);
-            
-            // Loading state'i kaldır
-            const saveBtn = document.getElementById('saveTaskBtn');
-            if (saveBtn) {
-                saveBtn.innerHTML = '<i class="fas fa-save mr-2"></i>Marka Başvurusunu Kaydet';
-                saveBtn.disabled = false;
-            }
-        }
-    }
-    _adjustSelectedListHeight() {
-        const left = document.querySelector('.search-results-container');
-        const right = document.getElementById('selectedNiceClasses');
-        if (left && right) {
-            right.style.maxHeight = `${left.clientHeight}px`;
-        }
-    }
-    resetForm() {
-        console.log('🧹 Form sıfırlanıyor...');
-        
-        // Form alanlarını sıfırla
-        document.getElementById('brandExampleText').value = '';
-        document.getElementById('brandType').value = '';
-        document.getElementById('brandCategory').value = '';
-        document.getElementById('nonLatinAlphabet').value = '';
-        document.getElementById('specificTaskType').value = '';
-        
-        // Radio buttonları sıfırla
-        document.querySelectorAll('input[type="radio"]').forEach(radio => {
-            radio.checked = false;
-        });
-        
-        // Varsayılan radio seçimlerini yap
-        document.getElementById('coverLetterRequestYok').checked = true;
-        document.getElementById('consentRequestYok').checked = true;
-        
-        // Seçimleri sıfırla
-        this.selectedApplicants = [];
-        this.priorities = [];
-        this.selectedTpInvoiceParty = null;
-        this.selectedServiceInvoiceParty = null;
-        this.selectedRelatedParty = null;
-        this.selectedIpRecord = null;
-        
-        // Render'ları güncelle
+  // Marka / başvuru sahibi arama + seçme
+  setupApplicantListeners() {
+    console.log('🔍 Applicant dinleyicileri kuruluyor...');
+    $('#applicantSearchInput').on('input', e => this.searchPersons(e.target.value));
+    $('#addNewApplicantBtn').on('click', () => this.showNewPersonModal('applicant'));
+    $('#applicantSearchResults').on('click', '.search-result-item', (e) => {
+      const id = $(e.currentTarget).data('id');
+      const person = this.allPersons.find(p => p.id === id);
+      if (person && !this.selectedApplicants.some(a => a.id === id)) {
+        this.selectedApplicants.push(person);
         this.renderSelectedApplicants();
-        this.renderSelectedTpInvoiceParty();
-        this.renderSelectedServiceInvoiceParty();
-        this.renderSelectedRelatedParty();
-        
-        // Nice sınıflarını temizle
-        if (window.clearAllSelectedClasses) {
-            window.clearAllSelectedClasses();
-        }
-        
-        // İlk tab'a dön
-        const firstTab = document.querySelector('.nav-link[data-toggle="tab"]');
-        if (firstTab) {
-            $(firstTab).tab('show');
-        }
-        
-        console.log('✅ Form sıfırlandı');
+      }
+      $('#applicantSearchResults').hide();
+      $('#applicantSearchInput').val('');
+    });
+  }
+
+  searchPersons(query) {
+    if (query.length < 2) {
+      $('#applicantSearchResults').hide();
+      return;
     }
+    const matches = this.allPersons
+      .filter(p => p.name.toLowerCase().includes(query.toLowerCase()))
+      .slice(0, 10);
+    const html = matches.map(p => `
+      <div class="search-result-item p-2 border-bottom" data-id="${p.id}">
+        <strong>${p.name}</strong><br><small class="text-muted">${p.email || ''}</small>
+      </div>
+    `).join('');
+    $('#applicantSearchResults').html(html).show();
+  }
+
+  renderSelectedApplicants() {
+    const $c = $('#selectedApplicantsList');
+    if (this.selectedApplicants.length === 0) {
+      $c.html(`
+        <div class="empty-state text-center">
+          <i class="fas fa-user-plus fa-3x text-muted mb-3"></i>
+          <p class="text-muted">Henüz başvuru sahibi seçilmedi.</p>
+        </div>
+      `);
+      return;
+    }
+    const html = this.selectedApplicants.map(a => `
+      <div class="d-flex justify-content-between align-items-center mb-2 p-2 border rounded">
+        <span>${a.name}</span>
+        <button class="btn btn-sm btn-danger remove-applicant-btn" data-id="${a.id}">&times;</button>
+      </div>
+    `).join('');
+    $c.html(html);
+    $c.find('.remove-applicant-btn').on('click', e => {
+      const id = $(e.currentTarget).data('id');
+      this.selectedApplicants = this.selectedApplicants.filter(x => x.id !== id);
+      this.renderSelectedApplicants();
+    });
+  }
+
+  addPriority() {
+    const date = $('#priorityDate').val();
+    const country = $('#priorityCountry').val();
+    const number = $('#priorityNumber').val();
+    const type = $('#priorityType').val();
+    if (!date || !country || !number) {
+      return alert('Lütfen tüm rüçhan bilgilerini doldurun.');
+    }
+    this.priorities.push({ id: Date.now().toString(), type, date, country, number });
+    this.renderPriorities();
+    $('#priorityDate,#priorityCountry,#priorityNumber').val('');
+  }
+
+  renderPriorities() {
+    const $c = $('#addedPrioritiesList');
+    if (this.priorities.length === 0) {
+      $c.html(`
+        <div class="empty-state text-center">
+          <i class="fas fa-info-circle fa-3x text-muted mb-3"></i>
+          <p class="text-muted">Henüz rüçhan bilgisi eklenmedi.</p>
+        </div>
+      `);
+      return;
+    }
+    const html = this.priorities.map(p => `
+      <div class="d-flex justify-content-between align-items-center mb-2 p-2 border rounded">
+        <div>
+          <b>Tip:</b> ${p.type}<br>
+          <b>Tarih:</b> ${p.date}<br>
+          <b>Ülke:</b> ${p.country}<br>
+          <b>Numara:</b> ${p.number}
+        </div>
+        <button class="btn btn-sm btn-danger remove-priority-btn" data-id="${p.id}">&times;</button>
+      </div>
+    `).join('');
+    $c.html(html);
+    $c.find('.remove-priority-btn').on('click', e => {
+      const id = $(e.currentTarget).data('id');
+      this.priorities = this.priorities.filter(x => x.id !== id);
+      this.renderPriorities();
+    });
+  }
+
+  renderTransactionTypes() {
+    const sel = document.getElementById('specificTaskType');
+    if (!sel) return;
+    sel.innerHTML = '<option value="">Seçiniz...</option>';
+    this.allTransactionTypes
+      .filter(t => t.ipType === 'trademark')
+      .forEach(t => {
+        const o = document.createElement('option');
+        o.value = t.id;
+        o.textContent = t.alias || t.name;
+        sel.appendChild(o);
+      });
+  }
+
+  async handleFormSubmit() {
+    const txId = $('#specificTaskType').val();
+    const tx = this.allTransactionTypes.find(t => t.id === txId);
+    if (!tx) {
+      alert('Lütfen işlem tipini seçin.');
+      return $('#brand-info-tab').tab('show');
+    }
+    if (tx.alias !== 'Başvuru' || tx.ipType !== 'trademark') {
+      return alert('Sadece marka başvuru işlemleri desteklenmektedir.');
+    }
+    const goodsAndServices = getSelectedNiceClasses();
+    if (goodsAndServices.length === 0) {
+      alert('Lütfen en az bir mal veya hizmet sınıfı seçin.');
+      return $('#goods-services-tab').tab('show');
+    }
+    if (this.selectedApplicants.length === 0) {
+      alert('Lütfen en az bir başvuru sahibi seçin.');
+      return $('#applicants-tab').tab('show');
+    }
+    const brandExampleText = $('#brandExampleText').val().trim();
+    if (!brandExampleText) {
+      alert('Lütfen marka örneği yazılı ifadesi girin.');
+      $('#brand-info-tab').tab('show');
+      return $('#brandExampleText').focus();
+    }
+
+    if (!confirm(`"${brandExampleText}" markası için ${goodsAndServices.length} sınıfta başvuru oluşturulsun mu?`)) {
+      return;
+    }
+
+    const taskData = {
+      taskType: tx.id,
+      title: brandExampleText,
+      description: `'${brandExampleText}' adlı marka için ${tx.alias} işlemi.`,
+      priority: null,
+      assignedTo_uid: null,
+      assignedTo_email: null,
+      dueDate: null,
+      status: 'open',
+      relatedIpRecordId: null,
+      relatedIpRecordTitle: null,
+      details: {}
+    };
+    const newIpRecordData = {
+      title: brandExampleText,
+      type: tx.ipType,
+      status: 'application_filed',
+      details: {
+        brandInfo: {
+          brandType: document.getElementById('brandType')?.value,
+          brandCategory: document.getElementById('brandCategory')?.value,
+          brandExampleText,
+          nonLatinAlphabet: document.getElementById('nonLatinAlphabet')?.value || null,
+          coverLetterRequest: document.querySelector('input[name="coverLetterRequest"]:checked')?.value,
+          consentRequest: document.querySelector('input[name="consentRequest"]:checked')?.value,
+          goodsAndServices
+        },
+        applicants: this.selectedApplicants.map(p => ({ id: p.id, name: p.name, email: p.email || null })),
+        priorities: this.priorities.length > 0 ? this.priorities : null,
+        transactionType: { id: tx.id, name: tx.name, alias: tx.alias }
+      }
+    };
+    const formData = { taskData, newIpRecordData, accrualData: null, brandExampleFile: null };
+
+    const $btn = $('#saveTaskBtn');
+    const orig = $btn.html();
+    $btn.html('<i class="fas fa-spinner fa-spin mr-2"></i>Kaydediliyor...').prop('disabled', true);
+    try {
+      const res = await createTrademarkApplication(formData);
+      if (res.success) {
+        alert('🎉 Marka başvurusu başarıyla oluşturuldu!');
+        this.resetForm();
+      } else {
+        throw new Error(res.error);
+      }
+    } catch (err) {
+      console.error('❌ Oluşturma hatası:', err);
+      alert('Hata: ' + err.message);
+    } finally {
+      $btn.html(orig).prop('disabled', false);
+    }
+  }
+
+  _adjustSelectedListHeight() {
+    const left = document.getElementById('niceClassificationList');
+    const right = document.getElementById('selectedNiceClasses');
+    if (left && right) {
+      right.style.maxHeight = `${left.clientHeight}px`;
+    }
+  }
+
+  resetForm() {
+    $('#brandExampleText,#applicantSearchInput,#priorityDate,#priorityCountry,#priorityNumber').val('');
+    $('input[name="coverLetterRequest"][value="yok"]').prop('checked', true);
+    $('input[name="consentRequest"][value="yok"]').prop('checked', true);
+    this.selectedApplicants = [];
+    this.priorities = [];
+    this.renderSelectedApplicants();
+    this.renderPriorities();
+    if (window.clearAllSelectedClasses) window.clearAllSelectedClasses();
+    $('#myTaskTabs a').first().tab('show');
+  }
 }
 
 // GLOBAL INSTANCE
 window.dataEntryInstance = null;
 
-// DOMContentLoaded event listener
-document.addEventListener('DOMContentLoaded', () => {
-    console.log('🚀 DataEntry DOM yüklendi, modül başlatılıyor...');
-    
-    window.dataEntryInstance = new DataEntryModule();
-    window.dataEntryInstance.init().catch(error => {
-        console.error('❌ DataEntry başlatılamadı:', error);
-        alert('Uygulama başlatılamadı. Lütfen sayfayı yenileyin.');
-    });
+$(async () => {
+  window.dataEntryInstance = new DataEntryModule();
+  await window.dataEntryInstance.init();
 });
-
-// EVENT DELEGATION FOR DYNAMIC ELEMENTS
-document.addEventListener('click', (e) => {
-    const target = e.target;
-    
-    // Person search result selection
-    if (target.classList.contains('search-result-item') || target.closest('.search-result-item')) {
-        const item = target.closest('.search-result-item');
-        if (item && window.dataEntryInstance) {
-            const personId = item.dataset.personId;
-            const type = item.dataset.type;
-            window.dataEntryInstance.selectPerson(personId, type);
-        }
-    }
-    
-    // Remove selected person
-    if (target.classList.contains('remove-person-btn')) {
-        if (window.dataEntryInstance) {
-            const personId = target.dataset.personId;
-            const type = target.dataset.type;
-            window.dataEntryInstance.removeSelectedPerson(personId, type);
-        }
-    }
-});
-
-console.log('✅ DataEntry modülü yüklendi');
