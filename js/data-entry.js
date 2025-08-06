@@ -131,6 +131,13 @@ setupEventListeners() {
     .on('resize', () => this._adjustSelectedListHeight());
 
   console.log('✅ Ana event listeners kuruldu');
+   $('#myTaskTabs').on('shown.bs.tab', (e) => {
+    const tabId = $(e.target).attr('href').substring(1);
+    if (tabId === 'applicants') {
+        console.log('📋 Applicants sekmesi açıldı, liste yeniden çiziliyor...');
+        this.renderSelectedApplicants(true);  // force parametresiyle çağır
+    }
+  });
 }
 
 setupApplicantListeners() {
@@ -172,30 +179,28 @@ setupApplicantListeners() {
     $('#applicantSearchResults').html(html).show();
   }
 
-  renderSelectedApplicants() {
-    const $c = $('#selectedApplicantsList');
+ renderSelectedApplicants(force = false) {
+    const container = document.getElementById('selectedApplicants');
+    if (!container) return;
+
     if (this.selectedApplicants.length === 0) {
-      $c.html(`
-        <div class="empty-state text-center">
-          <i class="fas fa-user-plus fa-3x text-muted mb-3"></i>
-          <p class="text-muted">Henüz başvuru sahibi seçilmedi.</p>
-        </div>
-      `);
-      return;
+        container.innerHTML = '<div class="text-muted">Henüz başvuru sahibi seçilmedi</div>';
+        return;
     }
-    const html = this.selectedApplicants.map(a => `
-      <div class="d-flex justify-content-between align-items-center mb-2 p-2 border rounded">
-        <span>${a.name}</span>
-        <button class="btn btn-sm btn-danger remove-applicant-btn" data-id="${a.id}">&times;</button>
-      </div>
+
+    // Force gelirse önce container'ı temizle
+    if (force) container.innerHTML = '';
+
+    container.innerHTML = this.selectedApplicants.map(applicant => `
+        <div class="selected-person-item">
+            <div class="person-info">
+                <strong>${applicant.name}</strong>
+                <br><small class="text-muted">${applicant.email || 'Email yok'} • ${applicant.phone || 'Telefon yok'}</small>
+            </div>
+            <button class="remove-person-btn" data-person-id="${applicant.id}" data-type="applicant" title="Kaldır">×</button>
+        </div>
     `).join('');
-    $c.html(html);
-    $c.find('.remove-applicant-btn').on('click', e => {
-      const id = $(e.currentTarget).data('id');
-      this.selectedApplicants = this.selectedApplicants.filter(x => x.id !== id);
-      this.renderSelectedApplicants();
-    });
-  }
+}
 
   addPriority() {
     const date = $('#priorityDate').val();
