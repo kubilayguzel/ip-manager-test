@@ -438,44 +438,99 @@ body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333
         <!-- Tab Content -->
         <div class="tab-content mt-3" id="myTaskTabContent">
 
-          <!-- 1. Marka Bilgileri -->
-          <div class="tab-pane fade show active" id="brand-info" role="tabpanel" aria-labelledby="brand-info-tab">
-            <div class="form-section">
-              <h3 class="section-title">Marka Bilgileri</h3>
-              <div class="form-group row">
-                <label for="brandType" class="col-sm-3 col-form-label">Marka Tipi</label>
-                <div class="col-sm-9">
-                  <select class="form-control" id="brandType">
-                    <option value="Sadece Kelime">Sadece Kelime</option>
-                    <option value="Sadece Şekil">Sadece Şekil</option>
-                    <option value="Şekil + Kelime" selected>Şekil + Kelime</option>
-                    <option value="Ses">Ses</option>
-                    <option value="Hareket">Hareket</option>
-                    <option value="Renk">Renk</option>
-                    <option value="Üç Boyutlu">Üç Boyutlu</option>
-                  </select>
-                </div>
-              </div>
-              <div class="form-group row">
-                <label for="brandCategory" class="col-sm-3 col-form-label">Marka Türü</label>
-                <div class="col-sm-9">
-                  <select class="form-control" id="brandCategory">
-                    <option value="Ticaret/Hizmet Markası" selected>Ticaret/Hizmet Markası</option>
-                    <option value="Garanti Markası">Garanti Markası</option>
-                    <option value="Ortak Marka">Ortak Marka</option>
-                  </select>
-                </div>
-              </div>
-              <div class="form-group row">
-                <label for="brandExampleText" class="col-sm-3 col-form-label">Marka Örneği Yazılı İfadesi</label>
-                <div class="col-sm-9">
-                  <input type="text" class="form-control" id="brandExampleText">
-                </div>
-              </div>
-              <!-- Diğer marka bilgisi alanlarınız… -->
-            </div>
-          </div>
+        <!-- Marka Tipi -->
+        <div class="form-group row">
+        <label for="brandType" class="col-sm-3 col-form-label">Marka Tipi</label>
+        <div class="col-sm-9">
+            <select id="brandType" class="form-control">
+            <option value="Sadece Kelime">Sadece Kelime</option>
+            <option value="Sadece Şekil">Sadece Şekil</option>
+            <option value="Şekil + Kelime" selected>Şekil + Kelime</option>
+            <!-- … diğer tipler … -->
+            </select>
+        </div>
+        </div>
 
+        <!-- Marka Türü -->
+        <div class="form-group row">
+        <label for="brandCategory" class="col-sm-3 col-form-label">Marka Türü</label>
+        <div class="col-sm-9">
+            <select id="brandCategory" class="form-control">
+            <option value="Ticaret/Hizmet Markası" selected>Ticaret/Hizmet Markası</option>
+            <option value="Garanti Markası">Garanti Markası</option>
+            <option value="Ortak Marka">Ortak Marka</option>
+            </select>
+        </div>
+        </div>
+
+        <!-- Marka Örneği (Resim) -->
+        <div class="form-group row">
+        <label class="col-sm-3 col-form-label">Marka Örneği</label>
+        <div class="col-sm-9">
+            <div id="brand-example-drop-zone" class="file-upload-wrapper brand-upload-frame">
+            <input type="file" id="brandExample" accept="image/*" style="display:none;">
+            <div class="file-upload-button">
+                <i class="fas fa-image fa-2x"></i><br>
+                Marka resmini sürükle veya tıkla
+            </div>
+            <small class="form-text text-muted">
+                591×591px, 300 DPI, JPEG. Yüklendiğinde otomatik dönüştürülecek.
+            </small>
+            </div>
+            <div id="brandExamplePreviewContainer" class="mt-2" style="display:none;">
+            <img id="brandExamplePreview" src="#" style="max-width:150px; border:1px solid #ccc;"/>
+            <button id="removeBrandExampleBtn" class="btn btn-sm btn-danger ml-2">Kaldır</button>
+            </div>
+        </div>
+        </div>
+
+        <!-- Marka Örneği Yazılı İfade -->
+        <div class="form-group row">
+        <label for="brandExampleText" class="col-sm-3 col-form-label">Marka Örneği Yazılı İfadesi</label>
+        <div class="col-sm-9">
+            <input type="text" id="brandExampleText" class="form-control" placeholder="Örn: ACME">
+        </div>
+        </div>
+
+        <!-- Latin Dışı Karakter -->
+        <div class="form-group row">
+        <label for="nonLatinAlphabet" class="col-sm-3 col-form-label">
+            Latin Alfabesi Dışında Harf Var Mı?
+        </label>
+        <div class="col-sm-9">
+            <input type="text" id="nonLatinAlphabet" class="form-control" placeholder="Örn: Ü, Ş">
+        </div>
+        </div>
+
+        <!-- Önyazı / Muvafakat -->
+        <div class="form-group row">
+        <label class="col-sm-3 col-form-label">Önyazı Talebi</label>
+        <div class="col-sm-9">
+            <div class="form-check form-check-inline">
+            <input name="coverLetterRequest" id="coverLetterRequestVar" value="var" type="radio" class="form-check-input">
+            <label for="coverLetterRequestVar" class="form-check-label">Var</label>
+            </div>
+            <div class="form-check form-check-inline">
+            <input name="coverLetterRequest" id="coverLetterRequestYok" value="yok" type="radio" class="form-check-input" checked>
+            <label for="coverLetterRequestYok" class="form-check-label">Yok</label>
+            </div>
+        </div>
+        </div>
+
+        <div class="form-group row">
+        <label class="col-sm-3 col-form-label">Muvafakat Talebi</label>
+        <div class="col-sm-9">
+            <div class="form-check form-check-inline">
+            <input name="consentRequest" id="consentRequestVar" value="var" type="radio" class="form-check-input">
+            <label for="consentRequestVar" class="form-check-label">Var</label>
+            </div>
+            <div class="form-check form-check-inline">
+            <input name="consentRequest" id="consentRequestYok" value="yok" type="radio" class="form-check-input" checked>
+            <label for="consentRequestYok" class="form-check-label">Yok</label>
+            </div>
+        </div>
+        </div>
+        
           <!-- 2. Mal/Hizmet Seçimi -->
           <div class="tab-pane fade" id="goods-services" role="tabpanel" aria-labelledby="goods-services-tab">
             <div class="nice-classification-container mt-3">
