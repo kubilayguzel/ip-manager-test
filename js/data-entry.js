@@ -347,7 +347,18 @@ class DataEntryModule {
 
                             <div id="priorityFields" style="display:none;">
                                 <div class="form-group row mb-3">
-                                    <label for="priorityDate" class="col-sm-3 col-form-label">Rüçhan Tarihi</label>
+                                    <label for="priorityType" class="col-sm-3 col-form-label">Rüçhan Tipi</label>
+                                    <div class="col-sm-9">
+                                        <select class="form-control" id="priorityType">
+                                            <option value="">Seçiniz...</option>
+                                            <option value="Başvuru">Başvuru</option>
+                                            <option value="Sergi">Sergi</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="form-group row mb-3">
+                                    <label for="priorityDate" class="col-sm-3 col-form-label" id="priorityDateLabel">Rüçhan Tarihi</label>
                                     <div class="col-sm-9">
                                         <input type="date" class="form-control" id="priorityDate">
                                     </div>
@@ -543,7 +554,18 @@ class DataEntryModule {
             });
         });
 
-        // Priority country change
+        // Priority type change
+        const priorityTypeSelect = document.getElementById('priorityType');
+        if (priorityTypeSelect) {
+            priorityTypeSelect.addEventListener('change', (e) => {
+                const priorityDateLabel = document.getElementById('priorityDateLabel');
+                if (e.target.value === 'Sergi') {
+                    priorityDateLabel.textContent = 'Sergi Tarihi';
+                } else {
+                    priorityDateLabel.textContent = 'Rüçhan Tarihi';
+                }
+            });
+        }
         const priorityCountrySelect = document.getElementById('priorityCountry');
         if (priorityCountrySelect) {
             priorityCountrySelect.addEventListener('change', (e) => {
@@ -629,7 +651,12 @@ class DataEntryModule {
             }
 
             try {
-                // Mock data for now - replace with actual personService call
+                // Gerçek personService kullan
+                const searchResults = await personService.searchApplicants(query);
+                this.renderSearchResults(searchResults, searchResults);
+            } catch (error) {
+                console.error('❌ Kişi arama hatası:', error);
+                // Hata durumunda mock data kullan
                 const mockResults = [
                     { id: 1, name: 'Ahmet Yılmaz', email: 'ahmet@example.com' },
                     { id: 2, name: 'Ayşe Kaya', email: 'ayse@example.com' },
@@ -637,10 +664,6 @@ class DataEntryModule {
                 ].filter(person => person.name.toLowerCase().includes(query.toLowerCase()));
 
                 this.renderSearchResults(mockResults, searchResults);
-            } catch (error) {
-                console.error('❌ Kişi arama hatası:', error);
-                searchResults.innerHTML = '<div class="search-result-item text-danger">Arama sırasında hata oluştu</div>';
-                searchResults.style.display = 'block';
             }
         });
 
@@ -731,31 +754,56 @@ class DataEntryModule {
         console.log('🗑️ Başvuru sahibi kaldırıldı:', personId);
     }
 
-    handleSaveNewPerson() {
-        const form = document.getElementById('newPersonForm');
-        const formData = new FormData(form);
-        
-        const personData = {
-            id: Date.now().toString(), // Temporary ID
-            name: document.getElementById('personName').value.trim(),
-            email: document.getElementById('personEmail').value.trim(),
-            phone: document.getElementById('personPhone').value.trim(),
-            address: document.getElementById('personAddress').value.trim()
-        };
+    async handleSaveNewPerson() {
+        const personName = document.getElementById('personName').value.trim();
+        const personEmail = document.getElementById('personEmail').value.trim();
+        const personPhone = document.getElementById('personPhone').value.trim();
+        const personAddress = document.getElementById('personAddress').value.trim();
 
-        if (!personData.name) {
+        if (!personName) {
             alert('Lütfen kişi adını giriniz!');
             return;
         }
 
-        // Add to applicants
-        this.addApplicant(personData);
-        
-        // Close modal and reset form
-        $('#newPersonModal').modal('hide');
-        form.reset();
-        
-        console.log('✅ Yeni kişi eklendi:', personData.name);
+        const personData = {
+            name: personName,
+            email: personEmail,
+            phone: personPhone,
+            address: personAddress
+        };
+
+        try {
+            // Backend'e kaydet
+            const savedPerson = await personService.createPerson(personData);
+            
+            // Kaydedilen kişiyi başvuru sahiplerine ekle
+            this.addApplicant(savedPerson);
+            
+            // Modal'ı kapat ve formu temizle
+            $('#newPersonModal').modal('hide');
+            document.getElementById('newPersonForm').reset();
+            
+            console.log('✅ Yeni kişi eklendi:', savedPerson.name);
+            alert('Kişi başarıyla eklendi!');
+            
+        } catch (error) {
+            console.error('❌ Kişi kaydetme hatası:', error);
+            
+            // Hata durumunda geçici ID ile ekle
+            const tempPersonData = {
+                id: Date.now().toString(),
+                name: personName,
+                email: personEmail,
+                phone: personPhone,
+                address: personAddress
+            };
+            
+            this.addApplicant(tempPersonData);
+            $('#newPersonModal').modal('hide');
+            document.getElementById('newPersonForm').reset();
+            
+            alert('Kişi geçici olarak eklendi. Kayıt sırasında backend hatası oluştu.');
+        }
     }
 
     setupFormCompletionCheck() {
@@ -841,6 +889,7 @@ class DataEntryModule {
             applicants: this.selectedApplicants,
             priority: {
                 hasPriority: document.querySelector('input[name="hasPriority"]:checked')?.value,
+                priorityType: document.getElementById('priorityType')?.value,
                 priorityDate: document.getElementById('priorityDate')?.value,
                 priorityNumber: document.getElementById('priorityNumber')?.value,
                 priorityCountry: document.getElementById('priorityCountry')?.value,
