@@ -53,6 +53,7 @@ class DataEntryModule {
 
         this.setupInitialForm();
         this.setupEventListeners();
+        this.setupNiceClassificationEvents();
         
         console.log('🎉 DataEntry modülü başarıyla başlatıldı');
     }
@@ -420,71 +421,82 @@ class DataEntryModule {
     }
 
     setupNiceClassificationEvents() {
-        console.log('🔧 Nice Classification event listeners kuruluyor...');
-        
-        const listContainer = document.getElementById('niceClassificationList');
-        const selectedContainer = document.getElementById('selectedNiceClasses');
-        
-        if (!listContainer) {
-            console.error('❌ List container bulunamadı');
-            return;
-        }
+    const listContainer = document.getElementById('niceClassificationList');
+    const selectedContainer = document.getElementById('selectedNiceClasses');
+    const addCustomBtn = document.getElementById('addCustomClassBtn');
+    const customInput = document.getElementById('customClassInput');
+    const charCountElement = document.getElementById('customClassCharCount');
 
-        // Ana list container'a event listener ekle
+    // 1. Akordiyon kapanma ve alt sınıf seçimi sorununu giderme
+    if (listContainer) {
         listContainer.addEventListener('click', (e) => {
-            // Select class button tıklaması
             const selectBtn = e.target.closest('.select-class-btn');
+            const subclass = e.target.closest('.subclass-item');
+            const header = e.target.closest('.class-header');
+
             if (selectBtn) {
+                // Ana sınıf seç/kaldır butonu
                 e.preventDefault();
-                e.stopPropagation();
+                e.stopPropagation(); // Olayın yayılmasını durdur
                 const classNumber = selectBtn.dataset.classNumber;
-                console.log('✅ Sınıf seç butonu tıklandı:', classNumber);
+                if (window.isClassFullySelected(classNumber)) {
+                    window.deselectWholeClass(classNumber);
+                } else {
+                    window.selectWholeClass(classNumber);
+                }
                 return;
             }
 
-            // Subclass tıklaması
-            const subclass = e.target.closest('.subclass-item');
             if (subclass) {
+                // Alt sınıf seçimi
                 e.preventDefault();
-                e.stopPropagation();
+                e.stopPropagation(); // Olayın yayılmasını durdur
                 const code = subclass.dataset.code;
                 const classNum = subclass.dataset.classNum;
                 const text = subclass.dataset.text;
-                console.log('✅ Alt sınıf tıklandı:', {code, classNum, text});
-                
-                this.toggleNiceSubclass(code, classNum, text, subclass);
+                if (this.selectedNiceClasses[code]) {
+                    delete this.selectedNiceClasses[code];
+                } else {
+                    this.selectedNiceClasses[code] = { classNum, text };
+                }
+                this.renderSelectedNiceClasses();
+                this.updateNiceVisualStates();
                 return;
             }
 
-            // Header tıklaması (accordion)
-            const header = e.target.closest('.class-header');
             if (header && !e.target.closest('.select-class-btn')) {
-                const classId = header.dataset.id;
-                console.log('🔄 Accordion toggle:', classId);
-                const subContainer = document.getElementById(`subclasses-${classId}`);
-                if (subContainer) {
-                    subContainer.classList.toggle('show');
-                    header.classList.toggle('expanded');
-                    console.log('✅ Accordion toggled');
-                }
+                // Header tıklama (accordion)
+                window.toggleAccordion(header.dataset.id);
             }
         });
-        
-        // Selected classes container'a event listener ekle
-        if (selectedContainer) {
-            selectedContainer.addEventListener('click', (e) => {
-                const removeBtn = e.target.closest('.remove-selected-class-btn');
-                if (removeBtn) {
-                    e.preventDefault();
-                    const key = removeBtn.dataset.key;
-                    console.log('🗑️ Seçim kaldırılıyor:', key);
-                    this.removeNiceSelection(key);
-                }
-            });
-        }
-        
-        console.log('✅ Nice Classification event listeners eklendi');
     }
+
+    // 2. 99. Sınıf ekleme işlemini düzeltme
+    if (addCustomBtn) {
+        addCustomBtn.addEventListener('click', () => {
+            const text = customInput.value.trim();
+            if (!text) {
+                alert('Lütfen özel sınıf metnini girin');
+                return;
+            }
+            const code = `99-${Date.now()}`;
+            this.addNiceSelection(code, '99', text);
+            customInput.value = '';
+            if (charCountElement) charCountElement.textContent = '0';
+        });
+    }
+    
+    // Seçilenleri kaldırma butonu için olay dinleyicisi
+    if(selectedContainer) {
+        selectedContainer.addEventListener('click', (e) => {
+            const removeBtn = e.target.closest('.remove-selected-class-btn');
+            if(removeBtn) {
+                const key = removeBtn.dataset.key;
+                this.removeNiceSelection(key);
+            }
+        });
+    }
+}
 
     toggleNiceSubclass(code, classNum, text, element) {
         const isSelected = element.classList.contains('selected');
