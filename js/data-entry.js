@@ -420,8 +420,10 @@ class DataEntryModule {
         }
     }
 
-    setupNiceClassificationEvents() {
-    console.log('🔧 Nice Classification event listeners kuruluyor (güncellenmiş)...');
+ // data-entry.js içindeki setupNiceClassificationEvents fonksiyonu - düzeltilmiş versiyon
+
+setupNiceClassificationEvents() {
+    console.log('🔧 Nice Classification event listeners kuruluyor (düzeltilmiş versiyon)...');
 
     const listContainer = document.getElementById('niceClassificationList');
     const selectedContainer = document.getElementById('selectedNiceClasses');
@@ -430,11 +432,11 @@ class DataEntryModule {
     const charCountElement = document.getElementById('customClassCharCount');
 
     if (!listContainer) {
-        console.error('❌ List container bulunamadı');
+        console.error('❌ niceClassificationList container bulunamadı');
         return;
     }
     
-    // Akordiyonun kapanmasını ve seçimi düzeltmek için ana dinleyici
+    // Ana click handler - accordion kapanma sorununu çözer
     listContainer.addEventListener('click', e => {
         // Ana sınıf seç/kaldır butonu
         const selectBtn = e.target.closest('.select-class-btn');
@@ -442,75 +444,150 @@ class DataEntryModule {
             e.preventDefault();
             e.stopPropagation();
             const classNumber = selectBtn.dataset.classNumber;
-            // `nice-classification.js`'in global fonksiyonlarını çağır
-            if (window.isClassFullySelected(classNumber)) {
-                window.deselectWholeClass(classNumber);
+            
+            // Global fonksiyonları kontrol et ve çağır
+            if (window.isClassFullySelected && window.deselectWholeClass && window.selectWholeClass) {
+                if (window.isClassFullySelected(classNumber)) {
+                    window.deselectWholeClass(classNumber);
+                } else {
+                    window.selectWholeClass(classNumber);
+                }
             } else {
-                window.selectWholeClass(classNumber);
+                console.warn('⚠️ Global nice classification fonksiyonları yüklenmemiş');
             }
             return;
         }
 
-        // Alt sınıf tıklaması
+        // Alt sınıf seçimi - accordion kapanma sorunu burada çözülüyor
         const subclass = e.target.closest('.subclass-item');
         if (subclass) {
             e.preventDefault();
-            e.stopPropagation();
+            e.stopPropagation(); // Bu çok önemli - accordion'un kapanmasını engelliyor
+            
             const code = subclass.dataset.code;
             const classNum = subclass.dataset.classNum;
             const text = subclass.dataset.text;
             
-            // `nice-classification.js`'in global fonksiyonlarını çağır
-            if (this.selectedNiceClasses[code]) {
-                window.removeSelectedClass(code);
-                delete this.selectedNiceClasses[code];
+            console.log('🎯 Alt sınıf seçimi:', { code, classNum, text });
+            
+            // Global fonksiyonları ve yerel state'i senkronize et
+            if (window.selectItem && window.removeSelectedClass) {
+                if (this.selectedNiceClasses[code]) {
+                    // Kaldır
+                    window.removeSelectedClass(code);
+                    delete this.selectedNiceClasses[code];
+                } else {
+                    // Ekle
+                    window.selectItem(code, classNum, text);
+                    this.selectedNiceClasses[code] = { classNum, text };
+                }
+                this.renderSelectedNiceClasses();
             } else {
-                window.selectItem(code, classNum, text);
-                this.selectedNiceClasses[code] = { classNum, text };
+                console.warn('⚠️ selectItem/removeSelectedClass fonksiyonları bulunamadı');
             }
-            this.renderSelectedNiceClasses();
             return;
         }
 
-        // Header tıklaması (accordion)
+        // Header tıklama (accordion toggle)
         const header = e.target.closest('.class-header');
         if (header && !e.target.closest('.select-class-btn')) {
-            window.toggleAccordion(header.dataset.id);
+            e.preventDefault();
+            if (window.toggleAccordion) {
+                window.toggleAccordion(header.dataset.id);
+            } else {
+                console.warn('⚠️ toggleAccordion fonksiyonu bulunamadı');
+            }
         }
     });
 
-    // 99. Sınıf ekleme butonu için event listener
+    // 99. sınıf (özel sınıf) ekleme - SORUN BURADA ÇÖZÜLÜYOR
     if (addCustomBtn) {
         addCustomBtn.addEventListener('click', () => {
             const text = customInput.value.trim();
-            if (!text) return alert('Lütfen özel sınıf metnini girin');
+            if (!text) {
+                alert('Lütfen özel sınıf metnini girin');
+                return;
+            }
+            
+            if (text.length > 500) {
+                alert('Özel sınıf metni maksimum 500 karakter olabilir');
+                return;
+            }
+            
             const code = `99-${Date.now()}`;
-            // `nice-classification.js`'in global fonksiyonunu çağır
-            window.selectItem(code, '99', text);
-            // Kendi yerel state'ini de güncelle
+            console.log('➕ 99. sınıf ekleniyor:', { code, text });
+            
+            // Global fonksiyonu çağır
+            if (window.selectItem) {
+                window.selectItem(code, '99', text);
+            }
+            
+            // Yerel state'i güncelle
             this.selectedNiceClasses[code] = { classNum: '99', text };
             this.renderSelectedNiceClasses();
             
+            // Input'u temizle
             customInput.value = '';
             if (charCountElement) charCountElement.textContent = '0';
+            
+            console.log('✅ 99. sınıf başarıyla eklendi');
+        });
+        
+        console.log('✅ 99. sınıf ekleme butonu event listener eklendi');
+    } else {
+        console.error('❌ addCustomClassBtn bulunamadı');
+    }
+
+    // Enter tuşu ile 99. sınıf ekleme
+    if (customInput) {
+        customInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                if (addCustomBtn) addCustomBtn.click();
+            }
         });
     }
 
-    // Seçilenleri kaldırma butonu için dinleyici
+    // Karakter sayacı
+    if (customInput && charCountElement) {
+        customInput.addEventListener('input', (e) => {
+            const length = e.target.value.length;
+            charCountElement.textContent = length.toLocaleString('tr-TR');
+            
+            // Karakter sınırı uyarısı
+            if (length > 450) {
+                charCountElement.style.color = length > 500 ? 'red' : 'orange';
+            } else {
+                charCountElement.style.color = '#6c757d';
+            }
+        });
+    }
+
+    // Seçilen sınıfları kaldırma
     if (selectedContainer) {
         selectedContainer.addEventListener('click', (e) => {
             const removeBtn = e.target.closest('.remove-selected-btn');
-            if(removeBtn) {
+            if (removeBtn) {
                 e.preventDefault();
                 const key = removeBtn.dataset.key;
-                window.removeSelectedClass(key);
+                
+                console.log('🗑️ Sınıf kaldırılıyor:', key);
+                
+                // Global fonksiyonu çağır
+                if (window.removeSelectedClass) {
+                    window.removeSelectedClass(key);
+                }
+                
+                // Yerel state'den kaldır
                 delete this.selectedNiceClasses[key];
                 this.renderSelectedNiceClasses();
             }
         });
+        
+        console.log('✅ Seçilen sınıfları kaldırma event listener eklendi');
     }
     
-    console.log('✅ Nice Classification event listeners eklendi');
+    console.log('✅ Nice Classification event listeners başarıyla kuruldu');
 }
 
     toggleNiceSubclass(code, classNum, text, element) {
