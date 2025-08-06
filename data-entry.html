@@ -112,33 +112,162 @@ body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333
     border: 1px solid #e1e8ed;
 }
 
-/* Seçilen öğeler listesi - create-task stilinde */
-.selected-items-list {
-    min-height: 100px;
-    border: 1px dashed #ced4da;
-    border-radius: 0.25rem;
-    padding: 10px;
+/* Seçilen Öğeler - create-task stilinde */
+.selected-class-item { 
+    background: #f8f9fa; 
+    border: 1px solid #dee2e6; 
+    border-radius: 8px; 
+    padding: 12px 15px; 
+    margin-bottom: 12px; 
+    position: relative; 
+    transition: .2s; 
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1); 
+}
+.selected-class-item:hover { 
+    box-shadow: 0 2px 6px rgba(0,0,0,0.15); 
+}
+.selected-class-item.custom { 
+    background: linear-gradient(135deg,#fff5f5 0%,#fed7d7 100%); 
+    border-color: #feb2b2; 
+}
+.selected-class-number { 
+    font-weight: 600; 
+    font-size: 13px; 
+    color: #495057; 
+}
+.selected-class-item.custom .selected-class-number { 
+    color: #dc3545; 
+    font-weight: 700; 
+}
+.selected-class-description { 
+    font-size: 12px; 
+    color: #6c757d; 
+    padding-right: 30px; 
+}
+.remove-selected-btn { 
+    position: absolute; 
+    top: 10px; 
+    right: 10px; 
+    background: #dc3545; 
+    color: #fff; 
+    border: none; 
+    width: 22px; 
+    height: 22px; 
+    border-radius: 50%; 
+    font-size: 12px; 
+    cursor: pointer; 
+    display: flex; 
+    align-items: center; 
+    justify-content: center; 
+    transition: .2s; 
+}
+.remove-selected-btn:hover { 
+    background: #c82333; 
+    transform: scale(1.1); 
+}
+
+/* 35-5 Modal Stilleri - create-task'tan */
+.class-35-5-modal { 
+    display: none; 
+    position: fixed; 
+    z-index: 10000; 
+    inset: 0; 
+    background: rgba(0,0,0,0.7); 
+    backdrop-filter: blur(5px); 
+    animation: fadeIn .3s; 
+}
+.class-35-5-modal-content { 
+    background: #fff; 
+    margin: 2% auto; 
+    border-radius: 15px; 
+    width: 95%; 
+    max-width: 1400px; 
+    max-height: 95vh; 
+    display: flex; 
+    flex-direction: column; 
+    overflow: hidden; 
+    animation: slideIn .3s; 
+}
+.class-35-5-modal-header { 
+    background: linear-gradient(135deg,#1e3c72 0%,#2a5298 100%); 
+    color: #fff; 
+    padding: 20px 30px; 
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center; 
+    border-radius: 15px 15px 0 0; 
+}
+.close-modal-btn { 
+    background: none; 
+    border: none; 
+    color: #fff; 
+    font-size: 2rem; 
+    cursor: pointer; 
+    width: 40px; 
+    height: 40px; 
+    display: flex; 
+    align-items: center; 
+    justify-content: center; 
+    border-radius: 50%; 
+    transition: .3s; 
+}
+.close-modal-btn:hover { 
+    background: rgba(255,255,255,0.2); 
+    transform: scale(1.1); 
+}
+.class-35-5-modal-body { 
+    padding: 30px; 
+    flex: 1; 
+    overflow: auto; 
+}
+.class-35-5-modal-footer { 
+    background: #f8f9fa; 
+    padding: 20px 30px; 
+    border-top: 1px solid #dee2e6; 
+    display: flex; 
+    justify-content: flex-end; 
+    gap: 15px; 
+    border-radius: 0 0 15px 15px; 
+}
+
+/* Modal İç Paneller */
+.class-35-5-modal .classification-panel, 
+.class-35-5-modal .selected-classes-panel { 
+    max-height: 600px; 
+}
+.class-35-5-modal .selected-class-item { 
+    margin-bottom: 12px; 
+    padding: 12px; 
+    border-radius: 8px; 
+    background: #fff; 
+    border: 1px solid #e1e8ed; 
+    transition: .3s; 
+}
+.class-35-5-modal .selected-class-item:hover { 
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1); 
+    transform: translateY(-1px); 
+}
+
+/* Modal içi form check stilleri */
+.class-35-5-modal .form-check {
+    padding: 12px;
+    margin-bottom: 8px;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+}
+.class-35-5-modal .form-check:hover {
     background-color: #f8f9fa;
-    overflow-y: auto;
-    max-height: 300px;
+    border-color: #1e3c72;
 }
-.selected-item {
-    background-color: #e2f0ff;
-    border: 1px solid #b3d9ff;
-    border-radius: 15px;
-    padding: 8px 12px;
-    margin: 3px;
-    display: inline-flex;
-    align-items: center;
-    font-size: 0.9em;
+.class-35-5-modal .form-check-input:checked ~ .form-check-label {
+    color: #1e3c72;
+    font-weight: 600;
 }
-.selected-item .remove-item {
-    background: none;
-    border: none;
-    color: #dc3545;
-    margin-left: 8px;
-    cursor: pointer;
-}
+
+/* Animasyonlar */
+@keyframes fadeIn { from {opacity:0;} to {opacity:1;} }
+@keyframes slideIn { from {opacity:0;transform:translateY(-50px) scale(.9);} to {opacity:1;transform:translateY(0) scale(1);} }
 
 /* Empty State */
 .empty-state {
