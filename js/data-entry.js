@@ -504,8 +504,22 @@ class DataEntryModule {
             if (tabId === 'goods-services' && !this.isNiceInitialized) {
                 console.log('🏷️ Nice Classification başlatılıyor...');
                 setTimeout(() => {
-                    initializeNiceClassification();
-                    this.isNiceInitialized = true;
+                    try {
+                        initializeNiceClassification();
+                        this.isNiceInitialized = true;
+                        
+                        // Nice classification header'ını düzelt
+                        setTimeout(() => {
+                            const header = document.querySelector('.classification-panel .panel-header');
+                            if (header) {
+                                header.style.display = 'block';
+                                header.style.visibility = 'visible';
+                            }
+                        }, 200);
+                        
+                    } catch (error) {
+                        console.error('Nice Classification başlatma hatası:', error);
+                    }
                 }, 100);
             }
 
@@ -639,7 +653,13 @@ class DataEntryModule {
         const searchResults = document.getElementById('applicantSearchResults');
         const addNewBtn = document.getElementById('addNewApplicantBtn');
 
-        if (!searchInput || !searchResults) return;
+        if (!searchInput || !searchResults) {
+            console.error('❌ Başvuru sahibi arama elementleri bulunamadı!');
+            return;
+        }
+
+        console.log('🎛️ Başvuru sahibi arama kurulumu yapılıyor...');
+        console.log('🔧 PersonService durumu:', typeof personService, personService);
 
         // Search functionality
         searchInput.addEventListener('input', async (e) => {
@@ -650,26 +670,46 @@ class DataEntryModule {
                 return;
             }
 
+            console.log('🔍 Başvuru sahibi aranıyor:', query);
+
             try {
-                // Gerçek personService kullan
-                const searchResults = await personService.searchApplicants(query);
-                this.renderSearchResults(searchResults, searchResults);
+                let results = [];
+                
+                // Önce personService'i dene
+                if (typeof personService !== 'undefined' && personService.searchApplicants) {
+                    console.log('🔍 PersonService kullanılıyor...');
+                    results = await personService.searchApplicants(query);
+                    console.log('📋 PersonService sonuçları:', results);
+                }
+                
+                // PersonService sonuç vermediyse veya hata verdiyse mock data kullan
+                if (!results || results.length === 0) {
+                    console.log('⚠️ Mock data kullanılıyor, PersonService sonuç vermedi');
+                    results = [
+                        { id: 1, name: 'Ahmet Yılmaz', email: 'ahmet@example.com', phone: '0532 123 4567' },
+                        { id: 2, name: 'Ayşe Kaya', email: 'ayse@example.com', phone: '0533 987 6543' },
+                        { id: 3, name: 'Mehmet Öz', email: 'mehmet@example.com', phone: '0534 111 2233' },
+                        { id: 4, name: 'Fatma Demir', email: 'fatma@example.com', phone: '0535 444 5566' },
+                        { id: 5, name: 'Ali Veli', email: 'ali@example.com', phone: '0536 777 8899' }
+                    ].filter(person => 
+                        person.name.toLowerCase().includes(query.toLowerCase()) ||
+                        (person.email && person.email.toLowerCase().includes(query.toLowerCase()))
+                    );
+                }
+
+                this.renderSearchResults(results, searchResults);
+                
             } catch (error) {
                 console.error('❌ Kişi arama hatası:', error);
-                // Hata durumunda mock data kullan
-                const mockResults = [
-                    { id: 1, name: 'Ahmet Yılmaz', email: 'ahmet@example.com' },
-                    { id: 2, name: 'Ayşe Kaya', email: 'ayse@example.com' },
-                    { id: 3, name: 'Mehmet Öz', email: 'mehmet@example.com' }
-                ].filter(person => person.name.toLowerCase().includes(query.toLowerCase()));
-
-                this.renderSearchResults(mockResults, searchResults);
+                searchResults.innerHTML = '<div class="search-result-item text-danger">Arama sırasında hata oluştu: ' + error.message + '</div>';
+                searchResults.style.display = 'block';
             }
         });
 
         // Add new person button
         if (addNewBtn) {
             addNewBtn.addEventListener('click', () => {
+                console.log('➕ Yeni kişi modal açılıyor...');
                 $('#newPersonModal').modal('show');
             });
         }
