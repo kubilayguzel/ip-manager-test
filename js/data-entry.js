@@ -508,12 +508,12 @@ class DataEntryModule {
                                 niceList.addEventListener('click', (ev) => {
                                     const subItem = ev.target.closest('.subclass-item');
                                     if (subItem) {
-                                        const parentClass = subItem.dataset.parentClass; // örn: 35
-                                        const subGroup = subItem.dataset.subGroup;      // örn: 5
-                                        console.log('🔍 Alt grup tıklandı:', parentClass, subGroup);
+                                        const parentClass = subItem.dataset.parentClass;
+                                        const subGroup = subItem.dataset.subGroup;
+
                                         if (parentClass === '35' && subGroup === '5') {
-                                            console.log('📢 35-5 alt grubu seçildi, modal açılıyor...');
-                                            $('#class355Modal').modal('show');
+                                            console.log('📢 35-5 alt grubu seçildi, özel modal açılıyor...');
+                                            document.getElementById('class355Modal').style.display = 'block';
                                         }
                                     }
                                 });
@@ -1032,7 +1032,21 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log('🎯 DOM yüklendi, Data Entry Module başlatılıyor...');
     dataEntryInstance = new DataEntryModule();
     dataEntryInstance.init();
-    
+    // --- 35-5 modal kapatma butonları ---
+const closeBtn = document.getElementById('closeClass355Modal');
+if (closeBtn) {
+    closeBtn.addEventListener('click', () => {
+        document.getElementById('class355Modal').style.display = 'none';
+    });
+}
+
+const cancelBtn = document.getElementById('cancel355Selection');
+if (cancelBtn) {
+    cancelBtn.addEventListener('click', () => {
+        document.getElementById('class355Modal').style.display = 'none';
+    });
+}
+   
     // Make instance globally accessible
     window.dataEntryInstance = dataEntryInstance;
 });
