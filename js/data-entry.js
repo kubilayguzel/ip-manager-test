@@ -491,29 +491,45 @@ class DataEntryModule {
 
         this.updateSaveButtonState();
     }
+        setupTrademarkFormListeners() {
+            console.log('🎛️ Marka form listeners kuruluyor...');
 
-    setupTrademarkFormListeners() {
-        console.log('🎛️ Marka form listeners kuruluyor...');
+            // Tab geçişlerini dinle
+            $('#portfolioTabs a').on('shown.bs.tab', (e) => {
+                const tabId = e.target.getAttribute('href').substring(1);
+                console.log('📑 Tab değişti:', tabId);
 
-        // Tab geçişlerini dinle
-        $('#portfolioTabs a').on('shown.bs.tab', (e) => {
-            const tabId = e.target.getAttribute('href').substring(1);
-            console.log('📑 Tab değişti:', tabId);
+                // Mal/Hizmet sekmesi açıldığında Nice Classification'ı başlat
+                if (tabId === 'goods-services' && !this.isNiceInitialized) {
+                    console.log('🏷️ Nice Classification başlatılıyor...');
+                    setTimeout(() => {
+                        try {
+                            initializeNiceClassification();
+                            this.isNiceInitialized = true;
+                            console.log('✅ Nice Classification başlatıldı');
 
-            // Mal/Hizmet sekmesi açıldığında Nice Classification'ı başlat
-            if (tabId === 'goods-services' && !this.isNiceInitialized) {
-                console.log('🏷️ Nice Classification başlatılıyor...');
-                setTimeout(() => {
-                    try {
-                        initializeNiceClassification();
-                        this.isNiceInitialized = true;
-                        console.log('✅ Nice Classification başlatıldı');
-                        
-                    } catch (error) {
-                        console.error('❌ Nice Classification başlatma hatası:', error);
-                    }
-                }, 100);
-            }
+                            // --- 35-5 alt grubu için modal açma event ---
+                            const niceList = document.getElementById('niceClassificationList');
+                            if (niceList) {
+                                niceList.addEventListener('click', (ev) => {
+                                    const subItem = ev.target.closest('.subclass-item');
+                                    if (subItem) {
+                                        const parentClass = subItem.dataset.parentClass; // örn: 35
+                                        const subGroup = subItem.dataset.subGroup;      // örn: 5
+                                        console.log('🔍 Alt grup tıklandı:', parentClass, subGroup);
+                                        if (parentClass === '35' && subGroup === '5') {
+                                            console.log('📢 35-5 alt grubu seçildi, modal açılıyor...');
+                                            $('#class355Modal').modal('show');
+                                        }
+                                    }
+                                });
+                            }
+
+                        } catch (error) {
+                            console.error('❌ Nice Classification başlatma hatası:', error);
+                        }
+                    }, 100);
+                }
 
             // Başvuru sahibi sekmesi açıldığında arama setup'ını yap
             if (tabId === 'applicants') {
