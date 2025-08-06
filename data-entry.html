@@ -178,36 +178,23 @@ body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333
     border-bottom: none;
 }
 
-/* Nice Classification Accordion Fix - Güçlendirilmiş */
+/* Nice Classification Accordion - create-task stilinde */
 .collapse {
-    display: none !important;
-    height: 0 !important;
-    overflow: hidden !important;
+    display: none;
 }
 .collapse.show {
-    display: block !important;
-    height: auto !important;
-}
-.collapse.collapsing {
-    display: block !important;
-    height: 0 !important;
-    overflow: hidden !important;
-    transition: height 0.35s ease;
+    display: block;
 }
 
-/* Subclasses container - default kapalı */
+/* Subclasses container */
 [id^="subclasses-"] {
-    display: none !important;
-    height: 0 !important;
-    overflow: hidden !important;
+    display: none;
 }
 [id^="subclasses-"].show {
-    display: block !important;
-    height: auto !important;
-    overflow: visible !important;
+    display: block;
 }
 
-/* Nice Classification Item Styles */
+/* Nice Classification Item Styles - create-task stilinde */
 .class-header {
     padding: 15px;
     border-bottom: 1px solid #eee;
@@ -220,37 +207,27 @@ body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333
     color: #333;
     position: relative;
 }
-.class-header::after {
-    content: '\f107';
-    font-family: 'Font Awesome 5 Free';
-    font-weight: 900;
-    font-size: 12px;
-    color: #666;
-    transition: transform 0.3s ease;
-}
-.class-header.expanded::after {
-    transform: rotate(180deg);
-}
 .class-header:hover {
     background-color: #f8f9fa;
 }
-.class-header.selected {
-    background-color: #e3f2fd !important;
-    border-left: 4px solid #1976d2;
-    color: #1976d2 !important;
-}
-.class-header.partially-selected {
-    background-color: #fff3e0 !important;
-    border-left: 4px solid #ff9800;
-    color: #ff9800 !important;
-}
-.class-header.fully-selected {
-    background-color: #e8f5e8 !important;
-    border-left: 4px solid #4caf50;
-    color: #4caf50 !important;
+
+/* Ana sınıf seçili değil (varsayılan) -> beyaz */
+.class-header {
+    background: white;
 }
 
-/* Class number badge with select button */
+/* En az 1 alt sınıf seçili ama hepsi değil -> sarı */
+.class-header.partially-selected {
+    background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+    border-left: 4px solid #ffc107;
+}
+
+/* Tüm alt sınıflar veya ana sınıf seçili -> yeşil */
+.class-header.fully-selected {
+    background: linear-gradient(135deg, #e8f5e8 0%, #d4edda 100%);
+    border-left: 4px solid #28a745;
+}
+
 .class-number-badge {
     background: #1976d2;
     color: white;
@@ -264,32 +241,33 @@ body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333
     align-items: center;
     gap: 5px;
 }
-.class-header.selected .class-number-badge {
-    background: #1976d2;
+
+/* Tik butonu varsayılan gri */
+.select-class-btn {
+    background: #6c757d;
+    color: white;
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    border: none;
+    cursor: pointer;
 }
-.class-header.partially-selected .class-number-badge {
-    background: #ff9800;
-}
-.class-header.fully-selected .class-number-badge {
-    background: #4caf50;
+.select-class-btn:hover { 
+    background: #5a6268; 
+    transform: scale(1.1); 
 }
 
-/* Ana sınıf seçim butonu */
-.main-class-select-btn {
-    background: none;
-    border: none;
-    color: inherit;
-    cursor: pointer;
-    padding: 2px 4px;
-    border-radius: 3px;
-    font-size: 12px;
-    transition: all 0.2s ease;
+/* Duruma göre tik rengi değişsin */
+.class-header.fully-selected .select-class-btn { 
+    background: #28a745; 
 }
-.main-class-select-btn:hover {
-    background-color: rgba(255,255,255,0.2);
-}
-.main-class-select-btn i {
-    font-size: 10px;
+.class-header.partially-selected .select-class-btn { 
+    background: #ffc107; 
+    color: #333; 
 }
 
 /* Sub-class items */
@@ -300,6 +278,7 @@ body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333
     background-color: #fff;
     color: #666;
     margin-left: 20px;
+    transition: all 0.3s ease;
 }
 .subclass-item:hover {
     background-color: #f8f9fa;
