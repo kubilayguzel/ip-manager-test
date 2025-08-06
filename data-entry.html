@@ -565,7 +565,126 @@ body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333
         </div>
     </div>
 
-    <!-- Scripts -->
+    <!-- 35-5 Modal - create-task'tan kopyalandı -->
+    <div id="class355Modal" class="class-35-5-modal">
+        <div class="class-35-5-modal-content">
+            <div class="class-35-5-modal-header">
+                <h2><i class="fas fa-cogs mr-3"></i>Sınıf 35-5: Reklam; İş Yönetimi - Alt Sınıf Seçimi</h2>
+                <button class="close-modal-btn" id="closeClass355Modal">&times;</button>
+            </div>
+            <div class="class-35-5-modal-body">
+                <div class="row">
+                    <div class="col-lg-8">
+                        <div class="classification-panel">
+                            <div class="panel-header">
+                                <h5 class="mb-0">
+                                    <i class="fas fa-list-ul mr-2"></i>
+                                    Sınıf 35-5 Alt Kategorileri
+                                </h5>
+                                <small class="text-white-50">İhtiyacınıza göre spesifik hizmetleri seçin</small>
+                            </div>
+                            
+                            <div class="search-section">
+                                <div class="input-group">
+                                    <div class="input-group-prepend">
+                                        <span class="input-group-text">
+                                            <i class="fas fa-search"></i>
+                                        </span>
+                                    </div>
+                                    <input type="text" class="form-control" id="class355Search" 
+                                           placeholder="35-5 alt kategorilerinde ara...">
+                                </div>
+                            </div>
+
+                            <div class="classes-list" id="class355List" style="height: 400px; overflow-y: auto; background: #fafafa;">
+                                <div class="p-3">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="class355_advertising" value="Reklam hizmetleri">
+                                        <label class="form-check-label" for="class355_advertising">
+                                            <strong>Reklam Hizmetleri</strong>
+                                            <br><small class="text-muted">Televizyon, radyo, internet ve basılı medyada reklam</small>
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="class355_marketing" value="Pazarlama hizmetleri">
+                                        <label class="form-check-label" for="class355_marketing">
+                                            <strong>Pazarlama Hizmetleri</strong>
+                                            <br><small class="text-muted">Pazar araştırması, müşteri analizi, kampanya yönetimi</small>
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="class355_business_management" value="İş yönetimi danışmanlığı">
+                                        <label class="form-check-label" for="class355_business_management">
+                                            <strong>İş Yönetimi Danışmanlığı</strong>
+                                            <br><small class="text-muted">Strateji geliştirme, operasyonel verimlilik, organizasyonel yapı</small>
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="class355_office_functions" value="Ofis işleri">
+                                        <label class="form-check-label" for="class355_office_functions">
+                                            <strong>Ofis İşleri</strong>
+                                            <br><small class="text-muted">Sekreterlik, daktilografi, belge düzenleme</small>
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="class355_import_export" value="İthalat-ihracat acenteliği">
+                                        <label class="form-check-label" for="class355_import_export">
+                                            <strong>İthalat-İhracat Acenteliği</strong>
+                                            <br><small class="text-muted">Ticari aracılık, gümrük işlemleri, lojistik koordinasyon</small>
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="class355_retail_services" value="Perakende satış hizmetleri">
+                                        <label class="form-check-label" for="class355_retail_services">
+                                            <strong>Perakende Satış Hizmetleri</strong>
+                                            <br><small class="text-muted">Online ve fiziki mağaza işletmeciliği</small>
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="class355_personnel" value="Personel hizmetleri">
+                                        <label class="form-check-label" for="class355_personnel">
+                                            <strong>Personel Hizmetleri</strong>
+                                            <br><small class="text-muted">İnsan kaynakları, işe alım, personel değerlendirme</small>
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="class355_accounting" value="Muhasebe hizmetleri">
+                                        <label class="form-check-label" for="class355_accounting">
+                                            <strong>Muhasebe Hizmetleri</strong>
+                                            <br><small class="text-muted">Mali müşavirlik, defterlerin tutulması, vergi danışmanlığı</small>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-lg-4">
+                        <div class="selected-classes-panel">
+                            <h6 class="mb-3">
+                                <i class="fas fa-check-square mr-2 text-success"></i>
+                                Seçilen 35-5 Alt Kategorileri
+                            </h6>
+                            <div id="selected355Classes" style="min-height: 300px; max-height: 400px; overflow-y: auto; border: 1px dashed #ced4da; border-radius: 8px; padding: 15px;">
+                                <div class="empty-state">
+                                    <i class="fas fa-hand-pointer fa-2x text-muted mb-2"></i>
+                                    <p class="text-muted">Henüz alt kategori seçilmedi</p>
+                                    <small class="text-muted">Sol panelden kategorileri seçin</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="class-35-5-modal-footer">
+                <button type="button" class="btn btn-secondary" id="cancel355Selection">İptal</button>
+                <button type="button" class="btn btn-primary" id="confirm355Selection">
+                    <i class="fas fa-check mr-1"></i>Seçimi Onayla
+                </button>
+            </div>
+        </div>
+    </div>
+
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
@@ -588,7 +707,21 @@ body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333
         });
     </script>
     
-    <script type="module" src="./js/layout-loader.js"></script>
+    <script type="module">
+        // Layout loader'ı import et ve çalıştır
+        import { loadSharedLayout } from './js/layout-loader.js';
+        
+        document.addEventListener('DOMContentLoaded', async () => {
+            console.log('🔄 Layout yükleniyor...');
+            try {
+                await loadSharedLayout({ activeMenuLink: 'data-entry.html' });
+                console.log('✅ Layout yüklendi');
+            } catch (error) {
+                console.error('❌ Layout yükleme hatası:', error);
+            }
+        });
+    </script>
+    
     <script type="module" src="./js/nice-classification.js"></script>
     <script type="module" src="./js/data-entry.js"></script>
 </body>
