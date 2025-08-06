@@ -1,32 +1,33 @@
-// nice-classification.js - Debug ve seçim sorunları düzeltildi
+// nice-classification.js - Gelişmiş debug ve hata yakalama
 
 import { db } from '../firebase-config.js';
 import { collection, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 let allNiceData = [];
-let selectedClasses = {};  // { key: { classNum, text } }
+let selectedClasses = {};
+let isInitialized = false;
 
-// 35-5 özel modal değişkenleri
-let class35_5_modalSelectedItems = {};
-let class35_5_modalAllData = [];
-
-// DEBUG: Seçim durumunu takip et
-function debugSelection(action, key, classNum, text) {
-    console.log(`🎯 NICE DEBUG [${action}]:`, {
-        key,
-        classNum,
-        text: text?.substring(0, 50),
-        totalSelected: Object.keys(selectedClasses).length,
-        selectedClasses: Object.keys(selectedClasses)
-    });
+// Enhanced Debug Logging
+function debugLog(level, message, data = null) {
+    const timestamp = new Date().toLocaleTimeString();
+    const prefix = `[${timestamp}] NICE-${level}:`;
+    
+    if (data) {
+        console.log(prefix, message, data);
+    } else {
+        console.log(prefix, message);
+    }
 }
 
 // RENDER FONKSİYONLARI
 function renderSelectedClasses() {
     const container = document.getElementById('selectedNiceClasses');
     const countBadge = document.getElementById('selectedClassCount');
+    
+    debugLog('RENDER', 'renderSelectedClasses başlatıldı');
+    
     if (!container) {
-        console.error('❌ selectedNiceClasses container bulunamadı');
+        debugLog('ERROR', 'selectedNiceClasses container bulunamadı!');
         return;
     }
 
@@ -35,7 +36,7 @@ function renderSelectedClasses() {
         countBadge.textContent = selectedCount;
     }
 
-    console.log('🔄 renderSelectedClasses çalışıyor, toplam:', selectedCount);
+    debugLog('INFO', `Render ediliyor: ${selectedCount} seçili sınıf`);
 
     if (selectedCount === 0) {
         container.innerHTML = `
@@ -71,91 +72,74 @@ function renderSelectedClasses() {
     });
     
     container.innerHTML = html;
-    console.log('✅ Selected classes render edildi:', selectedCount);
+    debugLog('SUCCESS', `${selectedCount} sınıf başarıyla render edildi`);
 }
 
 function toggleAccordion(id) {
-    console.log('📂 toggleAccordion:', id);
+    debugLog('ACTION', `toggleAccordion çağrıldı: ${id}`);
     const el = document.getElementById(`subclasses-${id}`);
     if (!el) {
-        console.error('❌ Accordion element bulunamadı:', `subclasses-${id}`);
+        debugLog('ERROR', `Accordion element bulunamadı: subclasses-${id}`);
         return;
     }
     el.classList.toggle('show');
     const header = document.querySelector(`.class-header[data-id="${id}"]`);
     if (header) header.classList.toggle('expanded');
+    debugLog('SUCCESS', `Accordion toggle tamamlandı: ${id}`);
 }
 
 // SEÇIM FONKSİYONLARI
 function selectItem(key, classNum, text) {
+    debugLog('ACTION', `selectItem çağrıldı`, { key, classNum, textPreview: text?.substring(0, 50) });
+    
     if (selectedClasses[key]) {
-        console.log('⚠️ Sınıf zaten seçili:', key);
-        return; // zaten seçili
-    }
-    
-    debugSelection('SELECT', key, classNum, text);
-    
-    // 35-5 kontrolü - ÖZEL DURUM
-    if (key === "35-5") {
-        selectedClasses[key] = { classNum, text };
-        renderSelectedClasses();
-        updateVisualStates();
-        
-        const el = document.querySelector(`[data-code="${key}"]`);
-        if (el) el.classList.add('selected');
-        
-        // Modal'ı aç (eğer varsa)
-        setTimeout(() => {
-            if (typeof openClass35_5Modal === 'function') {
-                openClass35_5Modal();
-            }
-        }, 300);
-        
+        debugLog('WARN', `Sınıf zaten seçili: ${key}`);
         return;
     }
     
-    // Normal seçim işlemi
     selectedClasses[key] = { classNum, text };
+    debugLog('SUCCESS', `Sınıf eklendi: ${key}`);
+    
     renderSelectedClasses();
     updateVisualStates();
 
     const el = document.querySelector(`[data-code="${key}"]`);
     if (el) {
         el.classList.add('selected');
-        console.log('✅ Element selected class eklendi:', key);
+        debugLog('SUCCESS', `Element visual state güncellendi: ${key}`);
     } else {
-        console.warn('⚠️ Element bulunamadı:', key);
+        debugLog('WARN', `Element bulunamadı: ${key}`);
     }
 }
 
 function removeSelectedClass(key) {
+    debugLog('ACTION', `removeSelectedClass çağrıldı: ${key}`);
+    
     if (!selectedClasses[key]) {
-        console.log('⚠️ Sınıf zaten seçili değil:', key);
+        debugLog('WARN', `Sınıf zaten seçili değil: ${key}`);
         return;
     }
     
-    debugSelection('REMOVE', key, selectedClasses[key].classNum, selectedClasses[key].text);
-    
     delete selectedClasses[key];
+    debugLog('SUCCESS', `Sınıf kaldırıldı: ${key}`);
+    
     renderSelectedClasses();
     updateVisualStates();
     
     const el = document.querySelector(`[data-code="${key}"]`);
     if (el) {
         el.classList.remove('selected');
-        console.log('✅ Element selected class kaldırıldı:', key);
     }
 }
 
-// ANA SINIF SEÇİMİ FONKSİYONLARI
+// ANA SINIF FONKSİYONLARI
 function selectWholeClass(classNumber) {
+    debugLog('ACTION', `selectWholeClass çağrıldı: ${classNumber}`);
     const classData = allNiceData.find(c => c.classNumber === parseInt(classNumber));
     if (!classData) {
-        console.error('❌ Class data bulunamadı:', classNumber);
+        debugLog('ERROR', `Class data bulunamadı: ${classNumber}`);
         return;
     }
-
-    console.log('🔘 Ana sınıf seçiliyor:', classNumber, 'alt sınıf sayısı:', classData.subClasses.length);
 
     // Ana sınıf başlığını seç
     const mainClassCode = `${classNumber}-main`;
@@ -174,23 +158,24 @@ function selectWholeClass(classNumber) {
     }
     const header = document.querySelector(`.class-header[data-id="${classNumber}"]`);
     if (header) header.classList.add('expanded');
+    
+    debugLog('SUCCESS', `Ana sınıf seçimi tamamlandı: ${classNumber}`);
 }
 
 function deselectWholeClass(classNumber) {
+    debugLog('ACTION', `deselectWholeClass çağrıldı: ${classNumber}`);
     const classData = allNiceData.find(c => c.classNumber === parseInt(classNumber));
     if (!classData) return;
 
-    console.log('🔘 Ana sınıf kaldırılıyor:', classNumber);
-
-    // Ana sınıf başlığını kaldır
     const mainClassCode = `${classNumber}-main`;
     removeSelectedClass(mainClassCode);
 
-    // Tüm alt sınıfları kaldır
     classData.subClasses.forEach((sc, index) => {
         const code = `${classNumber}-${index + 1}`;
         removeSelectedClass(code);
     });
+    
+    debugLog('SUCCESS', `Ana sınıf kaldırma tamamlandı: ${classNumber}`);
 }
 
 function isClassFullySelected(classNumber) {
@@ -210,8 +195,9 @@ function isClassFullySelected(classNumber) {
     return isMainSelected || allSubClassesSelected;
 }
 
-// GÖRSEL DURUMLAR GÜNCELLEMESİ
 function updateVisualStates() {
+    debugLog('RENDER', 'updateVisualStates başlatıldı');
+    
     allNiceData.forEach(cls => {
         const classNumber = cls.classNumber;
         const mainClassCode = `${classNumber}-main`;
@@ -238,7 +224,6 @@ function updateVisualStates() {
                 headerElement.classList.add('selected', 'partially-selected');
                 if (accordionElement) accordionElement.classList.add('show');
             } else {
-                // hiçbir seçim yok → accordion'u kapat
                 if (accordionElement) accordionElement.classList.remove('show');
                 headerElement.classList.remove('expanded');
             }
@@ -254,87 +239,63 @@ function updateVisualStates() {
     });
 }
 
-// 35-5 MODAL FONKSİYONLARI (Placeholder)
-function openClass35_5Modal() {
-    console.log('35-5 Modal açılıyor...');
-    // Modal açma kodları buraya gelecek
-}
-
-function closeClass35_5Modal() {
-    console.log('35-5 Modal kapanıyor...');
-    // Modal kapama kodları buraya gelecek
-}
-
-function clearClass35_5Search() {
-    const searchInput = document.getElementById('class35-5-search');
-    if (searchInput) {
-        searchInput.value = '';
-        searchInput.dispatchEvent(new Event('input'));
-    }
-}
-
-function removeClass35_5(code) {
-    delete class35_5_modalSelectedItems[code];
-    // Modal güncelleme kodları
-}
-
-function addClass35_5(code, classNum, text) {
-    class35_5_modalSelectedItems[code] = { classNum, text };
-    // Modal güncelleme kodları
-}
-
-// MAIN INITIALIZATION FUNCTION
+// MAIN INITIALIZATION FUNCTION - GELİŞMİŞ HATA YAKALAMA
 export async function initializeNiceClassification() {
-    const listContainer = document.getElementById('niceClassificationList');
-    const searchInput = document.getElementById('niceClassSearch');
-    const addCustomBtn = document.getElementById('addCustomClassBtn');
-    const customInput = document.getElementById('customClassInput');
-    const selectedContainer = document.getElementById('selectedNiceClasses');
-    const charCountElement = document.getElementById('customClassCharCount');
-
-    console.log('🔄 Nice Classification başlatılıyor...');
-    console.log('📋 DOM Elementleri kontrol:', {
-        listContainer: !!listContainer,
-        searchInput: !!searchInput,
-        addCustomBtn: !!addCustomBtn,
-        customInput: !!customInput,
-        selectedContainer: !!selectedContainer,
-        charCountElement: !!charCountElement
-    });
-
-    if (!listContainer) {
-        console.error('❌ niceClassificationList container bulunamadı');
+    debugLog('INIT', '=== Nice Classification başlatılıyor ===');
+    
+    if (isInitialized) {
+        debugLog('WARN', 'Nice Classification zaten initialize edilmiş');
         return;
     }
 
-    // Karakter sayacı
-    if (customInput && charCountElement) {
-        customInput.addEventListener('input', (e) => {
-            const length = e.target.value.length;
-            charCountElement.textContent = length.toLocaleString('tr-TR');
-            
-            // Renk uyarıları
-            if (length > 45000) {
-                charCountElement.style.color = '#dc3545';
-                charCountElement.style.fontWeight = 'bold';
-            } else if (length > 40000) {
-                charCountElement.style.color = '#fd7e14';
-            } else {
-                charCountElement.style.color = '#6c757d';
-                charCountElement.style.fontWeight = 'normal';
-            }
-        });
+    // DOM elementleri kontrolü
+    const elements = {
+        listContainer: document.getElementById('niceClassificationList'),
+        searchInput: document.getElementById('niceClassSearch'),
+        addCustomBtn: document.getElementById('addCustomClassBtn'),
+        customInput: document.getElementById('customClassInput'),
+        selectedContainer: document.getElementById('selectedNiceClasses'),
+        charCountElement: document.getElementById('customClassCharCount')
+    };
+
+    debugLog('INIT', 'DOM elementleri kontrol:', {
+        listContainer: !!elements.listContainer,
+        searchInput: !!elements.searchInput,
+        addCustomBtn: !!elements.addCustomBtn,
+        customInput: !!elements.customInput,
+        selectedContainer: !!elements.selectedContainer,
+        charCountElement: !!elements.charCountElement
+    });
+
+    if (!elements.listContainer) {
+        debugLog('ERROR', 'KRITIK: niceClassificationList container bulunamadı!');
+        return;
     }
 
-    listContainer.innerHTML = `
+    // Loading state
+    elements.listContainer.innerHTML = `
         <div class="loading-spinner text-center p-4">
             <div class="spinner-border text-primary"></div>
             <p class="mt-2 text-muted">Nice sınıfları yükleniyor...</p>
         </div>`;
 
     try {
-        console.log('🔄 Firebase\'dan nice sınıfları yükleniyor...');
+        // Firebase import kontrolü
+        debugLog('INIT', 'Firebase modülleri kontrol ediliyor...');
+        
+        if (!db) {
+            throw new Error('Firebase db nesnesi tanımsız');
+        }
+        
+        debugLog('INIT', 'Firebase bağlantısı OK, veriler yükleniyor...');
+        
+        // Firestore'dan veri çekme
         const snapshot = await getDocs(collection(db, "niceClassification"));
+        
+        if (snapshot.empty) {
+            throw new Error('niceClassification koleksiyonu boş');
+        }
+        
         allNiceData = snapshot.docs.map(doc => {
             const data = doc.data();
             return {
@@ -344,22 +305,56 @@ export async function initializeNiceClassification() {
             };
         }).sort((a, b) => a.classNumber - b.classNumber);
 
-        if (allNiceData.length === 0) {
-            listContainer.innerHTML = '<div class="empty-state text-center p-4">Hiçbir sınıf bulunamadı</div>';
-            return;
-        }
+        debugLog('SUCCESS', `${allNiceData.length} nice sınıfı yüklendi`);
 
-        console.log('✅ Nice sınıfları yüklendi:', allNiceData.length, 'sınıf');
-
-        // HTML'i render et
+        // HTML render
         renderClassificationList();
         
-        // Event listener'ları kur
+        // Event listeners
         setupEventListeners();
         
-    } catch (err) {
-        console.error("❌ Nice sınıfları yüklenirken hata:", err);
-        listContainer.innerHTML = `<div class="error-state text-center p-4 text-danger">Sınıflar yüklenemedi: ${err.message}</div>`;
+        // Character counter
+        if (elements.customInput && elements.charCountElement) {
+            elements.customInput.addEventListener('input', (e) => {
+                const length = e.target.value.length;
+                elements.charCountElement.textContent = length.toLocaleString('tr-TR');
+                
+                if (length > 45000) {
+                    elements.charCountElement.style.color = '#dc3545';
+                    elements.charCountElement.style.fontWeight = 'bold';
+                } else if (length > 40000) {
+                    elements.charCountElement.style.color = '#fd7e14';
+                } else {
+                    elements.charCountElement.style.color = '#6c757d';
+                    elements.charCountElement.style.fontWeight = 'normal';
+                }
+            });
+        }
+        
+        isInitialized = true;
+        debugLog('SUCCESS', '=== Nice Classification başarıyla initialize edildi ===');
+        
+    } catch (error) {
+        debugLog('ERROR', 'KRITIK HATA:', error);
+        
+        elements.listContainer.innerHTML = `
+            <div class="error-state text-center p-4">
+                <div class="alert alert-danger">
+                    <h5><i class="fas fa-exclamation-triangle"></i> Yükleme Hatası</h5>
+                    <p><strong>Hata:</strong> ${error.message}</p>
+                    <hr>
+                    <div class="text-left small">
+                        <strong>Olası Çözümler:</strong><br>
+                        1. Sayfayı yenileyin (F5)<br>
+                        2. Firebase bağlantısını kontrol edin<br>
+                        3. niceClassification koleksiyonunun varlığını kontrol edin<br>
+                        4. Konsolda detaylı hata mesajlarını inceleyin
+                    </div>
+                    <button class="btn btn-primary btn-sm mt-3" onclick="location.reload()">
+                        <i class="fas fa-refresh"></i> Sayfayı Yenile
+                    </button>
+                </div>
+            </div>`;
     }
 }
 
@@ -367,7 +362,7 @@ function renderClassificationList() {
     const listContainer = document.getElementById('niceClassificationList');
     if (!listContainer) return;
 
-    console.log('🔄 Classification listesi render ediliyor...');
+    debugLog('RENDER', `Classification listesi render ediliyor: ${allNiceData.length} sınıf`);
 
     let html = '';
     allNiceData.forEach(cls => {
@@ -405,26 +400,26 @@ function renderClassificationList() {
     });
 
     listContainer.innerHTML = html;
-    console.log('✅ Classification listesi render edildi');
+    debugLog('SUCCESS', 'Classification listesi başarıyla render edildi');
 }
 
 function setupEventListeners() {
+    debugLog('INIT', 'Event listeners kuruluyor...');
+    
     const listContainer = document.getElementById('niceClassificationList');
     const searchInput = document.getElementById('niceClassSearch');
     const addCustomBtn = document.getElementById('addCustomClassBtn');
     const customInput = document.getElementById('customClassInput');
     const selectedContainer = document.getElementById('selectedNiceClasses');
 
-    console.log('🔧 Nice Classification event listeners kuruluyor...');
-
     if (!listContainer) {
-        console.error('❌ listContainer yok, event listeners kurulamıyor');
+        debugLog('ERROR', 'listContainer yok, event listeners kurulamıyor');
         return;
     }
 
-    // ANA CLICK HANDLER - ACCORDION SORUNUNU ÇÖZER
+    // Ana click handler
     listContainer.addEventListener('click', e => {
-        console.log('🖱️ List container click:', e.target);
+        debugLog('EVENT', 'List container click', { target: e.target.className });
 
         // Ana sınıf seç/kaldır butonu
         const selectBtn = e.target.closest('.select-class-btn');
@@ -433,7 +428,7 @@ function setupEventListeners() {
             e.stopPropagation();
             const classNumber = selectBtn.dataset.classNumber;
             
-            console.log('🔘 Ana sınıf butonu tıklandı:', classNumber);
+            debugLog('ACTION', `Ana sınıf butonu tıklandı: ${classNumber}`);
             
             if (isClassFullySelected(classNumber)) {
                 deselectWholeClass(classNumber);
@@ -443,17 +438,17 @@ function setupEventListeners() {
             return;
         }
 
-        // Alt sınıf seçimi - ACCORDION KAPANMA SORUNU BURADA ÇÖZÜLÜYOR
+        // Alt sınıf seçimi
         const subclass = e.target.closest('.subclass-item');
         if (subclass) {
             e.preventDefault();
-            e.stopPropagation(); // ÇOK ÖNEMLİ!
+            e.stopPropagation();
             
             const code = subclass.dataset.code;
             const classNum = subclass.dataset.classNum;
             const text = subclass.dataset.text;
             
-            console.log('🎯 Alt sınıf tıklandı:', { code, classNum, text: text?.substring(0, 30) });
+            debugLog('ACTION', `Alt sınıf tıklandı: ${code}`);
             
             if (selectedClasses[code]) {
                 removeSelectedClass(code);
@@ -467,7 +462,7 @@ function setupEventListeners() {
         const header = e.target.closest('.class-header');
         if (header && !e.target.closest('.select-class-btn')) {
             const headerId = header.dataset.id;
-            console.log('📂 Header tıklandı, accordion toggle:', headerId);
+            debugLog('ACTION', `Header tıklandı, accordion toggle: ${headerId}`);
             toggleAccordion(headerId);
         }
     });
@@ -479,7 +474,7 @@ function setupEventListeners() {
             if (btn) {
                 e.preventDefault();
                 const key = btn.dataset.key;
-                console.log('🗑️ Remove button tıklandı:', key);
+                debugLog('ACTION', `Remove button tıklandı: ${key}`);
                 removeSelectedClass(key);
             }
         });
@@ -489,12 +484,11 @@ function setupEventListeners() {
     if (searchInput) {
         searchInput.addEventListener('input', e => {
             const term = e.target.value.toLowerCase();
-            console.log('🔍 Arama yapılıyor:', term);
+            debugLog('ACTION', `Arama yapılıyor: ${term}`);
             document.querySelectorAll('#niceClassificationList .class-item').forEach(el => {
                 const shouldShow = el.dataset.searchText.includes(term);
                 el.style.display = shouldShow ? '' : 'none';
                 
-                // Arama sonuçları için sınıfları otomatik genişlet
                 if (shouldShow && term.length > 2) {
                     const collapseElement = el.querySelector('.subclasses-container');
                     if (collapseElement) collapseElement.classList.add('show');
@@ -505,15 +499,15 @@ function setupEventListeners() {
         });
     }
 
-    // 99. SINIF EKLEME - ANA SORUNUN ÇÖZÜMÜ
+    // 99. sınıf ekleme
     if (addCustomBtn) {
-        console.log('✅ 99. sınıf butonu bulundu, event listener ekleniyor');
+        debugLog('INIT', '99. sınıf butonu event listener ekleniyor');
         
         addCustomBtn.addEventListener('click', (e) => {
             e.preventDefault();
             
             const text = customInput.value.trim();
-            console.log('➕ 99. sınıf ekleme denemesi:', text?.substring(0, 50));
+            debugLog('ACTION', `99. sınıf ekleme denemesi: ${text?.substring(0, 30)}...`);
             
             if (!text) {
                 alert('Lütfen özel sınıf metnini girin');
@@ -534,12 +528,8 @@ function setupEventListeners() {
             }
             
             const code = `99-${Date.now()}`;
-            console.log('🆔 99. sınıf kodu:', code);
-            
-            // Sınıfı ekle
             selectItem(code, '99', text);
             
-            // Input'u temizle
             customInput.value = '';
             const charCountElement = document.getElementById('customClassCharCount');
             if (charCountElement) {
@@ -548,10 +538,10 @@ function setupEventListeners() {
                 charCountElement.style.fontWeight = 'normal';
             }
             
-            console.log('✅ 99. sınıf başarıyla eklendi');
+            debugLog('SUCCESS', `99. sınıf başarıyla eklendi: ${code}`);
         });
     } else {
-        console.warn('⚠️ addCustomClassBtn bulunamadı');
+        debugLog('WARN', '99. sınıf butonu bulunamadı');
     }
 
     // Enter tuşu ile 99. sınıf ekleme
@@ -566,17 +556,17 @@ function setupEventListeners() {
         });
     }
 
-    console.log('✅ Nice Classification event listeners kuruldu');
+    debugLog('SUCCESS', 'Event listeners başarıyla kuruldu');
 }
 
 // EXPORT FONKSİYONLARI
 export function clearAllSelectedClasses() {
-    console.log('🧹 Tüm seçimler temizleniyor...');
+    debugLog('ACTION', 'Tüm seçimler temizleniyor...');
     selectedClasses = {};
     renderSelectedClasses();
     updateVisualStates();
     document.querySelectorAll('.subclass-item.selected').forEach(el => el.classList.remove('selected'));
-    console.log('✅ Tüm seçimler temizlendi');
+    debugLog('SUCCESS', 'Tüm seçimler temizlendi');
 }
 
 export function getSelectedNiceClasses() {
@@ -584,7 +574,7 @@ export function getSelectedNiceClasses() {
         return v.classNum === '99' ? `(99) ${v.text}` : `(${k}) ${v.text}`;
     });
     
-    console.log('📋 getSelectedNiceClasses çağrıldı, sonuç:', result.length, 'adet');
+    debugLog('INFO', `getSelectedNiceClasses çağrıldı, sonuç: ${result.length} adet`);
     return result;
 }
 
@@ -606,40 +596,42 @@ window.clearNiceSearch = () => {
     }
 };
 
-// 35-5 Modal fonksiyonları
-window.openClass35_5Modal = openClass35_5Modal;
-window.closeClass35_5Modal = closeClass35_5Modal;
-window.clearClass35_5Search = clearClass35_5Search;
-window.removeClass35_5 = removeClass35_5;
-window.addClass35_5 = addClass35_5;
-
-// Debug fonksiyonu
+// Enhanced Debug fonksiyonu
 window.debugNiceClassification = () => {
-    console.log('🔍 === NICE CLASSIFICATION DEBUG ===');
+    debugLog('DEBUG', '=== NICE CLASSIFICATION DEBUG RAPORU ===');
+    console.log('🔧 Initialize durumu:', isInitialized);
     console.log('📊 Seçili sınıflar:', selectedClasses);
     console.log('📋 Toplam data:', allNiceData.length, 'sınıf');
     console.log('🎯 getSelectedNiceClasses() sonucu:', getSelectedNiceClasses());
-    console.log('🌐 Global fonksiyonlar:', [
-        'selectItem', 'removeSelectedClass', 'toggleAccordion',
-        'selectWholeClass', 'deselectWholeClass', 'isClassFullySelected'
-    ].map(fn => `${fn}: ${typeof window[fn] === 'function' ? '✅' : '❌'}`));
     
     // DOM elementleri kontrol
     const elements = [
         'niceClassificationList', 'selectedNiceClasses', 
-        'customClassInput', 'addCustomClassBtn'
+        'customClassInput', 'addCustomClassBtn', 'niceClassSearch'
     ];
-    console.log('🏗️ DOM elementleri:', elements.map(id => 
-        `${id}: ${document.getElementById(id) ? '✅' : '❌'}`
-    ));
+    console.log('🏗️ DOM elementleri:');
+    elements.forEach(id => {
+        const element = document.getElementById(id);
+        console.log(`  ${id}: ${element ? '✅ Var' : '❌ Yok'}`);
+    });
+    
+    // Global fonksiyonlar kontrol
+    const functions = [
+        'selectItem', 'removeSelectedClass', 'toggleAccordion',
+        'selectWholeClass', 'deselectWholeClass', 'isClassFullySelected'
+    ];
+    console.log('🌐 Global fonksiyonlar:');
+    functions.forEach(fn => {
+        console.log(`  window.${fn}: ${typeof window[fn] === 'function' ? '✅ Tanımlı' : '❌ Tanımsız'}`);
+    });
     
     return { 
+        isInitialized,
         selectedClasses, 
         allNiceData: allNiceData.length,
         selectedCount: Object.keys(selectedClasses).length 
     };
 };
 
-// İlk yükleme mesajı
-console.log('✅ Nice Classification modülü yüklendi');
-console.log('🔧 Debug için: window.debugNiceClassification()');
+debugLog('INIT', '✅ Nice Classification modülü yüklendi');
+debugLog('INIT', '🔧 Debug için: window.debugNiceClassification()');
