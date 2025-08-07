@@ -299,6 +299,30 @@ body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333
     background-color: #f8f9fa;
 }
 
+.class-header-content {
+    display: flex;
+    align-items: center;
+    flex: 1;
+}
+
+.class-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.toggle-icon {
+    color: #6c757d;
+    transition: transform 0.3s ease;
+    font-size: 14px;
+    margin-right: 10px; /* İkonu başa almak için */
+    order: -1; /* Flex order ile en başa al */
+}
+
+.class-header.expanded .toggle-icon {
+    transform: rotate(180deg);
+}
+
 /* Ana sınıf seçili değil (varsayılan) -> beyaz */
 .class-header {
     background: white;
