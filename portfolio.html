@@ -482,7 +482,8 @@
             await loadTransactionTypes();
             await loadPersons();
             portfolioModule = new PortfolioModule();
-            portfolioModule.init(); 
+            portfolioModule.init();
+            window.portfolioModule = portfolioModule;
         });
         
         class PortfolioModule {
