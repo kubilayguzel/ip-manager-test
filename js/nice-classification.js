@@ -209,7 +209,7 @@ function openClass35_5Modal() {
                 <i class="fas fa-shopping-cart mr-2"></i>
                 (35-5) Müşterilerin Malları - Mal Seçimi
             </h3>
-            <button class="close-modal-btn" onclick="closeClass35_5Modal()">&times;</button>
+            <button class="close-modal-btn" onclick="closeClass35_5Modal(false)">&times;</button>
         </div>
         
         <div class="class-35-5-modal-body">
@@ -300,7 +300,7 @@ function openClass35_5Modal() {
         </div>
 
         <div class="class-35-5-modal-footer">
-            <button type="button" class="btn btn-secondary" onclick="closeClass35_5Modal(true)">
+            <button type="button" class="btn btn-secondary" onclick="closeClass35_5Modal(false)">
                 <i class="fas fa-times mr-1"></i>İptal
             </button>
             <button type="button" class="btn btn-primary" id="class35-5-save-btn">
@@ -310,27 +310,36 @@ function openClass35_5Modal() {
     </div>
 </div>
 `;
-
+    
+    // Modal'ı DOM'a ekle
     document.body.insertAdjacentHTML('beforeend', modalHTML);
+    
+    // Modal'ı göster
     document.getElementById('class35-5-modal').style.display = 'flex';
+    
+    // Modal içeriğini yükle
     loadClass35_5ModalContent();
+    
+    // Güncellenmiş event listener'ları kur
+    setupClass35_5ModalEvents();
 }
 
-function closeClass35_5Modal() {
+function closeClass35_5Modal(isCanceled) {
     try {
         console.log('Modal kapatılıyor...');
-        console.log('Kapanma öncesi seçimler:', Object.keys(class35_5_modalSelectedItems).length);
         
+        // Eğer işlem iptal edildiyse, modal seçimlerini temizle
+        if (isCanceled) {
+            class35_5_modalSelectedItems = {};
+            console.log('İşlem iptal edildi, modal seçimleri temizlendi.');
+        }
+
         const modal = document.getElementById('class35-5-modal');
         if (modal) {
             modal.remove();
             console.log('Modal DOM\'dan kaldırıldı');
         }
         
-        // Seçimleri temizle
-        class35_5_modalSelectedItems = {};
-        console.log('Modal seçimleri temizlendi');
-        console.log('Temizleme sonrası:', Object.keys(class35_5_modalSelectedItems).length);
     } catch (error) {
         console.error('Modal kapatma hatası:', error);
     }
