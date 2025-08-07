@@ -1339,10 +1339,43 @@ class CreateTaskModule {
                 }
             }
 
+            // create-task.js içinde
             const newIpRecordData = {
+                // Temel bilgiler
                 title: taskData.title,
                 type: selectedTransactionType.ipType,
-                status: 'application_filed',
+                
+                // Durum bilgileri
+                portfoyStatus: 'active',
+                status: 'application_filed', // İş oluşturmada bu status kullanılıyor
+                
+                // Kayıt sahipliği
+                recordOwnerType: 'self',
+                
+                // Başvuru bilgileri (iş oluşturmada bu bilgiler yok)
+                applicationNumber: null,
+                applicationDate: new Date().toISOString().split('T')[0], // Bugünün tarihi
+                registrationNumber: null,
+                registrationDate: null,
+                renewalDate: null,
+                
+                // Marka özeli
+                brandText: document.getElementById('brandExampleText')?.value || null,
+                brandImageUrl: brandImageUrl,
+                
+                // Açıklama
+                description: null,
+                
+                // Ana seviye veriler
+                applicants: this.selectedApplicants.map(p => ({
+                    id: p.id,
+                    name: p.name,
+                    email: p.email || null
+                })),
+                priorities: this.priorities.length > 0 ? this.priorities : [],
+                goodsAndServices: goodsAndServices,
+                
+                // Detay bilgiler (iş oluşturmada bu bilgiler var)
                 details: {
                     brandInfo: {
                         brandType: document.getElementById('brandType')?.value,
@@ -1354,14 +1387,12 @@ class CreateTaskModule {
                         brandImage: brandImageUrl,
                         brandImageName: brandExampleFile ? brandExampleFile.name : null,
                         goodsAndServices: goodsAndServices
-                    },
-                    applicants: this.selectedApplicants.map(p => ({
-                        id: p.id,
-                        name: p.name,
-                        email: p.email || null
-                    })),
-                    priorities: this.priorities.length > 0 ? this.priorities : null
-                }
+                    }
+                },
+                
+                // Sistem bilgileri
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString()
             };
 
             const newRecordResult = await ipRecordsService.createRecord(newIpRecordData);
