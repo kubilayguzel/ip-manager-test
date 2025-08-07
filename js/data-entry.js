@@ -661,7 +661,7 @@ class DataEntryModule {
         const renewalDate = document.getElementById('renewalDate').value;
         const description = document.getElementById('brandDescription').value.trim();
 
-        // Mal ve hizmet sınıflarını al
+        // Mal ve hizmet sınıflarını al (orijinal nice-classification.js fonksiyonu)
         const goodsAndServices = getSelectedNiceClasses();
 
         // Marka görseli yükle
