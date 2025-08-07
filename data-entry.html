@@ -113,9 +113,40 @@ body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333
 }
 .scrollable-list {
     background: #fff;
-    max-height: 400px;
+    max-height: 500px;
     overflow-y: auto;
     border-radius: 0 0 10px 10px;
+}
+
+/* Custom scrollbar for selected classes */
+.scrollable-list::-webkit-scrollbar {
+    width: 8px;
+}
+
+.scrollable-list::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+.scrollable-list::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 4px;
+}
+
+.scrollable-list::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+
+/* Temizle butonu stilleri */
+.btn-outline-light {
+    border-color: rgba(255,255,255,0.3);
+    color: white;
+}
+
+.btn-outline-light:hover {
+    background-color: rgba(255,255,255,0.1);
+    border-color: rgba(255,255,255,0.5);
+    color: white;
 }
 
 /* Seçilen Öğeler - create-task stilinde */
