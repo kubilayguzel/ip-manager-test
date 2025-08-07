@@ -553,7 +553,6 @@
             }
             
             // portfolio.html içindeki renderCurrentPage() fonksiyonunda düzeltme
-
             renderCurrentPage() {
                 const tableBody = document.getElementById('portfolioTableBody');
                 tableBody.innerHTML = '';
@@ -569,30 +568,14 @@
 
                     const ownerNames = record.owners?.map(o => allPersons.find(p => p.id === o.id)?.name).filter(Boolean).join(', ') || 'Belirtilmemiş';
                     const isChecked = this.selectedRecords.has(record.id) ? 'checked' : '';
+                    const imageSrc = typeof record.trademarkImage === 'string' ? record.trademarkImage : record.trademarkImage?.content;
+                    const imageHtml = record.type === 'trademark' && imageSrc?.startsWith('data:image') ? `<div class="trademark-image-wrapper"><img src="${imageSrc}" alt="Marka Görseli" class="trademark-image-thumbnail"></div>` : '-';
 
-                    // İlgili record.type'a göre görsel hücresini oluşturun
-                    let imageCell = '';
-                    if (record.type === 'trademark') {
-                        const imageSrc = typeof record.trademarkImage === 'string' ? record.trademarkImage : record.trademarkImage?.content;
-                        const imageHtml = imageSrc?.startsWith('data:image') ? `<div class="trademark-image-wrapper"><img src="${imageSrc}" alt="Marka Görseli" class="trademark-image-thumbnail"></div>` : '-';
-                        imageCell = `<td>${imageHtml}</td>`;
-                    }
-
-                    const statusText = record.status && typeof record.status === 'string' && record.status.length > 0
-                        ? record.status.charAt(0).toUpperCase() + record.status.slice(1)
-                        : '-';
-
-                    const recordStatusText = record.recordStatus && typeof record.recordStatus === 'string' && record.recordStatus.length > 0
-                        ? record.recordStatus.charAt(0).toUpperCase() + record.recordStatus.slice(1)
-                        : 'Aktif';
-
-                    const recordTypeText = record.recordType && typeof record.recordType === 'string' && record.recordType.length > 0
-                        ? record.recordType.charAt(0).toUpperCase() + record.recordType.slice(1)
-                        : 'Portföy';
-
-                    const typeText = record.type && typeof record.type === 'string' && record.type.length > 0
-                        ? record.type.charAt(0).toUpperCase() + record.type.slice(1)
-                        : '-';
+                    // ✅ DÜZELTME: Bu değişkenlerin boş olup olmadığını kontrol edin
+                    const statusText = record.status ? record.status.charAt(0).toUpperCase() + record.status.slice(1) : '-';
+                    const recordStatusText = record.recordStatus ? record.recordStatus.charAt(0).toUpperCase() + record.recordStatus.slice(1) : '-';
+                    const recordTypeText = record.recordType ? record.recordType.charAt(0).toUpperCase() + record.recordType.slice(1) : '-';
+                    const typeText = record.type ? record.type.charAt(0).toUpperCase() + record.type.slice(1) : '-';
 
                     const applicationDate = record.applicationDate || record.details?.applicationDate;
                     const applicationNumber = record.applicationNumber || record.details?.applicationNumber;
@@ -603,7 +586,7 @@
                         <td>${recordTypeText}</td>
                         <td>${typeText}</td>
                         <td title="${title}">${title}</td>
-                        ${imageCell}
+                        <td>${imageHtml}</td>
                         <td>${applicationNumber || '-'}</td>
                         <td>${applicationDate ? new Date(applicationDate).toLocaleDateString('tr-TR') : '-'}</td>
                         <td><span class="application-status-badge ${record.status || 'beklemede'}">${statusText}</span></td>
@@ -615,13 +598,11 @@
                             <button class="action-btn delete-btn" data-id="${record.id}">Sil</button>
                         </td>
                     `;
-
+                    
                     fragment.appendChild(row);
                 });
-
                 tableBody.appendChild(fragment);
             }
-
             applyFiltersAndSort() {
                 const globalSearchTerm = document.getElementById('searchBar').value.toLowerCase();
                 
