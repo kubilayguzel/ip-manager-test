@@ -538,13 +538,15 @@
                 document.getElementById('loadingIndicator').style.display = 'block';
                 try {
                     const recordsResult = await ipRecordsService.getRecords();
+                    console.log('📊 Firebase\'den gelen veri:', recordsResult); // Debug log
                     
-                    // Firebase yapısına uygun - recordType ve recordStatus ekleme yapma
                     this.allRecords = recordsResult.success ? recordsResult.data : [];
+                    console.log('📊 İşlenen kayıtlar:', this.allRecords); // Debug log
                     
                     this.initialRenderTableStructure(); 
                     this.applyFiltersAndSort(); 
                 } catch (error) {
+                    console.error('❌ Veri yükleme hatası:', error);
                     showNotification('Veriler yüklenirken bir hata oluştu: ' + error.message, 'error');
                     document.getElementById('noRecordsMessage').style.display = 'block';
                 } finally {
