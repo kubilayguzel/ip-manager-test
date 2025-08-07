@@ -846,27 +846,101 @@
             window.location.href = `data-entry.html?id=${recordId}`;
         }
 
+        // ✅ Düzeltilmiş showRecordDetailModal fonksiyonu
         async showRecordDetailModal(recordId) {
-            const record = this.allRecords.find(r => r.id === recordId);
-            if (!record) {
-                showNotification('Kayıt bulunamadı.', 'error');
-                return;
-            }
-
             const modal = document.getElementById('recordDetailModal');
-            const modalTitle = document.getElementById('modalRecordTitle');
             const modalBody = document.getElementById('modalBody');
+            modalBody.innerHTML = '<p>Yükleniyor...</p>';
+            modal.classList.add('show');
 
-            // Modal başlığını ayarla
-            modalTitle.textContent = `${record.type || 'Kayıt'} - ${record.title || record.details?.brandText || record.details?.patentTitle || 'Detay'}`;
+            try {
+                const recordResult = await ipRecordsService.getRecordById(recordId);
+                if (!recordResult.success || !recordResult.data) {
+                    throw new Error('Kayıt bulunamadı.');
+                }
+                const record = recordResult.data;
 
-            // Modal içeriğini oluştur
-            modalBody.innerHTML = this.generateRecordDetailHTML(record);
+                document.getElementById('modalRecordTitle').textContent = `Kayıt Detayı: ${record.title || 'N/A'}`;
+                const getOwnerNames = (owners) => (!owners || owners.length === 0) ? '-' : owners.map(o => allPersons.find(p => p.id === o.id)?.name || 'Bilinmeyen').join(', ');
+                
+                // Marka görseli
+                let imageHtml = '';
+                let imageSrc = typeof record.trademarkImage === 'string' ? record.trademarkImage : record.trademarkImage?.content;
+                if (record.type === 'trademark' && imageSrc?.startsWith('data:image')) {
+                    imageHtml = `<h4 class="modal-detail-section-title">Marka Görseli</h4><img src="${imageSrc}" alt="Marka Görseli" class="record-image-display">`;
+                }
 
-            // Modal'ı göster
-            modal.style.display = 'flex';
+                // Belgeler
+                let documentsHtml = '<ul class="document-list"><li>Henüz belge yok.</li></ul>';
+                if (record.documents && record.documents.length > 0) {
+                    documentsHtml = '<ul class="document-list">' + record.documents.map(doc => `<li><a href="${doc.content}" download="${doc.name}"><span class="doc-icon">📄</span>${doc.name} (${formatFileSize(doc.size)}) - ${doc.documentDesignation || 'Belge'}</a></li>`).join('') + '</ul>';
+                }
+
+                // İşlemler
+                let transactionsHtml = '<div class="transaction-history">';
+                const transResult = await ipRecordsService.getRecordTransactions(record.id);
+                if (transResult.success && transResult.data.length > 0) {
+                    const transactions = transResult.data;
+                    const transactionMap = new Map(transactions.map(tx => [tx.id, { ...tx, children: [] }]));
+                    const topLevelTransactions = [];
+                    transactions.forEach(tx => {
+                        if (tx.transactionHierarchy === 'child' && tx.parentId && transactionMap.has(tx.parentId)) {
+                            transactionMap.get(tx.parentId).children.push(transactionMap.get(tx.id));
+                        } else {
+                            topLevelTransactions.push(transactionMap.get(tx.id));
+                        }
+                    });
+                    topLevelTransactions.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+                    topLevelTransactions.forEach(parentTx => {
+                        parentTx.children.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+                        const hasChildrenClass = parentTx.children.length > 0 ? 'has-children' : '';
+                        const typeObj = transactionTypesMap.get(parentTx.type);
+                        const typeName = (typeObj ? (typeObj.alias || typeObj.name) : parentTx.type || parentTx.designation) || 'Bilinmiyor';
+                        transactionsHtml += `<div class="accordion"><div class="accordion-header ${hasChildrenClass}"><span class="transaction-type">${typeName} <span class="transaction-meta-inline">${new Date(parentTx.timestamp).toLocaleString('tr-TR')}</span><span class="transaction-meta-inline user-info">(${parentTx.userName || parentTx.userEmail || 'Bilinmeyen'})</span></span></div><div class="accordion-content">${parentTx.children.map(childTx => { const cTypeObj = transactionTypesMap.get(childTx.type); const cTypeName = (cTypeObj ? (cTypeObj.alias || cTypeObj.name) : childTx.type || childTx.designation) || 'Bilinmiyor'; return `<div class="transaction-item" style="margin-left: 20px; border-left: 2px solid #ccc; padding-left: 10px;"><div class="transaction-type">Alt İşlem: ${cTypeName}</div><div class="transaction-meta">Açıklama: ${childTx.description || '-'}</div><div class="transaction-meta">Tarih: ${childTx.timestamp ? new Date(childTx.timestamp).toLocaleString('tr-TR') : '-'}</div><div class="transaction-meta">Yapan: ${childTx.userName || childTx.userEmail || 'Bilinmeyen'}</div></div>`; }).join('')}</div></div>`;
+                    });
+
+                } else {
+                    transactionsHtml += '<p>Bu kayıt için işlem geçmişi bulunmamaktadır.</p>';
+                }
+                transactionsHtml += '</div>';
+
+                // ✅ Düzeltme: Burada .charAt() kullanımlarını kontrol edin
+                const recordTypeDisplay = record.type ? record.type.charAt(0).toUpperCase() + record.type.slice(1) : '-';
+                const statusDisplay = record.status ? record.status.charAt(0).toUpperCase() + record.status.slice(1) : '-';
+                const recordStatusDisplay = record.recordStatus ? record.recordStatus.charAt(0).toUpperCase() + record.recordStatus.slice(1) : '-';
+
+                modalBody.innerHTML = `
+                    <div class="modal-detail-grid">
+                        <div class="modal-detail-item"><div class="modal-detail-label">Kayıt Tipi</div><div class="modal-detail-value">${record.recordType || '-'}</div></div>
+                        <div class="modal-detail-item"><div class="modal-detail-label">Kayıt Türü</div><div class="modal-detail-value">${recordTypeDisplay}</div></div>
+                        <div class="modal-detail-item"><div class="modal-detail-label">Başvuru Durumu</div><div class="modal-detail-value">${statusDisplay}</div></div>
+                        <div class="modal-detail-item"><div class="modal-detail-label">Kayıt Durumu</div><div class="modal-detail-value">${recordStatusDisplay}</div></div>
+                        <div class="modal-detail-item" style="grid-column: 1 / -1;"><div class="modal-detail-label">Başlık</div><div class="modal-detail-value">${record.title || '-'}</div></div>
+                        <div class="modal-detail-item"><div class="modal-detail-label">Başvuru Numarası</div><div class="modal-detail-value">${record.applicationNumber || '-'}</div></div>
+                        <div class="modal-detail-item"><div class="modal-detail-label">Başvuru Tarihi</div><div class="modal-detail-value">${record.applicationDate || '-'}</div></div>
+                        <div class="modal-detail-item"><div class="modal-detail-label">Tescil Numarası</div><div class="modal-detail-value">${record.registrationNumber || '-'}</div></div>
+                        <div class="modal-detail-item"><div class="modal-detail-label">Tescil Tarihi</div><div class="modal-detail-value">${record.registrationDate || '-'}</div></div>
+                        <div class="modal-detail-item" style="grid-column: 1 / -1;"><div class="modal-detail-label">Hak Sahipleri</div><div class="modal-detail-value">${getOwnerNames(record.owners)}</div></div>
+                        <div class="modal-detail-item" style="grid-column: 1 / -1;"><div class="modal-detail-label">Açıklama</div><div class="modal-detail-value long-text">${record.description || '-'}</div></div>
+                    </div>
+                    ${imageHtml}
+                    <h4 class="modal-detail-section-title">Ekli Belgeler</h4>
+                    <div class="modal-detail-item" style="grid-column: 1 / -1;">${documentsHtml}</div>
+                    <h4 class="modal-detail-section-title">İşlem Geçmişi</h4>
+                    <div class="modal-detail-item" style="grid-column: 1 / -1;">${transactionsHtml}</div>
+                `;
+                
+                modalBody.querySelectorAll('.accordion-header.has-children').forEach(acc => {
+                    acc.addEventListener('click', function() {
+                        this.classList.toggle('active');
+                        const content = this.nextElementSibling;
+                        content.style.maxHeight = content.style.maxHeight ? null : content.scrollHeight + "px";
+                    });
+                });
+            } catch (error) {
+                showNotification('Kayıt detayları yüklenirken hata oluştu: ' + error.message, 'error');
+            }
         }
-
         closeModal(modalId) {
             const modal = document.getElementById(modalId);
             if (modal) {
