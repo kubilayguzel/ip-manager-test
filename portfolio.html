@@ -572,15 +572,25 @@
                     const imageHtml = record.type === 'trademark' && imageSrc?.startsWith('data:image') ? `<div class="trademark-image-wrapper"><img src="${imageSrc}" alt="Marka Görseli" class="trademark-image-thumbnail"></div>` : '-';
 
                     // ✅ DÜZELTME: Bu değişkenlerin boş olup olmadığını kontrol edin
-                    const statusText = record.status ? record.status.charAt(0).toUpperCase() + record.status.slice(1) : '-';
-                    const recordStatusText = record.recordStatus ? record.recordStatus.charAt(0).toUpperCase() + record.recordStatus.slice(1) : '-';
-                    const recordTypeText = record.recordType ? record.recordType.charAt(0).toUpperCase() + record.recordType.slice(1) : '-';
-                    const typeText = record.type ? record.type.charAt(0).toUpperCase() + record.type.slice(1) : '-';
+                    // Firebase yapısına uygun düzeltme:
+                    const statusText = (record.status && typeof record.status === 'string' && record.status.length > 0) 
+                        ? record.status.charAt(0).toUpperCase() + record.status.slice(1) 
+                        : '-';
 
-                    const applicationDate = record.applicationDate || record.details?.applicationDate;
-                    const applicationNumber = record.applicationNumber || record.details?.applicationNumber;
-                    const title = record.title || record.details?.brandText || record.details?.patentTitle || record.details?.designTitle || '-';
+                    // recordStatus yerine status kullanın (aynı alan)
+                    const recordStatusText = (record.status && typeof record.status === 'string' && record.status.length > 0) 
+                        ? record.status.charAt(0).toUpperCase() + record.status.slice(1) 
+                        : '-';
 
+                    // recordType alanı Firebase'de yok, ipType kullanın  
+                    const recordTypeText = (record.ipType && typeof record.ipType === 'string' && record.ipType.length > 0) 
+                        ? record.ipType.charAt(0).toUpperCase() + record.ipType.slice(1) 
+                        : '-';
+
+                    // record.type yerine record.ipType kullanın
+                    const typeText = (record.ipType && typeof record.ipType === 'string' && record.ipType.length > 0) 
+                        ? record.ipType.charAt(0).toUpperCase() + record.ipType.slice(1) 
+                        : '-';
                     row.innerHTML = `
                         <td><input type="checkbox" ${isChecked} onchange="portfolioModule.handleRecordSelection('${record.id}', this.checked)"></td>
                         <td>${recordTypeText}</td>
@@ -886,27 +896,47 @@
                 transactionsHtml += '</div>';
 
                 // ✅ Düzeltme: Burada .charAt() kullanımlarını kontrol edin
-                const recordTypeDisplay = record.type ? record.type.charAt(0).toUpperCase() + record.type.slice(1) : '-';
-                const statusDisplay = record.status ? record.status.charAt(0).toUpperCase() + record.status.slice(1) : '-';
-                const recordStatusDisplay = record.recordStatus ? record.recordStatus.charAt(0).toUpperCase() + record.recordStatus.slice(1) : '-';
+                // Modal detay kısmında şu değişiklikleri yapın:
+                const recordTypeDisplay = (record.ipType && typeof record.ipType === 'string' && record.ipType.length > 0) 
+                    ? record.ipType.charAt(0).toUpperCase() + record.ipType.slice(1) 
+                    : '-';
+
+                const statusDisplay = (record.status && typeof record.status === 'string' && record.status.length > 0) 
+                    ? record.status.charAt(0).toUpperCase() + record.status.slice(1) 
+                    : '-';
+
+                // recordStatus alanı Firebase'de yok, bu alanı kaldırın veya varsayılan değer verin
+                const recordStatusDisplay = 'Aktif'; // Sabit değer veya record.status'u kullanın
 
                 modalBody.innerHTML = `
                     <div class="modal-detail-grid">
-                        <div class="modal-detail-item"><div class="modal-detail-label">Kayıt Tipi</div><div class="modal-detail-value">${record.recordType || '-'}</div></div>
-                        <div class="modal-detail-item"><div class="modal-detail-label">Kayıt Türü</div><div class="modal-detail-value">${recordTypeDisplay}</div></div>
-                        <div class="modal-detail-item"><div class="modal-detail-label">Başvuru Durumu</div><div class="modal-detail-value">${statusDisplay}</div></div>
-                        <div class="modal-detail-item"><div class="modal-detail-label">Kayıt Durumu</div><div class="modal-detail-value">${recordStatusDisplay}</div></div>
+                        <div class="modal-detail-item"><div class="modal-detail-label">IP Türü</div><div class="modal-detail-value">${recordTypeDisplay}</div></div>
+                        <div class="modal-detail-item"><div class="modal-detail-label">Durum</div><div class="modal-detail-value">${statusDisplay}</div></div>
                         <div class="modal-detail-item" style="grid-column: 1 / -1;"><div class="modal-detail-label">Başlık</div><div class="modal-detail-value">${record.title || '-'}</div></div>
                         <div class="modal-detail-item"><div class="modal-detail-label">Başvuru Numarası</div><div class="modal-detail-value">${record.applicationNumber || '-'}</div></div>
                         <div class="modal-detail-item"><div class="modal-detail-label">Başvuru Tarihi</div><div class="modal-detail-value">${record.applicationDate || '-'}</div></div>
                         <div class="modal-detail-item"><div class="modal-detail-label">Tescil Numarası</div><div class="modal-detail-value">${record.registrationNumber || '-'}</div></div>
                         <div class="modal-detail-item"><div class="modal-detail-label">Tescil Tarihi</div><div class="modal-detail-value">${record.registrationDate || '-'}</div></div>
-                        <div class="modal-detail-item" style="grid-column: 1 / -1;"><div class="modal-detail-label">Hak Sahipleri</div><div class="modal-detail-value">${getOwnerNames(record.owners)}</div></div>
                         <div class="modal-detail-item" style="grid-column: 1 / -1;"><div class="modal-detail-label">Açıklama</div><div class="modal-detail-value long-text">${record.description || '-'}</div></div>
                     </div>
                     ${imageHtml}
-                    <h4 class="modal-detail-section-title">Ekli Belgeler</h4>
-                    <div class="modal-detail-item" style="grid-column: 1 / -1;">${documentsHtml}</div>
+                    <h4 class="modal-detail-section-title">Nice Sınıfları</h4>
+                    <div class="modal-detail-item" style="grid-column: 1 / -1;">
+                        ${record.goodsAndServices ? record.goodsAndServices.map((item, index) => `<div class="nice-class-item">${item}</div>`).join('') : 'Nice sınıfı belirtilmemiş'}
+                    </div>
+                    <h4 class="modal-detail-section-title">Başvuru Sahipleri</h4>
+                    <div class="modal-detail-item" style="grid-column: 1 / -1;">
+                        ${record.applicants ? record.applicants.map(app => `<div class="applicant-item">${app.name} (${app.email})</div>`).join('') : 'Başvuru sahibi belirtilmemiş'}
+                    </div>
+                    <h4 class="modal-detail-section-title">Rüçhan Bilgileri</h4>
+                    <div class="modal-detail-item" style="grid-column: 1 / -1;">
+                        ${record.priorities && record.priorities.length > 0 ? record.priorities.map(priority => 
+                            `<div class="priority-item">
+                                <strong>${priority.type === 'başvuru' ? 'Başvuru' : 'Sergi'} Rüçhanı:</strong> 
+                                ${priority.country} - ${priority.number} (${priority.date})
+                            </div>`
+                        ).join('') : 'Rüçhan bilgisi yok'}
+                    </div>
                     <h4 class="modal-detail-section-title">İşlem Geçmişi</h4>
                     <div class="modal-detail-item" style="grid-column: 1 / -1;">${transactionsHtml}</div>
                 `;
