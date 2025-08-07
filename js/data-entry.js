@@ -328,7 +328,7 @@ class DataEntryModule {
                                                 '</button>' +
                                             '</div>' +
                                         '</div>' +
-                                        '<div class="scrollable-list" id="selectedNiceClasses" style="max-height: 500px; overflow-y: auto; padding: 15px;">' +
+                                        '<div class="scrollable-list" id="selectedNiceClasses" style="max-height: 700px; overflow-y: auto; padding: 15px;">' +
                                             '<div class="empty-state text-center py-4">' +
                                                 '<i class="fas fa-clipboard-list fa-2x text-muted mb-2"></i>' +
                                                 '<p class="text-muted">Henüz sınıf seçilmedi</p>' +
@@ -345,6 +345,7 @@ class DataEntryModule {
         this.dynamicFormContainer.innerHTML = html;
         this.setupDynamicFormListeners();
         this.setupBrandExampleUploader();
+        this.setupClearClassesButton(); // Temizle butonu setup'ını ekle
         this.updateSaveButtonState();
     }
 
@@ -930,7 +931,8 @@ class DataEntryModule {
         const result = await ipRecordsService.createRecord(portfolioData);
         if (result.success) {
             alert('Marka portföy kaydı başarıyla oluşturuldu!');
-            window.location.href = 'portfolio-management.html';
+            // Portfolio management sayfası yoksa ana sayfaya yönlendir
+            window.location.href = 'index.html'; // veya 'dashboard.html'
         } else {
             throw new Error(result.error);
         }
@@ -951,7 +953,7 @@ class DataEntryModule {
         const result = await ipRecordsService.createRecord(portfolioData);
         if (result.success) {
             alert('Patent portföy kaydı başarıyla oluşturuldu!');
-            window.location.href = 'portfolio-management.html';
+            window.location.href = 'index.html';
         } else {
             throw new Error(result.error);
         }
@@ -972,7 +974,7 @@ class DataEntryModule {
         const result = await ipRecordsService.createRecord(portfolioData);
         if (result.success) {
             alert('Tasarım portföy kaydı başarıyla oluşturuldu!');
-            window.location.href = 'portfolio-management.html';
+            window.location.href = 'index.html';
         } else {
             throw new Error(result.error);
         }
@@ -996,8 +998,14 @@ window.updateClearButton = function() {
     if (clearBtn && countBadge) {
         const count = parseInt(countBadge.textContent) || 0;
         clearBtn.style.display = count > 0 ? 'inline-block' : 'none';
+        console.log('🔄 Temizle butonu güncellendi, seçim sayısı:', count);
     }
 };
+
+// Sayfa yüklendiğinde nice classification render edildiğinde bu fonksiyonu çağır
+window.addEventListener('niceClassificationRendered', () => {
+    window.updateClearButton();
+});
 
 // Sayfa yüklendiğinde modülü başlat
 document.addEventListener('DOMContentLoaded', async () => {
