@@ -1048,7 +1048,7 @@ populateFormFields(recordData) {
     }
 }
 async saveTrademarkPortfolio(portfolioData) {
-    // Formdan marka bilgilerini topla
+    // Form verilerini al
     const brandText = document.getElementById('brandExampleText').value.trim();
     const applicationNumber = document.getElementById('applicationNumber').value.trim();
     const applicationDate = document.getElementById('applicationDate').value;
@@ -1057,46 +1057,74 @@ async saveTrademarkPortfolio(portfolioData) {
     const renewalDate = document.getElementById('renewalDate').value;
     const description = document.getElementById('brandDescription').value.trim();
     
-    // Nice sınıflarını al
     const goodsAndServices = getSelectedNiceClasses();
     
-    // Marka görselini Firebase Storage'a yükle
+    // Marka görseli yükle
     let brandImageUrl = null;
     if (this.uploadedBrandImage && typeof this.uploadedBrandImage !== 'string') {
         const imagePath = `brands/${Date.now()}_${this.uploadedBrandImage.name}`;
         brandImageUrl = await this.uploadFileToStorage(this.uploadedBrandImage, imagePath);
-    } 
-    else if (typeof this.uploadedBrandImage === 'string') {
+    } else if (typeof this.uploadedBrandImage === 'string') {
         brandImageUrl = this.uploadedBrandImage;
     }
 
-    // ✅ Güncellenen portföy verisi - iki status alanı
+    // ✅ STANDART YAPI
     const dataToSave = {
+        // Temel bilgiler
         title: brandText,
-        brandText: brandText,
-        ipType: 'trademark',
+        type: 'trademark', // type kullan
+        
+        // Durum bilgileri
+        portfoyStatus: 'active',
+        status: 'başvuru',
+        
+        // Kayıt sahipliği
         recordOwnerType: this.recordOwnerTypeSelect.value,
-        portfoyStatus: 'active', // Kayıt durumu (active/inactive)
-        status: 'başvuru', // Başvuru durumu (başvuru, tescilli, yenilendi vb.)
+        
+        // Başvuru bilgileri
         applicationNumber: applicationNumber || null,
         applicationDate: applicationDate || null,
         registrationNumber: registrationNumber || null,
         registrationDate: registrationDate || null,
         renewalDate: renewalDate || null,
-        description: description || null,
+        
+        // Marka özeli
+        brandText: brandText,
         brandImageUrl: brandImageUrl,
-        goodsAndServices: goodsAndServices,
-        priorities: this.priorities,
+        
+        // Açıklama
+        description: description || null,
+        
+        // Ana seviye veriler
         applicants: this.selectedApplicants.map(p => ({
             id: p.id,
             name: p.name,
             email: p.email || null
         })),
+        priorities: this.priorities,
+        goodsAndServices: goodsAndServices,
+        
+        // Detay bilgiler (iş oluşturma için)
+        details: {
+            brandInfo: {
+                brandType: null, // data-entry'de bu bilgi yok
+                brandCategory: null,
+                brandExampleText: brandText,
+                nonLatinAlphabet: null,
+                coverLetterRequest: null,
+                consentRequest: null,
+                brandImage: brandImageUrl,
+                brandImageName: this.uploadedBrandImage && typeof this.uploadedBrandImage !== 'string' ? this.uploadedBrandImage.name : null,
+                goodsAndServices: goodsAndServices
+            }
+        },
+        
+        // Sistem bilgileri
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
     };
     
-    // Kayıt ID'si varsa güncelleme, yoksa yeni kayıt oluşturma
+    // Kaydet
     let result;
     if (this.editingRecordId) {
         result = await ipRecordsService.updateRecord(this.editingRecordId, dataToSave);
@@ -1111,25 +1139,46 @@ async saveTrademarkPortfolio(portfolioData) {
         throw new Error(result.error);
     }
 }
-    async savePatentPortfolio(portfolioData) {
+
+// Patent için
+async savePatentPortfolio(portfolioData) {
     const patentTitle = document.getElementById('patentTitle').value.trim();
     const applicationNumber = document.getElementById('patentApplicationNumber').value.trim();
     const description = document.getElementById('patentDescription').value.trim();
 
     const dataToSave = {
         title: patentTitle,
-        ipType: 'patent',
+        type: 'patent',
+        portfoyStatus: 'active',
+        status: 'başvuru',
         recordOwnerType: this.recordOwnerTypeSelect.value,
-        portfoyStatus: 'active', // ✅ Kayıt durumu
-        status: 'başvuru', // ✅ Başvuru durumu
+        
         applicationNumber: applicationNumber || null,
+        applicationDate: null,
+        registrationNumber: null,
+        registrationDate: null,
+        renewalDate: null,
+        
+        brandText: null,
+        brandImageUrl: null,
         description: description || null,
+        
         applicants: this.selectedApplicants.map(p => ({
             id: p.id,
             name: p.name,
             email: p.email || null
         })),
         priorities: this.priorities,
+        goodsAndServices: [],
+        
+        details: {
+            patentInfo: {
+                patentTitle: patentTitle,
+                patentType: null,
+                description: description || null
+            }
+        },
+        
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
     };
@@ -1142,6 +1191,8 @@ async saveTrademarkPortfolio(portfolioData) {
         throw new Error(result.error);
     }
 }
+
+// Tasarım için
 async saveDesignPortfolio(portfolioData) {
     const designTitle = document.getElementById('designTitle').value.trim();
     const applicationNumber = document.getElementById('designApplicationNumber').value.trim();
@@ -1149,18 +1200,37 @@ async saveDesignPortfolio(portfolioData) {
 
     const dataToSave = {
         title: designTitle,
-        ipType: 'design',
+        type: 'design',
+        portfoyStatus: 'active',
+        status: 'başvuru',
         recordOwnerType: this.recordOwnerTypeSelect.value,
-        portfoyStatus: 'active', // ✅ Kayıt durumu
-        status: 'başvuru', // ✅ Başvuru durumu
+        
         applicationNumber: applicationNumber || null,
+        applicationDate: null,
+        registrationNumber: null,
+        registrationDate: null,
+        renewalDate: null,
+        
+        brandText: null,
+        brandImageUrl: null,
         description: description || null,
+        
         applicants: this.selectedApplicants.map(p => ({
             id: p.id,
             name: p.name,
             email: p.email || null
         })),
         priorities: this.priorities,
+        goodsAndServices: [],
+        
+        details: {
+            designInfo: {
+                designTitle: designTitle,
+                designType: null,
+                description: description || null
+            }
+        },
+        
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
     };
