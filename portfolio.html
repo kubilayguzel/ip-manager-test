@@ -564,15 +564,18 @@
                 currentPageData.forEach(record => {
                     const row = document.createElement('tr');
                     row.dataset.recordId = record.id;
-                    row.className = `record-status-${record.recordStatus}`;
+                    row.className = `record-status-${record.recordStatus || 'aktif'}`;
 
-                    const ownerNames = record.owners?.map(o => allPersons.find(p => p.id === o.id)?.name).filter(Boolean).join(', ') || 'Belirtilmemiş';
+                    // Hak sahipleri (applicants kullanın, owners değil)
+                    const ownerNames = record.applicants?.map(a => a.name).join(', ') || 'Belirtilmemiş';
                     const isChecked = this.selectedRecords.has(record.id) ? 'checked' : '';
-                    const imageSrc = typeof record.trademarkImage === 'string' ? record.trademarkImage : record.trademarkImage?.content;
-                    const imageHtml = record.type === 'trademark' && imageSrc?.startsWith('data:image') ? `<div class="trademark-image-wrapper"><img src="${imageSrc}" alt="Marka Görseli" class="trademark-image-thumbnail"></div>` : '-';
+                    
+                    // Marka görseli (brandImageUrl kullanın)
+                    const imageHtml = record.ipType === 'trademark' && record.brandImageUrl 
+                        ? `<div class="trademark-image-wrapper"><img src="${record.brandImageUrl}" alt="Marka Görseli" class="trademark-image-thumbnail"></div>` 
+                        : '-';
 
-                    // ✅ DÜZELTME: Bu değişkenlerin boş olup olmadığını kontrol edin
-
+                    // Firebase yapısına uygun değişkenler
                     const statusText = (record.status && typeof record.status === 'string' && record.status.length > 0) 
                         ? record.status.charAt(0).toUpperCase() + record.status.slice(1) 
                         : '-';
@@ -588,6 +591,12 @@
                     const typeText = (record.ipType && typeof record.ipType === 'string' && record.ipType.length > 0) 
                         ? record.ipType.charAt(0).toUpperCase() + record.ipType.slice(1) 
                         : '-';
+
+                    // Firebase yapısına uygun title, applicationDate, applicationNumber
+                    const title = record.title || record.brandText || '-';
+                    const applicationDate = record.applicationDate;
+                    const applicationNumber = record.applicationNumber;
+
                     row.innerHTML = `
                         <td><input type="checkbox" ${isChecked} onchange="portfolioModule.handleRecordSelection('${record.id}', this.checked)"></td>
                         <td>${recordTypeText}</td>
@@ -597,7 +606,7 @@
                         <td>${applicationNumber || '-'}</td>
                         <td>${applicationDate ? new Date(applicationDate).toLocaleDateString('tr-TR') : '-'}</td>
                         <td><span class="application-status-badge ${record.status || 'beklemede'}">${statusText}</span></td>
-                        <td><span class="record-active-status-badge ${record.recordStatus || 'aktif'}">${recordStatusText}</span></td>
+                        <td><span class="record-active-status-badge ${record.status || 'aktif'}">${recordStatusText}</span></td>
                         <td title="${ownerNames}">${ownerNames}</td>
                         <td>
                             <button class="action-btn view-btn" data-id="${record.id}">Detay</button>
