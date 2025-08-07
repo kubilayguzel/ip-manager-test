@@ -420,6 +420,8 @@ class CreateTaskModule {
         `;
         this.setupDynamicFormListeners();
         this.populateAssignedToDropdown();
+        this.updateButtonsAndTabs();
+        this.checkFormCompleteness(); 
     }
 handleIpRecordChange(recordId) {
     if (recordId) {
