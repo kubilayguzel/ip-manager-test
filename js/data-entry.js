@@ -317,23 +317,34 @@ class DataEntryModule {
     setupDynamicFormListeners() {
         console.log('🎯 Dynamic form listeners kuruluyor...');
         
-        // Tab değişim listener'ları
+        // Tab değişim listener'ları - jQuery ve vanilla JS ikisini de deneyelim
         const tabLinks = document.querySelectorAll('#portfolioTabs a[data-toggle="tab"]');
         tabLinks.forEach(tabLink => {
+            // Bootstrap tab event
             tabLink.addEventListener('shown.bs.tab', (e) => {
                 const targetTab = e.target.getAttribute('href');
-                console.log('📋 Tab değişti:', targetTab);
-                
-                // Nice Classification tab'ına geçildiğinde başlat
-                if (targetTab === '#goods-services' && !this.isNiceInitialized) {
-                    console.log('🔄 Nice Classification başlatılıyor...');
-                    this.isNiceInitialized = true;
-                    setTimeout(() => {
-                        initializeNiceClassification();
-                    }, 100);
-                }
+                console.log('📋 Tab değişti (Bootstrap):', targetTab);
+                this.handleTabChange(targetTab);
+            });
+            
+            // Tıklama eventi de ekleyelim
+            tabLink.addEventListener('click', (e) => {
+                const targetTab = e.target.getAttribute('href');
+                console.log('📋 Tab tıklandı:', targetTab);
+                setTimeout(() => {
+                    this.handleTabChange(targetTab);
+                }, 200);
             });
         });
+
+        // jQuery varsa o da çalışsın
+        if (window.$ && window.$('#portfolioTabs a[data-toggle="tab"]').length > 0) {
+            window.$('#portfolioTabs a[data-toggle="tab"]').on('shown.bs.tab', (e) => {
+                const targetTab = window.$(e.target).attr('href');
+                console.log('📋 Tab değişti (jQuery):', targetTab);
+                this.handleTabChange(targetTab);
+            });
+        }
 
         // Başvuru sahibi arama
         const applicantSearch = document.getElementById('applicantSearch');
@@ -355,6 +366,40 @@ class DataEntryModule {
         this.dynamicFormContainer.addEventListener('input', () => {
             this.updateSaveButtonState();
         });
+    }
+
+    handleTabChange(targetTab) {
+        if (targetTab === '#goods-services' && !this.isNiceInitialized) {
+            console.log('🔄 Nice Classification başlatılıyor...');
+            console.log('🔍 DOM elementleri kontrol ediliyor...');
+            
+            const niceList = document.getElementById('niceClassificationList');
+            const selectedList = document.getElementById('selectedNiceClasses');
+            const searchInput = document.getElementById('niceClassSearch');
+            
+            console.log('📋 Nice elementleri:', {
+                niceList: !!niceList,
+                selectedList: !!selectedList,
+                searchInput: !!searchInput
+            });
+            
+            if (niceList && selectedList && searchInput) {
+                this.isNiceInitialized = true;
+                console.log('✅ Nice Classification elementleri hazır, başlatılıyor...');
+                
+                setTimeout(() => {
+                    initializeNiceClassification()
+                        .then(() => {
+                            console.log('✅ Nice Classification başarıyla başlatıldı');
+                        })
+                        .catch((error) => {
+                            console.error('❌ Nice Classification başlatma hatası:', error);
+                        });
+                }, 100);
+            } else {
+                console.error('❌ Nice Classification elementleri bulunamadı');
+            }
+        }
     }
 
     searchPersons(searchTerm, type) {
