@@ -536,12 +536,12 @@
 
             async loadAllData() {
                 document.getElementById('loadingIndicator').style.display = 'block';
-                document.getElementById('portfolioTableBody').style.display = 'none';
-                document.getElementById('noRecordsMessage').style.display = 'none';
-
                 try {
                     const recordsResult = await ipRecordsService.getRecords();
-                    this.allRecords = recordsResult.success ? recordsResult.data.map(r => ({ ...r, recordStatus: r.recordStatus || 'aktif', recordType: r.recordType || 'Portföy' })) : [];
+                    
+                    // Firebase yapısına uygun - recordType ve recordStatus ekleme yapma
+                    this.allRecords = recordsResult.success ? recordsResult.data : [];
+                    
                     this.initialRenderTableStructure(); 
                     this.applyFiltersAndSort(); 
                 } catch (error) {
@@ -564,35 +564,26 @@
                 currentPageData.forEach(record => {
                     const row = document.createElement('tr');
                     row.dataset.recordId = record.id;
-                    row.className = `record-status-${record.recordStatus || 'aktif'}`;
+                    row.className = `record-status-${record.status || 'active'}`;
 
-                    // Hak sahipleri (applicants kullanın, owners değil)
+                    // Firebase yapısından applicants
                     const ownerNames = record.applicants?.map(a => a.name).join(', ') || 'Belirtilmemiş';
                     const isChecked = this.selectedRecords.has(record.id) ? 'checked' : '';
                     
-                    // Marka görseli (brandImageUrl kullanın)
+                    // Firebase'den brandImageUrl
                     const imageHtml = record.ipType === 'trademark' && record.brandImageUrl 
                         ? `<div class="trademark-image-wrapper"><img src="${record.brandImageUrl}" alt="Marka Görseli" class="trademark-image-thumbnail"></div>` 
                         : '-';
 
-                    // Firebase yapısına uygun değişkenler
-                    const statusText = (record.status && typeof record.status === 'string' && record.status.length > 0) 
-                        ? record.status.charAt(0).toUpperCase() + record.status.slice(1) 
-                        : '-';
+                    // Durum metinleri - Firebase'den status
+                    const statusText = record.status === 'active' ? 'Aktif' : (record.status || '-');
+                    const recordStatusText = statusText; // Aynı alan
+                    
+                    // IP türü - Firebase'den ipType  
+                    const recordTypeText = record.ipType === 'trademark' ? 'Marka' : (record.ipType === 'patent' ? 'Patent' : (record.ipType === 'design' ? 'Tasarım' : (record.ipType || '-')));
+                    const typeText = recordTypeText; // Aynı alan
 
-                    const recordStatusText = (record.status && typeof record.status === 'string' && record.status.length > 0) 
-                        ? record.status.charAt(0).toUpperCase() + record.status.slice(1) 
-                        : '-';
-
-                    const recordTypeText = (record.ipType && typeof record.ipType === 'string' && record.ipType.length > 0) 
-                        ? record.ipType.charAt(0).toUpperCase() + record.ipType.slice(1) 
-                        : '-';
-
-                    const typeText = (record.ipType && typeof record.ipType === 'string' && record.ipType.length > 0) 
-                        ? record.ipType.charAt(0).toUpperCase() + record.ipType.slice(1) 
-                        : '-';
-
-                    // Firebase yapısına uygun title, applicationDate, applicationNumber
+                    // Firebase yapısından title ve brandText
                     const title = record.title || record.brandText || '-';
                     const applicationDate = record.applicationDate;
                     const applicationNumber = record.applicationNumber;
@@ -605,8 +596,8 @@
                         <td>${imageHtml}</td>
                         <td>${applicationNumber || '-'}</td>
                         <td>${applicationDate ? new Date(applicationDate).toLocaleDateString('tr-TR') : '-'}</td>
-                        <td><span class="application-status-badge ${record.status || 'beklemede'}">${statusText}</span></td>
-                        <td><span class="record-active-status-badge ${record.status || 'aktif'}">${recordStatusText}</span></td>
+                        <td><span class="application-status-badge ${record.status || 'active'}">${statusText}</span></td>
+                        <td><span class="record-active-status-badge ${record.status || 'active'}">${recordStatusText}</span></td>
                         <td title="${ownerNames}">${ownerNames}</td>
                         <td>
                             <button class="action-btn view-btn" data-id="${record.id}">Detay</button>
@@ -857,105 +848,75 @@
                 }
                 const record = recordResult.data;
 
-                document.getElementById('modalRecordTitle').textContent = `Kayıt Detayı: ${record.title || 'N/A'}`;
-                const getOwnerNames = (owners) => (!owners || owners.length === 0) ? '-' : owners.map(o => allPersons.find(p => p.id === o.id)?.name || 'Bilinmeyen').join(', ');
+                document.getElementById('modalRecordTitle').textContent = `Kayıt Detayı: ${record.title || record.brandText || 'N/A'}`;
                 
-                // Marka görseli
+                // Başvuru sahiplerini Firebase'den applicants olarak al
+                const getOwnerNames = (applicants) => {
+                    if (!applicants || applicants.length === 0) return 'Belirtilmemiş';
+                    return applicants.map(a => a.name || 'Bilinmeyen').join(', ');
+                };
+                
+                // Marka görseli - Firebase'den brandImageUrl
                 let imageHtml = '';
-                let imageSrc = typeof record.trademarkImage === 'string' ? record.trademarkImage : record.trademarkImage?.content;
-                if (record.type === 'trademark' && imageSrc?.startsWith('data:image')) {
-                    imageHtml = `<h4 class="modal-detail-section-title">Marka Görseli</h4><img src="${imageSrc}" alt="Marka Görseli" class="record-image-display">`;
+                if (record.ipType === 'trademark' && record.brandImageUrl) {
+                    imageHtml = `<h4 class="modal-detail-section-title">Marka Görseli</h4>
+                                <img src="${record.brandImageUrl}" alt="Marka Görseli" class="record-image-display">`;
                 }
 
-                // Belgeler
-                let documentsHtml = '<ul class="document-list"><li>Henüz belge yok.</li></ul>';
-                if (record.documents && record.documents.length > 0) {
-                    documentsHtml = '<ul class="document-list">' + record.documents.map(doc => `<li><a href="${doc.content}" download="${doc.name}"><span class="doc-icon">📄</span>${doc.name} (${formatFileSize(doc.size)}) - ${doc.documentDesignation || 'Belge'}</a></li>`).join('') + '</ul>';
-                }
-
-                // İşlemler
-                let transactionsHtml = '<div class="transaction-history">';
-                const transResult = await ipRecordsService.getRecordTransactions(record.id);
-                if (transResult.success && transResult.data.length > 0) {
-                    const transactions = transResult.data;
-                    const transactionMap = new Map(transactions.map(tx => [tx.id, { ...tx, children: [] }]));
-                    const topLevelTransactions = [];
-                    transactions.forEach(tx => {
-                        if (tx.transactionHierarchy === 'child' && tx.parentId && transactionMap.has(tx.parentId)) {
-                            transactionMap.get(tx.parentId).children.push(transactionMap.get(tx.id));
-                        } else {
-                            topLevelTransactions.push(transactionMap.get(tx.id));
-                        }
-                    });
-                    topLevelTransactions.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-                    topLevelTransactions.forEach(parentTx => {
-                        parentTx.children.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-                        const hasChildrenClass = parentTx.children.length > 0 ? 'has-children' : '';
-                        const typeObj = transactionTypesMap.get(parentTx.type);
-                        const typeName = (typeObj ? (typeObj.alias || typeObj.name) : parentTx.type || parentTx.designation) || 'Bilinmiyor';
-                        transactionsHtml += `<div class="accordion"><div class="accordion-header ${hasChildrenClass}"><span class="transaction-type">${typeName} <span class="transaction-meta-inline">${new Date(parentTx.timestamp).toLocaleString('tr-TR')}</span><span class="transaction-meta-inline user-info">(${parentTx.userName || parentTx.userEmail || 'Bilinmeyen'})</span></span></div><div class="accordion-content">${parentTx.children.map(childTx => { const cTypeObj = transactionTypesMap.get(childTx.type); const cTypeName = (cTypeObj ? (cTypeObj.alias || cTypeObj.name) : childTx.type || childTx.designation) || 'Bilinmiyor'; return `<div class="transaction-item" style="margin-left: 20px; border-left: 2px solid #ccc; padding-left: 10px;"><div class="transaction-type">Alt İşlem: ${cTypeName}</div><div class="transaction-meta">Açıklama: ${childTx.description || '-'}</div><div class="transaction-meta">Tarih: ${childTx.timestamp ? new Date(childTx.timestamp).toLocaleString('tr-TR') : '-'}</div><div class="transaction-meta">Yapan: ${childTx.userName || childTx.userEmail || 'Bilinmeyen'}</div></div>`; }).join('')}</div></div>`;
-                    });
-
-                } else {
-                    transactionsHtml += '<p>Bu kayıt için işlem geçmişi bulunmamaktadır.</p>';
-                }
-                transactionsHtml += '</div>';
-
-                // ✅ Düzeltme: Burada .charAt() kullanımlarını kontrol edin
-                // Modal detay kısmında şu değişiklikleri yapın:
-                const recordTypeDisplay = (record.ipType && typeof record.ipType === 'string' && record.ipType.length > 0) 
-                    ? record.ipType.charAt(0).toUpperCase() + record.ipType.slice(1) 
-                    : '-';
-
-                const statusDisplay = (record.status && typeof record.status === 'string' && record.status.length > 0) 
-                    ? record.status.charAt(0).toUpperCase() + record.status.slice(1) 
-                    : '-';
-
-                // recordStatus alanı Firebase'de yok, bu alanı kaldırın veya varsayılan değer verin
-                const recordStatusDisplay = 'Aktif'; // Sabit değer veya record.status'u kullanın
+                // Durum gösterimi
+                const statusDisplay = record.status === 'active' ? 'Aktif' : (record.status || '-');
+                const ipTypeDisplay = record.ipType === 'trademark' ? 'Marka' : (record.ipType === 'patent' ? 'Patent' : (record.ipType === 'design' ? 'Tasarım' : (record.ipType || '-')));
 
                 modalBody.innerHTML = `
                     <div class="modal-detail-grid">
-                        <div class="modal-detail-item"><div class="modal-detail-label">IP Türü</div><div class="modal-detail-value">${recordTypeDisplay}</div></div>
+                        <div class="modal-detail-item"><div class="modal-detail-label">IP Türü</div><div class="modal-detail-value">${ipTypeDisplay}</div></div>
                         <div class="modal-detail-item"><div class="modal-detail-label">Durum</div><div class="modal-detail-value">${statusDisplay}</div></div>
-                        <div class="modal-detail-item" style="grid-column: 1 / -1;"><div class="modal-detail-label">Başlık</div><div class="modal-detail-value">${record.title || '-'}</div></div>
+                        <div class="modal-detail-item"><div class="modal-detail-label">Kayıt Sahibi Türü</div><div class="modal-detail-value">${record.recordOwnerType === 'self' ? 'Kendi Kaydı' : '3. Taraf'}</div></div>
+                        <div class="modal-detail-item" style="grid-column: 1 / -1;"><div class="modal-detail-label">Başlık</div><div class="modal-detail-value">${record.title || record.brandText || '-'}</div></div>
                         <div class="modal-detail-item"><div class="modal-detail-label">Başvuru Numarası</div><div class="modal-detail-value">${record.applicationNumber || '-'}</div></div>
                         <div class="modal-detail-item"><div class="modal-detail-label">Başvuru Tarihi</div><div class="modal-detail-value">${record.applicationDate || '-'}</div></div>
                         <div class="modal-detail-item"><div class="modal-detail-label">Tescil Numarası</div><div class="modal-detail-value">${record.registrationNumber || '-'}</div></div>
                         <div class="modal-detail-item"><div class="modal-detail-label">Tescil Tarihi</div><div class="modal-detail-value">${record.registrationDate || '-'}</div></div>
+                        <div class="modal-detail-item"><div class="modal-detail-label">Yenileme Tarihi</div><div class="modal-detail-value">${record.renewalDate || '-'}</div></div>
+                        <div class="modal-detail-item" style="grid-column: 1 / -1;"><div class="modal-detail-label">Başvuru Sahipleri</div><div class="modal-detail-value">${getOwnerNames(record.applicants)}</div></div>
                         <div class="modal-detail-item" style="grid-column: 1 / -1;"><div class="modal-detail-label">Açıklama</div><div class="modal-detail-value long-text">${record.description || '-'}</div></div>
                     </div>
                     ${imageHtml}
-                    <h4 class="modal-detail-section-title">Nice Sınıfları</h4>
+                    <h4 class="modal-detail-section-title">Nice Sınıfları ve Hizmetler</h4>
                     <div class="modal-detail-item" style="grid-column: 1 / -1;">
-                        ${record.goodsAndServices ? record.goodsAndServices.map((item, index) => `<div class="nice-class-item">${item}</div>`).join('') : 'Nice sınıfı belirtilmemiş'}
-                    </div>
-                    <h4 class="modal-detail-section-title">Başvuru Sahipleri</h4>
-                    <div class="modal-detail-item" style="grid-column: 1 / -1;">
-                        ${record.applicants ? record.applicants.map(app => `<div class="applicant-item">${app.name} (${app.email})</div>`).join('') : 'Başvuru sahibi belirtilmemiş'}
+                        ${record.goodsAndServices && record.goodsAndServices.length > 0 
+                            ? record.goodsAndServices.map((item, index) => 
+                                `<div class="nice-class-item" style="margin-bottom: 10px; padding: 8px; background-color: #f8f9fa; border-radius: 4px;">
+                                    <strong>Sınıf ${index + 1}:</strong> ${item}
+                                </div>`
+                            ).join('') 
+                            : 'Nice sınıfı belirtilmemiş'
+                        }
                     </div>
                     <h4 class="modal-detail-section-title">Rüçhan Bilgileri</h4>
                     <div class="modal-detail-item" style="grid-column: 1 / -1;">
-                        ${record.priorities && record.priorities.length > 0 ? record.priorities.map(priority => 
-                            `<div class="priority-item">
-                                <strong>${priority.type === 'başvuru' ? 'Başvuru' : 'Sergi'} Rüçhanı:</strong> 
-                                ${priority.country} - ${priority.number} (${priority.date})
-                            </div>`
-                        ).join('') : 'Rüçhan bilgisi yok'}
+                        ${record.priorities && record.priorities.length > 0 
+                            ? record.priorities.map(priority => 
+                                `<div class="priority-item" style="margin-bottom: 8px; padding: 8px; background-color: #e3f2fd; border-radius: 4px;">
+                                    <strong>${priority.type === 'başvuru' ? 'Başvuru' : 'Sergi'} Rüçhanı:</strong><br>
+                                    <span style="margin-left: 10px;">Ülke: ${priority.country}</span><br>
+                                    <span style="margin-left: 10px;">Numara: ${priority.number}</span><br>
+                                    <span style="margin-left: 10px;">Tarih: ${priority.date}</span>
+                                </div>`
+                            ).join('') 
+                            : 'Rüçhan bilgisi bulunmuyor'
+                        }
                     </div>
-                    <h4 class="modal-detail-section-title">İşlem Geçmişi</h4>
-                    <div class="modal-detail-item" style="grid-column: 1 / -1;">${transactionsHtml}</div>
+                    <h4 class="modal-detail-section-title">Sistem Bilgileri</h4>
+                    <div class="modal-detail-grid">
+                        <div class="modal-detail-item"><div class="modal-detail-label">Oluşturma Tarihi</div><div class="modal-detail-value">${record.createdAt ? new Date(record.createdAt.seconds * 1000).toLocaleString('tr-TR') : '-'}</div></div>
+                        <div class="modal-detail-item"><div class="modal-detail-label">Son Güncelleme</div><div class="modal-detail-value">${record.updatedAt ? new Date(record.updatedAt).toLocaleString('tr-TR') : '-'}</div></div>
+                    </div>
                 `;
                 
-                modalBody.querySelectorAll('.accordion-header.has-children').forEach(acc => {
-                    acc.addEventListener('click', function() {
-                        this.classList.toggle('active');
-                        const content = this.nextElementSibling;
-                        content.style.maxHeight = content.style.maxHeight ? null : content.scrollHeight + "px";
-                    });
-                });
             } catch (error) {
-                showNotification('Kayıt detayları yüklenirken hata oluştu: ' + error.message, 'error');
+                modalBody.innerHTML = `<p class="error-message">Kayıt detayları yüklenirken hata oluştu: ${error.message}</p>`;
+                console.error('Modal detay hatası:', error);
             }
         }
         closeModal(modalId) {
