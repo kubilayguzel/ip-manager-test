@@ -12,6 +12,7 @@ class DataEntryModule {
         
         // State variables
         this.selectedApplicants = [];
+        this.priorities = []; // Rüçhan bilgileri için
         this.isNiceInitialized = false;
         this.uploadedBrandImage = null;
         this.allPersons = [];
@@ -72,6 +73,7 @@ class DataEntryModule {
         
         this.dynamicFormContainer.innerHTML = '';
         this.selectedApplicants = [];
+        this.priorities = []; // Rüçhan listesini temizle
         this.isNiceInitialized = false;
         this.uploadedBrandImage = null;
         this.updateSaveButtonState();
@@ -103,6 +105,11 @@ class DataEntryModule {
                     '<li class="nav-item">' +
                         '<a class="nav-link" id="applicants-tab" data-toggle="tab" href="#applicants" role="tab">' +
                             '<i class="fas fa-users mr-1"></i>Başvuru Sahipleri' +
+                        '</a>' +
+                    '</li>' +
+                    '<li class="nav-item">' +
+                        '<a class="nav-link" id="priority-tab" data-toggle="tab" href="#priority" role="tab">' +
+                            '<i class="fas fa-star mr-1"></i>Rüçhan' +
                         '</a>' +
                     '</li>' +
                     '<li class="nav-item">' +
@@ -188,7 +195,76 @@ class DataEntryModule {
                         '</div>' +
                     '</div>' +
                     
-                    // Tab 3: Mal ve Hizmetler (Nice Classification)
+                    // Tab 3: Rüçhan
+                    '<div class="tab-pane fade" id="priority" role="tabpanel">' +
+                        '<div class="form-section">' +
+                            '<h3 class="section-title">Rüçhan Bilgileri</h3>' +
+                            '<p class="text-muted mb-3">Birden fazla rüçhan hakkı ekleyebilirsiniz.</p>' +
+                            
+                            '<div class="form-group row">' +
+                                '<label for="priorityType" class="col-sm-3 col-form-label">Rüçhan Tipi</label>' +
+                                '<div class="col-sm-9">' +
+                                    '<select class="form-control" id="priorityType">' +
+                                        '<option value="başvuru" selected>Başvuru</option>' +
+                                        '<option value="sergi">Sergi</option>' +
+                                    '</select>' +
+                                '</div>' +
+                            '</div>' +
+                            
+                            '<div class="form-group row">' +
+                                '<label for="priorityDate" class="col-sm-3 col-form-label" id="priorityDateLabel">Rüçhan Tarihi</label>' +
+                                '<div class="col-sm-9">' +
+                                    '<input type="date" class="form-control" id="priorityDate">' +
+                                '</div>' +
+                            '</div>' +
+                            
+                            '<div class="form-group row">' +
+                                '<label for="priorityCountry" class="col-sm-3 col-form-label">Rüçhan Ülkesi</label>' +
+                                '<div class="col-sm-9">' +
+                                    '<select class="form-control" id="priorityCountry">' +
+                                        '<option value="">Seçiniz...</option>' +
+                                        '<option value="TR">Türkiye</option>' +
+                                        '<option value="US">Amerika Birleşik Devletleri</option>' +
+                                        '<option value="DE">Almanya</option>' +
+                                        '<option value="FR">Fransa</option>' +
+                                        '<option value="GB">İngiltere</option>' +
+                                        '<option value="IT">İtalya</option>' +
+                                        '<option value="ES">İspanya</option>' +
+                                        '<option value="CN">Çin</option>' +
+                                        '<option value="JP">Japonya</option>' +
+                                        '<option value="KR">Güney Kore</option>' +
+                                    '</select>' +
+                                '</div>' +
+                            '</div>' +
+                            
+                            '<div class="form-group row">' +
+                                '<label for="priorityNumber" class="col-sm-3 col-form-label">Rüçhan Numarası</label>' +
+                                '<div class="col-sm-9">' +
+                                    '<input type="text" class="form-control" id="priorityNumber" placeholder="Örn: 2023/12345">' +
+                                '</div>' +
+                            '</div>' +
+                            
+                            '<div class="form-group full-width text-right mt-3">' +
+                                '<button type="button" id="addPriorityBtn" class="btn btn-secondary">' +
+                                    '<i class="fas fa-plus mr-1"></i> Rüçhan Ekle' +
+                                '</button>' +
+                            '</div>' +
+                            
+                            '<hr class="my-4">' +
+                            
+                            '<div class="form-group full-width">' +
+                                '<label class="form-label">Eklenen Rüçhan Hakları</label>' +
+                                '<div id="addedPrioritiesList" class="selected-items-list">' +
+                                    '<div class="empty-state text-center py-4">' +
+                                        '<i class="fas fa-info-circle fa-2x text-muted mb-2"></i>' +
+                                        '<p class="text-muted">Henüz rüçhan bilgisi eklenmedi.</p>' +
+                                    '</div>' +
+                                '</div>' +
+                            '</div>' +
+                        '</div>' +
+                    '</div>' +
+                    
+                    // Tab 4: Mal ve Hizmetler (Nice Classification)
                     '<div class="tab-pane fade" id="goods-services" role="tabpanel">' +
                         '<div class="nice-classification-container">' +
                             '<div class="row">' +
@@ -239,13 +315,20 @@ class DataEntryModule {
                                 '<div class="col-lg-4">' +
                                     '<div class="selected-classes-panel">' +
                                         '<div class="panel-header">' +
-                                            '<h5 class="mb-0">' +
-                                                '<i class="fas fa-check-circle mr-2"></i>' +
-                                                'Seçilen Sınıflar' +
-                                            '</h5>' +
-                                            '<small class="text-white-50">Toplam: <span id="selectedClassCount">0</span></small>' +
+                                            '<div class="d-flex justify-content-between align-items-center">' +
+                                                '<div>' +
+                                                    '<h5 class="mb-0">' +
+                                                        '<i class="fas fa-check-circle mr-2"></i>' +
+                                                        'Seçilen Sınıflar' +
+                                                    '</h5>' +
+                                                    '<small class="text-white-50">Toplam: <span id="selectedClassCount">0</span></small>' +
+                                                '</div>' +
+                                                '<button type="button" class="btn btn-outline-light btn-sm" id="clearAllClassesBtn" style="display: none;" title="Tüm seçimleri temizle">' +
+                                                    '<i class="fas fa-trash"></i> Temizle' +
+                                                '</button>' +
+                                            '</div>' +
                                         '</div>' +
-                                        '<div class="scrollable-list p-3" id="selectedNiceClasses">' +
+                                        '<div class="scrollable-list" id="selectedNiceClasses" style="max-height: 500px; overflow-y: auto; padding: 15px;">' +
                                             '<div class="empty-state text-center py-4">' +
                                                 '<i class="fas fa-clipboard-list fa-2x text-muted mb-2"></i>' +
                                                 '<p class="text-muted">Henüz sınıf seçilmedi</p>' +
@@ -363,6 +446,34 @@ class DataEntryModule {
             });
         }
 
+        // Rüçhan ekleme butonu
+        const addPriorityBtn = document.getElementById('addPriorityBtn');
+        if (addPriorityBtn) {
+            addPriorityBtn.addEventListener('click', () => {
+                this.addPriority();
+            });
+        }
+
+        // Rüçhan tipi değişim listener'ı
+        const priorityType = document.getElementById('priorityType');
+        if (priorityType) {
+            priorityType.addEventListener('change', (e) => {
+                this.handlePriorityTypeChange(e.target.value);
+            });
+        }
+
+        // Rüçhan listesi click listener'ı
+        const addedPrioritiesList = document.getElementById('addedPrioritiesList');
+        if (addedPrioritiesList) {
+            addedPrioritiesList.addEventListener('click', (e) => {
+                const removeBtn = e.target.closest('.remove-priority-btn');
+                if (removeBtn) {
+                    const priorityId = removeBtn.dataset.id;
+                    this.removePriority(priorityId);
+                }
+            });
+        }
+
         // Form input change listeners
         this.dynamicFormContainer.addEventListener('input', () => {
             this.updateSaveButtonState();
@@ -392,6 +503,8 @@ class DataEntryModule {
                     initializeNiceClassification()
                         .then(() => {
                             console.log('✅ Nice Classification başarıyla başlatıldı');
+                            // Temizle butonu event listener'ı ekle
+                            this.setupClearClassesButton();
                         })
                         .catch((error) => {
                             console.error('❌ Nice Classification başlatma hatası:', error);
@@ -400,6 +513,22 @@ class DataEntryModule {
             } else {
                 console.error('❌ Nice Classification elementleri bulunamadı');
             }
+        }
+    }
+
+    setupClearClassesButton() {
+        const clearBtn = document.getElementById('clearAllClassesBtn');
+        if (clearBtn) {
+            clearBtn.addEventListener('click', () => {
+                if (confirm('Tüm seçilen sınıfları temizlemek istediğinizden emin misiniz?')) {
+                    // clearAllSelectedClasses fonksiyonu nice-classification.js'de tanımlı
+                    if (window.clearAllSelectedClasses) {
+                        window.clearAllSelectedClasses();
+                        clearBtn.style.display = 'none'; // Butonu gizle
+                        console.log('✅ Tüm sınıflar temizlendi');
+                    }
+                }
+            });
         }
     }
 
@@ -566,6 +695,86 @@ class DataEntryModule {
         reader.readAsDataURL(file);
     }
 
+    // Rüçhan (Priority) Fonksiyonları
+    handlePriorityTypeChange(value) {
+        const priorityDateLabel = document.getElementById('priorityDateLabel');
+        if (priorityDateLabel) {
+            if (value === 'sergi') {
+                priorityDateLabel.textContent = 'Sergi Tarihi';
+            } else {
+                priorityDateLabel.textContent = 'Rüçhan Tarihi';
+            }
+        }
+    }
+
+    addPriority() {
+        const priorityType = document.getElementById('priorityType')?.value;
+        const priorityDate = document.getElementById('priorityDate')?.value;
+        const priorityCountry = document.getElementById('priorityCountry')?.value;
+        const priorityNumber = document.getElementById('priorityNumber')?.value;
+
+        if (!priorityDate || !priorityCountry || !priorityNumber) {
+            alert('Lütfen tüm rüçhan bilgilerini doldurun.');
+            return;
+        }
+
+        const newPriority = {
+            id: Date.now().toString(),
+            type: priorityType,
+            date: priorityDate,
+            country: priorityCountry,
+            number: priorityNumber
+        };
+
+        this.priorities.push(newPriority);
+        this.renderPriorities();
+
+        // Formu temizle
+        document.getElementById('priorityDate').value = '';
+        document.getElementById('priorityCountry').value = '';
+        document.getElementById('priorityNumber').value = '';
+        
+        console.log('✅ Rüçhan eklendi:', newPriority);
+    }
+
+    removePriority(priorityId) {
+        this.priorities = this.priorities.filter(p => p.id !== priorityId);
+        this.renderPriorities();
+        console.log('🗑️ Rüçhan kaldırıldı:', priorityId);
+    }
+
+    renderPriorities() {
+        const container = document.getElementById('addedPrioritiesList');
+        if (!container) return;
+
+        if (this.priorities.length === 0) {
+            container.innerHTML = 
+                '<div class="empty-state text-center py-4">' +
+                    '<i class="fas fa-info-circle fa-2x text-muted mb-2"></i>' +
+                    '<p class="text-muted">Henüz rüçhan bilgisi eklenmedi.</p>' +
+                '</div>';
+            return;
+        }
+
+        let html = '';
+        this.priorities.forEach(priority => {
+            html += 
+                '<div class="selected-item d-flex justify-content-between align-items-center p-2 mb-2 border rounded">' +
+                    '<span>' +
+                        '<b>Tip:</b> ' + (priority.type === 'sergi' ? 'Sergi' : 'Başvuru') + ' | ' +
+                        '<b>Tarih:</b> ' + priority.date + ' | ' +
+                        '<b>Ülke:</b> ' + priority.country + ' | ' +
+                        '<b>Numara:</b> ' + priority.number +
+                    '</span>' +
+                    '<button type="button" class="btn btn-sm btn-danger remove-priority-btn" data-id="' + priority.id + '">' +
+                        '<i class="fas fa-trash-alt"></i>' +
+                    '</button>' +
+                '</div>';
+        });
+        
+        container.innerHTML = html;
+    }
+
     updateSaveButtonState() {
         const ipType = this.ipTypeSelect.value;
         let isComplete = false;
@@ -710,6 +919,7 @@ class DataEntryModule {
             description: description || null,
             brandImageUrl,
             goodsAndServices,
+            priorities: this.priorities, // Rüçhan bilgilerini kaydet
             applicants: this.selectedApplicants.map(p => ({
                 id: p.id,
                 name: p.name,
@@ -775,6 +985,17 @@ window.clearNiceSearch = function() {
     if (searchInput) {
         searchInput.value = '';
         searchInput.dispatchEvent(new Event('input'));
+    }
+};
+
+// Temizle butonunun görünürlüğünü kontrol et
+window.updateClearButton = function() {
+    const clearBtn = document.getElementById('clearAllClassesBtn');
+    const countBadge = document.getElementById('selectedClassCount');
+    
+    if (clearBtn && countBadge) {
+        const count = parseInt(countBadge.textContent) || 0;
+        clearBtn.style.display = count > 0 ? 'inline-block' : 'none';
     }
 };
 
