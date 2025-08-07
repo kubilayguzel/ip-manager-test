@@ -1,5 +1,5 @@
 // js/data-entry.js
-import { initializeNiceClassification, getSelectedNiceClasses } from './nice-classification.js';
+import { initializeNiceClassification, getSelectedNiceClasses, setSelectedNiceClasses } from './nice-classification.js';
 import { personService, ipRecordsService, storage } from '../firebase-config.js';
 import { ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 import { loadSharedLayout } from './layout-loader.js';
@@ -984,8 +984,7 @@ populateFormFields(recordData) {
 
         // Nice sınıflarını yükle (nice-classification.js'deki fonksiyonu çağır)
         const niceClasses = recordData.details.goodsAndServices || [];
-        if (niceClasses.length > 0 && window.setSelectedNiceClasses) {
-             window.setSelectedNiceClasses(niceClasses);
+        if (niceClasses.length > 0) { setSelectedNiceClasses(niceClasses);
         }
     }
     // Patent özel alanları
