@@ -309,17 +309,28 @@ function openClass35_5Modal() {
 }
 
 function closeClass35_5Modal(isCanceled) {
-    if (isCanceled) {
-        class35_5_modalSelectedItems = {};
-        console.log('İptal işlemi yapıldı, modal içindeki seçimler temizlendi.');
-    } else {
-        console.log('Kaydetme işlemi yapıldı, modal seçimleri kaydedilecek.');
+    // Modal ve backdrop'ı temizle
+    const modal = document.getElementById('class35-5-modal');
+    if (modal) {
+        modal.remove();
     }
     
-    const modal = document.getElementById('class35-5-modal');
-    if (modal) modal.remove();
     const backdrop = document.querySelector('.modal-backdrop');
-    if (backdrop) backdrop.remove();
+    if (backdrop) {
+        backdrop.remove();
+    }
+
+    // Body'den modal sınıflarını temizle
+    document.body.classList.remove('modal-open');
+    document.body.style.paddingRight = '';
+
+    if (isCanceled) {
+        // İptal edilmişse modal seçimlerini temizle
+        class35_5_modalSelectedItems = {};
+        console.log('Modal iptal edildi, seçimler temizlendi.');
+    } else {
+        console.log('Modal başarıyla kapatıldı.');
+    }
 }
 
 async function loadClass35_5ModalContent() {
@@ -576,19 +587,22 @@ function saveClass35_5Selection() {
             return;
         }
 
-        // Önce 35-5 ana seçimini kaldır (varsa)
-        removeSelectedClass("35-5");
-        
+        // Önce modal'ı kapat
+        closeClass35_5Modal(false);
+
         // Seçilen malları ana sisteme aktar
         Object.entries(class35_5_modalSelectedItems).forEach(([code, item]) => {
-            selectItem(code, item.classNum, item.text); // addSelectedClass yerine selectItem
+            selectedClasses[code] = { classNum: item.classNum, text: item.text };
         });
-        
-        // 35-5 ana seçimini ekle
-        const class35_5_main = allNiceData.find(c => c.classNumber === 35).subClasses[4];
-        selectItem("35-5", "35", class35_5_main.subClassDescription); // addSelectedClass yerine selectItem
 
-        closeClass35_5Modal(false);
+        // 35-5 ana seçimini ekle
+        selectedClasses["35-5"] = { classNum: "35", text: "Müşterilerin malları (seçilen mallar için)" };
+
+        // Ana sistemi güncelle
+        renderSelectedClasses();
+        updateVisualStates();
+
+        // Başarı mesajı
         alert(`✅ 35-5 hizmeti başarıyla güncellendi!\n${itemCount} mal kategorisi eklendi.`);
         
     } catch (error) {
