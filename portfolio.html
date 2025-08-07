@@ -572,22 +572,19 @@
                     const imageHtml = record.type === 'trademark' && imageSrc?.startsWith('data:image') ? `<div class="trademark-image-wrapper"><img src="${imageSrc}" alt="Marka Görseli" class="trademark-image-thumbnail"></div>` : '-';
 
                     // ✅ DÜZELTME: Bu değişkenlerin boş olup olmadığını kontrol edin
-                    // Firebase yapısına uygun düzeltme:
+
                     const statusText = (record.status && typeof record.status === 'string' && record.status.length > 0) 
                         ? record.status.charAt(0).toUpperCase() + record.status.slice(1) 
                         : '-';
 
-                    // recordStatus yerine status kullanın (aynı alan)
                     const recordStatusText = (record.status && typeof record.status === 'string' && record.status.length > 0) 
                         ? record.status.charAt(0).toUpperCase() + record.status.slice(1) 
                         : '-';
 
-                    // recordType alanı Firebase'de yok, ipType kullanın  
                     const recordTypeText = (record.ipType && typeof record.ipType === 'string' && record.ipType.length > 0) 
                         ? record.ipType.charAt(0).toUpperCase() + record.ipType.slice(1) 
                         : '-';
 
-                    // record.type yerine record.ipType kullanın
                     const typeText = (record.ipType && typeof record.ipType === 'string' && record.ipType.length > 0) 
                         ? record.ipType.charAt(0).toUpperCase() + record.ipType.slice(1) 
                         : '-';
