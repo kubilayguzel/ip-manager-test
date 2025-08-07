@@ -576,14 +576,17 @@ function saveClass35_5Selection() {
             return;
         }
 
+        // Önce 35-5 ana seçimini kaldır (varsa)
         removeSelectedClass("35-5");
         
+        // Seçilen malları ana sisteme aktar
         Object.entries(class35_5_modalSelectedItems).forEach(([code, item]) => {
-            addSelectedClass(code, item.text, item.classNum);
+            selectItem(code, item.classNum, item.text); // addSelectedClass yerine selectItem
         });
         
+        // 35-5 ana seçimini ekle
         const class35_5_main = allNiceData.find(c => c.classNumber === 35).subClasses[4];
-        addSelectedClass("35-5", class35_5_main.subClassDescription, "35");
+        selectItem("35-5", "35", class35_5_main.subClassDescription); // addSelectedClass yerine selectItem
 
         closeClass35_5Modal(false);
         alert(`✅ 35-5 hizmeti başarıyla güncellendi!\n${itemCount} mal kategorisi eklendi.`);
