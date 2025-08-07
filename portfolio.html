@@ -611,50 +611,105 @@
                 tableBody.appendChild(fragment);
             }
             applyFiltersAndSort() {
-                const globalSearchTerm = document.getElementById('searchBar').value.toLowerCase();
+            const globalSearchTerm = document.getElementById('searchBar').value.toLowerCase();
+            
+            let filtered = this.allRecords.filter(record => {
+                let tabMatch = false;
                 
-                let filtered = this.allRecords.filter(record => {
-                    let tabMatch = false;
-                    if (this.activeTypeFilter === 'all') tabMatch = record.recordType === 'Portföy';
-                    else if (this.activeTypeFilter === 'thirdParty') tabMatch = record.recordType === '3. Taraf';
-                    else if (this.activeTypeFilter === 'objections') tabMatch = record.recordType === 'Portföy' && record.transactions?.some(t => t.type?.includes('İtiraz'));
-                    else if (this.activeTypeFilter === 'litigation') tabMatch = record.recordType === 'Portföy' && record.transactions?.some(t => t.type?.includes('Dava'));
-                    else tabMatch = record.recordType === 'Portföy' && record.type === this.activeTypeFilter;
-                    if (!tabMatch) return false;
+                // Firebase yapısına uygun filtreleme - recordOwnerType kullanın
+                if (this.activeTypeFilter === 'all') {
+                    tabMatch = true; // Tüm kayıtları göster
+                } else if (this.activeTypeFilter === 'thirdParty') {
+                    tabMatch = record.recordOwnerType === 'thirdParty'; // 3. taraf kayıtları
+                } else if (this.activeTypeFilter === 'objections') {
+                    tabMatch = record.transactions?.some(t => t.type?.includes('İtiraz'));
+                } else if (this.activeTypeFilter === 'litigation') {
+                    tabMatch = record.transactions?.some(t => t.type?.includes('Dava'));
+                } else {
+                    // IP türüne göre filtreleme (trademark, patent, design)
+                    tabMatch = record.ipType === this.activeTypeFilter;
+                }
+                
+                if (!tabMatch) return false;
 
-                    const globalMatch = JSON.stringify(record).toLowerCase().includes(globalSearchTerm);
-                    if (!globalMatch) return false;
+                // Global arama
+                if (globalSearchTerm) {
+                    const searchableText = `
+                        ${record.title || ''} 
+                        ${record.brandText || ''} 
+                        ${record.applicationNumber || ''} 
+                        ${record.status || ''} 
+                        ${record.ipType || ''}
+                        ${record.applicants?.map(a => a.name).join(' ') || ''}
+                    `.toLowerCase();
+                    
+                    if (!searchableText.includes(globalSearchTerm)) return false;
+                }
 
-                    return Object.keys(this.columnFilters).every(key => {
-                        const filterValue = this.columnFilters[key];
-                        if (!filterValue) return true;
-                        let recordValue = (key === 'owners') ? (record.owners?.map(o => allPersons.find(p => p.id === o.id)?.name).filter(Boolean).join(' ') || '') : String(record[key] || '');
-                        return recordValue.toLowerCase().includes(filterValue);
-                    });
+                // Kolon filtreleri
+                return Object.keys(this.columnFilters).every(key => {
+                    const filterValue = this.columnFilters[key];
+                    if (!filterValue) return true;
+                    
+                    let recordValue = '';
+                    if (key === 'owners' || key === 'applicants') {
+                        recordValue = record.applicants?.map(a => a.name).join(' ') || '';
+                    } else if (key === 'title') {
+                        recordValue = record.title || record.brandText || '';
+                    } else if (key === 'type' || key === 'recordType') {
+                        recordValue = record.ipType || '';
+                    } else {
+                        recordValue = String(record[key] || '');
+                    }
+                    
+                    return recordValue.toLowerCase().includes(filterValue);
                 });
+            });
 
-                if (this.sortBy.column) {
-                    const { column, direction } = this.sortBy;
-                    filtered.sort((a, b) => {
-                        let valA = a[column] || '', valB = b[column] || '';
-                        if (column.includes('Date')) { valA = new Date(valA || 0); valB = new Date(valB || 0); }
-                        if (valA < valB) return direction === 'asc' ? -1 : 1;
-                        if (valA > valB) return direction === 'asc' ? 1 : -1;
-                        return 0;
-                    });
-                }
-                
-                this.filteredAndSortedRecords = filtered;
-
-                if (pagination) {
-                    pagination.update(this.filteredAndSortedRecords.length);
-                }
-                
-                document.getElementById('portfolioTableBody').style.display = this.filteredAndSortedRecords.length > 0 ? 'table-row-group' : 'none';
-                document.getElementById('noRecordsMessage').style.display = this.filteredAndSortedRecords.length === 0 ? 'block' : 'none';
-
-                this.renderCurrentPage();
+            // Sıralama
+            if (this.sortBy.column) {
+                const { column, direction } = this.sortBy;
+                filtered.sort((a, b) => {
+                    let valA, valB;
+                    
+                    // Özel alanlar için sıralama
+                    if (column === 'title') {
+                        valA = a.title || a.brandText || '';
+                        valB = b.title || b.brandText || '';
+                    } else if (column === 'type' || column === 'recordType') {
+                        valA = a.ipType || '';
+                        valB = b.ipType || '';
+                    } else if (column === 'owners') {
+                        valA = a.applicants?.map(app => app.name).join(', ') || '';
+                        valB = b.applicants?.map(app => app.name).join(', ') || '';
+                    } else {
+                        valA = a[column] || '';
+                        valB = b[column] || '';
+                    }
+                    
+                    // Tarih alanları için özel işlem
+                    if (column.includes('Date')) {
+                        valA = new Date(valA || 0);
+                        valB = new Date(valB || 0);
+                    }
+                    
+                    if (valA < valB) return direction === 'asc' ? -1 : 1;
+                    if (valA > valB) return direction === 'asc' ? 1 : -1;
+                    return 0;
+                });
             }
+            
+            this.filteredAndSortedRecords = filtered;
+
+            if (pagination) {
+                pagination.update(this.filteredAndSortedRecords.length);
+            }
+            
+            document.getElementById('portfolioTableBody').style.display = this.filteredAndSortedRecords.length > 0 ? 'table-row-group' : 'none';
+            document.getElementById('noRecordsMessage').style.display = this.filteredAndSortedRecords.length === 0 ? 'block' : 'none';
+
+            this.renderCurrentPage();
+        }
             
             setupEventListeners() {
                 document.querySelectorAll('.tab-menu .tab-button').forEach(button => {
