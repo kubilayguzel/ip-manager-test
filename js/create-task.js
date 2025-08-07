@@ -1440,38 +1440,35 @@ handleIpRecordChange(recordId) {
             alert("Kişi kaydedilirken beklenmeyen bir hata oluştu.");
         }
     }
- checkFormCompleteness() {
+checkFormCompleteness() {
     const taskTypeId = document.getElementById('specificTaskType')?.value;
     const selectedTaskType = this.allTransactionTypes.find(type => type.id === taskTypeId);
-    
-    if (!selectedTaskType) {
-        const saveTaskBtn = document.getElementById('saveTaskBtn');
+    const saveTaskBtn = document.getElementById('saveTaskBtn');
+
+    if (!selectedTaskType || !saveTaskBtn) {
         if (saveTaskBtn) saveTaskBtn.disabled = true;
         return;
     }
 
+    const assignedTo = document.getElementById('assignedTo')?.value;
     let isComplete = false;
 
-    // Marka başvurusu için özel kontrol
     if (selectedTaskType.alias === 'Başvuru' && selectedTaskType.ipType === 'trademark') {
         const brandText = document.getElementById('brandExampleText')?.value?.trim();
-        const hasNiceClasses = getSelectedNiceClasses && getSelectedNiceClasses().length > 0;
+        const hasNiceClasses = typeof getSelectedNiceClasses === 'function' && getSelectedNiceClasses().length > 0;
         const hasApplicants = this.selectedApplicants && this.selectedApplicants.length > 0;
-        
-        isComplete = !!(brandText && hasNiceClasses && hasApplicants);
-    } 
-    // ✅ Diğer işlem tipleri için kontrol
-    else {
+
+        isComplete = !!(assignedTo && brandText && hasNiceClasses && hasApplicants);
+    } else {
         const title = document.getElementById('taskTitle')?.value?.trim();
-        const assignedTo = document.getElementById('assignedTo')?.value;
         const hasIpRecord = !!this.selectedIpRecord;
-        
-        isComplete = !!(title && assignedTo && hasIpRecord);
+
+        isComplete = !!(assignedTo && title && hasIpRecord);
     }
 
-    const saveTaskBtn = document.getElementById('saveTaskBtn');
-    if (saveTaskBtn) saveTaskBtn.disabled = !isComplete;
+    saveTaskBtn.disabled = !isComplete;
 }
+
 
     async uploadFileToStorage(file, path) {
         if (!file || !path) {
