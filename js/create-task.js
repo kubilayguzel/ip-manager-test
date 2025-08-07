@@ -1460,10 +1460,12 @@ checkFormCompleteness() {
 
         isComplete = !!(assignedTo && brandText && hasNiceClasses && hasApplicants);
     } else {
-        const title = document.getElementById('taskTitle')?.value?.trim();
+        // ✅ DÜZELTME: taskTitle için doğru kontrolü yap
+        const taskTitle = document.getElementById('taskTitle')?.value?.trim() || selectedTaskType.alias || selectedTaskType.name;
         const hasIpRecord = !!this.selectedIpRecord;
 
-        isComplete = !!(assignedTo && title && hasIpRecord);
+        // assignedTo, başlık ve portföy kaydı seçildiğinde tamamlandı olarak işaretle
+        isComplete = !!(assignedTo && taskTitle && hasIpRecord);
     }
 
     saveTaskBtn.disabled = !isComplete;
