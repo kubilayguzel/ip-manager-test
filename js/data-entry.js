@@ -313,28 +313,28 @@ class DataEntryModule {
                                     '</div>' +
                                 '</div>' +
                                 '<div class="col-lg-4">' +
-                                    '<div class="selected-classes-panel">' +
-                                        '<div class="panel-header">' +
-                                            '<div class="d-flex justify-content-between align-items-center">' +
-                                                '<div>' +
-                                                    '<h5 class="mb-0">' +
-                                                        '<i class="fas fa-check-circle mr-2"></i>' +
-                                                        'Seçilen Sınıflar' +
-                                                    '</h5>' +
-                                                    '<small class="text-white-50">Toplam: <span id="selectedClassCount">0</span></small>' +
-                                                '</div>' +
-                                                '<button type="button" class="btn btn-outline-light btn-sm" id="clearAllClassesBtn" style="display: none;" title="Tüm seçimleri temizle">' +
-                                                    '<i class="fas fa-trash"></i> Temizle' +
-                                                '</button>' +
-                                            '</div>' +
-                                        '</div>' +
-                                        '<div class="scrollable-list" id="selectedNiceClasses" style="max-height: 700px; overflow-y: auto; padding: 15px;">' +
-                                            '<div class="empty-state text-center py-4">' +
-                                                '<i class="fas fa-clipboard-list fa-2x text-muted mb-2"></i>' +
-                                                '<p class="text-muted">Henüz sınıf seçilmedi</p>' +
-                                            '</div>' +
-                                        '</div>' +
-                                    '</div>' +
+                                '    <div class="selected-classes-panel">' +
+                                '        <div class="panel-header">' +
+                                '            <div class="d-flex justify-content-between align-items-center">' +
+                                '                <div>' +
+                                '                    <h5 class="mb-0">' +
+                                '                        <i class="fas fa-check-circle mr-2"></i>' +
+                                '                        Seçilen Sınıflar' +
+                                '                    </h5>' +
+                                '                    <small class="text-white-50">Toplam: <span id="selectedClassCount">0</span></small>' +
+                                '                </div>' +
+                                '                <button type="button" class="btn btn-outline-light btn-sm" id="clearAllClassesBtn" style="display: none;" title="Tüm seçimleri temizle">' +
+                                '                    <i class="fas fa-trash"></i> Temizle' +
+                                '                </button>' +
+                                '            </div>' +
+                                '        </div>' +
+                                '        <div class="scrollable-list" id="selectedNiceClasses" style="max-height: 700px; overflow-y: auto; padding: 15px;">' +
+                                '            <div class="empty-state text-center py-4">' +
+                                '                <i class="fas fa-clipboard-list fa-2x text-muted mb-2"></i>' +
+                                '                <p class="text-muted">Henüz sınıf seçilmedi</p>' +
+                                '            </div>' +
+                                '        </div>' +
+                                '    </div>' +
                                 '</div>' +
                             '</div>' +
                         '</div>' +
@@ -478,6 +478,16 @@ class DataEntryModule {
         // Form input change listeners
         this.dynamicFormContainer.addEventListener('input', () => {
             this.updateSaveButtonState();
+        });
+        
+        // Temizle butonu için event listener
+        $(document).on('click', '#clearAllClassesBtn', () => {
+            if (typeof window.clearAllSelectedClasses === 'function') {
+                window.clearAllSelectedClasses();
+                console.log('✅ Tüm sınıflar temizlendi');
+            } else {
+                console.error('❌ clearAllSelectedClasses fonksiyonu bulunamadı.');
+            }
         });
     }
 
