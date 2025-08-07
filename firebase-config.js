@@ -220,7 +220,7 @@ export const authService = {
 export const ipRecordsService = {
     async createRecord(recordData) {
         try {
-            const docRef = await addDoc(collection(db, "iprecords"), {
+            const docRef = await addDoc(collection(db, "ipRecords"), {
                 ...recordData,
                 createdAt: serverTimestamp(),
                 updatedAt: serverTimestamp(),
