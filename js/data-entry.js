@@ -1017,103 +1017,100 @@ populateFormFields(recordData) {
     // Kaydet butonunun durumunu güncelle
     this.updateSaveButtonState();
 }
-        async handleSavePortfolio() {
-            const ipType = this.ipTypeSelect.value;
-            
-            if (!ipType) {
-                alert('Lütfen bir IP türü seçin');
-                return;
-            }
+ async handleSavePortfolio() {
+    const ipType = this.ipTypeSelect.value;
+    
+    if (!ipType) {
+        alert('Lütfen bir IP türü seçin');
+        return;
+    }
 
-            let portfolioData = {
-                ipType: ipType,
-                status: 'active',
-                createdAt: new Date().toISOString(),
-                recordOwnerType: this.recordOwnerTypeSelect.value,
-                details: {}
-            };
+    let portfolioData = {
+        ipType: ipType,
+        portfoyStatus: 'active', // ✅ Kayıt durumu için portfoyStatus
+        status: 'başvuru', // ✅ Başvuru durumu için status - default başvuru
+        createdAt: new Date().toISOString(),
+        recordOwnerType: this.recordOwnerTypeSelect.value,
+        details: {}
+    };
 
-            try {
-                if (ipType === 'trademark') {
-                    await this.saveTrademarkPortfolio(portfolioData);
-                } else if (ipType === 'patent') {
-                    await this.savePatentPortfolio(portfolioData);
-                } else if (ipType === 'design') {
-                    await this.saveDesignPortfolio(portfolioData);
-                }
-            } catch (error) {
-                console.error('Portföy kaydı kaydetme hatası:', error);
-                alert('Portföy kaydı kaydedilirken bir hata oluştu');
-            }
+    try {
+        if (ipType === 'trademark') {
+            await this.saveTrademarkPortfolio(portfolioData);
+        } else if (ipType === 'patent') {
+            await this.savePatentPortfolio(portfolioData);
+        } else if (ipType === 'design') {
+            await this.saveDesignPortfolio(portfolioData);
         }
+    } catch (error) {
+        console.error('Portföy kaydı kaydetme hatası:', error);
+        alert('Portföy kaydı kaydedilirken bir hata oluştu');
+    }
+}
+async saveTrademarkPortfolio(portfolioData) {
+    // Formdan marka bilgilerini topla
+    const brandText = document.getElementById('brandExampleText').value.trim();
+    const applicationNumber = document.getElementById('applicationNumber').value.trim();
+    const applicationDate = document.getElementById('applicationDate').value;
+    const registrationNumber = document.getElementById('registrationNumber').value.trim();
+    const registrationDate = document.getElementById('registrationDate').value;
+    const renewalDate = document.getElementById('renewalDate').value;
+    const description = document.getElementById('brandDescription').value.trim();
+    
+    // Nice sınıflarını al
+    const goodsAndServices = getSelectedNiceClasses();
+    
+    // Marka görselini Firebase Storage'a yükle
+    let brandImageUrl = null;
+    if (this.uploadedBrandImage && typeof this.uploadedBrandImage !== 'string') {
+        const imagePath = `brands/${Date.now()}_${this.uploadedBrandImage.name}`;
+        brandImageUrl = await this.uploadFileToStorage(this.uploadedBrandImage, imagePath);
+    } 
+    else if (typeof this.uploadedBrandImage === 'string') {
+        brandImageUrl = this.uploadedBrandImage;
+    }
 
-    // ✅ Düzeltilmiş saveTrademarkPortfolio fonksiyonu
-        async saveTrademarkPortfolio(portfolioData) {
-            // Formdan marka bilgilerini topla
-            const brandText = document.getElementById('brandExampleText').value.trim();
-            const applicationNumber = document.getElementById('applicationNumber').value.trim();
-            const applicationDate = document.getElementById('applicationDate').value;
-            const registrationNumber = document.getElementById('registrationNumber').value.trim();
-            const registrationDate = document.getElementById('registrationDate').value;
-            const renewalDate = document.getElementById('renewalDate').value;
-            const description = document.getElementById('brandDescription').value.trim();
-            
-            // Mal ve hizmet sınıflarını al (Nice Classification'dan)
-            // Bu fonksiyonun nice-classification.js dosyasında tanımlı olduğunu varsayıyoruz.
-            const goodsAndServices = getSelectedNiceClasses();
-            
-            // Marka görselini Firebase Storage'a yükle
-            let brandImageUrl = null;
-            if (this.uploadedBrandImage && typeof this.uploadedBrandImage !== 'string') {
-                const imagePath = `brands/${Date.now()}_${this.uploadedBrandImage.name}`;
-                brandImageUrl = await this.uploadFileToStorage(this.uploadedBrandImage, imagePath);
-            } 
-            // Mevcut bir görsel varsa, URL'ini koru
-            else if (typeof this.uploadedBrandImage === 'string') {
-                brandImageUrl = this.uploadedBrandImage;
-            }
+    // ✅ Güncellenen portföy verisi - iki status alanı
+    const dataToSave = {
+        title: brandText,
+        brandText: brandText,
+        ipType: 'trademark',
+        recordOwnerType: this.recordOwnerTypeSelect.value,
+        portfoyStatus: 'active', // Kayıt durumu (active/inactive)
+        status: 'başvuru', // Başvuru durumu (başvuru, tescilli, yenilendi vb.)
+        applicationNumber: applicationNumber || null,
+        applicationDate: applicationDate || null,
+        registrationNumber: registrationNumber || null,
+        registrationDate: registrationDate || null,
+        renewalDate: renewalDate || null,
+        description: description || null,
+        brandImageUrl: brandImageUrl,
+        goodsAndServices: goodsAndServices,
+        priorities: this.priorities,
+        applicants: this.selectedApplicants.map(p => ({
+            id: p.id,
+            name: p.name,
+            email: p.email || null
+        })),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+    };
+    
+    // Kayıt ID'si varsa güncelleme, yoksa yeni kayıt oluşturma
+    let result;
+    if (this.editingRecordId) {
+        result = await ipRecordsService.updateRecord(this.editingRecordId, dataToSave);
+    } else {
+        result = await ipRecordsService.createRecord(dataToSave);
+    }
 
-            // Portföy verisini oluştur
-            const dataToSave = {
-                title: brandText,
-                ipType: 'trademark', // ipType'ı doğrudan burada tanımlıyoruz
-                recordOwnerType: this.recordOwnerTypeSelect.value,
-                details: {
-                    brandText,
-                    applicationNumber: applicationNumber || null,
-                    applicationDate: applicationDate || null,
-                    registrationNumber: registrationNumber || null,
-                    registrationDate: registrationDate || null,
-                    renewalDate: renewalDate || null,
-                    description: description || null,
-                    brandImageUrl,
-                    goodsAndServices,
-                    priorities: this.priorities, // Rüçhan bilgilerini kaydet
-                    applicants: this.selectedApplicants.map(p => ({
-                        id: p.id,
-                        name: p.name,
-                        email: p.email || null
-                    }))
-                }
-            };
-            
-            // ✅ Düzeltme: Kayıt ID'si varsa güncelleme, yoksa yeni kayıt oluşturma
-            let result;
-            if (this.editingRecordId) {
-                result = await ipRecordsService.updateRecord(this.editingRecordId, dataToSave);
-            } else {
-                result = await ipRecordsService.createRecord(dataToSave);
-            }
-
-            if (result.success) {
-                alert('Marka portföy kaydı başarıyla ' + (this.editingRecordId ? 'güncellendi' : 'oluşturuldu') + '!');
-                // Başarılı işlem sonrası portföy sayfasına yönlendir
-                window.location.href = 'portfolio.html';
-            } else {
-                throw new Error(result.error);
-            }
-        }
-
+    if (result.success) {
+        alert('Marka portföy kaydı başarıyla ' + (this.editingRecordId ? 'güncellendi' : 'oluşturuldu') + '!');
+        window.location.href = 'portfolio.html';
+    } else {
+        throw new Error(result.error);
+    }
+}
     async savePatentPortfolio(portfolioData) {
         const patentTitle = document.getElementById('patentTitle').value.trim();
         const applicationNumber = document.getElementById('patentApplicationNumber').value.trim();
