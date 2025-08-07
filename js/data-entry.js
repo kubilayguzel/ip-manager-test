@@ -9,13 +9,12 @@ class DataEntryModule {
         this.ipTypeSelect = document.getElementById('ipTypeSelect');
         this.dynamicFormContainer = document.getElementById('dynamicFormContainer');
         this.saveBtn = document.getElementById('savePortfolioBtn');
-        
-        // State variables
         this.selectedApplicants = [];
         this.priorities = []; // Rüçhan bilgileri için
         this.isNiceInitialized = false;
         this.uploadedBrandImage = null;
         this.allPersons = [];
+        this.recordOwnerTypeSelect = document.getElementById('recordOwnerType');
     }
 
     async init() {
@@ -52,6 +51,11 @@ class DataEntryModule {
         if (this.saveBtn) {
             this.saveBtn.addEventListener('click', () => {
                 this.handleSavePortfolio();
+            });
+        }
+        if (this.recordOwnerTypeSelect) {
+            this.recordOwnerTypeSelect.addEventListener('change', () => {
+                this.updateSaveButtonState();
             });
         }
     }
@@ -479,7 +483,7 @@ class DataEntryModule {
         this.dynamicFormContainer.addEventListener('input', () => {
             this.updateSaveButtonState();
         });
-        
+
         // Temizle butonu için event listener
         $(document).on('click', '#clearAllClassesBtn', () => {
             if (typeof window.clearAllSelectedClasses === 'function') {
@@ -806,25 +810,32 @@ class DataEntryModule {
     }
 
     updateSaveButtonState() {
-        const ipType = this.ipTypeSelect.value;
-        let isComplete = false;
+    const ipType = this.ipTypeSelect.value;
+    const recordOwnerType = this.recordOwnerTypeSelect?.value;
+    let isComplete = false;
 
-        if (ipType === 'trademark') {
-            const brandText = document.getElementById('brandExampleText');
-            const hasApplicants = this.selectedApplicants.length > 0;
-            isComplete = brandText && brandText.value.trim() && hasApplicants;
-        } else if (ipType === 'patent') {
-            const patentTitle = document.getElementById('patentTitle');
-            isComplete = patentTitle && patentTitle.value.trim();
-        } else if (ipType === 'design') {
-            const designTitle = document.getElementById('designTitle');
-            isComplete = designTitle && designTitle.value.trim();
-        }
-
-        if (this.saveBtn) {
-            this.saveBtn.disabled = !isComplete;
-        }
+    if (!ipType || !recordOwnerType) {
+        this.saveBtn.disabled = true;
+        return;
     }
+
+    if (ipType === 'trademark') {
+        const brandText = document.getElementById('brandExampleText');
+        const hasApplicants = this.selectedApplicants.length > 0;
+        isComplete = brandText && brandText.value.trim() && hasApplicants;
+    } else if (ipType === 'patent') {
+        const patentTitle = document.getElementById('patentTitle');
+        isComplete = patentTitle && patentTitle.value.trim();
+    } else if (ipType === 'design') {
+        const designTitle = document.getElementById('designTitle');
+        isComplete = designTitle && designTitle.value.trim();
+    }
+
+    if (this.saveBtn) {
+        this.saveBtn.disabled = !isComplete;
+    }
+}
+
 
     showAddPersonModal() {
         const modal = document.getElementById('addPersonModal');
@@ -902,6 +913,7 @@ class DataEntryModule {
             ipType: ipType,
             status: 'active',
             createdAt: new Date().toISOString(),
+            recordOwnerType: this.recordOwnerTypeSelect.value,
             details: {}
         };
 
