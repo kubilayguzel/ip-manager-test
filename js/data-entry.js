@@ -1112,46 +1112,67 @@ async saveTrademarkPortfolio(portfolioData) {
     }
 }
     async savePatentPortfolio(portfolioData) {
-        const patentTitle = document.getElementById('patentTitle').value.trim();
-        const applicationNumber = document.getElementById('patentApplicationNumber').value.trim();
-        const description = document.getElementById('patentDescription').value.trim();
+    const patentTitle = document.getElementById('patentTitle').value.trim();
+    const applicationNumber = document.getElementById('patentApplicationNumber').value.trim();
+    const description = document.getElementById('patentDescription').value.trim();
 
-        portfolioData.title = patentTitle;
-        portfolioData.details = {
-            patentTitle,
-            applicationNumber: applicationNumber || null,
-            description: description || null
-        };
+    const dataToSave = {
+        title: patentTitle,
+        ipType: 'patent',
+        recordOwnerType: this.recordOwnerTypeSelect.value,
+        portfoyStatus: 'active', // ✅ Kayıt durumu
+        status: 'başvuru', // ✅ Başvuru durumu
+        applicationNumber: applicationNumber || null,
+        description: description || null,
+        applicants: this.selectedApplicants.map(p => ({
+            id: p.id,
+            name: p.name,
+            email: p.email || null
+        })),
+        priorities: this.priorities,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+    };
 
-        const result = await ipRecordsService.createRecord(portfolioData);
-        if (result.success) {
-            alert('Patent portföy kaydı başarıyla oluşturuldu!');
-            window.location.href = 'portfolio.html';
-        } else {
-            throw new Error(result.error);
-        }
+    const result = await ipRecordsService.createRecord(dataToSave);
+    if (result.success) {
+        alert('Patent portföy kaydı başarıyla oluşturuldu!');
+        window.location.href = 'portfolio.html';
+    } else {
+        throw new Error(result.error);
     }
+}
+async saveDesignPortfolio(portfolioData) {
+    const designTitle = document.getElementById('designTitle').value.trim();
+    const applicationNumber = document.getElementById('designApplicationNumber').value.trim();
+    const description = document.getElementById('designDescription').value.trim();
 
-    async saveDesignPortfolio(portfolioData) {
-        const designTitle = document.getElementById('designTitle').value.trim();
-        const applicationNumber = document.getElementById('designApplicationNumber').value.trim();
-        const description = document.getElementById('designDescription').value.trim();
+    const dataToSave = {
+        title: designTitle,
+        ipType: 'design',
+        recordOwnerType: this.recordOwnerTypeSelect.value,
+        portfoyStatus: 'active', // ✅ Kayıt durumu
+        status: 'başvuru', // ✅ Başvuru durumu
+        applicationNumber: applicationNumber || null,
+        description: description || null,
+        applicants: this.selectedApplicants.map(p => ({
+            id: p.id,
+            name: p.name,
+            email: p.email || null
+        })),
+        priorities: this.priorities,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+    };
 
-        portfolioData.title = designTitle;
-        portfolioData.details = {
-            designTitle,
-            applicationNumber: applicationNumber || null,
-            description: description || null
-        };
-
-        const result = await ipRecordsService.createRecord(portfolioData);
-        if (result.success) {
-            alert('Tasarım portföy kaydı başarıyla oluşturuldu!');
-            window.location.href = 'portfolio.html';
-        } else {
-            throw new Error(result.error);
-        }
+    const result = await ipRecordsService.createRecord(dataToSave);
+    if (result.success) {
+        alert('Tasarım portföy kaydı başarıyla oluşturuldu!');
+        window.location.href = 'portfolio.html';
+    } else {
+        throw new Error(result.error);
     }
+}
 }
 
 // Global fonksiyonlar
