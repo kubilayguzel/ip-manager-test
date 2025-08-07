@@ -357,14 +357,13 @@ async function loadClass35_5ModalContent() {
                 <div class="class-item" data-search-text="${(cls.classNumber + ' ' + cls.classTitle).toLowerCase()}">
                     <div class="class-header" data-class-number="${cls.classNumber}">
                         <div class="class-header-content">
-                            <span class="class-number">${cls.classNumber}</span>
+                            <i class="fas fa-chevron-down toggle-icon"></i> <span class="class-number">${cls.classNumber}</span>
                             <span class="class-title">${cls.classTitle}</span>
                         </div>
                         <div class="class-header-actions">
                             <button class="select-class-btn" data-class-number="${cls.classNumber}" title="Tüm sınıfı seç">
                                 <i class="fas fa-check"></i>
                             </button>
-                            <i class="fas fa-chevron-down toggle-icon"></i>
                         </div>
                     </div>
                     <div class="subclasses-container" id="modal-subclasses-${cls.classNumber}">`;
@@ -753,14 +752,13 @@ export async function initializeNiceClassification() {
                 <div class="class-item" data-search-text="${(c.classNumber + ' ' + c.classTitle).toLowerCase()}">
                     <div class="class-header" data-id="${c.classNumber}">
                         <div class="class-header-content">
-                            <span class="class-number">${c.classNumber}</span>
+                            <i class="fas fa-chevron-down toggle-icon"></i> <span class="class-number">${c.classNumber}</span>
                             <span class="class-title">${c.classTitle}</span>
                         </div>
                         <div class="class-header-actions">
                             <button class="select-class-btn" data-class-number="${c.classNumber}" title="Tüm sınıfı seç/kaldır">
                                 <i class="fas fa-check"></i>
                             </button>
-                            <i class="fas fa-chevron-down toggle-icon"></i>
                         </div>
                     </div>
                     <div class="subclasses-container" id="subclasses-${c.classNumber}">`;
