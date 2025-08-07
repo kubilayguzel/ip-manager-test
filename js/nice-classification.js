@@ -214,7 +214,6 @@ function openClass35_5Modal() {
         
         <div class="class-35-5-modal-body">
             <div class="row align-items-stretch">
-                <!-- Sol Panel - Mal Sınıfları (1-34) -->
                 <div class="col-lg-8">
                     <div class="classification-panel">
                         <div class="panel-header">
@@ -225,7 +224,6 @@ function openClass35_5Modal() {
                             <small class="text-white-50">35-5 hizmeti için uygun mal sınıflarını seçin</small>
                         </div>
                         
-                        <!-- Arama Kutusu -->
                         <div class="search-section">
                             <div class="input-group">
                                 <div class="input-group-prepend">
@@ -234,7 +232,7 @@ function openClass35_5Modal() {
                                     </span>
                                 </div>
                                 <input type="text" class="form-control" id="class35-5-search" 
-                                       placeholder="Mal sınıfı ara...">
+                                        placeholder="Mal sınıfı ara...">
                                 <div class="input-group-append">
                                     <button class="btn btn-outline-secondary" type="button" onclick="clearClass35_5Search()">
                                         <i class="fas fa-times"></i>
@@ -243,16 +241,14 @@ function openClass35_5Modal() {
                             </div>
                         </div>
 
-                        <!-- Sınıflar Listesi -->
                         <div class="classes-list" id="class35-5-list" 
-                             style="height: 450px; overflow-y: auto; background: #fafafa;">
+                                style="height: 450px; overflow-y: auto; background: #fafafa;">
                             <div class="loading-spinner text-center p-4">
                                 <div class="spinner-border text-primary"></div>
                                 <p class="mt-2 text-muted">Mal sınıfları yükleniyor...</p>
                             </div>
                         </div>
 
-                        <!-- 99. Özel Mal -->
                         <div class="custom-class-section">
                             <div class="d-flex align-items-center mb-2">
                                 <span class="badge badge-danger mr-2" style="font-size: 11px;">99</span>
@@ -260,8 +256,8 @@ function openClass35_5Modal() {
                             </div>
                             <div class="input-group">
                                 <textarea class="form-control" id="class35-5-custom-input" 
-                                       placeholder="Özel mal tanımınızı yazın..."
-                                       maxlength="1000" rows="2"></textarea>
+                                        placeholder="Özel mal tanımınızı yazın..."
+                                        maxlength="1000" rows="2"></textarea>
                                 <div class="input-group-append">
                                     <button class="btn btn-danger" type="button" id="class35-5-add-custom">
                                         <i class="fas fa-plus mr-1"></i>Ekle
@@ -275,7 +271,6 @@ function openClass35_5Modal() {
                     </div>
                 </div>
 
-                <!-- Sağ Panel - Seçilen Mallar -->
                 <div class="col-lg-4">
                     <div class="selected-classes-panel">
                         <div class="panel-header d-flex justify-content-between align-items-center">
@@ -284,6 +279,11 @@ function openClass35_5Modal() {
                                 Seçilen Mallar
                             </h5>
                             <span class="badge badge-light" id="class35-5-selected-count">0</span>
+                        </div>
+                        <div class="border-bottom p-2 d-flex justify-content-end">
+                            <button type="button" class="btn btn-sm btn-outline-danger" id="clearGoodsBtn">
+                                <i class="fas fa-trash-alt mr-1"></i>Temizle
+                            </button>
                         </div>
                         <div class="selected-classes-content" id="class35-5-selected-items">
                             <div class="empty-state">
@@ -299,9 +299,8 @@ function openClass35_5Modal() {
             </div>
         </div>
 
-        <!-- Footer body’nin DIŞINDA -->
         <div class="class-35-5-modal-footer">
-            <button type="button" class="btn btn-secondary" onclick="closeClass35_5Modal()">
+            <button type="button" class="btn btn-secondary" onclick="closeClass35_5Modal(true)">
                 <i class="fas fa-times mr-1"></i>İptal
             </button>
             <button type="button" class="btn btn-primary" id="class35-5-save-btn">
@@ -312,13 +311,8 @@ function openClass35_5Modal() {
 </div>
 `;
 
-    // Modal'ı DOM'a ekle
     document.body.insertAdjacentHTML('beforeend', modalHTML);
-    
-    // Modal'ı göster
     document.getElementById('class35-5-modal').style.display = 'flex';
-    
-    // Modal içeriğini yükle
     loadClass35_5ModalContent();
 }
 
@@ -402,7 +396,13 @@ function setupClass35_5ModalEvents() {
     const addCustomBtn = document.getElementById('class35-5-add-custom');
     const saveBtn = document.getElementById('class35-5-save-btn');
     const charCount = document.getElementById('class35-5-char-count');
-
+    
+    // YENİ EKLENDİ: Temizle butonu dinleyicisi
+    const clearBtn = document.getElementById('clearGoodsBtn');
+    if (clearBtn) {
+        clearBtn.addEventListener('click', clearClass35_5Selection);
+    }
+    
     // Karakter sayacı
     if (customInput && charCount) {
         customInput.addEventListener('input', (e) => {
@@ -708,6 +708,17 @@ function clearClass35_5Search() {
     if (searchInput) {
         searchInput.value = '';
         searchInput.dispatchEvent(new Event('input'));
+    }
+}
+function clearClass35_5Selection() {
+    try {
+        console.log('35-5 modal seçimleri temizleniyor...');
+        class35_5_modalSelectedItems = {}; // Seçimleri sıfırla
+        renderClass35_5Selected(); // Sağ paneli yeniden çiz
+        updateClass35_5VisualStates(); // Sol paneli yeniden çiz
+        console.log('✅ 35-5 modal seçimleri temizlendi.');
+    } catch (error) {
+        console.error('❌ 35-5 seçimlerini temizleme hatası:', error);
     }
 }
 
