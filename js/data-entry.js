@@ -15,7 +15,8 @@ class DataEntryModule {
         this.uploadedBrandImage = null;
         this.allPersons = [];
         this.recordOwnerTypeSelect = document.getElementById('recordOwnerType');
-        this.editingRecordId = null; 
+        this.editingRecordId = null;
+        this.currentIpType = null;
     }
 
     async init() {
