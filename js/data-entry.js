@@ -2,6 +2,7 @@
 import { initializeNiceClassification, getSelectedNiceClasses } from './nice-classification.js';
 import { personService, ipRecordsService, storage } from '../firebase-config.js';
 import { ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
+import { loadSharedLayout } from './layout-loader.js';
 
 class DataEntryModule {
     constructor() {
@@ -372,21 +373,21 @@ window.clearNiceSearch = function() {
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('🚀 Data Entry sayfası yükleniyor...');
     
-    // Layout'un yüklenmesini bekle
-    setTimeout(async () => {
-        try {
-            // Layout kontrol
-            const layoutPlaceholder = document.getElementById('layout-placeholder');
-            console.log('🔍 Layout placeholder:', layoutPlaceholder);
-            console.log('🔍 Layout içeriği:', layoutPlaceholder ? layoutPlaceholder.innerHTML.length : 'YOK');
-            
-            const dataEntry = new DataEntryModule();
-            await dataEntry.init();
-            console.log('✅ Data Entry Module başlatıldı');
-        } catch (error) {
-            console.error('❌ Data Entry Module başlatma hatası:', error);
-        }
-    }, 1000); // 1 saniye bekle
+    try {
+        // Önce layout'u yükle
+        console.log('📐 Layout yükleniyor...');
+        await loadSharedLayout();
+        console.log('✅ Layout yüklendi');
+        
+        // Sonra data entry modülünü başlat
+        console.log('📋 Data Entry Module başlatılıyor...');
+        const dataEntry = new DataEntryModule();
+        await dataEntry.init();
+        console.log('✅ Data Entry Module başlatıldı');
+        
+    } catch (error) {
+        console.error('❌ Sayfa yükleme hatası:', error);
+    }
 });
 
 export default DataEntryModule;
