@@ -372,15 +372,21 @@ window.clearNiceSearch = function() {
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('🚀 Data Entry sayfası yükleniyor...');
     
+    // Layout'un yüklenmesini bekle
     setTimeout(async () => {
         try {
+            // Layout kontrol
+            const layoutPlaceholder = document.getElementById('layout-placeholder');
+            console.log('🔍 Layout placeholder:', layoutPlaceholder);
+            console.log('🔍 Layout içeriği:', layoutPlaceholder ? layoutPlaceholder.innerHTML.length : 'YOK');
+            
             const dataEntry = new DataEntryModule();
             await dataEntry.init();
             console.log('✅ Data Entry Module başlatıldı');
         } catch (error) {
             console.error('❌ Data Entry Module başlatma hatası:', error);
         }
-    }, 500);
+    }, 1000); // 1 saniye bekle
 });
 
 export default DataEntryModule;
