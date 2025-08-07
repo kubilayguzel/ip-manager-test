@@ -25,7 +25,10 @@ class DataEntryModule {
             await this.loadAllData();
             this.setupEventListeners();
             this.setupModalCloseButtons();
-            await this.loadRecordForEditing(); 
+
+            // ✅ Yeni: URL'den kayıt ID'sini kontrol et ve kaydı yükle
+            await this.loadRecordForEditing();
+
         } catch (error) {
             console.error('Data Entry Module init hatası:', error);
         }
