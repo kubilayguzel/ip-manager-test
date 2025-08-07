@@ -934,88 +934,150 @@ async loadRecordForEditing() {
 }
 
     // ✅ Eklenecek metod: populateFormFields
+// ✅ Yeni veri yapısına uygun populateFormFields fonksiyonu
 populateFormFields(recordData) {
     if (!recordData) return;
 
+    console.log('🔄 Form alanları doldruluyor:', recordData);
+
     // IP türünü ayarla ve formu yeniden render et
-    this.ipTypeSelect.value = recordData.ipType || 'trademark';
+    const ipType = recordData.type || recordData.ipType; // Yeni yapıda 'type' alanı
+    this.ipTypeSelect.value = ipType || 'trademark';
     this.currentIpType = this.ipTypeSelect.value;
     this.handleIPTypeChange(this.currentIpType);
 
-    // Ortak alanları doldur
-    const formTitle = document.getElementById('formTitle');
-    if (formTitle) formTitle.textContent = 'Kayıt Düzenle';
+    // Record Owner Type
+    if (this.recordOwnerTypeSelect && recordData.recordOwnerType) {
+        this.recordOwnerTypeSelect.value = recordData.recordOwnerType;
+    }
 
-    const applicationNumber = document.getElementById('applicationNumber');
-    if (applicationNumber) applicationNumber.value = recordData.details?.applicationNumber || '';
+    // Formu render ettikten sonra alanları doldurmak için setTimeout kullan
+    setTimeout(() => {
+        // Ortak alanları doldur (yeni veri yapısından)
+        const formTitle = document.getElementById('formTitle');
+        if (formTitle) formTitle.textContent = 'Kayıt Düzenle';
 
-    const applicationDate = document.getElementById('applicationDate');
-    if (applicationDate) applicationDate.value = recordData.details?.applicationDate || '';
+        // ✅ Yeni yapıya göre - ana seviyeden al
+        const applicationNumber = document.getElementById('applicationNumber');
+        if (applicationNumber) applicationNumber.value = recordData.applicationNumber || '';
 
-    const registrationNumber = document.getElementById('registrationNumber');
-    if (registrationNumber) registrationNumber.value = recordData.details?.registrationNumber || '';
+        const applicationDate = document.getElementById('applicationDate');
+        if (applicationDate) applicationDate.value = recordData.applicationDate || '';
 
-    const registrationDate = document.getElementById('registrationDate');
-    if (registrationDate) registrationDate.value = recordData.details?.registrationDate || '';
-    
-    const renewalDate = document.getElementById('renewalDate');
-    if (renewalDate) renewalDate.value = recordData.details?.renewalDate || '';
+        const registrationNumber = document.getElementById('registrationNumber');
+        if (registrationNumber) registrationNumber.value = recordData.registrationNumber || '';
 
-    // Marka özel alanları
-    if (this.currentIpType === 'trademark' && recordData.details) {
-        const brandText = document.getElementById('brandExampleText');
-        if (brandText) brandText.value = recordData.details.brandText || '';
+        const registrationDate = document.getElementById('registrationDate');
+        if (registrationDate) registrationDate.value = recordData.registrationDate || '';
+        
+        const renewalDate = document.getElementById('renewalDate');
+        if (renewalDate) renewalDate.value = recordData.renewalDate || '';
 
-        // Marka görseli
-        const imagePreview = document.getElementById('brandExamplePreview');
-        if (imagePreview && recordData.details.brandImageUrl) {
-            imagePreview.src = recordData.details.brandImageUrl;
-            document.getElementById('brandExamplePreviewContainer').style.display = 'block';
-            this.uploadedBrandImage = recordData.details.brandImageUrl; // Mevcut görseli değişkene kaydet
+        // Marka özel alanları
+        if (this.currentIpType === 'trademark') {
+            // ✅ Yeni yapıya göre - brandText ana seviyede
+            const brandText = document.getElementById('brandExampleText');
+            if (brandText) brandText.value = recordData.title || recordData.brandText || '';
+
+            // ✅ Açıklama ana seviyeden
+            const description = document.getElementById('brandDescription');
+            if (description) description.value = recordData.description || '';
+
+            // ✅ Marka görseli - brandImageUrl ana seviyede
+            if (recordData.brandImageUrl) {
+                this.uploadedBrandImage = recordData.brandImageUrl; // String olarak sakla
+                
+                const imagePreview = document.getElementById('brandExamplePreview');
+                if (imagePreview) {
+                    imagePreview.src = recordData.brandImageUrl;
+                    imagePreview.style.display = 'block';
+                }
+                
+                const previewContainer = document.getElementById('brandExamplePreviewContainer');
+                if (previewContainer) previewContainer.style.display = 'block';
+            }
+
+            // ✅ Nice sınıfları - goodsAndServices ana seviyede
+            if (recordData.goodsAndServices && recordData.goodsAndServices.length > 0) {
+                // Nice classification'ı initialize et ve seç
+                if (typeof setSelectedNiceClasses === 'function') {
+                    console.log('🎯 Nice sınıfları ayarlanıyor:', recordData.goodsAndServices);
+                    setSelectedNiceClasses(recordData.goodsAndServices);
+                }
+            }
+
+            // ✅ Başvuru sahipleri - applicants ana seviyede
+            if (recordData.applicants && recordData.applicants.length > 0) {
+                this.selectedApplicants = recordData.applicants.map(applicant => ({
+                    id: applicant.id,
+                    name: applicant.name,
+                    email: applicant.email || ''
+                }));
+                this.renderSelectedApplicants();
+                console.log('👥 Başvuru sahipleri yüklendi:', this.selectedApplicants);
+            }
+
+            // ✅ Rüçhan bilgileri - priorities ana seviyede  
+            if (recordData.priorities && recordData.priorities.length > 0) {
+                this.priorities = recordData.priorities;
+                this.renderPriorities();
+                console.log('🏆 Rüçhan bilgileri yüklendi:', this.priorities);
+            }
         }
 
-        // Başvuru sahiplerini yükle
-        this.selectedApplicants = recordData.details.applicants || [];
-        this.renderSelectedApplicants();
+        // Patent özel alanları
+        else if (this.currentIpType === 'patent') {
+            // ✅ Patent için title ana seviyede
+            const patentTitle = document.getElementById('patentTitle');
+            if (patentTitle) patentTitle.value = recordData.title || '';
 
-        // Rüçhanları yükle
-        this.priorities = recordData.details.priorities || [];
-        this.renderPriorities();
+            const patentApplicationNumber = document.getElementById('patentApplicationNumber');
+            if (patentApplicationNumber) patentApplicationNumber.value = recordData.applicationNumber || '';
 
-        // Nice sınıflarını yükle (nice-classification.js'deki fonksiyonu çağır)
-        const niceClasses = recordData.details.goodsAndServices || [];
-        if (niceClasses.length > 0) { setSelectedNiceClasses(niceClasses);
+            const patentDescription = document.getElementById('patentDescription');
+            if (patentDescription) patentDescription.value = recordData.description || '';
+
+            // Başvuru sahipleri ve rüçhan bilgileri patent için de
+            if (recordData.applicants && recordData.applicants.length > 0) {
+                this.selectedApplicants = recordData.applicants;
+                this.renderSelectedApplicants();
+            }
+
+            if (recordData.priorities && recordData.priorities.length > 0) {
+                this.priorities = recordData.priorities;
+                this.renderPriorities();
+            }
         }
-    }
-    // Patent özel alanları
-    else if (this.currentIpType === 'patent' && recordData.details) {
-        const patentTitle = document.getElementById('patentTitle');
-        if (patentTitle) patentTitle.value = recordData.details.patentTitle || '';
 
-        const patentApplicationNumber = document.getElementById('patentApplicationNumber');
-        if (patentApplicationNumber) patentApplicationNumber.value = recordData.details.applicationNumber || '';
+        // Tasarım özel alanları
+        else if (this.currentIpType === 'design') {
+            // ✅ Tasarım için title ana seviyede
+            const designTitle = document.getElementById('designTitle');
+            if (designTitle) designTitle.value = recordData.title || '';
 
-        const patentDescription = document.getElementById('patentDescription');
-        if (patentDescription) patentDescription.value = recordData.details.description || '';
-    }
-    // Tasarım özel alanları
-    else if (this.currentIpType === 'design' && recordData.details) {
-        const designTitle = document.getElementById('designTitle');
-        if (designTitle) designTitle.value = recordData.details.designTitle || '';
+            const designApplicationNumber = document.getElementById('designApplicationNumber');
+            if (designApplicationNumber) designApplicationNumber.value = recordData.applicationNumber || '';
 
-        const designApplicationNumber = document.getElementById('designApplicationNumber');
-        if (designApplicationNumber) designApplicationNumber.value = recordData.details.applicationNumber || '';
+            const designDescription = document.getElementById('designDescription');
+            if (designDescription) designDescription.value = recordData.description || '';
 
-        const designDescription = document.getElementById('designDescription');
-        if (designDescription) designDescription.value = recordData.details.description || '';
-    }
-    
-    // `recordOwnerType` alanını doldur
-    const recordOwnerTypeSelect = document.getElementById('recordOwnerType');
-    if (recordOwnerTypeSelect) recordOwnerTypeSelect.value = recordData.recordOwnerType || '';
-    
-    // Kaydet butonunun durumunu güncelle
-    this.updateSaveButtonState();
+            // Başvuru sahipleri ve rüçhan bilgileri tasarım için de
+            if (recordData.applicants && recordData.applicants.length > 0) {
+                this.selectedApplicants = recordData.applicants;
+                this.renderSelectedApplicants();
+            }
+
+            if (recordData.priorities && recordData.priorities.length > 0) {
+                this.priorities = recordData.priorities;
+                this.renderPriorities();
+            }
+        }
+
+        // Kaydet butonunun durumunu güncelle
+        this.updateSaveButtonState();
+        
+        console.log('✅ Form alanları başarıyla dolduruldu');
+    }, 500); // Form render edilmesini bekle
 }
  async handleSavePortfolio() {
     const ipType = this.ipTypeSelect.value;
