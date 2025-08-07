@@ -50,6 +50,43 @@ function renderSelectedClasses() {
     container.innerHTML = html;
 }
 
+export function setSelectedNiceClasses(classes) {
+    // Mevcut tüm seçilmiş sınıfları temizle
+    clearAllSelectedClasses();
+
+    classes.forEach(classString => {
+        // Gelen string'i (örn: "(1-1) Kimyasallar") parçala
+        const match = classString.match(/^\((\d+-\d+)\)\s*(.*)$/);
+        if (match) {
+            const code = match[1];
+            const text = match[2];
+            const parts = code.split('-');
+            const classNum = parts[0];
+            
+            // Eğer 35-5 özel bir durumsa, onu ayrı işle
+            if (code === '35-5') {
+                // Şimdilik sadece ana 35-5 öğesini seçili yapalım.
+                selectedClasses['35-5'] = { classNum: '35', text: 'Müşterilerin malları' };
+            } else {
+                // Diğer sınıfları seçilmiş olarak işaretle
+                selectedClasses[code] = { classNum, text };
+            }
+        } else {
+            // Eğer string formatı eşleşmezse (örn. özel sınıf 99)
+            const customMatch = classString.match(/^\(99\)\s*(.*)$/);
+            if (customMatch) {
+                const text = customMatch[1];
+                const code = `99-${Date.now()}`; // Yeni bir key oluştur
+                selectedClasses[code] = { classNum: '99', text };
+            }
+        }
+    });
+
+    // Arayüzü güncelle
+    renderSelectedClasses();
+    updateVisualStates();
+}
+
 function toggleAccordion(id) {
     const el = document.getElementById(`subclasses-${id}`);
     if (!el) return;
