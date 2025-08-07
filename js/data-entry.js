@@ -220,6 +220,21 @@ class DataEntryModule {
                                             '<!-- Nice classification sınıfları buraya yüklenecek -->' +
                                         '</div>' +
                                     '</div>' +
+                                    '<!-- Özel Mal/Hizmet Tanımı - Liste altında -->' +
+                                    '<div class="custom-class-frame">' +
+                                        '<div class="custom-class-section">' +
+                                            '<label class="form-label">Özel Mal/Hizmet Tanımı</label>' +
+                                            '<textarea id="customClassInput" class="form-control" rows="3" placeholder="Standart sınıflarda olmayan özel mal/hizmetlerinizi buraya yazabilirsiniz..."></textarea>' +
+                                            '<div class="d-flex justify-content-between align-items-center mt-2">' +
+                                                '<small class="text-muted">' +
+                                                    '<span id="customClassCharCount">0</span>/500 karakter' +
+                                                '</small>' +
+                                                '<button type="button" class="btn btn-warning btn-sm" id="addCustomClassBtn">' +
+                                                    '<i class="fas fa-plus mr-1"></i>Ekle' +
+                                                '</button>' +
+                                            '</div>' +
+                                        '</div>' +
+                                    '</div>' +
                                 '</div>' +
                                 '<div class="col-lg-4">' +
                                     '<div class="selected-classes-panel">' +
@@ -234,20 +249,6 @@ class DataEntryModule {
                                             '<div class="empty-state text-center py-4">' +
                                                 '<i class="fas fa-clipboard-list fa-2x text-muted mb-2"></i>' +
                                                 '<p class="text-muted">Henüz sınıf seçilmedi</p>' +
-                                            '</div>' +
-                                        '</div>' +
-                                        '<div class="custom-class-frame">' +
-                                            '<div class="custom-class-section">' +
-                                                '<label class="form-label">Özel Mal/Hizmet Tanımı</label>' +
-                                                '<textarea id="customClassInput" class="form-control" rows="3" placeholder="Standart sınıflarda olmayan özel mal/hizmetlerinizi buraya yazabilirsiniz..."></textarea>' +
-                                                '<div class="d-flex justify-content-between align-items-center mt-2">' +
-                                                    '<small class="text-muted">' +
-                                                        '<span id="customClassCharCount">0</span>/500 karakter' +
-                                                    '</small>' +
-                                                    '<button type="button" class="btn btn-warning btn-sm" id="addCustomClassBtn">' +
-                                                        '<i class="fas fa-plus mr-1"></i>Ekle' +
-                                                    '</button>' +
-                                                '</div>' +
                                             '</div>' +
                                         '</div>' +
                                     '</div>' +
