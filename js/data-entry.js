@@ -525,11 +525,30 @@ class DataEntryModule {
                     // clearAllSelectedClasses fonksiyonu nice-classification.js'de tanımlı
                     if (window.clearAllSelectedClasses) {
                         window.clearAllSelectedClasses();
-                        clearBtn.style.display = 'none'; // Butonu gizle
                         console.log('✅ Tüm sınıflar temizlendi');
                     }
                 }
             });
+        }
+
+        // MutationObserver ile selectedClassCount'u izle
+        const countBadge = document.getElementById('selectedClassCount');
+        if (countBadge) {
+            const observer = new MutationObserver(() => {
+                this.updateClearButtonVisibility();
+            });
+            observer.observe(countBadge, { childList: true, characterData: true, subtree: true });
+        }
+    }
+
+    updateClearButtonVisibility() {
+        const clearBtn = document.getElementById('clearAllClassesBtn');
+        const countBadge = document.getElementById('selectedClassCount');
+        
+        if (clearBtn && countBadge) {
+            const count = parseInt(countBadge.textContent) || 0;
+            clearBtn.style.display = count > 0 ? 'inline-block' : 'none';
+            console.log('🔄 Temizle butonu güncellendi, seçim sayısı:', count);
         }
     }
 
@@ -932,7 +951,7 @@ class DataEntryModule {
         if (result.success) {
             alert('Marka portföy kaydı başarıyla oluşturuldu!');
             // Portfolio management sayfası yoksa ana sayfaya yönlendir
-            window.location.href = 'portfolio.html';
+            window.location.href = 'index.html'; // veya 'dashboard.html'
         } else {
             throw new Error(result.error);
         }
@@ -953,7 +972,7 @@ class DataEntryModule {
         const result = await ipRecordsService.createRecord(portfolioData);
         if (result.success) {
             alert('Patent portföy kaydı başarıyla oluşturuldu!');
-            window.location.href = 'portfolio.html';
+            window.location.href = 'index.html';
         } else {
             throw new Error(result.error);
         }
@@ -974,7 +993,7 @@ class DataEntryModule {
         const result = await ipRecordsService.createRecord(portfolioData);
         if (result.success) {
             alert('Tasarım portföy kaydı başarıyla oluşturuldu!');
-            window.location.href = 'portfolio.html';
+            window.location.href = 'index.html';
         } else {
             throw new Error(result.error);
         }
@@ -1002,9 +1021,14 @@ window.updateClearButton = function() {
     }
 };
 
-// Sayfa yüklendiğinde nice classification render edildiğinde bu fonksiyonu çağır
-window.addEventListener('niceClassificationRendered', () => {
-    window.updateClearButton();
+// Nice Classification render'ından sonra çağrılacak
+window.addEventListener('load', () => {
+    // Interval ile temizle butonunu kontrol et
+    setInterval(() => {
+        if (window.updateClearButton) {
+            window.updateClearButton();
+        }
+    }, 1000); // Her saniye kontrol et
 });
 
 // Sayfa yüklendiğinde modülü başlat
