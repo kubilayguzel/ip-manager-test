@@ -568,38 +568,38 @@
                     row.dataset.recordId = record.id;
                     row.className = `record-status-${record.status || 'active'}`;
 
-                    // Firebase yapısından applicants
+                    // Firebase yapısına uygun alanlar
                     const ownerNames = record.applicants?.map(a => a.name).join(', ') || 'Belirtilmemiş';
                     const isChecked = this.selectedRecords.has(record.id) ? 'checked' : '';
                     
-                    // Firebase'den brandImageUrl
+                    // Marka görseli
                     const imageHtml = record.ipType === 'trademark' && record.brandImageUrl 
                         ? `<div class="trademark-image-wrapper"><img src="${record.brandImageUrl}" alt="Marka Görseli" class="trademark-image-thumbnail"></div>` 
                         : '-';
 
-                    // Durum metinleri - Firebase'den status
-                    const statusText = record.status === 'active' ? 'Aktif' : (record.status || '-');
-                    const recordStatusText = statusText; // Aynı alan
-                    
-                    // IP türü - Firebase'den ipType  
-                    const recordTypeText = record.ipType === 'trademark' ? 'Marka' : (record.ipType === 'patent' ? 'Patent' : (record.ipType === 'design' ? 'Tasarım' : (record.ipType || '-')));
-                    const typeText = recordTypeText; // Aynı alan
+                    // IP türü görüntüleme
+                    const ipTypeDisplay = record.ipType === 'trademark' ? 'Marka' : 
+                                        record.ipType === 'patent' ? 'Patent' : 
+                                        record.ipType === 'design' ? 'Tasarım' : 
+                                        (record.ipType || '-');
 
-                    // Firebase yapısından title ve brandText
+                    // Durum görüntüleme
+                    const statusDisplay = record.status === 'active' ? 'Aktif' : (record.status || '-');
+
+                    // Başlık
                     const title = record.title || record.brandText || '-';
-                    const applicationDate = record.applicationDate;
-                    const applicationNumber = record.applicationNumber;
 
+                    // KOLON SIRASI: initialRenderTableStructure ile tam eşleşmeli
                     row.innerHTML = `
                         <td><input type="checkbox" ${isChecked} onchange="portfolioModule.handleRecordSelection('${record.id}', this.checked)"></td>
-                        <td>${recordTypeText}</td>
-                        <td>${typeText}</td>
+                        <td>${ipTypeDisplay}</td>
+                        <td>${ipTypeDisplay}</td>
                         <td title="${title}">${title}</td>
                         <td>${imageHtml}</td>
-                        <td>${applicationNumber || '-'}</td>
-                        <td>${applicationDate ? new Date(applicationDate).toLocaleDateString('tr-TR') : '-'}</td>
-                        <td><span class="application-status-badge ${record.status || 'active'}">${statusText}</span></td>
-                        <td><span class="record-active-status-badge ${record.status || 'active'}">${recordStatusText}</span></td>
+                        <td>${record.applicationNumber || '-'}</td>
+                        <td>${record.applicationDate ? new Date(record.applicationDate).toLocaleDateString('tr-TR') : '-'}</td>
+                        <td><span class="application-status-badge ${record.status || 'active'}">${statusDisplay}</span></td>
+                        <td><span class="record-active-status-badge ${record.status || 'active'}">${statusDisplay}</span></td>
                         <td title="${ownerNames}">${ownerNames}</td>
                         <td>
                             <button class="action-btn view-btn" data-id="${record.id}">Detay</button>
@@ -1130,48 +1130,51 @@
             this.toggleRecordSelection(recordId, isChecked);
         }
             
-            initialRenderTableStructure() {
-                const headerRow = document.getElementById('portfolioTableHeaderRow');
-                const filterRow = document.getElementById('portfolioTableFilterRow');
-                headerRow.innerHTML = ''; filterRow.innerHTML = '';
+        initialRenderTableStructure() {
+            const headerRow = document.getElementById('portfolioTableHeaderRow');
+            const filterRow = document.getElementById('portfolioTableFilterRow');
+            headerRow.innerHTML = ''; 
+            filterRow.innerHTML = '';
 
-                const columns = [
-                    { key: 'selection', label: '', sortable: false, isCheckbox: true, width: '40px' },
-                    { key: 'recordType', label: 'Kayıt Tipi', sortable: true, width: '100px' },
-                    { key: 'type', label: 'Kayıt Türü', sortable: true, width: '100px' },
-                    { key: 'title', label: 'Başlık', sortable: true, width: '200px' },
-                    { key: 'trademarkImage', label: 'Görsel', sortable: false, width: '80px' },
-                    { key: 'applicationNumber', label: 'Başvuru No', sortable: true, width: '120px' },
-                    { key: 'applicationDate', label: 'Başvuru Tarihi', sortable: true, width: '120px' },
-                    { key: 'status', label: 'Başvuru Durumu', sortable: true, width: '120px' },
-                    { key: 'recordStatus', label: 'Kayıt Durumu', sortable: true, width: '110px' },
-                    { key: 'owners', label: 'Hak Sahipleri', sortable: true, width: '200px' },
-                    { key: 'actions', label: 'İşlemler', sortable: false, width: '250px' }
-                ];
+            const columns = [
+                { key: 'selection', label: '', sortable: false, isCheckbox: true, width: '40px' },
+                { key: 'ipType', label: 'Kayıt Tipi', sortable: true, width: '100px' },
+                { key: 'ipType', label: 'Kayıt Türü', sortable: true, width: '100px' },
+                { key: 'title', label: 'Başlık', sortable: true, width: '200px' },
+                { key: 'brandImage', label: 'Görsel', sortable: false, width: '80px' },
+                { key: 'applicationNumber', label: 'Başvuru No', sortable: true, width: '120px' },
+                { key: 'applicationDate', label: 'Başvuru Tarihi', sortable: true, width: '120px' },
+                { key: 'status', label: 'Başvuru Durumu', sortable: true, width: '120px' },
+                { key: 'status', label: 'Kayıt Durumu', sortable: true, width: '110px' },
+                { key: 'applicants', label: 'Hak Sahipleri', sortable: true, width: '200px' },
+                { key: 'actions', label: 'İşlemler', sortable: false, width: '250px' }
+            ];
 
-                columns.forEach(col => {
-                    const th = document.createElement('th');
-                    th.style.width = col.width;
-                    if (col.sortable) {
-                        th.className = 'sortable-header inactive';
-                        th.dataset.column = col.key;
-                    }
-                    th.innerHTML = col.isCheckbox ? `<input type="checkbox" id="selectAllCheckbox">` : col.label;
+            columns.forEach(col => {
+                const th = document.createElement('th');
+                th.style.width = col.width;
+                if (col.sortable) {
+                    th.className = 'sortable-header inactive';
+                    th.dataset.column = col.key;
+                }
+                th.innerHTML = col.isCheckbox ? 
+                    `<input type="checkbox" id="selectAllCheckbox">` : col.label;
 
-                    const thFilter = document.createElement('th');
-                    if (col.sortable) {
-                        thFilter.innerHTML = `<input type="text" class="column-filter" data-column="${col.key}" placeholder="${col.label} ara...">`;
-                    }
-                    
-                    if ((col.key === 'type' && this.activeTypeFilter === 'thirdParty') || (col.key === 'trademarkImage' && this.activeTypeFilter !== 'trademark')) {
-                        th.style.display = 'none';
-                        thFilter.style.display = 'none';
-                    }
+                const thFilter = document.createElement('th');
+                if (col.sortable && !col.isCheckbox) {
+                    thFilter.innerHTML = `<input type="text" class="column-filter" data-column="${col.key}" placeholder="${col.label} ara...">`;
+                }
+                
+                // Görsel kolonu sadece trademark sekmesinde göster
+                if (col.key === 'brandImage' && this.activeTypeFilter !== 'trademark' && this.activeTypeFilter !== 'all') {
+                    th.style.display = 'none';
+                    thFilter.style.display = 'none';
+                }
 
-                    headerRow.appendChild(th);
-                    filterRow.appendChild(thFilter);
-                });
-            }
+                headerRow.appendChild(th);
+                filterRow.appendChild(thFilter);
+            });
+        }
             
             async showRecordDetailModal(recordId) {
                 const modal = document.getElementById('recordDetailModal');
