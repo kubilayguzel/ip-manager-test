@@ -563,56 +563,78 @@
                     const currentPageData = pagination.getCurrentPageData(this.filteredAndSortedRecords);
                     const fragment = document.createDocumentFragment();
 
-                    currentPageData.forEach(record => {
-                        const row = document.createElement('tr');
-                        row.dataset.recordId = record.id;
-                        row.className = `record-status-${record.status || 'active'}`;
+currentPageData.forEach(record => {
+        console.log('🔍 İşlenen kayıt:', record);
 
-                        const isChecked = this.selectedRecords.has(record.id) ? 'checked' : '';
-                        
-                        // Kayıt Durumu - Türkçe (status)
-                        const portfoyStatusDisplay = record.portfoyStatus === 'active' ? 'Aktif' : 'Pasif';
+        const row = document.createElement('tr');
+        row.dataset.recordId = record.id;
+        row.className = `record-status-${record.portfoyStatus || 'active'}`;
 
-                        // Kayıt Tipi - Türkçe (ipType)
-                        const ipTypeDisplay = record.ipType === 'trademark' ? 'Marka' : 
-                                            record.ipType === 'patent' ? 'Patent' : 
-                                            record.ipType === 'design' ? 'Tasarım' : 
-                                            (record.ipType || '-');
+        const isChecked = this.selectedRecords.has(record.id) ? 'checked' : '';
+        
+        // 1. Kayıt Durumu - portfoyStatus
+        const portfoyStatusDisplay = record.portfoyStatus === 'active' ? 'Aktif' : 
+                                    record.portfoyStatus === 'inactive' ? 'Pasif' : 
+                                    'Aktif';
 
-                        // M/T/B Adı (title)
-                        const title = record.title || record.brandText || '-';
+        // 2. Kayıt Tipi - type alanı
+        const ipTypeDisplay = record.type === 'trademark' ? 'Marka' : 
+                             record.type === 'patent' ? 'Patent' : 
+                             record.type === 'design' ? 'Tasarım' : 
+                             (record.type || '-');
 
-                        // Marka görseli (sadece marka için)
-                        const imageHtml = record.ipType === 'trademark' && record.brandImageUrl 
-                            ? `<div class="trademark-image-wrapper"><img src="${record.brandImageUrl}" alt="Marka Görseli" class="trademark-image-thumbnail"></div>` 
-                            : '-';
+        // 3. M/T/B Adı - title
+        const title = record.title || '-';
 
-                        // Başvuru Sahipleri - Türkçe (applicants)
-                        const applicantsDisplay = record.applicants?.map(a => a.name).join(', ') || 'Belirtilmemiş';
+        // 4. Marka görseli - brandImageUrl
+        const imageHtml = record.type === 'trademark' && record.brandImageUrl 
+            ? `<div class="trademark-image-wrapper"><img src="${record.brandImageUrl}" alt="Marka Görseli" class="trademark-image-thumbnail"></div>` 
+            : '-';
 
-                        // KOLON SIRASI: Kolon yapısıyla tam eşleşmeli
-                        row.innerHTML = `
-                                <td><input type="checkbox" ${isChecked} onchange="portfolioModule.handleRecordSelection('${record.id}', this.checked)"></td>
-                                <td><span class="record-active-status-badge ${record.portfoyStatus || 'active'}">${portfoyStatusDisplay}</span></td>
-                                <td>${ipTypeDisplay}</td>
-                                <td title="${title}">${title}</td>
-                                <td style="${this.activeTypeFilter === 'all' ? 'display: none;' : ''}">${imageHtml}</td>
-                                <td>${record.applicationNumber || '-'}</td>
-                                <td>${record.applicationDate ? new Date(record.applicationDate).toLocaleDateString('tr-TR') : '-'}</td>
-                                <td>${record.status || '-'}</td>
-                                <td title="${applicantsDisplay}">${applicantsDisplay}</td>
-                                <td>
-                                    <button class="action-btn view-btn" data-id="${record.id}">Detay</button>
-                                    <button class="action-btn edit-btn" data-id="${record.id}">Düzenle</button>
-                                    <button class="action-btn delete-btn" data-id="${record.id}">Sil</button>
-                                </td>
-                            `;
-                        }
-                        
-                        fragment.appendChild(row);
-                    });
-                    tableBody.appendChild(fragment);
-                }
+        // 5. Başvuru No - applicationNumber
+        const applicationNumber = record.applicationNumber || '-';
+
+        // 6. Başvuru Tarihi - applicationDate
+        const applicationDateDisplay = record.applicationDate ? 
+            new Date(record.applicationDate).toLocaleDateString('tr-TR') : '-';
+
+        // 7. Başvuru Durumu - status (Türkçe çeviri)
+        const statusDisplay = record.status === 'başvuru' ? 'Başvuru' :
+                             record.status === 'application_filed' ? 'Başvuru Yapıldı' :
+                             record.status === 'tescilli' ? 'Tescilli' :
+                             record.status === 'registered' ? 'Tescilli' :
+                             record.status === 'yenilendi' ? 'Yenilendi' :
+                             record.status === 'renewed' ? 'Yenilendi' :
+                             record.status === 'hükümsüz' ? 'Hükümsüz' :
+                             record.status === 'invalid' ? 'Hükümsüz' :
+                             record.status === 'itiraz edildi' ? 'İtiraz Edildi' :
+                             record.status === 'opposed' ? 'İtiraz Edildi' :
+                             (record.status || '-');
+
+        // 8. Başvuru Sahipleri - applicants
+        const applicantsDisplay = record.applicants?.map(a => a.name).join(', ') || 'Belirtilmemiş';
+
+        row.innerHTML = `
+            <td><input type="checkbox" ${isChecked} onchange="portfolioModule.handleRecordSelection('${record.id}', this.checked)"></td>
+            <td><span class="record-active-status-badge ${record.portfoyStatus || 'active'}">${portfoyStatusDisplay}</span></td>
+            <td>${ipTypeDisplay}</td>
+            <td title="${title}">${title}</td>
+            <td style="${this.activeTypeFilter === 'all' ? 'display: none;' : ''}">${imageHtml}</td>
+            <td>${applicationNumber}</td>
+            <td>${applicationDateDisplay}</td>
+            <td>${statusDisplay}</td>
+            <td title="${applicantsDisplay}">${applicantsDisplay}</td>
+            <td>
+                <button class="action-btn view-btn" data-id="${record.id}">Detay</button>
+                <button class="action-btn edit-btn" data-id="${record.id}">Düzenle</button>
+                <button class="action-btn delete-btn" data-id="${record.id}">Sil</button>
+            </td>
+        `;
+        
+        fragment.appendChild(row);
+    });
+    tableBody.appendChild(fragment);
+}
             applyFiltersAndSort() {
             const globalSearchTerm = document.getElementById('searchBar').value.toLowerCase();
             
