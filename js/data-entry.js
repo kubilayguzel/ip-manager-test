@@ -1,165 +1,4 @@
-searchPersons(searchTerm, type) {
-        const resultsContainer = document.getElementById(`${type}SearchResults`);
-        if (!resultsContainer) return;
-
-        if (searchTerm.length < 2) {
-            resultsContainer.style.display = 'none';
-            return;
-        }
-
-        const filteredPersons = this.allPersons.filter(person => 
-            person.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            (person.email && person.email.toLowerCase().includes(searchTerm.toLowerCase()))
-        );
-
-        if (filteredPersons.length === 0) {
-            resultsContainer.innerHTML = '<div class="no-results-message">Sonuç bulunamadı</div>';
-        } else {
-            resultsContainer.innerHTML = filteredPersons.map(person => 
-                '<div class="search-result-item" data-person-id="' + person.id + '">' +
-                    '<strong>' + person.name + '</strong>' +
-                    (person.email ? '<br><small class="text-muted">' + person.email + '</small>' : '') +
-                '</div>'
-            ).join('');
-
-            // Tıklama listener'ları ekle
-            resultsContainer.querySelectorAll('.search-result-item').forEach(item => {
-                item.addEventListener('click', () => {
-                    const personId = item.dataset.personId;
-                    const person = this.allPersons.find(p => p.id === personId);
-                    if (person) {
-                        this.addSelectedPerson(person, type);
-                        document.getElementById(`${type}Search`).value = '';
-                        resultsContainer.style.display = 'none';
-                    }
-                });
-            });
-        }
-
-        resultsContainer.style.display = 'block';
-    }
-
-    addSelectedPerson(person, type) {
-        if (type === 'applicant') {
-            // Zaten seçili mi kontrol et
-            if (this.selectedApplicants.find(p => p.id === person.id)) {
-                alert('Bu kişi zaten seçili');
-                return;
-            }
-
-            this.selectedApplicants.push(person);
-            this.renderSelectedApplicants();
-        }
-        
-        this.updateSaveButtonState();
-    }
-
-    renderSelectedApplicants() {
-        const container = document.getElementById('selectedApplicantsContainer');
-        if (!container) return;
-
-        if (this.selectedApplicants.length === 0) {
-            container.innerHTML = 
-                '<div class="empty-state text-center py-4">' +
-                    '<i class="fas fa-users fa-2x text-muted mb-2"></i>' +
-                    '<p class="text-muted">Henüz başvuru sahibi seçilmedi</p>' +
-                '</div>';
-        } else {
-            container.innerHTML = this.selectedApplicants.map(person => 
-                '<div class="selected-item">' +
-                    '<span><strong>' + person.name + '</strong>' + (person.email ? ' (' + person.email + ')' : '') + '</span>' +
-                    '<button type="button" class="remove-selected-item-btn" data-person-id="' + person.id + '">' +
-                        '&times;' +
-                    '</button>' +
-                '</div>'
-            ).join('');
-
-            // Kaldır butonları için listener'lar
-            container.querySelectorAll('.remove-selected-item-btn').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    const personId = btn.dataset.personId;
-                    this.selectedApplicants = this.selectedApplicants.filter(p => p.id !== personId);
-                    this.renderSelectedApplicants();
-                    this.updateSaveButtonState();
-                });
-            });
-        }
-    }
-
-    setupBrandExampleUploader() {
-        const uploadArea = document.getElementById('brandExampleUploadArea');
-        const fileInput = document.getElementById('brandExample');
-        
-        if (!uploadArea || !fileInput) return;
-
-        // Drag & Drop olayları
-        uploadArea.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            uploadArea.style.backgroundColor = '#e9ecef';
-        });
-
-        uploadArea.addEventListener('dragleave', () => {
-            uploadArea.style.backgroundColor = '#f8f9fa';
-        });
-
-        uploadArea.addEventListener('drop', (e) => {
-            e.preventDefault();
-            uploadArea.style.backgroundColor = '#f8f9fa';
-            const files = e.dataTransfer.files;
-            if (files.length > 0) {
-                this.handleBrandExampleFile(files[0]);
-            }
-        });
-
-        // Tıklama olayı
-        uploadArea.addEventListener('click', () => {
-            fileInput.click();
-        });
-
-        // Dosya seçim olayı
-        fileInput.addEventListener('change', (e) => {
-            if (e.target.files.length > 0) {
-                this.handleBrandExampleFile(e.target.files[0]);
-            }
-        });
-
-        // Kaldır butonu
-        const removeBtn = document.getElementById('removeBrandExampleBtn');
-        if (removeBtn) {
-            removeBtn.addEventListener('click', () => {
-                const previewContainer = document.getElementById('brandExamplePreviewContainer');
-                const previewImage = document.getElementById('brandExamplePreview');
-                
-                if (previewContainer) previewContainer.style.display = 'none';
-                if (previewImage) previewImage.src = '';
-                if (fileInput) fileInput.value = '';
-                
-                this.uploadedBrandImage = null;
-                this.updateSaveButtonState();
-            });
-        }
-    }
-
-    handleBrandExampleFile(file) {
-        if (!file.type.startsWith('image/')) {
-            alert('Lütfen geçerli bir resim dosyası seçin (PNG, JPG, JPEG)');
-            return;
-        }
-
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            const previewContainer = document.getElementById('brandExamplePreviewContainer');
-            const previewImage = document.getElementById('brandExamplePreview');
-            
-            if (previewImage) previewImage.src = e.target.result;
-            if (previewContainer) previewContainer.style.display = 'block';
-            
-            this.uploadedBrandImage = file;
-            this.updateSaveButtonState();
-        };
-        
-        reader.readAsDataURL(file);
-    }// js/data-entry.js
+// js/data-entry.js
 import { initializeNiceClassification, getSelectedNiceClasses } from './nice-classification.js';
 import { personService, ipRecordsService, storage } from '../firebase-config.js';
 import { ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
@@ -516,6 +355,169 @@ class DataEntryModule {
         this.dynamicFormContainer.addEventListener('input', () => {
             this.updateSaveButtonState();
         });
+    }
+
+    searchPersons(searchTerm, type) {
+        const resultsContainer = document.getElementById(`${type}SearchResults`);
+        if (!resultsContainer) return;
+
+        if (searchTerm.length < 2) {
+            resultsContainer.style.display = 'none';
+            return;
+        }
+
+        const filteredPersons = this.allPersons.filter(person => 
+            person.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (person.email && person.email.toLowerCase().includes(searchTerm.toLowerCase()))
+        );
+
+        if (filteredPersons.length === 0) {
+            resultsContainer.innerHTML = '<div class="no-results-message">Sonuç bulunamadı</div>';
+        } else {
+            resultsContainer.innerHTML = filteredPersons.map(person => 
+                '<div class="search-result-item" data-person-id="' + person.id + '">' +
+                    '<strong>' + person.name + '</strong>' +
+                    (person.email ? '<br><small class="text-muted">' + person.email + '</small>' : '') +
+                '</div>'
+            ).join('');
+
+            // Tıklama listener'ları ekle
+            resultsContainer.querySelectorAll('.search-result-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    const personId = item.dataset.personId;
+                    const person = this.allPersons.find(p => p.id === personId);
+                    if (person) {
+                        this.addSelectedPerson(person, type);
+                        document.getElementById(`${type}Search`).value = '';
+                        resultsContainer.style.display = 'none';
+                    }
+                });
+            });
+        }
+
+        resultsContainer.style.display = 'block';
+    }
+
+    addSelectedPerson(person, type) {
+        if (type === 'applicant') {
+            // Zaten seçili mi kontrol et
+            if (this.selectedApplicants.find(p => p.id === person.id)) {
+                alert('Bu kişi zaten seçili');
+                return;
+            }
+
+            this.selectedApplicants.push(person);
+            this.renderSelectedApplicants();
+        }
+        
+        this.updateSaveButtonState();
+    }
+
+    renderSelectedApplicants() {
+        const container = document.getElementById('selectedApplicantsContainer');
+        if (!container) return;
+
+        if (this.selectedApplicants.length === 0) {
+            container.innerHTML = 
+                '<div class="empty-state text-center py-4">' +
+                    '<i class="fas fa-users fa-2x text-muted mb-2"></i>' +
+                    '<p class="text-muted">Henüz başvuru sahibi seçilmedi</p>' +
+                '</div>';
+        } else {
+            container.innerHTML = this.selectedApplicants.map(person => 
+                '<div class="selected-item">' +
+                    '<span><strong>' + person.name + '</strong>' + (person.email ? ' (' + person.email + ')' : '') + '</span>' +
+                    '<button type="button" class="remove-selected-item-btn" data-person-id="' + person.id + '">' +
+                        '&times;' +
+                    '</button>' +
+                '</div>'
+            ).join('');
+
+            // Kaldır butonları için listener'lar
+            container.querySelectorAll('.remove-selected-item-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const personId = btn.dataset.personId;
+                    this.selectedApplicants = this.selectedApplicants.filter(p => p.id !== personId);
+                    this.renderSelectedApplicants();
+                    this.updateSaveButtonState();
+                });
+            });
+        }
+    }
+
+    setupBrandExampleUploader() {
+        const uploadArea = document.getElementById('brandExampleUploadArea');
+        const fileInput = document.getElementById('brandExample');
+        
+        if (!uploadArea || !fileInput) return;
+
+        // Drag & Drop olayları
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.style.backgroundColor = '#e9ecef';
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.style.backgroundColor = '#f8f9fa';
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.style.backgroundColor = '#f8f9fa';
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                this.handleBrandExampleFile(files[0]);
+            }
+        });
+
+        // Tıklama olayı
+        uploadArea.addEventListener('click', () => {
+            fileInput.click();
+        });
+
+        // Dosya seçim olayı
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                this.handleBrandExampleFile(e.target.files[0]);
+            }
+        });
+
+        // Kaldır butonu
+        const removeBtn = document.getElementById('removeBrandExampleBtn');
+        if (removeBtn) {
+            removeBtn.addEventListener('click', () => {
+                const previewContainer = document.getElementById('brandExamplePreviewContainer');
+                const previewImage = document.getElementById('brandExamplePreview');
+                
+                if (previewContainer) previewContainer.style.display = 'none';
+                if (previewImage) previewImage.src = '';
+                if (fileInput) fileInput.value = '';
+                
+                this.uploadedBrandImage = null;
+                this.updateSaveButtonState();
+            });
+        }
+    }
+
+    handleBrandExampleFile(file) {
+        if (!file.type.startsWith('image/')) {
+            alert('Lütfen geçerli bir resim dosyası seçin (PNG, JPG, JPEG)');
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const previewContainer = document.getElementById('brandExamplePreviewContainer');
+            const previewImage = document.getElementById('brandExamplePreview');
+            
+            if (previewImage) previewImage.src = e.target.result;
+            if (previewContainer) previewContainer.style.display = 'block';
+            
+            this.uploadedBrandImage = file;
+            this.updateSaveButtonState();
+        };
+        
+        reader.readAsDataURL(file);
     }
 
     updateSaveButtonState() {
