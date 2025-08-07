@@ -951,7 +951,7 @@ class DataEntryModule {
         if (result.success) {
             alert('Marka portföy kaydı başarıyla oluşturuldu!');
             // Portfolio management sayfası yoksa ana sayfaya yönlendir
-            window.location.href = 'index.html'; // veya 'dashboard.html'
+            window.location.href = 'portfolio.html';
         } else {
             throw new Error(result.error);
         }
@@ -972,7 +972,7 @@ class DataEntryModule {
         const result = await ipRecordsService.createRecord(portfolioData);
         if (result.success) {
             alert('Patent portföy kaydı başarıyla oluşturuldu!');
-            window.location.href = 'index.html';
+            window.location.href = 'portfolio.html';
         } else {
             throw new Error(result.error);
         }
@@ -993,7 +993,7 @@ class DataEntryModule {
         const result = await ipRecordsService.createRecord(portfolioData);
         if (result.success) {
             alert('Tasarım portföy kaydı başarıyla oluşturuldu!');
-            window.location.href = 'index.html';
+            window.location.href = 'portfolio.html';
         } else {
             throw new Error(result.error);
         }
