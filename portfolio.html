@@ -571,10 +571,7 @@
                         const isChecked = this.selectedRecords.has(record.id) ? 'checked' : '';
                         
                         // Kayıt Durumu - Türkçe (status)
-                        const statusDisplay = record.status === 'active' ? 'Aktif' : 
-                                            record.status === 'inactive' ? 'Pasif' :
-                                            record.status === 'pending' ? 'Beklemede' :
-                                            (record.status || '-');
+                        const portfoyStatusDisplay = record.portfoyStatus === 'active' ? 'Aktif' : 'Pasif';
 
                         // Kayıt Tipi - Türkçe (ipType)
                         const ipTypeDisplay = record.ipType === 'trademark' ? 'Marka' : 
@@ -595,21 +592,22 @@
 
                         // KOLON SIRASI: Kolon yapısıyla tam eşleşmeli
                         row.innerHTML = `
-                            <td><input type="checkbox" ${isChecked} onchange="portfolioModule.handleRecordSelection('${record.id}', this.checked)"></td>
-                            <td><span class="record-active-status-badge ${record.status || 'active'}">${statusDisplay}</span></td>
-                            <td>${ipTypeDisplay}</td>
-                            <td title="${title}">${title}</td>
-                            <td style="${this.activeTypeFilter === 'all' ? 'display: none;' : ''}">${imageHtml}</td>
-                            <td>${record.applicationNumber || '-'}</td>
-                            <td>${record.applicationDate ? new Date(record.applicationDate).toLocaleDateString('tr-TR') : '-'}</td>
-                            <td>-</td>
-                            <td title="${applicantsDisplay}">${applicantsDisplay}</td>
-                            <td>
-                                <button class="action-btn view-btn" data-id="${record.id}">Detay</button>
-                                <button class="action-btn edit-btn" data-id="${record.id}">Düzenle</button>
-                                <button class="action-btn delete-btn" data-id="${record.id}">Sil</button>
-                            </td>
-                        `;
+                                <td><input type="checkbox" ${isChecked} onchange="portfolioModule.handleRecordSelection('${record.id}', this.checked)"></td>
+                                <td><span class="record-active-status-badge ${record.portfoyStatus || 'active'}">${portfoyStatusDisplay}</span></td>
+                                <td>${ipTypeDisplay}</td>
+                                <td title="${title}">${title}</td>
+                                <td style="${this.activeTypeFilter === 'all' ? 'display: none;' : ''}">${imageHtml}</td>
+                                <td>${record.applicationNumber || '-'}</td>
+                                <td>${record.applicationDate ? new Date(record.applicationDate).toLocaleDateString('tr-TR') : '-'}</td>
+                                <td>${record.status || '-'}</td>
+                                <td title="${applicantsDisplay}">${applicantsDisplay}</td>
+                                <td>
+                                    <button class="action-btn view-btn" data-id="${record.id}">Detay</button>
+                                    <button class="action-btn edit-btn" data-id="${record.id}">Düzenle</button>
+                                    <button class="action-btn delete-btn" data-id="${record.id}">Sil</button>
+                                </td>
+                            `;
+                        }
                         
                         fragment.appendChild(row);
                     });
