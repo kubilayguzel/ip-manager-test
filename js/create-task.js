@@ -1440,18 +1440,38 @@ handleIpRecordChange(recordId) {
             alert("Kişi kaydedilirken beklenmeyen bir hata oluştu.");
         }
     }
-
-//  Testten sonra orijinal kodunuza geri dönmeniz gerekecektir.
 checkFormCompleteness() {
+    const taskTypeId = document.getElementById('specificTaskType')?.value;
+    const selectedTaskType = this.allTransactionTypes.find(type => type.id === taskTypeId);
     const saveTaskBtn = document.getElementById('saveTaskBtn');
-    if (saveTaskBtn) {
-        // Tüm koşulları kaldırıp butonu her zaman aktif hale getiririz.
-        saveTaskBtn.disabled = false;
+
+    if (!selectedTaskType || !saveTaskBtn) {
+        if (saveTaskBtn) saveTaskBtn.disabled = true;
+        return;
     }
+
+    const assignedTo = document.getElementById('assignedTo')?.value;
+    let isComplete = false;
+
+    if (selectedTaskType.alias === 'Başvuru' && selectedTaskType.ipType === 'trademark') {
+        const brandText = document.getElementById('brandExampleText')?.value?.trim();
+        const hasNiceClasses = typeof getSelectedNiceClasses === 'function' && getSelectedNiceClasses().length > 0;
+        const hasApplicants = this.selectedApplicants && this.selectedApplicants.length > 0;
+
+        isComplete = !!(assignedTo && brandText && hasNiceClasses && hasApplicants);
+    } else {
+        // ✅ DÜZELTME: taskTitle için doğru kontrolü yap
+        const taskTitle = document.getElementById('taskTitle')?.value?.trim() || selectedTaskType.alias || selectedTaskType.name;
+        const hasIpRecord = !!this.selectedIpRecord;
+
+        // assignedTo, başlık ve portföy kaydı seçildiğinde tamamlandı olarak işaretle
+        isComplete = !!(assignedTo && taskTitle && hasIpRecord);
+    }
+
+    saveTaskBtn.disabled = !isComplete;
 }
 
-
-    async uploadFileToStorage(file, path) {
+async uploadFileToStorage(file, path) {
         if (!file || !path) {
             return null;
         }
