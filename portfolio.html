@@ -452,8 +452,23 @@
             <div id="paginationContainer"></div>
 
         </main>
+        <!-- 📄 Kayıt Detayları Modalı -->
+        <div class="modal fade" id="portfolioDetailModal" tabindex="-1" role="dialog" aria-labelledby="portfolioDetailModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable" role="document">
+            <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="portfolioDetailModalLabel">Kayıt Detayları</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Kapat">
+                <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body" id="portfolioDetailModalBody">
+                <!-- JS ile doldurulacak -->
+            </div>
+            </div>
+        </div>
+        </div>
     </div>
-
     <div id="recordDetailModal" class="modal">
         <div class="modal-content">
             <span class="close-modal-btn" id="closeRecordDetailModal">&times;</span>
@@ -465,6 +480,8 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js"></script>
 
     <script type="module">
         import Pagination from './js/pagination.js'; 
@@ -815,193 +832,193 @@
                 }
             }
             viewRecordDetail(recordId) {
-                const record = this.allRecords.find(r => r.id === recordId);
-                if (!record) {
-                    showNotification('Kayıt bulunamadı.', 'error');
-                    return;
-                }
-                this.showRecordDetailModal(recordId);
+            const record = this.allRecords.find(r => r.id === recordId);
+            if (!record) {
+                showNotification('Kayıt bulunamadı.', 'error');
+                return;
+            }
+            this.showRecordDetailModal(recordId);
+        }
+
+        editRecord(recordId) {
+            // Düzenleme sayfasına yönlendir
+            window.location.href = `data-entry.html?id=${recordId}`;
+        }
+
+        async showRecordDetailModal(recordId) {
+            const record = this.allRecords.find(r => r.id === recordId);
+            if (!record) {
+                showNotification('Kayıt bulunamadı.', 'error');
+                return;
             }
 
-            editRecord(recordId) {
-                // Düzenleme sayfasına yönlendir
-                window.location.href = `data-entry.html?id=${recordId}`;
+            const modal = document.getElementById('recordDetailModal');
+            const modalTitle = document.getElementById('modalRecordTitle');
+            const modalBody = document.getElementById('modalBody');
+
+            // Modal başlığını ayarla
+            modalTitle.textContent = `${record.type || 'Kayıt'} - ${record.title || record.details?.brandText || record.details?.patentTitle || 'Detay'}`;
+
+            // Modal içeriğini oluştur
+            modalBody.innerHTML = this.generateRecordDetailHTML(record);
+
+            // Modal'ı göster
+            modal.style.display = 'flex';
+        }
+
+        closeModal(modalId) {
+            const modal = document.getElementById(modalId);
+            if (modal) {
+                modal.style.display = 'none';
             }
+        }
 
-            async showRecordDetailModal(recordId) {
-                const record = this.allRecords.find(r => r.id === recordId);
-                if (!record) {
-                    showNotification('Kayıt bulunamadı.', 'error');
-                    return;
-                }
+        generateRecordDetailHTML(record) {
+            const details = record.details || {};
+            const owners = record.owners || [];
+            const transactions = record.transactions || [];
+            
+            // Hak sahiplerini al
+            const ownerNames = owners.map(owner => 
+                allPersons.find(p => p.id === owner.id)?.name || 'Bilinmiyor'
+            ).join(', ') || 'Belirtilmemiş';
 
-                const modal = document.getElementById('recordDetailModal');
-                const modalTitle = document.getElementById('modalRecordTitle');
-                const modalBody = document.getElementById('modalBody');
+            let html = `
+                <div class="detail-grid">
+                    <div class="detail-item">
+                        <div class="detail-label">Kayıt Türü:</div>
+                        <div class="detail-value">${record.type || '-'}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Başvuru Numarası:</div>
+                        <div class="detail-value">${record.applicationNumber || details.applicationNumber || '-'}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Başvuru Tarihi:</div>
+                        <div class="detail-value">${record.applicationDate ? new Date(record.applicationDate).toLocaleDateString('tr-TR') : '-'}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Durum:</div>
+                        <div class="detail-value">
+                            <span class="application-status-badge ${record.status || 'beklemede'}">${record.status || 'Beklemede'}</span>
+                        </div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Kayıt Durumu:</div>
+                        <div class="detail-value">
+                            <span class="record-active-status-badge ${record.recordStatus || 'aktif'}">${record.recordStatus === 'aktif' ? 'Aktif' : 'Pasif'}</span>
+                        </div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Hak Sahipleri:</div>
+                        <div class="detail-value">${ownerNames}</div>
+                    </div>
+                `;
 
-                // Modal başlığını ayarla
-                modalTitle.textContent = `${record.type || 'Kayıt'} - ${record.title || record.details?.brandText || record.details?.patentTitle || 'Detay'}`;
-
-                // Modal içeriğini oluştur
-                modalBody.innerHTML = this.generateRecordDetailHTML(record);
-
-                // Modal'ı göster
-                modal.style.display = 'flex';
-            }
-
-            closeModal(modalId) {
-                const modal = document.getElementById(modalId);
-                if (modal) {
-                    modal.style.display = 'none';
-                }
-            }
-
-            generateRecordDetailHTML(record) {
-                const details = record.details || {};
-                const owners = record.owners || [];
-                const transactions = record.transactions || [];
+            // Marka özel alanları
+            if (record.type === 'trademark') {
+                html += `
+                    <div class="detail-item">
+                        <div class="detail-label">Marka Metni:</div>
+                        <div class="detail-value">${details.brandText || '-'}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Nice Sınıfları:</div>
+                        <div class="detail-value">${details.niceClasses?.join(', ') || '-'}</div>
+                    </div>
+                `;
                 
-                // Hak sahiplerini al
-                const ownerNames = owners.map(owner => 
-                    allPersons.find(p => p.id === owner.id)?.name || 'Bilinmiyor'
-                ).join(', ') || 'Belirtilmemiş';
-
-                let html = `
-                    <div class="detail-grid">
-                        <div class="detail-item">
-                            <div class="detail-label">Kayıt Türü:</div>
-                            <div class="detail-value">${record.type || '-'}</div>
-                        </div>
-                        <div class="detail-item">
-                            <div class="detail-label">Başvuru Numarası:</div>
-                            <div class="detail-value">${record.applicationNumber || details.applicationNumber || '-'}</div>
-                        </div>
-                        <div class="detail-item">
-                            <div class="detail-label">Başvuru Tarihi:</div>
-                            <div class="detail-value">${record.applicationDate ? new Date(record.applicationDate).toLocaleDateString('tr-TR') : '-'}</div>
-                        </div>
-                        <div class="detail-item">
-                            <div class="detail-label">Durum:</div>
+                if (details.trademarkImage) {
+                    html += `
+                        <div class="detail-item full-width">
+                            <div class="detail-label">Marka Görseli:</div>
                             <div class="detail-value">
-                                <span class="application-status-badge ${record.status || 'beklemede'}">${record.status || 'Beklemede'}</span>
+                                <img src="${details.trademarkImage}" alt="Marka Görseli" style="max-width: 200px; max-height: 200px; border: 1px solid #ddd; border-radius: 8px;">
                             </div>
                         </div>
-                        <div class="detail-item">
-                            <div class="detail-label">Kayıt Durumu:</div>
-                            <div class="detail-value">
-                                <span class="record-active-status-badge ${record.recordStatus || 'aktif'}">${record.recordStatus === 'aktif' ? 'Aktif' : 'Pasif'}</span>
-                            </div>
-                        </div>
-                        <div class="detail-item">
-                            <div class="detail-label">Hak Sahipleri:</div>
-                            <div class="detail-value">${ownerNames}</div>
-                        </div>
-                    `;
-
-                // Marka özel alanları
-                if (record.type === 'trademark') {
-                    html += `
-                        <div class="detail-item">
-                            <div class="detail-label">Marka Metni:</div>
-                            <div class="detail-value">${details.brandText || '-'}</div>
-                        </div>
-                        <div class="detail-item">
-                            <div class="detail-label">Nice Sınıfları:</div>
-                            <div class="detail-value">${details.niceClasses?.join(', ') || '-'}</div>
-                        </div>
-                    `;
-                    
-                    if (details.trademarkImage) {
-                        html += `
-                            <div class="detail-item full-width">
-                                <div class="detail-label">Marka Görseli:</div>
-                                <div class="detail-value">
-                                    <img src="${details.trademarkImage}" alt="Marka Görseli" style="max-width: 200px; max-height: 200px; border: 1px solid #ddd; border-radius: 8px;">
-                                </div>
-                            </div>
-                        `;
-                    }
-                }
-
-                // Patent özel alanları
-                if (record.type === 'patent') {
-                    html += `
-                        <div class="detail-item full-width">
-                            <div class="detail-label">Patent Başlığı:</div>
-                            <div class="detail-value">${details.patentTitle || '-'}</div>
-                        </div>
-                        <div class="detail-item full-width">
-                            <div class="detail-label">Patent Özeti:</div>
-                            <div class="detail-value">${details.patentSummary || '-'}</div>
-                        </div>
-                        <div class="detail-item">
-                            <div class="detail-label">Uluslararası Patent Sınıfı:</div>
-                            <div class="detail-value">${details.ipcClass || '-'}</div>
-                        </div>
                     `;
                 }
-
-                // Tasarım özel alanları
-                if (record.type === 'design') {
-                    html += `
-                        <div class="detail-item full-width">
-                            <div class="detail-label">Tasarım Başlığı:</div>
-                            <div class="detail-value">${details.designTitle || '-'}</div>
-                        </div>
-                        <div class="detail-item">
-                            <div class="detail-label">Locarno Sınıfı:</div>
-                            <div class="detail-value">${details.locarnoClass || '-'}</div>
-                        </div>
-                    `;
-                }
-
-                html += `</div>`;
-
-                // İşlemler tablosu
-                if (transactions.length > 0) {
-                    html += `
-                        <div class="transactions-section" style="margin-top: 30px;">
-                            <h4>İşlem Geçmişi</h4>
-                            <table class="transactions-table" style="width: 100%; border-collapse: collapse; margin-top: 15px;">
-                                <thead>
-                                    <tr style="background: #f8f9fa;">
-                                        <th style="padding: 10px; border: 1px solid #ddd;">Tarih</th>
-                                        <th style="padding: 10px; border: 1px solid #ddd;">İşlem Türü</th>
-                                        <th style="padding: 10px; border: 1px solid #ddd;">Durum</th>
-                                        <th style="padding: 10px; border: 1px solid #ddd;">Açıklama</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                    `;
-                    
-                    transactions.forEach(transaction => {
-                        const transactionType = transactionTypesMap.get(transaction.transactionTypeId)?.name || 'Bilinmiyor';
-                        html += `
-                            <tr>
-                                <td style="padding: 8px; border: 1px solid #eee;">${transaction.date ? new Date(transaction.date).toLocaleDateString('tr-TR') : '-'}</td>
-                                <td style="padding: 8px; border: 1px solid #eee;">${transactionType}</td>
-                                <td style="padding: 8px; border: 1px solid #eee;">
-                                    <span class="status-badge ${transaction.status || 'beklemede'}">${transaction.status || 'Beklemede'}</span>
-                                </td>
-                                <td style="padding: 8px; border: 1px solid #eee;">${transaction.description || '-'}</td>
-                            </tr>
-                        `;
-                    });
-                    
-                    html += `
-                                </tbody>
-                            </table>
-                        </div>
-                    `;
-                }
-
-                return html;
             }
 
-            // handleRecordSelection fonksiyonu da eksikse ekleyin:
-            handleRecordSelection(recordId, isChecked) {
-                this.toggleRecordSelection(recordId, isChecked);
+            // Patent özel alanları
+            if (record.type === 'patent') {
+                html += `
+                    <div class="detail-item full-width">
+                        <div class="detail-label">Patent Başlığı:</div>
+                        <div class="detail-value">${details.patentTitle || '-'}</div>
+                    </div>
+                    <div class="detail-item full-width">
+                        <div class="detail-label">Patent Özeti:</div>
+                        <div class="detail-value">${details.patentSummary || '-'}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Uluslararası Patent Sınıfı:</div>
+                        <div class="detail-value">${details.ipcClass || '-'}</div>
+                    </div>
+                `;
             }
+
+            // Tasarım özel alanları
+            if (record.type === 'design') {
+                html += `
+                    <div class="detail-item full-width">
+                        <div class="detail-label">Tasarım Başlığı:</div>
+                        <div class="detail-value">${details.designTitle || '-'}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Locarno Sınıfı:</div>
+                        <div class="detail-value">${details.locarnoClass || '-'}</div>
+                    </div>
+                `;
+            }
+
+            html += `</div>`;
+
+            // İşlemler tablosu
+            if (transactions.length > 0) {
+                html += `
+                    <div class="transactions-section" style="margin-top: 30px;">
+                        <h4>İşlem Geçmişi</h4>
+                        <table class="transactions-table" style="width: 100%; border-collapse: collapse; margin-top: 15px;">
+                            <thead>
+                                <tr style="background: #f8f9fa;">
+                                    <th style="padding: 10px; border: 1px solid #ddd;">Tarih</th>
+                                    <th style="padding: 10px; border: 1px solid #ddd;">İşlem Türü</th>
+                                    <th style="padding: 10px; border: 1px solid #ddd;">Durum</th>
+                                    <th style="padding: 10px; border: 1px solid #ddd;">Açıklama</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                `;
+                
+                transactions.forEach(transaction => {
+                    const transactionType = transactionTypesMap.get(transaction.transactionTypeId)?.name || 'Bilinmiyor';
+                    html += `
+                        <tr>
+                            <td style="padding: 8px; border: 1px solid #eee;">${transaction.date ? new Date(transaction.date).toLocaleDateString('tr-TR') : '-'}</td>
+                            <td style="padding: 8px; border: 1px solid #eee;">${transactionType}</td>
+                            <td style="padding: 8px; border: 1px solid #eee;">
+                                <span class="status-badge ${transaction.status || 'beklemede'}">${transaction.status || 'Beklemede'}</span>
+                            </td>
+                            <td style="padding: 8px; border: 1px solid #eee;">${transaction.description || '-'}</td>
+                        </tr>
+                    `;
+                });
+                
+                html += `
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            }
+
+            return html;
+        }
+
+        // handleRecordSelection fonksiyonu da eksikse ekleyin:
+        handleRecordSelection(recordId, isChecked) {
+            this.toggleRecordSelection(recordId, isChecked);
+        }
             
             initialRenderTableStructure() {
                 const headerRow = document.getElementById('portfolioTableHeaderRow');
@@ -1147,6 +1164,32 @@
             const result = await personService.getPersons();
             if (result.success) allPersons = result.data;
         }
+        function viewRecordDetail(id) {
+            const record = allRecords.find(r => r.id === id);
+            if (!record) return alert('Kayıt bulunamadı');
+
+            const html = `
+                <table class="table table-bordered table-sm">
+                <tbody>
+                    <tr><th>IP Türü</th><td>${record.ipType || '-'}</td></tr>
+                    <tr><th>Marka Adı</th><td>${record.brandName || '-'}</td></tr>
+                    <tr><th>Sahip</th><td>${record.ownerName || '-'}</td></tr>
+                    <tr><th>Başvuru No</th><td>${record.applicationNo || '-'}</td></tr>
+                    <tr><th>Başvuru Tarihi</th><td>${record.applicationDate || '-'}</td></tr>
+                    <tr><th>Nice Sınıfları</th><td>${(record.niceClasses || []).join(', ') || '-'}</td></tr>
+                    <tr><th>Notlar</th><td>${record.notes || '-'}</td></tr>
+                </tbody>
+                </table>
+            `;
+            document.getElementById('portfolioDetailModalBody').innerHTML = html;
+            $('#portfolioDetailModal').modal('show');
+            }
+            function editRecord(id) {
+            const record = allRecords.find(r => r.id === id);
+            if (!record) return alert('Kayıt bulunamadı');
+            window.open(`data-entry.html?id=${id}`, '_blank');
+            }
+
     </script>
 </body>
 </html>
