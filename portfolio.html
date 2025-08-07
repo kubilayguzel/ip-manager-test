@@ -534,50 +534,74 @@
                 }
             }
             
+            // portfolio.html içindeki renderCurrentPage() fonksiyonunda düzeltme
+
             renderCurrentPage() {
-                const tableBody = document.getElementById('portfolioTableBody');
-                tableBody.innerHTML = ''; 
-                if (!pagination) return;
+            const tableBody = document.getElementById('portfolioTableBody');
+            tableBody.innerHTML = ''; 
+            if (!pagination) return;
+            
+            const currentPageData = pagination.getCurrentPageData(this.filteredAndSortedRecords);
+            const fragment = document.createDocumentFragment();
+
+            currentPageData.forEach(record => {
+                const row = document.createElement('tr');
+                row.dataset.recordId = record.id;
+                row.className = `record-status-${record.recordStatus}`;
                 
-                const currentPageData = pagination.getCurrentPageData(this.filteredAndSortedRecords);
-                const fragment = document.createDocumentFragment();
-
-                currentPageData.forEach(record => {
-                    const row = document.createElement('tr');
-                    row.dataset.recordId = record.id;
-                    row.className = `record-status-${record.recordStatus}`;
+                const ownerNames = record.owners?.map(o => allPersons.find(p => p.id === o.id)?.name).filter(Boolean).join(', ') || 'Belirtilmemiş';
+                const isChecked = this.selectedRecords.has(record.id) ? 'checked' : '';
+                const imageSrc = typeof record.trademarkImage === 'string' ? record.trademarkImage : record.trademarkImage?.content;
+                const imageHtml = record.type === 'trademark' && imageSrc?.startsWith('data:image') ? `<div class="trademark-image-wrapper"><img src="${imageSrc}" alt="Marka Görseli" class="trademark-image-thumbnail"></div>` : '-';
+                               
+                // ✅ YENİ: Güvenli string işleme
+                const statusText = record.status && typeof record.status === 'string' && record.status.length > 0 
+                    ? record.status.charAt(0).toUpperCase() + record.status.slice(1) 
+                    : '-';
                     
-                    const ownerNames = record.owners?.map(o => allPersons.find(p => p.id === o.id)?.name).filter(Boolean).join(', ') || 'Belirtilmemiş';
-                    const isChecked = this.selectedRecords.has(record.id) ? 'checked' : '';
-                    const imageSrc = typeof record.trademarkImage === 'string' ? record.trademarkImage : record.trademarkImage?.content;
-                    const imageHtml = record.type === 'trademark' && imageSrc?.startsWith('data:image') ? `<div class="trademark-image-wrapper"><img src="${imageSrc}" alt="Marka Görseli" class="trademark-image-thumbnail"></div>` : '-';
-                    const statusText = record.status ? record.status.charAt(0).toUpperCase() + record.status.slice(1) : '-';
-                    const recordStatusText = record.recordStatus ? record.recordStatus.charAt(0).toUpperCase() + record.recordStatus.slice(1) : '-';
+                
+                // ✅ YENİ: Güvenli string işleme
+                const recordStatusText = record.recordStatus && typeof record.recordStatus === 'string' && record.recordStatus.length > 0
+                    ? record.recordStatus.charAt(0).toUpperCase() + record.recordStatus.slice(1) 
+                    : 'Aktif';
 
-                    row.innerHTML = `
-                        <td><input type="checkbox" class="record-checkbox" data-id="${record.id}" ${isChecked}></td>
-                        <td>${record.recordType || '-'}</td>
-                        <td>${record.type.charAt(0).toUpperCase() + record.type.slice(1)}</td>
-                        <td>${record.title || 'Başlıksız Kayıt'}</td>
-                        <td>${imageHtml}</td>
-                        <td>${record.applicationNumber || '-'}</td>
-                        <td>${record.applicationDate || '-'}</td>
-                        <td><span class="application-status-badge ${record.status}">${statusText}</span></td>
-                        <td><span class="record-active-status-badge ${record.recordStatus}">${recordStatusText}</span></td>
-                        <td>${ownerNames}</td>
-                        <td>
-                            <button type="button" class="action-btn view-btn" data-id="${record.id}">Görüntüle</button>
-                            <button type="button" class="action-btn edit-btn" data-id="${record.id}">Düzenle</button>
-                            <button type="button" class="action-btn delete-btn" data-id="${record.id}">Sil</button>
-                        </td>`;
+                // Diğer potansiyel charAt() kullanımlarını da kontrol edelim
+                const recordTypeText = record.recordType && typeof record.recordType === 'string' && record.recordType.length > 0
+                    ? record.recordType.charAt(0).toUpperCase() + record.recordType.slice(1)
+                    : 'Portföy';
                     
-                    const cells = row.children;
-                    cells[2].style.display = this.activeTypeFilter === 'thirdParty' ? 'none' : 'table-cell';
-                    cells[4].style.display = this.activeTypeFilter !== 'trademark' ? 'none' : 'table-cell';
-                    fragment.appendChild(row);
-                });
-                tableBody.appendChild(fragment);
-            }
+                const typeText = record.type && typeof record.type === 'string' && record.type.length > 0
+                    ? record.type.charAt(0).toUpperCase() + record.type.slice(1)
+                    : '-';
+
+                // İleri tarih güvenliği için de kontrol edelim
+                const applicationDate = record.applicationDate || record.details?.applicationDate;
+                const applicationNumber = record.applicationNumber || record.details?.applicationNumber;
+                const title = record.title || record.details?.brandText || record.details?.patentTitle || record.details?.designTitle || '-';
+
+                row.innerHTML = `
+                    <td><input type="checkbox" ${isChecked} onchange="portfolioModule.handleRecordSelection('${record.id}', this.checked)"></td>
+                    <td>${recordTypeText}</td>
+                    <td>${typeText}</td>
+                    <td title="${title}">${title}</td>
+                    <td>${imageHtml}</td>
+                    <td>${applicationNumber || '-'}</td>
+                    <td>${applicationDate ? new Date(applicationDate).toLocaleDateString('tr-TR') : '-'}</td>
+                    <td><span class="application-status-badge ${record.status || 'beklemede'}">${statusText}</span></td>
+                    <td><span class="record-active-status-badge ${record.recordStatus || 'aktif'}">${recordStatusText}</span></td>
+                    <td title="${ownerNames}">${ownerNames}</td>
+                    <td>
+                        <button onclick="portfolioModule.viewRecordDetail('${record.id}')" class="btn-primary" style="margin: 2px; padding: 5px 10px; font-size: 0.8em;">Detay</button>
+                        <button onclick="portfolioModule.editRecord('${record.id}')" class="btn-secondary" style="margin: 2px; padding: 5px 10px; font-size: 0.8em;">Düzenle</button>
+                        <button onclick="portfolioModule.deleteRecord('${record.id}')" class="btn-secondary" style="margin: 2px; padding: 5px 10px; font-size: 0.8em; background-color: #dc3545;">Sil</button>
+                    </td>
+                `;
+                
+                fragment.appendChild(row);
+            });
+
+            tableBody.appendChild(fragment);
+        }
 
             applyFiltersAndSort() {
                 const globalSearchTerm = document.getElementById('searchBar').value.toLowerCase();
