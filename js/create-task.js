@@ -227,7 +227,7 @@ async initIpRecordSearchSelector() {
     const thumb = selectedBox.querySelector('.ip-thumb') || (() => {
       const ph = document.createElement('img');
       ph.className = 'ip-thumb';
-      ph.style.cssText = 'width:36px;height:36px;object-fit:cover;border:1px solid #eee;border-radius:4px;margin-right:8px;';
+      ph.style.cssText = 'width:96px;height:96px;object-fit:contain;border:1px solid #eee;border-radius:4px;margin-right:8px;background:#fff;';
       host.prepend(ph);
       return ph;
     })();
