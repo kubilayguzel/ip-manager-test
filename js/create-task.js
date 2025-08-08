@@ -45,6 +45,103 @@ class CreateTaskModule {
         }
         this.setupEventListeners();
     }
+    // Basit debounce
+    
+    debounce(fn, delay = 250) {
+    let t;
+    return (...args) => {
+        clearTimeout(t);
+        t = setTimeout(() => fn.apply(this, args), delay);
+    };
+    }
+
+    initIpRecordSearchSelector() {
+    const input = document.getElementById('ipRecordSearch');
+    const results = document.getElementById('ipRecordSearchResults');
+    const selectedBox = document.getElementById('selectedIpRecordContainer');
+    const selectedLabel = document.getElementById('selectedIpRecordLabel');
+    const selectedMeta = document.getElementById('selectedIpRecordMeta');
+    const clearBtn = document.getElementById('clearSelectedIpRecord');
+    if (!input || !results) return;
+
+    const renderResults = (items) => {
+        if (!items || items.length === 0) {
+        results.innerHTML = `<div class="p-2 text-muted">Sonuç bulunamadı</div>`;
+        results.style.display = 'block';
+        return;
+        }
+        results.innerHTML = items.slice(0, 50).map(r => {
+        const title = r.title || r.markName || r.applicationTitle || 'Başlık yok';
+        const owner = r.ownerName || r.applicantName || '';
+        const appNo = r.applicationNo || r.fileNo || r.registrationNo || '';
+        const id = r.id || r.recordId || r.docId || '';
+        return `
+            <div class="search-result-item" data-id="${id}" style="padding:8px 10px; border-bottom:1px solid #eee; cursor:pointer;">
+            <div><strong>${title}</strong></div>
+            <div class="text-muted" style="font-size:12px;">${[owner, appNo].filter(Boolean).join(' • ')}</div>
+            </div>`;
+        }).join('');
+        results.style.display = 'block';
+    };
+
+    const doSearch = this.debounce((term) => {
+        term = (term || '').toLowerCase().trim();
+        if (!term) { results.style.display = 'none'; results.innerHTML = ''; return; }
+
+        const pool = Array.isArray(this.allIpRecords) ? this.allIpRecords : [];
+        const filtered = pool.filter(r => {
+        const hay = [
+            r.title, r.markName, r.applicationTitle,
+            r.ownerName, r.applicantName,
+            r.applicationNo, r.fileNo, r.registrationNo
+        ].filter(Boolean).join(' ').toLowerCase();
+        return hay.includes(term);
+        });
+        renderResults(filtered);
+    }, 250);
+
+    input.addEventListener('input', (e) => doSearch(e.target.value));
+
+    results.addEventListener('click', (e) => {
+        const item = e.target.closest('.search-result-item');
+        if (!item) return;
+        const id = item.dataset.id;
+
+        const pool = Array.isArray(this.allIpRecords) ? this.allIpRecords : [];
+        const rec = pool.find(x => (x.id || x.recordId || x.docId) === id);
+
+        const title = rec?.title || rec?.markName || rec?.applicationTitle || 'Başlık yok';
+        const owner = rec?.ownerName || rec?.applicantName || '';
+        const appNo = rec?.applicationNo || rec?.fileNo || rec?.registrationNo || '';
+
+        this.selectedIpRecord = rec || { id, title, ownerName: owner, applicationNo: appNo };
+
+        selectedLabel.textContent = title;
+        selectedMeta.textContent = [owner, appNo].filter(Boolean).join(' • ');
+        selectedBox.style.display = 'block';
+        results.style.display = 'none';
+        results.innerHTML = '';
+        input.value = '';
+
+        this.checkFormCompleteness();
+    });
+
+    if (clearBtn) {
+        clearBtn.addEventListener('click', () => {
+        this.selectedIpRecord = null;
+        selectedBox.style.display = 'none';
+        selectedLabel.textContent = '';
+        selectedMeta.textContent = '';
+        this.checkFormCompleteness();
+        });
+    }
+
+    document.addEventListener('click', (e) => {
+        if (!results.contains(e.target) && e.target !== input) {
+        results.style.display = 'none';
+        }
+    });
+    }
 
     populateAssignedToDropdown() {
         const assignedToSelect = document.getElementById('assignedTo');
@@ -313,16 +410,33 @@ class CreateTaskModule {
         
         container.innerHTML = `
             <div class="form-section">
-                <h3 class="section-title">2. İşleme Konu Varlık</h3>
-                <div class="form-group full-width">
-                    <label for="portfolioSearchInput" class="form-label">Portföyden Ara</label>
-                    <input type="text" id="portfolioSearchInput" class="form-input" placeholder="Aramak için en az 3 karakter...">
-                    <div id="portfolioSearchResults" class="search-results-list"></div>
-                    <div id="selectedIpRecordDisplay" class="search-result-display" style="display:none; align-items: center;"></div>
+            <h3 class="section-title">2. İşleme Konu Varlık</h3>
+
+            <div class="form-group full-width">
+                <label for="ipRecordSearch" class="form-label">Portföyden Ara</label>
+
+                <!-- Arama kutusu -->
+                <div class="position-relative">
+                <input type="text" id="ipRecordSearch" class="form-input" placeholder="Başlık, dosya no, başvuru no, sahip adı...">
+                <!-- Sonuç listesi (drop-down) -->
+                <div id="ipRecordSearchResults"
+                    style="position:absolute; top:100%; left:0; right:0; z-index:1000; background:#fff; border:1px solid #ddd; border-top:none; display:none; max-height:260px; overflow:auto;">
+                </div>
+                </div>
+
+                <!-- Seçili kayıt özeti -->
+                <div id="selectedIpRecordContainer" class="mt-2" style="display:none;">
+                <div class="p-2 border rounded d-flex justify-content-between align-items-center">
+                    <div>
+                    <div class="text-muted" id="selectedIpRecordLabel"></div>
+                    <small class="text-secondary" id="selectedIpRecordMeta"></small>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-outline-danger" id="clearSelectedIpRecord">Kaldır</button>
+                </div>
                 </div>
             </div>
-            
-            ${needsRelatedParty ? `
+            </div>
+           ${needsRelatedParty ? `
             <div class="form-section">
                 <h3 class="section-title">3. ${partyLabel}</h3>
                 <div class="form-group full-width">
@@ -423,6 +537,7 @@ class CreateTaskModule {
         this.setupBaseFormListeners();
         this.updateButtonsAndTabs();
         this.checkFormCompleteness();
+        this.initIpRecordSearchSelector();
     }
 handleIpRecordChange(recordId) {
     if (recordId) {
