@@ -678,34 +678,52 @@ async handleSpecificTypeChange(e) {
   const container = document.getElementById('conditionalFieldsContainer');
   if (!container) return;
 
-  // aynı seçimi tekrar geldiyse ve içerik zaten varsa, atla
-  const sig = selectedTaskType ? `${selectedTaskType.id}::${selectedTaskType.alias || selectedTaskType.name || ''}` : '';
+  // Aynı seçim tekrar geldiyse ve içerik zaten varsa, atla
+  const alias = selectedTaskType?.alias || selectedTaskType?.name || '';
+  const sig = selectedTaskType ? `${selectedTaskType.id}::${alias}` : '';
   if (this._lastRenderSig === sig && container.childElementCount > 0) return;
 
-  if (this._rendering) return; // re-entrancy guard
+  // Re-entrancy guard
+  if (this._rendering) return;
   this._rendering = true;
 
-  // güvenlik: varsa önceki form-actions'ları da sil (duble güvenlik)
+  // Arama kaynağını seç (itiraz ise bulletin, değilse portfolio)
+  const isTrademarkOpposition =
+    (selectedTaskType?.ipType === 'trademark') &&
+    /itiraz|yayına\s*itiraz/i.test(alias); // "Marka Yayınına İtiraz" varyasyonlarını da yakalar
+  this.searchSource = isTrademarkOpposition ? 'bulletin' : 'portfolio';
+
+  // Eski action bar kalıntılarını temizle (ekstra güvenlik)
   document.querySelectorAll('.form-actions').forEach(el => el.remove());
 
+  // Alanı sıfırla
   container.innerHTML = '';
   this.resetSelections();
 
   const saveTaskBtn = document.getElementById('saveTaskBtn');
   if (saveTaskBtn) saveTaskBtn.disabled = true;
 
-  if (!selectedTaskType) { this._rendering = false; return; }
+  if (!selectedTaskType) { 
+    this._rendering = false; 
+    return; 
+  }
 
+  // Render
   if (selectedTaskType.alias === 'Başvuru' && selectedTaskType.ipType === 'trademark') {
     this.renderTrademarkApplicationForm(container);
   } else {
-    this.renderBaseForm(container, selectedTaskType.alias || selectedTaskType.name, selectedTaskType.id);
+    this.renderBaseForm(container, alias, selectedTaskType.id);
   }
 
-  this.initIpRecordSearchSelector();
+  // Arama bileşenini kur (bulletin ise bülten kayıtlarını yükleyip o havuzdan arar)
+  await this.initIpRecordSearchSelector();
+
   this.updateButtonsAndTabs();
   this.checkFormCompleteness();
-  this.dedupeActionButtons();
+
+  // Fazla butonları ayıkla (olası çift render kalıntısı)
+  this.dedupeActionButtons?.();
+
   this._lastRenderSig = sig;
   this._rendering = false;
 }
