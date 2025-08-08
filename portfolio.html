@@ -514,18 +514,35 @@
             }
 
             updateRecordStatusToggleButtonState() {
-                const btn = document.getElementById('toggleRecordStatusBtn');
-                if (this.selectedRecords.size === 0) {
-                    btn.disabled = true;
-                    btn.textContent = 'Aktif/Pasif';
-                    btn.className = 'btn-status-toggle';
-                    return;
-                }
-                btn.disabled = false;
-                btn.textContent = `Aktif/Pasif (${this.selectedRecords.size})`;
+            const btn = document.getElementById('toggleRecordStatusBtn');
+            if (this.selectedRecords.size === 0) {
+                btn.disabled = true;
+                btn.textContent = 'Aktif/Pasif';
+                btn.className = 'btn-status-toggle';
+                return;
+            }
+
+            const selected = [...this.selectedRecords]
+                .map(id => this.allRecords.find(r => r.id === id))
+                .filter(Boolean);
+
+            const statuses = selected.map(r => r.portfoyStatus === 'inactive' ? 'inactive' : 'active');
+            const first = statuses[0];
+            const allSame = statuses.every(s => s === first);
+
+            btn.disabled = false;
+            if (allSame && first === 'active') {
+                btn.textContent = `Arşivle (${selected.length})`;
+                btn.className = 'btn-status-toggle archive';
+            } else if (allSame && first === 'inactive') {
+                btn.textContent = `Aktif Et (${selected.length})`;
+                btn.className = 'btn-status-toggle activate';
+            } else {
+                btn.textContent = `Aktif/Pasif (${selected.length})`;
                 btn.className = 'btn-status-toggle';
             }
-            
+            }
+        
             updateAddToMonitoringButtonState() {
                 const btn = document.getElementById('addToMonitoringBtn');
                 btn.disabled = this.selectedRecords.size === 0;
@@ -533,8 +550,40 @@
             }
 
             async toggleSelectedRecordsStatus() {
-                if (this.selectedRecords.size === 0) return;
-                showNotification('Örnek: Aktif/Pasif işlemi tetiklendi.', 'info');
+            if (this.selectedRecords.size === 0) return;
+
+            const selected = [...this.selectedRecords]
+                .map(id => this.allRecords.find(r => r.id === id))
+                .filter(Boolean);
+
+            const statuses = selected.map(r => r.portfoyStatus === 'inactive' ? 'inactive' : 'active');
+            const first = statuses[0];
+            const allSame = statuses.every(s => s === first);
+
+            let targetStatus;
+            if (allSame) {
+                // hepsi aynıysa tersine çevir
+                targetStatus = (first === 'active') ? 'inactive' : 'active';
+            } else {
+                // karışık durum: kullanıcıya sor
+                const makeActive = confirm('Seçili kayıtlar farklı durumda. Tümü "Aktif" yapılsın mı? (İptal: Pasif yapılır)');
+                targetStatus = makeActive ? 'active' : 'inactive';
+            }
+
+            try {
+                await Promise.all(
+                selected.map(r => ipRecordsService.updateRecord(r.id, { portfoyStatus: targetStatus }))
+                );
+                showNotification(`Seçilen ${selected.length} kayıt "${targetStatus === 'active' ? 'Aktif' : 'Pasif'}" yapıldı.`, 'success');
+
+                this.selectedRecords.clear();
+                await this.loadAllData();           // tabloyu tazele
+                this.updateRecordStatusToggleButtonState();
+                this.updateAddToMonitoringButtonState();
+            } catch (err) {
+                console.error(err);
+                showNotification('Kayıtlar güncellenirken bir hata oluştu.', 'error');
+            }
             }
             
             async addSelectedToMonitoring() {
