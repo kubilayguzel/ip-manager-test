@@ -20,6 +20,8 @@ class CreateTaskModule {
         this.isNiceClassificationInitialized = false;
         this.selectedApplicants = [];
         this.priorities = [];
+        this._rendering = false;
+        this._lastRenderSig = '';
     }
 
     async init() {
@@ -574,31 +576,53 @@ handleIpRecordChange(recordId) {
     }
     this.checkFormCompleteness();
 }
- async handleSpecificTypeChange(e) {
-    const taskTypeId = e.target.value;
-    const selectedTaskType = this.allTransactionTypes.find(type => type.id === taskTypeId);
+async handleSpecificTypeChange(e) {
+  console.count('handleSpecificTypeChange called');
+  const taskTypeId = e.target.value;
+  const selectedTaskType = this.allTransactionTypes.find(t => t.id === taskTypeId);
 
-    const container = document.getElementById('conditionalFieldsContainer');
-    container.innerHTML = '';
-    this.resetSelections();
+  const container = document.getElementById('conditionalFieldsContainer');
+  if (!container) return;
 
-    const saveTaskBtn = document.getElementById('saveTaskBtn');
-    if (saveTaskBtn) saveTaskBtn.disabled = true;
+  // --- aynı seçim tekrarlandıysa atla
+  const sig = selectedTaskType ? `${selectedTaskType.id}::${selectedTaskType.alias || selectedTaskType.name || ''}` : '';
+  if (this._lastRenderSig === sig && container.childElementCount > 0) {
+    // console.debug('Skip re-render for same selection:', sig);
+    return;
+  }
 
-    if (!selectedTaskType) return;
+  // --- re-entrancy guard
+  if (this._rendering) return;
+  this._rendering = true;
 
-    // Marka başvurusu için özel form
-    if (selectedTaskType.alias === 'Başvuru' && selectedTaskType.ipType === 'trademark') {
-        this.renderTrademarkApplicationForm(container);
-        this.updateButtonsAndTabs();
-    } 
-    // ✅ Diğer tüm işlem tipleri için base form
-    else {
-        this.renderBaseForm(container, selectedTaskType.alias || selectedTaskType.name, selectedTaskType.id);
-        this.updateButtonsAndTabs();
-    }
-    this.checkFormCompleteness();
+  // Temizle ve sıfırla
+  container.innerHTML = '';
+  this.resetSelections();
+
+  const saveTaskBtn = document.getElementById('saveTaskBtn');
+  if (saveTaskBtn) saveTaskBtn.disabled = true;
+
+  if (!selectedTaskType) { this._rendering = false; return; }
+
+  // Özel / Base render
+  if (selectedTaskType.alias === 'Başvuru' && selectedTaskType.ipType === 'trademark') {
+    this.renderTrademarkApplicationForm(container);
+    this.updateButtonsAndTabs();
+    // Eğer trademark formunda da portföy araması kullanacaksan:
+    this.initIpRecordSearchSelector();
+  } else {
+    this.renderBaseForm(container, selectedTaskType.alias || selectedTaskType.name, selectedTaskType.id);
+    this.updateButtonsAndTabs();
+    // Yeni arama&seçim UI’ı için:
+    this.initIpRecordSearchSelector();
+  }
+
+  this._lastRenderSig = sig;
+  this._rendering = false;
+
+  this.checkFormCompleteness();
 }
+
 
     renderTrademarkApplicationForm(container) {
         container.innerHTML = `
