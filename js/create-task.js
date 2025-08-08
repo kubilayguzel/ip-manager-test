@@ -92,18 +92,23 @@ class CreateTaskModule {
         results.style.display = 'block';
         return;
         }
-        results.innerHTML = items.slice(0, 50).map(r => {
-        const title = r.title || r.markName || r.applicationTitle || 'Başlık yok';
-        const owner = r.ownerName || r.applicantName || '';
-        const appNo = r.applicationNo || r.fileNo || r.registrationNo || '';
-        const id = r.id || r.recordId || r.docId || '';
-        return `
-            <div class="search-result-item" data-id="${id}" style="padding:8px 10px; border-bottom:1px solid #eee; cursor:pointer;">
-            <div><strong>${title}</strong></div>
-            <div class="text-muted" style="font-size:12px;">${[owner, appNo].filter(Boolean).join(' • ')}</div>
-            </div>`;
-        }).join('');
-        results.style.display = 'block';
+    results.innerHTML = items.slice(0, 50).map(r => {
+       const id = r.id || r.recordId || r.docId || r._id || r.uid || '';
+       const title = r.title || r.name || r.markName || r.applicationTitle || 'Başlık yok';
+       const owner = r.ownerName || r.owner || r.applicantName || '';
+       const appNo = r.applicationNo || r.applicationNumber || r.appNo || r.fileNo || r.registrationNo || '';
+       const img  = r.markImageUrl || r.brandSampleUrl || r.markSampleUrl || r.imageUrl || '';
+       const line = `${appNo ? (appNo + ' — ') : ''}${title}`;
+       return `
+         <div class="search-result-item d-flex align-items-center" data-id="${id}" style="padding:8px 10px; border-bottom:1px solid #eee; cursor:pointer; gap:10px;">
+           ${img ? `<img src="${img}" alt="" style="width:32px;height:32px;object-fit:cover;border-radius:4px;border:1px solid #eee;">` : ''}
+           <div>
+             <div><strong>${line}</strong></div>
+             <div class="text-muted" style="font-size:12px;">${owner || ''}</div>
+           </div>
+         </div>`;
+     }).join('');
+    results.style.display = 'block';
     };
 
     const doSearch = this.debounce((term) => {
@@ -111,16 +116,25 @@ class CreateTaskModule {
         term = (term || '').toLowerCase().trim();
         if (!term) { results.style.display = 'none'; results.innerHTML = ''; return; }
 
-        const pool = Array.isArray(this.allIpRecords) ? this.allIpRecords : [];
-        const filtered = pool.filter(r => {
-        const hay = [
-            r.title, r.markName, r.applicationTitle,
-            r.ownerName, r.applicantName,
-            r.applicationNo, r.fileNo, r.registrationNo
-        ].filter(Boolean).join(' ').toLowerCase();
-        return hay.includes(term);
-        });
-        renderResults(filtered);
+    const pool = Array.isArray(this.allIpRecords) ? this.allIpRecords : [];
+    const norm = v => (v == null ? '' : String(v)).toLowerCase();
+    const filtered = pool.filter(r => {
+       // yaygın alanlar + varyasyonlar
+    const haystack = [
+        r.title, r.name, r.markName, r.applicationTitle,
+         r.ownerName, r.owner, r.applicantName,
+         r.applicationNo, r.applicationNumber, r.appNo,
+         r.fileNo, r.registrationNo
+       ].map(norm).join(' ');
+       if (haystack.includes(term)) return true;
+       // çok “garanti” olsun dersen tüm değerleri tara:
+       if (!haystack.trim()) {
+        try { return Object.values(r).map(norm).join(' ').includes(term); }
+         catch { return false; }
+       }
+       return false;
+    });
+    renderResults(filtered);
     }, 250);
 
     input.addEventListener('input', (e) => doSearch(e.target.value));
@@ -133,15 +147,28 @@ class CreateTaskModule {
         const pool = Array.isArray(this.allIpRecords) ? this.allIpRecords : [];
         const rec = pool.find(x => (x.id || x.recordId || x.docId) === id);
 
-        const title = rec?.title || rec?.markName || rec?.applicationTitle || 'Başlık yok';
-        const owner = rec?.ownerName || rec?.applicantName || '';
-        const appNo = rec?.applicationNo || rec?.fileNo || rec?.registrationNo || '';
+        const title = rec?.title || rec?.name || rec?.markName || rec?.applicationTitle || 'Başlık yok';
+        const owner = rec?.ownerName || rec?.owner || rec?.applicantName || '';
+        const appNo = rec?.applicationNo || rec?.applicationNumber || rec?.appNo || rec?.fileNo || rec?.registrationNo || '';
+        const img  = rec?.markImageUrl || rec?.brandSampleUrl || rec?.markSampleUrl || rec?.imageUrl || '';
 
         this.selectedIpRecord = rec || { id, title, ownerName: owner, applicationNo: appNo };
-
-        selectedLabel.textContent = title;
-        selectedMeta.textContent = [owner, appNo].filter(Boolean).join(' • ');
         selectedBox.style.display = 'block';
+        selectedLabel.innerHTML = `${appNo ? `<strong>${appNo}</strong> — ` : ''}${title}`;
+        selectedMeta.textContent = owner || '';
+        // küçük görseli göstermek istersen:
+        if (img) {
+        // box içine küçük bir img yerleştir (id'li bir <span> içine ya da direkt prepend)
+        if (!selectedBox.querySelector('.ip-thumb')) {
+            const ph = document.createElement('img');
+            ph.className = 'ip-thumb';
+            ph.style.cssText = 'width:36px;height:36px;object-fit:cover;border:1px solid #eee;border-radius:4px;margin-right:8px;';
+            ph.src = img;
+            selectedBox.querySelector('.p-2')?.prepend(ph);
+        } else {
+            selectedBox.querySelector('.ip-thumb').src = img;
+        }
+        }
         results.style.display = 'none';
         results.innerHTML = '';
         input.value = '';
