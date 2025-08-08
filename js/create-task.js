@@ -1742,8 +1742,8 @@ async loadBulletinRecordsOnce() {
   try {
     const db = getFirestore();
     
-    // ✅ DOĞRU: trademarkRecords koleksiyonunu oku
-    const snap = await getDocs(collection(db, 'trademarkRecords'));
+    // ✅ DOĞRU: trademarkBulletinRecords koleksiyonunu oku
+    const snap = await getDocs(collection(db, 'trademarkBulletinRecords'));
     
     this.allBulletinRecords = snap.docs.map(d => {
       const x = d.data() || {};
@@ -1753,10 +1753,9 @@ async loadBulletinRecordsOnce() {
         applicationNo: x.applicationNo || x.applicationNumber || '',
         imagePath: x.imagePath || '',
         holders: x.holders || [],
-        // Ek alanlar varsa buraya ekleyin
         bulletinId: x.bulletinId || '',
         attorneys: x.attorneys || [],
-        // Diğer gerekli alanlar...
+        // ihtiyacın olan başka alanlar da buraya eklenebilir
       };
     });
     
@@ -1766,6 +1765,7 @@ async loadBulletinRecordsOnce() {
     this.allBulletinRecords = [];
   }
 }
+
 
 checkFormCompleteness() {
     const taskTypeId = document.getElementById('specificTaskType')?.value;
