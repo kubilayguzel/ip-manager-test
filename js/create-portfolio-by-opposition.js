@@ -1,7 +1,7 @@
 // js/create-portfolio-by-opposition.js
 // Yayına İtiraz işi oluşturulduğunda otomatik 3.taraf portföy kaydı oluşturma
 
-import { getFirestore, doc, getDoc, addDoc, collection, query, where, getDocs } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+import { getFirestore, doc, getDoc, addDoc, collection, query, where, getDocs, updateDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 
 class PortfolioByOppositionCreator {
     constructor() {
@@ -23,7 +23,7 @@ class PortfolioByOppositionCreator {
     }
 
     /**
-     * Bulletin kaydından 3.taraf portföy kaydı oluşturur
+     * Bulletin kaydından 3.taraf portföy kaydı oluşturur ve task'ı günceller
      * @param {string} bulletinRecordId - Seçilen bulletin kaydının ID'si
      * @param {string} transactionId - İtiraz işinin ID'si
      * @returns {Object} Oluşturulan portföy kaydı bilgisi
@@ -38,28 +38,194 @@ class PortfolioByOppositionCreator {
                 return { success: false, error: bulletinData.error };
             }
 
-            // 2. Bulletin verisini portföy formatına dönüştür
+            // 2. Bulletin verisini portföy formatına dönüştür (henüz originalBulletinRecordId yok)
             const portfolioData = this.mapBulletinToPortfolio(bulletinData.data, transactionId);
 
             // 3. Portföy kaydını oluştur
             const result = await this.createPortfolioRecord(portfolioData);
 
-            if (result.success) {
-                console.log('✅ 3.taraf portföy kaydı başarıyla oluşturuldu:', result.recordId);
+            if (!result.success) {
+                return { success: false, error: result.error };
+            }
+
+            // 4. ✅ Task'ın relatedIpRecordId'sini yeni oluşturulan 3.taraf portföy ID'si ile güncelle
+            const taskUpdateResult = await this.updateTaskWithNewPortfolioRecord(transactionId, result.recordId, portfolioData.title);
+
+            if (!taskUpdateResult.success) {
+                console.warn('⚠️ Task güncellenirken hata oluştu:', taskUpdateResult.error);
+                // Portföy kaydı oluşturuldu ama task güncellenemedi - bu durumu kullanıcıya bildir
                 return {
                     success: true,
                     recordId: result.recordId,
-                    message: '3.taraf portföy kaydı başarıyla oluşturuldu'
+                    message: '3.taraf portföy kaydı oluşturuldu ancak iş relatedIpRecordId güncellenirken hata oluştu',
+                    warning: taskUpdateResult.error
                 };
-            } else {
-                return { success: false, error: result.error };
             }
+
+            console.log('✅ 3.taraf portföy kaydı başarıyla oluşturuldu ve task relatedIpRecordId güncellendi:', result.recordId);
+            return {
+                success: true,
+                recordId: result.recordId,
+                message: '3.taraf portföy kaydı başarıyla oluşturuldu ve iş relatedIpRecordId güncellendi'
+            };
 
         } catch (error) {
             console.error('❌ 3.taraf portföy kaydı oluşturma hatası:', error);
             return { 
                 success: false, 
                 error: `Portföy kaydı oluşturulamadı: ${error.message}` 
+            };
+        }
+    }
+
+    /**
+     * ✅ YENİ METOD: Task'ın relatedIpRecordId'sini yeni oluşturulan 3.taraf portföy ID'si ile günceller
+     * @param {string} taskId - Güncellenecek task'ın ID'si
+     * @param {string} newPortfolioId - Yeni oluşturulan portföy kaydının ID'si
+     * @param {string} portfolioTitle - Portföy kaydının başlığı
+     * @returns {Object} Güncelleme sonucu
+     */
+    async updateTaskWithNewPortfolioRecord(taskId, newPortfolioId, portfolioTitle) {
+        try {
+            if (!this.db) {
+                return { success: false, error: 'Firebase bağlantısı bulunamadı' };
+            }
+
+            const taskRef = doc(this.db, 'tasks', taskId);
+            
+            const updateData = {
+                relatedIpRecordId: newPortfolioId, // Yeni 3.taraf portföy ID'sini task'a yaz
+                relatedIpRecordTitle: portfolioTitle,
+                updatedAt: new Date().toISOString()
+            };
+
+            await updateDoc(taskRef, updateData);
+            
+            console.log('✅ Task relatedIpRecordId güncellendi:', {
+                taskId,
+                oldRelatedIpRecordId: 'bulletin_record_id',
+                newRelatedIpRecordId: newPortfolioId
+            });
+
+            return { success: true };
+
+        } catch (error) {
+            console.error('❌ Task güncelleme hatası:', error);
+            return { 
+                success: false, 
+                error: `Task güncellenemedi: ${error.message}` 
+            };
+        }
+    }
+     * @param {string} bulletinRecordId - Güncellenecek bulletin kaydının ID'si
+     * @param {string} portfolioId - Yeni oluşturulan portföy kaydının ID'si
+     * @returns {Object} Güncelleme sonucu
+     */
+    async updateBulletinWithPortfolioId(bulletinRecordId, portfolioId) {
+        try {
+            if (!this.db) {
+                return { success: false, error: 'Firebase bağlantısı bulunamadı' };
+            }
+
+            const bulletinRef = doc(this.db, 'trademarkBulletinRecords', bulletinRecordId);
+            
+            const updateData = {
+                originalBulletinRecordId: portfolioId, // Yeni portföy ID'sini bulletin kaydına yaz
+                updatedAt: new Date().toISOString()
+            };
+
+            await updateDoc(bulletinRef, updateData);
+            
+            console.log('✅ Bulletin kaydının originalBulletinRecordId güncellendi:', {
+                bulletinRecordId,
+                originalBulletinRecordId: portfolioId
+            });
+
+            return { success: true };
+
+        } catch (error) {
+            console.error('❌ Bulletin originalBulletinRecordId güncelleme hatası:', error);
+            return { 
+                success: false, 
+                error: `Bulletin güncellenemedi: ${error.message}` 
+            };
+        }
+    }
+     * @param {string} taskId - Güncellenecek task'ın ID'si
+     * @param {string} newPortfolioId - Yeni oluşturulan portföy kaydının ID'si
+     * @param {string} portfolioTitle - Portföy kaydının başlığı
+     * @returns {Object} Güncelleme sonucu
+     */
+    async updateTaskWithNewPortfolioRecord(taskId, newPortfolioId, portfolioTitle) {
+        try {
+            if (!this.db) {
+                return { success: false, error: 'Firebase bağlantısı bulunamadı' };
+            }
+
+            const taskRef = doc(this.db, 'tasks', taskId);
+            
+            const updateData = {
+                relatedIpRecordId: newPortfolioId,
+                relatedIpRecordTitle: portfolioTitle,
+                updatedAt: new Date().toISOString()
+            };
+
+            await updateDoc(taskRef, updateData);
+            
+            console.log('✅ Task relatedIpRecordId güncellendi:', {
+                taskId,
+                oldId: 'bulletin_record_id',
+                newId: newPortfolioId
+            });
+
+            return { success: true };
+
+        } catch (error) {
+            console.error('❌ Task güncelleme hatası:', error);
+            return { 
+                success: false, 
+                error: `Task güncellenemedi: ${error.message}` 
+            };
+        }
+    }
+
+    /**
+     * İş oluşturulduğunda otomatik tetikleme kontrolü
+     * @param {Object} transactionData - İş verisi
+     * @returns {Promise<Object>} İşlem sonucu
+     */
+    async handleTransactionCreated(transactionData) {
+        try {
+            console.log('🔍 İş oluşturuldu, yayına itiraz kontrolü yapılıyor...');
+
+            // Yayına itiraz işi mi kontrol et
+            if (!this.isPublicationOpposition(transactionData.specificTaskType)) {
+                console.log('ℹ️ Bu iş yayına itiraz değil, portföy oluşturulmayacak');
+                return { success: true, message: 'Yayına itiraz işi değil' };
+            }
+
+            // Seçilen bulletin kaydı var mı kontrol et
+            if (!transactionData.selectedIpRecord || !transactionData.selectedIpRecord.id) {
+                console.warn('⚠️ Seçilen bulletin kaydı bulunamadı');
+                return { 
+                    success: false, 
+                    error: 'Yayına itiraz için bulletin kaydı seçilmeli' 
+                };
+            }
+
+            // 3.taraf portföy kaydı oluştur ve task'ı güncelle
+            const result = await this.createThirdPartyPortfolioFromBulletin(
+                transactionData.selectedIpRecord.id,
+                transactionData.id
+            );
+
+            return result;
+
+        } catch (error) {
+            console.error('❌ İş oluşturulma sonrası işlem hatası:', error);
+            return { 
+                success: false, 
+                error: `Otomatik portföy oluşturma hatası: ${error.message}` 
             };
         }
     }
@@ -102,99 +268,62 @@ class PortfolioByOppositionCreator {
     /**
      * Bulletin verisini ipRecords portföy formatına dönüştürür
      * @param {Object} bulletinData - Bulletin verisi
-     * @param {string} transactionId - İtiraz işi ID'si
+     * @param {string} transactionId - İlgili işlem ID'si
      * @returns {Object} Portföy kayıt verisi
      */
     mapBulletinToPortfolio(bulletinData, transactionId) {
         const now = new Date().toISOString();
+        
+        // Başvuru sahiplerini düzenle
+        const applicants = bulletinData.applicants?.map(applicant => ({
+            id: `bulletin_applicant_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            name: applicant.name || applicant,
+            address: applicant.address || null,
+            email: null,
+            phone: null,
+            type: 'company'
+        })) || [];
 
-        // Başvuru sahiplerini dönüştür
-        const applicants = [];
-        if (Array.isArray(bulletinData.holders) && bulletinData.holders.length > 0) {
-            bulletinData.holders.forEach(holder => {
-                if (holder && holder.name) {
-                    applicants.push({
-                        id: `holder_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-                        name: holder.name.trim(),
-                        email: holder.email || null,
-                        type: 'applicant'
-                    });
-                }
-            });
-        }
+        // Mal ve hizmet sınıflarını düzenle
+        const goodsAndServices = bulletinData.classNumbers?.map(classNum => ({
+            niceClass: classNum.toString(),
+            description: `Sınıf ${classNum} - Bulletin kaydından alınan`,
+            status: 'active'
+        })) || [];
 
-        // Nice sınıfları ve mal/hizmetleri dönüştür
-        const goodsAndServices = [];
-        if (Array.isArray(bulletinData.niceClasses)) {
-            bulletinData.niceClasses.forEach(niceClass => {
-                if (niceClass) {
-                    goodsAndServices.push({
-                        niceClass: niceClass.toString(),
-                        goods: bulletinData.goods || [],
-                        extractedGoods: bulletinData.extractedGoods || []
-                    });
-                }
-            });
-        }
-
-        // Vekilleri dönüştür
-        const attorneys = [];
-        if (Array.isArray(bulletinData.attorneys) && bulletinData.attorneys.length > 0) {
-            bulletinData.attorneys.forEach(attorney => {
-                if (attorney && attorney.name) {
-                    attorneys.push({
-                        id: `attorney_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-                        name: attorney.name.trim(),
-                        email: attorney.email || null,
-                        type: 'attorney'
-                    });
-                }
-            });
-        }
-
-        // Ana portföy kayıt yapısı
         const portfolioData = {
             // Temel bilgiler
-            title: bulletinData.markName || '',
+            title: bulletinData.markName || `Başvuru No: ${bulletinData.applicationNo}`,
             type: 'trademark',
-            
-            // Durum bilgileri  
             portfoyStatus: 'active',
-            status: '', // Boş bırak
+            status: 'published_in_bulletin',
+            recordOwnerType: 'third_party',
             
-            // Kayıt sahipliği - 3.taraf
-            recordOwnerType: 'third-party',
-            
-            // Başvuru bilgileri
-            applicationNumber: bulletinData.applicationNo || bulletinData.applicationNumber || null,
+            // Başvuru/Tescil bilgileri
+            applicationNumber: bulletinData.applicationNo || null,
             applicationDate: bulletinData.applicationDate || null,
-            registrationNumber: null, // Bulletin'de bu bilgi yok
+            registrationNumber: null,
             registrationDate: null,
             renewalDate: null,
             
-            // Marka özellikleri
-            brandText: bulletinData.markName || '',
+            // Marka bilgileri
+            brandText: bulletinData.markName || null,
             brandImageUrl: bulletinData.imagePath || null,
+            description: `Yayına itiraz (İş ID: ${transactionId}) için oluşturulan 3.taraf portföy kaydı`,
             
-            // Açıklama
-            description: `Yayına itiraz kapsamında oluşturulan 3.taraf dosyası (İşlem: ${transactionId})`,
-            
-            // Ana seviye veriler
+            // İlişkili veriler
             applicants: applicants,
-            priorities: [], // Bulletin'de öncelik bilgisi yok
+            priorities: [],
             goodsAndServices: goodsAndServices,
-            attorneys: attorneys,
             
-            // Detay bilgiler
+            // Detay bilgileri
             details: {
-                source: 'bulletin_opposition',
-                originalBulletinId: bulletinData.bulletinId || null,
-                originalBulletinRecordId: bulletinData.id || null,
+                originalBulletinId: bulletinData.id,
                 relatedTransactionId: transactionId,
                 brandInfo: {
-                    brandType: null,
+                    brandType: bulletinData.markType || null,
                     brandCategory: null,
-                    brandExampleText: bulletinData.markName || '',
+                    brandExampleText: bulletinData.markName || null,
                     nonLatinAlphabet: null,
                     coverLetterRequest: null,
                     consentRequest: null,
@@ -271,47 +400,6 @@ class PortfolioByOppositionCreator {
     }
 
     /**
-     * İş oluşturulduğunda otomatik tetikleme kontrolü
-     * @param {Object} transactionData - İş verisi
-     * @returns {Promise<Object>} İşlem sonucu
-     */
-    async handleTransactionCreated(transactionData) {
-        try {
-            console.log('🔍 İş oluşturuldu, yayına itiraz kontrolü yapılıyor...');
-
-            // Yayına itiraz işi mi kontrol et
-            if (!this.isPublicationOpposition(transactionData.specificTaskType)) {
-                console.log('ℹ️ Bu iş yayına itiraz değil, portföy oluşturulmayacak');
-                return { success: true, message: 'Yayına itiraz işi değil' };
-            }
-
-            // Seçilen bulletin kaydı var mı kontrol et
-            if (!transactionData.selectedIpRecord || !transactionData.selectedIpRecord.id) {
-                console.warn('⚠️ Seçilen bulletin kaydı bulunamadı');
-                return { 
-                    success: false, 
-                    error: 'Yayına itiraz için bulletin kaydı seçilmeli' 
-                };
-            }
-
-            // 3.taraf portföy kaydı oluştur
-            const result = await this.createThirdPartyPortfolioFromBulletin(
-                transactionData.selectedIpRecord.id,
-                transactionData.id
-            );
-
-            return result;
-
-        } catch (error) {
-            console.error('❌ İş oluşturulma sonrası işlem hatası:', error);
-            return { 
-                success: false, 
-                error: `Otomatik portföy oluşturma hatası: ${error.message}` 
-            };
-        }
-    }
-
-    /**
      * Manuel portföy oluşturma (test amaçlı)
      * @param {string} bulletinRecordId - Bulletin kayıt ID'si
      * @returns {Promise<Object>} İşlem sonucu
@@ -338,22 +426,9 @@ class PortfolioByOppositionCreator {
             if (applicationNo) {
                 const q = query(
                     collection(this.db, 'ipRecords'),
-                    where('applicationNumber', '==', applicationNo),
-                    where('recordOwnerType', '==', 'third-party')
+                    where('applicationNumber', '==', applicationNo)
                 );
                 querySnapshot = await getDocs(q);
-            }
-
-            // Başvuru numarası ile bulunamadıysa marka adı ile kontrol
-            if (!querySnapshot || querySnapshot.empty) {
-                if (markName) {
-                    const q2 = query(
-                        collection(this.db, 'ipRecords'),
-                        where('title', '==', markName),
-                        where('recordOwnerType', '==', 'third-party')
-                    );
-                    querySnapshot = await getDocs(q2);
-                }
             }
 
             if (querySnapshot && !querySnapshot.empty) {
@@ -366,23 +441,19 @@ class PortfolioByOppositionCreator {
                 };
             }
 
-            return {
-                success: true,
-                exists: false
-            };
+            return { success: true, exists: false };
 
         } catch (error) {
             console.error('❌ Mevcut portföy kontrolü hatası:', error);
-            return { 
-                success: false, 
-                error: error.message 
-            };
+            return { success: false, error: error.message };
         }
     }
 }
 
-// Global instance oluştur
-window.portfolioByOppositionCreator = new PortfolioByOppositionCreator();
+// Global erişim için window objesine ekle
+if (typeof window !== 'undefined') {
+    window.PortfolioByOppositionCreator = PortfolioByOppositionCreator;
+    window.portfolioByOppositionCreator = new PortfolioByOppositionCreator();
+}
 
-// Export et (ES6 modüller için)
 export default PortfolioByOppositionCreator;
