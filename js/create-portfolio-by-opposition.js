@@ -117,77 +117,6 @@ class PortfolioByOppositionCreator {
             };
         }
     }
-     * @param {string} bulletinRecordId - Güncellenecek bulletin kaydının ID'si
-     * @param {string} portfolioId - Yeni oluşturulan portföy kaydının ID'si
-     * @returns {Object} Güncelleme sonucu
-     */
-    async updateBulletinWithPortfolioId(bulletinRecordId, portfolioId) {
-        try {
-            if (!this.db) {
-                return { success: false, error: 'Firebase bağlantısı bulunamadı' };
-            }
-
-            const bulletinRef = doc(this.db, 'trademarkBulletinRecords', bulletinRecordId);
-            
-            const updateData = {
-                originalBulletinRecordId: portfolioId, // Yeni portföy ID'sini bulletin kaydına yaz
-                updatedAt: new Date().toISOString()
-            };
-
-            await updateDoc(bulletinRef, updateData);
-            
-            console.log('✅ Bulletin kaydının originalBulletinRecordId güncellendi:', {
-                bulletinRecordId,
-                originalBulletinRecordId: portfolioId
-            });
-
-            return { success: true };
-
-        } catch (error) {
-            console.error('❌ Bulletin originalBulletinRecordId güncelleme hatası:', error);
-            return { 
-                success: false, 
-                error: `Bulletin güncellenemedi: ${error.message}` 
-            };
-        }
-    }
-     * @param {string} taskId - Güncellenecek task'ın ID'si
-     * @param {string} newPortfolioId - Yeni oluşturulan portföy kaydının ID'si
-     * @param {string} portfolioTitle - Portföy kaydının başlığı
-     * @returns {Object} Güncelleme sonucu
-     */
-    async updateTaskWithNewPortfolioRecord(taskId, newPortfolioId, portfolioTitle) {
-        try {
-            if (!this.db) {
-                return { success: false, error: 'Firebase bağlantısı bulunamadı' };
-            }
-
-            const taskRef = doc(this.db, 'tasks', taskId);
-            
-            const updateData = {
-                relatedIpRecordId: newPortfolioId,
-                relatedIpRecordTitle: portfolioTitle,
-                updatedAt: new Date().toISOString()
-            };
-
-            await updateDoc(taskRef, updateData);
-            
-            console.log('✅ Task relatedIpRecordId güncellendi:', {
-                taskId,
-                oldId: 'bulletin_record_id',
-                newId: newPortfolioId
-            });
-
-            return { success: true };
-
-        } catch (error) {
-            console.error('❌ Task güncelleme hatası:', error);
-            return { 
-                success: false, 
-                error: `Task güncellenemedi: ${error.message}` 
-            };
-        }
-    }
 
     /**
      * İş oluşturulduğunda otomatik tetikleme kontrolü
@@ -318,7 +247,8 @@ class PortfolioByOppositionCreator {
             
             // Detay bilgileri
             details: {
-                originalBulletinId: bulletinData.id,
+                originalBulletinRecordId: null, // Bu daha sonra portföy ID'si ile güncellenecek
+                sourceBulletinRecordId: bulletinData.id, // Kaynak bulletin kaydının ID'si
                 relatedTransactionId: transactionId,
                 brandInfo: {
                     brandType: bulletinData.markType || null,
