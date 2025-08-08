@@ -1741,17 +1741,25 @@ async loadBulletinRecordsOnce() {
 
   try {
     const db = getFirestore();
-    const snap = await getDocs(collection(db, 'trademarkBulletinRecords'));
+    
+    // ✅ DOĞRU: trademarkRecords koleksiyonunu oku
+    const snap = await getDocs(collection(db, 'trademarkRecords'));
+    
     this.allBulletinRecords = snap.docs.map(d => {
       const x = d.data() || {};
       return {
         id: d.id,
         markName: x.markName || '',
         applicationNo: x.applicationNo || x.applicationNumber || '',
-        imagePath: x.imagePath || '',        // Storage path (ör: "bulletins/.../2025_081142.jpg")
-        holders: x.holders || []
+        imagePath: x.imagePath || '',
+        holders: x.holders || [],
+        // Ek alanlar varsa buraya ekleyin
+        bulletinId: x.bulletinId || '',
+        attorneys: x.attorneys || [],
+        // Diğer gerekli alanlar...
       };
     });
+    
     console.log('[BULLETIN] yüklendi:', this.allBulletinRecords.length);
   } catch (err) {
     console.error('[BULLETIN] yüklenemedi:', err);
