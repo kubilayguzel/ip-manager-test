@@ -1453,7 +1453,6 @@ checkFormCompleteness() {
         return;
     }
 
-    const assignedTo = document.getElementById('assignedTo')?.value;
     let isComplete = false;
 
     if (selectedTaskType.alias === 'Başvuru' && selectedTaskType.ipType === 'trademark') {
@@ -1467,7 +1466,7 @@ checkFormCompleteness() {
         const hasIpRecord = !!this.selectedIpRecord;
 
         // assignedTo, başlık ve portföy kaydı seçildiğinde tamamlandı olarak işaretle
-        isComplete = !!(assignedTo && taskTitle && hasIpRecord);
+        isComplete = !!taskTitle && !!this.selectedIpRecord;
     }
 
     saveTaskBtn.disabled = !isComplete;
