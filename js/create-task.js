@@ -94,11 +94,11 @@ class CreateTaskModule {
             $(e.target).tab('show');
         });
 
-        $(document).on('shown.bs.tab', '#myTaskTabs a', (e) => {
+        $(document).on('shown.bs.tab', '#myTaskTabs a', async (e) => {
             this.updateButtonsAndTabs();
             const targetTabId = e.target.getAttribute('href').substring(1);
             if (targetTabId === 'goods-services' && !this.isNiceClassificationInitialized) {
-                initializeNiceClassification();
+                await initializeNiceClassification();
                 this.isNiceClassificationInitialized = true;
             }
             if (targetTabId === 'applicants') {
@@ -454,8 +454,8 @@ handleIpRecordChange(recordId) {
     // ✅ Diğer tüm işlem tipleri için base form
     else {
         this.renderBaseForm(container, selectedTaskType.alias || selectedTaskType.name, selectedTaskType.id);
+        this.updateButtonsAndTabs();
     }
-
     this.checkFormCompleteness();
 }
 
