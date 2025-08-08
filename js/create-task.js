@@ -115,7 +115,7 @@ async initIpRecordSearchSelector() {
       const title = r.title || r.name || r.markName || r.applicationTitle || 'Başlık yok';
       const owner = r.ownerName || r.owner || r.applicantName || '';
       const appNo = r.applicationNo || r.applicationNumber || r.appNo || r.fileNo || r.registrationNo || '';
-      const img   = r.markImageUrl || r.brandSampleUrl || r.markSampleUrl || r.imageUrl || r.brandSamplePath || '';
+      const img   = r.brandImageUrl || r.markImageUrl || r.brandSampleUrl || r.markSampleUrl || r.imageUrl || r.brandSamplePath || '';
 
       const line = `${appNo ? (appNo + ' — ') : ''}${title}`;
       const imgHtml = img
@@ -184,7 +184,7 @@ async initIpRecordSearchSelector() {
     const title = rec?.title || rec?.name || rec?.markName || rec?.applicationTitle || 'Başlık yok';
     const owner = rec?.ownerName || rec?.owner || rec?.applicantName || '';
     const appNo = rec?.applicationNo || rec?.applicationNumber || rec?.appNo || rec?.fileNo || rec?.registrationNo || '';
-    const img   = rec?.markImageUrl || rec?.brandSampleUrl || rec?.markSampleUrl || rec?.imageUrl || rec?.brandSamplePath || '';
+    const img   = rec?.brandImageUrl || rec?.markImageUrl || rec?.brandSampleUrl || rec?.markSampleUrl || rec?.imageUrl || rec?.brandSamplePath || '';
 
     this.selectedIpRecord = rec || { id, title, ownerName: owner, applicationNo: appNo };
 
