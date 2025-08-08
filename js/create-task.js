@@ -2,6 +2,8 @@ import { authService, taskService, ipRecordsService, personService, accrualServi
 import { loadSharedLayout } from './layout-loader.js';
 import { initializeNiceClassification, getSelectedNiceClasses } from './nice-classification.js';
 import { ref, uploadBytes, getStorage, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
+import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
 
 
 class CreateTaskModule {
@@ -692,7 +694,11 @@ async handleSpecificTypeChange(e) {
     (selectedTaskType?.ipType === 'trademark') &&
     /itiraz|yayına\s*itiraz/i.test(alias); // "Marka Yayınına İtiraz" varyasyonlarını da yakalar
   this.searchSource = isTrademarkOpposition ? 'bulletin' : 'portfolio';
-
+  console.log('[TYPE]', {
+  alias,
+  ipType: selectedTaskType?.ipType,
+  searchSource: this.searchSource
+});
   // Eski action bar kalıntılarını temizle (ekstra güvenlik)
   document.querySelectorAll('.form-actions').forEach(el => el.remove());
 
@@ -1726,29 +1732,28 @@ async resolveImageUrl(img) {
     return '';
   }
 }
-async resolveImageUrl(img) {
-  if (!img) return '';
-  if (img.startsWith('http')) return img;
-  try {
-    const url = await getDownloadURL(ref(getStorage(), img));
-    return url;
-  } catch { return ''; }
-}
 
 async loadBulletinRecordsOnce() {
   if (Array.isArray(this.allBulletinRecords) && this.allBulletinRecords.length) return;
-  const snap = await getDocs(collection(getFirestore(), 'trademarkBulletinRecords'));
-  this.allBulletinRecords = snap.docs.map(d => {
-    const x = d.data();
-    return {
-      id: d.id,
-      markName: x.markName || '',
-      applicationNo: x.applicationNo || x.applicationNumber || '',
-      imagePath: x.imagePath || '',                // storage path
-      holders: x.holders || [],
-      // başka alanlar gerekirse ekleyebilirsin
-    };
-  });
+
+  try {
+    const db = getFirestore();
+    const snap = await getDocs(collection(db, 'trademarkBulletinRecords'));
+    this.allBulletinRecords = snap.docs.map(d => {
+      const x = d.data() || {};
+      return {
+        id: d.id,
+        markName: x.markName || '',
+        applicationNo: x.applicationNo || x.applicationNumber || '',
+        imagePath: x.imagePath || '',        // Storage path (ör: "bulletins/.../2025_081142.jpg")
+        holders: x.holders || []
+      };
+    });
+    console.log('[BULLETIN] yüklendi:', this.allBulletinRecords.length);
+  } catch (err) {
+    console.error('[BULLETIN] yüklenemedi:', err);
+    this.allBulletinRecords = [];
+  }
 }
 
 checkFormCompleteness() {
