@@ -87,6 +87,7 @@ class CreateTaskModule {
     };
 
     const doSearch = this.debounce((term) => {
+        console.log('[SEARCH] term=', term, 'poolSize=', this.allIpRecords?.length);
         term = (term || '').toLowerCase().trim();
         if (!term) { results.style.display = 'none'; results.innerHTML = ''; return; }
 
