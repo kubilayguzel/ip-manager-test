@@ -132,8 +132,8 @@ async initIpRecordSearchSelector() {
       const line = `${appNo ? (appNo + ' — ') : ''}${title}`;
       const imgHtml = img
         ? (img.startsWith('http')
-            ? `<img src="${img}" class="ip-thumb" style="width:96px;height:96px;object-fit:cover;border-radius:4px;border:1px solid #eee;">`
-            : `<img data-storage-path="${img}" class="ip-thumb" style="width:96px;height:96px;object-fit:cover;border-radius:4px;border:1px solid #eee;">`)
+            ? `<img src="${img}" class="ip-thumb" style="width:96px;height:96px;object-fit:contain;border-radius:4px;border:1px solid #eee;background:#fff;">`
+            : `<img data-storage-path="${img}" class="ip-thumb" style="width:96px;height:96px;object-fit:contain;border-radius:4px;border:1px solid #eee;background:#fff;">`)
         : '';
 
       return `
