@@ -1822,7 +1822,18 @@ async uploadFileToStorage(file, path) {
             return null;
         }
     }
-
+isPublicationOpposition(transactionTypeId) {
+    // create-portfolio-by-opposition.js ile aynı kontrol mantığı
+    const PUBLICATION_OPPOSITION_IDS = [
+        'trademark_publication_objection',  // JSON'daki ID
+        '20',                               // Sistemdeki numeric ID
+        20                                  // Number olarak da olabilir
+    ];
+    
+    return PUBLICATION_OPPOSITION_IDS.includes(transactionTypeId) || 
+           PUBLICATION_OPPOSITION_IDS.includes(String(transactionTypeId)) ||
+           PUBLICATION_OPPOSITION_IDS.includes(Number(transactionTypeId));
+}
 async handleFormSubmit(e) {
     e.preventDefault();
     const specificTaskTypeId = document.getElementById('specificTaskType')?.value;
@@ -1920,9 +1931,9 @@ async handleFormSubmit(e) {
             updatedAt: new Date().toISOString()
         };
 
-        const newRecordResult = await ipRecordsService.createRecord(newIpRecordData);
+        const newRecordResult = await ipRecordsService.addIpRecord(newIpRecordData);
         if (!newRecordResult.success) {
-            alert('Yeni IP kaydı oluşturulurken bir hata oluştu: ' + newRecordResult.error);
+            alert('IP kaydı oluşturulurken hata oluştu: ' + newRecordResult.error);
             return;
         }
 
@@ -1937,24 +1948,19 @@ async handleFormSubmit(e) {
 
         const officialFee = parseFloat(document.getElementById('officialFee')?.value) || 0;
         const serviceFee = parseFloat(document.getElementById('serviceFee')?.value) || 0;
+
         if (officialFee > 0 || serviceFee > 0) {
             const vatRate = parseFloat(document.getElementById('vatRate')?.value) || 0;
             const applyVatToOfficial = document.getElementById('applyVatToOfficialFee')?.checked;
-            const totalAmount = applyVatToOfficial ?
+            let totalAmount = applyVatToOfficial ?
                 (officialFee + serviceFee) * (1 + vatRate / 100) :
                 officialFee + (serviceFee * (1 + vatRate / 100));
 
             const accrualData = {
                 taskId: taskResult.id,
                 taskTitle: taskData.title,
-                officialFee: {
-                    amount: officialFee,
-                    currency: document.getElementById('officialFeeCurrency')?.value
-                },
-                serviceFee: {
-                    amount: serviceFee,
-                    currency: document.getElementById('serviceFeeCurrency')?.value
-                },
+                officialFee: { amount: officialFee, currency: 'TRY' },
+                serviceFee: { amount: serviceFee, currency: 'TRY' },
                 vatRate,
                 applyVatToOfficialFee: applyVatToOfficial,
                 totalAmount,
@@ -1992,6 +1998,8 @@ async handleFormSubmit(e) {
         alert('İş ve ilgili kayıt başarıyla oluşturuldu!');
         window.location.href = 'task-management.html';
     } else {
+        // ✅ NORMAL İŞLER İÇİN MANTIK
+        
         if (!this.selectedIpRecord) {
             alert('Lütfen işleme konu olacak bir portföy kaydı seçin.');
             return;
@@ -2003,6 +2011,7 @@ async handleFormSubmit(e) {
             return;
         }
 
+        // Tahakkuk işlemleri
         const officialFee = parseFloat(document.getElementById('officialFee')?.value) || 0;
         const serviceFee = parseFloat(document.getElementById('serviceFee')?.value) || 0;
 
@@ -2022,6 +2031,14 @@ async handleFormSubmit(e) {
                 applyVatToOfficialFee: applyVatToOfficial,
                 totalAmount,
                 totalAmountCurrency: 'TRY',
+                tpInvoiceParty: this.selectedTpInvoiceParty ? {
+                    id: this.selectedTpInvoiceParty.id,
+                    name: this.selectedTpInvoiceParty.name
+                } : null,
+                serviceInvoiceParty: this.selectedServiceInvoiceParty ? {
+                    id: this.selectedServiceInvoiceParty.id,
+                    name: this.selectedServiceInvoiceParty.name
+                } : null,
                 status: 'unpaid',
                 createdAt: new Date().toISOString()
             };
@@ -2032,40 +2049,50 @@ async handleFormSubmit(e) {
             }
         }
 
-        const transactionData = {
-            type: selectedTransactionType.id,
-            description: `${selectedTransactionType.name} işlemi.`,
-            parentId: null,
-            transactionHierarchy: "parent"
-        };
+        // ✅ ÇÖZÜM: Yayına itiraz işleri için portföye işlem eklemeyi atla
+        const isPublicationOpposition = this.isPublicationOpposition(selectedTransactionType.id);
+        
+        if (!isPublicationOpposition) {
+            // Normal işler için portföye işlem ekle
+            const transactionData = {
+                type: selectedTransactionType.id,
+                description: `${selectedTransactionType.name} işlemi.`,
+                parentId: null,
+                transactionHierarchy: "parent"
+            };
 
-        const addResult = await ipRecordsService.addTransactionToRecord(this.selectedIpRecord.id, transactionData);
-        if (addResult.success) {
-            if (window.portfolioByOppositionCreator) {
-                const oppositionResult = await window.portfolioByOppositionCreator
-                    .handleTransactionCreated({
-                        id: taskResult.id,
-                        specificTaskType: selectedTransactionType.id,
-                        selectedIpRecord: this.selectedIpRecord
-                    });
-                
-                if (oppositionResult.success && oppositionResult.recordId) {
-                    console.log('✅ Otomatik 3.taraf portföy kaydı oluşturuldu:', oppositionResult.recordId);
-                    alert('İş başarıyla oluşturuldu!\n\nYayına itiraz işi olduğu için otomatik olarak 3.taraf portföy kaydı da oluşturuldu.');
-                } else if (!oppositionResult.success && oppositionResult.error !== 'Yayına itiraz işi değil') {
-                    console.warn('⚠️ 3.taraf portföy kaydı oluşturulamadı:', oppositionResult.error);
-                    alert('İş başarıyla oluşturuldu!\n\nAncak 3.taraf portföy kaydı oluşturulurken bir hata oluştu: ' + oppositionResult.error);
-                } else {
-                    alert('İş başarıyla oluşturuldu!');
-                }
+            const addResult = await ipRecordsService.addTransactionToRecord(this.selectedIpRecord.id, transactionData);
+            if (!addResult.success) {
+                alert('İş oluşturuldu ama işlem kaydedilemedi: ' + addResult.error);
+                return;
+            }
+        } else {
+            console.log('🔄 Yayına itiraz işi: Portföye işlem ekleme atlandı, otomatik 3.taraf portföy oluşturulacak');
+        }
+
+        // ✅ Yayına itiraz işleri için otomatik 3.taraf portföy oluşturma
+        if (window.portfolioByOppositionCreator) {
+            const oppositionResult = await window.portfolioByOppositionCreator
+                .handleTransactionCreated({
+                    id: taskResult.id,
+                    specificTaskType: selectedTransactionType.id,
+                    selectedIpRecord: this.selectedIpRecord
+                });
+            
+            if (oppositionResult.success && oppositionResult.recordId) {
+                console.log('✅ Otomatik 3.taraf portföy kaydı oluşturuldu:', oppositionResult.recordId);
+                alert('İş başarıyla oluşturuldu!\n\nYayına itiraz işi olduğu için otomatik olarak 3.taraf portföy kaydı da oluşturuldu.');
+            } else if (!oppositionResult.success && oppositionResult.error !== 'Yayına itiraz işi değil') {
+                console.warn('⚠️ 3.taraf portföy kaydı oluşturulamadı:', oppositionResult.error);
+                alert('İş başarıyla oluşturuldu!\n\nAncak 3.taraf portföy kaydı oluşturulurken bir hata oluştu: ' + oppositionResult.error);
             } else {
                 alert('İş başarıyla oluşturuldu!');
             }
-            
-            window.location.href = 'task-management.html';
         } else {
-            alert('İş oluşturuldu ama işlem kaydedilemedi.');
+            alert('İş başarıyla oluşturuldu!');
         }
+        
+        window.location.href = 'task-management.html';
     }
 }
 
