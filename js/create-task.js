@@ -46,7 +46,7 @@ class CreateTaskModule {
         this.setupEventListeners();
     }
     // Basit debounce
-    
+
     debounce(fn, delay = 250) {
     let t;
     return (...args) => {
@@ -1082,10 +1082,6 @@ handleIpRecordChange(recordId) {
         container.innerHTML = html;
     }
     setupDynamicFormListeners() {
-        const portfolioSearchInput = document.getElementById('portfolioSearchInput');
-        if (portfolioSearchInput) {
-            portfolioSearchInput.addEventListener('input', (e) => this.searchPortfolio(e.target.value));
-        }
         const brandExampleInput = document.getElementById('brandExample');
         if (brandExampleInput) {
             brandExampleInput.addEventListener('change', (e) => this.handleBrandExampleFile(e.target.files));
