@@ -23,30 +23,48 @@ class CreateTaskModule {
     }
 
     async init() {
-        this.currentUser = authService.getCurrentUser();
-        if (!this.currentUser) { window.location.href = 'index.html'; return; }
+  this.currentUser = authService.getCurrentUser();
+  if (!this.currentUser) { window.location.href = 'index.html'; return; }
 
-        try {
-            const [ipRecordsResult, personsResult, usersResult, transactionTypesResult] = await Promise.all([
-                ipRecordsService.getRecords(),
-                personService.getPersons(),
-                taskService.getAllUsers(),
-                transactionTypeService.getTransactionTypes()
-            ]);
-            this.allIpRecords = ipRecordsResult.data || [];
-            this.allPersons = personsResult.data || [];
-            this.allUsers = usersResult.data || [];
-            this.allTransactionTypes = transactionTypesResult.data || [];
+  try {
+    const [
+      ipRecordsResult,
+      personsResult,
+      usersResult,
+      transactionTypesResult
+    ] = await Promise.all([
+      ipRecordsService.getRecords(),
+      personService.getPersons(),
+      taskService.getAllUsers(),
+      transactionTypeService.getTransactionTypes()
+    ]);
 
-        } catch (error) {
-            console.error("Veri yüklenirken hata oluştu:", error);
-            alert("Gerekli veriler yüklenemedi, lütfen sayfayı yenileyin.");
-            return;
-        }
-        this.setupEventListeners();
-        console.log('[INIT] ipRecordsResult=', ipRecordsResult);
-        console.log('[INIT] allIpRecords size=', Array.isArray(this.allIpRecords) ? this.allIpRecords.length : 'NOT_ARRAY');
-    }
+    // Dönen yapıları normalize et (data / items / dizi)
+    const pickArray = (x) =>
+      Array.isArray(x?.data)  ? x.data  :
+      Array.isArray(x?.items) ? x.items :
+      (Array.isArray(x) ? x : []);
+
+    this.allIpRecords        = pickArray(ipRecordsResult);
+    this.allPersons          = pickArray(personsResult);
+    this.allUsers            = pickArray(usersResult);
+    this.allTransactionTypes = pickArray(transactionTypesResult);
+
+    // Logları try bloğu içinde yap (scope hatası olmasın)
+    console.log('[INIT] allIpRecords size =', this.allIpRecords.length);
+    console.log('[INIT] persons size =', this.allPersons.length);
+    console.log('[INIT] users size =', this.allUsers.length);
+    console.log('[INIT] transactionTypes size =', this.allTransactionTypes.length);
+
+  } catch (error) {
+    console.error("Veri yüklenirken hata oluştu:", error);
+    alert("Gerekli veriler yüklenemedi, lütfen sayfayı yenileyin.");
+    return;
+  }
+
+  this.setupEventListeners();
+}
+
     // Basit debounce
 
     debounce(fn, delay = 250) {
@@ -218,32 +236,37 @@ class CreateTaskModule {
         this.setupBrandExampleUploader();
     }
 
-    setupBaseFormListeners() {
-    // İptal butonu
-    const cancelBtn = document.getElementById('cancelBtn');
-    if (cancelBtn) {
-        cancelBtn.addEventListener('click', () => {
-            if (confirm('İşlem iptal edilsin mi? Girilen veriler kaybolacak.')) {
-                window.location.href = 'task-management.html';
-            }
-        });
-    }
-    
-    // Form submit
-    const saveTaskBtn = document.getElementById('saveTaskBtn');
-    if (saveTaskBtn) {
-        saveTaskBtn.addEventListener('click', (e) => {
-            this.handleFormSubmit(e);
-        });
-    }
-    
-    // Form validation için input listeners
-    const inputs = container.querySelectorAll('input, select, textarea');
-    inputs.forEach(input => {
-        input.addEventListener('input', () => this.checkFormCompleteness());
-        input.addEventListener('change', () => this.checkFormCompleteness());
+setupBaseFormListeners() {
+  // Bu fonksiyon container'ı parametre almıyor; DOM'dan bulalım
+  const container = document.getElementById('conditionalFieldsContainer');
+  if (!container) return;
+
+  // İptal butonu
+  const cancelBtn = document.getElementById('cancelBtn');
+  if (cancelBtn) {
+    cancelBtn.addEventListener('click', () => {
+      if (confirm('İşlem iptal edilsin mi? Girilen veriler kaybolacak.')) {
+        window.location.href = 'task-management.html';
+      }
     });
+  }
+
+  // Form submit
+  const saveTaskBtn = document.getElementById('saveTaskBtn');
+  if (saveTaskBtn) {
+    saveTaskBtn.addEventListener('click', (e) => {
+      this.handleFormSubmit(e);
+    });
+  }
+
+  // Form validation için input listeners
+  const inputs = container.querySelectorAll('input, select, textarea');
+  inputs.forEach(input => {
+    input.addEventListener('input', () => this.checkFormCompleteness());
+    input.addEventListener('change', () => this.checkFormCompleteness());
+  });
 }
+
     setupAccrualTabListeners() {
         this.populateAssignedToDropdown();
         this.calculateTotalAmount();
