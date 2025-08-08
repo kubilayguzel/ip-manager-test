@@ -44,6 +44,8 @@ class CreateTaskModule {
             return;
         }
         this.setupEventListeners();
+        console.log('[INIT] ipRecordsResult=', ipRecordsResult);
+        console.log('[INIT] allIpRecords size=', Array.isArray(this.allIpRecords) ? this.allIpRecords.length : 'NOT_ARRAY');
     }
     // Basit debounce
 
