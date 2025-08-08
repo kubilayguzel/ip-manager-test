@@ -88,103 +88,146 @@ class CreateTaskModule {
     if (!input || !results) return;
 
     const renderResults = (items) => {
-        if (!items || items.length === 0) {
+    if (!items || items.length === 0) {
         results.innerHTML = `<div class="p-2 text-muted">Sonuç bulunamadı</div>`;
         results.style.display = 'block';
         return;
-        }
+    }
+
     results.innerHTML = items.slice(0, 50).map(r => {
-       const id = r.id || r.recordId || r.docId || r._id || r.uid || '';
-       const title = r.title || r.name || r.markName || r.applicationTitle || 'Başlık yok';
-       const owner = r.ownerName || r.owner || r.applicantName || '';
-       const appNo = r.applicationNo || r.applicationNumber || r.appNo || r.fileNo || r.registrationNo || '';
-       const img  = r.markImageUrl || r.brandSampleUrl || r.markSampleUrl || r.imageUrl || '';
-       const line = `${appNo ? (appNo + ' — ') : ''}${title}`;
-       return `
-         <div class="search-result-item d-flex align-items-center" data-id="${id}" style="padding:8px 10px; border-bottom:1px solid #eee; cursor:pointer; gap:10px;">
-           ${img ? `<img src="${img}" alt="" style="width:32px;height:32px;object-fit:cover;border-radius:4px;border:1px solid #eee;">` : ''}
-           <div>
-             <div><strong>${line}</strong></div>
-             <div class="text-muted" style="font-size:12px;">${owner || ''}</div>
-           </div>
-         </div>`;
-     }).join('');
+        const id = r.id || r.recordId || r.docId || r._id || r.uid || '';
+        const title = r.title || r.name || r.markName || r.applicationTitle || 'Başlık yok';
+        const owner = r.ownerName || r.owner || r.applicantName || '';
+        const appNo = r.applicationNo || r.applicationNumber || r.appNo || r.fileNo || r.registrationNo || '';
+        const img  = r.markImageUrl || r.brandSampleUrl || r.markSampleUrl || r.imageUrl || r.brandSamplePath || '';
+
+        const line = `${appNo ? (appNo + ' — ') : ''}${title}`;
+
+        // image bir URL ise direkt img src, değilse data-path bırak (Firebase Storage path ise sonradan yüklenecek)
+        const imgHtml = img
+        ? (img.startsWith('http') ? `<img src="${img}" class="ip-thumb" style="width:32px;height:32px;object-fit:cover;border-radius:4px;border:1px solid #eee;">`
+                                    : `<img data-storage-path="${img}" class="ip-thumb" style="width:32px;height:32px;object-fit:cover;border-radius:4px;border:1px solid #eee;">`)
+        : '';
+
+        return `
+        <div class="search-result-item d-flex align-items-center" data-id="${id}" style="padding:8px 10px; border-bottom:1px solid #eee; cursor:pointer; gap:10px;">
+            ${imgHtml}
+            <div>
+            <div><strong>${line}</strong></div>
+            <div class="text-muted" style="font-size:12px;">${owner || ''}</div>
+            </div>
+        </div>`;
+    }).join('');
+
     results.style.display = 'block';
+
+    // Eğer Firebase Storage path geldiyse, URL'e çevir
+    if (window.firebase?.storage && typeof window.firebase.storage === 'function') {
+        const storage = window.firebase.storage();
+        results.querySelectorAll('img[data-storage-path]').forEach(async imgEl => {
+        try {
+            const path = imgEl.getAttribute('data-storage-path');
+            const url = await storage.ref(path).getDownloadURL();
+            imgEl.src = url;
+            imgEl.removeAttribute('data-storage-path');
+        } catch (_) {/* sessiz geç */}
+        });
+    }
     };
 
+    const norm = v => (v == null ? '' : String(v)).toLowerCase();
     const doSearch = this.debounce((term) => {
-        console.log('[SEARCH] term=', term, 'poolSize=', this.allIpRecords?.length);
-        term = (term || '').toLowerCase().trim();
-        if (!term) { results.style.display = 'none'; results.innerHTML = ''; return; }
+    term = norm(term).trim();
+    if (!term) { results.style.display = 'none'; results.innerHTML = ''; return; }
 
     const pool = Array.isArray(this.allIpRecords) ? this.allIpRecords : [];
-    const norm = v => (v == null ? '' : String(v)).toLowerCase();
     const filtered = pool.filter(r => {
-       // yaygın alanlar + varyasyonlar
-    const haystack = [
+        const hay = [
         r.title, r.name, r.markName, r.applicationTitle,
-         r.ownerName, r.owner, r.applicantName,
-         r.applicationNo, r.applicationNumber, r.appNo,
-         r.fileNo, r.registrationNo
-       ].map(norm).join(' ');
-       if (haystack.includes(term)) return true;
-       // çok “garanti” olsun dersen tüm değerleri tara:
-       if (!haystack.trim()) {
-        try { return Object.values(r).map(norm).join(' ').includes(term); }
-         catch { return false; }
-       }
-       return false;
+        r.ownerName, r.owner, r.applicantName,
+        r.applicationNo, r.applicationNumber, r.appNo,
+        r.fileNo, r.registrationNo
+        ].map(norm).join(' ');
+        if (hay.includes(term)) return true;
+
+        // tamamen farklı şemalarda da yakalayalım:
+        try { return Object.values(r).map(norm).join(' ').includes(term); } catch { return false; }
     });
+
     renderResults(filtered);
     }, 250);
 
     input.addEventListener('input', (e) => doSearch(e.target.value));
 
-    results.addEventListener('click', (e) => {
-        const item = e.target.closest('.search-result-item');
-        if (!item) return;
-        const id = item.dataset.id;
+    results.addEventListener('click', async (e) => {           // ← async
+    const item = e.target.closest('.search-result-item');
+    if (!item) return;
 
-        const pool = Array.isArray(this.allIpRecords) ? this.allIpRecords : [];
-        const rec = pool.find(x => (x.id || x.recordId || x.docId) === id);
+    const id = item.dataset.id;
+    const pool = Array.isArray(this.allIpRecords) ? this.allIpRecords : [];
+    const rec = pool.find(x => (x.id || x.recordId || x.docId || x._id || x.uid) === id);
 
-        const title = rec?.title || rec?.name || rec?.markName || rec?.applicationTitle || 'Başlık yok';
-        const owner = rec?.ownerName || rec?.owner || rec?.applicantName || '';
-        const appNo = rec?.applicationNo || rec?.applicationNumber || rec?.appNo || rec?.fileNo || rec?.registrationNo || '';
-        const img  = rec?.markImageUrl || rec?.brandSampleUrl || rec?.markSampleUrl || rec?.imageUrl || '';
+    const title = rec?.title || rec?.name || rec?.markName || rec?.applicationTitle || 'Başlık yok';
+    const owner = rec?.ownerName || rec?.owner || rec?.applicantName || '';
+    const appNo = rec?.applicationNo || rec?.applicationNumber || rec?.appNo || rec?.fileNo || rec?.registrationNo || '';
+    const img  = rec?.markImageUrl || rec?.brandSampleUrl || rec?.markSampleUrl || rec?.imageUrl || rec?.brandSamplePath || '';
 
-        this.selectedIpRecord = rec || { id, title, ownerName: owner, applicationNo: appNo };
-        selectedBox.style.display = 'block';
-        selectedLabel.innerHTML = `${appNo ? `<strong>${appNo}</strong> — ` : ''}${title}`;
-        selectedMeta.textContent = owner || '';
-        // küçük görseli göstermek istersen:
-        if (img) {
-        // box içine küçük bir img yerleştir (id'li bir <span> içine ya da direkt prepend)
-        if (!selectedBox.querySelector('.ip-thumb')) {
-            const ph = document.createElement('img');
-            ph.className = 'ip-thumb';
-            ph.style.cssText = 'width:36px;height:36px;object-fit:cover;border:1px solid #eee;border-radius:4px;margin-right:8px;';
-            ph.src = img;
-            selectedBox.querySelector('.p-2')?.prepend(ph);
+    this.selectedIpRecord = rec || { id, title, ownerName: owner, applicationNo: appNo };
+
+    selectedBox.style.display = 'block';
+    selectedLabel.innerHTML = `${appNo ? `<strong>${appNo}</strong> — ` : ''}${title}`;
+    selectedMeta.textContent = owner || '';
+
+    // küçük görsel
+    const host = selectedBox.querySelector('.p-2') || selectedBox;   // ← fallback
+    const thumb = selectedBox.querySelector('.ip-thumb') || (() => {
+        const ph = document.createElement('img');
+        ph.className = 'ip-thumb';
+        ph.style.cssText = 'width:36px;height:36px;object-fit:cover;border:1px solid #eee;border-radius:4px;margin-right:8px;';
+        host.prepend(ph);
+        return ph;
+    })();
+
+    if (img) {
+        if (img.startsWith('http')) {
+        thumb.src = img;
         } else {
-            selectedBox.querySelector('.ip-thumb').src = img;
+        // A) namespaced (window.firebase) kullanıyorsan:
+        if (window.firebase?.storage && typeof window.firebase.storage === 'function') {
+            try {
+            const url = await window.firebase.storage().ref(img).getDownloadURL();
+            thumb.src = url;
+            } catch {}
         }
+        // B) modular SDK kullanıyorsan (import { getStorage, ref, getDownloadURL } ...):
+        // else {
+        //   try {
+        //     const storage = getStorage();
+        //     const url = await getDownloadURL(ref(storage, img));
+        //     thumb.src = url;
+        //   } catch {}
+        // }
         }
-        results.style.display = 'none';
-        results.innerHTML = '';
-        input.value = '';
+    }
 
-        this.checkFormCompleteness();
+    results.style.display = 'none';
+    results.innerHTML = '';
+    input.value = '';
+
+    this.checkFormCompleteness();
     });
 
     if (clearBtn) {
-        clearBtn.addEventListener('click', () => {
+    clearBtn.addEventListener('click', () => {
         this.selectedIpRecord = null;
         selectedBox.style.display = 'none';
         selectedLabel.textContent = '';
         selectedMeta.textContent = '';
+        // varsa küçük resmi da temizle
+        const t = selectedBox.querySelector('.ip-thumb');
+        if (t) t.remove();
         this.checkFormCompleteness();
-        });
+    });
     }
 
     document.addEventListener('click', (e) => {
@@ -637,14 +680,10 @@ async handleSpecificTypeChange(e) {
     this.renderBaseForm(container, selectedTaskType.alias || selectedTaskType.name, selectedTaskType.id);
   }
 
-  // arama UI'ını bağla (yeni ipRecordSearch alanı için)
   this.initIpRecordSearchSelector();
   this.updateButtonsAndTabs();
   this.checkFormCompleteness();
-
-  // buton dedupe: yanlışlıkla kalan kopyaları temizle
   this.dedupeActionButtons();
-
   this._lastRenderSig = sig;
   this._rendering = false;
 }
