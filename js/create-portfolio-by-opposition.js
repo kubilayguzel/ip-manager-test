@@ -258,7 +258,7 @@ class PortfolioByOppositionCreator {
      * @returns {boolean} Yayına itiraz işi mi?
      */
     isPublicationOpposition(transactionTypeId) {
-        return transactionTypeId === 'trademark_publication_objection';
+        return transactionTypeId === '20';
     }
 
     /**
