@@ -1,7 +1,7 @@
 import { authService, taskService, ipRecordsService, personService, accrualService, auth, transactionTypeService, db, storage } from '../firebase-config.js';
 import { loadSharedLayout } from './layout-loader.js';
 import { initializeNiceClassification, getSelectedNiceClasses } from './nice-classification.js';
-import { ref, uploadBytes, getStorage, getDownloadURL, getFirestore, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
+import { ref, uploadBytes, getStorage, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 
 
 class CreateTaskModule {
