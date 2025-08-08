@@ -257,10 +257,6 @@ function openClass35_5Modal() {
                                 </div>
                                 <div class="classes-list" id="class35-5-list" 
                                         style="height: 450px; overflow-y: auto; background: #fafafa;">
-                                    <div class="loading-spinner text-center p-4">
-                                        <div class="spinner-border text-primary"></div>
-                                        <p class="mt-2 text-muted">Mal sınıfları yükleniyor...</p>
-                                    </div>
                                 </div>
                                 <div class="custom-class-section">
                                     <div class="d-flex align-items-center mb-2">
@@ -689,11 +685,7 @@ export async function initializeNiceClassification() {
         });
     }
 
-    listContainer.innerHTML = `
-        <div class="loading-spinner text-center p-4">
-            <div class="spinner-border text-primary"></div>
-            <p class="mt-2 text-muted">Nice sınıfları yükleniyor...</p>
-        </div>`;
+    listContainer.innerHTML = '';
 
     try {
         const niceCollection = collection(db, "niceClassification");
