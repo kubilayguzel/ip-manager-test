@@ -201,7 +201,7 @@
 
     <script type="module">
         import Pagination from './js/pagination.js'; 
-        import { ipRecordsService, personService, transactionTypeService, auth, monitoringService } from './firebase-config.js';
+        import { ipRecordsService, personService, transactionTypeService, auth, monitoringService, taskService } from './firebase-config.js';
         import { showNotification, formatFileSize } from './utils.js';
         import { loadSharedLayout } from './js/layout-loader.js';
 
@@ -227,6 +227,7 @@
                 this.columnFilters = {}; 
                 this.sortBy = { column: 'applicationDate', direction: 'desc' };
                 this.selectedRecords = new Set();
+                this.objectionRows = [];
             }
 
             init() {
@@ -274,16 +275,27 @@
                 const tableBody = document.getElementById('portfolioTableBody');
                 tableBody.innerHTML = '';
                 if (!pagination) return;
-
-                const currentPageData = pagination.getCurrentPageData(this.filteredAndSortedRecords);
+                const isObjections = (this.activeTypeFilter === 'objections');
+                const baseData = isObjections ? this.objectionRows : this.filteredAndSortedRecords;
+                const currentPageData = pagination.getCurrentPageData(baseData);
                 const fragment = document.createDocumentFragment();
-
                 currentPageData.forEach(record => {
                     const row = document.createElement('tr');
                     row.dataset.recordId = record.id;
-                    row.className = `record-status-${record.portfoyStatus || 'active'}`;
 
-                    const isChecked = this.selectedRecords.has(record.id) ? 'checked' : '';
+                    if (isObjections) {
+                        // Kayıt Tipi, İşlem Tipi, Başvuru No, Başvuru Sahibi, Bülten No, Bülten Tarihi
+                        row.innerHTML = `
+                        <td>${record.recordType || '-'}</td>
+                        <td>${record.transactionTypeName || '-'}</td>
+                        <td>${record.applicationNumber || '-'}</td>
+                        <td title="${record.applicantName || '-'}">${record.applicantName || '-'}</td>
+                        <td>${record.bulletinNo || '-'}</td>
+                        <td>${record.bulletinDate || '-'}</td>
+                        `;
+                        fragment.appendChild(row);
+                        return;
+                    }
                     
                     const portfoyStatusDisplay = record.portfoyStatus === 'inactive' ? 'Pasif' : 'Aktif';
 
@@ -341,9 +353,9 @@
                 
                 let filtered = this.allRecords.filter(record => {
                     let tabMatch = false;
-                    
                     if (this.activeTypeFilter === 'all') {
-                        tabMatch = true;
+                    // Tümü sekmesinde 3. taraf (yayına itirazdan açılan) kayıtlar gösterilmesin
+                    tabMatch = (record.recordOwnerType !== 'thirdParty');
                     } else if (this.activeTypeFilter === 'objections') {
                         tabMatch = Array.isArray(record.transactions) && record.transactions.some(t => (t.type || '').includes('İtiraz'));
                     } else if (this.activeTypeFilter === 'litigation') {
@@ -437,7 +449,13 @@
                         const globalSelect = document.getElementById('selectAllCheckbox');
                         if (globalSelect) globalSelect.checked = false;
                         this.initialRenderTableStructure();
-                        this.applyFiltersAndSort();
+                        if (this.activeTypeFilter === 'objections') {
+                            this.loadObjectionRows()
+                                .then(() => this.renderCurrentPage())
+                                .catch(err => console.error('İtiraz satırları yüklenemedi:', err));
+                            } else {
+                            this.applyFiltersAndSort();
+                            }
                     });
                 });
 
@@ -699,24 +717,92 @@
                 if (modal) modal.classList.remove('show');
             }
 
+            async loadObjectionRows() {
+            // Sadece objections sekmesi görünürken çağıracağız
+            const TYPE_SET = new Set(['7','19','20', 7, 19, 20]);
+
+            // 1) Tasks'ı çek
+            // Projende taskService.getTasks gibi bir metot varsa onu kullan.
+            // Yoksa taskService.getAllTasks() + filtre de olur.
+            let tasks = [];
+            try {
+                const res = await taskService.getTasks?.() || await taskService.getAllTasks?.();
+                const arr = Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []);
+                tasks = arr.filter(t => TYPE_SET.has(String(t.taskType)));
+            } catch (e) {
+                console.error('Tasks yüklenemedi', e);
+                tasks = [];
+            }
+
+            // 2) Her task için ilgili IP kaydını topla
+            const rows = [];
+            for (const t of tasks) {
+                try {
+                // İlgili portföy kaydı
+                let rec = null;
+                if (t.relatedIpRecordId) {
+                    const r = await ipRecordsService.getRecordById(t.relatedIpRecordId);
+                    rec = r?.success ? r.data : null;
+                }
+
+                // işlem tipi adı (7/19/20)
+                const typeMeta = transactionTypesMap.get(String(t.taskType)) || transactionTypesMap.get(Number(t.taskType));
+                const transactionTypeName = (typeMeta?.alias || typeMeta?.name || String(t.taskType));
+
+                // başvuru sahibi/numarası
+                const applicants = rec?.applicants?.map(a => a.name).join(', ') || (t.applicantName || '-');
+                const applicationNumber = rec?.applicationNumber || t.applicationNumber || '-';
+
+                // bülten bilgisi (task.details içinde beklenen alan adları)
+                const details = t.details || t.extra || {};
+                const bulletinNo = details.bulletinNo || details.bulletinId || t.bulletinNo || t.bulletinId || '-';
+                const bulletinDate = details.bulletinDate || t.bulletinDate || '-';
+
+                rows.push({
+                    id: t.id,
+                    recordType: rec?.type || '-',                          // Kayıt Tipi
+                    transactionTypeName,                                   // İşlem Tipi
+                    applicationNumber,                                     // Başvuru No
+                    applicantName: applicants || '-',                      // Başvuru Sahibi
+                    bulletinNo,                                            // Bülten No
+                    bulletinDate                                           // Bülten Tarihi
+                });
+                } catch (e) {
+                console.warn('Task satırı oluşturulamadı', t?.id, e);
+                }
+            }
+
+            this.objectionRows = rows;
+            }
+
             initialRenderTableStructure() {
                 const headerRow = document.getElementById('portfolioTableHeaderRow');
                 const filterRow = document.getElementById('portfolioTableFilterRow');
                 headerRow.innerHTML = ''; 
                 filterRow.innerHTML = '';
 
-                const columns = [
-                    { key: 'selection', label: '', sortable: false, isCheckbox: true, width: '40px' },
-                    { key: 'status', label: 'Kayıt Durumu', sortable: true, width: '110px' },
-                    { key: 'ipType', label: 'Kayıt Tipi', sortable: true, width: '100px' },
-                    { key: 'title', label: 'M/T/B Adı', sortable: true, width: '200px' },
-                    { key: 'brandImage', label: 'Görsel', sortable: false, width: '80px' },
-                    { key: 'applicationNumber', label: 'Başvuru No', sortable: true, width: '120px' },
-                    { key: 'applicationDate', label: 'Başvuru Tarihi', sortable: true, width: '120px' },
-                    { key: 'applicationStatus', label: 'Başvuru Durumu', sortable: false, width: '120px' },
-                    { key: 'applicants', label: 'Baş.Sahibi', sortable: true, width: '200px' },
-                    { key: 'actions', label: 'İşlemler', sortable: false, width: '250px' }
-                ];
+                 const isObjections = (this.activeTypeFilter === 'objections');
+                 const columns = isObjections
+                   ? [
+                       { key: 'recordType',        label: 'Kayıt Tipi',  sortable: true,  width: '110px' },
+                       { key: 'transactionType',   label: 'İşlem Tipi',  sortable: true,  width: '180px' },
+                       { key: 'applicationNumber', label: 'Başvuru No',  sortable: true,  width: '140px' },
+                       { key: 'applicantName',     label: 'Başvuru Sahibi', sortable: true, width: '240px' },
+                       { key: 'bulletinNo',        label: 'Bülten No',   sortable: true,  width: '120px' },
+                       { key: 'bulletinDate',      label: 'Bülten Tarihi', sortable: true, width: '140px' }
+                     ]
+                   : [
+                       { key: 'selection', label: '', sortable: false, isCheckbox: true, width: '40px' },
+                       { key: 'status', label: 'Kayıt Durumu', sortable: true, width: '110px' },
+                       { key: 'ipType', label: 'Kayıt Tipi', sortable: true, width: '100px' },
+                       { key: 'title', label: 'M/T/B Adı', sortable: true, width: '200px' },
+                       { key: 'brandImage', label: 'Görsel', sortable: false, width: '80px' },
+                       { key: 'applicationNumber', label: 'Başvuru No', sortable: true, width: '120px' },
+                       { key: 'applicationDate', label: 'Başvuru Tarihi', sortable: true, width: '120px' },
+                       { key: 'applicationStatus', label: 'Başvuru Durumu', sortable: false, width: '120px' },
+                       { key: 'applicants', label: 'Baş.Sahibi', sortable: true, width: '200px' },
+                       { key: 'actions', label: 'İşlemler', sortable: false, width: '250px' }
+                     ];
 
                 columns.forEach(col => {
                     const th = document.createElement('th');
