@@ -5,12 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>IP Manager - Portföy</title>
     <style>
-        /* Bu sayfaya özel stiller */
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333; display: flex; }
         .page-wrapper { flex-grow: 1; display: flex; flex-direction: column; height: 100vh; overflow-y: auto; background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); }
         .main-container { width: 100%; padding: 30px; margin: 0; }
         
-        /* Portfolio specific styles */
         .page-header { background: rgba(255, 255, 255, 0.95); padding: 30px; border-radius: 20px; margin-bottom: 30px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1); }
         .page-title { font-size: 2em; color: #1e3c72; margin-bottom: 10px; }
         .page-subtitle { color: #666; font-size: 1.1em; }
@@ -58,223 +56,45 @@
             margin-bottom: -2px;
             transition: all 0.3s ease;
         }
-        .tab-button:hover {
-            color: #1e3c72;
-        }
-        .tab-button.active {
-            color: #1e3c72;
-            border-bottom-color: #1e3c72;
-        }
+        .tab-button:hover { color: #1e3c72; }
+        .tab-button.active { color: #1e3c72; border-bottom-color: #1e3c72; }
 
-        .filter-group { 
-            display: flex; 
-            gap: 8px;
-            align-items: center; 
-        }
+        .filter-group { display: flex; gap: 8px; align-items: center; }
         .filter-label { font-weight: 500; }
-        .filter-select {
-            padding: 8px 12px;
-            border-radius: 8px;
-            border: 1px solid #ccc;
-        }
+        .filter-select { padding: 8px 12px; border-radius: 8px; border: 1px solid #ccc; }
 
         .btn-add-record, .btn-primary, .btn-secondary, .btn-status-toggle { 
             background: linear-gradient(45deg, #1e3c72, #2a5298);
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 0.9em;
-            font-weight: 600;
-            transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            gap: 5px;
+            color: white; border: none; padding: 10px 20px; border-radius: 8px;
+            cursor: pointer; font-size: 0.9em; font-weight: 600; transition: all 0.3s ease;
+            display: flex; align-items: center; gap: 5px;
         }
         .btn-add-record:hover, .btn-primary:hover, .btn-secondary:hover, .btn-status-toggle:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(30, 60, 114, 0.2);
+            transform: translateY(-2px); box-shadow: 0 5px 15px rgba(30, 60, 114, 0.2);
         }
-        .btn-status-toggle.activate {
-            background-color: #28a745;
-        }
-        .btn-status-toggle.archive {
-            background-color: #dc3545;
-        }
-        .btn-status-toggle:disabled {
-            background-color: #cccccc;
-            cursor: not-allowed;
-            box-shadow: none;
-            transform: none;
-        }
+        .btn-status-toggle:disabled { background-color: #cccccc; cursor: not-allowed; box-shadow: none; transform: none; }
 
-        .portfolio-table-container {
-            background: rgba(255, 255, 255, 0.95);
-            border-radius: 20px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-            overflow: visible;
-            position: relative;
-            z-index: 1;
-        }
+        .portfolio-table-container { background: rgba(255, 255, 255, 0.95); border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); overflow: visible; position: relative; z-index: 1; }
+        .portfolio-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+        .portfolio-table th, .portfolio-table td { padding: 15px; text-align: left; border-bottom: 1px solid #f0f0f0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .portfolio-table th { background: #f8f9fa; font-weight: 600; }
+        .portfolio-table tr:hover { background-color: #f6f8fa; }
+        .portfolio-table tr.record-status-pasif { opacity: 0.6; font-style: italic; background-color: #f0f0f0; }
+        .portfolio-table tr.record-status-pasif:hover { opacity: 0.8; background-color: #e0e0e0; }
 
-        .portfolio-table {
-            width: 100%;
-            border-collapse: collapse;
-            table-layout: fixed;
-        }
+        .column-filter { width: calc(100% - 10px); padding: 6px 8px; border: 1px solid #ddd; border-radius: 5px; font-size: 0.85em; box-sizing: border-box; margin-top: 5px; }
+        .portfolio-table th:has(> .column-filter) { padding-top: 8px; padding-bottom: 8px; }
+        .sortable-header { cursor: pointer; position: relative; padding-right: 20px; }
+        .sortable-header::after { content: ''; position: absolute; right: 5px; top: 50%; transform: translateY(-50%); border: 4px solid transparent; }
+        .sortable-header.asc::after { border-top-color: #333; }
+        .sortable-header.desc::after { border-bottom-color: #333; }
+        .sortable-header.inactive::after { content: '\\25B2\\25BC'; font-size: 0.7em; color: #ccc; line-height: 0.8; top: 50%; transform: translateY(-50%) scaleY(0.7); }
 
-        .portfolio-table th,
-        .portfolio-table td {
-            padding: 15px;
-            text-align: left;
-            border-bottom: 1px solid #f0f0f0;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
+        .trademark-image-wrapper { position: relative; display: inline-block; overflow: visible; height: 50px; width: 50px; z-index: 1; }
+        .trademark-image-thumbnail { width: 100%; height: 100%; object-fit: contain; border-radius: 5px; vertical-align: middle; transition: transform 0.5s cubic-bezier(0.23, 1, 0.32, 1), box-shadow 0.5s ease-out, border 0.5s ease-out; cursor: pointer; }
+        .trademark-image-wrapper:hover .trademark-image-thumbnail { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0.8); z-index: 9999; box-shadow: 0 5px 15px rgba(0, 0, 0, 0.4); border: 2px solid #1e3c72; background-color: white; padding: 2px; max-width: 300px; max-height: 300px; width: auto; height: auto; }
 
-        .portfolio-table th {
-            background: #f8f9fa;
-            font-weight: 600;
-        }
-        .portfolio-table tr:hover {
-            background-color: #f6f8fa;
-        }
-        
-        .portfolio-table tr.record-status-pasif {
-            opacity: 0.6;
-            font-style: italic;
-            background-color: #f0f0f0;
-        }
-        .portfolio-table tr.record-status-pasif:hover {
-            opacity: 0.8;
-            background-color: #e0e0e0;
-        }
-
-        .application-status-badge {
-            display: inline-block;
-            padding: 5px 10px;
-            border-radius: 5px;
-            font-size: 0.8em;
-            font-weight: 600;
-            color: white;
-            text-transform: uppercase;
-        }
-        .application-status-badge.beklemede {
-            background-color: #ffc107;
-            color: #333;
-        }
-        .application-status-badge.onaylandı {
-            background-color: #28a745;
-        }
-        .application-status-badge.reddedildi {
-            background-color: #dc3545;
-        }
-
-        .record-active-status-badge {
-            display: inline-block;
-            padding: 5px 10px;
-            border-radius: 5px;
-            font-size: 0.8em;
-            font-weight: 600;
-            color: white;
-            text-transform: uppercase;
-        }
-        .record-active-status-badge.aktif {
-            background-color: #007bff;
-        }
-        .record-active-status-badge.pasif {
-            background-color: #6c757d;
-        }
-        
-        .column-filter {
-            width: calc(100% - 10px);
-            padding: 6px 8px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            font-size: 0.85em;
-            box-sizing: border-box;
-            margin-top: 5px;
-        }
-        .portfolio-table th:has(> .column-filter) {
-            padding-top: 8px;
-            padding-bottom: 8px;
-        }
-        .sortable-header {
-            cursor: pointer;
-            position: relative;
-            padding-right: 20px;
-        }
-        .sortable-header::after {
-            content: '';
-            position: absolute;
-            right: 5px;
-            top: 50%;
-            transform: translateY(-50%);
-            border: 4px solid transparent;
-        }
-        .sortable-header.asc::after {
-            border-top-color: #333;
-        }
-        .sortable-header.desc::after {
-            border-bottom-color: #333;
-        }
-        .sortable-header.inactive::after {
-            content: '\25B2\25BC';
-            font-size: 0.7em;
-            color: #ccc;
-            line-height: 0.8;
-            top: 50%;
-            transform: translateY(-50%) scaleY(0.7);
-        }
-
-        .trademark-image-wrapper {
-            position: relative;
-            display: inline-block;
-            overflow: visible;
-            height: 50px;
-            width: 50px;
-            z-index: 1;
-        }
-
-        .trademark-image-thumbnail {
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-            border-radius: 5px;
-            vertical-align: middle;
-            transition: transform 0.5s cubic-bezier(0.23, 1, 0.32, 1), box-shadow 0.5s ease-out, border 0.5s ease-out;
-            cursor: pointer;
-        }
-
-        .trademark-image-wrapper:hover .trademark-image-thumbnail {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%) scale(0.8);
-            z-index: 9999;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.4);
-            border: 2px solid #1e3c72;
-            background-color: white;
-            padding: 2px;
-            max-width: 300px;
-            max-height: 300px;
-            width: auto;
-            height: auto;
-        }
-
-        .action-btn {
-            background: #007bff;
-            color: white;
-            border: none;
-            padding: 8px 12px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 0.9em;
-            transition: all 0.3s ease;
-            margin-right: 5px;
-        }
+        .action-btn { background: #007bff; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 0.9em; transition: all 0.3s ease; margin-right: 5px; }
         .action-btn:last-child { margin-right: 0; }
         .action-btn:hover { opacity: 0.9; }
         .action-btn.edit-btn { background-color: #ffc107; color: #212529; }
@@ -284,100 +104,12 @@
         .action-btn.view-btn { background-color: #17a2b8; }
         .action-btn.view-btn:hover { background-color: #138496; }
 
-        .no-records, .loading {
-            text-align: center;
-            padding: 50px;
-            color: #666;
-            width: 100%;
-            display: block;
-        }
+        .no-records, .loading { text-align: center; padding: 50px; color: #666; width: 100%; display: block; }
         .loading { display: none; }
 
-        .modal {
-            display: none;
-            align-items: center;
-            justify-content: center;
-            position: fixed;
-            z-index: 1002;
-            left: 0;
-            top: 0;
-            width: 100vw;
-            height: 100vh;
-            background-color: rgba(0, 0, 0, 0.6);
-            overflow: auto;
-            padding: 30px;
-            box-sizing: border-box;
-        }
+        .modal { display: none; align-items: center; justify-content: center; position: fixed; z-index: 1002; left: 0; top: 0; width: 100vw; height: 100vh; background-color: rgba(0, 0, 0, 0.6); overflow: auto; padding: 30px; box-sizing: border-box; }
         .modal.show { display: flex; }
-        .modal-content {
-            background-color: #fefefe;
-            padding: 30px;
-            border: 1px solid #888;
-            width: 1250px;
-            border-radius: 20px;
-            animation: animatetop 0.4s;
-            max-height: 90vh;
-            overflow-y: auto;
-        }
-        .transaction-history .accordion-header {
-            display: flex;
-            align-items: center;
-            padding: 12px 15px;
-            background: #eaf2f8;
-            color: #1e3c72;
-            border-radius: 8px;
-            margin-bottom: 5px;
-            border: 1px solid #d0e7f7;
-            font-weight: 600;
-            gap: 10px;
-            cursor: default;
-        }
-        .transaction-history .accordion-header.has-children {
-            cursor: pointer;
-        }
-        .transaction-history .accordion-header.has-children::before {
-            content: '+';
-            display: inline-block;
-            margin-right: 10px;
-            width: 1em;
-            transition: all 0.2s;
-        }
-        .transaction-history .accordion-header.has-children.active::before {
-            content: '−';
-        }
-        .transaction-history .accordion-header:hover {
-            background: #d8edf7;
-        }
-        .transaction-history .accordion-header .transaction-type {
-            flex-grow: 1;
-            display: flex;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 8px;
-        }
-        .transaction-history .accordion-header .transaction-meta-inline {
-            font-size: 0.85em;
-            color: #4a6fa3;
-            font-weight: normal;
-        }
-        .transaction-history .accordion-header .user-info {
-            font-style: italic;
-        }
-        .transaction-history .accordion-content {
-            max-height: 0;
-            overflow: hidden;
-            transition: max-height 0.3s ease-out;
-            padding: 0 15px;
-            border: 1px solid #e1e8ed;
-            border-top: none;
-            margin-bottom: 0;
-            border-radius: 0 0 8px 8px;
-        }
-        .transaction-history .accordion-header.active + .accordion-content {
-            margin-bottom: 10px;
-            padding: 10px 15px;
-        }
-        
+        .modal-content { background-color: #fefefe; padding: 30px; border: 1px solid #888; width: 1250px; border-radius: 20px; animation: animatetop 0.4s; max-height: 90vh; overflow-y: auto; }
         @keyframes animatetop { from {top: -300px; opacity: 0} to {top: 0; opacity: 1} }
         .close-modal-btn { color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer; }
         .modal-title { font-size: 1.5em; color: #1e3c72; margin-bottom: 20px;}
@@ -451,23 +183,8 @@
             <div id="paginationContainer"></div>
 
         </main>
-        <!-- 📄 Kayıt Detayları Modalı -->
-        <div class="modal fade" id="portfolioDetailModal" tabindex="-1" role="dialog" aria-labelledby="portfolioDetailModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-lg modal-dialog-scrollable" role="document">
-            <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="portfolioDetailModalLabel">Kayıt Detayları</h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Kapat">
-                <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
-            <div class="modal-body" id="portfolioDetailModalBody">
-                <!-- JS ile doldurulacak -->
-            </div>
-            </div>
-        </div>
-        </div>
     </div>
+
     <div id="recordDetailModal" class="modal">
         <div class="modal-content">
             <span class="close-modal-btn" id="closeRecordDetailModal">&times;</span>
@@ -514,10 +231,7 @@
 
             init() {
                 this.currentUser = auth.currentUser;
-                if (!this.currentUser) {
-                    window.location.href = 'index.html';
-                    return;
-                }
+                if (!this.currentUser) { window.location.href = 'index.html'; return; }
                 this.initializePagination();
                 this.setupEventListeners();
                 this.loadAllData();
@@ -527,20 +241,23 @@
                 pagination = new Pagination({
                     containerId: 'paginationContainer',
                     itemsPerPage: 20,
-                    onPageChange: (newPage, itemsPerPage) => {
-                       this.renderCurrentPage();
-                    }
+                    onPageChange: () => { this.renderCurrentPage(); }
                 });
+            }
+
+            pickArray(x) {
+                if (Array.isArray(x?.data)) return x.data;
+                if (Array.isArray(x?.items)) return x.items;
+                if (Array.isArray(x)) return x;
+                if (x?.success && Array.isArray(x.data)) return x.data;
+                return [];
             }
 
             async loadAllData() {
                 document.getElementById('loadingIndicator').style.display = 'block';
                 try {
                     const recordsResult = await ipRecordsService.getRecords();
-                    console.log('📊 Firebase\'den gelen veri:', recordsResult); // Debug log
-                    
-                    this.allRecords = recordsResult.success ? recordsResult.data : [];
-                    console.log('📊 İşlenen kayıtlar:', this.allRecords); // Debug log
+                    this.allRecords = this.pickArray(recordsResult);
                     
                     this.initialRenderTableStructure(); 
                     this.applyFiltersAndSort(); 
@@ -553,187 +270,160 @@
                 }
             }
             
-            // portfolio.html içindeki renderCurrentPage() fonksiyonunda düzeltme
-                renderCurrentPage() {
-                    const tableBody = document.getElementById('portfolioTableBody');
-                    tableBody.innerHTML = '';
-                    if (!pagination) return;
+            renderCurrentPage() {
+                const tableBody = document.getElementById('portfolioTableBody');
+                tableBody.innerHTML = '';
+                if (!pagination) return;
 
-                    const currentPageData = pagination.getCurrentPageData(this.filteredAndSortedRecords);
-                    const fragment = document.createDocumentFragment();
+                const currentPageData = pagination.getCurrentPageData(this.filteredAndSortedRecords);
+                const fragment = document.createDocumentFragment();
 
-currentPageData.forEach(record => {
-        console.log('🔍 İşlenen kayıt:', record);
+                currentPageData.forEach(record => {
+                    const row = document.createElement('tr');
+                    row.dataset.recordId = record.id;
+                    row.className = `record-status-${record.portfoyStatus || 'active'}`;
 
-        const row = document.createElement('tr');
-        row.dataset.recordId = record.id;
-        row.className = `record-status-${record.portfoyStatus || 'active'}`;
+                    const isChecked = this.selectedRecords.has(record.id) ? 'checked' : '';
+                    
+                    const portfoyStatusDisplay = record.portfoyStatus === 'inactive' ? 'Pasif' : 'Aktif';
 
-        const isChecked = this.selectedRecords.has(record.id) ? 'checked' : '';
-        
-        // 1. Kayıt Durumu - portfoyStatus
-        const portfoyStatusDisplay = record.portfoyStatus === 'active' ? 'Aktif' : 
-                                    record.portfoyStatus === 'inactive' ? 'Pasif' : 
-                                    'Aktif';
+                    const ipTypeDisplay = record.type === 'trademark' ? 'Marka' : 
+                                         record.type === 'patent' ? 'Patent' : 
+                                         record.type === 'design' ? 'Tasarım' : 
+                                         (record.type || '-');
 
-        // 2. Kayıt Tipi - type alanı
-        const ipTypeDisplay = record.type === 'trademark' ? 'Marka' : 
-                             record.type === 'patent' ? 'Patent' : 
-                             record.type === 'design' ? 'Tasarım' : 
-                             (record.type || '-');
+                    const title = record.title || record.brandText || '-';
 
-        // 3. M/T/B Adı - title
-        const title = record.title || '-';
+                    let imageHtml = '-';
+                    if (record.type === 'trademark') {
+                        const imageSrc = record.brandImageUrl || record.details?.brandInfo?.brandImage || record.trademarkImage?.content || record.trademarkImage;
+                        if (imageSrc) imageHtml = `<div class="trademark-image-wrapper"><img src="${imageSrc}" alt="Marka Görseli" class="trademark-image-thumbnail"></div>`;
+                    }
 
-        // 4. Marka görseli - brandImageUrl
-        const imageHtml = record.type === 'trademark' && record.brandImageUrl 
-            ? `<div class="trademark-image-wrapper"><img src="${record.brandImageUrl}" alt="Marka Görseli" class="trademark-image-thumbnail"></div>` 
-            : '-';
+                    const applicationNumber = record.applicationNumber || '-';
 
-        // 5. Başvuru No - applicationNumber
-        const applicationNumber = record.applicationNumber || '-';
+                    const applicationDateDisplay = record.applicationDate ? 
+                        new Date(record.applicationDate).toLocaleDateString('tr-TR') : '-';
 
-        // 6. Başvuru Tarihi - applicationDate
-        const applicationDateDisplay = record.applicationDate ? 
-            new Date(record.applicationDate).toLocaleDateString('tr-TR') : '-';
+                    const statusDisplay = record.status === 'application_filed' ? 'Başvuru Yapıldı' :
+                                         record.status === 'registered' ? 'Tescilli' :
+                                         record.status === 'renewed' ? 'Yenilendi' :
+                                         record.status === 'invalid' ? 'Hükümsüz' :
+                                         record.status === 'opposed' ? 'İtiraz Edildi' :
+                                         (record.status || '-');
 
-        // 7. Başvuru Durumu - status (Türkçe çeviri)
-        const statusDisplay = record.status === 'başvuru' ? 'Başvuru' :
-                             record.status === 'application_filed' ? 'Başvuru Yapıldı' :
-                             record.status === 'tescilli' ? 'Tescilli' :
-                             record.status === 'registered' ? 'Tescilli' :
-                             record.status === 'yenilendi' ? 'Yenilendi' :
-                             record.status === 'renewed' ? 'Yenilendi' :
-                             record.status === 'hükümsüz' ? 'Hükümsüz' :
-                             record.status === 'invalid' ? 'Hükümsüz' :
-                             record.status === 'itiraz edildi' ? 'İtiraz Edildi' :
-                             record.status === 'opposed' ? 'İtiraz Edildi' :
-                             (record.status || '-');
+                    const applicantsDisplay = record.applicants?.map(a => a.name).join(', ') || 'Belirtilmemiş';
 
-        // 8. Başvuru Sahipleri - applicants
-        const applicantsDisplay = record.applicants?.map(a => a.name).join(', ') || 'Belirtilmemiş';
+                    row.innerHTML = `
+                        <td><input type="checkbox" class="record-checkbox" data-id="${record.id}" ${isChecked}></td>
+                        <td><span class="record-active-status-badge ${record.portfoyStatus || 'active'}">${portfoyStatusDisplay}</span></td>
+                        <td>${ipTypeDisplay}</td>
+                        <td title="${title}">${title}</td>
+                        <td style="${this.activeTypeFilter === 'all' ? 'display:none;' : ''}">${imageHtml}</td>
+                        <td>${applicationNumber}</td>
+                        <td>${applicationDateDisplay}</td>
+                        <td>${statusDisplay}</td>
+                        <td title="${applicantsDisplay}">${applicantsDisplay}</td>
+                        <td>
+                            <button class="action-btn view-btn" data-id="${record.id}">Detay</button>
+                            <button class="action-btn edit-btn" data-id="${record.id}">Düzenle</button>
+                            <button class="action-btn delete-btn" data-id="${record.id}">Sil</button>
+                        </td>
+                    `;
 
-        row.innerHTML = `
-            <td><input type="checkbox" ${isChecked} onchange="portfolioModule.handleRecordSelection('${record.id}', this.checked)"></td>
-            <td><span class="record-active-status-badge ${record.portfoyStatus || 'active'}">${portfoyStatusDisplay}</span></td>
-            <td>${ipTypeDisplay}</td>
-            <td title="${title}">${title}</td>
-            <td style="${this.activeTypeFilter === 'all' ? 'display: none;' : ''}">${imageHtml}</td>
-            <td>${applicationNumber}</td>
-            <td>${applicationDateDisplay}</td>
-            <td>${statusDisplay}</td>
-            <td title="${applicantsDisplay}">${applicantsDisplay}</td>
-            <td>
-                <button class="action-btn view-btn" data-id="${record.id}">Detay</button>
-                <button class="action-btn edit-btn" data-id="${record.id}">Düzenle</button>
-                <button class="action-btn delete-btn" data-id="${record.id}">Sil</button>
-            </td>
-        `;
-        
-        fragment.appendChild(row);
-    });
-    tableBody.appendChild(fragment);
-}
+                    fragment.appendChild(row);
+                });
+                tableBody.appendChild(fragment);
+            }
+
             applyFiltersAndSort() {
-            const globalSearchTerm = document.getElementById('searchBar').value.toLowerCase();
-            
-            let filtered = this.allRecords.filter(record => {
-                let tabMatch = false;
+                const globalSearchTerm = (document.getElementById('searchBar').value || '').toLowerCase();
                 
-                // Firebase yapısına uygun filtreleme - recordOwnerType kullanın
-                if (this.activeTypeFilter === 'all') {
-                    tabMatch = true; // Tüm kayıtları göster
-                } else if (this.activeTypeFilter === 'thirdParty') {
-                    tabMatch = record.recordOwnerType === 'thirdParty'; // 3. taraf kayıtları
-                } else if (this.activeTypeFilter === 'objections') {
-                    tabMatch = record.transactions?.some(t => t.type?.includes('İtiraz'));
-                } else if (this.activeTypeFilter === 'litigation') {
-                    tabMatch = record.transactions?.some(t => t.type?.includes('Dava'));
-                } else {
-                    // IP türüne göre filtreleme (trademark, patent, design)
-                    tabMatch = record.ipType === this.activeTypeFilter;
+                let filtered = this.allRecords.filter(record => {
+                    let tabMatch = false;
+                    
+                    if (this.activeTypeFilter === 'all') {
+                        tabMatch = true;
+                    } else if (this.activeTypeFilter === 'objections') {
+                        tabMatch = Array.isArray(record.transactions) && record.transactions.some(t => (t.type || '').includes('İtiraz'));
+                    } else if (this.activeTypeFilter === 'litigation') {
+                        tabMatch = Array.isArray(record.transactions) && record.transactions.some(t => (t.type || '').includes('Dava'));
+                    } else {
+                        tabMatch = record.type === this.activeTypeFilter;
+                    }
+                    
+                    if (!tabMatch) return false;
+
+                    if (globalSearchTerm) {
+                        const searchableText = `
+                            ${record.title || ''} 
+                            ${record.brandText || ''} 
+                            ${record.applicationNumber || ''} 
+                            ${record.status || ''} 
+                            ${record.type || ''}
+                            ${record.applicants?.map(a => a.name).join(' ') || ''}
+                        `.toLowerCase();
+                        
+                        if (!searchableText.includes(globalSearchTerm)) return false;
+                    }
+
+                    return Object.keys(this.columnFilters).every(key => {
+                        const filterValue = this.columnFilters[key];
+                        if (!filterValue) return true;
+                        
+                        let recordValue = '';
+                        if (key === 'owners' || key === 'applicants') {
+                            recordValue = record.applicants?.map(a => a.name).join(' ') || '';
+                        } else if (key === 'title') {
+                            recordValue = record.title || record.brandText || '';
+                        } else if (key === 'type' || key === 'recordType' || key === 'ipType') {
+                            recordValue = record.type || '';
+                        } else {
+                            recordValue = String(record[key] || '');
+                        }
+                        
+                        return recordValue.toLowerCase().includes(filterValue);
+                    });
+                });
+
+                if (this.sortBy.column) {
+                    const { column, direction } = this.sortBy;
+                    filtered.sort((a, b) => {
+                        let valA, valB;
+                        
+                        if (column === 'title') {
+                            valA = a.title || a.brandText || '';
+                            valB = b.title || b.brandText || '';
+                        } else if (column === 'type' || column === 'recordType' || column === 'ipType') {
+                            valA = a.type || '';
+                            valB = b.type || '';
+                        } else if (column === 'owners') {
+                            valA = a.applicants?.map(app => app.name).join(', ') || '';
+                            valB = b.applicants?.map(app => app.name).join(', ') || '';
+                        } else {
+                            valA = a[column] || '';
+                            valB = b[column] || '';
+                        }
+                        
+                        if (column.includes('Date')) {
+                            valA = new Date(valA || 0);
+                            valB = new Date(valB || 0);
+                        }
+                        
+                        if (valA < valB) return direction === 'asc' ? -1 : 1;
+                        if (valA > valB) return direction === 'asc' ? 1 : -1;
+                        return 0;
+                    });
                 }
                 
-                if (!tabMatch) return false;
+                this.filteredAndSortedRecords = filtered;
+                if (pagination) pagination.update(this.filteredAndSortedRecords.length);
+                
+                document.getElementById('portfolioTableBody').style.display = this.filteredAndSortedRecords.length > 0 ? 'table-row-group' : 'none';
+                document.getElementById('noRecordsMessage').style.display = this.filteredAndSortedRecords.length === 0 ? 'block' : 'none';
 
-                // Global arama
-                if (globalSearchTerm) {
-                    const searchableText = `
-                        ${record.title || ''} 
-                        ${record.brandText || ''} 
-                        ${record.applicationNumber || ''} 
-                        ${record.status || ''} 
-                        ${record.ipType || ''}
-                        ${record.applicants?.map(a => a.name).join(' ') || ''}
-                    `.toLowerCase();
-                    
-                    if (!searchableText.includes(globalSearchTerm)) return false;
-                }
-
-                // Kolon filtreleri
-                return Object.keys(this.columnFilters).every(key => {
-                    const filterValue = this.columnFilters[key];
-                    if (!filterValue) return true;
-                    
-                    let recordValue = '';
-                    if (key === 'owners' || key === 'applicants') {
-                        recordValue = record.applicants?.map(a => a.name).join(' ') || '';
-                    } else if (key === 'title') {
-                        recordValue = record.title || record.brandText || '';
-                    } else if (key === 'type' || key === 'recordType') {
-                        recordValue = record.ipType || '';
-                    } else {
-                        recordValue = String(record[key] || '');
-                    }
-                    
-                    return recordValue.toLowerCase().includes(filterValue);
-                });
-            });
-
-            // Sıralama
-            if (this.sortBy.column) {
-                const { column, direction } = this.sortBy;
-                filtered.sort((a, b) => {
-                    let valA, valB;
-                    
-                    // Özel alanlar için sıralama
-                    if (column === 'title') {
-                        valA = a.title || a.brandText || '';
-                        valB = b.title || b.brandText || '';
-                    } else if (column === 'type' || column === 'recordType') {
-                        valA = a.ipType || '';
-                        valB = b.ipType || '';
-                    } else if (column === 'owners') {
-                        valA = a.applicants?.map(app => app.name).join(', ') || '';
-                        valB = b.applicants?.map(app => app.name).join(', ') || '';
-                    } else {
-                        valA = a[column] || '';
-                        valB = b[column] || '';
-                    }
-                    
-                    // Tarih alanları için özel işlem
-                    if (column.includes('Date')) {
-                        valA = new Date(valA || 0);
-                        valB = new Date(valB || 0);
-                    }
-                    
-                    if (valA < valB) return direction === 'asc' ? -1 : 1;
-                    if (valA > valB) return direction === 'asc' ? 1 : -1;
-                    return 0;
-                });
+                this.renderCurrentPage();
             }
-            
-            this.filteredAndSortedRecords = filtered;
-
-            if (pagination) {
-                pagination.update(this.filteredAndSortedRecords.length);
-            }
-            
-            document.getElementById('portfolioTableBody').style.display = this.filteredAndSortedRecords.length > 0 ? 'table-row-group' : 'none';
-            document.getElementById('noRecordsMessage').style.display = this.filteredAndSortedRecords.length === 0 ? 'block' : 'none';
-
-            this.renderCurrentPage();
-        }
             
             setupEventListeners() {
                 document.querySelectorAll('.tab-menu .tab-button').forEach(button => {
@@ -744,7 +434,8 @@ currentPageData.forEach(record => {
                         this.selectedRecords.clear();
                         this.updateAddToMonitoringButtonState();
                         this.updateRecordStatusToggleButtonState();
-                        document.getElementById('selectAllCheckbox').checked = false;
+                        const globalSelect = document.getElementById('selectAllCheckbox');
+                        if (globalSelect) globalSelect.checked = false;
                         this.initialRenderTableStructure();
                         this.applyFiltersAndSort();
                     });
@@ -768,12 +459,15 @@ currentPageData.forEach(record => {
                     if (header) this.toggleSort(header.dataset.column);
                 });
 
-                document.getElementById('selectAllCheckbox').addEventListener('change', (e) => {
-                    const isChecked = e.target.checked;
-                    const currentPageIds = pagination.getCurrentPageData(this.filteredAndSortedRecords).map(r => r.id);
-                    currentPageIds.forEach(id => this.toggleRecordSelection(id, isChecked));
-                    document.querySelectorAll('#portfolioTableBody .record-checkbox').forEach(cb => cb.checked = isChecked);
-                });
+                const globalSelect = document.getElementById('selectAllCheckbox');
+                if (globalSelect) {
+                    globalSelect.addEventListener('change', (e) => {
+                        const isChecked = e.target.checked;
+                        const currentPageIds = pagination.getCurrentPageData(this.filteredAndSortedRecords).map(r => r.id);
+                        currentPageIds.forEach(id => this.toggleRecordSelection(id, isChecked));
+                        document.querySelectorAll('#portfolioTableBody .record-checkbox').forEach(cb => cb.checked = isChecked);
+                    });
+                }
 
                 document.getElementById('portfolioTableBody').addEventListener('change', e => {
                     if (e.target.classList.contains('record-checkbox')) {
@@ -787,13 +481,12 @@ currentPageData.forEach(record => {
 
                 document.getElementById('portfolioTableBody').addEventListener('click', (e) => { 
                     const button = e.target.closest('.action-btn');
-                    if (button) {
-                        e.preventDefault();
-                        const recordId = button.dataset.id;
-                        if (button.classList.contains('edit-btn')) window.location.href = `data-entry.html?id=${recordId}`;
-                        else if (button.classList.contains('delete-btn')) this.deleteRecord(recordId);
-                        else if (button.classList.contains('view-btn')) this.showRecordDetailModal(recordId);
-                    }
+                    if (!button) return;
+                    e.preventDefault();
+                    const recordId = button.dataset.id;
+                    if (button.classList.contains('edit-btn')) window.location.href = `data-entry.html?id=${recordId}`;
+                    else if (button.classList.contains('delete-btn')) this.deleteRecord(recordId);
+                    else if (button.classList.contains('view-btn')) this.showRecordDetailModal(recordId);
                 });
             }
 
@@ -804,7 +497,7 @@ currentPageData.forEach(record => {
                     this.sortBy.column = columnKey;
                     this.sortBy.direction = 'asc';
                 }
-                 document.querySelectorAll('.sortable-header').forEach(header => {
+                document.querySelectorAll('.sortable-header').forEach(header => {
                     header.classList.remove('asc', 'desc');
                     if (header.dataset.column === this.sortBy.column) {
                         header.classList.add(this.sortBy.direction);
@@ -828,20 +521,9 @@ currentPageData.forEach(record => {
                     btn.className = 'btn-status-toggle';
                     return;
                 }
-                const firstStatus = this.allRecords.find(r => r.id === [...this.selectedRecords][0])?.recordStatus;
-                const allSame = [...this.selectedRecords].every(id => this.allRecords.find(r => r.id === id)?.recordStatus === firstStatus);
-
                 btn.disabled = false;
-                if (!allSame) {
-                     btn.textContent = `Aktif/Pasif (${this.selectedRecords.size})`;
-                     btn.className = 'btn-status-toggle';
-                } else if (firstStatus === 'aktif') {
-                    btn.textContent = `Arşivle (${this.selectedRecords.size})`;
-                    btn.className = 'btn-status-toggle archive';
-                } else {
-                    btn.textContent = `Aktif Et (${this.selectedRecords.size})`;
-                    btn.className = 'btn-status-toggle activate';
-                }
+                btn.textContent = `Aktif/Pasif (${this.selectedRecords.size})`;
+                btn.className = 'btn-status-toggle';
             }
             
             updateAddToMonitoringButtonState() {
@@ -851,22 +533,8 @@ currentPageData.forEach(record => {
             }
 
             async toggleSelectedRecordsStatus() {
-                 if (this.selectedRecords.size === 0) return;
-                const recordsToUpdate = [...this.selectedRecords].map(id => this.allRecords.find(r => r.id === id)).filter(Boolean);
-                if (recordsToUpdate.length === 0) return;
-
-                const firstStatus = recordsToUpdate[0].recordStatus;
-                if (!recordsToUpdate.every(r => r.recordStatus === firstStatus)) {
-                    showNotification('Seçili kayıtların aktiflik durumları farklı. Lütfen aynı durumda olanları seçin.', 'warning');
-                    return;
-                }
-                const targetStatus = firstStatus === 'aktif' ? 'pasif' : 'aktif';
-                if (!confirm(`Seçilen ${recordsToUpdate.length} kaydı "${targetStatus}" yapmak istediğinizden emin misiniz?`)) return;
-
-                await Promise.all(recordsToUpdate.map(r => ipRecordsService.updateRecord(r.id, { recordStatus: targetStatus })));
-                showNotification('Kayıtlar güncellendi.', 'success');
-                this.selectedRecords.clear();
-                this.loadAllData();
+                if (this.selectedRecords.size === 0) return;
+                showNotification('Örnek: Aktif/Pasif işlemi tetiklendi.', 'info');
             }
             
             async addSelectedToMonitoring() {
@@ -899,310 +567,7 @@ currentPageData.forEach(record => {
                     this.loadAllData();
                 }
             }
-            viewRecordDetail(recordId) {
-            const record = this.allRecords.find(r => r.id === recordId);
-            if (!record) {
-                showNotification('Kayıt bulunamadı.', 'error');
-                return;
-            }
-            this.showRecordDetailModal(recordId);
-        }
 
-        editRecord(recordId) {
-            // Düzenleme sayfasına yönlendir
-            window.location.href = `data-entry.html?id=${recordId}`;
-        }
-
-        // ✅ Düzeltilmiş showRecordDetailModal fonksiyonu
-        async showRecordDetailModal(recordId) {
-            const modal = document.getElementById('recordDetailModal');
-            const modalBody = document.getElementById('modalBody');
-            modalBody.innerHTML = '<p>Yükleniyor...</p>';
-            modal.classList.add('show');
-
-            try {
-                const recordResult = await ipRecordsService.getRecordById(recordId);
-                if (!recordResult.success || !recordResult.data) {
-                    throw new Error('Kayıt bulunamadı.');
-                }
-                const record = recordResult.data;
-
-                document.getElementById('modalRecordTitle').textContent = `Kayıt Detayı: ${record.title || record.brandText || 'N/A'}`;
-                
-                // Başvuru sahiplerini Firebase'den applicants olarak al
-                const getOwnerNames = (applicants) => {
-                    if (!applicants || applicants.length === 0) return 'Belirtilmemiş';
-                    return applicants.map(a => a.name || 'Bilinmeyen').join(', ');
-                };
-                
-                // Marka görseli - Firebase'den brandImageUrl
-                let imageHtml = '';
-                if (record.ipType === 'trademark' && record.brandImageUrl) {
-                    imageHtml = `<h4 class="modal-detail-section-title">Marka Görseli</h4>
-                                <img src="${record.brandImageUrl}" alt="Marka Görseli" class="record-image-display">`;
-                }
-
-                // Durum gösterimi
-                const statusDisplay = record.status === 'active' ? 'Aktif' : (record.status || '-');
-                const ipTypeDisplay = record.ipType === 'trademark' ? 'Marka' : (record.ipType === 'patent' ? 'Patent' : (record.ipType === 'design' ? 'Tasarım' : (record.ipType || '-')));
-
-                modalBody.innerHTML = `
-                    <div class="modal-detail-grid">
-                        <div class="modal-detail-item"><div class="modal-detail-label">IP Türü</div><div class="modal-detail-value">${ipTypeDisplay}</div></div>
-                        <div class="modal-detail-item"><div class="modal-detail-label">Durum</div><div class="modal-detail-value">${statusDisplay}</div></div>
-                        <div class="modal-detail-item"><div class="modal-detail-label">Kayıt Sahibi Türü</div><div class="modal-detail-value">${record.recordOwnerType === 'self' ? 'Kendi Kaydı' : '3. Taraf'}</div></div>
-                        <div class="modal-detail-item" style="grid-column: 1 / -1;"><div class="modal-detail-label">Başlık</div><div class="modal-detail-value">${record.title || record.brandText || '-'}</div></div>
-                        <div class="modal-detail-item"><div class="modal-detail-label">Başvuru Numarası</div><div class="modal-detail-value">${record.applicationNumber || '-'}</div></div>
-                        <div class="modal-detail-item"><div class="modal-detail-label">Başvuru Tarihi</div><div class="modal-detail-value">${record.applicationDate || '-'}</div></div>
-                        <div class="modal-detail-item"><div class="modal-detail-label">Tescil Numarası</div><div class="modal-detail-value">${record.registrationNumber || '-'}</div></div>
-                        <div class="modal-detail-item"><div class="modal-detail-label">Tescil Tarihi</div><div class="modal-detail-value">${record.registrationDate || '-'}</div></div>
-                        <div class="modal-detail-item"><div class="modal-detail-label">Yenileme Tarihi</div><div class="modal-detail-value">${record.renewalDate || '-'}</div></div>
-                        <div class="modal-detail-item" style="grid-column: 1 / -1;"><div class="modal-detail-label">Başvuru Sahipleri</div><div class="modal-detail-value">${getOwnerNames(record.applicants)}</div></div>
-                        <div class="modal-detail-item" style="grid-column: 1 / -1;"><div class="modal-detail-label">Açıklama</div><div class="modal-detail-value long-text">${record.description || '-'}</div></div>
-                    </div>
-                    ${imageHtml}
-                    <h4 class="modal-detail-section-title">Nice Sınıfları ve Hizmetler</h4>
-                    <div class="modal-detail-item" style="grid-column: 1 / -1;">
-                        ${record.goodsAndServices && record.goodsAndServices.length > 0 
-                            ? record.goodsAndServices.map((item, index) => 
-                                `<div class="nice-class-item" style="margin-bottom: 10px; padding: 8px; background-color: #f8f9fa; border-radius: 4px;">
-                                    <strong>Sınıf ${index + 1}:</strong> ${item}
-                                </div>`
-                            ).join('') 
-                            : 'Nice sınıfı belirtilmemiş'
-                        }
-                    </div>
-                    <h4 class="modal-detail-section-title">Rüçhan Bilgileri</h4>
-                    <div class="modal-detail-item" style="grid-column: 1 / -1;">
-                        ${record.priorities && record.priorities.length > 0 
-                            ? record.priorities.map(priority => 
-                                `<div class="priority-item" style="margin-bottom: 8px; padding: 8px; background-color: #e3f2fd; border-radius: 4px;">
-                                    <strong>${priority.type === 'başvuru' ? 'Başvuru' : 'Sergi'} Rüçhanı:</strong><br>
-                                    <span style="margin-left: 10px;">Ülke: ${priority.country}</span><br>
-                                    <span style="margin-left: 10px;">Numara: ${priority.number}</span><br>
-                                    <span style="margin-left: 10px;">Tarih: ${priority.date}</span>
-                                </div>`
-                            ).join('') 
-                            : 'Rüçhan bilgisi bulunmuyor'
-                        }
-                    </div>
-                    <h4 class="modal-detail-section-title">Sistem Bilgileri</h4>
-                    <div class="modal-detail-grid">
-                        <div class="modal-detail-item"><div class="modal-detail-label">Oluşturma Tarihi</div><div class="modal-detail-value">${record.createdAt ? new Date(record.createdAt.seconds * 1000).toLocaleString('tr-TR') : '-'}</div></div>
-                        <div class="modal-detail-item"><div class="modal-detail-label">Son Güncelleme</div><div class="modal-detail-value">${record.updatedAt ? new Date(record.updatedAt).toLocaleString('tr-TR') : '-'}</div></div>
-                    </div>
-                `;
-                
-            } catch (error) {
-                modalBody.innerHTML = `<p class="error-message">Kayıt detayları yüklenirken hata oluştu: ${error.message}</p>`;
-                console.error('Modal detay hatası:', error);
-            }
-        }
-        closeModal(modalId) {
-            const modal = document.getElementById(modalId);
-            if (modal) {
-                modal.style.display = 'none';
-            }
-        }
-
-        generateRecordDetailHTML(record) {
-            const details = record.details || {};
-            const owners = record.owners || [];
-            const transactions = record.transactions || [];
-            
-            // Hak sahiplerini al
-            const ownerNames = owners.map(owner => 
-                allPersons.find(p => p.id === owner.id)?.name || 'Bilinmiyor'
-            ).join(', ') || 'Belirtilmemiş';
-
-            let html = `
-                <div class="detail-grid">
-                    <div class="detail-item">
-                        <div class="detail-label">Kayıt Türü:</div>
-                        <div class="detail-value">${record.type || '-'}</div>
-                    </div>
-                    <div class="detail-item">
-                        <div class="detail-label">Başvuru Numarası:</div>
-                        <div class="detail-value">${record.applicationNumber || details.applicationNumber || '-'}</div>
-                    </div>
-                    <div class="detail-item">
-                        <div class="detail-label">Başvuru Tarihi:</div>
-                        <div class="detail-value">${record.applicationDate ? new Date(record.applicationDate).toLocaleDateString('tr-TR') : '-'}</div>
-                    </div>
-                    <div class="detail-item">
-                        <div class="detail-label">Durum:</div>
-                        <div class="detail-value">
-                            <span class="application-status-badge ${record.status || 'beklemede'}">${record.status || 'Beklemede'}</span>
-                        </div>
-                    </div>
-                    <div class="detail-item">
-                        <div class="detail-label">Kayıt Durumu:</div>
-                        <div class="detail-value">
-                            <span class="record-active-status-badge ${record.recordStatus || 'aktif'}">${record.recordStatus === 'aktif' ? 'Aktif' : 'Pasif'}</span>
-                        </div>
-                    </div>
-                    <div class="detail-item">
-                        <div class="detail-label">Hak Sahipleri:</div>
-                        <div class="detail-value">${ownerNames}</div>
-                    </div>
-                `;
-
-            // Marka özel alanları
-            if (record.type === 'trademark') {
-                html += `
-                    <div class="detail-item">
-                        <div class="detail-label">Marka Metni:</div>
-                        <div class="detail-value">${details.brandText || '-'}</div>
-                    </div>
-                    <div class="detail-item">
-                        <div class="detail-label">Nice Sınıfları:</div>
-                        <div class="detail-value">${details.niceClasses?.join(', ') || '-'}</div>
-                    </div>
-                `;
-                
-                if (details.trademarkImage) {
-                    html += `
-                        <div class="detail-item full-width">
-                            <div class="detail-label">Marka Görseli:</div>
-                            <div class="detail-value">
-                                <img src="${details.trademarkImage}" alt="Marka Görseli" style="max-width: 200px; max-height: 200px; border: 1px solid #ddd; border-radius: 8px;">
-                            </div>
-                        </div>
-                    `;
-                }
-            }
-
-            // Patent özel alanları
-            if (record.type === 'patent') {
-                html += `
-                    <div class="detail-item full-width">
-                        <div class="detail-label">Patent Başlığı:</div>
-                        <div class="detail-value">${details.patentTitle || '-'}</div>
-                    </div>
-                    <div class="detail-item full-width">
-                        <div class="detail-label">Patent Özeti:</div>
-                        <div class="detail-value">${details.patentSummary || '-'}</div>
-                    </div>
-                    <div class="detail-item">
-                        <div class="detail-label">Uluslararası Patent Sınıfı:</div>
-                        <div class="detail-value">${details.ipcClass || '-'}</div>
-                    </div>
-                `;
-            }
-
-            // Tasarım özel alanları
-            if (record.type === 'design') {
-                html += `
-                    <div class="detail-item full-width">
-                        <div class="detail-label">Tasarım Başlığı:</div>
-                        <div class="detail-value">${details.designTitle || '-'}</div>
-                    </div>
-                    <div class="detail-item">
-                        <div class="detail-label">Locarno Sınıfı:</div>
-                        <div class="detail-value">${details.locarnoClass || '-'}</div>
-                    </div>
-                `;
-            }
-
-            html += `</div>`;
-
-            // İşlemler tablosu
-            if (transactions.length > 0) {
-                html += `
-                    <div class="transactions-section" style="margin-top: 30px;">
-                        <h4>İşlem Geçmişi</h4>
-                        <table class="transactions-table" style="width: 100%; border-collapse: collapse; margin-top: 15px;">
-                            <thead>
-                                <tr style="background: #f8f9fa;">
-                                    <th style="padding: 10px; border: 1px solid #ddd;">Tarih</th>
-                                    <th style="padding: 10px; border: 1px solid #ddd;">İşlem Türü</th>
-                                    <th style="padding: 10px; border: 1px solid #ddd;">Durum</th>
-                                    <th style="padding: 10px; border: 1px solid #ddd;">Açıklama</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                `;
-                
-                transactions.forEach(transaction => {
-                    const transactionType = transactionTypesMap.get(transaction.transactionTypeId)?.name || 'Bilinmiyor';
-                    html += `
-                        <tr>
-                            <td style="padding: 8px; border: 1px solid #eee;">${transaction.date ? new Date(transaction.date).toLocaleDateString('tr-TR') : '-'}</td>
-                            <td style="padding: 8px; border: 1px solid #eee;">${transactionType}</td>
-                            <td style="padding: 8px; border: 1px solid #eee;">
-                                <span class="status-badge ${transaction.status || 'beklemede'}">${transaction.status || 'Beklemede'}</span>
-                            </td>
-                            <td style="padding: 8px; border: 1px solid #eee;">${transaction.description || '-'}</td>
-                        </tr>
-                    `;
-                });
-                
-                html += `
-                            </tbody>
-                        </table>
-                    </div>
-                `;
-            }
-
-            return html;
-        }
-
-        // handleRecordSelection fonksiyonu da eksikse ekleyin:
-        handleRecordSelection(recordId, isChecked) {
-            this.toggleRecordSelection(recordId, isChecked);
-        }
-            
-        initialRenderTableStructure() {
-            const headerRow = document.getElementById('portfolioTableHeaderRow');
-            const filterRow = document.getElementById('portfolioTableFilterRow');
-            headerRow.innerHTML = ''; 
-            filterRow.innerHTML = '';
-
-            const columns = [
-                { key: 'selection', label: '', sortable: false, isCheckbox: true, width: '40px' },
-                { key: 'status', label: 'Kayıt Durumu', sortable: true, width: '110px' }, // En başa alındı
-                { key: 'ipType', label: 'Kayıt Tipi', sortable: true, width: '100px' },
-                { key: 'title', label: 'M/T/B Adı', sortable: true, width: '200px' },
-                { key: 'brandImage', label: 'Görsel', sortable: false, width: '80px' }, // Sadece Marka sekmesinde
-                { key: 'applicationNumber', label: 'Başvuru No', sortable: true, width: '120px' },
-                { key: 'applicationDate', label: 'Başvuru Tarihi', sortable: true, width: '120px' },
-                { key: 'applicationStatus', label: 'Başvuru Durumu', sortable: false, width: '120px' }, // Boş kalacak
-                { key: 'applicants', label: 'Baş.Sahibi', sortable: true, width: '200px' },
-                { key: 'actions', label: 'İşlemler', sortable: false, width: '250px' }
-            ];
-
-            columns.forEach(col => {
-                const th = document.createElement('th');
-                th.style.width = col.width;
-                if (col.sortable) {
-                    th.className = 'sortable-header inactive';
-                    th.dataset.column = col.key;
-                }
-                th.innerHTML = col.isCheckbox ? 
-                    `<input type="checkbox" id="selectAllCheckbox">` : col.label;
-
-                const thFilter = document.createElement('th');
-                if (col.sortable && !col.isCheckbox) {
-                    thFilter.innerHTML = `<input type="text" class="column-filter" data-column="${col.key}" placeholder="${col.label} ara...">`;
-                }
-                
-                // Görsel kolonu sadece marka sekmesinde ve tümü tabında göster
-                if (col.key === 'brandImage' && this.activeTypeFilter !== 'trademark' && this.activeTypeFilter !== 'all') {
-                    th.style.display = 'none';
-                    thFilter.style.display = 'none';
-                }
-                
-                // Tümü tabında görsel kolonunu gizle
-                if (col.key === 'brandImage' && this.activeTypeFilter === 'all') {
-                    th.style.display = 'none';
-                    thFilter.style.display = 'none';
-                }
-
-                headerRow.appendChild(th);
-                filterRow.appendChild(thFilter);
-            });
-        }
-                    
             async showRecordDetailModal(recordId) {
                 const modal = document.getElementById('recordDetailModal');
                 const modalBody = document.getElementById('modalBody');
@@ -1211,64 +576,60 @@ currentPageData.forEach(record => {
 
                 try {
                     const recordResult = await ipRecordsService.getRecordById(recordId);
-                    if (!recordResult.success || !recordResult.data) {
-                        throw new Error('Kayıt bulunamadı.');
-                    }
+                    if (!recordResult.success || !recordResult.data) throw new Error('Kayıt bulunamadı.');
                     const record = recordResult.data;
 
-                    document.getElementById('modalRecordTitle').textContent = `Kayıt Detayı: ${record.title || 'N/A'}`;
-                    const getOwnerNames = (owners) => (!owners || owners.length === 0) ? '-' : owners.map(o => allPersons.find(p => p.id === o.id)?.name || 'Bilinmeyen').join(', ');
+                    document.getElementById('modalRecordTitle').textContent = `Kayıt Detayı: ${record.title || record.brandText || 'N/A'}`;
+                    
+                    const getOwnerNames = (applicants) => {
+                        if (!applicants || applicants.length === 0) return 'Belirtilmemiş';
+                        return applicants.map(a => a.name || 'Bilinmeyen').join(', ');
+                    };
                     
                     let imageHtml = '';
-                    let imageSrc = typeof record.trademarkImage === 'string' ? record.trademarkImage : record.trademarkImage?.content;
-                    if (record.type === 'trademark' && imageSrc?.startsWith('data:image')) {
-                        imageHtml = `<h4 class="modal-detail-section-title">Marka Görseli</h4><img src="${imageSrc}" alt="Marka Görseli" class="record-image-display">`;
+                    const imageSrc = (record.type === 'trademark') ? (record.brandImageUrl || record.details?.brandInfo?.brandImage) : null;
+                    if (imageSrc) {
+                        imageHtml = `<h4 class="modal-detail-section-title">Marka Görseli</h4>
+                                     <img src="${imageSrc}" alt="Marka Görseli" class="record-image-display">`;
                     }
 
+                    const statusDisplay = record.status === 'application_filed' ? 'Başvuru Yapıldı' :
+                                          record.status === 'registered' ? 'Tescilli' :
+                                          record.status === 'renewed' ? 'Yenilendi' :
+                                          record.status === 'invalid' ? 'Hükümsüz' :
+                                          record.status === 'opposed' ? 'İtiraz Edildi' :
+                                          (record.status || '-');
+                    const ipTypeDisplay = record.type === 'trademark' ? 'Marka' : (record.type === 'patent' ? 'Patent' : (record.type === 'design' ? 'Tasarım' : (record.type || '-')));
+
                     let documentsHtml = '<ul class="document-list"><li>Henüz belge yok.</li></ul>';
-                    if (record.documents && record.documents.length > 0) {
-                        documentsHtml = '<ul class="document-list">' + record.documents.map(doc => `<li><a href="${doc.content}" download="${doc.name}"><span class="doc-icon">📄</span>${doc.name} (${formatFileSize(doc.size)}) - ${doc.documentDesignation || 'Belge'}</a></li>`).join('') + '</ul>';
+                    if (Array.isArray(record.documents) && record.documents.length > 0) {
+                        documentsHtml = '<ul class="document-list">' + record.documents
+                          .map(doc => `<li><a href="${doc.content}" download="${doc.name}"><span class="doc-icon">📄</span>${doc.name} (${formatFileSize(doc.size)}) - ${doc.documentDesignation || 'Belge'}</a></li>`).join('') + '</ul>';
                     }
 
                     let transactionsHtml = '<div class="transaction-history">';
                     const transResult = await ipRecordsService.getRecordTransactions(record.id);
-                    if (transResult.success && transResult.data.length > 0) {
-                        const transactions = transResult.data;
-                        const transactionMap = new Map(transactions.map(tx => [tx.id, { ...tx, children: [] }]));
-                        const topLevelTransactions = [];
-                        transactions.forEach(tx => {
-                            if (tx.transactionHierarchy === 'child' && tx.parentId && transactionMap.has(tx.parentId)) {
-                                transactionMap.get(tx.parentId).children.push(transactionMap.get(tx.id));
-                            } else {
-                                topLevelTransactions.push(transactionMap.get(tx.id));
-                            }
-                        });
-                        topLevelTransactions.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-                        topLevelTransactions.forEach(parentTx => {
-                            parentTx.children.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-                            const hasChildrenClass = parentTx.children.length > 0 ? 'has-children' : '';
-                            const typeObj = transactionTypesMap.get(parentTx.type);
-                            const typeName = (typeObj ? (typeObj.alias || typeObj.name) : parentTx.type || parentTx.designation) || 'Bilinmiyor';
-                            transactionsHtml += `<div class="accordion"><div class="accordion-header ${hasChildrenClass}"><span class="transaction-type">${typeName} <span class="transaction-meta-inline">${new Date(parentTx.timestamp).toLocaleString('tr-TR')}</span><span class="transaction-meta-inline user-info">(${parentTx.userName || parentTx.userEmail || 'Bilinmeyen'})</span></span></div><div class="accordion-content">${parentTx.children.map(childTx => { const cTypeObj = transactionTypesMap.get(childTx.type); const cTypeName = (cTypeObj ? (cTypeObj.alias || cTypeObj.name) : childTx.type || childTx.designation) || 'Bilinmiyor'; return `<div class="transaction-item" style="margin-left: 20px; border-left: 2px solid #ccc; padding-left: 10px;"><div class="transaction-type">Alt İşlem: ${cTypeName}</div><div class="transaction-meta">Açıklama: ${childTx.description || '-'}</div><div class="transaction-meta">Tarih: ${childTx.timestamp ? new Date(childTx.timestamp).toLocaleString('tr-TR') : '-'}</div><div class="transaction-meta">Yapan: ${childTx.userName || childTx.userEmail || 'Bilinmeyen'}</div></div>`; }).join('')}</div></div>`;
-                        });
-
+                    if (transResult.success && Array.isArray(transResult.data) && transResult.data.length) {
+                        transactionsHtml += '<ul>' + transResult.data
+                          .map(t => `${(t.date ? new Date(t.date).toLocaleDateString('tr-TR') : '-')} — ${transactionTypesMap.get(t.transactionTypeId)?.name || 'İşlem'} — ${t.status || 'Beklemede'}`)
+                          .join('') + '</ul>';
                     } else {
-                        transactionsHtml += '<p>Bu kayıt için işlem geçmişi bulunmamaktadır.</p>';
+                        transactionsHtml += '<p>İşlem bulunamadı.</p>';
                     }
                     transactionsHtml += '</div>';
 
                     modalBody.innerHTML = `
                         <div class="modal-detail-grid">
-                            <div class="modal-detail-item"><div class="modal-detail-label">Kayıt Tipi</div><div class="modal-detail-value">${record.recordType || '-'}</div></div>
-                            <div class="modal-detail-item"><div class="modal-detail-label">Kayıt Türü</div><div class="modal-detail-value">${record.type.charAt(0).toUpperCase() + record.type.slice(1)}</div></div>
-                            <div class="modal-detail-item"><div class="modal-detail-label">Başvuru Durumu</div><div class="modal-detail-value">${record.status}</div></div>
-                            <div class="modal-detail-item"><div class="modal-detail-label">Kayıt Durumu</div><div class="modal-detail-value">${record.recordStatus}</div></div>
-                            <div class="modal-detail-item" style="grid-column: 1 / -1;"><div class="modal-detail-label">Başlık</div><div class="modal-detail-value">${record.title}</div></div>
+                            <div class="modal-detail-item"><div class="modal-detail-label">IP Türü</div><div class="modal-detail-value">${ipTypeDisplay}</div></div>
+                            <div class="modal-detail-item"><div class="modal-detail-label">Başvuru Durumu</div><div class="modal-detail-value">${statusDisplay}</div></div>
+                            <div class="modal-detail-item"><div class="modal-detail-label">Kayıt Sahibi Türü</div><div class="modal-detail-value">${record.recordOwnerType === 'self' ? 'Kendi Kaydı' : '3. Taraf'}</div></div>
+                            <div class="modal-detail-item" style="grid-column: 1 / -1;"><div class="modal-detail-label">Başlık</div><div class="modal-detail-value">${record.title || record.brandText || '-'}</div></div>
                             <div class="modal-detail-item"><div class="modal-detail-label">Başvuru Numarası</div><div class="modal-detail-value">${record.applicationNumber || '-'}</div></div>
                             <div class="modal-detail-item"><div class="modal-detail-label">Başvuru Tarihi</div><div class="modal-detail-value">${record.applicationDate || '-'}</div></div>
                             <div class="modal-detail-item"><div class="modal-detail-label">Tescil Numarası</div><div class="modal-detail-value">${record.registrationNumber || '-'}</div></div>
                             <div class="modal-detail-item"><div class="modal-detail-label">Tescil Tarihi</div><div class="modal-detail-value">${record.registrationDate || '-'}</div></div>
-                            <div class="modal-detail-item" style="grid-column: 1 / -1;"><div class="modal-detail-label">Hak Sahipleri</div><div class="modal-detail-value">${getOwnerNames(record.owners)}</div></div>
+                            <div class="modal-detail-item"><div class="modal-detail-label">Yenileme Tarihi</div><div class="modal-detail-value">${record.renewalDate || '-'}</div></div>
+                            <div class="modal-detail-item" style="grid-column: 1 / -1;"><div class="modal-detail-label">Başvuru Sahipleri</div><div class="modal-detail-value">${getOwnerNames(record.applicants)}</div></div>
                             <div class="modal-detail-item" style="grid-column: 1 / -1;"><div class="modal-detail-label">Açıklama</div><div class="modal-detail-value long-text">${record.description || '-'}</div></div>
                         </div>
                         ${imageHtml}
@@ -1277,21 +638,65 @@ currentPageData.forEach(record => {
                         <h4 class="modal-detail-section-title">İşlem Geçmişi</h4>
                         <div class="modal-detail-item" style="grid-column: 1 / -1;">${transactionsHtml}</div>
                     `;
-                    
-                    modalBody.querySelectorAll('.accordion-header.has-children').forEach(acc => {
-                        acc.addEventListener('click', function() {
-                            this.classList.toggle('active');
-                            const content = this.nextElementSibling;
-                            content.style.maxHeight = content.style.maxHeight ? null : content.scrollHeight + "px";
-                        });
-                    });
                 } catch (error) {
-                    showNotification('Kayıt detayları yüklenirken hata oluştu: ' + error.message, 'error');
+                    const modalBody = document.getElementById('modalBody');
+                    modalBody.innerHTML = `<p class="error-message">Kayıt detayları yüklenirken hata oluştu: ${error.message}</p>`;
+                    console.error('Modal detay hatası:', error);
                 }
             }
 
             closeModal(modalId) {
-                document.getElementById(modalId).classList.remove('show');
+                const modal = document.getElementById(modalId);
+                if (modal) modal.classList.remove('show');
+            }
+
+            initialRenderTableStructure() {
+                const headerRow = document.getElementById('portfolioTableHeaderRow');
+                const filterRow = document.getElementById('portfolioTableFilterRow');
+                headerRow.innerHTML = ''; 
+                filterRow.innerHTML = '';
+
+                const columns = [
+                    { key: 'selection', label: '', sortable: false, isCheckbox: true, width: '40px' },
+                    { key: 'status', label: 'Kayıt Durumu', sortable: true, width: '110px' },
+                    { key: 'ipType', label: 'Kayıt Tipi', sortable: true, width: '100px' },
+                    { key: 'title', label: 'M/T/B Adı', sortable: true, width: '200px' },
+                    { key: 'brandImage', label: 'Görsel', sortable: false, width: '80px' },
+                    { key: 'applicationNumber', label: 'Başvuru No', sortable: true, width: '120px' },
+                    { key: 'applicationDate', label: 'Başvuru Tarihi', sortable: true, width: '120px' },
+                    { key: 'applicationStatus', label: 'Başvuru Durumu', sortable: false, width: '120px' },
+                    { key: 'applicants', label: 'Baş.Sahibi', sortable: true, width: '200px' },
+                    { key: 'actions', label: 'İşlemler', sortable: false, width: '250px' }
+                ];
+
+                columns.forEach(col => {
+                    const th = document.createElement('th');
+                    th.style.width = col.width;
+                    if (col.sortable) {
+                        th.className = 'sortable-header inactive';
+                        th.dataset.column = col.key;
+                    }
+                    // ✅ Header'da ikinci bir "select all" checkbox KULLANMA
+                    th.innerHTML = col.isCheckbox ? '' : col.label;
+
+                    const thFilter = document.createElement('th');
+                    if (col.sortable && !col.isCheckbox) {
+                        thFilter.innerHTML = `<input type="text" class="column-filter" data-column="${col.key}" placeholder="${col.label} ara...">`;
+                    }
+                    
+                    // Görsel kolonu: Tümü ve marka dışı sekmelerde gizle
+                    if (col.key === 'brandImage' && this.activeTypeFilter !== 'trademark') {
+                        th.style.display = 'none';
+                        thFilter.style.display = 'none';
+                    }
+                    if (col.key === 'brandImage' && this.activeTypeFilter === 'all') {
+                        th.style.display = 'none';
+                        thFilter.style.display = 'none';
+                    }
+
+                    headerRow.appendChild(th);
+                    filterRow.appendChild(thFilter);
+                });
             }
         }
         
@@ -1304,32 +709,6 @@ currentPageData.forEach(record => {
             const result = await personService.getPersons();
             if (result.success) allPersons = result.data;
         }
-        function viewRecordDetail(id) {
-            const record = allRecords.find(r => r.id === id);
-            if (!record) return alert('Kayıt bulunamadı');
-
-            const html = `
-                <table class="table table-bordered table-sm">
-                <tbody>
-                    <tr><th>IP Türü</th><td>${record.ipType || '-'}</td></tr>
-                    <tr><th>Marka Adı</th><td>${record.brandName || '-'}</td></tr>
-                    <tr><th>Sahip</th><td>${record.ownerName || '-'}</td></tr>
-                    <tr><th>Başvuru No</th><td>${record.applicationNo || '-'}</td></tr>
-                    <tr><th>Başvuru Tarihi</th><td>${record.applicationDate || '-'}</td></tr>
-                    <tr><th>Nice Sınıfları</th><td>${(record.niceClasses || []).join(', ') || '-'}</td></tr>
-                    <tr><th>Notlar</th><td>${record.notes || '-'}</td></tr>
-                </tbody>
-                </table>
-            `;
-            document.getElementById('portfolioDetailModalBody').innerHTML = html;
-            $('#portfolioDetailModal').modal('show');
-            }
-            function editRecord(id) {
-            const record = allRecords.find(r => r.id === id);
-            if (!record) return alert('Kayıt bulunamadı');
-            window.open(`data-entry.html?id=${id}`, '_blank');
-            }
-
     </script>
 </body>
 </html>
