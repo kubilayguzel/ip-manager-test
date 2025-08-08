@@ -271,81 +271,110 @@
                 }
             }
             
-            renderCurrentPage() {
-                const tableBody = document.getElementById('portfolioTableBody');
-                tableBody.innerHTML = '';
-                if (!pagination) return;
-                const isObjections = (this.activeTypeFilter === 'objections');
-                const baseData = isObjections ? this.objectionRows : this.filteredAndSortedRecords;
-                const currentPageData = pagination.getCurrentPageData(baseData);
-                const fragment = document.createDocumentFragment();
-                currentPageData.forEach(record => {
-                    const row = document.createElement('tr');
-                    row.dataset.recordId = record.id;
+renderCurrentPage() {
+  const tableBody = document.getElementById('portfolioTableBody');
+  tableBody.innerHTML = '';
+  if (!pagination) return;
 
-                    if (isObjections) {
-                        // Kayıt Tipi, İşlem Tipi, Başvuru No, Başvuru Sahibi, Bülten No, Bülten Tarihi
-                        row.innerHTML = `
-                        <td>${record.recordType || '-'}</td>
-                        <td>${record.transactionTypeName || '-'}</td>
-                        <td>${record.applicationNumber || '-'}</td>
-                        <td title="${record.applicantName || '-'}">${record.applicantName || '-'}</td>
-                        <td>${record.bulletinNo || '-'}</td>
-                        <td>${record.bulletinDate || '-'}</td>
-                        `;
-                        fragment.appendChild(row);
-                        return;
-                    }
-                    
-                    const portfoyStatusDisplay = record.portfoyStatus === 'inactive' ? 'Pasif' : 'Aktif';
+  const isObjections = (this.activeTypeFilter === 'objections');
+  const baseData = isObjections ? (this.objectionRows || []) : this.filteredAndSortedRecords;
+  const currentPageData = pagination.getCurrentPageData(baseData);
 
-                    const ipTypeDisplay = record.type === 'trademark' ? 'Marka' : 
-                                         record.type === 'patent' ? 'Patent' : 
-                                         record.type === 'design' ? 'Tasarım' : 
-                                         (record.type || '-');
+  const fragment = document.createDocumentFragment();
 
-                    const title = record.title || record.brandText || '-';
+  currentPageData.forEach(record => {
+    const row = document.createElement('tr');
+    row.dataset.recordId = record.id || '';
 
-                    let imageHtml = '-';
-                    if (record.type === 'trademark') {
-                        const imageSrc = record.brandImageUrl || record.details?.brandInfo?.brandImage || record.trademarkImage?.content || record.trademarkImage;
-                        if (imageSrc) imageHtml = `<div class="trademark-image-wrapper"><img src="${imageSrc}" alt="Marka Görseli" class="trademark-image-thumbnail"></div>`;
-                    }
+    if (isObjections) {
+      // Kayıt Tipi, İşlem Tipi, Başvuru No, Başvuru Sahibi, Bülten No, Bülten Tarihi
+      row.innerHTML = `
+        <td>${record.recordType || '-'}</td>
+        <td>${record.transactionTypeName || '-'}</td>
+        <td>${record.applicationNumber || '-'}</td>
+        <td title="${record.applicantName || '-'}">${record.applicantName || '-'}</td>
+        <td>${record.bulletinNo || '-'}</td>
+        <td>${record.bulletinDate || '-'}</td>
+      `;
+      fragment.appendChild(row);
+      return;
+    }
 
-                    const applicationNumber = record.applicationNumber || '-';
+    // === Normal (itiraz dışı) satırlar ===
+    const portfoyStatusDisplay = record.portfoyStatus === 'inactive' ? 'Pasif' : 'Aktif';
 
-                    const applicationDateDisplay = record.applicationDate ? 
-                        new Date(record.applicationDate).toLocaleDateString('tr-TR') : '-';
+    const ipTypeDisplay =
+      record.type === 'trademark' ? 'Marka' :
+      record.type === 'patent'    ? 'Patent' :
+      record.type === 'design'    ? 'Tasarım' :
+      (record.type || '-');
 
-                    const statusDisplay = record.status === 'application_filed' ? 'Başvuru Yapıldı' :
-                                         record.status === 'registered' ? 'Tescilli' :
-                                         record.status === 'renewed' ? 'Yenilendi' :
-                                         record.status === 'invalid' ? 'Hükümsüz' :
-                                         record.status === 'opposed' ? 'İtiraz Edildi' :
-                                         (record.status || '-');
+    const title = record.title || record.brandText || '-';
 
-                    const applicantsDisplay = record.applicants?.map(a => a.name).join(', ') || 'Belirtilmemiş';
-                    row.innerHTML = `
-                        data-id="${record.id}"${this.selectedRecords.has(record.id) ? 'checked' : ''}></td>
-                        <td><span class="record-active-status-badge ${record.portfoyStatus || 'active'}">${portfoyStatusDisplay}</span></td>
-                        <td>${ipTypeDisplay}</td>
-                        <td title="${title}">${title}</td>
-                        <td style="${this.activeTypeFilter === 'all' ? 'display:none;' : ''}">${imageHtml}</td>
-                        <td>${applicationNumber}</td>
-                        <td>${applicationDateDisplay}</td>
-                        <td>${statusDisplay}</td>
-                        <td title="${applicantsDisplay}">${applicantsDisplay}</td>
-                        <td>
-                            <button class="action-btn view-btn" data-id="${record.id}">Detay</button>
-                            <button class="action-btn edit-btn" data-id="${record.id}">Düzenle</button>
-                            <button class="action-btn delete-btn" data-id="${record.id}">Sil</button>
-                        </td>
-                    `;
+    let imageHtml = '-';
+    if (record.type === 'trademark') {
+      const imageSrc =
+        record.brandImageUrl ||
+        record.details?.brandInfo?.brandImage ||
+        record.trademarkImage?.content ||
+        record.trademarkImage;
+      if (imageSrc) {
+        imageHtml = `
+          <div class="trademark-image-wrapper">
+            <img src="${imageSrc}" alt="Marka Görseli" class="trademark-image-thumbnail">
+          </div>`;
+      }
+    }
 
-                    fragment.appendChild(row);
-                });
-                tableBody.appendChild(fragment);
-            }
+    const applicationNumber = record.applicationNumber || '-';
+    const applicationDateDisplay = record.applicationDate
+      ? new Date(record.applicationDate).toLocaleDateString('tr-TR')
+      : '-';
+
+    const statusDisplay =
+      record.status === 'application_filed' ? 'Başvuru Yapıldı' :
+      record.status === 'registered'       ? 'Tescilli' :
+      record.status === 'renewed'          ? 'Yenilendi' :
+      record.status === 'invalid'          ? 'Hükümsüz' :
+      record.status === 'opposed'          ? 'İtiraz Edildi' :
+      (record.status || '-');
+
+    const applicantsDisplay = (record.applicants?.map(a => a.name).join(', ')) || 'Belirtilmemiş';
+
+    // checkbox hücresi
+    const checkboxCell = `
+      <td>
+        <input
+          type="checkbox"
+          class="record-checkbox"
+          data-id="${record.id}"
+          ${this.selectedRecords.has(record.id) ? 'checked' : ''}
+        >
+      </td>`;
+
+    row.innerHTML = `
+      ${checkboxCell}
+      <td><span class="record-active-status-badge ${record.portfoyStatus || 'active'}">${portfoyStatusDisplay}</span></td>
+      <td>${ipTypeDisplay}</td>
+      <td title="${title}">${title}</td>
+      <td style="${this.activeTypeFilter === 'all' ? 'display:none;' : ''}">${imageHtml}</td>
+      <td>${applicationNumber}</td>
+      <td>${applicationDateDisplay}</td>
+      <td>${statusDisplay}</td>
+      <td title="${applicantsDisplay}">${applicantsDisplay}</td>
+      <td>
+        <button class="action-btn view-btn" data-id="${record.id}">Detay</button>
+        <button class="action-btn edit-btn" data-id="${record.id}">Düzenle</button>
+        <button class="action-btn delete-btn" data-id="${record.id}">Sil</button>
+      </td>
+    `;
+
+    fragment.appendChild(row);
+  });
+
+  tableBody.appendChild(fragment);
+}
+
 
             applyFiltersAndSort() {
                 const globalSearchTerm = (document.getElementById('searchBar').value || '').toLowerCase();
