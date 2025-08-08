@@ -680,20 +680,24 @@ async handleSpecificTypeChange(e) {
     const container = document.getElementById('conditionalFieldsContainer');
     if (!container) return;
 
-    // ✅ DÜZELTME: Kaynak seçimi (Yayına İtiraz ise bulletin, aksi halde portfolio)
-    const alias = (selectedTaskType?.alias || selectedTaskType?.name || '').toLowerCase().trim();
+    // ✅ ID BAZLI KONTROL - Çok daha güvenilir!
+    // Yayına İtiraz tiplerinin ID'leri (Firebase'den gelen veriler)
+    const YAYIN_ITIRAZ_IDS = [
+        '20',  // Yayına İtiraz (ana tip)
+        'trademark_publication_objection',  // Eğer başka formatta ID varsa
+        // Gerekirse başka ID'ler de eklenebilir
+    ];
     
-    // String comparison'ı düzelt: 'yayına itiraz' kelimelerini kontrol et
-    if (selectedTaskType?.ipType === 'trademark' && 
-        (alias.includes('yayına itiraz') || alias === 'yayına itiraz')) {
-        this.searchSource = 'bulletin';
-    } else {
-        this.searchSource = 'portfolio';
-    }
+    const isYayinaItiraz = selectedTaskType?.ipType === 'trademark' && 
+                          YAYIN_ITIRAZ_IDS.includes(selectedTaskType.id);
     
-    console.log('[TYPE]', { 
-        alias: selectedTaskType?.alias, 
+    this.searchSource = isYayinaItiraz ? 'bulletin' : 'portfolio';
+    
+    console.log('[TYPE-ID-BASED]', { 
+        id: selectedTaskType?.id,
+        alias: selectedTaskType?.alias,
         ipType: selectedTaskType?.ipType, 
+        isYayinaItiraz,
         searchSource: this.searchSource 
     });
 
@@ -727,7 +731,7 @@ async handleSpecificTypeChange(e) {
         this.renderBaseForm(container, selectedTaskType.alias || selectedTaskType.name, selectedTaskType.id);
     }
 
-    // ✅ DÜZELTME: Arama kaynağına göre veri yükle
+    // Arama kaynağına göre veri yükle
     if (this.searchSource === 'bulletin') {
         await this.loadBulletinRecordsOnce();
         console.log('📚 Bulletin records loaded:', this.allBulletinRecords?.length || 0);
