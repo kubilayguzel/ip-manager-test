@@ -253,12 +253,21 @@ class PortfolioByOppositionCreator {
     }
 
     /**
-     * Yayına itiraz işi türü kontrolü
+     * Yayına itiraz işi türü kontrolü - Hem ID hem de alias'a göre kontrol
      * @param {string} transactionTypeId - İşlem türü ID'si
      * @returns {boolean} Yayına itiraz işi mi?
      */
     isPublicationOpposition(transactionTypeId) {
-        return transactionTypeId === '20';
+        // Hem string ID'ler hem de numeric ID'ler için kontrol
+        const PUBLICATION_OPPOSITION_IDS = [
+            'trademark_publication_objection',  // JSON'daki ID
+            '20',                               // Sistemdeki numeric ID
+            20                                  // Number olarak da olabilir
+        ];
+        
+        return PUBLICATION_OPPOSITION_IDS.includes(transactionTypeId) || 
+               PUBLICATION_OPPOSITION_IDS.includes(String(transactionTypeId)) ||
+               PUBLICATION_OPPOSITION_IDS.includes(Number(transactionTypeId));
     }
 
     /**
