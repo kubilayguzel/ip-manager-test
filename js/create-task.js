@@ -1463,8 +1463,7 @@ checkFormCompleteness() {
 
         isComplete = !!(assignedTo && brandText && hasNiceClasses && hasApplicants);
     } else {
-        // ✅ DÜZELTME: taskTitle için doğru kontrolü yap
-        const taskTitle = document.getElementById('taskTitle')?.value?.trim() || selectedTaskType.alias || selectedTaskType.name;
+        const taskTitle = document.getElementById('taskTitle')?.value?.trim() || selectedTaskType?.alias || selectedTaskType?.name;
         const hasIpRecord = !!this.selectedIpRecord;
 
         // assignedTo, başlık ve portföy kaydı seçildiğinde tamamlandı olarak işaretle
