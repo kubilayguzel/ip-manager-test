@@ -680,17 +680,26 @@ async handleSpecificTypeChange(e) {
     const container = document.getElementById('conditionalFieldsContainer');
     if (!container) return;
 
-    // Kaynak seçimi (Yayına İtiraz ise bulletin, aksi halde portfolio)
+    // ✅ DÜZELTME: Kaynak seçimi (Yayına İtiraz ise bulletin, aksi halde portfolio)
     const alias = (selectedTaskType?.alias || selectedTaskType?.name || '').toLowerCase().trim();
-    if (selectedTaskType?.ipType === 'trademark' && alias.includes('yayına itiraz')) {
+    
+    // String comparison'ı düzelt: 'yayına itiraz' kelimelerini kontrol et
+    if (selectedTaskType?.ipType === 'trademark' && 
+        (alias.includes('yayına itiraz') || alias === 'yayına itiraz')) {
         this.searchSource = 'bulletin';
     } else {
         this.searchSource = 'portfolio';
     }
-    console.log('[TYPE]', { alias: selectedTaskType?.alias, ipType: selectedTaskType?.ipType, searchSource: this.searchSource });
+    
+    console.log('[TYPE]', { 
+        alias: selectedTaskType?.alias, 
+        ipType: selectedTaskType?.ipType, 
+        searchSource: this.searchSource 
+    });
 
     // Aynı seçim tekrar geldiyse ve içerik zaten varsa atla
-    const sig = selectedTaskType ? `${selectedTaskType.id}::${selectedTaskType.alias || selectedTaskType.name || ''}` : '';
+    const sig = selectedTaskType ? 
+        `${selectedTaskType.id}::${selectedTaskType.alias || selectedTaskType.name || ''}` : '';
     if (this._lastRenderSig === sig && container.childElementCount > 0) return;
 
     // Re-entrancy guard
@@ -718,7 +727,7 @@ async handleSpecificTypeChange(e) {
         this.renderBaseForm(container, selectedTaskType.alias || selectedTaskType.name, selectedTaskType.id);
     }
 
-    // Arama kaynağına göre veri yükle
+    // ✅ DÜZELTME: Arama kaynağına göre veri yükle
     if (this.searchSource === 'bulletin') {
         await this.loadBulletinRecordsOnce();
         console.log('📚 Bulletin records loaded:', this.allBulletinRecords?.length || 0);
@@ -736,7 +745,6 @@ async handleSpecificTypeChange(e) {
     this._lastRenderSig = sig;
     this._rendering = false;
 }
-
     renderTrademarkApplicationForm(container) {
         container.innerHTML = `
             <div class="card-body">
