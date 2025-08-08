@@ -674,64 +674,67 @@ handleIpRecordChange(recordId) {
     this.checkFormCompleteness();
 }
 async handleSpecificTypeChange(e) {
-  const taskTypeId = e.target.value;
-  const selectedTaskType = this.allTransactionTypes.find(t => t.id === taskTypeId);
+    const taskTypeId = e.target.value;
+    const selectedTaskType = this.allTransactionTypes.find(t => t.id === taskTypeId);
 
-  const container = document.getElementById('conditionalFieldsContainer');
-  if (!container) return;
+    const container = document.getElementById('conditionalFieldsContainer');
+    if (!container) return;
 
-  // Aynı seçim tekrar geldiyse ve içerik zaten varsa, atla
-  const alias = selectedTaskType?.alias || selectedTaskType?.name || '';
-  const sig = selectedTaskType ? `${selectedTaskType.id}::${alias}` : '';
-  if (this._lastRenderSig === sig && container.childElementCount > 0) return;
+    // Kaynak seçimi (Yayına İtiraz ise bulletin, aksi halde portfolio)
+    const alias = (selectedTaskType?.alias || selectedTaskType?.name || '').toLowerCase().trim();
+    if (selectedTaskType?.ipType === 'trademark' && alias.includes('yayına itiraz')) {
+        this.searchSource = 'bulletin';
+    } else {
+        this.searchSource = 'portfolio';
+    }
+    console.log('[TYPE]', { alias: selectedTaskType?.alias, ipType: selectedTaskType?.ipType, searchSource: this.searchSource });
 
-  // Re-entrancy guard
-  if (this._rendering) return;
-  this._rendering = true;
+    // Aynı seçim tekrar geldiyse ve içerik zaten varsa atla
+    const sig = selectedTaskType ? `${selectedTaskType.id}::${selectedTaskType.alias || selectedTaskType.name || ''}` : '';
+    if (this._lastRenderSig === sig && container.childElementCount > 0) return;
 
-  // Arama kaynağını seç (itiraz ise bulletin, değilse portfolio)
-  const isTrademarkOpposition =
-    (selectedTaskType?.ipType === 'trademark') &&
-    /itiraz|yayına\s*itiraz/i.test(alias); // "Marka Yayınına İtiraz" varyasyonlarını da yakalar
-  this.searchSource = isTrademarkOpposition ? 'bulletin' : 'portfolio';
-  console.log('[TYPE]', {
-  alias,
-  ipType: selectedTaskType?.ipType,
-  searchSource: this.searchSource
-});
-  // Eski action bar kalıntılarını temizle (ekstra güvenlik)
-  document.querySelectorAll('.form-actions').forEach(el => el.remove());
+    // Re-entrancy guard
+    if (this._rendering) return;
+    this._rendering = true;
 
-  // Alanı sıfırla
-  container.innerHTML = '';
-  this.resetSelections();
+    // Önceki form-actions düğmelerini temizle
+    document.querySelectorAll('.form-actions').forEach(el => el.remove());
 
-  const saveTaskBtn = document.getElementById('saveTaskBtn');
-  if (saveTaskBtn) saveTaskBtn.disabled = true;
+    container.innerHTML = '';
+    this.resetSelections();
 
-  if (!selectedTaskType) { 
-    this._rendering = false; 
-    return; 
-  }
+    const saveTaskBtn = document.getElementById('saveTaskBtn');
+    if (saveTaskBtn) saveTaskBtn.disabled = true;
 
-  // Render
-  if (selectedTaskType.alias === 'Başvuru' && selectedTaskType.ipType === 'trademark') {
-    this.renderTrademarkApplicationForm(container);
-  } else {
-    this.renderBaseForm(container, alias, selectedTaskType.id);
-  }
+    if (!selectedTaskType) {
+        this._rendering = false;
+        return;
+    }
 
-  // Arama bileşenini kur (bulletin ise bülten kayıtlarını yükleyip o havuzdan arar)
-  await this.initIpRecordSearchSelector();
+    // Marka başvurusu için özel form
+    if (selectedTaskType.alias === 'Başvuru' && selectedTaskType.ipType === 'trademark') {
+        this.renderTrademarkApplicationForm(container);
+    } else {
+        this.renderBaseForm(container, selectedTaskType.alias || selectedTaskType.name, selectedTaskType.id);
+    }
 
-  this.updateButtonsAndTabs();
-  this.checkFormCompleteness();
+    // Arama kaynağına göre veri yükle
+    if (this.searchSource === 'bulletin') {
+        await this.loadBulletinRecordsOnce();
+        console.log('📚 Bulletin records loaded:', this.allBulletinRecords?.length || 0);
+    }
 
-  // Fazla butonları ayıkla (olası çift render kalıntısı)
-  this.dedupeActionButtons?.();
+    // Arama kutusunu başlat
+    await this.initIpRecordSearchSelector();
 
-  this._lastRenderSig = sig;
-  this._rendering = false;
+    this.updateButtonsAndTabs();
+    this.checkFormCompleteness();
+    if (typeof this.dedupeActionButtons === 'function') {
+        this.dedupeActionButtons();
+    }
+
+    this._lastRenderSig = sig;
+    this._rendering = false;
 }
 
     renderTrademarkApplicationForm(container) {
