@@ -1,7 +1,7 @@
 import { authService, taskService, ipRecordsService, personService, accrualService, auth, transactionTypeService, db, storage } from '../firebase-config.js';
 import { loadSharedLayout } from './layout-loader.js';
 import { initializeNiceClassification, getSelectedNiceClasses } from './nice-classification.js';
-import { ref, uploadBytes, getStorage, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
+import { ref, uploadBytes, getStorage, getDownloadURL, getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 
 
 class CreateTaskModule {
@@ -23,6 +23,8 @@ class CreateTaskModule {
         this._rendering = false;
         this._lastRenderSig = '';
         this._eventsBound = false;
+        this.searchSource = 'portfolio';       // 'portfolio' | 'bulletin'
+        this.allBulletinRecords = [];          // itiraz aramaları için
     }
 
     async init() {
@@ -87,35 +89,43 @@ async initIpRecordSearchSelector() {
   const clearBtn = document.getElementById('clearSelectedIpRecord');
   if (!input || !results) return;
 
-  // Havuz boşsa (opsiyonel): bir defa çek
-  if (!Array.isArray(this.allIpRecords) || this.allIpRecords.length === 0) {
-    try {
-      const res = await ipRecordsService.getRecords?.();
-      const pickArray = (x) =>
-        Array.isArray(x?.data) ? x.data :
-        Array.isArray(x?.items) ? x.items :
-        (Array.isArray(x) ? x : []);
-      this.allIpRecords = pickArray(res);
-    } catch (e) {
-      console.warn('Portföy kayıtları yüklenemedi:', e);
+  // Kaynağa göre havuzu hazırla
+  if (this.searchSource === 'portfolio') {
+    if (!Array.isArray(this.allIpRecords) || !this.allIpRecords.length) {
+      try {
+        const r = await ipRecordsService.getRecords?.();
+        const arr = Array.isArray(r?.data) ? r.data : (Array.isArray(r?.items) ? r.items : (Array.isArray(r) ? r : []));
+        this.allIpRecords = arr;
+      } catch {}
     }
+  } else {
+    await this.loadBulletinRecordsOnce();
   }
 
   const norm = v => (v == null ? '' : String(v)).toLowerCase();
 
   const renderResults = (items) => {
-    if (!items || items.length === 0) {
+    if (!items?.length) {
       results.innerHTML = `<div class="p-2 text-muted">Sonuç bulunamadı</div>`;
       results.style.display = 'block';
       return;
     }
 
     results.innerHTML = items.slice(0, 50).map(r => {
+      // Kaynağa göre alan eşlemesi
       const id    = r.id || r.recordId || r.docId || r._id || r.uid || '';
-      const title = r.title || r.name || r.markName || r.applicationTitle || 'Başlık yok';
-      const owner = r.ownerName || r.owner || r.applicantName || '';
-      const appNo = r.applicationNo || r.applicationNumber || r.appNo || r.fileNo || r.registrationNo || '';
-      const img   = r.brandImageUrl || r.markImageUrl || r.brandSampleUrl || r.markSampleUrl || r.imageUrl || r.brandSamplePath || '';
+      const appNo = this.searchSource === 'bulletin'
+        ? (r.applicationNo || '')
+        : (r.applicationNo || r.applicationNumber || r.appNo || r.fileNo || r.registrationNo || '');
+      const title = this.searchSource === 'bulletin'
+        ? (r.markName || 'Başlık yok')
+        : (r.title || r.name || r.markName || r.applicationTitle || 'Başlık yok');
+      const owner = this.searchSource === 'bulletin'
+        ? (Array.isArray(r.holders) && r.holders[0]?.name ? r.holders[0].name : '')
+        : (r.ownerName || r.owner || r.applicantName || '');
+      const img   = this.searchSource === 'bulletin'
+        ? (r.imagePath || '')
+        : (r.brandImageUrl || r.markImageUrl || r.brandSampleUrl || r.markSampleUrl || r.imageUrl || r.brandSamplePath || '');
 
       const line = `${appNo ? (appNo + ' — ') : ''}${title}`;
       const imgHtml = img
@@ -138,7 +148,7 @@ async initIpRecordSearchSelector() {
 
     results.style.display = 'block';
 
-    // Storage path -> URL dönüştür
+    // Storage path -> URL çevir
     results.querySelectorAll('img[data-storage-path]').forEach(async imgEl => {
       const path = imgEl.getAttribute('data-storage-path');
       const url = await this.resolveImageUrl(path);
@@ -150,20 +160,31 @@ async initIpRecordSearchSelector() {
   };
 
   const doSearch = this.debounce((raw) => {
-    let term = norm(raw).trim();
+    const term = norm(raw).trim();
     if (!term) { results.style.display = 'none'; results.innerHTML = ''; return; }
 
-    const pool = Array.isArray(this.allIpRecords) ? this.allIpRecords : [];
+    const pool = (this.searchSource === 'bulletin')
+      ? (this.allBulletinRecords || [])
+      : (this.allIpRecords || []);
+
     const filtered = pool.filter(r => {
-      const hay = [
-        r.title, r.name, r.markName, r.applicationTitle,
-        r.ownerName, r.owner, r.applicantName,
-        r.applicationNo, r.applicationNumber, r.appNo,
-        r.fileNo, r.registrationNo
-      ].map(norm).join(' ');
+      // Kaynağa göre aranan alanlar
+      const hay = (this.searchSource === 'bulletin'
+        ? [
+            r.markName,
+            r.applicationNo || r.applicationNumber
+          ]
+        : [
+            r.title, r.name, r.markName, r.applicationTitle,
+            r.ownerName, r.owner, r.applicantName,
+            r.applicationNo, r.applicationNumber, r.appNo,
+            r.fileNo, r.registrationNo
+          ])
+        .map(norm).join(' ');
+
       if (hay.includes(term)) return true;
 
-      // Tam garanti: tüm değerleri tara (şema değişkense)
+      // Şemalar değişkense son güvenlik
       try { return Object.values(r).map(norm).join(' ').includes(term); }
       catch { return false; }
     });
@@ -177,16 +198,24 @@ async initIpRecordSearchSelector() {
     const item = e.target.closest('.search-result-item');
     if (!item) return;
 
-    const id   = item.dataset.id;
-    const pool = Array.isArray(this.allIpRecords) ? this.allIpRecords : [];
-    const rec  = pool.find(x => (x.id || x.recordId || x.docId || x._id || x.uid) === id);
+    const id = item.dataset.id;
+    const pool = (this.searchSource === 'bulletin') ? this.allBulletinRecords : this.allIpRecords;
+    const rec  = pool.find(x => (x.id || x.recordId || x.docId || x._id || x.uid) === id) || {};
 
-    const title = rec?.title || rec?.name || rec?.markName || rec?.applicationTitle || 'Başlık yok';
-    const owner = rec?.ownerName || rec?.owner || rec?.applicantName || '';
-    const appNo = rec?.applicationNo || rec?.applicationNumber || rec?.appNo || rec?.fileNo || rec?.registrationNo || '';
-    const img   = rec?.brandImageUrl || rec?.markImageUrl || rec?.brandSampleUrl || rec?.markSampleUrl || rec?.imageUrl || rec?.brandSamplePath || '';
+    const title = (this.searchSource === 'bulletin')
+      ? (rec.markName || 'Başlık yok')
+      : (rec.title || rec.name || rec.markName || rec.applicationTitle || 'Başlık yok');
+    const owner = (this.searchSource === 'bulletin')
+      ? (Array.isArray(rec.holders) && rec.holders[0]?.name ? rec.holders[0].name : '')
+      : (rec.ownerName || rec.owner || rec.applicantName || '');
+    const appNo = (this.searchSource === 'bulletin')
+      ? (rec.applicationNo || rec.applicationNumber || '')
+      : (rec.applicationNo || rec.applicationNumber || rec.appNo || rec.fileNo || rec.registrationNo || '');
+    const img   = (this.searchSource === 'bulletin')
+      ? (rec.imagePath || '')
+      : (rec.brandImageUrl || rec.markImageUrl || rec.brandSampleUrl || rec.markSampleUrl || rec.imageUrl || rec.brandSamplePath || '');
 
-    this.selectedIpRecord = rec || { id, title, ownerName: owner, applicationNo: appNo };
+    this.selectedIpRecord = { id: rec.id || id, title, ownerName: owner, applicationNo: appNo, source: this.searchSource };
 
     selectedBox.style.display = 'block';
     selectedLabel.innerHTML = `${appNo ? `<strong>${appNo}</strong> — ` : ''}${title}`;
@@ -224,13 +253,11 @@ async initIpRecordSearchSelector() {
     });
   }
 
-  // Dışa tıklayınca sonuç listesini kapat
   document.addEventListener('click', (e) => {
-    if (!results.contains(e.target) && e.target !== input) {
-      results.style.display = 'none';
-    }
+    if (!results.contains(e.target) && e.target !== input) results.style.display = 'none';
   });
 }
+
 
     populateAssignedToDropdown() {
         const assignedToSelect = document.getElementById('assignedTo');
@@ -1680,6 +1707,30 @@ async resolveImageUrl(img) {
   } catch {
     return '';
   }
+}
+async resolveImageUrl(img) {
+  if (!img) return '';
+  if (img.startsWith('http')) return img;
+  try {
+    const url = await getDownloadURL(ref(getStorage(), img));
+    return url;
+  } catch { return ''; }
+}
+
+async loadBulletinRecordsOnce() {
+  if (Array.isArray(this.allBulletinRecords) && this.allBulletinRecords.length) return;
+  const snap = await getDocs(collection(getFirestore(), 'trademarkBulletinRecords'));
+  this.allBulletinRecords = snap.docs.map(d => {
+    const x = d.data();
+    return {
+      id: d.id,
+      markName: x.markName || '',
+      applicationNo: x.applicationNo || x.applicationNumber || '',
+      imagePath: x.imagePath || '',                // storage path
+      holders: x.holders || [],
+      // başka alanlar gerekirse ekleyebilirsin
+    };
+  });
 }
 
 checkFormCompleteness() {
