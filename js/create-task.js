@@ -2041,7 +2041,27 @@ async handleFormSubmit(e) {
 
         const addResult = await ipRecordsService.addTransactionToRecord(this.selectedIpRecord.id, transactionData);
         if (addResult.success) {
-            alert('İş başarıyla oluşturuldu!');
+            if (window.portfolioByOppositionCreator) {
+                const oppositionResult = await window.portfolioByOppositionCreator
+                    .handleTransactionCreated({
+                        id: taskResult.id,
+                        specificTaskType: selectedTransactionType.id,
+                        selectedIpRecord: this.selectedIpRecord
+                    });
+                
+                if (oppositionResult.success && oppositionResult.recordId) {
+                    console.log('✅ Otomatik 3.taraf portföy kaydı oluşturuldu:', oppositionResult.recordId);
+                    alert('İş başarıyla oluşturuldu!\n\nYayına itiraz işi olduğu için otomatik olarak 3.taraf portföy kaydı da oluşturuldu.');
+                } else if (!oppositionResult.success && oppositionResult.error !== 'Yayına itiraz işi değil') {
+                    console.warn('⚠️ 3.taraf portföy kaydı oluşturulamadı:', oppositionResult.error);
+                    alert('İş başarıyla oluşturuldu!\n\nAncak 3.taraf portföy kaydı oluşturulurken bir hata oluştu: ' + oppositionResult.error);
+                } else {
+                    alert('İş başarıyla oluşturuldu!');
+                }
+            } else {
+                alert('İş başarıyla oluşturuldu!');
+            }
+            
             window.location.href = 'task-management.html';
         } else {
             alert('İş oluşturuldu ama işlem kaydedilemedi.');
