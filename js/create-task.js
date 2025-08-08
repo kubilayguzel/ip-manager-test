@@ -22,6 +22,7 @@ class CreateTaskModule {
         this.priorities = [];
         this._rendering = false;
         this._lastRenderSig = '';
+        this._eventsBound = false;
     }
 
     async init() {
@@ -210,6 +211,8 @@ class CreateTaskModule {
     }
 
     setupEventListeners() {
+        if (this._eventsBound) return;
+        this._eventsBound = true;
         document.getElementById('mainIpType').addEventListener('change', (e) => this.handleMainTypeChange(e));
         document.getElementById('specificTaskType').addEventListener('change', (e) => this.handleSpecificTypeChange(e));
         document.getElementById('createTaskForm').addEventListener('submit', (e) => this.handleFormSubmit(e));
@@ -604,25 +607,22 @@ handleIpRecordChange(recordId) {
     this.checkFormCompleteness();
 }
 async handleSpecificTypeChange(e) {
-  console.count('handleSpecificTypeChange called');
   const taskTypeId = e.target.value;
   const selectedTaskType = this.allTransactionTypes.find(t => t.id === taskTypeId);
 
   const container = document.getElementById('conditionalFieldsContainer');
   if (!container) return;
 
-  // --- aynı seçim tekrarlandıysa atla
+  // aynı seçimi tekrar geldiyse ve içerik zaten varsa, atla
   const sig = selectedTaskType ? `${selectedTaskType.id}::${selectedTaskType.alias || selectedTaskType.name || ''}` : '';
-  if (this._lastRenderSig === sig && container.childElementCount > 0) {
-    // console.debug('Skip re-render for same selection:', sig);
-    return;
-  }
+  if (this._lastRenderSig === sig && container.childElementCount > 0) return;
 
-  // --- re-entrancy guard
-  if (this._rendering) return;
+  if (this._rendering) return; // re-entrancy guard
   this._rendering = true;
 
-  // Temizle ve sıfırla
+  // güvenlik: varsa önceki form-actions'ları da sil (duble güvenlik)
+  document.querySelectorAll('.form-actions').forEach(el => el.remove());
+
   container.innerHTML = '';
   this.resetSelections();
 
@@ -631,25 +631,23 @@ async handleSpecificTypeChange(e) {
 
   if (!selectedTaskType) { this._rendering = false; return; }
 
-  // Özel / Base render
   if (selectedTaskType.alias === 'Başvuru' && selectedTaskType.ipType === 'trademark') {
     this.renderTrademarkApplicationForm(container);
-    this.updateButtonsAndTabs();
-    // Eğer trademark formunda da portföy araması kullanacaksan:
-    this.initIpRecordSearchSelector();
   } else {
     this.renderBaseForm(container, selectedTaskType.alias || selectedTaskType.name, selectedTaskType.id);
-    this.updateButtonsAndTabs();
-    // Yeni arama&seçim UI’ı için:
-    this.initIpRecordSearchSelector();
   }
+
+  // arama UI'ını bağla (yeni ipRecordSearch alanı için)
+  this.initIpRecordSearchSelector();
+  this.updateButtonsAndTabs();
+  this.checkFormCompleteness();
+
+  // buton dedupe: yanlışlıkla kalan kopyaları temizle
+  this.dedupeActionButtons();
 
   this._lastRenderSig = sig;
   this._rendering = false;
-
-  this.checkFormCompleteness();
 }
-
 
     renderTrademarkApplicationForm(container) {
         container.innerHTML = `
@@ -1631,6 +1629,13 @@ async handleSpecificTypeChange(e) {
             alert("Kişi kaydedilirken beklenmeyen bir hata oluştu.");
         }
     }
+dedupeActionButtons() {
+    const saves = Array.from(document.querySelectorAll('#saveTaskBtn'));
+    if (saves.length > 1) saves.slice(0, -1).forEach(b => b.closest('.form-actions')?.remove());
+
+    const cancels = Array.from(document.querySelectorAll('#cancelBtn'));
+    if (cancels.length > 1) cancels.slice(0, -1).forEach(b => b.closest('.form-actions')?.remove());
+}
 checkFormCompleteness() {
     const taskTypeId = document.getElementById('specificTaskType')?.value;
     const selectedTaskType = this.allTransactionTypes.find(type => type.id === taskTypeId);
