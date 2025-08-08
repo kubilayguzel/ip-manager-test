@@ -325,9 +325,8 @@
                                          (record.status || '-');
 
                     const applicantsDisplay = record.applicants?.map(a => a.name).join(', ') || 'Belirtilmemiş';
-
                     row.innerHTML = `
-                        <td><input type="checkbox" class="record-checkbox" data-id="${record.id}" ${isChecked}></td>
+                        data-id="${record.id}"${this.selectedRecords.has(record.id) ? 'checked' : ''}></td>
                         <td><span class="record-active-status-badge ${record.portfoyStatus || 'active'}">${portfoyStatusDisplay}</span></td>
                         <td>${ipTypeDisplay}</td>
                         <td title="${title}">${title}</td>
