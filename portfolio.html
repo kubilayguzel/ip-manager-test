@@ -703,7 +703,7 @@ renderCurrentPage() {
                     }
 
                     let transactionsHtml = '<div class="transaction-history">';
-                    const transResult = await ipRecordsService.getRecordTransactions(record.id);
+                    const transResult = await ipRecordsService.getTransactionsForRecord(record.id);
                     if (transResult.success && Array.isArray(transResult.data) && transResult.data.length) {
                         transactionsHtml += '<ul>' + transResult.data
                           .map(t => `${(t.date ? new Date(t.date).toLocaleDateString('tr-TR') : '-')} — ${transactionTypesMap.get(t.transactionTypeId)?.name || 'İşlem'} — ${t.status || 'Beklemede'}`)
