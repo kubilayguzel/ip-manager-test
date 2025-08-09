@@ -708,26 +708,19 @@ renderCurrentPage() {
                     // Hem data hem items desteği
                     const txs = Array.isArray(transResult?.data) ? transResult.data
                             : Array.isArray(transResult?.items) ? transResult.items
-                            : Array.isArray(transResult) ? transResult
                             : [];
 
                     const fmtDate = (ts) => {
                     if (!ts) return '-';
-                    if (typeof ts?.toDate === 'function') return ts.toDate().toLocaleDateString('tr-TR'); // Firestore Timestamp
+                    if (typeof ts?.toDate === 'function') return ts.toDate().toLocaleDateString('tr-TR');
                     if (typeof ts === 'object' && 'seconds' in ts) return new Date(ts.seconds * 1000).toLocaleDateString('tr-TR');
                     return new Date(ts).toLocaleDateString('tr-TR');
                     };
 
-                    // type alanı id veya code olabilir
-                    const getTypeMeta = (t) => {
-                    const key = String(t.transactionTypeId ?? t.type ?? '');
-                    return transactionTypesMap.get(key) || null;
-                    };
-
                     if (txs.length) {
                     transactionsHtml += '<ul>' + txs.map(t => {
-                        const meta = getTypeMeta(t);
-                        const name = meta?.alias || meta?.name || (t.description || 'İşlem');
+                        const meta = transactionTypesMap.get(String(t.type));  // ✅ type = ID
+                        const name = meta?.alias || meta?.name || 'İşlem';
                         const dateStr = fmtDate(t.timestamp ?? t.date);
                         const status = t.status || 'Beklemede';
                         return `<li>${dateStr} — ${name} — ${status}</li>`;
