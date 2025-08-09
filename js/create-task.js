@@ -1386,8 +1386,8 @@ async handleSpecificTypeChange(e) {
 
         
         // — İlgili taraf çoklu arama —
-        const relatedPartySearch = document.getElementById('relatedPartySearch');
-        const relatedPartyResults = document.getElementById('relatedPartyResults');
+        const relatedPartySearch  = document.getElementById('personSearchInput');
+        const relatedPartyResults = document.getElementById('personSearchResults');
         let rpTimer;
         if (relatedPartySearch) {
             relatedPartySearch.addEventListener('input', (e) => {
@@ -1990,7 +1990,7 @@ checkFormCompleteness() {
         // assignedTo, başlık ve portföy kaydı seçildiğinde tamamlandı olarak işaretle
         const tIdStr = asId(selectedTaskType.id);
         const needsRelatedParty = RELATED_PARTY_REQUIRED.has(tIdStr);
-        const needsObjectionOwner = (tIdStr === TASK_IDS.ITIRAZ_TESCIL) || (tIdStr === TASK_IDS.ITIRAZ_YAYIN);
+        const needsObjectionOwner = (tIdStr === TASK_IDS.ITIRAZ_YAYIN);
         const hasRelated = Array.isArray(this.selectedRelatedParties) && this.selectedRelatedParties.length > 0;
         isComplete = !!taskTitle && !!this.selectedIpRecord && (!needsRelatedParty || hasRelated) && (!needsObjectionOwner || hasRelated);
     }
