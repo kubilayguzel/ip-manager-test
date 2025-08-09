@@ -1254,39 +1254,34 @@ async savePatentPortfolio(portfolioData) {
     const result = await ipRecordsService.createRecord(dataToSave);
     if (result.success) {
         if (dataToSave.recordOwnerType === 'self' && !this.editingRecordId) {
-        // ipType -> transaction code eşlemesi (create-task.js ile aynı kodlar)
+        // ipType'a göre code belirle
         const CODE_BY_IP = {
             trademark: 'TRADEMARK_APPLICATION',
-            patent:    'PATENT_APPLICATION',
-            design:    'DESIGN_APPLICATION'
+            patent: 'PATENT_APPLICATION',
+            design: 'DESIGN_APPLICATION'
         };
         const targetCode = CODE_BY_IP[dataToSave.ipType] || 'TRADEMARK_APPLICATION';
 
-        // 1) Tercihen servisten ID’yi çek
+        // Transaction type ID'sini çek
         let txTypeId = null;
         try {
             const typeRes = await transactionTypeService.getByCode?.(targetCode);
-            txTypeId = String(typeRes?.id || '');
-        } catch (_) {}
-
-        // 2) Servis yoksa/başarısızsa fallback: statik ID haritası kullan
-        if (!txTypeId) {
-            const TX_IDS = {
-            trademark: '2', 
-            patent:    '',  // örnek: "Başvuru" (Patent) ID'si
-            design:    ''  // örnek: "Başvuru" (Tasarım) ID'si
-            };
-            txTypeId = TX_IDS[dataToSave.ipType] || '3';
+            txTypeId = typeRes?.id || null;
+        } catch (err) {
+            console.error('Transaction type bulunamadı:', err);
         }
 
-        await ipRecordsService.addTransactionToRecord(result.id, {
-            type: txTypeId,                 // ✅ KOD DEĞİL, **ID** yazıyoruz
+        if (!txTypeId) {
+            console.error('Transaction type ID bulunamadı, ekleme yapılmıyor.');
+        } else {
+            await ipRecordsService.addTransactionToRecord(result.id, {
+            type: String(txTypeId), // ✅ Artık ID yazıyoruz
             description: 'Başvuru işlemi.',
             parentId: null,
             transactionHierarchy: 'parent'
-        });
+            });
         }
-
+        }
         alert('Patent portföy kaydı başarıyla oluşturuldu!');
         window.location.href = 'portfolio.html';
     } else {
