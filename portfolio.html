@@ -917,13 +917,13 @@ renderCurrentPage() {
         }
         
         async function loadTransactionTypes() {
-            const result = await transactionTypeService.getTransactionTypes();
-            if (result.success) {
+        const result = await transactionTypeService.getTransactionTypes();
+        if (result.success) {
             result.data.forEach(type => {
-                transactionTypesMap.set(String(type.id), type);
-                if (type.code) transactionTypesMap.set(String(type.code), type); // kodla da arayabilelim
+            transactionTypesMap.set(String(type.id), type);
+            if (type.code) transactionTypesMap.set(String(type.code), type); // <-- kod ile de eriş
             });
-            }
+        }
         }
 
         async function loadPersons() {
