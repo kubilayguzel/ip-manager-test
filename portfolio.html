@@ -704,14 +704,42 @@ renderCurrentPage() {
 
                     let transactionsHtml = '<div class="transaction-history">';
                     const transResult = await ipRecordsService.getTransactionsForRecord(record.id);
-                    if (transResult.success && Array.isArray(transResult.data) && transResult.data.length) {
-                        transactionsHtml += '<ul>' + transResult.data
-                          .map(t => `${(t.date ? new Date(t.date).toLocaleDateString('tr-TR') : '-')} — ${transactionTypesMap.get(t.transactionTypeId)?.name || 'İşlem'} — ${t.status || 'Beklemede'}`)
-                          .join('') + '</ul>';
+
+                    // hem data hem items için destek
+                    const txs = Array.isArray(transResult?.data) ? transResult.data
+                            : Array.isArray(transResult?.items) ? transResult.items
+                            : [];
+
+                    // tarih alanını normalize et
+                    const fmtDate = (ts) => {
+                    if (!ts) return '-';
+                    // Firestore Timestamp
+                    if (typeof ts?.toDate === 'function') return ts.toDate().toLocaleDateString('tr-TR');
+                    // {seconds,nanos}
+                    if (typeof ts === 'object' && 'seconds' in ts) return new Date(ts.seconds * 1000).toLocaleDateString('tr-TR');
+                    // ISO/string
+                    return new Date(ts).toLocaleDateString('tr-TR');
+                    };
+
+                    // type meta'yı id **veya** kod ile bul
+                    const getTypeMeta = (t) => {
+                    const key = String(t.transactionTypeId ?? t.type ?? '');
+                    return transactionTypesMap.get(key) || null;
+                    };
+
+                    if (txs.length) {
+                    transactionsHtml += '<ul>' + txs.map(t => {
+                        const meta = getTypeMeta(t);
+                        const name = meta?.alias || meta?.name || (t.description ? t.description : 'İşlem');
+                        const dateStr = fmtDate(t.timestamp ?? t.date);
+                        const status = t.status || 'Beklemede';
+                        return `<li>${dateStr} — ${name} — ${status}</li>`;
+                    }).join('') + '</ul>';
                     } else {
-                        transactionsHtml += '<p>İşlem bulunamadı.</p>';
+                    transactionsHtml += '<p>İşlem bulunamadı.</p>';
                     }
                     transactionsHtml += '</div>';
+
 
                     modalBody.innerHTML = `
                         <div class="modal-detail-grid">
@@ -890,7 +918,12 @@ renderCurrentPage() {
         
         async function loadTransactionTypes() {
             const result = await transactionTypeService.getTransactionTypes();
-            if (result.success) result.data.forEach(type => transactionTypesMap.set(type.id, type));
+            if (result.success) {
+            result.data.forEach(type => {
+                transactionTypesMap.set(String(type.id), type);
+                if (type.code) transactionTypesMap.set(String(type.code), type); // kodla da arayabilelim
+            });
+            }
         }
 
         async function loadPersons() {
