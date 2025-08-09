@@ -1195,6 +1195,12 @@ async saveTrademarkPortfolio(portfolioData) {
     }
 
     if (result.success) {
+        await ipRecordsService.addTransactionToRecord(result.id, {
+        type: 'trademark_application',      // data/transactionTypes.json’daki id
+        description: 'Başvuru işlemi.',
+        parentId: null,
+        transactionHierarchy: 'parent'
+    });
         alert('Marka portföy kaydı başarıyla ' + (this.editingRecordId ? 'güncellendi' : 'oluşturuldu') + '!');
         window.location.href = 'portfolio.html';
     } else {
