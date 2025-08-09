@@ -273,7 +273,7 @@ class PortfolioByOppositionCreator {
                     brandImageName: null,
                     goodsAndServices: goodsAndServices
                     opposedMarkBulletinNo: bulletinData.bulletinNo || null,
-                    opposedMarkBulletinDate: bulletinDate || null
+                    opposedMarkBulletinDate: bulletinDate || null,
                 }
             },
             
