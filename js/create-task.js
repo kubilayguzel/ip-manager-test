@@ -366,6 +366,18 @@ async initIpRecordSearchSelector() {
         this.setupBrandExampleUploader();
     }
 
+updateRelatedPartySectionVisibility(selectedTaskType) {
+    const section = document.getElementById('relatedPartySection'); // ← bölümün kapsayıcı div'i
+    const titleEl = section?.querySelector('.section-title');       // ← bölüm başlığı (h3 vs.)
+
+    const tIdStr = asId(selectedTaskType?.id); // daima string
+    const needsRelatedParty = RELATED_PARTY_REQUIRED.has(tIdStr);
+    const label = PARTY_LABEL_BY_ID[tIdStr] || 'İlgili Taraf';
+
+    if (section) section.classList.toggle('d-none', !needsRelatedParty);
+    if (titleEl) titleEl.textContent = label;
+    }
+
 setupBaseFormListeners() {
   // Bu fonksiyon container'ı parametre almıyor; DOM'dan bulalım
   const container = document.getElementById('conditionalFieldsContainer');
@@ -560,6 +572,8 @@ setupBaseFormListeners() {
         }
         
         container.innerHTML = `
+            const selectedTaskTypeObj = this.allTransactionTypes.find(t => asId(t.id) === asId(taskTypeId));
+            this.updateRelatedPartySectionVisibility(selectedTaskTypeObj);
             <div class="form-section">
             <h3 class="section-title">2. İşleme Konu Varlık</h3>
 
@@ -702,6 +716,17 @@ handleIpRecordChange(recordId) {
 async handleSpecificTypeChange(e) {
     const taskTypeId = e.target.value;
     const selectedTaskType = this.allTransactionTypes.find(t => t.id === taskTypeId);
+    // — INSERT #1 — seçime göre arama kaynağı + ilgili taraf görünürlüğü
+        try {
+        // Eğer TASK_IDS sabitini kullanıyorsan:
+        const tIdStr = String(selectedTaskType?.id ?? '');
+        this.searchSource = (tIdStr === TASK_IDS.ITIRAZ_YAYIN) ? 'bulletin' : 'portfolio';
+
+        // İlgili taraf (Devir/Lisans/Birleşme/… ve 19-20) görünürlük/başlık
+        this.updateRelatedPartySectionVisibility(selectedTaskType);
+        } catch (e) {
+        console.warn('Tip sonrası görünürlük/arama kaynağı ayarlanamadı:', e);
+        }
 
     const container = document.getElementById('conditionalFieldsContainer');
     if (!container) return;
@@ -765,6 +790,12 @@ async handleSpecificTypeChange(e) {
 
     // Arama kutusunu başlat
     await this.initIpRecordSearchSelector();
+    // — INSERT #2 — DOM çizimi sonrası görünürlüğü bir kez daha sabitle
+    try {
+    const tIdStr = String(document.getElementById('specificTaskType')?.value || '');
+    const selected = this.allTransactionTypes.find(t => String(t.id) === tIdStr);
+    this.updateRelatedPartySectionVisibility(selected);
+    } catch (e) {}
 
     this.updateButtonsAndTabs();
     this.checkFormCompleteness();
@@ -1808,6 +1839,7 @@ async loadBulletinRecordsOnce() {
 checkFormCompleteness() {
     const taskTypeId = document.getElementById('specificTaskType')?.value;
     const selectedTaskType = this.allTransactionTypes.find(type => type.id === taskTypeId);
+    
     const saveTaskBtn = document.getElementById('saveTaskBtn');
 
     if (!selectedTaskType || !saveTaskBtn) {
