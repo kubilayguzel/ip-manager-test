@@ -383,7 +383,7 @@ renderCurrentPage() {
                     let tabMatch = false;
                     if (this.activeTypeFilter === 'all') {
                     // Tümü sekmesinde 3. taraf (yayına itirazdan açılan) kayıtlar gösterilmesin
-                    tabMatch = (record.recordOwnerType !== 'thirdParty');
+                    tabMatch = (record.recordOwnerType !== 'third_party');
                     } else if (this.activeTypeFilter === 'objections') {
                         tabMatch = Array.isArray(record.transactions) && record.transactions.some(t => (t.type || '').includes('İtiraz'));
                     } else if (this.activeTypeFilter === 'litigation') {
