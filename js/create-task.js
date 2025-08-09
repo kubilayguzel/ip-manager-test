@@ -48,10 +48,9 @@ class CreateTaskModule {
         this.allUsers = [];
         this.uploadedFiles = [];
         this.selectedIpRecord = null;
-        this.selectedRelatedParty = null;
-        
+        this.selectedRelatedParty = null;    
         this.selectedRelatedParties = []; // çoklu ilgili taraf listesi
-this.selectedTpInvoiceParty = null;
+        this.selectedTpInvoiceParty = null;
         this.selectedServiceInvoiceParty = null;
         this.pendingChildTransactionData = null;
         this.activeTab = 'brand-info';
@@ -610,12 +609,21 @@ setupBaseFormListeners() {
                 <div class="form-group full-width">
                     <label for="personSearchInput" class="form-label">Sistemdeki Kişilerden Ara</label>
                     <div style="display: flex; gap: 10px;">
-                        <input type="text" id="personSearchInput" class="form-input" placeholder="Aramak için en az 2 karakter...">
-                        <button type="button" id="addNewPersonBtn" class="btn-small btn-add-person"><span>&#x2795;</span> Yeni Kişi</button>
+                    <input type="text" id="personSearchInput" class="form-input" placeholder="Aramak için en az 2 karakter...">
+                    <button type="button" id="addNewPersonBtn" class="btn-small btn-add-person"><span>&#x2795;</span> Yeni Kişi</button>
                     </div>
                     <div id="personSearchResults" class="search-results-list"></div>
-                    <div id="selectedRelatedPartyDisplay" class="search-result-display" style="display:none;"></div>
-                </div>
+                    <div class="form-group full-width mt-2">
+                    <label class="form-label">Seçilen Taraflar
+                        <span class="badge badge-light ml-2" id="relatedPartyCount">0</span>
+                    </label>
+                    <div id="relatedPartyList" class="selected-items-list">
+                        <div class="empty-state">
+                        <i class="fas fa-user-friends fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">Henüz taraf eklenmedi.</p>
+                        </div>
+                    </div>
+                    </div>
             </div>
             ` : ''}
 
@@ -1357,8 +1365,6 @@ async handleSpecificTypeChange(e) {
         // — İlgili taraf çoklu arama —
         const relatedPartySearch = document.getElementById('relatedPartySearch');
         const relatedPartyResults = document.getElementById('relatedPartyResults');
-        const relatedPartyList = document.getElementById('relatedPartyList');
-
         let rpTimer;
         if (relatedPartySearch) {
             relatedPartySearch.addEventListener('input', (e) => {
@@ -1400,7 +1406,7 @@ async handleSpecificTypeChange(e) {
                 this.updateRelatedPartySectionVisibility({ id: document.getElementById('specificTaskType')?.value });
             });
         }
-const applicantSearchInput = document.getElementById('applicantSearchInput');
+        const applicantSearchInput = document.getElementById('applicantSearchInput');
         if (applicantSearchInput) applicantSearchInput.addEventListener('input', (e) => this.searchPersons(e.target.value, 'applicant'));
         const addNewApplicantBtn = document.getElementById('addNewApplicantBtn');
         if (addNewApplicantBtn) addNewApplicantBtn.addEventListener('click', () => this.showAddPersonModal('applicant'));
@@ -1414,6 +1420,16 @@ const applicantSearchInput = document.getElementById('applicantSearchInput');
                     this.removeApplicant(personId);
                 }
             });
+        }
+
+        const relatedPartyList = document.getElementById('relatedPartyList');
+        if (relatedPartyList) {
+        relatedPartyList.addEventListener('click', (e) => {
+            const btn = e.target.closest('.remove-selected-item-btn');
+            if (!btn) return;
+            const id = btn.dataset.id;
+            this.removeRelatedParty(id);
+        });
         }
         
         const priorityTypeSelect = document.getElementById('priorityType');
@@ -1667,7 +1683,13 @@ const applicantSearchInput = document.getElementById('applicantSearchInput');
             'applicant': 'applicantSearchResults'
         } [target];
 
-        if (target === 'relatedParty') { this.addRelatedParty(person); }
+        if (target === 'relatedParty') {
+        if (!Array.isArray(this.selectedRelatedParties)) this.selectedRelatedParties = [];
+        if (!this.selectedRelatedParties.some(p => String(p.id) === String(person.id))) {
+            this.selectedRelatedParties.push({ id: person.id, name: person.name, email: person.email || '', phone: person.phone || '' });
+            this.renderSelectedRelatedParties();
+        }
+        }
         else if (target === 'tpInvoiceParty') this.selectedTpInvoiceParty = person;
         else if (target === 'serviceInvoiceParty') this.selectedServiceInvoiceParty = person;
         else if (target === 'applicant') {
@@ -1675,9 +1697,9 @@ const applicantSearchInput = document.getElementById('applicantSearchInput');
         }
 
         const display = document.getElementById(displayId);
-        if (display && target !== 'applicant') {
-            display.innerHTML = `<p><b>Seçilen:</b> ${person.name}</p>`;
-            display.style.display = 'block';
+        if (display && target !== 'applicant' && target !== 'relatedParty') {
+        display.innerHTML = `<p><b>Seçilen:</b> ${person.name}</p>`;
+        display.style.display = 'block';
         }
         const resultsContainer = document.getElementById(resultsId);
         if (resultsContainer) resultsContainer.innerHTML = '';
@@ -1726,6 +1748,37 @@ const applicantSearchInput = document.getElementById('applicantSearchInput');
         });
         container.innerHTML = html;
     }
+
+    renderSelectedRelatedParties() {
+        const list = document.getElementById('relatedPartyList');
+        const countEl = document.getElementById('relatedPartyCount');
+        if (!list) return;
+        const arr = Array.isArray(this.selectedRelatedParties) ? this.selectedRelatedParties : [];
+
+        if (!arr.length) {
+            list.innerHTML = `
+            <div class="empty-state">
+                <i class="fas fa-user-friends fa-3x text-muted mb-3"></i>
+                <p class="text-muted">Henüz taraf eklenmedi.</p>
+            </div>`;
+        } else {
+            list.innerHTML = arr.map(p => `
+            <div class="selected-item d-flex justify-content-between align-items-center p-2 mb-2 border rounded">
+                <span>${p.name} <small class="text-muted">${p.email || ''}</small></span>
+                <button type="button" class="btn btn-sm btn-danger remove-selected-item-btn" data-id="${p.id}">
+                <i class="fas fa-trash-alt"></i>
+                </button>
+            </div>
+            `).join('');
+        }
+        if (countEl) countEl.textContent = arr.length;
+        }
+
+        removeRelatedParty(id) {
+        this.selectedRelatedParties = (this.selectedRelatedParties || []).filter(x => String(x.id) !== String(id));
+        this.renderSelectedRelatedParties();
+        this.checkFormCompleteness();
+        }
 
     showAddPersonModal(target = null) {
         const modal = document.getElementById('addPersonModal');
@@ -1913,10 +1966,10 @@ checkFormCompleteness() {
 
         // assignedTo, başlık ve portföy kaydı seçildiğinde tamamlandı olarak işaretle
         const tIdStr = asId(selectedTaskType.id);
-const needsRelatedParty = RELATED_PARTY_REQUIRED.has(tIdStr);
-const needsObjectionOwner = (tIdStr === TASK_IDS.ITIRAZ_TESCIL) || (tIdStr === TASK_IDS.ITIRAZ_YAYIN);
-const hasRelated = Array.isArray(this.selectedRelatedParties) && this.selectedRelatedParties.length > 0;
-isComplete = !!taskTitle && !!this.selectedIpRecord && (!needsRelatedParty || hasRelated) && (!needsObjectionOwner || hasRelated);
+        const needsRelatedParty = RELATED_PARTY_REQUIRED.has(tIdStr);
+        const needsObjectionOwner = (tIdStr === TASK_IDS.ITIRAZ_TESCIL) || (tIdStr === TASK_IDS.ITIRAZ_YAYIN);
+        const hasRelated = Array.isArray(this.selectedRelatedParties) && this.selectedRelatedParties.length > 0;
+        isComplete = !!taskTitle && !!this.selectedIpRecord && (!needsRelatedParty || hasRelated) && (!needsObjectionOwner || hasRelated);
     }
 
     saveTaskBtn.disabled = !isComplete;
@@ -2053,45 +2106,35 @@ async handleFormSubmit(e) {
 
         taskData.relatedIpRecordId = newRecordResult.id;
         taskData.relatedIpRecordTitle = newIpRecordData.title;
-
-        
-    
+   
         // Çoklu ilgili tarafları ekle
         try {
             const tIdStr = asId(selectedTransactionType.id);
             if (Array.isArray(this.selectedRelatedParties) && this.selectedRelatedParties.length) {
                 taskData.details = taskData.details || {};
                 taskData.details.relatedParties = this.selectedRelatedParties.map(p => ({
-                    id: p.id, name: p.name, email: p.email || '', phone: p.phone || ''
+                    id: p.id,
+                    name: p.name,
+                    email: p.email || '',
+                    phone: p.phone || ''
                 }));
                 if (!taskData.details.relatedParty) {
                     const p0 = this.selectedRelatedParties[0];
-                    taskData.details.relatedParty = { id: p0.id, name: p0.name, email: p0.email || '', phone: p0.phone || '' };
+                    taskData.details.relatedParty = { 
+                        id: p0.id, 
+                        name: p0.name, 
+                        email: p0.email || '', 
+                        phone: p0.phone || '' 
+                    };
                 }
             }
             if ((tIdStr === TASK_IDS.YAYIMA_ITIRAZIN_YENIDEN_INCELENMESI || tIdStr === TASK_IDS.ITIRAZ_YAYIN) && taskData.details?.relatedParties) {
                 taskData.details.objectionOwners = [...taskData.details.relatedParties];
             }
-        } catch (e) { console.warn('relatedParties ekleme hatası:', e); }
-
-        // Çoklu ilgili tarafları ekle
-        try {
-            const tIdStr = asId(selectedTransactionType.id);
-            if (Array.isArray(this.selectedRelatedParties) && this.selectedRelatedParties.length) {
-                taskData.details = taskData.details || {};
-                taskData.details.relatedParties = this.selectedRelatedParties.map(p => ({
-                    id: p.id, name: p.name, email: p.email || '', phone: p.phone || ''
-                }));
-                if (!taskData.details.relatedParty) {
-                    const p0 = this.selectedRelatedParties[0];
-                    taskData.details.relatedParty = { id: p0.id, name: p0.name, email: p0.email || '', phone: p0.phone || '' };
-                }
-            }
-            if ((tIdStr === TASK_IDS.YAYIMA_ITIRAZIN_YENIDEN_INCELENMESI || tIdStr === TASK_IDS.ITIRAZ_YAYIN) && taskData.details?.relatedParties) {
-                taskData.details.objectionOwners = [...taskData.details.relatedParties];
-            }
-        } catch (e) { console.warn('relatedParties ekleme hatası:', e); }
-const taskResult = await taskService.createTask(taskData);
+        } catch (e) { 
+            console.warn('relatedParties ekleme hatası:', e); 
+        }
+        const taskResult = await taskService.createTask(taskData);
         if (!taskResult.success) {
             alert('İş oluşturulurken hata oluştu: ' + taskResult.error);
             return;
