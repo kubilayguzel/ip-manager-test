@@ -382,6 +382,9 @@ renderCurrentPage() {
                     let tabMatch = false;
                     if (this.activeTypeFilter === 'all') {
                     tabMatch = (record.recordOwnerType !== 'third_party');
+                    } else if (this.activeTypeFilter === 'trademark') {
+                    // "Marka" sekmesinde self kayıtları hariç tut
+                    tabMatch = record.type === 'trademark' && record.recordOwnerType !== 'self';
                     } else if (this.activeTypeFilter === 'objections') {
                         tabMatch = Array.isArray(record.transactions) && record.transactions.some(t => (t.type || '').includes('İtiraz'));
                     } else if (this.activeTypeFilter === 'litigation') {
