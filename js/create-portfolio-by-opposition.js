@@ -271,7 +271,7 @@ class PortfolioByOppositionCreator {
                     consentRequest: null,
                     brandImage: bulletinData.imagePath || null,
                     brandImageName: null,
-                    goodsAndServices: goodsAndServices
+                    goodsAndServices: goodsAndServices,
                     opposedMarkBulletinNo: bulletinData.bulletinNo || null,
                     opposedMarkBulletinDate: bulletinDate || null
                 }
