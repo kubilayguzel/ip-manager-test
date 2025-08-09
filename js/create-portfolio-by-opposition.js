@@ -38,8 +38,21 @@ class PortfolioByOppositionCreator {
                 return { success: false, error: bulletinData.error };
             }
 
-            // 2. Bulletin verisini portföy formatına dönüştür (henüz originalBulletinRecordId yok)
-            const portfolioData = this.mapBulletinToPortfolio(bulletinData.data, transactionId);
+        let bulletinDate = null;
+        try {
+            if (bulletinData.data.bulletinId) {
+                const bulletinRef = doc(this.db, 'trademarkBulletins', bulletinData.data.bulletinId);
+                const bulletinSnap = await getDoc(bulletinRef);
+                if (bulletinSnap.exists()) {
+                    bulletinDate = bulletinSnap.data().bulletinDate || null;
+                }
+            }
+        } catch (err) {
+            console.warn('⚠️ Bulletin tarihi alınamadı:', err);
+        }
+
+        // 2. Bulletin verisini portföy formatına dönüştür
+        const portfolioData = this.mapBulletinToPortfolio(bulletinData.data, transactionId, bulletinDate);
 
             // 3. Portföy kaydını oluştur
             const result = await this.createPortfolioRecord(portfolioData);
@@ -200,7 +213,7 @@ class PortfolioByOppositionCreator {
      * @param {string} transactionId - İlgili işlem ID'si
      * @returns {Object} Portföy kayıt verisi
      */
-    mapBulletinToPortfolio(bulletinData, transactionId) {
+    mapBulletinToPortfolio(bulletinData, transactionId,bulletinDate = null) {
         const now = new Date().toISOString();
         
     const applicants = Array.isArray(bulletinData.holders)
@@ -259,6 +272,8 @@ class PortfolioByOppositionCreator {
                     brandImage: bulletinData.imagePath || null,
                     brandImageName: null,
                     goodsAndServices: goodsAndServices
+                    opposedMarkBulletinNo: bulletinData.bulletinNo || null,
+                    opposedMarkBulletinDate: bulletinDate || null
                 }
             },
             
