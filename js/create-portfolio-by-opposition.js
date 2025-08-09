@@ -203,15 +203,14 @@ class PortfolioByOppositionCreator {
     mapBulletinToPortfolio(bulletinData, transactionId) {
         const now = new Date().toISOString();
         
-        // Başvuru sahiplerini düzenle
-        const applicants = bulletinData.applicants?.map(applicant => ({
-            id: `bulletin_applicant_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-            name: applicant.name || applicant,
-            address: applicant.address || null,
-            email: null,
-            phone: null,
-            type: 'company'
-        })) || [];
+    const applicants = Array.isArray(bulletinData.holders)
+        ? bulletinData.holders.map(holder => ({
+            id: `bulletin_holder_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            name: holder.name || holder.holderName || holder.title || holder, // string veya obje olabilir
+            address: holder.address || holder.addressText || null,
+            country: holder.country || holder.countryCode || null,
+        }))
+        : [];
 
         // Mal ve hizmet sınıflarını düzenle
         const goodsAndServices = bulletinData.classNumbers?.map(classNum => ({
