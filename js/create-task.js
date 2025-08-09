@@ -708,9 +708,6 @@ setupBaseFormListeners() {
         this.checkFormCompleteness();
         this.initIpRecordSearchSelector();
     }
-    const selectedTaskTypeObj = this.allTransactionTypes.find(t => asId(t.id) === asId(taskTypeId));
-    this.updateRelatedPartySectionVisibility(selectedTaskTypeObj);
-    
 handleIpRecordChange(recordId) {
     if (recordId) {
         this.selectedIpRecord = this.allIpRecords.find(r => r.id === recordId);
