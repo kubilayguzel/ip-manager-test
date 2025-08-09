@@ -1401,9 +1401,8 @@ async handleSpecificTypeChange(e) {
                     const results = this.allPersons.filter(p => (p.name || '').toLowerCase().includes(q.toLowerCase()));
                     if (!relatedPartyResults) return;
                     relatedPartyResults.innerHTML = results.map(p => `
-                        <div class="search-result-item d-flex justify-content-between align-items-center" data-id="${p.id}">
-                            <span><b>${p.name}</b> <small class="text-muted">${p.email || ''}</small></span>
-                            <button type="button" class="btn btn-sm btn-outline-primary" data-action="add-related" data-id="${p.id}">Ekle</button>
+                        <div class="search-result-item d-flex align-items-center" data-id="${p.id}">
+                            <span class="clickable-owner"><b>${p.name}</b> <small class="text-muted">${p.email || ''}</small></span>
                         </div>
                     `).join('');
                     relatedPartyResults.style.display = results.length ? 'block' : 'none';
@@ -1413,20 +1412,21 @@ async handleSpecificTypeChange(e) {
 
         if (relatedPartyResults) {
             relatedPartyResults.addEventListener('click', (e) => {
-                const btn = e.target.closest('[data-action="add-related"]');
-                if (!btn) return;
-                const id = btn.getAttribute('data-id');
-                const p = this.allPersons.find(x => String(x.id) == String(id));
-                if (!p) return;
-                if (!Array.isArray(this.selectedRelatedParties)) this.selectedRelatedParties = [];
-                if (this.selectedRelatedParties.some(x => String(x.id) == String(p.id))) return;
-                this.selectedRelatedParties.push({ id: p.id, name: p.name, email: p.email || '', phone: p.phone || '' });
-                if (relatedPartySearch) relatedPartySearch.value = '';
+                const item = e.target.closest('.search-result-item');
+                if (!item) return;
+
+                const id = item.getAttribute('data-id');
+                const person = this.allPersons.find(p => p.id === id);
+                if (!person) return;
+
+                // Burada sahibin ekleme işlemi yapılır
+                this.selectedRelatedParty = person;
+                this.renderSelectedRelatedParty();
+
+                // Arama sonuçlarını kapat
                 relatedPartyResults.innerHTML = '';
                 relatedPartyResults.style.display = 'none';
-                this.renderSelectedRelatedParties();
-                this.checkFormCompleteness();
-                this.updateRelatedPartySectionVisibility({ id: document.getElementById('specificTaskType')?.value });
+                relatedPartySearch.value = '';
             });
         }
         const applicantSearchInput = document.getElementById('applicantSearchInput');
