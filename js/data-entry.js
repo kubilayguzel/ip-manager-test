@@ -1253,6 +1253,21 @@ async savePatentPortfolio(portfolioData) {
 
     const result = await ipRecordsService.createRecord(dataToSave);
     if (result.success) {
+        if (dataToSave.recordOwnerType === 'self' && !this.editingRecordId) {
+        // ipType'a göre işlem tipi belirle
+        const txTypeByIp = (dataToSave.ipType === 'patent')
+            ? 'patent_application'
+            : (dataToSave.ipType === 'design')
+            ? 'design_application'
+            : 'trademark_application';
+
+        await ipRecordsService.addTransactionToRecord(result.id, {
+            type: txTypeByIp,                 // veya transactionTypes.json’daki id
+            description: 'Başvuru işlemi.',
+            parentId: null,
+            transactionHierarchy: 'parent'
+        });
+    }
         alert('Patent portföy kaydı başarıyla oluşturuldu!');
         window.location.href = 'portfolio.html';
     } else {
