@@ -5,30 +5,33 @@ import { ref, uploadBytes, getStorage, getDownloadURL } from "https://www.gstati
 import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 // === ID-based configuration (added by assistant) ===
 export const TASK_IDS = {
-  DEVIR: '7',
-  LISANS: '8',
-  BIRLESME: '9',
-  VERASET: '10',
-  REHIN_TEMINAT: '11',
-  YIDK_IPTAL: '18',
-  ITIRAZ_TESCIL: '19',
-  ITIRAZ_YAYIN: '20',
+  DEVIR: '5',
+  LISANS: '10',
+  REHIN_TEMINAT: '13',
+  BIRLESME: '3',
+  VERASET: '18',
+  YAYIMA_ITIRAZIN_YENIDEN_INCELENMESI: '19', // (senin adlandırmanla)
+  ITIRAZ_YAYIN: '20'                           // Yayına İtiraz
 };
 
 export const RELATED_PARTY_REQUIRED = new Set([
-  TASK_IDS.DEVIR, TASK_IDS.LISANS, TASK_IDS.BIRLESME, TASK_IDS.VERASET,
-  TASK_IDS.REHIN_TEMINAT, TASK_IDS.YIDK_IPTAL, TASK_IDS.ITIRAZ_TESCIL, TASK_IDS.ITIRAZ_YAYIN
+  TASK_IDS.DEVIR,
+  TASK_IDS.LISANS,
+  TASK_IDS.REHIN_TEMINAT,
+  TASK_IDS.BIRLESME,
+  TASK_IDS.VERASET,
+  TASK_IDS.YAYIMA_ITIRAZIN_YENIDEN_INCELENMESI, // 19
+  TASK_IDS.ITIRAZ_YAYIN   
 ]);
 
 export const PARTY_LABEL_BY_ID = {
   [TASK_IDS.DEVIR]: 'Devralan Taraf',
   [TASK_IDS.LISANS]: 'Lisans Alan Taraf',
+  [TASK_IDS.REHIN_TEMINAT]: 'Rehin Alan Taraf',
   [TASK_IDS.BIRLESME]: 'Birleşilen Taraf',
   [TASK_IDS.VERASET]: 'Mirasçı',
-  [TASK_IDS.REHIN_TEMINAT]: 'Rehin Alan Taraf',
-  [TASK_IDS.YIDK_IPTAL]: 'Davacı/Davalı',
-  [TASK_IDS.ITIRAZ_TESCIL]: 'İtiraz Sahibi',
-  [TASK_IDS.ITIRAZ_YAYIN]: 'İtiraz Sahibi',
+  [TASK_IDS.YAYIMA_ITIRAZIN_YENIDEN_INCELENMESI]: 'İtiraz Sahibi',
+  [TASK_IDS.ITIRAZ_YAYIN]: 'İtiraz Sahibi'
 };
 
 const asId = (v) => String(v ?? '');
