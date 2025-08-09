@@ -49,7 +49,9 @@ class CreateTaskModule {
         this.uploadedFiles = [];
         this.selectedIpRecord = null;
         this.selectedRelatedParty = null;
-        this.selectedTpInvoiceParty = null;
+        
+        this.selectedRelatedParties = []; // çoklu ilgili taraf listesi
+this.selectedTpInvoiceParty = null;
         this.selectedServiceInvoiceParty = null;
         this.pendingChildTransactionData = null;
         this.activeTab = 'brand-info';
@@ -370,16 +372,16 @@ async initIpRecordSearchSelector() {
     }
 
 updateRelatedPartySectionVisibility(selectedTaskType) {
-    const section = document.getElementById('relatedPartySection'); // ← bölümün kapsayıcı div'i
-    const titleEl = section?.querySelector('.section-title');       // ← bölüm başlığı (h3 vs.)
-
-    const tIdStr = asId(selectedTaskType?.id); // daima string
+    const section = document.getElementById('relatedPartySection');
+    const titleEl = document.getElementById('relatedPartyTitle') || section?.querySelector('.section-title');
+    const countEl = document.getElementById('relatedPartyCount');
+    const tIdStr = asId(selectedTaskType?.id);
     const needsRelatedParty = RELATED_PARTY_REQUIRED.has(tIdStr);
     const label = PARTY_LABEL_BY_ID[tIdStr] || 'İlgili Taraf';
-
     if (section) section.classList.toggle('d-none', !needsRelatedParty);
     if (titleEl) titleEl.textContent = label;
-    }
+    if (countEl) countEl.textContent = (Array.isArray(this.selectedRelatedParties) ? this.selectedRelatedParties.length : 0);
+}
 
 setupBaseFormListeners() {
   // Bu fonksiyon container'ı parametre almıyor; DOM'dan bulalım
@@ -700,6 +702,7 @@ setupBaseFormListeners() {
         `;
         const selectedTaskTypeObj = this.allTransactionTypes.find(t => asId(t.id) === asId(taskTypeId));
         this.updateRelatedPartySectionVisibility(selectedTaskTypeObj);
+        this.renderSelectedRelatedParties();
         this.setupDynamicFormListeners();
         this.populateAssignedToDropdown();
         this.setupBaseFormListeners();
@@ -1343,8 +1346,6 @@ async handleSpecificTypeChange(e) {
                 }
             });
         }
-        const personSearch = document.getElementById('personSearchInput');
-        if (personSearch) personSearch.addEventListener('input', (e) => this.searchPersons(e.target.value, 'relatedParty'));
         const tpInvoicePartySearch = document.getElementById('tpInvoicePartySearch');
         if (tpInvoicePartySearch) tpInvoicePartySearch.addEventListener('input', (e) => this.searchPersons(e.target.value, 'tpInvoiceParty'));
         const serviceInvoicePartySearch = document.getElementById('serviceInvoicePartySearch');
@@ -1352,7 +1353,54 @@ async handleSpecificTypeChange(e) {
         const addNewPersonBtn = document.getElementById('addNewPersonBtn');
         if (addNewPersonBtn) addNewPersonBtn.addEventListener('click', () => this.showAddPersonModal('relatedParty'));
 
-        const applicantSearchInput = document.getElementById('applicantSearchInput');
+        
+        // — İlgili taraf çoklu arama —
+        const relatedPartySearch = document.getElementById('relatedPartySearch');
+        const relatedPartyResults = document.getElementById('relatedPartyResults');
+        const relatedPartyList = document.getElementById('relatedPartyList');
+
+        let rpTimer;
+        if (relatedPartySearch) {
+            relatedPartySearch.addEventListener('input', (e) => {
+                const q = e.target.value.trim();
+                clearTimeout(rpTimer);
+                if (q.length < 2) {
+                    if (relatedPartyResults) { relatedPartyResults.innerHTML = ''; relatedPartyResults.style.display = 'none'; }
+                    return;
+                }
+                rpTimer = setTimeout(() => {
+                    const results = this.allPersons.filter(p => (p.name || '').toLowerCase().includes(q.toLowerCase()));
+                    if (!relatedPartyResults) return;
+                    relatedPartyResults.innerHTML = results.map(p => `
+                        <div class="search-result-item d-flex justify-content-between align-items-center" data-id="${p.id}">
+                            <span><b>${p.name}</b> <small class="text-muted">${p.email || ''}</small></span>
+                            <button type="button" class="btn btn-sm btn-outline-primary" data-action="add-related" data-id="${p.id}">Ekle</button>
+                        </div>
+                    `).join('');
+                    relatedPartyResults.style.display = results.length ? 'block' : 'none';
+                }, 250);
+            });
+        }
+
+        if (relatedPartyResults) {
+            relatedPartyResults.addEventListener('click', (e) => {
+                const btn = e.target.closest('[data-action="add-related"]');
+                if (!btn) return;
+                const id = btn.getAttribute('data-id');
+                const p = this.allPersons.find(x => String(x.id) == String(id));
+                if (!p) return;
+                if (!Array.isArray(this.selectedRelatedParties)) this.selectedRelatedParties = [];
+                if (this.selectedRelatedParties.some(x => String(x.id) == String(p.id))) return;
+                this.selectedRelatedParties.push({ id: p.id, name: p.name, email: p.email || '', phone: p.phone || '' });
+                if (relatedPartySearch) relatedPartySearch.value = '';
+                relatedPartyResults.innerHTML = '';
+                relatedPartyResults.style.display = 'none';
+                this.renderSelectedRelatedParties();
+                this.checkFormCompleteness();
+                this.updateRelatedPartySectionVisibility({ id: document.getElementById('specificTaskType')?.value });
+            });
+        }
+const applicantSearchInput = document.getElementById('applicantSearchInput');
         if (applicantSearchInput) applicantSearchInput.addEventListener('input', (e) => this.searchPersons(e.target.value, 'applicant'));
         const addNewApplicantBtn = document.getElementById('addNewApplicantBtn');
         if (addNewApplicantBtn) addNewApplicantBtn.addEventListener('click', () => this.showAddPersonModal('applicant'));
@@ -1619,7 +1667,7 @@ async handleSpecificTypeChange(e) {
             'applicant': 'applicantSearchResults'
         } [target];
 
-        if (target === 'relatedParty') this.selectedRelatedParty = person;
+        if (target === 'relatedParty') { this.addRelatedParty(person); }
         else if (target === 'tpInvoiceParty') this.selectedTpInvoiceParty = person;
         else if (target === 'serviceInvoiceParty') this.selectedServiceInvoiceParty = person;
         else if (target === 'applicant') {
@@ -1857,6 +1905,7 @@ checkFormCompleteness() {
         const hasNiceClasses = typeof getSelectedNiceClasses === 'function' && getSelectedNiceClasses().length > 0;
         const hasApplicants = this.selectedApplicants && this.selectedApplicants.length > 0;
 
+        const assignedTo = document.getElementById('assignedTo')?.value;
         isComplete = !!(assignedTo && brandText && hasNiceClasses && hasApplicants);
     } else {
         const taskTitle = document.getElementById('taskTitle')?.value?.trim() || selectedTaskType?.alias || selectedTaskType?.name;
@@ -1866,7 +1915,7 @@ checkFormCompleteness() {
         const tIdStr = asId(selectedTaskType.id);
 const needsRelatedParty = RELATED_PARTY_REQUIRED.has(tIdStr);
 const needsObjectionOwner = (tIdStr === TASK_IDS.ITIRAZ_TESCIL) || (tIdStr === TASK_IDS.ITIRAZ_YAYIN);
-const hasRelated = !!this.selectedRelatedParty;
+const hasRelated = Array.isArray(this.selectedRelatedParties) && this.selectedRelatedParties.length > 0;
 isComplete = !!taskTitle && !!this.selectedIpRecord && (!needsRelatedParty || hasRelated) && (!needsObjectionOwner || hasRelated);
     }
 
@@ -2006,25 +2055,42 @@ async handleFormSubmit(e) {
         taskData.relatedIpRecordTitle = newIpRecordData.title;
 
         
-    // Add related party / objection owner to details for specific IDs
-    try {
-      const tIdStr = asId(selectedTransactionType.id);
-      if (RELATED_PARTY_REQUIRED.has(tIdStr) && this.selectedRelatedParty) {
-        taskData.details = taskData.details || {};
-        taskData.details.relatedParty = {
-          id: this.selectedRelatedParty.id,
-          name: this.selectedRelatedParty.name,
-          email: this.selectedRelatedParty.email || '',
-          phone: this.selectedRelatedParty.phone || ''
-        };
-      }
-      if ((tIdStr === TASK_IDS.ITIRAZ_TESCIL || tIdStr === TASK_IDS.ITIRAZ_YAYIN) && this.selectedRelatedParty) {
-        taskData.details = taskData.details || {};
-        taskData.details.objectionOwner = { ...taskData.details.relatedParty };
-      }
-    } catch (e) {
-      console.warn('relatedParty/objectionOwner eklenemedi:', e);
-    }
+    
+        // Çoklu ilgili tarafları ekle
+        try {
+            const tIdStr = asId(selectedTransactionType.id);
+            if (Array.isArray(this.selectedRelatedParties) && this.selectedRelatedParties.length) {
+                taskData.details = taskData.details || {};
+                taskData.details.relatedParties = this.selectedRelatedParties.map(p => ({
+                    id: p.id, name: p.name, email: p.email || '', phone: p.phone || ''
+                }));
+                if (!taskData.details.relatedParty) {
+                    const p0 = this.selectedRelatedParties[0];
+                    taskData.details.relatedParty = { id: p0.id, name: p0.name, email: p0.email || '', phone: p0.phone || '' };
+                }
+            }
+            if ((tIdStr === TASK_IDS.YAYIMA_ITIRAZIN_YENIDEN_INCELENMESI || tIdStr === TASK_IDS.ITIRAZ_YAYIN) && taskData.details?.relatedParties) {
+                taskData.details.objectionOwners = [...taskData.details.relatedParties];
+            }
+        } catch (e) { console.warn('relatedParties ekleme hatası:', e); }
+
+        // Çoklu ilgili tarafları ekle
+        try {
+            const tIdStr = asId(selectedTransactionType.id);
+            if (Array.isArray(this.selectedRelatedParties) && this.selectedRelatedParties.length) {
+                taskData.details = taskData.details || {};
+                taskData.details.relatedParties = this.selectedRelatedParties.map(p => ({
+                    id: p.id, name: p.name, email: p.email || '', phone: p.phone || ''
+                }));
+                if (!taskData.details.relatedParty) {
+                    const p0 = this.selectedRelatedParties[0];
+                    taskData.details.relatedParty = { id: p0.id, name: p0.name, email: p0.email || '', phone: p0.phone || '' };
+                }
+            }
+            if ((tIdStr === TASK_IDS.YAYIMA_ITIRAZIN_YENIDEN_INCELENMESI || tIdStr === TASK_IDS.ITIRAZ_YAYIN) && taskData.details?.relatedParties) {
+                taskData.details.objectionOwners = [...taskData.details.relatedParties];
+            }
+        } catch (e) { console.warn('relatedParties ekleme hatası:', e); }
 const taskResult = await taskService.createTask(taskData);
         if (!taskResult.success) {
             alert('İş oluşturulurken hata oluştu: ' + taskResult.error);
