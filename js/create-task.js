@@ -1636,33 +1636,69 @@ async handleSpecificTypeChange(e) {
         this.checkFormCompleteness();
     }
     searchPersons(query, target) {
-        const resultsContainerId = {
-            'relatedParty': 'personSearchResults',
-            'tpInvoiceParty': 'tpInvoicePartyResults',
-            'serviceInvoiceParty': 'serviceInvoicePartyResults',
-            'applicant': 'applicantSearchResults'
-        } [target];
-        const container = document.getElementById(resultsContainerId);
-        if (!container) return;
-        container.innerHTML = '';
-        if (query.length < 2) {
-            container.innerHTML = '<p class="no-results-message">Aramak için en az 2 karakter girin.</p>';
-            return;
-        }
-        const filtered = this.allPersons.filter(p => p.name.toLowerCase().includes(query.toLowerCase()));
-        if (filtered.length === 0) {
-            container.innerHTML = '<p class="no-results-message">Kişi bulunamadı.</p>';
-            return;
-        }
-        filtered.forEach(p => {
-            const item = document.createElement('div');
-            item.className = 'search-result-item';
-            item.dataset.id = p.id;
-            item.innerHTML = `<div><b>${p.name}</b><br><small>${p.email || '-'}</small></div>`;
-            item.addEventListener('click', () => this.selectPerson(p, target));
-            container.appendChild(item);
-        });
+    const resultsContainerId = {
+        'relatedParty': 'personSearchResults',
+        'tpInvoiceParty': 'tpInvoicePartyResults',
+        'serviceInvoiceParty': 'serviceInvoicePartyResults',
+        'applicant': 'applicantSearchResults'
+    }[target];
+
+    const container = document.getElementById(resultsContainerId);
+    if (!container) return;
+
+    container.innerHTML = '';
+    if ((query || '').trim().length < 2) {
+        container.innerHTML = '<p class="no-results-message">Aramak için en az 2 karakter girin.</p>';
+        return;
     }
+
+    // Havuz belirleme ve filtreleme
+    let pool;
+    if (target === 'relatedParty') {
+        const typeId = document.getElementById('specificTaskType')?.value;
+        const isOpposition = this.isPublicationOpposition(typeId); // 19–20 kontrolü
+        if (isOpposition) {
+        pool = this.allPersons || [];
+        } else {
+        pool = (this.allIpRecords || [])
+            .filter(r => String(r.recordOwnerType || '').toLowerCase() === 'self')
+            .flatMap(r => Array.isArray(r.applicants) && r.applicants.length ? r.applicants : [{
+            id: r.ownerId || r.id,
+            name: r.ownerName || r.applicantName || r.owner || '',
+            email: r.ownerEmail || '',
+            phone: r.ownerPhone || ''
+            }])
+            .filter(p => p && p.name); // boşları at
+        }
+    } else {
+        pool = this.allPersons || [];
+    }
+
+    const q = query.toLowerCase();
+    const filtered = pool.filter(p =>
+        (p.name || '').toLowerCase().includes(q) || (p.email || '').toLowerCase().includes(q)
+    );
+
+    if (filtered.length === 0) {
+        container.innerHTML = '<p class="no-results-message">Kişi bulunamadı.</p>';
+        return;
+    }
+
+    container.innerHTML = filtered.map(p => `
+        <div class="search-result-item" data-id="${p.id}">
+        <div><b>${p.name}</b><br><small>${p.email || '-'}</small></div>
+        </div>
+    `).join('');
+
+    Array.from(container.querySelectorAll('.search-result-item')).forEach(el => {
+        el.addEventListener('click', () => {
+        const id = el.dataset.id;
+        const person = filtered.find(x => String(x.id) === String(id));
+        if (person) this.selectPerson(person, target);
+        });
+    });
+    }
+
     selectPerson(person, target) {
         const displayId = {
             'relatedParty': 'selectedRelatedPartyDisplay',
