@@ -700,8 +700,7 @@ setupBaseFormListeners() {
             </div>
             <div class="form-actions"><button type="button" id="cancelBtn" class="btn btn-secondary">İptal</button><button type="submit" id="saveTaskBtn" class="btn btn-primary" disabled>İşi Oluştur ve Kaydet</button></div>
         `;
-        const selectedTaskTypeObj = this.allTransactionTypes.find(t => asId(t.id) === asId(taskTypeId));
-        this.updateRelatedPartySectionVisibility(selectedTaskTypeObj);
+
         this.setupDynamicFormListeners();
         this.populateAssignedToDropdown();
         this.setupBaseFormListeners();
@@ -709,6 +708,9 @@ setupBaseFormListeners() {
         this.checkFormCompleteness();
         this.initIpRecordSearchSelector();
     }
+    const selectedTaskTypeObj = this.allTransactionTypes.find(t => asId(t.id) === asId(taskTypeId));
+    this.updateRelatedPartySectionVisibility(selectedTaskTypeObj);
+    
 handleIpRecordChange(recordId) {
     if (recordId) {
         this.selectedIpRecord = this.allIpRecords.find(r => r.id === recordId);
