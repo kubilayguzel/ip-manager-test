@@ -3,6 +3,37 @@ import { loadSharedLayout } from './layout-loader.js';
 import { initializeNiceClassification, getSelectedNiceClasses } from './nice-classification.js';
 import { ref, uploadBytes, getStorage, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+// === ID-based configuration (added by assistant) ===
+export const TASK_IDS = {
+  DEVIR: '7',
+  LISANS: '8',
+  BIRLESME: '9',
+  VERASET: '10',
+  REHIN_TEMINAT: '11',
+  YIDK_IPTAL: '18',
+  ITIRAZ_TESCIL: '19',
+  ITIRAZ_YAYIN: '20',
+};
+
+export const RELATED_PARTY_REQUIRED = new Set([
+  TASK_IDS.DEVIR, TASK_IDS.LISANS, TASK_IDS.BIRLESME, TASK_IDS.VERASET,
+  TASK_IDS.REHIN_TEMINAT, TASK_IDS.YIDK_IPTAL, TASK_IDS.ITIRAZ_TESCIL, TASK_IDS.ITIRAZ_YAYIN
+]);
+
+export const PARTY_LABEL_BY_ID = {
+  [TASK_IDS.DEVIR]: 'Devralan Taraf',
+  [TASK_IDS.LISANS]: 'Lisans Alan Taraf',
+  [TASK_IDS.BIRLESME]: 'Birleşilen Taraf',
+  [TASK_IDS.VERASET]: 'Mirasçı',
+  [TASK_IDS.REHIN_TEMINAT]: 'Rehin Alan Taraf',
+  [TASK_IDS.YIDK_IPTAL]: 'Davacı/Davalı',
+  [TASK_IDS.ITIRAZ_TESCIL]: 'İtiraz Sahibi',
+  [TASK_IDS.ITIRAZ_YAYIN]: 'İtiraz Sahibi',
+};
+
+const asId = (v) => String(v ?? '');
+// === end ID-based configuration ===
+
 
 
 
@@ -499,14 +530,9 @@ setupBaseFormListeners() {
     }
 
       renderBaseForm(container, taskTypeName, taskTypeId) {
-        const transactionLikeTasks = ['Devir', 'Lisans', 'Birleşme', 'Veraset ile İntikal', 'Rehin/Teminat', 'YİDK Kararının İptali'];
-        const needsRelatedParty = transactionLikeTasks.includes(taskTypeName);
-        const partyLabels = { 
-            'Devir': 'Devralan Taraf', 'Lisans': 'Lisans Alan Taraf', 'Rehin': 'Rehin Alan Taraf', 
-            'Birleşme': 'Birleşilen Taraf', 'Veraset ile İntikal': 'Mirasçı', 'Rehin/Teminat': 'Rehin Alan Taraf',
-            'YİDK Kararının İptali': 'Davacı/Davalı'
-        };
-        const partyLabel = partyLabels[taskTypeName] || 'İlgili Taraf';
+        const taskIdStr = asId(taskTypeId);
+        const needsRelatedParty = RELATED_PARTY_REQUIRED.has(taskIdStr);
+        const partyLabel = PARTY_LABEL_BY_ID[taskIdStr] || 'İlgili Taraf';
 
         let specificFieldsHtml = '';
         if (taskTypeId === 'litigation_yidk_annulment') {
@@ -1802,7 +1828,11 @@ checkFormCompleteness() {
         const hasIpRecord = !!this.selectedIpRecord;
 
         // assignedTo, başlık ve portföy kaydı seçildiğinde tamamlandı olarak işaretle
-        isComplete = !!taskTitle && !!this.selectedIpRecord;
+        const tIdStr = asId(selectedTaskType.id);
+const needsRelatedParty = RELATED_PARTY_REQUIRED.has(tIdStr);
+const needsObjectionOwner = (tIdStr === TASK_IDS.ITIRAZ_TESCIL) || (tIdStr === TASK_IDS.ITIRAZ_YAYIN);
+const hasRelated = !!this.selectedRelatedParty;
+isComplete = !!taskTitle && !!this.selectedIpRecord && (!needsRelatedParty || hasRelated) && (!needsObjectionOwner || hasRelated);
     }
 
     saveTaskBtn.disabled = !isComplete;
@@ -1940,7 +1970,27 @@ async handleFormSubmit(e) {
         taskData.relatedIpRecordId = newRecordResult.id;
         taskData.relatedIpRecordTitle = newIpRecordData.title;
 
-        const taskResult = await taskService.createTask(taskData);
+        
+    // Add related party / objection owner to details for specific IDs
+    try {
+      const tIdStr = asId(selectedTransactionType.id);
+      if (RELATED_PARTY_REQUIRED.has(tIdStr) && this.selectedRelatedParty) {
+        taskData.details = taskData.details || {};
+        taskData.details.relatedParty = {
+          id: this.selectedRelatedParty.id,
+          name: this.selectedRelatedParty.name,
+          email: this.selectedRelatedParty.email || '',
+          phone: this.selectedRelatedParty.phone || ''
+        };
+      }
+      if ((tIdStr === TASK_IDS.ITIRAZ_TESCIL || tIdStr === TASK_IDS.ITIRAZ_YAYIN) && this.selectedRelatedParty) {
+        taskData.details = taskData.details || {};
+        taskData.details.objectionOwner = { ...taskData.details.relatedParty };
+      }
+    } catch (e) {
+      console.warn('relatedParty/objectionOwner eklenemedi:', e);
+    }
+const taskResult = await taskService.createTask(taskData);
         if (!taskResult.success) {
             alert('İş oluşturulurken hata oluştu: ' + taskResult.error);
             return;
