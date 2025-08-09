@@ -781,10 +781,35 @@ renderCurrentPage() {
                 const applicants = rec?.applicants?.map(a => a.name).join(', ') || (t.applicantName || '-');
                 const applicationNumber = rec?.applicationNumber || t.applicationNumber || '-';
 
-                // bülten bilgisi (task.details içinde beklenen alan adları)
+                const fmtDate = (d) => {
+                if (!d) return '-';
+                if (typeof d === 'string') return d;
+                if (typeof d === 'object') {
+                    if (typeof d.toDate === 'function') d = d.toDate();           // Firestore Timestamp
+                    else if ('seconds' in d) d = new Date(d.seconds * 1000);      // {seconds, nanos}
+                }
+                if (d instanceof Date && !isNaN(d)) return d.toLocaleDateString('tr-TR');
+                return String(d);
+                };
+
                 const details = t.details || t.extra || {};
-                const bulletinNo = details.bulletinNo || details.bulletinId || t.bulletinNo || t.bulletinId || '-';
-                const bulletinDate = details.bulletinDate || t.bulletinDate || '-';
+                const brandInfo = rec?.details?.brandInfo || {};
+
+                const opposedNo = brandInfo.opposedMarkBulletinNo ?? null;
+                const opposedDateRaw = brandInfo.opposedMarkBulletinDate ?? null;
+
+                const bulletinNo =
+                opposedNo
+                ?? details.bulletinNo
+                ?? details.bulletinId
+                ?? t.bulletinNo
+                ?? t.bulletinId
+                ?? '-';
+
+                const bulletinDate =
+                opposedDateRaw
+                ? fmtDate(opposedDateRaw)
+                : fmtDate(details.bulletinDate ?? t.bulletinDate ?? null);
 
                 rows.push({
                     id: t.id,
@@ -813,7 +838,7 @@ renderCurrentPage() {
                  const columns = isObjections
                    ? [
                        { key: 'recordType',        label: 'Kayıt Tipi',  sortable: true,  width: '110px' },
-                       { key: 'transactionType',   label: 'İşlem Tipi',  sortable: true,  width: '180px' },
+                       { key: 'transactionTypeName',   label: 'İşlem Tipi',  sortable: true,  width: '180px' },
                        { key: 'applicationNumber', label: 'Başvuru No',  sortable: true,  width: '140px' },
                        { key: 'applicantName',     label: 'Başvuru Sahibi', sortable: true, width: '240px' },
                        { key: 'bulletinNo',        label: 'Bülten No',   sortable: true,  width: '120px' },
