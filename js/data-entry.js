@@ -1187,25 +1187,57 @@ async saveTrademarkPortfolio(portfolioData) {
     };
     
     // Kaydet
-    let result;
-    if (this.editingRecordId) {
-        result = await ipRecordsService.updateRecord(this.editingRecordId, dataToSave);
-    } else {
-        result = await ipRecordsService.createRecord(dataToSave);
+// Kaydet
+let result;
+if (this.editingRecordId) {
+  result = await ipRecordsService.updateRecord(this.editingRecordId, dataToSave);
+} else {
+  result = await ipRecordsService.createRecord(dataToSave);
+}
+
+if (result.success) {
+  // ✅ SADECE portföy kaydı ve yeni oluşturma ise
+  if (dataToSave.recordOwnerType === 'self' && !this.editingRecordId) {
+    // ipType -> code
+    const CODE_BY_IP = {
+      trademark: 'TRADEMARK_APPLICATION',
+      patent:    'PATENT_APPLICATION',
+      design:    'DESIGN_APPLICATION'
+    };
+    const targetCode = CODE_BY_IP[dataToSave.ipType || 'trademark'];
+
+    // 1) code -> id çöz (tercihen servisle)
+    let txTypeId = null;
+    try {
+      const res = await transactionTypeService.getTransactionTypes();
+      const list = Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []);
+      const map = new Map(list.map(t => [String((t.code || '').toUpperCase()), String(t.id)]));
+      txTypeId = map.get(targetCode);
+    } catch (e) {
+      console.warn('TxTypes yüklenemedi, fallback kullanılacak:', e);
     }
 
-    if (result.success) {
-        await ipRecordsService.addTransactionToRecord(result.id, {
-        type: 'trademark_application',      // data/transactionTypes.json’daki id
-        description: 'Başvuru işlemi.',
-        parentId: null,
-        transactionHierarchy: 'parent'
-    });
-        alert('Marka portföy kaydı başarıyla ' + (this.editingRecordId ? 'güncellendi' : 'oluşturuldu') + '!');
-        window.location.href = 'portfolio.html';
-    } else {
-        throw new Error(result.error);
+    // 2) fallback (kendi gerçek ID’lerinle güncelle)
+    if (!txTypeId) {
+      const TX_IDS = { trademark: '2', patent: '5', design: '8' };
+      txTypeId = TX_IDS[dataToSave.ipType || 'trademark'] || '2';
     }
+
+    // 3) Transaction’u **ID** ile yaz
+    await ipRecordsService.addTransactionToRecord(result.id, {
+      type: String(txTypeId),               // ✅ ID
+      transactionTypeId: String(txTypeId),  // ✅ güvenlik için
+      description: 'Başvuru işlemi.',
+      parentId: null,
+      transactionHierarchy: 'parent'
+    });
+  }
+
+  alert('Marka portföy kaydı başarıyla ' + (this.editingRecordId ? 'güncellendi' : 'oluşturuldu') + '!');
+  window.location.href = 'portfolio.html';
+} else {
+  throw new Error(result.error);
+}
 }
 
 // Patent için
