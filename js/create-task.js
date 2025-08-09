@@ -246,7 +246,20 @@ async initIpRecordSearchSelector() {
     if (!item) return;
 
     const id = item.dataset.id;
-    const pool = (this.searchSource === 'bulletin') ? this.allBulletinRecords : this.allIpRecords;
+    // YENİ — seçimde de aynı filtre
+    let pool;
+    const typeId2 = document.getElementById('specificTaskType')?.value;
+    const isOpposition2 = this.isPublicationOpposition(typeId2);
+
+    if (this.searchSource === 'bulletin') {
+    pool = this.allBulletinRecords || [];
+    } else {
+    const basePool = this.allIpRecords || [];
+    pool = isOpposition2
+        ? basePool
+        : basePool.filter(r => String(r.recordOwnerType || '').toLowerCase() === 'self');
+    }
+
     const rec  = pool.find(x => (x.id || x.recordId || x.docId || x._id || x.uid) === id) || {};
 
     const title = (this.searchSource === 'bulletin')
