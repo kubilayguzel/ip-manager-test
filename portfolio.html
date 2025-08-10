@@ -124,148 +124,194 @@
         .document-list li a:hover { text-decoration: underline; }
         .document-list li .doc-icon { font-size: 1.2em; }
         .record-image-display { max-width: 100%; height: auto; border-radius: 8px; margin-top: 10px; border: 1px solid #eee; }
-
-        /* portfolio.css veya ana CSS dosyanıza ekleyin */
-.transaction-history {
-    max-height: 400px;
+/* Portfolio.css veya ana CSS dosyanıza ekleyin */
+.accordion-transaction-history {
+    max-height: 500px;
     overflow-y: auto;
     border: 1px solid #e0e0e0;
-    border-radius: 8px;
-    padding: 15px;
+    border-radius: 12px;
     background: #fafafa;
 }
 
-.transaction-history-list {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
-
-.transaction-item {
+.accordion-transaction-item {
+    border-bottom: 1px solid #e0e0e0;
     background: white;
-    border-radius: 8px;
-    padding: 15px;
-    border-left: 4px solid #ddd;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-    transition: all 0.2s ease;
 }
 
-.transaction-item:hover {
-    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-    transform: translateY(-1px);
+.accordion-transaction-item:last-child {
+    border-bottom: none;
 }
 
-.transaction-item.parent-transaction {
-    border-left-color: #3498db;
-}
-
-.transaction-item.child-transaction {
-    border-left-color: #f39c12;
-    margin-left: 20px;
-}
-
-.transaction-header {
+.accordion-transaction-header {
     display: flex;
     justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: 8px;
+    align-items: center;
+    padding: 15px 20px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-left: 4px solid #3498db;
 }
 
-.transaction-type-info {
+.accordion-transaction-header:hover {
+    background: #f8f9fa;
+}
+
+.accordion-transaction-header.has-children:hover {
+    background: #e3f2fd;
+}
+
+.transaction-main-info {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 12px;
+    flex: 1;
 }
 
-.transaction-name {
+.accordion-icon {
+    font-size: 12px;
+    color: #666;
+    transition: transform 0.2s ease;
+    min-width: 16px;
+}
+
+.accordion-icon.expanded {
+    transform: rotate(90deg);
+}
+
+.accordion-icon-empty {
+    min-width: 16px;
+}
+
+.transaction-details {
+    flex: 1;
+}
+
+.transaction-name-date {
     font-weight: 600;
     color: #2c3e50;
     font-size: 1em;
 }
 
-.hierarchy-badge {
-    font-size: 0.75em;
-    padding: 2px 6px;
-    border-radius: 12px;
+.child-transaction-name-date {
     font-weight: 500;
-}
-
-.hierarchy-badge.parent {
-    background: #e3f2fd;
-    color: #1976d2;
-}
-
-.hierarchy-badge.child {
-    background: #fff3e0;
-    color: #f57c00;
-}
-
-.transaction-datetime {
-    text-align: right;
-    font-size: 0.85em;
-    color: #666;
-}
-
-.transaction-datetime .date {
-    display: block;
-    font-weight: 500;
-}
-
-.transaction-datetime .time {
-    display: block;
-    color: #999;
-    margin-top: 2px;
-}
-
-.transaction-details {
-    margin-top: 8px;
-}
-
-.transaction-desc {
-    color: #555;
+    color: #34495e;
     font-size: 0.9em;
-    margin-bottom: 6px;
-    line-height: 1.4;
 }
 
 .transaction-meta {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-size: 0.8em;
-    color: #777;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+    text-align: right;
 }
 
-.user-info {
-    background: #f8f9fa;
+.child-count {
+    font-size: 0.75em;
+    background: #e3f2fd;
+    color: #1976d2;
     padding: 2px 6px;
-    border-radius: 4px;
-}
-
-.delivery-date {
-    color: #e74c3c;
+    border-radius: 8px;
     font-weight: 500;
 }
 
-.no-transactions {
-    text-align: center;
-    padding: 40px 20px;
-    color: #999;
-    font-style: italic;
+/* Child Transactions */
+.accordion-transaction-children {
+    border-top: 1px solid #f0f0f0;
+    background: #f8f9fa;
+    animation: slideDown 0.3s ease;
 }
 
-.loading {
-    text-align: center;
-    padding: 20px;
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        max-height: 0;
+    }
+    to {
+        opacity: 1;
+        max-height: 500px;
+    }
+}
+
+.child-transaction-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 20px 8px 48px; /* Sol padding parent'tan daha fazla */
+    border-bottom: 1px solid #e8e8e8;
+    border-left: 4px solid #f39c12;
+    background: white;
+    margin: 0 8px;
+    margin-bottom: 2px;
+    border-radius: 4px;
+}
+
+.child-transaction-item:last-child {
+    border-bottom: none;
+    margin-bottom: 8px;
+}
+
+.child-transaction-content {
+    flex: 1;
+}
+
+.child-transaction-meta {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 2px;
+    text-align: right;
+}
+
+.child-transaction-datetime {
+    font-size: 0.8em;
     color: #666;
 }
 
-.error-message {
-    color: #e74c3c;
-    background: #ffeaa7;
-    padding: 10px;
-    border-radius: 4px;
-    text-align: center;
+.child-transaction-datetime .date {
+    font-weight: 500;
+}
+
+.child-transaction-datetime .time {
+    color: #999;
+    margin-left: 6px;
+}
+
+.child-transaction-user {
+    font-size: 0.75em;
+    color: #777;
+    background: #ecf0f1;
+    padding: 1px 4px;
+    border-radius: 3px;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        max-height: 0;
+    }
+    to {
+        opacity: 1;
+        max-height: 500px;
+    }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .accordion-transaction-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+    
+    .transaction-meta {
+        align-items: flex-start;
+        text-align: left;
+    }
+    
+    .child-transaction-item {
+        padding-left: 32px;
+    }
 }
     </style>
 </head>
@@ -846,8 +892,7 @@ renderCurrentPage() {
                           .map(doc => `<li><a href="${doc.content}" download="${doc.name}"><span class="doc-icon">📄</span>${doc.name} (${formatFileSize(doc.size)}) - ${doc.documentDesignation || 'Belge'}</a></li>`).join('') + '</ul>';
                     }
 
-                    let transactionsHtml = '<div class="transaction-history">';
-        
+                    let transactionsHtml = '<div class="accordion-transaction-history">';
                     try {
                         // 1. Transaction türlerini yükle
                         const transactionTypesResult = await transactionTypeService.getTransactionTypes();
@@ -857,34 +902,52 @@ renderCurrentPage() {
 
                         // 2. Transaction geçmişini al 
                         const transResult = await ipRecordsService.getTransactionsForRecord(recordId);
-                        
-                        // transactions key'ini kullan (firebase-config.js'deki return değeri)
-                        const transactions = transResult.success && Array.isArray(transResult.transactions) 
+                        const allTransactions = transResult.success && Array.isArray(transResult.transactions) 
                                             ? transResult.transactions 
                                             : [];
 
-                        if (transactions.length === 0) {
+                        if (allTransactions.length === 0) {
                             transactionsHtml += '<p class="text-muted">Henüz işlem geçmişi yok.</p>';
                         } else {
-                            // Transaction'ları tarih sırasına göre sırala (en eski en üstte)
-                            transactions.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+                            // ✅ Parent-Child yapısını organize et
+                            const { parentTransactions, childrenMap } = organizeTransactionHierarchy(allTransactions);
                             
-                            transactions.forEach(tx => {
-                                const txDate = new Date(tx.timestamp).toLocaleDateString('tr-TR');
-                                const txTime = new Date(tx.timestamp).toLocaleTimeString('tr-TR');
+                            // Parent transaction'ları tarihe göre sırala (en eski en üstte)
+                            parentTransactions.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+                            
+                            // ✅ Accordion yapısında render et
+                            parentTransactions.forEach((parent, index) => {
+                                const parentType = allTransactionTypes.find(t => t.id === parent.type || t.id === String(parent.type));
+                                const parentName = parentType ? (parentType.alias || parentType.name) : `Bilinmeyen İşlem (ID: ${parent.type})`;
                                 
-                                // ✅ Transaction ID'sinden işlem adını bul
-                                const transactionType = allTransactionTypes.find(t => t.id === tx.type || t.id === String(tx.type));
-                                const transactionName = transactionType 
-                                                    ? (transactionType.alias || transactionType.name)
-                                                    : `Bilinmeyen İşlem (ID: ${tx.type})`;
+                                const parentDate = new Date(parent.timestamp).toLocaleDateString('tr-TR');
+                                const parentTime = new Date(parent.timestamp).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+                                
+                                const children = childrenMap[parent.id] || [];
+                                const hasChildren = children.length > 0;
                                 
                                 transactionsHtml += `
-                                    <div class="transaction-item">
-                                        <div class="transaction-type">${transactionName}</div>
-                                        <div class="transaction-desc">${tx.description || 'Açıklama yok'}</div>
-                                        <div class="transaction-date">${txDate} ${txTime}</div>
-                                        <div class="transaction-user">${tx.userEmail || 'Sistem'}</div>
+                                    <div class="accordion-transaction-item">
+                                        <div class="accordion-transaction-header ${hasChildren ? 'has-children' : ''}" 
+                                            onclick="toggleTransactionAccordion('${parent.id}')">
+                                            <div class="transaction-main-info">
+                                                <div class="transaction-details">
+                                                    <div class="transaction-name-date">
+                                                        ${hasChildren ? '<span class="accordion-icon">▶</span>' : ''}
+                                                        ${parentName} - ${parentDate} ${parentTime}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="transaction-meta">
+                                                ${hasChildren ? `<span class="child-count">${children.length} alt işlem</span>` : ''}
+                                            </div>
+                                        </div>
+                                        
+                                        ${hasChildren ? `
+                                            <div class="accordion-transaction-children" id="children-${parent.id}" style="display: none;">
+                                                ${renderChildTransactions(children, allTransactionTypes)}
+                                            </div>
+                                        ` : ''}
                                     </div>
                                 `;
                             });
@@ -926,6 +989,77 @@ renderCurrentPage() {
             closeModal(modalId) {
                 const modal = document.getElementById(modalId);
                 if (modal) modal.classList.remove('show');
+            }
+
+            // ✅ Parent-Child ilişkisini organize eden fonksiyon
+            async organizeTransactionHierarchy(transactions) {
+                const parentTransactions = [];
+                const childrenMap = {};
+                
+                // Önce parent transaction'ları topla
+                transactions.forEach(tx => {
+                    if (tx.transactionHierarchy === 'parent' || !tx.parentId) {
+                        parentTransactions.push(tx);
+                        childrenMap[tx.id] = []; // Her parent için boş child array'i hazırla
+                    }
+                });
+                
+                // Sonra child transaction'ları parent'larına ata
+                transactions.forEach(tx => {
+                    if (tx.transactionHierarchy === 'child' && tx.parentId) {
+                        if (childrenMap[tx.parentId]) {
+                            childrenMap[tx.parentId].push(tx);
+                        }
+                    }
+                });
+                
+                // Her parent'ın child'larını tarihe göre sırala (en eski en üstte)
+                Object.keys(childrenMap).forEach(parentId => {
+                    childrenMap[parentId].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+                });
+                
+                return { parentTransactions, childrenMap };
+            }
+
+            // ✅ Child transaction'ları render eden fonksiyon
+            async renderChildTransactions(children, allTransactionTypes) {
+                return children.map(child => {
+                    const childType = allTransactionTypes.find(t => t.id === child.type || t.id === String(child.type));
+                    const childName = childType ? (childType.alias || childType.name) : `Bilinmeyen İşlem (ID: ${child.type})`;
+                    
+                    const childDate = new Date(child.timestamp).toLocaleDateString('tr-TR');
+                    const childTime = new Date(child.timestamp).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+                    
+                    return `
+                        <div class="child-transaction-item">
+                            <div class="child-transaction-content">
+                                <div class="child-transaction-name-date">${childName} - ${childDate} ${childTime}</div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            // ✅ Accordion toggle fonksiyonu
+            async toggleTransactionAccordion(parentId) {
+                const childrenContainer = document.getElementById(`children-${parentId}`);
+                const icon = document.querySelector(`[onclick="toggleTransactionAccordion('${parentId}')"] .accordion-icon`);
+                
+                if (childrenContainer) {
+                    const isVisible = childrenContainer.style.display !== 'none';
+                    
+                    if (isVisible) {
+                        // Kapat
+                        childrenContainer.style.display = 'none';
+                        icon.textContent = '▶';
+                        icon.classList.remove('expanded');
+                    } else {
+                        // Aç
+                        childrenContainer.style.display = 'block';
+                        icon.textContent = '▼';
+                        icon.classList.add('expanded');
+                    }
+                }
             }
 
             async loadObjectionRows() {
