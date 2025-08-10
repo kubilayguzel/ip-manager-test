@@ -124,6 +124,149 @@
         .document-list li a:hover { text-decoration: underline; }
         .document-list li .doc-icon { font-size: 1.2em; }
         .record-image-display { max-width: 100%; height: auto; border-radius: 8px; margin-top: 10px; border: 1px solid #eee; }
+
+        /* portfolio.css veya ana CSS dosyanıza ekleyin */
+.transaction-history {
+    max-height: 400px;
+    overflow-y: auto;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 15px;
+    background: #fafafa;
+}
+
+.transaction-history-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.transaction-item {
+    background: white;
+    border-radius: 8px;
+    padding: 15px;
+    border-left: 4px solid #ddd;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    transition: all 0.2s ease;
+}
+
+.transaction-item:hover {
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    transform: translateY(-1px);
+}
+
+.transaction-item.parent-transaction {
+    border-left-color: #3498db;
+}
+
+.transaction-item.child-transaction {
+    border-left-color: #f39c12;
+    margin-left: 20px;
+}
+
+.transaction-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 8px;
+}
+
+.transaction-type-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.transaction-name {
+    font-weight: 600;
+    color: #2c3e50;
+    font-size: 1em;
+}
+
+.hierarchy-badge {
+    font-size: 0.75em;
+    padding: 2px 6px;
+    border-radius: 12px;
+    font-weight: 500;
+}
+
+.hierarchy-badge.parent {
+    background: #e3f2fd;
+    color: #1976d2;
+}
+
+.hierarchy-badge.child {
+    background: #fff3e0;
+    color: #f57c00;
+}
+
+.transaction-datetime {
+    text-align: right;
+    font-size: 0.85em;
+    color: #666;
+}
+
+.transaction-datetime .date {
+    display: block;
+    font-weight: 500;
+}
+
+.transaction-datetime .time {
+    display: block;
+    color: #999;
+    margin-top: 2px;
+}
+
+.transaction-details {
+    margin-top: 8px;
+}
+
+.transaction-desc {
+    color: #555;
+    font-size: 0.9em;
+    margin-bottom: 6px;
+    line-height: 1.4;
+}
+
+.transaction-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.8em;
+    color: #777;
+}
+
+.user-info {
+    background: #f8f9fa;
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+
+.delivery-date {
+    color: #e74c3c;
+    font-weight: 500;
+}
+
+.no-transactions {
+    text-align: center;
+    padding: 40px 20px;
+    color: #999;
+    font-style: italic;
+}
+
+.loading {
+    text-align: center;
+    padding: 20px;
+    color: #666;
+}
+
+.error-message {
+    color: #e74c3c;
+    background: #ffeaa7;
+    padding: 10px;
+    border-radius: 4px;
+    text-align: center;
+}
     </style>
 </head>
 <body>
@@ -663,17 +806,17 @@ renderCurrentPage() {
                 }
             }
 
-            async showRecordDetailModal(recordId) {
-            const modal = document.getElementById('recordDetailModal');
-                const modalBody = document.getElementById('modalBody');
-                modalBody.innerHTML = '<p>Yükleniyor...</p>';
-                modal.classList.add('show');
+                async showRecordDetailModal(recordId) {
+                    const modal = document.getElementById('recordDetailModal');
+                    const modalBody = document.getElementById('modalBody');
+                    modalBody.innerHTML = '<p>Yükleniyor...</p>';
+                    modal.classList.add('show');
 
-                try {
-                    const recordResult = await ipRecordsService.getRecordById(recordId);
-                    if (!recordResult.success || !recordResult.data) throw new Error('Kayıt bulunamadı.');
-                    
-                    const record = recordResult.data;
+                    try {
+                        const recordResult = await ipRecordsService.getRecordById(recordId);
+                        if (!recordResult.success || !recordResult.data) throw new Error('Kayıt bulunamadı.');
+                        
+                        const record = recordResult.data;
 
                     document.getElementById('modalRecordTitle').textContent = `Kayıt Detayı: ${record.title || record.brandText || 'N/A'}`;
                     
@@ -704,39 +847,55 @@ renderCurrentPage() {
                     }
 
                     let transactionsHtml = '<div class="transaction-history">';
-                            
-                            try {
-                                // getTransactionsForRecord metodunun döndürdüğü veri yapısını düzelt
-                                const transResult = await ipRecordsService.getTransactionsForRecord(recordId);
-                                
-                                // transactions key'ini kullan (firebase-config.js'deki return değeri)
-                                const transactions = transResult.success && Array.isArray(transResult.transactions) 
-                                                    ? transResult.transactions 
-                                                    : [];
+        
+                    try {
+                        // 1. Transaction türlerini yükle
+                        const transactionTypesResult = await transactionTypeService.getTransactionTypes();
+                        const allTransactionTypes = Array.isArray(transactionTypesResult?.data) 
+                                                ? transactionTypesResult.data 
+                                                : [];
 
-                                if (transactions.length === 0) {
-                                    transactionsHtml += '<p class="text-muted">Henüz işlem geçmişi yok.</p>';
-                                } else {
-                                    transactions.forEach(tx => {
-                                        const txDate = new Date(tx.timestamp).toLocaleDateString('tr-TR');
-                                        const txTime = new Date(tx.timestamp).toLocaleTimeString('tr-TR');
-                                        
-                                        transactionsHtml += `
-                                            <div class="transaction-item">
-                                                <div class="transaction-type">${tx.type || 'Bilinmeyen İşlem'}</div>
-                                                <div class="transaction-desc">${tx.description || 'Açıklama yok'}</div>
-                                                <div class="transaction-date">${txDate} ${txTime}</div>
-                                                <div class="transaction-user">${tx.userEmail || 'Sistem'}</div>
-                                            </div>
-                                        `;
-                                    });
-                                }
-                            } catch (txError) {
-                                console.error('Transaction geçmişi yüklenirken hata:', txError);
-                                transactionsHtml += '<p class="error-message">İşlem geçmişi yüklenirken hata oluştu.</p>';
-                            }
+                        // 2. Transaction geçmişini al 
+                        const transResult = await ipRecordsService.getTransactionsForRecord(recordId);
+                        
+                        // transactions key'ini kullan (firebase-config.js'deki return değeri)
+                        const transactions = transResult.success && Array.isArray(transResult.transactions) 
+                                            ? transResult.transactions 
+                                            : [];
+
+                        if (transactions.length === 0) {
+                            transactionsHtml += '<p class="text-muted">Henüz işlem geçmişi yok.</p>';
+                        } else {
+                            // Transaction'ları tarih sırasına göre sırala (en eski en üstte)
+                            transactions.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
                             
-                            transactionsHtml += '</div>';
+                            transactions.forEach(tx => {
+                                const txDate = new Date(tx.timestamp).toLocaleDateString('tr-TR');
+                                const txTime = new Date(tx.timestamp).toLocaleTimeString('tr-TR');
+                                
+                                // ✅ Transaction ID'sinden işlem adını bul
+                                const transactionType = allTransactionTypes.find(t => t.id === tx.type || t.id === String(tx.type));
+                                const transactionName = transactionType 
+                                                    ? (transactionType.alias || transactionType.name)
+                                                    : `Bilinmeyen İşlem (ID: ${tx.type})`;
+                                
+                                transactionsHtml += `
+                                    <div class="transaction-item">
+                                        <div class="transaction-type">${transactionName}</div>
+                                        <div class="transaction-desc">${tx.description || 'Açıklama yok'}</div>
+                                        <div class="transaction-date">${txDate} ${txTime}</div>
+                                        <div class="transaction-user">${tx.userEmail || 'Sistem'}</div>
+                                    </div>
+                                `;
+                            });
+                        }
+                    } catch (txError) {
+                        console.error('Transaction geçmişi yüklenirken hata:', txError);
+                        transactionsHtml += '<p class="error-message">İşlem geçmişi yüklenirken hata oluştu.</p>';
+                    }
+                    
+                    transactionsHtml += '</div>';
+
                         modalBody.innerHTML = `
                         <div class="modal-detail-grid">
                             <div class="modal-detail-item"><div class="modal-detail-label">IP Türü</div><div class="modal-detail-value">${ipTypeDisplay}</div></div>
@@ -750,8 +909,6 @@ renderCurrentPage() {
                             <div class="modal-detail-item"><div class="modal-detail-label">Yenileme Tarihi</div><div class="modal-detail-value">${record.renewalDate || '-'}</div></div>
                             <div class="modal-detail-item" style="grid-column: 1 / -1;"><div class="modal-detail-label">Başvuru Sahipleri</div><div class="modal-detail-value">${getOwnerNames(record.applicants)}</div></div>
                             <div class="modal-detail-item" style="grid-column: 1 / -1;"><div class="modal-detail-label">Açıklama</div><div class="modal-detail-value long-text">${record.description || '-'}</div></div>
-                            <h4 class="modal-detail-section-title">İşlem Geçmişi</h4>
-                            <div class="modal-detail-item" style="grid-column: 1 / -1;">${transactionsHtml}</div>
                         </div>
                         ${imageHtml}
                         <h4 class="modal-detail-section-title">Ekli Belgeler</h4>
@@ -760,11 +917,11 @@ renderCurrentPage() {
                         <div class="modal-detail-item" style="grid-column: 1 / -1;">${transactionsHtml}</div>
                     `;
                         } catch (error) {
-                            const modalBody = document.getElementById('modalBody');
-                            modalBody.innerHTML = `<p class="error-message">Kayıt detayları yüklenirken hata oluştu: ${error.message}</p>`;
-                            console.error('Modal detay hatası:', error);
+                                const modalBody = document.getElementById('modalBody');
+                                modalBody.innerHTML = `<p class="error-message">Kayıt detayları yüklenirken hata oluştu: ${error.message}</p>`;
+                                console.error('Modal detay hatası:', error);
+                            }
                         }
-                    }
 
             closeModal(modalId) {
                 const modal = document.getElementById(modalId);
