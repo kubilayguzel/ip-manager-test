@@ -893,98 +893,166 @@ renderCurrentPage() {
                     }
 
                     let transactionsHtml = '<div class="accordion-transaction-history">';
-                    try {
-                        // 1. Transaction türlerini yükle
-                        const transactionTypesResult = await transactionTypeService.getTransactionTypes();
-                        const allTransactionTypes = Array.isArray(transactionTypesResult?.data) 
-                                                ? transactionTypesResult.data 
-                                                : [];
-
-                        // 2. Transaction geçmişini al 
-                        const transResult = await ipRecordsService.getTransactionsForRecord(recordId);
-                        const allTransactions = transResult.success && Array.isArray(transResult.transactions) 
-                                            ? transResult.transactions 
-                                            : [];
-
-                        if (allTransactions.length === 0) {
-                            transactionsHtml += '<p class="text-muted">Henüz işlem geçmişi yok.</p>';
-                        } else {
-                            // ✅ Parent-Child yapısını organize et
-                            const { parentTransactions, childrenMap } = organizeTransactionHierarchy(allTransactions);
                             
-                            // Parent transaction'ları tarihe göre sırala (en eski en üstte)
-                            parentTransactions.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-                            
-                            // ✅ Accordion yapısında render et
-                            parentTransactions.forEach((parent, index) => {
-                                const parentType = allTransactionTypes.find(t => t.id === parent.type || t.id === String(parent.type));
-                                const parentName = parentType ? (parentType.alias || parentType.name) : `Bilinmeyen İşlem (ID: ${parent.type})`;
-                                
-                                const parentDate = new Date(parent.timestamp).toLocaleDateString('tr-TR');
-                                const parentTime = new Date(parent.timestamp).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
-                                
-                                const children = childrenMap[parent.id] || [];
-                                const hasChildren = children.length > 0;
-                                
-                                transactionsHtml += `
-                                    <div class="accordion-transaction-item">
-                                        <div class="accordion-transaction-header ${hasChildren ? 'has-children' : ''}" 
-                                            onclick="toggleTransactionAccordion('${parent.id}')">
-                                            <div class="transaction-main-info">
-                                                <div class="transaction-details">
-                                                    <div class="transaction-name-date">
-                                                        ${hasChildren ? '<span class="accordion-icon">▶</span>' : ''}
-                                                        ${parentName} - ${parentDate} ${parentTime}
+                            try {
+                                // 1. Transaction türlerini yükle
+                                const transactionTypesResult = await transactionTypeService.getTransactionTypes();
+                                const allTransactionTypes = Array.isArray(transactionTypesResult?.data) 
+                                                        ? transactionTypesResult.data 
+                                                        : [];
+
+                                // 2. Transaction geçmişini al 
+                                const transResult = await ipRecordsService.getTransactionsForRecord(recordId);
+                                const allTransactions = transResult.success && Array.isArray(transResult.transactions) 
+                                                    ? transResult.transactions 
+                                                    : [];
+
+                                if (allTransactions.length === 0) {
+                                    transactionsHtml += '<p class="text-muted">Henüz işlem geçmişi yok.</p>';
+                                } else {
+                                    // Parent-Child yapısını organize et
+                                    const parentTransactions = [];
+                                    const childrenMap = {};
+                                    
+                                    // Önce parent transaction'ları topla
+                                    allTransactions.forEach(tx => {
+                                        if (tx.transactionHierarchy === 'parent' || !tx.parentId) {
+                                            parentTransactions.push(tx);
+                                            childrenMap[tx.id] = [];
+                                        }
+                                    });
+                                    
+                                    // Sonra child transaction'ları parent'larına ata
+                                    allTransactions.forEach(tx => {
+                                        if (tx.transactionHierarchy === 'child' && tx.parentId) {
+                                            if (childrenMap[tx.parentId]) {
+                                                childrenMap[tx.parentId].push(tx);
+                                            }
+                                        }
+                                    });
+                                    
+                                    // Her parent'ın child'larını tarihe göre sırala (en eski en üstte)
+                                    Object.keys(childrenMap).forEach(parentId => {
+                                        childrenMap[parentId].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+                                    });
+                                    
+                                    // Parent transaction'ları tarihe göre sırala (en eski en üstte)
+                                    parentTransactions.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+                                    
+                                    // Accordion yapısında render et
+                                    parentTransactions.forEach((parent, index) => {
+                                        const parentType = allTransactionTypes.find(t => t.id === parent.type || t.id === String(parent.type));
+                                        const parentName = parentType ? (parentType.alias || parentType.name) : `Bilinmeyen İşlem (ID: ${parent.type})`;
+                                        
+                                        const parentDate = new Date(parent.timestamp).toLocaleDateString('tr-TR');
+                                        const parentTime = new Date(parent.timestamp).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+                                        
+                                        const children = childrenMap[parent.id] || [];
+                                        const hasChildren = children.length > 0;
+                                        
+                                        transactionsHtml += `
+                                            <div class="accordion-transaction-item">
+                                                <div class="accordion-transaction-header ${hasChildren ? 'has-children' : ''}" 
+                                                    data-parent-id="${parent.id}" style="cursor: pointer;">
+                                                    <div class="transaction-main-info">
+                                                        <div class="transaction-details">
+                                                            <div class="transaction-name-date">
+                                                                ${hasChildren ? '<span class="accordion-icon">▶</span>' : ''}
+                                                                ${parentName} - ${parentDate} ${parentTime}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="transaction-meta">
+                                                        ${hasChildren ? `<span class="child-count">${children.length} alt işlem</span>` : ''}
                                                     </div>
                                                 </div>
+                                                
+                                                ${hasChildren ? `
+                                                    <div class="accordion-transaction-children" id="children-${parent.id}" style="display: none;">
+                                                        ${children.map(child => {
+                                                            const childType = allTransactionTypes.find(t => t.id === child.type || t.id === String(child.type));
+                                                            const childName = childType ? (childType.alias || childType.name) : `Bilinmeyen İşlem (ID: ${child.type})`;
+                                                            
+                                                            const childDate = new Date(child.timestamp).toLocaleDateString('tr-TR');
+                                                            const childTime = new Date(child.timestamp).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+                                                            
+                                                            return `
+                                                                <div class="child-transaction-item">
+                                                                    <div class="child-transaction-content">
+                                                                        <div class="child-transaction-name-date">${childName} - ${childDate} ${childTime}</div>
+                                                                    </div>
+                                                                </div>
+                                                            `;
+                                                        }).join('')}
+                                                    </div>
+                                                ` : ''}
                                             </div>
-                                            <div class="transaction-meta">
-                                                ${hasChildren ? `<span class="child-count">${children.length} alt işlem</span>` : ''}
-                                            </div>
-                                        </div>
-                                        
-                                        ${hasChildren ? `
-                                            <div class="accordion-transaction-children" id="children-${parent.id}" style="display: none;">
-                                                ${renderChildTransactions(children, allTransactionTypes)}
-                                            </div>
-                                        ` : ''}
-                                    </div>
-                                `;
-                            });
-                        }
-                    } catch (txError) {
-                        console.error('Transaction geçmişi yüklenirken hata:', txError);
-                        transactionsHtml += '<p class="error-message">İşlem geçmişi yüklenirken hata oluştu.</p>';
-                    }
-                    
-                    transactionsHtml += '</div>';
-
-                        modalBody.innerHTML = `
-                        <div class="modal-detail-grid">
-                            <div class="modal-detail-item"><div class="modal-detail-label">IP Türü</div><div class="modal-detail-value">${ipTypeDisplay}</div></div>
-                            <div class="modal-detail-item"><div class="modal-detail-label">Başvuru Durumu</div><div class="modal-detail-value">${statusDisplay}</div></div>
-                            <div class="modal-detail-item"><div class="modal-detail-label">Kayıt Sahibi Türü</div><div class="modal-detail-value">${record.recordOwnerType === 'self' ? 'Kendi Kaydı' : '3. Taraf'}</div></div>
-                            <div class="modal-detail-item" style="grid-column: 1 / -1;"><div class="modal-detail-label">Başlık</div><div class="modal-detail-value">${record.title || record.brandText || '-'}</div></div>
-                            <div class="modal-detail-item"><div class="modal-detail-label">Başvuru Numarası</div><div class="modal-detail-value">${record.applicationNumber || '-'}</div></div>
-                            <div class="modal-detail-item"><div class="modal-detail-label">Başvuru Tarihi</div><div class="modal-detail-value">${record.applicationDate || '-'}</div></div>
-                            <div class="modal-detail-item"><div class="modal-detail-label">Tescil Numarası</div><div class="modal-detail-value">${record.registrationNumber || '-'}</div></div>
-                            <div class="modal-detail-item"><div class="modal-detail-label">Tescil Tarihi</div><div class="modal-detail-value">${record.registrationDate || '-'}</div></div>
-                            <div class="modal-detail-item"><div class="modal-detail-label">Yenileme Tarihi</div><div class="modal-detail-value">${record.renewalDate || '-'}</div></div>
-                            <div class="modal-detail-item" style="grid-column: 1 / -1;"><div class="modal-detail-label">Başvuru Sahipleri</div><div class="modal-detail-value">${getOwnerNames(record.applicants)}</div></div>
-                            <div class="modal-detail-item" style="grid-column: 1 / -1;"><div class="modal-detail-label">Açıklama</div><div class="modal-detail-value long-text">${record.description || '-'}</div></div>
-                        </div>
-                        ${imageHtml}
-                        <h4 class="modal-detail-section-title">Ekli Belgeler</h4>
-                        <div class="modal-detail-item" style="grid-column: 1 / -1;">${documentsHtml}</div>
-                        <h4 class="modal-detail-section-title">İşlem Geçmişi</h4>
-                        <div class="modal-detail-item" style="grid-column: 1 / -1;">${transactionsHtml}</div>
-                    `;
-                        } catch (error) {
-                                const modalBody = document.getElementById('modalBody');
-                                modalBody.innerHTML = `<p class="error-message">Kayıt detayları yüklenirken hata oluştu: ${error.message}</p>`;
-                                console.error('Modal detay hatası:', error);
+                                        `;
+                                    });
+                                }
+                            } catch (txError) {
+                                console.error('Transaction geçmişi yüklenirken hata:', txError);
+                                transactionsHtml += '<p class="error-message">İşlem geçmişi yüklenirken hata oluştu.</p>';
                             }
+                            
+                            transactionsHtml += '</div>';
+
+                            // Modal içeriğini oluştur (önceki gibi, sadece transaction kısmı değişti)
+                            modalBody.innerHTML = `
+                                <div class="modal-detail-grid">
+                                    <div class="modal-detail-item"><div class="modal-detail-label">IP Türü</div><div class="modal-detail-value">${ipTypeDisplay}</div></div>
+                                    <div class="modal-detail-item"><div class="modal-detail-label">Durum</div><div class="modal-detail-value">${statusDisplay}</div></div>
+                                    <div class="modal-detail-item"><div class="modal-detail-label">Kayıt Sahibi</div><div class="modal-detail-value">${record.recordOwnerType === 'self' ? 'Kendi Kaydı' : '3. Taraf'}</div></div>
+                                    <div class="modal-detail-item" style="grid-column: 1 / -1;"><div class="modal-detail-label">Başlık</div><div class="modal-detail-value">${record.title || record.brandText || '-'}</div></div>
+                                    <div class="modal-detail-item"><div class="modal-detail-label">Başvuru Numarası</div><div class="modal-detail-value">${record.applicationNumber || '-'}</div></div>
+                                    <div class="modal-detail-item"><div class="modal-detail-label">Başvuru Tarihi</div><div class="modal-detail-value">${record.applicationDate || '-'}</div></div>
+                                    <div class="modal-detail-item"><div class="modal-detail-label">Tescil Numarası</div><div class="modal-detail-value">${record.registrationNumber || '-'}</div></div>
+                                    <div class="modal-detail-item"><div class="modal-detail-label">Tescil Tarihi</div><div class="modal-detail-value">${record.registrationDate || '-'}</div></div>
+                                    <div class="modal-detail-item"><div class="modal-detail-label">Yenileme Tarihi</div><div class="modal-detail-value">${record.renewalDate || '-'}</div></div>
+                                    <div class="modal-detail-item" style="grid-column: 1 / -1;"><div class="modal-detail-label">Başvuru Sahipleri</div><div class="modal-detail-value">${getOwnerNames(record.applicants)}</div></div>
+                                    <div class="modal-detail-item" style="grid-column: 1 / -1;"><div class="modal-detail-label">Açıklama</div><div class="modal-detail-value long-text">${record.description || '-'}</div></div>
+                                </div>
+                                ${imageHtml}
+                                <h4 class="modal-detail-section-title">Ekli Belgeler</h4>
+                                <div class="modal-detail-item" style="grid-column: 1 / -1;">${documentsHtml}</div>
+                                <h4 class="modal-detail-section-title">İşlem Geçmişi</h4>
+                                <div class="modal-detail-item" style="grid-column: 1 / -1;">${transactionsHtml}</div>
+                            `;
+
+                            // Event listener'ları ekle (HTML render'dan sonra)
+                            const headers = document.querySelectorAll('.accordion-transaction-header[data-parent-id]');
+                            headers.forEach(header => {
+                                header.addEventListener('click', function() {
+                                    const parentId = this.getAttribute('data-parent-id');
+                                    
+                                    // Toggle accordion
+                                    const childrenContainer = document.getElementById(`children-${parentId}`);
+                                    const icon = this.querySelector('.accordion-icon');
+                                    
+                                    if (childrenContainer && icon) {
+                                        const isVisible = childrenContainer.style.display !== 'none';
+                                        
+                                        if (isVisible) {
+                                            // Kapat
+                                            childrenContainer.style.display = 'none';
+                                            icon.textContent = '▶';
+                                            icon.classList.remove('expanded');
+                                        } else {
+                                            // Aç
+                                            childrenContainer.style.display = 'block';
+                                            icon.textContent = '▼';
+                                            icon.classList.add('expanded');
+                                        }
+                                    }
+                                });
+                            });
+
+                        } catch (error) {
+                            const modalBody = document.getElementById('modalBody');
+                            modalBody.innerHTML = `<p class="error-message">Kayıt detayları yüklenirken hata oluştu: ${error.message}</p>`;
+                            console.error('Modal detay hatası:', error);
                         }
+                    }
 
             closeModal(modalId) {
                 const modal = document.getElementById(modalId);
