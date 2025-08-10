@@ -301,13 +301,37 @@ export const ipRecordsService = {
     },
     async deleteRecord(recordId) {
         if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor." };
+        
         try {
-            await deleteDoc(doc(db, 'ipRecords', recordId));
+            // ✅ ÖNCE: Alt koleksiyondaki transaction'ları sil
+            const recordRef = doc(db, 'ipRecords', recordId);
+            const transactionsRef = collection(recordRef, 'transactions');
+            
+            // Tüm transaction'ları getir
+            const transactionsSnapshot = await getDocs(transactionsRef);
+            
+            // Her transaction'ı tek tek sil
+            const deletePromises = transactionsSnapshot.docs.map(transactionDoc => 
+                deleteDoc(transactionDoc.ref)
+            );
+            
+            // Tüm transaction'ların silinmesini bekle
+            await Promise.all(deletePromises);
+            
+            console.log(`✅ ${deletePromises.length} transaction silindi`);
+            
+            // ✅ SONRA: Ana kayıt silme
+            await deleteDoc(recordRef);
+            
+            console.log('✅ Portfolio kaydı ve tüm transaction\'ları silindi');
             return { success: true };
+            
         } catch (error) {
+            console.error('❌ Kayıt silme hatası:', error);
             return { success: false, error: error.message };
         }
     },
+    
     async addTransactionToRecord(recordId, transactionData) {
         if (!isFirebaseAvailable) return { success: false, error: "Firebase kullanılamıyor." };
         try {
