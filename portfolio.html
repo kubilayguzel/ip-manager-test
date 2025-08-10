@@ -664,7 +664,7 @@ renderCurrentPage() {
             }
 
             async showRecordDetailModal(recordId) {
-                const modal = document.getElementById('recordDetailModal');
+            const modal = document.getElementById('recordDetailModal');
                 const modalBody = document.getElementById('modalBody');
                 modalBody.innerHTML = '<p>Yükleniyor...</p>';
                 modal.classList.add('show');
@@ -674,57 +674,97 @@ renderCurrentPage() {
                     if (!recordResult.success || !recordResult.data) throw new Error('Kayıt bulunamadı.');
                     
                     const record = recordResult.data;
-                    // ... diğer modal içeriği ...
 
-                    // ✅ DÜZELTME: Doğru transaction geçmişi alma
-                    let transactionsHtml = '<div class="transaction-history">';
+                    document.getElementById('modalRecordTitle').textContent = `Kayıt Detayı: ${record.title || record.brandText || 'N/A'}`;
                     
-                    try {
-                        // getTransactionsForRecord metodunun döndürdüğü veri yapısını düzelt
-                        const transResult = await ipRecordsService.getTransactionsForRecord(recordId);
-                        
-                        // transactions key'ini kullan (firebase-config.js'deki return değeri)
-                        const transactions = transResult.success && Array.isArray(transResult.transactions) 
-                                            ? transResult.transactions 
-                                            : [];
-
-                        if (transactions.length === 0) {
-                            transactionsHtml += '<p class="text-muted">Henüz işlem geçmişi yok.</p>';
-                        } else {
-                            transactions.forEach(tx => {
-                                const txDate = new Date(tx.timestamp).toLocaleDateString('tr-TR');
-                                const txTime = new Date(tx.timestamp).toLocaleTimeString('tr-TR');
-                                
-                                transactionsHtml += `
-                                    <div class="transaction-item">
-                                        <div class="transaction-type">${tx.type || 'Bilinmeyen İşlem'}</div>
-                                        <div class="transaction-desc">${tx.description || 'Açıklama yok'}</div>
-                                        <div class="transaction-date">${txDate} ${txTime}</div>
-                                        <div class="transaction-user">${tx.userEmail || 'Sistem'}</div>
-                                    </div>
-                                `;
-                            });
-                        }
-                    } catch (txError) {
-                        console.error('Transaction geçmişi yüklenirken hata:', txError);
-                        transactionsHtml += '<p class="error-message">İşlem geçmişi yüklenirken hata oluştu.</p>';
+                    const getOwnerNames = (applicants) => {
+                        if (!applicants || applicants.length === 0) return 'Belirtilmemiş';
+                        return applicants.map(a => a.name || 'Bilinmeyen').join(', ');
+                    };
+                    
+                    let imageHtml = '';
+                    const imageSrc = (record.type === 'trademark') ? (record.brandImageUrl || record.details?.brandInfo?.brandImage) : null;
+                    if (imageSrc) {
+                        imageHtml = `<h4 class="modal-detail-section-title">Marka Görseli</h4>
+                                     <img src="${imageSrc}" alt="Marka Görseli" class="record-image-display">`;
                     }
-                    
-                    transactionsHtml += '</div>';
 
-                    // Modal içeriğine ekle
-                    modalBody.innerHTML = `
-                        <!-- Diğer modal içerikleri -->
+                    const statusDisplay = record.status === 'application_filed' ? 'Başvuru Yapıldı' :
+                                          record.status === 'registered' ? 'Tescilli' :
+                                          record.status === 'renewed' ? 'Yenilendi' :
+                                          record.status === 'invalid' ? 'Hükümsüz' :
+                                          record.status === 'opposed' ? 'İtiraz Edildi' :
+                                          (record.status || '-');
+                    const ipTypeDisplay = record.type === 'trademark' ? 'Marka' : (record.type === 'patent' ? 'Patent' : (record.type === 'design' ? 'Tasarım' : (record.type || '-')));
+
+                    let documentsHtml = '<ul class="document-list"><li>Henüz belge yok.</li></ul>';
+                    if (Array.isArray(record.documents) && record.documents.length > 0) {
+                        documentsHtml = '<ul class="document-list">' + record.documents
+                          .map(doc => `<li><a href="${doc.content}" download="${doc.name}"><span class="doc-icon">📄</span>${doc.name} (${formatFileSize(doc.size)}) - ${doc.documentDesignation || 'Belge'}</a></li>`).join('') + '</ul>';
+                    }
+
+                    let transactionsHtml = '<div class="transaction-history">';
+                            
+                            try {
+                                // getTransactionsForRecord metodunun döndürdüğü veri yapısını düzelt
+                                const transResult = await ipRecordsService.getTransactionsForRecord(recordId);
+                                
+                                // transactions key'ini kullan (firebase-config.js'deki return değeri)
+                                const transactions = transResult.success && Array.isArray(transResult.transactions) 
+                                                    ? transResult.transactions 
+                                                    : [];
+
+                                if (transactions.length === 0) {
+                                    transactionsHtml += '<p class="text-muted">Henüz işlem geçmişi yok.</p>';
+                                } else {
+                                    transactions.forEach(tx => {
+                                        const txDate = new Date(tx.timestamp).toLocaleDateString('tr-TR');
+                                        const txTime = new Date(tx.timestamp).toLocaleTimeString('tr-TR');
+                                        
+                                        transactionsHtml += `
+                                            <div class="transaction-item">
+                                                <div class="transaction-type">${tx.type || 'Bilinmeyen İşlem'}</div>
+                                                <div class="transaction-desc">${tx.description || 'Açıklama yok'}</div>
+                                                <div class="transaction-date">${txDate} ${txTime}</div>
+                                                <div class="transaction-user">${tx.userEmail || 'Sistem'}</div>
+                                            </div>
+                                        `;
+                                    });
+                                }
+                            } catch (txError) {
+                                console.error('Transaction geçmişi yüklenirken hata:', txError);
+                                transactionsHtml += '<p class="error-message">İşlem geçmişi yüklenirken hata oluştu.</p>';
+                            }
+                            
+                            transactionsHtml += '</div>';
+                        modalBody.innerHTML = `
+                        <div class="modal-detail-grid">
+                            <div class="modal-detail-item"><div class="modal-detail-label">IP Türü</div><div class="modal-detail-value">${ipTypeDisplay}</div></div>
+                            <div class="modal-detail-item"><div class="modal-detail-label">Başvuru Durumu</div><div class="modal-detail-value">${statusDisplay}</div></div>
+                            <div class="modal-detail-item"><div class="modal-detail-label">Kayıt Sahibi Türü</div><div class="modal-detail-value">${record.recordOwnerType === 'self' ? 'Kendi Kaydı' : '3. Taraf'}</div></div>
+                            <div class="modal-detail-item" style="grid-column: 1 / -1;"><div class="modal-detail-label">Başlık</div><div class="modal-detail-value">${record.title || record.brandText || '-'}</div></div>
+                            <div class="modal-detail-item"><div class="modal-detail-label">Başvuru Numarası</div><div class="modal-detail-value">${record.applicationNumber || '-'}</div></div>
+                            <div class="modal-detail-item"><div class="modal-detail-label">Başvuru Tarihi</div><div class="modal-detail-value">${record.applicationDate || '-'}</div></div>
+                            <div class="modal-detail-item"><div class="modal-detail-label">Tescil Numarası</div><div class="modal-detail-value">${record.registrationNumber || '-'}</div></div>
+                            <div class="modal-detail-item"><div class="modal-detail-label">Tescil Tarihi</div><div class="modal-detail-value">${record.registrationDate || '-'}</div></div>
+                            <div class="modal-detail-item"><div class="modal-detail-label">Yenileme Tarihi</div><div class="modal-detail-value">${record.renewalDate || '-'}</div></div>
+                            <div class="modal-detail-item" style="grid-column: 1 / -1;"><div class="modal-detail-label">Başvuru Sahipleri</div><div class="modal-detail-value">${getOwnerNames(record.applicants)}</div></div>
+                            <div class="modal-detail-item" style="grid-column: 1 / -1;"><div class="modal-detail-label">Açıklama</div><div class="modal-detail-value long-text">${record.description || '-'}</div></div>
+                            <h4 class="modal-detail-section-title">İşlem Geçmişi</h4>
+                            <div class="modal-detail-item" style="grid-column: 1 / -1;">${transactionsHtml}</div>
+                        </div>
+                        ${imageHtml}
+                        <h4 class="modal-detail-section-title">Ekli Belgeler</h4>
+                        <div class="modal-detail-item" style="grid-column: 1 / -1;">${documentsHtml}</div>
                         <h4 class="modal-detail-section-title">İşlem Geçmişi</h4>
                         <div class="modal-detail-item" style="grid-column: 1 / -1;">${transactionsHtml}</div>
                     `;
-
-                } catch (error) {
-                    const modalBody = document.getElementById('modalBody');
-                    modalBody.innerHTML = `<p class="error-message">Kayıt detayları yüklenirken hata oluştu: ${error.message}</p>`;
-                    console.error('Modal detay hatası:', error);
-                }
-            }
+                        } catch (error) {
+                            const modalBody = document.getElementById('modalBody');
+                            modalBody.innerHTML = `<p class="error-message">Kayıt detayları yüklenirken hata oluştu: ${error.message}</p>`;
+                            console.error('Modal detay hatası:', error);
+                        }
+                    }
 
             closeModal(modalId) {
                 const modal = document.getElementById(modalId);
