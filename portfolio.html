@@ -323,6 +323,42 @@
   font-weight: bold;
   text-decoration: none;
 }
+.table-modern thead th { border-bottom: 0; }
+.group-header {
+  background: #f7f9fc;
+  border-top: 1px solid #edf1f7;
+  border-bottom: 1px solid #edf1f7;
+}
+.group-header:hover { background:#f2f6fb; }
+.group-title { font-size: 0.95rem; color:#24324a; padding: 14px 8px; }
+.count-dot {
+  display:inline-flex; align-items:center; justify-content:center;
+  width:24px; height:24px; margin-left:8px; border-radius:50%;
+  background:#e9f5ee; color:#2f8a58; font-weight:600; font-size:.8rem;
+}
+.badge-soft { background:#eef2ff; color:#4e5cf2; font-weight:600; padding:.35rem .55rem; }
+
+.toggle-cell { width:44px; }
+.accordion-toggle {
+  width:32px; height:32px; display:flex; align-items:center; justify-content:center;
+  border:0; background:transparent; outline:0; cursor:pointer;
+  border-radius:8px; transition:background .2s ease;
+}
+.accordion-toggle:hover { background:#e9edf7; }
+.accordion-toggle i { transition: transform .2s ease; }
+.accordion-toggle[aria-expanded="true"] i { transform: rotate(90deg); }
+
+/* satırların açılıp kapanmasında yumuşak animasyon */
+.group-row {
+  transition: all .18s ease;
+}
+.group-row[aria-hidden="true"] {
+  opacity:0; transform: translateY(-6px); display:none !important;
+}
+.group-row[aria-hidden="false"] {
+  opacity:1; transform: translateY(0);
+}
+
     </style>
 </head>
 <body>
@@ -471,175 +507,137 @@
             
 renderCurrentPage() {
   const tableBody = document.getElementById('portfolioTableBody');
+  if (!tableBody || !this.pagination) return;
   tableBody.innerHTML = '';
-  if (!pagination) return;
 
   const isObjections = (this.activeTypeFilter === 'objections');
 
-  // 📌 İtirazlar sekmesi için özel render
-if (isObjections) {
-  const totalCols = 7;
-  const frag = document.createDocumentFragment();
+  // Kaynak veri (filtre/sıralama sonrası)
+  const baseData = isObjections
+    ? (this.objectionRows || [])
+    : (this.filteredAndSortedRecords || []);
 
-  (this.objectionGroups || []).forEach((g, i) => {
-    const safeKey = String(g.key).replace(/\W/g, '');
-    const groupId = `grp-${i}-${safeKey}`;
+  // Sayfalama
+  const pageData = this.pagination.getCurrentPageData(baseData) || [];
 
-    if (g.hasMultiple) {
-      // PARENT satır: oku BAŞA aldık
-      const parent = document.createElement('tr');
-      parent.className = 'group-parent';
-      parent.innerHTML = `
-        <td colspan="${totalCols}" class="bg-light">
-          <span class="mr-2">
-            <button class="btn btn-sm btn-link p-0 toggle-group"
-                    data-target="#${groupId}" aria-expanded="false">▶</button>
-          </span>
-          <strong>${g.key}</strong> başvuru numarasına ait itiraz işlemleri
-          <span class="badge badge-secondary ml-2">${g.items.length}</span>
-        </td>`;
-      frag.appendChild(parent);
+  // Küçük yardımcılar
+  const safe = (v) => (v ?? '').toString();
+  const safeId = (v) => safe(v).replace(/[^a-zA-Z0-9_]+/g, '_');
+  const fmtDate = (v) => {
+    if (!v) return '-';
+    // Date objesi veya ISO string gelebilir
+    try {
+      const d = (v instanceof Date) ? v : new Date(v);
+      if (Number.isNaN(d.getTime())) return safe(v);
+      return d.toLocaleDateString('tr-TR');
+    } catch { return safe(v); }
+  };
 
-      // CHILD tablo
-      const child = document.createElement('tr');
-      child.className = 'group-children';
-      child.innerHTML = `
-        <td colspan="${totalCols}" style="padding:0;">
-          <div id="${groupId}" class="collapse">
-            <table class="table table-sm mb-0">
-              <thead>
-                <tr>
-                  <th style="width:110px;">Kayıt Tipi</th>
-                  <th style="width:180px;">İşlem Tipi</th>
-                  <th style="width:140px;">Başvuru No</th>
-                  <th style="width:240px;">Başvuru Sahibi</th>
-                  <th style="width:200px;">İtiraz Sahibi</th>
-                  <th style="width:140px;">Bülten Tarihi</th>
-                  <th style="width:120px;">Bülten No</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${g.items.map(r => `
-                  <tr>
-                    <td>${r.recordType || '-'}</td>
-                    <td>${r.transactionTypeName || '-'}</td>
-                    <td>${r.applicationNumber || '-'}</td>
-                    <td title="${r.applicantName || '-'}">${r.applicantName || '-'}</td>
-                    <td title="${r.opponent || '-'}">${r.opponent || '-'}</td>
-                    <td>${r.bulletinDate || '-'}</td>
-                    <td>${r.bulletinNo || '-'}</td>
-                  </tr>`).join('')}
-              </tbody>
-            </table>
-          </div>
-        </td>`;
-      frag.appendChild(child);
-    } else {
-      // TEK KAYIT: akordeon yok, düz tek satır
-      const r = g.items[0];
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td>${r.recordType || '-'}</td>
-        <td>${r.transactionTypeName || '-'}</td>
-        <td>${r.applicationNumber || '-'}</td>
-        <td title="${r.applicantName || '-'}">${r.applicantName || '-'}</td>
-        <td title="${r.opponent || '-'}">${r.opponent || '-'}</td>
-        <td>${r.bulletinDate || '-'}</td>
-        <td>${r.bulletinNo || '-'}</td>`;
-      frag.appendChild(tr);
-    }
-  });
-
-  tableBody.innerHTML = '';
-  tableBody.appendChild(frag);
-
-  // toggle
-  tableBody.querySelectorAll('.toggle-group').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const targetSel = btn.getAttribute('data-target');
-      const el = tableBody.querySelector(targetSel);
-      if (!el) return;
-      if (typeof $(el).collapse === 'function') $(el).collapse('toggle');
-      else el.classList.toggle('show');
-
-      const expanded = btn.getAttribute('aria-expanded') === 'true';
-      btn.setAttribute('aria-expanded', String(!expanded));
-      btn.textContent = expanded ? '▶' : '▼';
+  // Objections: başvuru no bazlı gruplama
+  if (isObjections) {
+    // 1) Grupla
+    const groups = {};
+    pageData.forEach(r => {
+      const appNo = r.applicationNo || r.basvuruNo || r.application_number || '—';
+      if (!groups[appNo]) groups[appNo] = [];
+      groups[appNo].push(r);
     });
-  });
 
-  return;
-}
+    // 2) Grupları sırala (opsiyonel: appNo artan)
+    const orderedAppNos = Object.keys(groups).sort((a,b) => a.localeCompare(b, 'tr'));
 
-  // 📌 Normal satır render (itiraz dışı)
-  const baseData = this.filteredAndSortedRecords;
-  const currentPageData = pagination.getCurrentPageData(baseData);
-  const frag = document.createDocumentFragment();
+    // 3) HTML üret
+    const frag = document.createDocumentFragment();
 
-  currentPageData.forEach(record => {
-    const row = document.createElement('tr');
-    row.dataset.recordId = record.id || '';
+    orderedAppNos.forEach(appNo => {
+      const rows = groups[appNo];
+      const groupId = appNo;
+      const groupIdSafe = safeId(groupId);
 
-    const portfoyStatusDisplay = record.portfoyStatus === 'inactive' ? 'Pasif' : 'Aktif';
-    const ipTypeDisplay =
-      record.type === 'trademark' ? 'Marka' :
-      record.type === 'patent'    ? 'Patent' :
-      record.type === 'design'    ? 'Tasarım' :
-      (record.type || '-');
-    const title = record.title || record.brandText || '-';
+      // Grup başlığı satırı
+      const trHeader = document.createElement('tr');
+      trHeader.className = 'group-header';
+      trHeader.dataset.groupId = groupId;
 
-    let imageHtml = '-';
-    if (record.type === 'trademark') {
-      const imageSrc =
-        record.brandImageUrl ||
-        record.details?.brandInfo?.brandImage ||
-        record.trademarkImage?.content ||
-        record.trademarkImage;
-      if (imageSrc) {
-        imageHtml = `<div class="trademark-image-wrapper">
-                       <img src="${imageSrc}" alt="Marka Görseli" class="trademark-image-thumbnail">
-                     </div>`;
-      }
+      trHeader.innerHTML = `
+        <td class="toggle-cell">
+          <button class="accordion-toggle" aria-expanded="false" aria-controls="grp-${groupIdSafe}">
+            <i class="fas fa-chevron-right"></i>
+          </button>
+        </td>
+        <td colspan="7" class="group-title">
+          <span class="badge badge-soft">${safe(appNo)}</span>
+          <strong>başvuru numarasına ait itiraz işlemleri</strong>
+          <span class="count-dot">${rows.length}</span>
+        </td>
+      `;
+      frag.appendChild(trHeader);
+
+      // Grup satırları
+      rows.forEach((r, idx) => {
+        const tr = document.createElement('tr');
+        tr.className = 'group-row';
+        tr.dataset.parentId = groupId;
+        // sadece ilk satıra id/aria-controls bağlayalım (görsel amaçlı)
+        if (idx === 0) tr.id = `grp-${groupIdSafe}`;
+        tr.setAttribute('aria-hidden', 'true');
+
+        const recordType = r.recordType || r.kayitTipi || r.type || 'trademark';
+        const txnType    = r.transactionTypeName || r.islemTipi || r.transactionType || '';
+        const appNoCell  = r.applicationNo || r.basvuruNo || r.application_number || '';
+        const applicant  = r.applicantName || r.basvuruSahibi || r.ownerName || '';
+        const opposer    = r.opposerName || r.itirazSahibi || '';
+        const bDate      = r.bulletinDate || r.bultenTarihi || r.opposedMarkBulletinDate || '';
+        const bNo        = r.bulletinNo || r.bultenNo || r.opposedMarkBulletinNo || '';
+
+        tr.innerHTML = `
+          <td class="toggle-cell"></td>
+          <td>${safe(recordType)}</td>
+          <td>${safe(txnType)}</td>
+          <td>${safe(appNoCell)}</td>
+          <td>${safe(applicant)}</td>
+          <td>${safe(opposer)}</td>
+          <td>${fmtDate(bDate)}</td>
+          <td>${safe(bNo) || '-'}</td>
+        `;
+        frag.appendChild(tr);
+      });
+    });
+
+    tableBody.appendChild(frag);
+
+    // Akordeonu bağla (durumu hatırlayan fonksiyon)
+    if (typeof wireObjectionsAccordion === 'function') {
+      wireObjectionsAccordion();
     }
+    return;
+  }
 
-    const applicationNumber = record.applicationNumber || '-';
-    const applicationDateDisplay = record.applicationDate
-      ? new Date(record.applicationDate).toLocaleDateString('tr-TR')
-      : '-';
-    const statusDisplay =
-      record.status === 'application_filed' ? 'Başvuru Yapıldı' :
-      record.status === 'registered'       ? 'Tescilli' :
-      record.status === 'renewed'          ? 'Yenilendi' :
-      record.status === 'invalid'          ? 'Hükümsüz' :
-      record.status === 'opposed'          ? 'İtiraz Edildi' :
-      (record.status || '-');
-    const applicantsDisplay = (record.applicants?.map(a => a.name).join(', ')) || 'Belirtilmemiş';
+  // ——— İtirazlar dışındaki sekmeler: düz liste ———
+  const frag = document.createDocumentFragment();
+  pageData.forEach(r => {
+    const tr = document.createElement('tr');
+    tr.dataset.recordId = r.id || '';
 
-    const checkboxCell = `
-      <td>
-        <input type="checkbox" class="record-checkbox" data-id="${record.id}"
-          ${this.selectedRecords.has(record.id) ? 'checked' : ''}>
-      </td>`;
+    const recordType = r.recordType || r.kayitTipi || r.type || '';
+    const txnType    = r.transactionTypeName || r.islemTipi || r.transactionType || '';
+    const appNo      = r.applicationNo || r.basvuruNo || r.application_number || '';
+    const applicant  = r.applicantName || r.basvuruSahibi || r.ownerName || '';
+    const opposer    = r.opposerName || r.itirazSahibi || '';
+    const bDate      = r.bulletinDate || r.bultenTarihi || '';
+    const bNo        = r.bulletinNo || r.bultenNo || '';
 
-    row.innerHTML = `
-      ${checkboxCell}
-      <td><span class="record-active-status-badge ${record.portfoyStatus || 'active'}">${portfoyStatusDisplay}</span></td>
-      <td>${ipTypeDisplay}</td>
-      <td title="${title}">${title}</td>
-      <td style="${this.activeTypeFilter === 'all' ? 'display:none;' : ''}">${imageHtml}</td>
-      <td>${applicationNumber}</td>
-      <td>${applicationDateDisplay}</td>
-      <td>${statusDisplay}</td>
-      <td title="${applicantsDisplay}">${applicantsDisplay}</td>
-      <td>
-        <button class="action-btn view-btn" data-id="${record.id}">Detay</button>
-        <button class="action-btn edit-btn" data-id="${record.id}">Düzenle</button>
-        <button class="action-btn delete-btn" data-id="${record.id}">Sil</button>
-      </td>
+    tr.innerHTML = `
+      <td>${safe(recordType)}</td>
+      <td>${safe(txnType)}</td>
+      <td>${safe(appNo)}</td>
+      <td>${safe(applicant)}</td>
+      <td>${safe(opposer)}</td>
+      <td>${fmtDate(bDate)}</td>
+      <td>${safe(bNo) || '-'}</td>
     `;
-    frag.appendChild(row);
+    frag.appendChild(tr);
   });
-
   tableBody.appendChild(frag);
 }
 
@@ -1398,5 +1396,66 @@ if (isObjections) {
             if (result.success) allPersons = result.data;
         }
     </script>
+    <script>
+(function () {
+  const STORAGE_KEY = 'objections_accordion_state';
+
+  function loadState() {
+    try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); }
+    catch { return {}; }
+  }
+  function saveState(state) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  }
+
+  function setGroupVisibility(groupId, expanded) {
+    const rows = document.querySelectorAll(`.group-row[data-parent-id="${groupId}"]`);
+    rows.forEach(r => r.setAttribute('aria-hidden', expanded ? 'false' : 'true'));
+    const headerBtn = document.querySelector(`.group-header[data-group-id="${groupId}"] .accordion-toggle`);
+    if (headerBtn) headerBtn.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+  }
+
+  window.wireObjectionsAccordion = function wireObjectionsAccordion() {
+    const state = loadState();
+
+    // İlk bağlama: butonlara click + klavye
+    document.querySelectorAll('#objectionsTable .group-header').forEach(header => {
+      const groupId = header.getAttribute('data-group-id');
+      const btn = header.querySelector('.accordion-toggle');
+      if (!btn) return;
+
+      // Başlangıç durumu
+      const expanded = state[groupId] === true;
+      setGroupVisibility(groupId, expanded);
+
+      const toggle = () => {
+        const isOpen = btn.getAttribute('aria-expanded') === 'true';
+        const next = !isOpen;
+        setGroupVisibility(groupId, next);
+        state[groupId] = next;
+        saveState(state);
+      };
+
+      // buton tıklama
+      btn.addEventListener('click', toggle);
+
+      // başlık satırının tamamı tıklanabilir olsun
+      header.addEventListener('click', (e) => {
+        if (e.target.closest('.accordion-toggle')) return;
+        toggle();
+      });
+
+      // klavye erişimi
+      header.setAttribute('tabindex', '0');
+      header.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); }
+        if (e.key === 'ArrowRight') { setGroupVisibility(groupId, true); state[groupId]=true; saveState(state); }
+        if (e.key === 'ArrowLeft')  { setGroupVisibility(groupId, false); state[groupId]=false; saveState(state); }
+      });
+    });
+  };
+})();
+</script>
+
 </body>
 </html>
