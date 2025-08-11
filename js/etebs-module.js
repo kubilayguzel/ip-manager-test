@@ -135,7 +135,23 @@ async uploadDocumentsToFirebase(documents, userId, evrakNo) {
 async indexNotification(token, notification) {
     try {
         showNotification('Evrak indiriliyor ve indeksleme sayfasına yönlendiriliyor...', 'info');
+        // 🔎 Önce yerel kopya var mı kontrol et (unindexed_pdfs → yoksa etebs_documents)
+            let unindexedDoc = await this.findUnindexedDocument(notification.evrakNo);
+            if (unindexedDoc) {
+            showNotification('Yerel kopya bulundu. İndeksleme sayfasına yönlendiriliyor...', 'success');
+            setTimeout(() => window.open(`indexing-detail.html?pdfId=${unindexedDoc.id}`, '_blank'), 500);
+            return;
+            }
 
+            let etebsDoc = await this.findETEBSDocument(notification.evrakNo);
+            if (etebsDoc) {
+            const newUnindexed = await this.copyToUnindexedPdfs(etebsDoc.data);
+            if (newUnindexed) {
+                showNotification('Yerel kopya indeksleme listesine eklendi. Yönlendiriliyor...', 'success');
+                setTimeout(() => window.open(`indexing-detail.html?pdfId=${newUnindexed.id}`, '_blank'), 500);
+                return;
+            }
+            }
         const downloadResult = await etebsService.downloadDocument(token, notification.evrakNo);
 
         if (downloadResult.success) {
@@ -158,8 +174,10 @@ async indexNotification(token, notification) {
         // ETEBS download başarısız olduysa ve sebep daha önce indirilmişse Firestore'dan bul
         if (
             downloadResult.success === false &&
-            downloadResult.error &&
-            downloadResult.error.toLowerCase().includes("daha önce indirildi")
+            (
+            downloadResult.errorCode === '005' || 
+            (downloadResult.error && /daha önce indir(ilmiş|ildi)/i.test(downloadResult.error))
+            )
         ) {
             console.log("📂 Daha önce indirilen evrak Firestore'dan bulunuyor...");
 
@@ -239,8 +257,10 @@ async showNotificationPDF(token, notification) {
         // 4️⃣ Eğer "daha önce indirildi" cevabı döndüyse Firestore'dan bul
         if (
             downloadResult.success === false &&
-            downloadResult.error &&
-            downloadResult.error.toLowerCase().includes("daha önce indirildi")
+            (
+            downloadResult.errorCode === '005' || 
+            (downloadResult.error && /daha önce indir(ilmiş|ildi)/i.test(downloadResult.error))
+            )
         ) {
             console.log("📂 Evrak daha önce indirilmiş, Firestore'dan kontrol ediliyor...");
 
@@ -875,8 +895,10 @@ async indexNotification(token, notification) {
         // ETEBS download başarısız olduysa ve sebep daha önce indirilmişse Firestore'dan bul
         if (
             downloadResult.success === false &&
-            downloadResult.error &&
-            downloadResult.error.toLowerCase().includes("daha önce indirildi")
+            (
+            downloadResult.errorCode === '005' || 
+            (downloadResult.error && /daha önce indir(ilmiş|ildi)/i.test(downloadResult.error))
+            )
         ) {
             console.log("📂 Daha önce indirilen evrak Firestore'dan bulunuyor...");
 
