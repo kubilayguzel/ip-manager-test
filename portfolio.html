@@ -900,8 +900,15 @@ renderCurrentPage() {
                         if (globalSelect) globalSelect.checked = false;
                         this.initialRenderTableStructure();
                         if (this.activeTypeFilter === 'objections') {
-                          this.loadObjectionRows()
-                            .then(() => { this.buildObjectionGroups(); this.renderCurrentPage(); })
+                        this.loadObjectionRows()
+                            .then(() => {
+                            this.buildObjectionGroups();
+                            if (pagination) pagination.update(this.objectionRows.length); // <-- EKLENDİ
+                            // boş liste mesajı
+                            document.getElementById('noRecordsMessage').style.display =
+                                (this.objectionRows.length === 0) ? 'block' : 'none';
+                            this.renderCurrentPage();
+                            })
                             .catch(err => console.error('İtiraz satırları yüklenemedi:', err));
                         } else {
                         this.applyFiltersAndSort();
