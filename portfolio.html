@@ -1445,42 +1445,86 @@ renderCurrentPage() {
                 const epatsDate = fmtDate(epatsDateRaw);
 
                 // Durum = parent transaction.requestResult
-                let reqResult = null;
-                try {
+            let statusText = 'Karar Bekleniyor'; // varsayılan değer
+            
+            try {
                 const parentTxId = details?.parentTransactionId || details?.selectedTransactionId || null;
+                
                 if (rec?.id && parentTxId) {
+                    console.log('🔍 Transaction kontrol ediliyor:', {
+                        recordId: rec.id,
+                        parentTxId: parentTxId
+                    });
+                    
                     const txRes = await ipRecordsService.getTransactionsForRecord(rec.id);
                     const txList = (txRes?.success && Array.isArray(txRes.transactions)) ? txRes.transactions : [];
-                    const parentTx = txList.find(x => x.id === parentTxId);
-                    reqResult = parentTx?.requestResult ?? null;
-                }
-                } catch (e) {
-                console.warn('requestResult okunamadı', e);
-                }
-                const statusText = (reqResult === 30 || reqResult === '30')
-                ? 'Ret'
-                : (reqResult == null || reqResult === '' ? 'Karar Bekleniyor' : String(reqResult));
-
-                rows.push({
-                    id: t.id,
-                    recordType: rec?.type || '-',                          // Kayıt Tipi
-                    transactionTypeName,                                   // İşlem Tipi
-                    applicationNumber,                                     // Başvuru No
-                    applicantName: applicants || '-',                      // Başvuru Sahibi
-                    opponent: opponentName,                                // İtiraz Sahibi
-                    bulletinDate,                                          // Bülten Tarihi
-                    bulletinNo,                                            // Bülten No
-                    epatsDate,
-                    statusText
                     
-                });
-                } catch (e) {
-                console.warn('Task satırı oluşturulamadı', t?.id, e);
+                    console.log('📊 Bulunan transaction sayısı:', txList.length);
+                    
+                    const parentTx = txList.find(x => x.id === parentTxId);
+                    
+                    if (parentTx) {
+                        console.log('✅ Parent transaction bulundu:', {
+                            id: parentTx.id,
+                            requestResult: parentTx.requestResult,
+                            requestResultType: typeof parentTx.requestResult
+                        });
+                        
+                        const reqResult = parentTx.requestResult;
+                        
+                        // ✅ DÜZELTME: requestResult kontrolü daha sıkı yapılıyor
+                        if (reqResult !== null && reqResult !== undefined && reqResult !== '') {
+                            // 30 değeri hem string hem number olarak kontrol edilir
+                            if (reqResult === 30 || reqResult === '30' || String(reqResult) === '30') {
+                                statusText = 'Ret';
+                                console.log('✅ Durum "Ret" olarak belirlendi');
+                            } else {
+                                // Diğer değerler için requestResult'ı string olarak göster
+                                statusText = String(reqResult);
+                                console.log('✅ Durum custom değer olarak belirlendi:', statusText);
+                            }
+                        } else {
+                            console.log('⚠️ requestResult boş/null, varsayılan durum kullanılıyor');
+                        }
+                    } else {
+                        console.log('❌ Parent transaction bulunamadı, parentTxId:', parentTxId);
+                        console.log('📊 Mevcut transaction ID\'leri:', txList.map(tx => tx.id));
+                    }
+                } else {
+                    if (!rec?.id) {
+                        console.log('⚠️ IP record ID yok');
+                    }
+                    if (!parentTxId) {
+                        console.log('⚠️ Parent transaction ID yok');
+                    }
                 }
+            } catch (e) {
+                console.error('❌ requestResult kontrolünde hata:', e);
             }
 
-            this.objectionRows = rows;
-            }
+            const rowData = {
+                id: t.id,
+                recordType: rec?.type || '-',
+                transactionTypeName,
+                applicationNumber,
+                applicantName: applicants || '-',
+                opponent: opponentName,
+                bulletinDate,
+                bulletinNo,
+                epatsDate,
+                statusText // ✅ Burada düzeltilmiş statusText kullanılıyor
+            };
+            
+            console.log('✅ Final satır verisi:', rowData);
+            rows.push(rowData);
+            
+        } catch (e) {
+            console.warn('❌ Task satırı oluşturulamadı', t?.id, e);
+        }
+    }
+
+    this.objectionRows = rows;
+}
             
             buildObjectionGroups() {
             // this.objectionRows: render ettiğiniz ham satırlar
