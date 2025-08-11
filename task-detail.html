@@ -381,6 +381,10 @@
                         <div class="file-list-container" id="epatsFileListContainer">
                             </div>
                     </div>
+                    <div class="form-group">
+                    <label for="epatsDocumentDate" class="form-label">İşlem Tarihi</label>
+                    <input type="date" id="epatsDocumentDate" class="form-input">
+                    </div>
                     <div id="tabContentHistory" class="form-section">
                         <h3 class="section-title">İşlem Geçmişi</h3>
                         <div id="historyList" class="history-list">
@@ -763,6 +767,13 @@
                         // YENİ: Saklanmış önceki durumu da yükle
                         this.statusBeforeEpatsUpload = task.details.statusBeforeEpatsUpload || null;
                         this.renderEpatsDocument();
+                        // EPATS işlem tarihi varsa input’a bas
+                    if (task.details.epatsDocument.documentDate) {
+                    const v = task.details.epatsDocument.documentDate;
+                    document.getElementById('epatsDocumentDate').value = (typeof v === 'string')
+                        ? v.slice(0, 10)
+                        : this.formatDateToYYYYMMDD(v);
+                    }
                     }
                 }
 
@@ -1272,12 +1283,15 @@ async recalculateOfficialAndOperationalDueDates() {
             }
 
             if (this.uploadedEpatsFile) {
-                updatedTaskData.details.epatsDocument = {
-                    ...this.uploadedEpatsFile,
-                    turkpatentEvrakNo: document.getElementById('turkpatentEvrakNo').value
-                };
+            const documentDateValue = document.getElementById('epatsDocumentDate')?.value || null;
+            updatedTaskData.details.epatsDocument = {
+                ...this.uploadedEpatsFile,
+                turkpatentEvrakNo: document.getElementById('turkpatentEvrakNo').value,
+                documentDate: documentDateValue ? new Date(documentDateValue).toISOString() : null
+            };
             } else {
-                updatedTaskData.details.epatsDocument = null;
+            // EPATS dokümanı kaldırıldıysa, alanları temizle
+            updatedTaskData.details.epatsDocument = null;
             }
             
             try {
