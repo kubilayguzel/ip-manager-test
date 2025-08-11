@@ -509,52 +509,98 @@
             
         // portfolio.html dosyasında renderCurrentPage fonksiyonunu bulun ve bu kodla değiştirin:
 
-        renderCurrentPage() {
-        const tableBody = document.getElementById('portfolioTableBody');
-        if (!tableBody || !pagination) return;
-        tableBody.innerHTML = '';
+renderCurrentPage() {
+    const tableBody = document.getElementById('portfolioTableBody');
+    if (!tableBody || !pagination) return;
+    tableBody.innerHTML = '';
 
-        const isObjections = (this.activeTypeFilter === 'objections');
+    const isObjections = (this.activeTypeFilter === 'objections');
 
-        // Kaynak veri (filtre/sıralama sonrası)
-        const baseData = isObjections
-            ? (this.objectionRows || [])
-            : (this.filteredAndSortedRecords || []);
+    // ✅ DÜZELTME: İtirazlar için doğru veri kaynağını kullan
+    let baseData;
+    if (isObjections) {
+        // İtirazlar: objectionRows'u kullan ve filtreleri uygula
+        baseData = this.objectionRows || [];
+        
+        // Global arama filtresini uygula
+        const globalSearchTerm = (document.getElementById('searchBar').value || '').toLowerCase();
+        if (globalSearchTerm) {
+            baseData = baseData.filter(row => {
+                const searchableText = `
+                    ${row.transactionTypeName || ''} 
+                    ${row.applicationNumber || ''} 
+                    ${row.applicantName || ''} 
+                    ${row.opponent || ''}
+                    ${row.statusText || ''}
+                `.toLowerCase();
+                return searchableText.includes(globalSearchTerm);
+            });
+        }
+        
+        // Kolon filtrelerini uygula
+        baseData = baseData.filter(row => {
+            return Object.keys(this.columnFilters).every(key => {
+                const filterValue = this.columnFilters[key];
+                if (!filterValue) return true;
+                let recordValue = String(row[key] || '');
+                return recordValue.toLowerCase().includes(filterValue);
+            });
+        });
 
-        // Sayfalama
-        const pageData = pagination.getCurrentPageData(baseData) || [];
+        // Sıralama uygula
+        if (this.sortBy.column) {
+            const { column, direction } = this.sortBy;
+            baseData.sort((a, b) => {
+                let valA = a[column] || '';
+                let valB = b[column] || '';
+                
+                if (column.includes('Date')) {
+                    valA = new Date(valA || 0);
+                    valB = new Date(valB || 0);
+                }
+                
+                if (valA < valB) return direction === 'asc' ? -1 : 1;
+                if (valA > valB) return direction === 'asc' ? 1 : -1;
+                return 0;
+            });
+        }
+    } else {
+        baseData = this.filteredAndSortedRecords || [];
+    }
 
-        // Küçük yardımcılar
-        const safe = (v) => (v ?? '').toString();
-        const safeId = (v) => safe(v).replace(/[^a-zA-Z0-9_]+/g, '_');
-        const fmtDate = (v) => {
-            if (!v) return '-';
-            // Date objesi veya ISO string gelebilir
-            try {
+    // Sayfalama
+    const pageData = pagination.getCurrentPageData(baseData) || [];
+
+    // Küçük yardımcılar
+    const safe = (v) => (v ?? '').toString();
+    const safeId = (v) => safe(v).replace(/[^a-zA-Z0-9_]+/g, '_');
+    const fmtDate = (v) => {
+        if (!v) return '-';
+        // Date objesi veya ISO string gelebilir
+        try {
             const d = (v instanceof Date) ? v : new Date(v);
             if (Number.isNaN(d.getTime())) return safe(v);
             return d.toLocaleDateString('tr-TR');
-            } catch { return safe(v); }
-        };
+        } catch { return safe(v); }
+    };
 
-        // Objections: başvuru no bazlı gruplama
-        if (isObjections) {
-            // 1) Grupla
-            const groups = {};
-            pageData.forEach(r => {
+    // Objections: başvuru no bazlı gruplama
+    if (isObjections) {
+        // 1) Grupla
+        const groups = {};
+        pageData.forEach(r => {
             const appNo = r.applicationNumber || r.applicationNo || r.basvuruNo || r.application_number || '—';
             if (!groups[appNo]) groups[appNo] = [];
             groups[appNo].push(r);
-            });
+        });
 
-            // 2) Grupları sırala (opsiyonel: appNo artan)
-            const orderedAppNos = Object.keys(groups).sort((a,b) => a.localeCompare(b, 'tr'));
+        // 2) Grupları sırala (opsiyonel: appNo artan)
+        const orderedAppNos = Object.keys(groups).sort((a,b) => a.localeCompare(b, 'tr'));
 
-            
-            // 3) HTML üret
-            const frag = document.createDocumentFragment();
+        // 3) HTML üret
+        const frag = document.createDocumentFragment();
 
-            orderedAppNos.forEach(appNo => {
+        orderedAppNos.forEach(appNo => {
             const rows = groups[appNo];
             const groupId = appNo;
             const groupIdSafe = safeId(groupId);
@@ -565,16 +611,16 @@
                 const tr = document.createElement('tr');
                 tr.dataset.recordId = r.id || '';
                 tr.innerHTML = `
-                <td></td>
-                <td>${safe(r.recordType || r.kayitTipi || r.type || 'trademark')}</td>
-                <td>${safe(r.transactionTypeName || r.islemTipi || r.transactionType || '')}</td>
-                <td>${safe(r.applicationNumber || r.applicationNo || r.basvuruNo || r.application_number || '')}</td>
-                <td>${safe(r.applicantName || r.basvuruSahibi || r.ownerName || '')}</td>
-                <td>${safe(r.opponent || r.opposerName || r.itirazSahibi || '')}</td>
-                <td>${fmtDate(r.bulletinDate || r.bultenTarihi || r.opposedMarkBulletinDate || '')}</td>
-                <td>${safe(r.bulletinNo || r.bultenNo || r.opposedMarkBulletinNo || '') || '-'}</td>
-                <td>${safe(r.epatsDate || '-')}</td>
-                <td>${safe(r.statusText || 'Karar Bekleniyor')}</td>
+                    <td></td>
+                    <td>${safe(r.recordType || r.kayitTipi || r.type || 'trademark')}</td>
+                    <td>${safe(r.transactionTypeName || r.islemTipi || r.transactionType || '')}</td>
+                    <td>${safe(r.applicationNumber || r.applicationNo || r.basvuruNo || r.application_number || '')}</td>
+                    <td>${safe(r.applicantName || r.basvuruSahibi || r.ownerName || '')}</td>
+                    <td>${safe(r.opponent || r.opposerName || r.itirazSahibi || '')}</td>
+                    <td>${fmtDate(r.bulletinDate || r.bultenTarihi || r.opposedMarkBulletinDate || '')}</td>
+                    <td>${safe(r.bulletinNo || r.bultenNo || r.opposedMarkBulletinNo || '') || '-'}</td>
+                    <td>${safe(r.epatsDate || '-')}</td>
+                    <td>${safe(r.statusText || 'Karar Bekleniyor')}</td>
                 `;
                 frag.appendChild(tr);
                 return;
@@ -587,14 +633,14 @@
 
             trHeader.innerHTML = `
                 <td class="toggle-cell">
-                <button class="accordion-toggle" aria-expanded="false" aria-controls="grp-${groupIdSafe}">
-                    <i class="fas fa-chevron-right"></i>
-                </button>
+                    <button class="accordion-toggle" aria-expanded="false" aria-controls="grp-${groupIdSafe}">
+                        <i class="fas fa-chevron-right"></i>
+                    </button>
                 </td>
                 <td colspan="9" class="group-title">
-                <span class="badge badge-soft">${safe(appNo)}</span>
-                <strong>başvuru numarasına ait itiraz işlemleri</strong>
-                <span class="count-dot">${rows.length}</span>
+                    <span class="badge badge-soft">${safe(appNo)}</span>
+                    <strong>başvuru numarasına ait itiraz işlemleri</strong>
+                    <span class="count-dot">${rows.length}</span>
                 </td>
             `;
             frag.appendChild(trHeader);
@@ -607,65 +653,65 @@
                 tr.setAttribute('aria-hidden', 'true');
 
                 tr.innerHTML = `
-                <td class="toggle-cell"></td>
-                <td>${safe(r.recordType || r.kayitTipi || r.type || 'trademark')}</td>
-                <td>${safe(r.transactionTypeName || r.islemTipi || r.transactionType || '')}</td>
-                <td>${safe(r.applicationNumber || r.applicationNo || r.basvuruNo || r.application_number || '')}</td>
-                <td>${safe(r.applicantName || r.basvuruSahibi || r.ownerName || '')}</td>
-                <td>${safe(r.opponent || r.opposerName || r.itirazSahibi || '')}</td>
-                <td>${fmtDate(r.bulletinDate || r.bultenTarihi || r.opposedMarkBulletinDate || '')}</td>
-                <td>${safe(r.bulletinNo || r.bultenNo || r.opposedMarkBulletinNo || '') || '-'}</td>
-                <td>${safe(r.epatsDate || '-')}</td>
-                <td>${safe(r.statusText || 'Karar Bekleniyor')}</td>
+                    <td class="toggle-cell"></td>
+                    <td>${safe(r.recordType || r.kayitTipi || r.type || 'trademark')}</td>
+                    <td>${safe(r.transactionTypeName || r.islemTipi || r.transactionType || '')}</td>
+                    <td>${safe(r.applicationNumber || r.applicationNo || r.basvuruNo || r.application_number || '')}</td>
+                    <td>${safe(r.applicantName || r.basvuruSahibi || r.ownerName || '')}</td>
+                    <td>${safe(r.opponent || r.opposerName || r.itirazSahibi || '')}</td>
+                    <td>${fmtDate(r.bulletinDate || r.bultenTarihi || r.opposedMarkBulletinDate || '')}</td>
+                    <td>${safe(r.bulletinNo || r.bultenNo || r.opposedMarkBulletinNo || '') || '-'}</td>
+                    <td>${safe(r.epatsDate || '-')}</td>
+                    <td>${safe(r.statusText || 'Karar Bekleniyor')}</td>
                 `;
                 frag.appendChild(tr);
             });
-            });
+        });
 
-            tableBody.appendChild(frag);
+        tableBody.appendChild(frag);
 
-            // Akordeonu bağla (durumu hatırlayan fonksiyon) — sadece çoklu gruplar için etkili olur
-            if (typeof wireObjectionsAccordion === 'function') {
+        // Akordeonu bağla (durumu hatırlayan fonksiyon) — sadece çoklu gruplar için etkili olur
+        if (typeof wireObjectionsAccordion === 'function') {
             wireObjectionsAccordion();
-            }
-            return;
         }
+        return;
+    }
 
-        // ——— İtirazlar dışındaki sekmeler: tabloda tanımlı kolonlara hizalı render ———
-        const frag = document.createDocumentFragment();
-        pageData.forEach(r => {
-            const tr = document.createElement('tr');
-            tr.dataset.recordId = r.id || '';
+    // ——— İtirazlar dışındaki sekmeler: tabloda tanımlı kolonlara hizalı render ———
+    const frag = document.createDocumentFragment();
+    pageData.forEach(r => {
+        const tr = document.createElement('tr');
+        tr.dataset.recordId = r.id || '';
 
-            const status    = r.portfoyStatus || r.status || '';
-            const ipType    = r.type || r.recordType || r.ipType || '';
-            const title     = r.title || r.brandText || r.name || '';
-            const appNo     = r.applicationNumber || r.applicationNo || r.basvuruNo || r.application_number || '';
-            const appDate   = r.applicationDate || r.basvuruTarihi || '';
-            const appStatus = r.applicationStatus || r.status || '';
-            const applicants = Array.isArray(r.applicants) ? r.applicants.map(a => a.name).join(', ') : (r.applicantName || '');
+        const status    = r.portfoyStatus || r.status || '';
+        const ipType    = r.type || r.recordType || r.ipType || '';
+        const title     = r.title || r.brandText || r.name || '';
+        const appNo     = r.applicationNumber || r.applicationNo || r.basvuruNo || r.application_number || '';
+        const appDate   = r.applicationDate || r.basvuruTarihi || '';
+        const appStatus = r.applicationStatus || r.status || '';
+        const applicants = Array.isArray(r.applicants) ? r.applicants.map(a => a.name).join(', ') : (r.applicantName || '');
 
-            // ✅ DÜZELTME: Marka görseli sadece trademark sekmesinde ve sadece trademark kayıtları için
-            let brandImgCell = '';
-            if (this.activeTypeFilter === 'trademark' && ipType === 'trademark') {
+        // ✅ DÜZELTME: Marka görseli sadece trademark sekmesinde ve sadece trademark kayıtları için
+        let brandImgCell = '';
+        if (this.activeTypeFilter === 'trademark' && ipType === 'trademark') {
             const imgSrc = r.brandImageUrl || r.details?.brandInfo?.brandImage || '';
             if (imgSrc) {
                 brandImgCell = `<td><div class="trademark-image-wrapper"><img class="trademark-image-thumbnail" src="${imgSrc}" alt="logo"></div></td>`;
             } else {
                 brandImgCell = `<td></td>`;
             }
-            }
+        }
 
-            // actions
-            const idAttr = r.id || '';
-            const actions = `
+        // actions
+        const idAttr = r.id || '';
+        const actions = `
             <button class="action-btn view-btn" data-id="${idAttr}">Görüntüle</button>
             <button class="action-btn edit-btn" data-id="${idAttr}">Düzenle</button>
             <button class="action-btn delete-btn" data-id="${idAttr}">Sil</button>
-            `;
+        `;
 
-            // ✅ DÜZELTME: Satır HTML'ini sekmeye göre oluştur
-            if (this.activeTypeFilter === 'trademark') {
+        // ✅ DÜZELTME: Satır HTML'ini sekmeye göre oluştur
+        if (this.activeTypeFilter === 'trademark') {
             // Trademark sekmesi: marka görseli kolonu var
             tr.innerHTML = `
                 <td><input type="checkbox" class="record-checkbox" data-id="${idAttr}"></td>
@@ -679,7 +725,7 @@
                 <td>${safe(applicants)}</td>
                 <td>${actions}</td>
             `;
-            } else {
+        } else {
             // Diğer tüm sekmeler (all, patent, design): marka görseli kolonu yok
             tr.innerHTML = `
                 <td><input type="checkbox" class="record-checkbox" data-id="${idAttr}"></td>
@@ -692,12 +738,12 @@
                 <td>${safe(applicants)}</td>
                 <td>${actions}</td>
             `;
-            }
-
-            frag.appendChild(tr);
-        });
-        tableBody.appendChild(frag);
         }
+
+        frag.appendChild(tr);
+    });
+    tableBody.appendChild(frag);
+}
         applyFiltersAndSort() {
             const globalSearchTerm = (document.getElementById('searchBar').value || '').toLowerCase();
             
