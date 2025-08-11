@@ -1186,48 +1186,13 @@ async handleTaskUpdate(e) {
     e.preventDefault();
     
     console.log('🔧 DEBUG: handleTaskUpdate başlatıldı');
-    
-    // Form elementlerini kontrol et
-    const form = document.getElementById('taskDetailForm');
-    const statusSelect = document.getElementById('taskStatus');
-    const evrakNoInput = document.getElementById('turkpatentEvrakNo');
-    const docDateInput = document.getElementById('epatsDocumentDate');
-    
-    console.log('🔧 DEBUG: Form elements:', {
-        form: !!form,
-        statusSelect: !!statusSelect,
-        evrakNoInput: !!evrakNoInput,
-        docDateInput: !!docDateInput
-    });
-    
-    if (!form || !statusSelect) {
-        console.error('❌ HATA: Gerekli form elementleri bulunamadı!');
-        showNotification('Form elementleri bulunamadı!', 'error');
-        return;
-    }
 
-    // Form değerlerini al ve kontrol et
-    const selectedStatus = statusSelect.value;
-    const evrakNo = evrakNoInput?.value?.trim() || '';
-    const docDate = docDateInput?.value || '';
-    const hasPdf = !!this.uploadedEpatsFile;
-    
-    console.log('🔧 DEBUG: Form değerleri:', {
-        selectedStatus,
-        evrakNo,
-        docDate,
-        hasPdf,
-        uploadedEpatsFile: this.uploadedEpatsFile
-    });
-
-    // EPATS validation
-    if (this.uploadedEpatsFile && !evrakNo) {
-        console.warn('⚠️ WARNING: EPATS dosyası var ama evrak no yok');
+    if (this.uploadedEpatsFile && !document.getElementById('turkpatentEvrakNo').value.trim()) {
         showNotification('EPATS Evrakı yüklendiğinde TURKPATENT Evrak No alanı zorunludur.', 'error');
         return;
     }
     
-    // Task data oluştur
+    const form = document.getElementById('taskDetailForm');
     const updatedTaskData = {
         title: form.taskTitle.value,
         description: form.taskDescription.value,
@@ -1236,57 +1201,55 @@ async handleTaskUpdate(e) {
         assignedTo_email: this.allUsers.find(u => u.id === form.assignedTo.value)?.email || '',
         deliveryDate: form.deliveryDate.value || null,
         updatedAt: new Date().toISOString(),
-        details: { ...this.currentTask.details },
-        status: selectedStatus
+        details: { ...this.currentTask.details }
     };
-    
-    console.log('🔧 DEBUG: Base updatedTaskData:', updatedTaskData);
 
-    // Completed status kontrolü
-    if (selectedStatus === 'completed') {
-        console.log('🔧 DEBUG: Status completed seçildi, EPATS kontrolü yapılıyor...');
-        
-        if (!hasPdf || !evrakNo || !docDate) {
-            console.error('❌ COMPLETED VALIDATION HATASI:', {
-                hasPdf,
-                evrakNo,
-                docDate
-            });
-            showNotification(
-                'Durumu "Tamamlandı" yapabilmek için EPATS dosyası, Evrak No ve İşlem Tarihi zorunludur.',
-                'error'
-            );
-            return;
-        }
-        console.log('✅ DEBUG: EPATS validation geçti, devam ediliyor...');
+    // EPATS bilgilerini kontrol et
+    const evrakNo = document.getElementById('turkpatentEvrakNo')?.value?.trim() || '';
+    const docDate = document.getElementById('epatsDocumentDate')?.value || '';
+    const hasPdf = !!this.uploadedEpatsFile;
+
+    console.log('🔧 DEBUG: EPATS kontrol değerleri:', {
+        hasPdf,
+        evrakNo,
+        docDate
+    });
+
+    // ** OTOMATİK STATUS LOGİC **
+    // Eğer EPATS üçlüsü tamsa (PDF + Evrak No + İşlem Tarihi) → completed
+    // Değilse → önceki duruma dön (statusBeforeEpatsUpload) veya open
+    if (hasPdf && evrakNo && docDate) {
+        console.log('✅ DEBUG: EPATS üçlüsü tam - Status otomatik completed yapılıyor');
+        updatedTaskData.status = 'completed';
+    } else {
+        console.log('⚠️ DEBUG: EPATS üçlüsü eksik - Status önceki duruma döndürülüyor');
+        // EPATS bilgileri eksikse önceki duruma dön
+        updatedTaskData.status = this.statusBeforeEpatsUpload || 'open';
     }
+
+    console.log('🔧 DEBUG: Ayarlanan status:', updatedTaskData.status);
 
     // EPATS document oluştur
     if (this.uploadedEpatsFile) {
-        console.log('🔧 DEBUG: EPATS dosyası işleniyor...');
-        
         updatedTaskData.details.epatsDocument = {
             ...this.uploadedEpatsFile,
             turkpatentEvrakNo: evrakNo,
             documentDate: docDate ? new Date(docDate).toISOString() : null
         };
-        
-        console.log('🔧 DEBUG: EPATS document oluşturuldu:', updatedTaskData.details.epatsDocument);
+        console.log('🔧 DEBUG: EPATS document oluşturuldu');
     } else {
-        console.log('🔧 DEBUG: EPATS dosyası yok, null olarak ayarlanıyor');
         updatedTaskData.details.epatsDocument = null;
+        console.log('🔧 DEBUG: EPATS document null yapıldı');
     }
-
-    // Status before EPATS upload logic
+    
+    // StatusBeforeEpatsUpload logic
     if (this.uploadedEpatsFile && this.statusBeforeEpatsUpload) {
         updatedTaskData.details.statusBeforeEpatsUpload = this.statusBeforeEpatsUpload;
-        console.log('🔧 DEBUG: statusBeforeEpatsUpload kaydedildi:', this.statusBeforeEpatsUpload);
     } else if (!this.uploadedEpatsFile && this.currentTask.details?.epatsDocument) {
-        updatedTaskData.details.statusBeforeEpatsUpload = null;
-        console.log('🔧 DEBUG: statusBeforeEpatsUpload temizlendi');
+        updatedTaskData.details.statusBeforeEpatsUpload = null; 
     }
 
-    // Delivery date logic (önceki kod aynı kalabilir)
+    // Delivery date logic (aynı kalabilir)
     const currentTaskDeliveryDateFormatted = this.currentTask.deliveryDate ? 
         this.formatDateToYYYYMMDD(this.currentTask.deliveryDate) : null;
 
@@ -1294,7 +1257,6 @@ async handleTaskUpdate(e) {
     const isOfficialDueDatePreviouslyEmpty = !this.currentTask.officialDueDate && form.deliveryDate.value;
 
     if ((isDeliveryDateChanged || isOfficialDueDatePreviouslyEmpty) && this.calculatedOfficialDueDate) {
-        // Tarih hesaplama kodları (aynı kalabilir)
         let confirmation = true;
         const existingOfficialDueDateFormatted = this.currentTask.officialDueDate ?
             this.formatDateToYYYYMMDD(new Date(this.currentTask.officialDueDate)) : null;
@@ -1354,7 +1316,13 @@ async handleTaskUpdate(e) {
         
         if (result.success) {
             console.log('✅ DEBUG: Task başarıyla güncellendi!');
-            showNotification('İş başarıyla güncellendi!', 'success');
+            
+            // Status değişikliğini bildir
+            if (updatedTaskData.status === 'completed') {
+                showNotification('İş tamamlandı olarak işaretlendi!', 'success');
+            } else {
+                showNotification('İş başarıyla güncellendi!', 'success');
+            }
             
             // Sayfayı yenile
             setTimeout(() => {
