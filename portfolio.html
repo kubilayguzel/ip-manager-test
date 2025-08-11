@@ -481,8 +481,8 @@ renderCurrentPage() {
         <td>${record.transactionTypeName || '-'}</td>
         <td>${record.applicationNumber || '-'}</td>
         <td title="${record.applicantName || '-'}">${record.applicantName || '-'}</td>
-        <td>${record.bulletinNo || '-'}</td>
         <td>${record.bulletinDate || '-'}</td>
+        <td>${record.bulletinNo || '-'}</td>
       `;
       fragment.appendChild(row);
       return;
@@ -1202,8 +1202,9 @@ renderCurrentPage() {
                     transactionTypeName,                                   // İşlem Tipi
                     applicationNumber,                                     // Başvuru No
                     applicantName: applicants || '-',                      // Başvuru Sahibi
-                    bulletinNo,                                            // Bülten No
-                    bulletinDate                                           // Bülten Tarihi
+                    bulletinDate,                                          // Bülten Tarihi
+                    bulletinNo                                             // Bülten No
+                    
                 });
                 } catch (e) {
                 console.warn('Task satırı oluşturulamadı', t?.id, e);
@@ -1226,8 +1227,8 @@ renderCurrentPage() {
                        { key: 'transactionTypeName',   label: 'İşlem Tipi',  sortable: true,  width: '180px' },
                        { key: 'applicationNumber', label: 'Başvuru No',  sortable: true,  width: '140px' },
                        { key: 'applicantName',     label: 'Başvuru Sahibi', sortable: true, width: '240px' },
-                       { key: 'bulletinNo',        label: 'Bülten No',   sortable: true,  width: '120px' },
-                       { key: 'bulletinDate',      label: 'Bülten Tarihi', sortable: true, width: '140px' }
+                       { key: 'bulletinDate',      label: 'Bülten Tarihi', sortable: true, width: '140px' },
+                       { key: 'bulletinNo',        label: 'Bülten No',   sortable: true,  width: '120px' }
                      ]
                    : [
                        { key: 'selection', label: '', sortable: false, isCheckbox: true, width: '40px' },
