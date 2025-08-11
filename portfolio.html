@@ -1418,13 +1418,49 @@ async loadObjectionRows() {
 
             const fmtDate = (d) => {
                 if (!d) return '-';
-                if (typeof d === 'string') return d;
-                if (typeof d === 'object') {
-                    if (typeof d.toDate === 'function') d = d.toDate();           // Firestore Timestamp
-                    else if ('seconds' in d) d = new Date(d.seconds * 1000);      // {seconds, nanos}
+                
+                try {
+                    // ISO string formatı (2025-08-09T00:00:00.000Z) için özel işlem
+                    if (typeof d === 'string') {
+                        // ISO format kontrolü
+                        if (d.includes('T') && (d.includes('Z') || d.includes('+'))) {
+                            const date = new Date(d);
+                            if (!isNaN(date.getTime())) {
+                                return date.toLocaleDateString('tr-TR');
+                            }
+                        }
+                        
+                        // Diğer string formatları
+                        const parsed = new Date(d);
+                        if (!isNaN(parsed.getTime())) {
+                            return parsed.toLocaleDateString('tr-TR');
+                        }
+                        
+                        return d;
+                    }
+                    
+                    // Firestore Timestamp
+                    if (typeof d === 'object') {
+                        if (typeof d.toDate === 'function') {
+                            return d.toDate().toLocaleDateString('tr-TR');
+                        }
+                        // {seconds, nanos} formatı
+                        else if ('seconds' in d) {
+                            return new Date(d.seconds * 1000).toLocaleDateString('tr-TR');
+                        }
+                    }
+                    
+                    // Date objesi
+                    if (d instanceof Date && !isNaN(d.getTime())) {
+                        return d.toLocaleDateString('tr-TR');
+                    }
+                    
+                    return String(d);
+                    
+                } catch (error) {
+                    console.warn('Tarih formatlama hatası:', error, 'Değer:', d);
+                    return String(d);
                 }
-                if (d instanceof Date && !isNaN(d)) return d.toLocaleDateString('tr-TR');
-                return String(d);
             };
 
             const details = t.details || t.extra || {};
