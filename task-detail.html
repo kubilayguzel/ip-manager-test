@@ -1184,13 +1184,50 @@ async recalculateOfficialAndOperationalDueDates() {
 
 async handleTaskUpdate(e) {
     e.preventDefault();
+    
+    console.log('🔧 DEBUG: handleTaskUpdate başlatıldı');
+    
+    // Form elementlerini kontrol et
+    const form = document.getElementById('taskDetailForm');
+    const statusSelect = document.getElementById('taskStatus');
+    const evrakNoInput = document.getElementById('turkpatentEvrakNo');
+    const docDateInput = document.getElementById('epatsDocumentDate');
+    
+    console.log('🔧 DEBUG: Form elements:', {
+        form: !!form,
+        statusSelect: !!statusSelect,
+        evrakNoInput: !!evrakNoInput,
+        docDateInput: !!docDateInput
+    });
+    
+    if (!form || !statusSelect) {
+        console.error('❌ HATA: Gerekli form elementleri bulunamadı!');
+        showNotification('Form elementleri bulunamadı!', 'error');
+        return;
+    }
 
-    if (this.uploadedEpatsFile && !document.getElementById('turkpatentEvrakNo').value.trim()) {
+    // Form değerlerini al ve kontrol et
+    const selectedStatus = statusSelect.value;
+    const evrakNo = evrakNoInput?.value?.trim() || '';
+    const docDate = docDateInput?.value || '';
+    const hasPdf = !!this.uploadedEpatsFile;
+    
+    console.log('🔧 DEBUG: Form değerleri:', {
+        selectedStatus,
+        evrakNo,
+        docDate,
+        hasPdf,
+        uploadedEpatsFile: this.uploadedEpatsFile
+    });
+
+    // EPATS validation
+    if (this.uploadedEpatsFile && !evrakNo) {
+        console.warn('⚠️ WARNING: EPATS dosyası var ama evrak no yok');
         showNotification('EPATS Evrakı yüklendiğinde TURKPATENT Evrak No alanı zorunludur.', 'error');
         return;
     }
     
-    const form = document.getElementById('taskDetailForm');
+    // Task data oluştur
     const updatedTaskData = {
         title: form.taskTitle.value,
         description: form.taskDescription.value,
@@ -1199,52 +1236,57 @@ async handleTaskUpdate(e) {
         assignedTo_email: this.allUsers.find(u => u.id === form.assignedTo.value)?.email || '',
         deliveryDate: form.deliveryDate.value || null,
         updatedAt: new Date().toISOString(),
-        details: { ...this.currentTask.details } // Mevcut detaylarla başla
+        details: { ...this.currentTask.details },
+        status: selectedStatus
     };
-
-    // Durumu formdan al
-    updatedTaskData.status = form.taskStatus.value;
     
-    // Sadece "Tamamlandı" durumunda EPATS üçlüsü (PDF + Evrak No + İşlem Tarihi) zorunlu
-    if (updatedTaskData.status === 'completed') {
-        const evrakNo = document.getElementById('turkpatentEvrakNo')?.value.trim();
-        const docDate = document.getElementById('epatsDocumentDate')?.value; // YYYY-MM-DD beklenir
-        const hasPdf = !!this.uploadedEpatsFile;
+    console.log('🔧 DEBUG: Base updatedTaskData:', updatedTaskData);
 
+    // Completed status kontrolü
+    if (selectedStatus === 'completed') {
+        console.log('🔧 DEBUG: Status completed seçildi, EPATS kontrolü yapılıyor...');
+        
         if (!hasPdf || !evrakNo || !docDate) {
+            console.error('❌ COMPLETED VALIDATION HATASI:', {
+                hasPdf,
+                evrakNo,
+                docDate
+            });
             showNotification(
                 'Durumu "Tamamlandı" yapabilmek için EPATS dosyası, Evrak No ve İşlem Tarihi zorunludur.',
                 'error'
             );
-            return; // Kaydı durdur
+            return;
         }
+        console.log('✅ DEBUG: EPATS validation geçti, devam ediliyor...');
     }
 
-    // EPATS dosyası işlemleri - Validation'dan SONRA yapılmalı
+    // EPATS document oluştur
     if (this.uploadedEpatsFile) {
-        const documentDateValue = document.getElementById('epatsDocumentDate')?.value || null;
-        const evrakNo = document.getElementById('turkpatentEvrakNo')?.value?.trim() || '';
+        console.log('🔧 DEBUG: EPATS dosyası işleniyor...');
         
         updatedTaskData.details.epatsDocument = {
             ...this.uploadedEpatsFile,
             turkpatentEvrakNo: evrakNo,
-            documentDate: documentDateValue ? new Date(documentDateValue).toISOString() : null
+            documentDate: docDate ? new Date(docDate).toISOString() : null
         };
         
-        console.log('EPATS Document being saved:', updatedTaskData.details.epatsDocument);
+        console.log('🔧 DEBUG: EPATS document oluşturuldu:', updatedTaskData.details.epatsDocument);
     } else {
+        console.log('🔧 DEBUG: EPATS dosyası yok, null olarak ayarlanıyor');
         updatedTaskData.details.epatsDocument = null;
     }
-    
-    // Eğer EPATS dosyası yeni yüklendiyse, önceki durumu veritabanına kaydet
+
+    // Status before EPATS upload logic
     if (this.uploadedEpatsFile && this.statusBeforeEpatsUpload) {
         updatedTaskData.details.statusBeforeEpatsUpload = this.statusBeforeEpatsUpload;
-    }
-    // Eğer EPATS dosyası kaldırıldıysa, veritabanındaki önceki durumu temizle
-    else if (!this.uploadedEpatsFile && this.currentTask.details?.epatsDocument) {
-        updatedTaskData.details.statusBeforeEpatsUpload = null; 
+        console.log('🔧 DEBUG: statusBeforeEpatsUpload kaydedildi:', this.statusBeforeEpatsUpload);
+    } else if (!this.uploadedEpatsFile && this.currentTask.details?.epatsDocument) {
+        updatedTaskData.details.statusBeforeEpatsUpload = null;
+        console.log('🔧 DEBUG: statusBeforeEpatsUpload temizlendi');
     }
 
+    // Delivery date logic (önceki kod aynı kalabilir)
     const currentTaskDeliveryDateFormatted = this.currentTask.deliveryDate ? 
         this.formatDateToYYYYMMDD(this.currentTask.deliveryDate) : null;
 
@@ -1252,6 +1294,7 @@ async handleTaskUpdate(e) {
     const isOfficialDueDatePreviouslyEmpty = !this.currentTask.officialDueDate && form.deliveryDate.value;
 
     if ((isDeliveryDateChanged || isOfficialDueDatePreviouslyEmpty) && this.calculatedOfficialDueDate) {
+        // Tarih hesaplama kodları (aynı kalabilir)
         let confirmation = true;
         const existingOfficialDueDateFormatted = this.currentTask.officialDueDate ?
             this.formatDateToYYYYMMDD(new Date(this.currentTask.officialDueDate)) : null;
@@ -1268,9 +1311,7 @@ async handleTaskUpdate(e) {
             updatedTaskData.officialDueDate = this.calculatedOfficialDueDate.toISOString();
             updatedTaskData.officialDueDateDetails = this.calculatedOfficialDueDateDetails;
             updatedTaskData.dueDate = this.calculatedOperationalDueDate ? this.calculatedOperationalDueDate.toISOString() : null;
-            showNotification('Resmi tarihler güncellendi!', 'info');
         } else {
-            showNotification('Resmi tarihler değiştirilmedi.', 'info');
             if(this.currentTask.officialDueDate) updatedTaskData.officialDueDate = this.currentTask.officialDueDate;
             if(this.currentTask.officialDueDateDetails) updatedTaskData.officialDueDateDetails = this.currentTask.officialDueDateDetails;
             if(this.currentTask.dueDate) updatedTaskData.dueDate = this.currentTask.dueDate; 
@@ -1279,51 +1320,56 @@ async handleTaskUpdate(e) {
     } else {
         if(this.currentTask.officialDueDate) updatedTaskData.officialDueDate = this.currentTask.officialDueDate;
         if(this.currentTask.officialDueDateDetails) updatedTaskData.officialDueDateDetails = this.currentTask.officialDueDateDetails;
-        if(form.taskDueDate.value) updatedTaskData.dueDate = form.taskDueDate.value; 
+        if(form.taskDueDate?.value) updatedTaskData.dueDate = form.taskDueDate.value; 
         else if(this.currentTask.dueDate) updatedTaskData.dueDate = this.currentTask.dueDate; 
         else updatedTaskData.dueDate = null;
     }
 
-    // Related IP Record işlemleri
+    // Related IP Record
     if (this.selectedRelatedIpRecord) {
         updatedTaskData.relatedIpRecordId = this.selectedRelatedIpRecord.id;
         updatedTaskData.relatedIpRecordTitle = this.selectedRelatedIpRecord.title;
-    } 
-    else if (this.currentTask && this.currentTask.relatedIpRecordId) {
+    } else if (this.currentTask && this.currentTask.relatedIpRecordId) {
         updatedTaskData.relatedIpRecordId = this.currentTask.relatedIpRecordId;
         updatedTaskData.relatedIpRecordTitle = this.currentTask.relatedIpRecordTitle;
-    } 
-    else {
+    } else {
         updatedTaskData.relatedIpRecordId = null;
         updatedTaskData.relatedIpRecordTitle = null;
     }
 
-    // Related Party işlemleri
+    // Related Party
     if (this.selectedRelatedParty) {
         updatedTaskData.details.relatedParty = { id: this.selectedRelatedParty.id, name: this.selectedRelatedParty.name };
     } else {
         updatedTaskData.details.relatedParty = null;
     }
     
+    console.log('🔧 DEBUG: Final updatedTaskData:', JSON.stringify(updatedTaskData, null, 2));
+    
     try {
-        console.log('Task update data being sent:', updatedTaskData);
+        console.log('🔧 DEBUG: taskService.updateTask çağrılıyor...', this.taskId);
         const result = await taskService.updateTask(this.taskId, updatedTaskData);
+        
+        console.log('🔧 DEBUG: taskService.updateTask sonucu:', result);
+        
         if (result.success) {
+            console.log('✅ DEBUG: Task başarıyla güncellendi!');
             showNotification('İş başarıyla güncellendi!', 'success');
             
             // Sayfayı yenile
             setTimeout(() => {
+                console.log('🔧 DEBUG: Sayfa yenileniyor...');
                 window.location.reload();
             }, 1000);
         } else {
+            console.error('❌ DEBUG: Task güncellenirken hata:', result.error);
             showNotification(`Güncelleme hatası: ${result.error}`, 'error');
         }
     } catch (error) {
-        console.error('Güncelleme hatası:', error);
+        console.error('❌ DEBUG: Exception caught:', error);
         showNotification(`Güncelleme hatası: ${error.message}`, 'error');
     }
 }
-
             searchIpRecords(query) {
                 const searchResultsContainer = document.getElementById('relatedIpRecordSearchResults');
                 searchResultsContainer.innerHTML = '';
