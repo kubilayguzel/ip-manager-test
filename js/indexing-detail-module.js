@@ -845,6 +845,25 @@ async handleIndexing() {
                 clientId: this.matchedRecord?.clientId || this.matchedRecord?.owners?.[0]?.id || 'client_not_set'
             }
         );
+        // 5. Parent transaction'a requestResult = childTypeId yaz (son indekse göre güncellenir)
+        if (this.selectedTransactionId && childTypeId) {
+        try {
+            await updateDoc(
+            doc(
+                collection(firebaseServices.db, 'ipRecords', this.matchedRecord.id, 'transactions'),
+                this.selectedTransactionId
+            ),
+            {
+                requestResult: childTypeId,
+                requestResultUpdatedAt: new Date()
+            }
+            );
+            console.log('Parent requestResult güncellendi:', this.selectedTransactionId, childTypeId);
+        } catch (err) {
+            console.error('requestResult güncellenemedi:', err);
+            // burada hatayı kullanıcıya göstermek istemezsen sadece log bırakmak yeterli
+        }
+        }
 
         const successMessage = createdTaskId ? 
             'PDF indekslendi ve ilgili iş tetiklendi!' : 
