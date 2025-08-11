@@ -360,8 +360,6 @@
 }
 
     </style>
-
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
 </head>
 <body>
     <div id="notification-container" class="notification-container"></div>
@@ -509,7 +507,7 @@
             
 renderCurrentPage() {
   const tableBody = document.getElementById('portfolioTableBody');
-  if (!tableBody || !pagination) return;
+  if (!tableBody || !this.pagination) return;
   tableBody.innerHTML = '';
 
   const isObjections = (this.activeTypeFilter === 'objections');
@@ -520,7 +518,7 @@ renderCurrentPage() {
     : (this.filteredAndSortedRecords || []);
 
   // Sayfalama
-  const pageData = pagination.getCurrentPageData(baseData) || [];
+  const pageData = this.pagination.getCurrentPageData(baseData) || [];
 
   // Küçük yardımcılar
   const safe = (v) => (v ?? '').toString();
@@ -540,7 +538,7 @@ renderCurrentPage() {
     // 1) Grupla
     const groups = {};
     pageData.forEach(r => {
-      const appNo = r.applicationNumber || r.applicationNo || r.basvuruNo || r.application_number || '—';
+      const appNo = r.applicationNo || r.basvuruNo || r.application_number || '—';
       if (!groups[appNo]) groups[appNo] = [];
       groups[appNo].push(r);
     });
@@ -548,7 +546,6 @@ renderCurrentPage() {
     // 2) Grupları sırala (opsiyonel: appNo artan)
     const orderedAppNos = Object.keys(groups).sort((a,b) => a.localeCompare(b, 'tr'));
 
-    
     // 3) HTML üret
     const frag = document.createDocumentFragment();
 
@@ -557,26 +554,7 @@ renderCurrentPage() {
       const groupId = appNo;
       const groupIdSafe = safeId(groupId);
 
-      if (rows.length === 1) {
-        // Tek kayıt: akordeonsuz düz satır
-        const r = rows[0];
-        const tr = document.createElement('tr');
-        tr.dataset.recordId = r.id || '';
-        tr.innerHTML = `
-          <td></td>
-          <td>${safe(r.recordType || r.kayitTipi || r.type || 'trademark')}</td>
-          <td>${safe(r.transactionTypeName || r.islemTipi || r.transactionType || '')}</td>
-          <td>${safe(r.applicationNumber || r.applicationNo || r.basvuruNo || r.application_number || '')}</td>
-          <td>${safe(r.applicantName || r.basvuruSahibi || r.ownerName || '')}</td>
-          <td>${safe(r.opponent || r.opposerName || r.itirazSahibi || '')}</td>
-          <td>${fmtDate(r.bulletinDate || r.bultenTarihi || r.opposedMarkBulletinDate || '')}</td>
-          <td>${safe(r.bulletinNo || r.bultenNo || r.opposedMarkBulletinNo || '') || '-'}</td>
-        `;
-        frag.appendChild(tr);
-        return;
-      }
-
-      // Birden fazla kayıt: grup başlığı + alt satırlar
+      // Grup başlığı satırı
       const trHeader = document.createElement('tr');
       trHeader.className = 'group-header';
       trHeader.dataset.groupId = groupId;
@@ -595,22 +573,32 @@ renderCurrentPage() {
       `;
       frag.appendChild(trHeader);
 
+      // Grup satırları
       rows.forEach((r, idx) => {
         const tr = document.createElement('tr');
         tr.className = 'group-row';
         tr.dataset.parentId = groupId;
+        // sadece ilk satıra id/aria-controls bağlayalım (görsel amaçlı)
         if (idx === 0) tr.id = `grp-${groupIdSafe}`;
         tr.setAttribute('aria-hidden', 'true');
 
+        const recordType = r.recordType || r.kayitTipi || r.type || 'trademark';
+        const txnType    = r.transactionTypeName || r.islemTipi || r.transactionType || '';
+        const appNoCell  = r.applicationNo || r.basvuruNo || r.application_number || '';
+        const applicant  = r.applicantName || r.basvuruSahibi || r.ownerName || '';
+        const opposer    = r.opposerName || r.itirazSahibi || '';
+        const bDate      = r.bulletinDate || r.bultenTarihi || r.opposedMarkBulletinDate || '';
+        const bNo        = r.bulletinNo || r.bultenNo || r.opposedMarkBulletinNo || '';
+
         tr.innerHTML = `
           <td class="toggle-cell"></td>
-          <td>${safe(r.recordType || r.kayitTipi || r.type || 'trademark')}</td>
-          <td>${safe(r.transactionTypeName || r.islemTipi || r.transactionType || '')}</td>
-          <td>${safe(r.applicationNumber || r.applicationNo || r.basvuruNo || r.application_number || '')}</td>
-          <td>${safe(r.applicantName || r.basvuruSahibi || r.ownerName || '')}</td>
-          <td>${safe(r.opponent || r.opposerName || r.itirazSahibi || '')}</td>
-          <td>${fmtDate(r.bulletinDate || r.bultenTarihi || r.opposedMarkBulletinDate || '')}</td>
-          <td>${safe(r.bulletinNo || r.bultenNo || r.opposedMarkBulletinNo || '') || '-'}</td>
+          <td>${safe(recordType)}</td>
+          <td>${safe(txnType)}</td>
+          <td>${safe(appNoCell)}</td>
+          <td>${safe(applicant)}</td>
+          <td>${safe(opposer)}</td>
+          <td>${fmtDate(bDate)}</td>
+          <td>${safe(bNo) || '-'}</td>
         `;
         frag.appendChild(tr);
       });
@@ -618,15 +606,14 @@ renderCurrentPage() {
 
     tableBody.appendChild(frag);
 
-    // Akordeonu bağla (durumu hatırlayan fonksiyon) — sadece çoklu gruplar için etkili olur
+    // Akordeonu bağla (durumu hatırlayan fonksiyon)
     if (typeof wireObjectionsAccordion === 'function') {
       wireObjectionsAccordion();
     }
     return;
   }
 
-
-  // ——— İtirazlar dışındaki sekmeler: tabloda tanımlı kolonlara hizalı render ———
+  // ——— İtirazlar dışındaki sekmeler: düz liste ———
   const frag = document.createDocumentFragment();
   pageData.forEach(r => {
     const tr = document.createElement('tr');
@@ -640,13 +627,12 @@ renderCurrentPage() {
     const appStatus = r.applicationStatus || r.status || '';
     const applicants = Array.isArray(r.applicants) ? r.applicants.map(a => a.name).join(', ') : (r.applicantName || '');
 
-    // brand image (only for trademarks if available)
-    let brandImg = '';
-    const imgSrc = (ipType === 'trademark')
-        ? (r.brandImageUrl || r.details?.brandInfo?.brandImage || '')
-        : '';
-    if (imgSrc) {
-      brandImg = `<div class="trademark-image-wrapper"><img class="trademark-image-thumbnail" src="${imgSrc}" alt="logo"></div>`;
+    // brand image cell only when active tab is 'trademark'
+    let brandImgCell = '';
+    if (this.activeTypeFilter === 'trademark') {
+      const imgSrc = r.brandImageUrl || (r.details && r.details.brandInfo && r.details.brandInfo.brandImage) || '';
+      const brandImg = imgSrc ? `<div class="trademark-image-wrapper"><img class="trademark-image-thumbnail" src="${imgSrc}" alt="logo"></div>` : '';
+      brandImgCell = `<td>${brandImg}</td>`;
     }
 
     // actions
@@ -662,7 +648,7 @@ renderCurrentPage() {
       <td>${safe(status)}</td>
       <td>${safe(ipType)}</td>
       <td>${safe(title)}</td>
-      <td style="display:${(ipType==='trademark') ? 'table-cell' : 'none'}">${brandImg}</td>
+      ${brandImgCell}
       <td>${safe(appNo)}</td>
       <td>${fmtDate(appDate)}</td>
       <td>${safe(appStatus)}</td>
@@ -1360,9 +1346,8 @@ renderCurrentPage() {
                 filterRow.innerHTML = '';
 
                  const isObjections = (this.activeTypeFilter === 'objections');
-                 const columns = isObjections
+                 let columns = isObjections
                    ? [
-                       { key: 'toggle', label: '', sortable: false, width: '44px' },
                        { key: 'recordType',        label: 'Kayıt Tipi',  sortable: true,  width: '110px' },
                        { key: 'transactionTypeName',   label: 'İşlem Tipi',  sortable: true,  width: '180px' },
                        { key: 'applicationNumber', label: 'Başvuru No',  sortable: true,  width: '140px' },
@@ -1383,6 +1368,9 @@ renderCurrentPage() {
                        { key: 'applicants', label: 'Baş.Sahibi', sortable: true, width: '200px' },
                        { key: 'actions', label: 'İşlemler', sortable: false, width: '250px' }
                      ];
+                if (!isObjections && this.activeTypeFilter !== 'trademark') {
+                    columns = columns.filter(c => c.key !== 'brandImage');
+                }
 
                 columns.forEach(col => {
                     const th = document.createElement('th');
@@ -1395,19 +1383,10 @@ renderCurrentPage() {
                     th.innerHTML = col.isCheckbox ? '' : col.label;
 
                     const thFilter = document.createElement('th');
-                    if (col.sortable && !col.isCheckbox && col.key !== 'toggle') {
+                    if (col.sortable && !col.isCheckbox) {
                         thFilter.innerHTML = `<input type="text" class="column-filter" data-column="${col.key}" placeholder="${col.label} ara...">`;
                     }
                     
-                    // Görsel kolonu: Tümü ve marka dışı sekmelerde gizle
-                    if (col.key === 'brandImage' && this.activeTypeFilter !== 'trademark') {
-                        th.style.display = 'none';
-                        thFilter.style.display = 'none';
-                    }
-                    if (col.key === 'brandImage' && this.activeTypeFilter === 'all') {
-                        th.style.display = 'none';
-                        thFilter.style.display = 'none';
-                    }
 
                     headerRow.appendChild(th);
                     filterRow.appendChild(thFilter);
@@ -1453,7 +1432,7 @@ renderCurrentPage() {
     const state = loadState();
 
     // İlk bağlama: butonlara click + klavye
-    document.querySelectorAll('#portfolioTableBody .group-header').forEach(header => {
+    document.querySelectorAll('#objectionsTable .group-header').forEach(header => {
       const groupId = header.getAttribute('data-group-id');
       const btn = header.querySelector('.accordion-toggle');
       if (!btn) return;
