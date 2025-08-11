@@ -542,11 +542,11 @@ renderCurrentPage() {
         fragment.appendChild(child);
     });
 
-    this.tbody.innerHTML = '';
-    this.tbody.appendChild(fragment);
+    tableBody.innerHTML = '';
+    tableBody.appendChild(fragment);
 
     // Toggle davranışı
-    this.tbody.querySelectorAll('.toggle-group').forEach(btn => {
+    tableBody.querySelectorAll('.toggle-group').forEach(btn => 
         btn.addEventListener('click', (e) => {
         const targetSel = btn.getAttribute('data-target');
         const el = this.tbody.querySelector(targetSel);
@@ -748,12 +748,12 @@ renderCurrentPage() {
                         if (globalSelect) globalSelect.checked = false;
                         this.initialRenderTableStructure();
                         if (this.activeTypeFilter === 'objections') {
-                            this.loadObjectionRows()
-                                .then(() => this.renderCurrentPage())
-                                .catch(err => console.error('İtiraz satırları yüklenemedi:', err));
-                            } else {
-                            this.applyFiltersAndSort();
-                            }
+                          this.loadObjectionRows()
+                            .then(() => { this.buildObjectionGroups(); this.renderCurrentPage(); })
+                            .catch(err => console.error('İtiraz satırları yüklenemedi:', err));
+                        } else {
+                        this.applyFiltersAndSort();
+                        }
                     });
                 });
 
