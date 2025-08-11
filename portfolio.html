@@ -477,27 +477,30 @@ renderCurrentPage() {
   const isObjections = (this.activeTypeFilter === 'objections');
 
   // 📌 İtirazlar sekmesi için özel render
-  if (isObjections) {
-    const totalCols = 7;
-    const frag = document.createDocumentFragment();
+if (isObjections) {
+  const totalCols = 7;
+  const frag = document.createDocumentFragment();
 
-    (this.objectionGroups || []).forEach((g, i) => {
-      const safeKey = String(g.key).replace(/\W/g, '');
-      const groupId = `grp-${i}-${safeKey}`;
+  (this.objectionGroups || []).forEach((g, i) => {
+    const safeKey = String(g.key).replace(/\W/g, '');
+    const groupId = `grp-${i}-${safeKey}`;
 
-      // Parent satır
+    if (g.hasMultiple) {
+      // PARENT satır: oku BAŞA aldık
       const parent = document.createElement('tr');
       parent.className = 'group-parent';
       parent.innerHTML = `
         <td colspan="${totalCols}" class="bg-light">
-          <button class="btn btn-sm btn-link p-0 mr-2 toggle-group" data-target="#${groupId}" aria-expanded="false">▶</button>
+          <span class="mr-2">
+            <button class="btn btn-sm btn-link p-0 toggle-group"
+                    data-target="#${groupId}" aria-expanded="false">▶</button>
+          </span>
           <strong>${g.key}</strong> başvuru numarasına ait itiraz işlemleri
           <span class="badge badge-secondary ml-2">${g.items.length}</span>
-        </td>
-      `;
+        </td>`;
       frag.appendChild(parent);
 
-      // Child satırlar
+      // CHILD tablo
       const child = document.createElement('tr');
       child.className = 'group-children';
       child.innerHTML = `
@@ -525,38 +528,48 @@ renderCurrentPage() {
                     <td title="${r.opponent || '-'}">${r.opponent || '-'}</td>
                     <td>${r.bulletinDate || '-'}</td>
                     <td>${r.bulletinNo || '-'}</td>
-                  </tr>
-                `).join('')}
+                  </tr>`).join('')}
               </tbody>
             </table>
           </div>
-        </td>
-      `;
+        </td>`;
       frag.appendChild(child);
+    } else {
+      // TEK KAYIT: akordeon yok, düz tek satır
+      const r = g.items[0];
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${r.recordType || '-'}</td>
+        <td>${r.transactionTypeName || '-'}</td>
+        <td>${r.applicationNumber || '-'}</td>
+        <td title="${r.applicantName || '-'}">${r.applicantName || '-'}</td>
+        <td title="${r.opponent || '-'}">${r.opponent || '-'}</td>
+        <td>${r.bulletinDate || '-'}</td>
+        <td>${r.bulletinNo || '-'}</td>`;
+      frag.appendChild(tr);
+    }
+  });
+
+  tableBody.innerHTML = '';
+  tableBody.appendChild(frag);
+
+  // toggle
+  tableBody.querySelectorAll('.toggle-group').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const targetSel = btn.getAttribute('data-target');
+      const el = tableBody.querySelector(targetSel);
+      if (!el) return;
+      if (typeof $(el).collapse === 'function') $(el).collapse('toggle');
+      else el.classList.toggle('show');
+
+      const expanded = btn.getAttribute('aria-expanded') === 'true';
+      btn.setAttribute('aria-expanded', String(!expanded));
+      btn.textContent = expanded ? '▶' : '▼';
     });
+  });
 
-    tableBody.appendChild(frag);
-
-    // Toggle davranışı
-    tableBody.querySelectorAll('.toggle-group').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const targetSel = btn.getAttribute('data-target');
-        const el = tableBody.querySelector(targetSel);
-        if (!el) return;
-
-        if (typeof $(el).collapse === 'function') {
-          $(el).collapse('toggle');
-        } else {
-          el.classList.toggle('show');
-        }
-        const expanded = btn.getAttribute('aria-expanded') === 'true';
-        btn.setAttribute('aria-expanded', String(!expanded));
-        btn.textContent = expanded ? '▶' : '▼';
-      });
-    });
-
-    return; // ⬅ sadece objections render edip fonksiyondan çık
-  }
+  return;
+}
 
   // 📌 Normal satır render (itiraz dışı)
   const baseData = this.filteredAndSortedRecords;
@@ -1297,19 +1310,17 @@ renderCurrentPage() {
 
             // İsterseniz grupları ve içindeki kayıtları tarihe göre sıralayabilirsiniz
             this.objectionGroups = Object.values(groupsMap)
-                .map(g => {
-                // çocukları (örn. bülten tarihine göre) sırala
+            .map(g => {
                 g.items.sort((a, b) => {
-                    const ad = new Date(a.bulletinDate || 0).getTime();
-                    const bd = new Date(b.bulletinDate || 0).getTime();
-                    return bd - ad; // yeni → eski
+                const ad = new Date(a.bulletinDate || 0).getTime();
+                const bd = new Date(b.bulletinDate || 0).getTime();
+                return bd - ad;
                 });
+                g.hasMultiple = g.items.length > 1;   // 👈 ek
                 return g;
-                })
-                // grup sırası: toplam öğe sayısı veya en yeni tarih vb.
-                .sort((a, b) => b.items.length - a.items.length);
+            })
+            .sort((a, b) => b.items.length - a.items.length);
             }
-
 
             initialRenderTableStructure() {
                 const headerRow = document.getElementById('portfolioTableHeaderRow');
