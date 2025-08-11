@@ -540,7 +540,7 @@ renderCurrentPage() {
     // 1) Grupla
     const groups = {};
     pageData.forEach(r => {
-      const appNo = r.applicationNo || r.basvuruNo || r.application_number || '—';
+      const appNo = r.applicationNumber || r.applicationNo || r.basvuruNo || r.application_number || '—';
       if (!groups[appNo]) groups[appNo] = [];
       groups[appNo].push(r);
     });
@@ -586,9 +586,9 @@ renderCurrentPage() {
 
         const recordType = r.recordType || r.kayitTipi || r.type || 'trademark';
         const txnType    = r.transactionTypeName || r.islemTipi || r.transactionType || '';
-        const appNoCell  = r.applicationNo || r.basvuruNo || r.application_number || '';
+        const appNoCell  = r.applicationNumber || r.applicationNo || r.basvuruNo || r.application_number || '';
         const applicant  = r.applicantName || r.basvuruSahibi || r.ownerName || '';
-        const opposer    = r.opposerName || r.itirazSahibi || '';
+        const opposer    = r.opponent || r.opposerName || r.itirazSahibi || '';
         const bDate      = r.bulletinDate || r.bultenTarihi || r.opposedMarkBulletinDate || '';
         const bNo        = r.bulletinNo || r.bultenNo || r.opposedMarkBulletinNo || '';
 
@@ -615,28 +615,48 @@ renderCurrentPage() {
     return;
   }
 
-  // ——— İtirazlar dışındaki sekmeler: düz liste ———
+  // ——— İtirazlar dışındaki sekmeler: tabloda tanımlı kolonlara hizalı render ———
   const frag = document.createDocumentFragment();
   pageData.forEach(r => {
     const tr = document.createElement('tr');
     tr.dataset.recordId = r.id || '';
 
-    const recordType = r.recordType || r.kayitTipi || r.type || '';
-    const txnType    = r.transactionTypeName || r.islemTipi || r.transactionType || '';
-    const appNo      = r.applicationNo || r.basvuruNo || r.application_number || '';
-    const applicant  = r.applicantName || r.basvuruSahibi || r.ownerName || '';
-    const opposer    = r.opposerName || r.itirazSahibi || '';
-    const bDate      = r.bulletinDate || r.bultenTarihi || '';
-    const bNo        = r.bulletinNo || r.bultenNo || '';
+    const status    = r.portfoyStatus || r.status || '';
+    const ipType    = r.type || r.recordType || r.ipType || '';
+    const title     = r.title || r.brandText || r.name || '';
+    const appNo     = r.applicationNumber || r.applicationNo || r.basvuruNo || r.application_number || '';
+    const appDate   = r.applicationDate || r.basvuruTarihi || '';
+    const appStatus = r.applicationStatus || r.status || '';
+    const applicants = Array.isArray(r.applicants) ? r.applicants.map(a => a.name).join(', ') : (r.applicantName || '');
+
+    // brand image (only for trademarks if available)
+    let brandImg = '';
+    const imgSrc = (ipType === 'trademark')
+        ? (r.brandImageUrl || r.details?.brandInfo?.brandImage || '')
+        : '';
+    if (imgSrc) {
+      brandImg = `<div class="trademark-image-wrapper"><img class="trademark-image-thumbnail" src="${imgSrc}" alt="logo"></div>`;
+    }
+
+    // actions
+    const idAttr = r.id || '';
+    const actions = `
+      <button class="action-btn view-btn" data-id="${idAttr}">Görüntüle</button>
+      <button class="action-btn edit-btn" data-id="${idAttr}">Düzenle</button>
+      <button class="action-btn delete-btn" data-id="${idAttr}">Sil</button>
+    `;
 
     tr.innerHTML = `
-      <td>${safe(recordType)}</td>
-      <td>${safe(txnType)}</td>
+      <td><input type="checkbox" class="record-checkbox" data-id="${idAttr}"></td>
+      <td>${safe(status)}</td>
+      <td>${safe(ipType)}</td>
+      <td>${safe(title)}</td>
+      <td style="display:${(ipType==='trademark') ? 'table-cell' : 'none'}">${brandImg}</td>
       <td>${safe(appNo)}</td>
-      <td>${safe(applicant)}</td>
-      <td>${safe(opposer)}</td>
-      <td>${fmtDate(bDate)}</td>
-      <td>${safe(bNo) || '-'}</td>
+      <td>${fmtDate(appDate)}</td>
+      <td>${safe(appStatus)}</td>
+      <td>${safe(applicants)}</td>
+      <td>${actions}</td>
     `;
     frag.appendChild(tr);
   });
