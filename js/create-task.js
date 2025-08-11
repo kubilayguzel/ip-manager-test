@@ -11,7 +11,8 @@ export const TASK_IDS = {
   BIRLESME: '3',
   VERASET: '18',
   YAYIMA_ITIRAZIN_YENIDEN_INCELENMESI: '19', // (senin adlandırmanla)
-  ITIRAZ_YAYIN: '20'                           // Yayına İtiraz
+  ITIRAZ_YAYIN: '20',      
+  KARARA_ITIRAZ: '7'                      
 };
 
 export const RELATED_PARTY_REQUIRED = new Set([
@@ -21,7 +22,8 @@ export const RELATED_PARTY_REQUIRED = new Set([
   TASK_IDS.BIRLESME,
   TASK_IDS.VERASET,
   TASK_IDS.YAYIMA_ITIRAZIN_YENIDEN_INCELENMESI, // 19
-  TASK_IDS.ITIRAZ_YAYIN   
+  TASK_IDS.ITIRAZ_YAYIN, 
+  TASK_IDS.KARARA_ITIRAZ 
 ]);
 
 export const PARTY_LABEL_BY_ID = {
@@ -31,7 +33,8 @@ export const PARTY_LABEL_BY_ID = {
   [TASK_IDS.BIRLESME]: 'Birleşilen Taraf',
   [TASK_IDS.VERASET]: 'Mirasçı',
   [TASK_IDS.YAYIMA_ITIRAZIN_YENIDEN_INCELENMESI]: 'İtiraz Sahibi',
-  [TASK_IDS.ITIRAZ_YAYIN]: 'İtiraz Sahibi'
+  [TASK_IDS.ITIRAZ_YAYIN]: 'İtiraz Sahibi',
+  [TASK_IDS.KARARA_ITIRAZ]: 'İtiraz Sahibi'
 };
 
 const asId = (v) => String(v ?? '');
