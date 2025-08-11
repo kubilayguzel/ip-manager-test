@@ -573,6 +573,8 @@
                 <td>${safe(r.opponent || r.opposerName || r.itirazSahibi || '')}</td>
                 <td>${fmtDate(r.bulletinDate || r.bultenTarihi || r.opposedMarkBulletinDate || '')}</td>
                 <td>${safe(r.bulletinNo || r.bultenNo || r.opposedMarkBulletinNo || '') || '-'}</td>
+                <td>${safe(r.epatsDate || '-')}</td>
+                <td>${safe(r.statusText || 'Karar Bekleniyor')}</td>
                 `;
                 frag.appendChild(tr);
                 return;
@@ -589,7 +591,7 @@
                     <i class="fas fa-chevron-right"></i>
                 </button>
                 </td>
-                <td colspan="7" class="group-title">
+                <td colspan="9" class="group-title">
                 <span class="badge badge-soft">${safe(appNo)}</span>
                 <strong>başvuru numarasına ait itiraz işlemleri</strong>
                 <span class="count-dot">${rows.length}</span>
@@ -613,6 +615,8 @@
                 <td>${safe(r.opponent || r.opposerName || r.itirazSahibi || '')}</td>
                 <td>${fmtDate(r.bulletinDate || r.bultenTarihi || r.opposedMarkBulletinDate || '')}</td>
                 <td>${safe(r.bulletinNo || r.bultenNo || r.opposedMarkBulletinNo || '') || '-'}</td>
+                <td>${safe(r.epatsDate || '-')}</td>
+                <td>${safe(r.statusText || 'Karar Bekleniyor')}</td>
                 `;
                 frag.appendChild(tr);
             });
@@ -1331,6 +1335,26 @@
                 (t?.opponent?.name) ||
                 '-';
 
+                const epatsDateRaw = details?.epatsDocument?.documentDate || null;
+                const epatsDate = fmtDate(epatsDateRaw);
+
+                // Durum = parent transaction.requestResult
+                let reqResult = null;
+                try {
+                const parentTxId = details?.parentTransactionId || details?.selectedTransactionId || null;
+                if (rec?.id && parentTxId) {
+                    const txRes = await ipRecordsService.getTransactionsForRecord(rec.id);
+                    const txList = (txRes?.success && Array.isArray(txRes.transactions)) ? txRes.transactions : [];
+                    const parentTx = txList.find(x => x.id === parentTxId);
+                    reqResult = parentTx?.requestResult ?? null;
+                }
+                } catch (e) {
+                console.warn('requestResult okunamadı', e);
+                }
+                const statusText = (reqResult === 30 || reqResult === '30')
+                ? 'Ret'
+                : (reqResult == null || reqResult === '' ? 'Karar Bekleniyor' : String(reqResult));
+
                 rows.push({
                     id: t.id,
                     recordType: rec?.type || '-',                          // Kayıt Tipi
@@ -1339,7 +1363,9 @@
                     applicantName: applicants || '-',                      // Başvuru Sahibi
                     opponent: opponentName,                                // İtiraz Sahibi
                     bulletinDate,                                          // Bülten Tarihi
-                    bulletinNo                                             // Bülten No
+                    bulletinNo,                                            // Bülten No
+                    epatsDate,
+                    statusText
                     
                 });
                 } catch (e) {
@@ -1389,7 +1415,9 @@
                         { key: 'applicantName',     label: 'Başvuru Sahibi', sortable: true, width: '240px' },
                         { key: 'opponent', label: 'İtiraz Sahibi', sortable: true, width: '200px' },
                         { key: 'bulletinDate',      label: 'Bülten Tarihi', sortable: true, width: '140px' },
-                        { key: 'bulletinNo',        label: 'Bülten No',   sortable: true,  width: '120px' }
+                        { key: 'bulletinNo',        label: 'Bülten No',   sortable: true,  width: '120px' },
+                        { key: 'epatsDate',         label: 'İşlem Tarihi', sortable: true, width: '130px' },
+                        { key: 'statusText',        label: 'Durum',        sortable: true, width: '140px' }
                     ]
                     : [
                         { key: 'selection', label: '', sortable: false, isCheckbox: true, width: '40px' },
