@@ -481,6 +481,7 @@ renderCurrentPage() {
         <td>${record.transactionTypeName || '-'}</td>
         <td>${record.applicationNumber || '-'}</td>
         <td title="${record.applicantName || '-'}">${record.applicantName || '-'}</td>
+        <td title="${record.opponent || '-'}">${record.opponent || '-'}</td>
         <td>${record.bulletinDate || '-'}</td>
         <td>${record.bulletinNo || '-'}</td>
       `;
@@ -1195,6 +1196,11 @@ renderCurrentPage() {
                 opposedDateRaw
                 ? fmtDate(opposedDateRaw)
                 : fmtDate(details.bulletinDate ?? t.bulletinDate ?? null);
+                
+                const opponentName =
+                (details?.opponent?.name) ||
+                (t?.opponent?.name) ||
+                '-';
 
                 rows.push({
                     id: t.id,
@@ -1202,6 +1208,7 @@ renderCurrentPage() {
                     transactionTypeName,                                   // İşlem Tipi
                     applicationNumber,                                     // Başvuru No
                     applicantName: applicants || '-',                      // Başvuru Sahibi
+                    opponent: opponentName,                                // İtiraz Sahibi
                     bulletinDate,                                          // Bülten Tarihi
                     bulletinNo                                             // Bülten No
                     
@@ -1227,6 +1234,7 @@ renderCurrentPage() {
                        { key: 'transactionTypeName',   label: 'İşlem Tipi',  sortable: true,  width: '180px' },
                        { key: 'applicationNumber', label: 'Başvuru No',  sortable: true,  width: '140px' },
                        { key: 'applicantName',     label: 'Başvuru Sahibi', sortable: true, width: '240px' },
+                       { key: 'opponent', label: 'İtiraz Sahibi', sortable: true, width: '200px' },
                        { key: 'bulletinDate',      label: 'Bülten Tarihi', sortable: true, width: '140px' },
                        { key: 'bulletinNo',        label: 'Bülten No',   sortable: true,  width: '120px' }
                      ]
