@@ -971,9 +971,9 @@
 
             this.renderEpatsDocument();
 
-            // Durumu "Tamamlandı" olarak güncelle
-            if (taskStatusSelect) {
-                taskStatusSelect.value = 'completed';
+            // Otomatik completed yapma. Eğer o anda completed seçiliyse geri al:
+            if (taskStatusSelect && taskStatusSelect.value === 'completed') {
+                taskStatusSelect.value = this.statusBeforeEpatsUpload || 'open';
             }
         }
 
@@ -1203,7 +1203,20 @@ async recalculateOfficialAndOperationalDueDates() {
 
             // Durumu formdan al
             updatedTaskData.status = form.taskStatus.value;
+            // Sadece "Tamamlandı" durumunda EPATS üçlüsü (PDF + Evrak No + İşlem Tarihi) zorunlu
+            if (updatedTaskData.status === 'completed') {
+            const evrakNo = document.getElementById('turkpatentEvrakNo')?.value.trim();
+            const docDate = document.getElementById('epatsDocumentDate')?.value; // YYYY-MM-DD beklenir
+            const hasPdf = !!this.uploadedEpatsFile;
 
+            if (!hasPdf || !evrakNo || !docDate) {
+                showNotification(
+                'Durumu "Tamamlandı" yapabilmek için EPATS dosyası, Evrak No ve İşlem Tarihi zorunludur.',
+                'error'
+                );
+                return; // Kaydı durdur
+            }
+            }
             // Eğer EPATS dosyası yeni yüklendiyse, önceki durumu veritabanına kaydet
             if (this.uploadedEpatsFile && this.statusBeforeEpatsUpload) {
                 updatedTaskData.details.statusBeforeEpatsUpload = this.statusBeforeEpatsUpload;
@@ -1290,7 +1303,6 @@ async recalculateOfficialAndOperationalDueDates() {
                 documentDate: documentDateValue ? new Date(documentDateValue).toISOString() : null
             };
             } else {
-            // EPATS dokümanı kaldırıldıysa, alanları temizle
             updatedTaskData.details.epatsDocument = null;
             }
             
