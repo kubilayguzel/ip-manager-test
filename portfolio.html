@@ -548,6 +548,7 @@ renderCurrentPage() {
     // 2) Grupları sırala (opsiyonel: appNo artan)
     const orderedAppNos = Object.keys(groups).sort((a,b) => a.localeCompare(b, 'tr'));
 
+    
     // 3) HTML üret
     const frag = document.createDocumentFragment();
 
@@ -556,7 +557,26 @@ renderCurrentPage() {
       const groupId = appNo;
       const groupIdSafe = safeId(groupId);
 
-      // Grup başlığı satırı
+      if (rows.length === 1) {
+        // Tek kayıt: akordeonsuz düz satır
+        const r = rows[0];
+        const tr = document.createElement('tr');
+        tr.dataset.recordId = r.id || '';
+        tr.innerHTML = `
+          <td></td>
+          <td>${safe(r.recordType || r.kayitTipi || r.type || 'trademark')}</td>
+          <td>${safe(r.transactionTypeName || r.islemTipi || r.transactionType || '')}</td>
+          <td>${safe(r.applicationNumber || r.applicationNo || r.basvuruNo || r.application_number || '')}</td>
+          <td>${safe(r.applicantName || r.basvuruSahibi || r.ownerName || '')}</td>
+          <td>${safe(r.opponent || r.opposerName || r.itirazSahibi || '')}</td>
+          <td>${fmtDate(r.bulletinDate || r.bultenTarihi || r.opposedMarkBulletinDate || '')}</td>
+          <td>${safe(r.bulletinNo || r.bultenNo || r.opposedMarkBulletinNo || '') || '-'}</td>
+        `;
+        frag.appendChild(tr);
+        return;
+      }
+
+      // Birden fazla kayıt: grup başlığı + alt satırlar
       const trHeader = document.createElement('tr');
       trHeader.className = 'group-header';
       trHeader.dataset.groupId = groupId;
@@ -575,32 +595,22 @@ renderCurrentPage() {
       `;
       frag.appendChild(trHeader);
 
-      // Grup satırları
       rows.forEach((r, idx) => {
         const tr = document.createElement('tr');
         tr.className = 'group-row';
         tr.dataset.parentId = groupId;
-        // sadece ilk satıra id/aria-controls bağlayalım (görsel amaçlı)
         if (idx === 0) tr.id = `grp-${groupIdSafe}`;
         tr.setAttribute('aria-hidden', 'true');
 
-        const recordType = r.recordType || r.kayitTipi || r.type || 'trademark';
-        const txnType    = r.transactionTypeName || r.islemTipi || r.transactionType || '';
-        const appNoCell  = r.applicationNumber || r.applicationNo || r.basvuruNo || r.application_number || '';
-        const applicant  = r.applicantName || r.basvuruSahibi || r.ownerName || '';
-        const opposer    = r.opponent || r.opposerName || r.itirazSahibi || '';
-        const bDate      = r.bulletinDate || r.bultenTarihi || r.opposedMarkBulletinDate || '';
-        const bNo        = r.bulletinNo || r.bultenNo || r.opposedMarkBulletinNo || '';
-
         tr.innerHTML = `
           <td class="toggle-cell"></td>
-          <td>${safe(recordType)}</td>
-          <td>${safe(txnType)}</td>
-          <td>${safe(appNoCell)}</td>
-          <td>${safe(applicant)}</td>
-          <td>${safe(opposer)}</td>
-          <td>${fmtDate(bDate)}</td>
-          <td>${safe(bNo) || '-'}</td>
+          <td>${safe(r.recordType || r.kayitTipi || r.type || 'trademark')}</td>
+          <td>${safe(r.transactionTypeName || r.islemTipi || r.transactionType || '')}</td>
+          <td>${safe(r.applicationNumber || r.applicationNo || r.basvuruNo || r.application_number || '')}</td>
+          <td>${safe(r.applicantName || r.basvuruSahibi || r.ownerName || '')}</td>
+          <td>${safe(r.opponent || r.opposerName || r.itirazSahibi || '')}</td>
+          <td>${fmtDate(r.bulletinDate || r.bultenTarihi || r.opposedMarkBulletinDate || '')}</td>
+          <td>${safe(r.bulletinNo || r.bultenNo || r.opposedMarkBulletinNo || '') || '-'}</td>
         `;
         frag.appendChild(tr);
       });
@@ -608,12 +618,13 @@ renderCurrentPage() {
 
     tableBody.appendChild(frag);
 
-    // Akordeonu bağla (durumu hatırlayan fonksiyon)
+    // Akordeonu bağla (durumu hatırlayan fonksiyon) — sadece çoklu gruplar için etkili olur
     if (typeof wireObjectionsAccordion === 'function') {
       wireObjectionsAccordion();
     }
     return;
   }
+
 
   // ——— İtirazlar dışındaki sekmeler: tabloda tanımlı kolonlara hizalı render ———
   const frag = document.createDocumentFragment();
@@ -1351,6 +1362,7 @@ renderCurrentPage() {
                  const isObjections = (this.activeTypeFilter === 'objections');
                  const columns = isObjections
                    ? [
+                       { key: 'toggle', label: '', sortable: false, width: '44px' },
                        { key: 'recordType',        label: 'Kayıt Tipi',  sortable: true,  width: '110px' },
                        { key: 'transactionTypeName',   label: 'İşlem Tipi',  sortable: true,  width: '180px' },
                        { key: 'applicationNumber', label: 'Başvuru No',  sortable: true,  width: '140px' },
@@ -1383,7 +1395,7 @@ renderCurrentPage() {
                     th.innerHTML = col.isCheckbox ? '' : col.label;
 
                     const thFilter = document.createElement('th');
-                    if (col.sortable && !col.isCheckbox) {
+                    if (col.sortable && !col.isCheckbox && col.key !== 'toggle') {
                         thFilter.innerHTML = `<input type="text" class="column-filter" data-column="${col.key}" placeholder="${col.label} ara...">`;
                     }
                     
