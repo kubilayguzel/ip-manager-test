@@ -1370,43 +1370,53 @@ renderCurrentPage() {
                 }
             }
 
-            async loadObjectionRows() {
-            // Sadece objections sekmesi görünürken çağıracağız
-            const TYPE_SET = new Set(['7','19','20', 7, 19, 20]);
+async loadObjectionRows() {
+    console.log('🔄 FIXED loadObjectionRows başladı');
+    
+    // Sadece objections sekmesi görünürken çağıracağız
+    const TYPE_SET = new Set(['7','19','20', 7, 19, 20]);
+    console.log('🎯 Aranacak task tipleri:', Array.from(TYPE_SET));
 
-            // 1) Tasks'ı çek
-            // Projende taskService.getTasks gibi bir metot varsa onu kullan.
-            // Yoksa taskService.getAllTasks() + filtre de olur.
-            let tasks = [];
-            try {
-                const res = await taskService.getTasks?.() || await taskService.getAllTasks?.();
-                const arr = Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []);
-                tasks = arr.filter(t => TYPE_SET.has(String(t.taskType)));
-            } catch (e) {
-                console.error('Tasks yüklenemedi', e);
-                tasks = [];
+    // 1) Tasks'ı çek
+    let tasks = [];
+    try {
+        console.log('📡 Tasks çekiliyor...');
+        const res = await taskService.getTasks?.() || await taskService.getAllTasks?.();
+        const arr = Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []);
+        tasks = arr.filter(t => TYPE_SET.has(String(t.taskType)));
+        console.log('📊 İtiraz task sayısı:', tasks.length);
+    } catch (e) {
+        console.error('❌ Tasks yüklenemedi', e);
+        tasks = [];
+    }
+
+    // 2) Her task için ilgili IP kaydını topla
+    console.log('🔄 Task detayları işleniyor...');
+    const rows = [];
+    
+    for (const t of tasks) {
+        try {
+            console.log('🔄 Task işleniyor:', t.id);
+            
+            // İlgili portföy kaydı
+            let rec = null;
+            if (t.relatedIpRecordId) {
+                console.log('📡 IP kaydı çekiliyor:', t.relatedIpRecordId);
+                const r = await ipRecordsService.getRecordById(t.relatedIpRecordId);
+                rec = r?.success ? r.data : null;
+                console.log('📊 IP kaydı:', rec ? 'bulundu' : 'bulunamadı');
             }
 
-            // 2) Her task için ilgili IP kaydını topla
-            const rows = [];
-            for (const t of tasks) {
-                try {
-                // İlgili portföy kaydı
-                let rec = null;
-                if (t.relatedIpRecordId) {
-                    const r = await ipRecordsService.getRecordById(t.relatedIpRecordId);
-                    rec = r?.success ? r.data : null;
-                }
+            // işlem tipi adı (7/19/20)
+            const typeMeta = transactionTypesMap.get(String(t.taskType)) || transactionTypesMap.get(Number(t.taskType));
+            const transactionTypeName = (typeMeta?.alias || typeMeta?.name || String(t.taskType));
+            console.log('🏷️ İşlem tipi:', transactionTypeName);
 
-                // işlem tipi adı (7/19/20)
-                const typeMeta = transactionTypesMap.get(String(t.taskType)) || transactionTypesMap.get(Number(t.taskType));
-                const transactionTypeName = (typeMeta?.alias || typeMeta?.name || String(t.taskType));
+            // başvuru sahibi/numarası
+            const applicants = rec?.applicants?.map(a => a.name).join(', ') || (t.applicantName || '-');
+            const applicationNumber = rec?.applicationNumber || t.applicationNumber || '-';
 
-                // başvuru sahibi/numarası
-                const applicants = rec?.applicants?.map(a => a.name).join(', ') || (t.applicantName || '-');
-                const applicationNumber = rec?.applicationNumber || t.applicationNumber || '-';
-
-                const fmtDate = (d) => {
+            const fmtDate = (d) => {
                 if (!d) return '-';
                 if (typeof d === 'string') return d;
                 if (typeof d === 'object') {
@@ -1415,15 +1425,15 @@ renderCurrentPage() {
                 }
                 if (d instanceof Date && !isNaN(d)) return d.toLocaleDateString('tr-TR');
                 return String(d);
-                };
+            };
 
-                const details = t.details || t.extra || {};
-                const brandInfo = rec?.details?.brandInfo || {};
+            const details = t.details || t.extra || {};
+            const brandInfo = rec?.details?.brandInfo || {};
 
-                const opposedNo = brandInfo.opposedMarkBulletinNo ?? null;
-                const opposedDateRaw = brandInfo.opposedMarkBulletinDate ?? null;
+            const opposedNo = brandInfo.opposedMarkBulletinNo ?? null;
+            const opposedDateRaw = brandInfo.opposedMarkBulletinDate ?? null;
 
-                const bulletinNo =
+            const bulletinNo =
                 opposedNo
                 ?? details.bulletinNo
                 ?? details.bulletinId
@@ -1431,72 +1441,98 @@ renderCurrentPage() {
                 ?? t.bulletinId
                 ?? '-';
 
-                const bulletinDate =
+            const bulletinDate =
                 opposedDateRaw
                 ? fmtDate(opposedDateRaw)
                 : fmtDate(details.bulletinDate ?? t.bulletinDate ?? null);
-                
-                const opponentName =
+            
+            const opponentName =
                 (details?.opponent?.name) ||
                 (t?.opponent?.name) ||
                 '-';
 
-                const epatsDateRaw = details?.epatsDocument?.documentDate || null;
-                const epatsDate = fmtDate(epatsDateRaw);
+            const epatsDateRaw = details?.epatsDocument?.documentDate || null;
+            const epatsDate = fmtDate(epatsDateRaw);
 
-                // Durum = parent transaction.requestResult
+            // ✅ DÜZELTME: Durum = parent transaction.requestResult
             let statusText = 'Karar Bekleniyor'; // varsayılan değer
             
+            console.log('🔍 Task analiz ediliyor:', {
+                taskId: t.id,
+                applicationNumber,
+                hasRecord: !!rec,
+                recordId: rec?.id
+            });
+            
             try {
-                const parentTxId = details?.parentTransactionId || details?.selectedTransactionId || null;
-                
-                if (rec?.id && parentTxId) {
-                    console.log('🔍 Transaction kontrol ediliyor:', {
-                        recordId: rec.id,
-                        parentTxId: parentTxId
-                    });
-                    
+                if (rec?.id) {
+                    console.log('📡 Transactions çekiliyor için record:', rec.id);
                     const txRes = await ipRecordsService.getTransactionsForRecord(rec.id);
                     const txList = (txRes?.success && Array.isArray(txRes.transactions)) ? txRes.transactions : [];
                     
-                    console.log('📊 Bulunan transaction sayısı:', txList.length);
+                    console.log('📊 Transaction sayısı:', txList.length);
                     
-                    const parentTx = txList.find(x => x.id === parentTxId);
+                    // ✅ DÜZELTME: requestResult arama stratejisi
+                    let foundRequestResult = null;
                     
-                    if (parentTx) {
-                        console.log('✅ Parent transaction bulundu:', {
-                            id: parentTx.id,
-                            requestResult: parentTx.requestResult,
-                            requestResultType: typeof parentTx.requestResult
-                        });
-                        
-                        const reqResult = parentTx.requestResult;
-                        
-                        // ✅ DÜZELTME: requestResult kontrolü daha sıkı yapılıyor
-                        if (reqResult !== null && reqResult !== undefined && reqResult !== '') {
-                            // 30 değeri hem string hem number olarak kontrol edilir
-                            if (reqResult === 30 || reqResult === '30' || String(reqResult) === '30') {
-                                statusText = 'Ret';
-                                console.log('✅ Durum "Ret" olarak belirlendi');
-                            } else {
-                                // Diğer değerler için requestResult'ı string olarak göster
-                                statusText = String(reqResult);
-                                console.log('✅ Durum custom değer olarak belirlendi:', statusText);
+                    // 1. Önce parent transaction ID ile ara
+                    const parentTxId = details?.parentTransactionId || details?.selectedTransactionId;
+                    console.log('🔍 Parent TX ID araniyor:', parentTxId);
+                    
+                    if (parentTxId) {
+                        const parentTx = txList.find(x => x.id === parentTxId);
+                        if (parentTx) {
+                            console.log('✅ Parent transaction bulundu:', {
+                                id: parentTx.id,
+                                requestResult: parentTx.requestResult,
+                                type: typeof parentTx.requestResult
+                            });
+                            
+                            if (parentTx.requestResult !== null && parentTx.requestResult !== undefined && parentTx.requestResult !== '') {
+                                foundRequestResult = parentTx.requestResult;
+                                console.log('✅ Parent TX\'den requestResult bulundu:', foundRequestResult);
                             }
                         } else {
-                            console.log('⚠️ requestResult boş/null, varsayılan durum kullanılıyor');
+                            console.log('❌ Parent transaction bulunamadı, parentTxId:', parentTxId);
+                            console.log('📊 Mevcut transaction ID\'leri:', txList.map(tx => tx.id));
+                        }
+                    }
+                    
+                    // 2. Eğer parent'ta yoksa, tüm transaction'larda requestResult ara
+                    if (foundRequestResult === null) {
+                        console.log('🔍 Tüm transactions\'da requestResult aranıyor...');
+                        for (const tx of txList) {
+                            if (tx.requestResult !== null && tx.requestResult !== undefined && tx.requestResult !== '') {
+                                foundRequestResult = tx.requestResult;
+                                console.log('✅ Genel aramada requestResult bulundu:', foundRequestResult, 'TX ID:', tx.id);
+                                break;
+                            }
+                        }
+                    }
+                    
+                    // 3. requestResult değerini kontrol et ve statusText belirle
+                    if (foundRequestResult !== null) {
+                        console.log('🔍 requestResult kontrolü:', {
+                            value: foundRequestResult,
+                            type: typeof foundRequestResult,
+                            equals30: foundRequestResult === 30,
+                            equalsString30: foundRequestResult === '30',
+                            stringEquals30: String(foundRequestResult) === '30'
+                        });
+                        
+                        // ✅ DÜZELTME: 30 değeri kontrolü sıkılaştırıldı
+                        if (foundRequestResult === 30 || foundRequestResult === '30' || String(foundRequestResult) === '30') {
+                            statusText = 'Ret';
+                            console.log('✅ Status "Ret" olarak belirlendi');
+                        } else {
+                            statusText = String(foundRequestResult);
+                            console.log('✅ Status custom değer olarak belirlendi:', statusText);
                         }
                     } else {
-                        console.log('❌ Parent transaction bulunamadı, parentTxId:', parentTxId);
-                        console.log('📊 Mevcut transaction ID\'leri:', txList.map(tx => tx.id));
+                        console.log('⚠️ Hiçbir transaction\'da requestResult bulunamadı');
                     }
                 } else {
-                    if (!rec?.id) {
-                        console.log('⚠️ IP record ID yok');
-                    }
-                    if (!parentTxId) {
-                        console.log('⚠️ Parent transaction ID yok');
-                    }
+                    console.log('⚠️ IP record ID yok, transaction kontrol edilemiyor');
                 }
             } catch (e) {
                 console.error('❌ requestResult kontrolünde hata:', e);
@@ -1504,18 +1540,18 @@ renderCurrentPage() {
 
             const rowData = {
                 id: t.id,
-                recordType: rec?.type || '-',
-                transactionTypeName,
-                applicationNumber,
-                applicantName: applicants || '-',
-                opponent: opponentName,
-                bulletinDate,
-                bulletinNo,
+                recordType: rec?.type || '-',                          // Kayıt Tipi
+                transactionTypeName,                                   // İşlem Tipi
+                applicationNumber,                                     // Başvuru No
+                applicantName: applicants || '-',                      // Başvuru Sahibi
+                opponent: opponentName,                                // İtiraz Sahibi
+                bulletinDate,                                          // Bülten Tarihi
+                bulletinNo,                                            // Bülten No
                 epatsDate,
-                statusText // ✅ Burada düzeltilmiş statusText kullanılıyor
+                statusText                                             // ✅ Düzeltilmiş durum
             };
             
-            console.log('✅ Final satır verisi:', rowData);
+            console.log('✅ Final row data:', rowData);
             rows.push(rowData);
             
         } catch (e) {
@@ -1523,6 +1559,9 @@ renderCurrentPage() {
         }
     }
 
+    console.log('✅ loadObjectionRows tamamlandı, toplam satır:', rows.length);
+    console.log('📊 Oluşturulan satırlar:', rows);
+    
     this.objectionRows = rows;
 }
             
