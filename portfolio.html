@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" integrity="sha512-dYwL2xQfCw+7e0g6EL3x4g5+1LiF0f2GxB6bM7h2oT1x6G8q1LZpG8C1JvT3D0f3qZ6e6v1dD2u3vYhB+8QJw==" crossorigin="anonymous" referrerpolicy="no-referrer"/>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>IP Manager - Portföy</title>
@@ -507,7 +508,7 @@
             
 renderCurrentPage() {
   const tableBody = document.getElementById('portfolioTableBody');
-  if (!tableBody || !this.pagination) return;
+  if (!tableBody || !pagination) return;
   tableBody.innerHTML = '';
 
   const isObjections = (this.activeTypeFilter === 'objections');
@@ -538,7 +539,7 @@ renderCurrentPage() {
     // 1) Grupla
     const groups = {};
     pageData.forEach(r => {
-      const appNo = r.applicationNo || r.basvuruNo || r.application_number || '—';
+      const appNo = r.applicationNumber || r.applicationNo || r.basvuruNo || r.application_number || '—';
       if (!groups[appNo]) groups[appNo] = [];
       groups[appNo].push(r);
     });
@@ -584,9 +585,9 @@ renderCurrentPage() {
 
         const recordType = r.recordType || r.kayitTipi || r.type || 'trademark';
         const txnType    = r.transactionTypeName || r.islemTipi || r.transactionType || '';
-        const appNoCell  = r.applicationNo || r.basvuruNo || r.application_number || '';
+        const appNoCell  = r.applicationNumber || r.applicationNo || r.basvuruNo || r.application_number || '';
         const applicant  = r.applicantName || r.basvuruSahibi || r.ownerName || '';
-        const opposer    = r.opposerName || r.itirazSahibi || '';
+        const opposer    = r.opponent || r.opposerName || r.itirazSahibi || '';
         const bDate      = r.bulletinDate || r.bultenTarihi || r.opposedMarkBulletinDate || '';
         const bNo        = r.bulletinNo || r.bultenNo || r.opposedMarkBulletinNo || '';
 
@@ -623,7 +624,7 @@ renderCurrentPage() {
     const txnType    = r.transactionTypeName || r.islemTipi || r.transactionType || '';
     const appNo      = r.applicationNo || r.basvuruNo || r.application_number || '';
     const applicant  = r.applicantName || r.basvuruSahibi || r.ownerName || '';
-    const opposer    = r.opposerName || r.itirazSahibi || '';
+    const opposer    = r.opponent || r.opposerName || r.itirazSahibi || '';
     const bDate      = r.bulletinDate || r.bultenTarihi || '';
     const bNo        = r.bulletinNo || r.bultenNo || '';
 
@@ -1419,7 +1420,7 @@ renderCurrentPage() {
     const state = loadState();
 
     // İlk bağlama: butonlara click + klavye
-    document.querySelectorAll('#objectionsTable .group-header').forEach(header => {
+    document.querySelectorAll('#portfolioTableBody .group-header').forEach(header => {
       const groupId = header.getAttribute('data-group-id');
       const btn = header.querySelector('.accordion-toggle');
       if (!btn) return;
