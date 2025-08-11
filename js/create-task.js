@@ -1423,8 +1423,16 @@ async handleSpecificTypeChange(e) {
                 if (!person) return;
 
                 // Burada sahibin ekleme işlemi yapılır
-                this.selectedRelatedParty = person;
-                this.renderSelectedRelatedParty();
+                if (!Array.isArray(this.selectedRelatedParties)) this.selectedRelatedParties = [];
+                if (!this.selectedRelatedParties.some(p => String(p.id) === String(person.id))) {
+                this.selectedRelatedParties.push({
+                    id: person.id,
+                    name: person.name,
+                    email: person.email || '',
+                    phone: person.phone || ''
+                });
+                this.renderSelectedRelatedParties();
+                }
 
                 // Arama sonuçlarını kapat
                 relatedPartyResults.innerHTML = '';
