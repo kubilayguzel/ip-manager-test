@@ -1993,7 +1993,7 @@ checkFormCompleteness() {
         // assignedTo, başlık ve portföy kaydı seçildiğinde tamamlandı olarak işaretle
         const tIdStr = asId(selectedTaskType.id);
         const needsRelatedParty = RELATED_PARTY_REQUIRED.has(tIdStr);
-        const needsObjectionOwner = (tIdStr === TASK_IDS.ITIRAZ_YAYIN);
+        const needsObjectionOwner = (tIdStr === TASK_IDS.ITIRAZ_YAYIN) || (tIdStr === '19') || (tIdStr === '7');
         const hasRelated = Array.isArray(this.selectedRelatedParties) && this.selectedRelatedParties.length > 0;
         isComplete = !!taskTitle && !!this.selectedIpRecord && (!needsRelatedParty || hasRelated) && (!needsObjectionOwner || hasRelated);
     }
@@ -2062,6 +2062,29 @@ async handleFormSubmit(e) {
         relatedIpRecordTitle: this.selectedIpRecord ? this.selectedIpRecord.title : taskTitle,
         details: {}
     };
+    // --- İtiraz sahibi (opponent) yazımı: IDs 7, 19, 20 ---
+    const tIdStr = String(selectedTransactionType?.id || '');
+    const objectionTypeIds = new Set(['7', '19', '20']);
+
+    // Birincil kaynak: çoklu ilgili taraf listesinin ilk elemanı
+    let opponentCandidate = Array.isArray(this.selectedRelatedParties) && this.selectedRelatedParties.length
+    ? this.selectedRelatedParties[0]
+    : (this.selectedRelatedParty || null);
+
+    if (objectionTypeIds.has(tIdStr) && opponentCandidate) {
+    const opponent = {
+        id: opponentCandidate.id || null,
+        name: opponentCandidate.name || '',
+        email: opponentCandidate.email || '',
+        phone: opponentCandidate.phone || ''
+    };
+    // Kök seviyeye yaz
+    taskData.opponent = opponent;
+
+    // İstersen detaylara da ayna yapalım
+    taskData.details = taskData.details || {};
+    taskData.details.opponent = opponent;
+    }
 
     if (selectedTransactionType.alias === 'Başvuru' && selectedTransactionType.ipType === 'trademark') {
         const goodsAndServices = getSelectedNiceClasses();
