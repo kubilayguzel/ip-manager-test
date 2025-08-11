@@ -1472,25 +1472,31 @@ async loadObjectionRows() {
                     
                     console.log('📊 Transaction sayısı:', txList.length);
                     
-                    // ✅ DÜZELTME: requestResult arama stratejisi
+                    // ✅ DÜZELTME: Önce bu task'ın hangi transaction'a ait olduğunu bul
+                    let targetTransactionId = null;
                     let foundRequestResult = null;
                     
-                    // 1. Önce parent transaction ID ile ara
+                    // 1. Task details'den parent transaction ID'sini al
                     const parentTxId = details?.parentTransactionId || details?.selectedTransactionId;
-                    console.log('🔍 Parent TX ID araniyor:', parentTxId);
                     
+                    // 2. Eğer parentTxId varsa, sadece o transaction'ı kontrol et
                     if (parentTxId) {
-                        const parentTx = txList.find(x => x.id === parentTxId);
-                        if (parentTx) {
-                            console.log('✅ Parent transaction bulundu:', {
-                                id: parentTx.id,
-                                requestResult: parentTx.requestResult,
-                                type: typeof parentTx.requestResult
+                        targetTransactionId = parentTxId;
+                        const specificTx = txList.find(x => x.id === parentTxId);
+                        
+                        if (specificTx) {
+                            console.log('✅ Spesifik parent transaction bulundu:', {
+                                id: specificTx.id,
+                                requestResult: specificTx.requestResult,
+                                type: typeof specificTx.requestResult
                             });
                             
-                            if (parentTx.requestResult !== null && parentTx.requestResult !== undefined && parentTx.requestResult !== '') {
-                                foundRequestResult = parentTx.requestResult;
-                                console.log('✅ Parent TX\'den requestResult bulundu:', foundRequestResult);
+                            // ✅ SADECE BU TRANSACTION'IN requestResult'ını al
+                            if (specificTx.requestResult !== null && specificTx.requestResult !== undefined && specificTx.requestResult !== '') {
+                                foundRequestResult = specificTx.requestResult;
+                                console.log('✅ Spesifik TX\'den requestResult bulundu:', foundRequestResult);
+                            } else {
+                                console.log('⚠️ Spesifik transaction\'da requestResult yok');
                             }
                         } else {
                             console.log('❌ Parent transaction bulunamadı, parentTxId:', parentTxId);
@@ -1498,21 +1504,36 @@ async loadObjectionRows() {
                         }
                     }
                     
-                    // 2. Eğer parent'ta yoksa, tüm transaction'larda requestResult ara
-                    if (foundRequestResult === null) {
-                        console.log('🔍 Tüm transactions\'da requestResult aranıyor...');
-                        for (const tx of txList) {
-                            if (tx.requestResult !== null && tx.requestResult !== undefined && tx.requestResult !== '') {
-                                foundRequestResult = tx.requestResult;
-                                console.log('✅ Genel aramada requestResult bulundu:', foundRequestResult, 'TX ID:', tx.id);
-                                break;
+                    // 3. Eğer parentTxId yoksa, task type'ına göre ilgili transaction'ı bul
+                    else {
+                        console.log('⚠️ parentTxId yok, task type\'ına göre transaction aranıyor...');
+                        
+                        // Task type'ına göre ilgili transaction'ı bul
+                        // Örneğin: task type 7 ise, type 7 olan transaction'ı ara
+                        const taskTypeStr = String(t.taskType);
+                        const relatedTx = txList.find(tx => String(tx.type) === taskTypeStr);
+                        
+                        if (relatedTx) {
+                            targetTransactionId = relatedTx.id;
+                            console.log('✅ Task type\'ına göre transaction bulundu:', {
+                                taskType: taskTypeStr,
+                                transactionId: relatedTx.id,
+                                requestResult: relatedTx.requestResult
+                            });
+                            
+                            if (relatedTx.requestResult !== null && relatedTx.requestResult !== undefined && relatedTx.requestResult !== '') {
+                                foundRequestResult = relatedTx.requestResult;
+                                console.log('✅ İlgili TX\'den requestResult bulundu:', foundRequestResult);
                             }
+                        } else {
+                            console.log('❌ Task type\'ına göre transaction bulunamadı');
                         }
                     }
                     
-                    // 3. requestResult değerini kontrol et ve statusText belirle
+                    // 4. requestResult değerini kontrol et ve statusText belirle
                     if (foundRequestResult !== null) {
-                        console.log('🔍 requestResult kontrolü:', {
+                        console.log('🔍 requestResult kontrolü (spesifik TX için):', {
+                            targetTransactionId,
                             value: foundRequestResult,
                             type: typeof foundRequestResult,
                             equals30: foundRequestResult === 30,
@@ -1520,17 +1541,23 @@ async loadObjectionRows() {
                             stringEquals30: String(foundRequestResult) === '30'
                         });
                         
-                        // ✅ DÜZELTME: 30 değeri kontrolü sıkılaştırıldı
                         if (foundRequestResult === 30 || foundRequestResult === '30' || String(foundRequestResult) === '30') {
                             statusText = 'Ret';
-                            console.log('✅ Status "Ret" olarak belirlendi');
+                            console.log('✅ Status "Ret" olarak belirlendi (spesifik TX)');
                         } else {
                             statusText = String(foundRequestResult);
-                            console.log('✅ Status custom değer olarak belirlendi:', statusText);
+                            console.log('✅ Status custom değer olarak belirlendi (spesifik TX):', statusText);
                         }
                     } else {
-                        console.log('⚠️ Hiçbir transaction\'da requestResult bulunamadı');
+                        console.log('⚠️ İlgili transaction\'da requestResult bulunamadı');
                     }
+                    
+                    // 5. Debug: Tüm transaction'ların requestResult'larını göster
+                    console.log('📊 Tüm transactions debug:');
+                    txList.forEach((tx, index) => {
+                        console.log(`  ${index + 1}. TX ID: ${tx.id}, Type: ${tx.type}, requestResult: ${tx.requestResult}`);
+                    });
+                    
                 } else {
                     console.log('⚠️ IP record ID yok, transaction kontrol edilemiyor');
                 }
