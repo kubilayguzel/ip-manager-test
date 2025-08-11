@@ -475,109 +475,104 @@ renderCurrentPage() {
   if (!pagination) return;
 
   const isObjections = (this.activeTypeFilter === 'objections');
-  const baseData = isObjections ? (this.objectionRows || []) : this.filteredAndSortedRecords;
-  const currentPageData = pagination.getCurrentPageData(baseData);
 
-  const fragment = document.createDocumentFragment();
+  // 📌 İtirazlar sekmesi için özel render
+  if (isObjections) {
+    const totalCols = 7;
+    const frag = document.createDocumentFragment();
+
+    (this.objectionGroups || []).forEach((g, i) => {
+      const safeKey = String(g.key).replace(/\W/g, '');
+      const groupId = `grp-${i}-${safeKey}`;
+
+      // Parent satır
+      const parent = document.createElement('tr');
+      parent.className = 'group-parent';
+      parent.innerHTML = `
+        <td colspan="${totalCols}" class="bg-light">
+          <button class="btn btn-sm btn-link p-0 mr-2 toggle-group" data-target="#${groupId}" aria-expanded="false">▶</button>
+          <strong>${g.key}</strong> başvuru numarasına ait itiraz işlemleri
+          <span class="badge badge-secondary ml-2">${g.items.length}</span>
+        </td>
+      `;
+      frag.appendChild(parent);
+
+      // Child satırlar
+      const child = document.createElement('tr');
+      child.className = 'group-children';
+      child.innerHTML = `
+        <td colspan="${totalCols}" style="padding:0;">
+          <div id="${groupId}" class="collapse">
+            <table class="table table-sm mb-0">
+              <thead>
+                <tr>
+                  <th style="width:110px;">Kayıt Tipi</th>
+                  <th style="width:180px;">İşlem Tipi</th>
+                  <th style="width:140px;">Başvuru No</th>
+                  <th style="width:240px;">Başvuru Sahibi</th>
+                  <th style="width:200px;">İtiraz Sahibi</th>
+                  <th style="width:140px;">Bülten Tarihi</th>
+                  <th style="width:120px;">Bülten No</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${g.items.map(r => `
+                  <tr>
+                    <td>${r.recordType || '-'}</td>
+                    <td>${r.transactionTypeName || '-'}</td>
+                    <td>${r.applicationNumber || '-'}</td>
+                    <td title="${r.applicantName || '-'}">${r.applicantName || '-'}</td>
+                    <td title="${r.opponent || '-'}">${r.opponent || '-'}</td>
+                    <td>${r.bulletinDate || '-'}</td>
+                    <td>${r.bulletinNo || '-'}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        </td>
+      `;
+      frag.appendChild(child);
+    });
+
+    tableBody.appendChild(frag);
+
+    // Toggle davranışı
+    tableBody.querySelectorAll('.toggle-group').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const targetSel = btn.getAttribute('data-target');
+        const el = tableBody.querySelector(targetSel);
+        if (!el) return;
+
+        if (typeof $(el).collapse === 'function') {
+          $(el).collapse('toggle');
+        } else {
+          el.classList.toggle('show');
+        }
+        const expanded = btn.getAttribute('aria-expanded') === 'true';
+        btn.setAttribute('aria-expanded', String(!expanded));
+        btn.textContent = expanded ? '▶' : '▼';
+      });
+    });
+
+    return; // ⬅ sadece objections render edip fonksiyondan çık
+  }
+
+  // 📌 Normal satır render (itiraz dışı)
+  const baseData = this.filteredAndSortedRecords;
+  const currentPageData = pagination.getCurrentPageData(baseData);
+  const frag = document.createDocumentFragment();
 
   currentPageData.forEach(record => {
     const row = document.createElement('tr');
     row.dataset.recordId = record.id || '';
 
-    if (isObjections) {
-    const fragment = document.createDocumentFragment();
-    const totalCols = 7; // İtirazlar tabındaki kolon sayınız: (Kayıt Tipi, İşlem Tipi, Başvuru No, Başvuru Sahibi, İtiraz Sahibi, Bülten No, Bülten Tarihi)
-
-    (this.objectionGroups || []).forEach((g, i) => {
-        const safeKey = String(g.key).replace(/\W/g, '');
-        const groupId = `grp-${i}-${safeKey}`;
-
-        // --- Parent satır (grup başlığı) ---
-        const parent = document.createElement('tr');
-        parent.className = 'group-parent';
-        parent.innerHTML = `
-        <td colspan="${totalCols}" class="bg-light">
-            <button class="btn btn-sm btn-link p-0 mr-2 toggle-group" data-target="#${groupId}" aria-expanded="false">▶</button>
-            <strong>${g.key}</strong> başvuru numarasına ait itiraz işlemleri
-            <span class="badge badge-secondary ml-2">${g.items.length}</span>
-        </td>
-        `;
-        fragment.appendChild(parent);
-
-        // --- Child satırlar için tek bir collapsible satır ---
-        const child = document.createElement('tr');
-        child.className = 'group-children';
-        child.innerHTML = `
-        <td colspan="${totalCols}" style="padding:0;">
-            <div id="${groupId}" class="collapse">
-            <table class="table table-sm mb-0">
-                <thead>
-                <tr>
-                    <th style="width:110px;">Kayıt Tipi</th>
-                    <th style="width:180px;">İşlem Tipi</th>
-                    <th style="width:140px;">Başvuru No</th>
-                    <th style="width:240px;">Başvuru Sahibi</th>
-                    <th style="width:200px;">İtiraz Sahibi</th>                
-                    <th style="width:140px;">Bülten Tarihi</th>
-                    <th style="width:120px;">Bülten No</th>
-                </tr>
-                </thead>
-                <tbody>
-                ${g.items.map(record => `
-                    <tr>
-                    <td>${record.recordType || '-'}</td>
-                    <td>${record.transactionTypeName || '-'}</td>
-                    <td>${record.applicationNumber || '-'}</td>
-                    <td title="${record.applicantName || '-'}">${record.applicantName || '-'}</td>
-                    <td title="${record.opponent || '-'}">${record.opponent || '-'}</td>
-                    <td>${record.bulletinDate || '-'}</td>
-                    <td>${record.bulletinNo || '-'}</td>
-                    </tr>
-                `).join('')}
-                </tbody>
-            </table>
-            </div>
-        </td>
-        `;
-        fragment.appendChild(child);
-    });
-
-    tableBody.innerHTML = '';
-    tableBody.appendChild(fragment);
-
-    // Toggle davranışı
-    tableBody.querySelectorAll('.toggle-group').forEach(btn => 
-        btn.addEventListener('click', (e) => {
-        const targetSel = btn.getAttribute('data-target');
-        const el = this.tbody.querySelector(targetSel);
-        if (!el) return;
-
-        // Bootstrap collapse varsa onu kullan; yoksa basit toggle
-        if (typeof $(el).collapse === 'function') {
-            $(el).collapse('toggle');
-        } else {
-            el.classList.toggle('show');
-        }
-        // Ok işareti dönüşümü
-        const expanded = btn.getAttribute('aria-expanded') === 'true';
-        btn.setAttribute('aria-expanded', String(!expanded));
-        btn.textContent = expanded ? '▶' : '▼';
-        });
-    });
-
-    return; // itirazlar render'ı tamam
-    }
-
-
-    // === Normal (itiraz dışı) satırlar ===
     const portfoyStatusDisplay = record.portfoyStatus === 'inactive' ? 'Pasif' : 'Aktif';
-
     const ipTypeDisplay =
       record.type === 'trademark' ? 'Marka' :
       record.type === 'patent'    ? 'Patent' :
       record.type === 'design'    ? 'Tasarım' :
       (record.type || '-');
-
     const title = record.title || record.brandText || '-';
 
     let imageHtml = '-';
@@ -588,10 +583,9 @@ renderCurrentPage() {
         record.trademarkImage?.content ||
         record.trademarkImage;
       if (imageSrc) {
-        imageHtml = `
-          <div class="trademark-image-wrapper">
-            <img src="${imageSrc}" alt="Marka Görseli" class="trademark-image-thumbnail">
-          </div>`;
+        imageHtml = `<div class="trademark-image-wrapper">
+                       <img src="${imageSrc}" alt="Marka Görseli" class="trademark-image-thumbnail">
+                     </div>`;
       }
     }
 
@@ -599,7 +593,6 @@ renderCurrentPage() {
     const applicationDateDisplay = record.applicationDate
       ? new Date(record.applicationDate).toLocaleDateString('tr-TR')
       : '-';
-
     const statusDisplay =
       record.status === 'application_filed' ? 'Başvuru Yapıldı' :
       record.status === 'registered'       ? 'Tescilli' :
@@ -607,18 +600,12 @@ renderCurrentPage() {
       record.status === 'invalid'          ? 'Hükümsüz' :
       record.status === 'opposed'          ? 'İtiraz Edildi' :
       (record.status || '-');
-
     const applicantsDisplay = (record.applicants?.map(a => a.name).join(', ')) || 'Belirtilmemiş';
 
-    // checkbox hücresi
     const checkboxCell = `
       <td>
-        <input
-          type="checkbox"
-          class="record-checkbox"
-          data-id="${record.id}"
-          ${this.selectedRecords.has(record.id) ? 'checked' : ''}
-        >
+        <input type="checkbox" class="record-checkbox" data-id="${record.id}"
+          ${this.selectedRecords.has(record.id) ? 'checked' : ''}>
       </td>`;
 
     row.innerHTML = `
@@ -637,13 +624,11 @@ renderCurrentPage() {
         <button class="action-btn delete-btn" data-id="${record.id}">Sil</button>
       </td>
     `;
-
-    fragment.appendChild(row);
+    frag.appendChild(row);
   });
 
-  tableBody.appendChild(fragment);
+  tableBody.appendChild(frag);
 }
-
 
             applyFiltersAndSort() {
                 const globalSearchTerm = (document.getElementById('searchBar').value || '').toLowerCase();
