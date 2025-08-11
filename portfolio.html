@@ -313,6 +313,16 @@
         padding-left: 32px;
     }
 }
+.group-parent td {
+  font-size: 0.95rem;
+}
+.group-children .table thead th {
+  background: #fafafa;
+}
+.toggle-group {
+  font-weight: bold;
+  text-decoration: none;
+}
     </style>
 </head>
 <body>
@@ -475,19 +485,89 @@ renderCurrentPage() {
     row.dataset.recordId = record.id || '';
 
     if (isObjections) {
-      // Kayıt Tipi, İşlem Tipi, Başvuru No, Başvuru Sahibi, Bülten No, Bülten Tarihi
-      row.innerHTML = `
-        <td>${record.recordType || '-'}</td>
-        <td>${record.transactionTypeName || '-'}</td>
-        <td>${record.applicationNumber || '-'}</td>
-        <td title="${record.applicantName || '-'}">${record.applicantName || '-'}</td>
-        <td title="${record.opponent || '-'}">${record.opponent || '-'}</td>
-        <td>${record.bulletinDate || '-'}</td>
-        <td>${record.bulletinNo || '-'}</td>
-      `;
-      fragment.appendChild(row);
-      return;
+    const fragment = document.createDocumentFragment();
+    const totalCols = 7; // İtirazlar tabındaki kolon sayınız: (Kayıt Tipi, İşlem Tipi, Başvuru No, Başvuru Sahibi, İtiraz Sahibi, Bülten No, Bülten Tarihi)
+
+    (this.objectionGroups || []).forEach((g, i) => {
+        const safeKey = String(g.key).replace(/\W/g, '');
+        const groupId = `grp-${i}-${safeKey}`;
+
+        // --- Parent satır (grup başlığı) ---
+        const parent = document.createElement('tr');
+        parent.className = 'group-parent';
+        parent.innerHTML = `
+        <td colspan="${totalCols}" class="bg-light">
+            <button class="btn btn-sm btn-link p-0 mr-2 toggle-group" data-target="#${groupId}" aria-expanded="false">▶</button>
+            <strong>${g.key}</strong> başvuru numarasına ait itiraz işlemleri
+            <span class="badge badge-secondary ml-2">${g.items.length}</span>
+        </td>
+        `;
+        fragment.appendChild(parent);
+
+        // --- Child satırlar için tek bir collapsible satır ---
+        const child = document.createElement('tr');
+        child.className = 'group-children';
+        child.innerHTML = `
+        <td colspan="${totalCols}" style="padding:0;">
+            <div id="${groupId}" class="collapse">
+            <table class="table table-sm mb-0">
+                <thead>
+                <tr>
+                    <th style="width:110px;">Kayıt Tipi</th>
+                    <th style="width:180px;">İşlem Tipi</th>
+                    <th style="width:140px;">Başvuru No</th>
+                    <th style="width:240px;">Başvuru Sahibi</th>
+                    <th style="width:200px;">İtiraz Sahibi</th>                
+                    <th style="width:140px;">Bülten Tarihi</th>
+                    <th style="width:120px;">Bülten No</th>
+                </tr>
+                </thead>
+                <tbody>
+                ${g.items.map(record => `
+                    <tr>
+                    <td>${record.recordType || '-'}</td>
+                    <td>${record.transactionTypeName || '-'}</td>
+                    <td>${record.applicationNumber || '-'}</td>
+                    <td title="${record.applicantName || '-'}">${record.applicantName || '-'}</td>
+                    <td title="${record.opponent || '-'}">${record.opponent || '-'}</td>
+                    <td>${record.bulletinDate || '-'}</td>
+                    <td>${record.bulletinNo || '-'}</td>
+                    </tr>
+                `).join('')}
+                </tbody>
+            </table>
+            </div>
+        </td>
+        `;
+        fragment.appendChild(child);
+    });
+
+    this.tbody.innerHTML = '';
+    this.tbody.appendChild(fragment);
+
+    // Toggle davranışı
+    this.tbody.querySelectorAll('.toggle-group').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+        const targetSel = btn.getAttribute('data-target');
+        const el = this.tbody.querySelector(targetSel);
+        if (!el) return;
+
+        // Bootstrap collapse varsa onu kullan; yoksa basit toggle
+        if (typeof $(el).collapse === 'function') {
+            $(el).collapse('toggle');
+        } else {
+            el.classList.toggle('show');
+        }
+        // Ok işareti dönüşümü
+        const expanded = btn.getAttribute('aria-expanded') === 'true';
+        btn.setAttribute('aria-expanded', String(!expanded));
+        btn.textContent = expanded ? '▶' : '▼';
+        });
+    });
+
+    return; // itirazlar render'ı tamam
     }
+
 
     // === Normal (itiraz dışı) satırlar ===
     const portfoyStatusDisplay = record.portfoyStatus === 'inactive' ? 'Pasif' : 'Aktif';
@@ -1220,6 +1300,31 @@ renderCurrentPage() {
 
             this.objectionRows = rows;
             }
+            
+            buildObjectionGroups() {
+            // this.objectionRows: render ettiğiniz ham satırlar
+            const groupsMap = {};
+            (this.objectionRows || []).forEach(item => {
+                const key = item.applicationNumber || '—';
+                if (!groupsMap[key]) groupsMap[key] = { key, items: [] };
+                groupsMap[key].items.push(item);
+            });
+
+            // İsterseniz grupları ve içindeki kayıtları tarihe göre sıralayabilirsiniz
+            this.objectionGroups = Object.values(groupsMap)
+                .map(g => {
+                // çocukları (örn. bülten tarihine göre) sırala
+                g.items.sort((a, b) => {
+                    const ad = new Date(a.bulletinDate || 0).getTime();
+                    const bd = new Date(b.bulletinDate || 0).getTime();
+                    return bd - ad; // yeni → eski
+                });
+                return g;
+                })
+                // grup sırası: toplam öğe sayısı veya en yeni tarih vb.
+                .sort((a, b) => b.items.length - a.items.length);
+            }
+
 
             initialRenderTableStructure() {
                 const headerRow = document.getElementById('portfolioTableHeaderRow');
