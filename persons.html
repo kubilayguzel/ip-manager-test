@@ -525,13 +525,25 @@
                 }
 
                 showAddPersonModal() {
-                    document.getElementById('personModalTitle').textContent = 'Yeni Kişi Ekle';
-                    document.getElementById('personForm').reset();
-                    document.getElementById('personId').value = '';
-                    document.getElementById('personModal').classList.add('show');
+                document.getElementById('personModalTitle').textContent = 'Yeni Kişi Ekle';
+                document.getElementById('personForm').reset();
+                document.getElementById('personId').value = '';
+
+                // Varsayılan: Gerçek kişi
+                document.getElementById('personType').value = 'gercek';
+                this.updateNameLabelByType();
+
+                // Ülke/İl yükle
+                this.loadCountries();
+
+                // Telefon maskesi placeholder’ı dursun
+                const phoneInput = document.getElementById('personPhone');
+                if (!phoneInput.value.trim()) phoneInput.value = '';
+
+                document.getElementById('personModal').classList.add('show');
                 }
                 
-                showEditPersonModal(personId) {
+                async showEditPersonModal(personId) {
                     const person = this.allPersons.find(p => p.id === personId);
                     if (!person) {
                         showNotification('Kişi bulunamadı.', 'error');
@@ -542,7 +554,44 @@
                     document.getElementById('personName').value = person.name;
                     document.getElementById('personEmail').value = person.email || '';
                     document.getElementById('personPhone').value = person.phone || '';
-                    document.getElementById('personType').value = person.type;
+                    let mappedType =
+                    (person.type === 'individual') ? 'gercek' :
+                    ((person.type === 'company' || person.type === 'institution') ? 'tuzel' : (person.type || ''));
+
+                    document.getElementById('personType').value = mappedType;
+                    this.updateNameLabelByType();
+
+                    // 1) Ülkeleri yükle (default Türkiye seçilecek)
+                    await this.loadCountries();
+
+                    // 2) Kaydedilen ülke varsa seç
+                    const countrySel = document.getElementById('countrySelect');
+                    if (person.countryCode) {
+                    const match = Array.from(countrySel.options).find(o => o.value === person.countryCode);
+                    if (match) {
+                        countrySel.value = match.value; // opt.selected = true yerine doğrudan value ata
+                    }
+                    }
+
+                    // 3) Seçili ülkeye göre il listesini getir / alanı uygun hale getir
+                    await this.loadProvincesForSelectedCountry();
+
+                    if (person.countryCode && !(/^(TR|TUR)$/i.test(person.countryCode))) {
+                    // Türkiye değilse text alanını doldur
+                    const pText = document.getElementById('provinceText');
+                    pText.value = person.province || '';
+                    } else {
+                    // Türkiye ise select’ten seç
+                    const pSel = document.getElementById('provinceSelect');
+                    if (person.provinceCode) {
+                        const opt = Array.from(pSel.options).find(o => o.value === person.provinceCode);
+                        if (opt) opt.selected = true;
+                    } else if (person.province) {
+                        const opt = Array.from(pSel.options).find(o => o.text === person.province);
+                        if (opt) opt.selected = true;
+                    }
+                    }
+
                     document.getElementById('personAddress').value = person.address || '';
                     document.getElementById('personModal').classList.add('show');
                 }
@@ -554,13 +603,33 @@
                 async handlePersonFormSubmit(event) {
                     event.preventDefault();
                     const personId = document.getElementById('personId').value;
+                    const countrySel   = document.getElementById('countrySelect');
+                    const provinceSel  = document.getElementById('provinceSelect');
+                    const provinceText = document.getElementById('provinceText');
+
+                    const countryCode = countrySel.value || '';
+                    const countryName = countrySel.options[countrySel.selectedIndex]?.text || '';
+
+                    const isTR = /^(TR|TUR)$/i.test(countryCode) || /türkiye|turkiye/i.test(countryName);
+                    const provinceCode = isTR ? (provinceSel.value || '') : '';
+                    const provinceName = isTR
+                    ? (provinceSel.options[provinceSel.selectedIndex]?.text || '')
+                    : (provinceText.value || '');
+
                     const personData = {
-                        name: document.getElementById('personName').value,
-                        email: document.getElementById('personEmail').value,
-                        phone: document.getElementById('personPhone').value,
-                        type: document.getElementById('personType').value,
-                        address: document.getElementById('personAddress').value
+                    name: document.getElementById('personName').value,
+                    email: document.getElementById('personEmail').value,
+                    phone: document.getElementById('personPhone').value,
+                    type: document.getElementById('personType').value, // 'gercek' | 'tuzel'
+                    address: document.getElementById('personAddress').value,
+
+                    // yeni alanlar
+                    countryCode,
+                    countryName,
+                    provinceCode,     // TR için kod
+                    province: provinceName // gösterim için isim veya text
                     };
+
 
                     if (!personData.name || !personData.type) {
                         showNotification('Ad Soyad / Firma Adı ve Kişi Tipi zorunludur.', 'error');
