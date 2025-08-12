@@ -485,7 +485,11 @@
                         tableBody.appendChild(row);
                     });
                 }
-
+                
+                updateNameLabelByType() {
+                const val = document.getElementById('personType').value;
+                document.getElementById('personNameLabel').textContent = (val === 'tuzel') ? 'Firma Adı' : 'Ad Soyad';
+                }
 
                 updateExtraFieldsByType() {
                 const type = document.getElementById('personType').value; // 'gercek' | 'tuzel'
