@@ -277,6 +277,25 @@
                     <label for="personName" class="form-label"><span id="personNameLabel">Ad Soyad</span>:</label>
                     <input type="text" id="personName" class="form-input" required>
                 </div>
+                <!-- Gerçek kişi: TCKN -->
+                <div class="form-group" id="tcknGroup" style="display:none;">
+                <label for="personTckn" class="form-label">TC Kimlik No:</label>
+                <input type="text" id="personTckn" class="form-input" maxlength="11" inputmode="numeric" placeholder="11 haneli">
+                <small class="text-muted">Sadece rakam, 11 hane</small>
+                </div>
+
+                <!-- Gerçek kişi: Doğum Tarihi -->
+                <div class="form-group" id="birthDateGroup" style="display:none;">
+                <label for="personBirthDate" class="form-label">Doğum Tarihi:</label>
+                <input type="date" id="personBirthDate" class="form-input">
+                </div>
+
+                <!-- Tüzel kişi: Vergi No -->
+                <div class="form-group" id="vknGroup" style="display:none;">
+                <label for="personVkn" class="form-label">Vergi No:</label>
+                <input type="text" id="personVkn" class="form-input" maxlength="10" inputmode="numeric" placeholder="10 haneli">
+                <small class="text-muted">Sadece rakam, 10 hane</small>
+                </div>
                 <div class="form-group">
                     <label for="personEmail" class="form-label">E-posta:</label>
                     <input type="email" id="personEmail" class="form-input">
@@ -362,6 +381,27 @@
 
                     // Ülke değişince il alanını uygun hale getir
                     document.getElementById('countrySelect').addEventListener('change', () => this.loadProvincesForSelectedCountry());
+                    
+                    // Tip değişince: etiket ve ekstra alanları güncelle
+                    document.getElementById('personType').addEventListener('change', () => {
+                    this.updateNameLabelByType();
+                    this.updateExtraFieldsByType();
+                    });
+
+                    // TCKN ve VKN için rakam/uzunluk kontrolü
+                    const tcknInput = document.getElementById('personTckn');
+                    const vknInput  = document.getElementById('personVkn');
+
+                    if (tcknInput) {
+                    tcknInput.addEventListener('input', () => {
+                        tcknInput.value = tcknInput.value.replace(/\D/g, '').slice(0, 11);
+                    });
+                    }
+                    if (vknInput) {
+                    vknInput.addEventListener('input', () => {
+                        vknInput.value = vknInput.value.replace(/\D/g, '').slice(0, 10);
+                    });
+                    }
                 }
 
                 async loadPersons() {
@@ -380,7 +420,6 @@
                         document.getElementById('loadingIndicator').style.display = 'none';
                     }
                 }
-
                 renderPersons(filterText = '') {
                     const tableBody = document.getElementById('personsTableBody');
                     const noPersonsMessage = document.getElementById('noPersonsMessage');
@@ -400,18 +439,41 @@
                     }
                     noPersonsMessage.style.display = 'none';
 
+                    // 🔹 Basit tarih formatlayıcı
+                    const formatDate = (isoDate) => {
+                        if (!isoDate) return '';
+                        const parts = isoDate.split('-'); // [YYYY, MM, DD]
+                        if (parts.length === 3) {
+                            return `${parts[2]}.${parts[1]}.${parts[0]}`;
+                        }
+                        return isoDate; // format beklenmedikse aynen döndür
+                    };
+
                     filteredPersons.forEach(person => {
                         const row = document.createElement('tr');
                         const typeKey =
-                        (person.type === 'individual') ? 'gercek' :
-                        ((person.type === 'company' || person.type === 'institution') ? 'tuzel' : (person.type || ''));
+                            (person.type === 'individual') ? 'gercek' :
+                            ((person.type === 'company' || person.type === 'institution') ? 'tuzel' : (person.type || ''));
 
                         const typeClass = `type-${typeKey}`;
                         const typeText = (typeKey === 'gercek') ? 'Gerçek' :
                                         (typeKey === 'tuzel')  ? 'Tüzel'  : 'Diğer';
 
+                        // 🔹 Tip’e göre ek bilgi metni hazırla (doğum tarihi formatlı)
+                        const extraInfo = (typeKey === 'gercek')
+                            ? [
+                                person.tckn && `TCKN: ${person.tckn}`,
+                                person.birthDate && `Doğum: ${formatDate(person.birthDate)}`
+                            ].filter(Boolean).join(' • ')
+                            : [
+                                person.taxNo && `Vergi No: ${person.taxNo}`
+                            ].filter(Boolean).join(' • ');
+
                         row.innerHTML = `
-                            <td>${person.name}</td>
+                            <td>
+                                ${person.name}
+                                ${extraInfo ? `<br><small class="text-muted">${extraInfo}</small>` : ''}
+                            </td>
                             <td>${person.email || '-'}</td>
                             <td>${person.phone || '-'}</td>
                             <td><span class="type-badge ${typeClass}">${typeText}</span></td>
@@ -424,11 +486,30 @@
                     });
                 }
 
-                updateNameLabelByType() {
-                    const val = document.getElementById('personType').value;
-                    document.getElementById('personNameLabel').textContent =
-                        (val === 'tuzel') ? 'Firma Adı' : 'Ad Soyad';
-                    }
+
+                updateExtraFieldsByType() {
+                const type = document.getElementById('personType').value; // 'gercek' | 'tuzel'
+                const tcknGroup = document.getElementById('tcknGroup');
+                const vknGroup  = document.getElementById('vknGroup');
+                const birthGroup= document.getElementById('birthDateGroup');
+
+                if (type === 'gercek') {
+                    // Gerçek kişi: TCKN + Doğum Tarihi açık, VKN kapalı
+                    tcknGroup.style.display = '';
+                    birthGroup.style.display = '';
+                    vknGroup.style.display = 'none';
+                } else if (type === 'tuzel') {
+                    // Tüzel kişi: VKN açık, TCKN + Doğum Tarihi kapalı
+                    tcknGroup.style.display = 'none';
+                    birthGroup.style.display = 'none';
+                    vknGroup.style.display = '';
+                } else {
+                    // Seçilmemişse hepsi gizli
+                    tcknGroup.style.display = 'none';
+                    birthGroup.style.display = 'none';
+                    vknGroup.style.display = 'none';
+                }
+                }
 
                 formatTRPhone(raw) {
                 const digits = raw.replace(/\D/g, '');
@@ -530,8 +611,12 @@
                 document.getElementById('personId').value = '';
 
                 // Varsayılan: Gerçek kişi
-                document.getElementById('personType').value = 'gercek';
+                document.getElementById('personType').value = 'gercek'; // varsayılan
                 this.updateNameLabelByType();
+                this.updateExtraFieldsByType();
+                document.getElementById('personTckn').value = '';
+                document.getElementById('personBirthDate').value = '';
+                document.getElementById('personVkn').value = '';
 
                 // Ülke/İl yükle
                 this.loadCountries();
@@ -560,6 +645,7 @@
 
                     document.getElementById('personType').value = mappedType;
                     this.updateNameLabelByType();
+                    this.updateExtraFieldsByType();
 
                     // 1) Ülkeleri yükle (default Türkiye seçilecek)
                     await this.loadCountries();
@@ -594,6 +680,10 @@
 
                     document.getElementById('personAddress').value = person.address || '';
                     document.getElementById('personModal').classList.add('show');
+                    // Kaydedilmiş alanları doldur
+                    document.getElementById('personTckn').value = person.tckn || '';
+                    document.getElementById('personBirthDate').value = person.birthDate || '';
+                    document.getElementById('personVkn').value = person.taxNo || '';
                 }
 
                 closePersonModal() {
@@ -615,22 +705,39 @@
                     const provinceName = isTR
                     ? (provinceSel.options[provinceSel.selectedIndex]?.text || '')
                     : (provinceText.value || '');
+                    const typeVal = document.getElementById('personType').value; // 'gercek' | 'tuzel'
+                    const tckn  = document.getElementById('personTckn').value.trim();
+                    const vkn   = document.getElementById('personVkn').value.trim();
+                    const bdate = document.getElementById('personBirthDate').value; // YYYY-MM-DD
+
+                    if (typeVal === 'gercek') {
+                    if (!tckn || tckn.length !== 11) {
+                        showNotification('TC Kimlik No 11 hane olmalı', 'warning');
+                        return; // kaydetmeyi durdur
+                    }
+                    }
+
+                    if (typeVal === 'tuzel') {
+                    if (!vkn || vkn.length !== 10) {
+                        showNotification('Vergi No 10 hane olmalı', 'warning');
+                        return; // kaydetmeyi durdur
+                    }
+                    }
 
                     const personData = {
                     name: document.getElementById('personName').value,
                     email: document.getElementById('personEmail').value,
                     phone: document.getElementById('personPhone').value,
-                    type: document.getElementById('personType').value, // 'gercek' | 'tuzel'
+                    type: typeVal,
                     address: document.getElementById('personAddress').value,
-
-                    // yeni alanlar
-                    countryCode,
-                    countryName,
-                    provinceCode,     // TR için kod
-                    province: provinceName // gösterim için isim veya text
+                    countryCode, countryName, provinceCode, province
                     };
-
-
+                    if (typeVal === 'gercek') {
+                    if (tckn) personData.tckn = tckn;
+                    if (bdate) personData.birthDate = bdate;
+                    } else if (typeVal === 'tuzel') {
+                    if (vkn) personData.taxNo = vkn;
+                    }
                     if (!personData.name || !personData.type) {
                         showNotification('Ad Soyad / Firma Adı ve Kişi Tipi zorunludur.', 'error');
                         return;
