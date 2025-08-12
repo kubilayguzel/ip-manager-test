@@ -241,6 +241,211 @@
 #toggleRelatedSection i {
     margin-right: 5px;
 }
+.related-section {
+    margin-top: 20px;
+    border: 1px solid #e1e8ed;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.related-header {
+    background-color: #f8f9fa;
+    padding: 15px 20px;
+    cursor: pointer;
+    border-bottom: 1px solid #e1e8ed;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: background-color 0.3s ease;
+}
+
+.related-header:hover {
+    background-color: #e9ecef;
+}
+
+.related-header h5 {
+    margin: 0;
+    color: #1e3c72;
+    font-weight: 600;
+}
+
+.related-toggle-icon {
+    font-size: 1.2em;
+    color: #666;
+    transition: transform 0.3s ease;
+}
+
+.related-section.expanded .related-toggle-icon {
+    transform: rotate(180deg);
+}
+
+.related-content {
+    display: none;
+    padding: 20px;
+    background-color: #fafbfc;
+}
+
+.related-section.expanded .related-content {
+    display: block;
+}
+
+.related-form {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    border: 1px solid #e1e8ed;
+    margin-bottom: 15px;
+}
+
+.related-form h6 {
+    color: #1e3c72;
+    margin-bottom: 15px;
+    font-weight: 600;
+}
+
+.related-form .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+    margin-bottom: 15px;
+}
+
+.related-form .form-group {
+    margin-bottom: 15px;
+}
+
+.related-form .form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 500;
+    color: #333;
+}
+
+.related-form .form-group input {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 0.9em;
+}
+
+.checkbox-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    margin-top: 10px;
+}
+
+.checkbox-group label {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.9em;
+    cursor: pointer;
+}
+
+.checkbox-group input[type="checkbox"] {
+    margin: 0;
+}
+
+#addRelatedBtn {
+    background: #28a745;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9em;
+    transition: background-color 0.3s ease;
+}
+
+#addRelatedBtn:hover {
+    background: #218838;
+}
+
+.related-list {
+    background: white;
+    border: 1px solid #e1e8ed;
+    border-radius: 8px;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.related-item {
+    padding: 15px;
+    border-bottom: 1px solid #f0f0f0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.related-item:last-child {
+    border-bottom: none;
+}
+
+.related-info {
+    flex-grow: 1;
+}
+
+.related-name {
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 5px;
+}
+
+.related-details {
+    font-size: 0.85em;
+    color: #666;
+    margin-bottom: 5px;
+}
+
+.related-scopes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+}
+
+.scope-badge {
+    background: #007bff;
+    color: white;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.75em;
+    font-weight: 500;
+}
+
+.remove-related-btn {
+    background: #dc3545;
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.8em;
+}
+
+.remove-related-btn:hover {
+    background: #c82333;
+}
+
+.related-empty {
+    padding: 30px;
+    text-align: center;
+    color: #666;
+    font-style: italic;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .related-form .form-row {
+        grid-template-columns: 1fr;
+    }
+    
+    .checkbox-group {
+        flex-direction: column;
+        gap: 10px;
+    }
+}
 
     </style>
 </head>
@@ -340,66 +545,57 @@
                         <input type="text" id="provinceText" class="form-input" style="display:none;flex:1 1 200px" placeholder="Eyalet / İl">
                     </div>
                     </div>
-                    <!-- İlgililer Butonu -->
-                    <div class="d-flex justify-content-start mb-3">
-                        <button type="button" class="btn btn-outline-primary" id="toggleRelatedBtn">
-                            <i class="fas fa-users"></i> İlgililer
-                        </button>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" id="cancelPersonBtn">İptal</button>
+                        <button type="submit" class="btn btn-primary" id="savePersonBtn" form="personForm">Kaydet</button>
                     </div>
+                    <div class="related-section" id="relatedSection">
+                        <div class="related-header" id="relatedHeader">
+                            <h5>👥 İlgililer</h5>
+                            <span class="related-toggle-icon">▼</span>
+                        </div>
+                        <div class="related-content">
+                            <div class="related-form">
+                                <h6>Yeni İlgili Ekle</h6>
+                                
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="relatedName">Ad Soyad *</label>
+                                        <input type="text" id="relatedName" placeholder="İlgili kişinin adı">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="relatedEmail">E-posta</label>
+                                        <input type="email" id="relatedEmail" placeholder="ilgili@email.com">
+                                    </div>
+                                </div>
 
-                    <!-- İlgililer Alanı -->
-                    <div id="relatedSection" class="related-section border rounded p-3 mb-3" style="display: none;">
-                        <h5 class="mb-3"><i class="fas fa-user-friends"></i> İlgililer</h5>
+                                <div class="form-group">
+                                    <label for="relatedPhone">Telefon</label>
+                                    <input type="tel" id="relatedPhone" placeholder="+90 5XX XXX XX XX">
+                                </div>
 
-                        <div class="form-row">
-                            <div class="form-group col-md-4">
-                                <label>Ad Soyad</label>
-                                <input type="text" class="form-control" id="relatedName" placeholder="Ad Soyad">
+                                <div class="form-group">
+                                    <label>Sorumlu Olduğu Alanlar:</label>
+                                    <div class="checkbox-group">
+                                        <label><input type="checkbox" value="patent"> Patent</label>
+                                        <label><input type="checkbox" value="marka"> Marka</label>
+                                        <label><input type="checkbox" value="tasarim"> Tasarım</label>
+                                        <label><input type="checkbox" value="dava"> Dava</label>
+                                        <label><input type="checkbox" value="muhasebe"> Muhasebe</label>
+                                    </div>
+                                </div>
+
+                                <button type="button" id="addRelatedBtn">➕ İlgili Ekle</button>
                             </div>
-                            <div class="form-group col-md-4">
-                                <label>E-mail</label>
-                                <input type="email" class="form-control" id="relatedEmail" placeholder="ornek@eposta.com">
-                            </div>
-                            <div class="form-group col-md-4">
-                                <label>Telefon</label>
-                                <input type="text" class="form-control" id="relatedPhone" placeholder="+90 5__ ___ __ __">
+
+                            <div class="related-list" id="relatedList">
+                                <div class="related-empty">
+                                    Henüz ilgili kişi eklenmedi.
+                                </div>
                             </div>
                         </div>
-
-                        <div class="form-group">
-                            <label>Sorumlu Olduğu Alanlar</label>
-                            <div class="checkbox-group">
-                                <label><input type="checkbox" value="patent" checked> Patent</label>
-                                <label><input type="checkbox" value="marka" checked> Marka</label>
-                                <label><input type="checkbox" value="tasarim" checked> Tasarım</label>
-                                <label><input type="checkbox" value="dava"> Dava</label>
-                                <label><input type="checkbox" value="muhasebe"> Muhasebe</label>
-                            </div>
-                        </div>
-
-                        <div class="d-flex justify-content-end">
-                            <button type="button" class="btn btn-success" id="addRelatedBtn">
-                                <i class="fas fa-plus"></i> Listeye Ekle
-                            </button>
-                        </div>
-
-                        <hr>
-
-                        <table class="table table-sm table-bordered table-striped mt-3">
-                            <thead class="thead-light">
-                                <tr>
-                                    <th>Ad Soyad</th>
-                                    <th>E-mail</th>
-                                    <th>Telefon</th>
-                                    <th>Sorumlu Alanlar</th>
-                                    <th width="60">İşlem</th>
-                                </tr>
-                            </thead>
-                            <tbody id="relatedTableBody"></tbody>
-                        </table>
                     </div>
-
-                    </div>
+                </div>
             </form>
         </div>
     </div>
@@ -431,7 +627,6 @@
                     });
                 }
 
-                // updateUserInfo() { /* Bu fonksiyon artık layout-loader.js içinde */ }
                 setupEventListeners() {
                     // Her element için null kontrolü yapın
                     const addNewPersonBtn = document.getElementById('addNewPersonBtn');
@@ -547,12 +742,68 @@
                         addRelBtn.dataset.bound = '1';
                     }
 
+                    // ============ YENİ EKLEMELER - İlgililer Bölümü ============
+                    
+                    // İlgililer bölümü toggle
+                    const relatedHeader = document.getElementById('relatedHeader');
+                    if (relatedHeader) {
+                        relatedHeader.addEventListener('click', () => {
+                            const section = document.getElementById('relatedSection');
+                            if (section) {
+                                section.classList.toggle('expanded');
+                            }
+                        });
+                    }
+
+                    // Yeni İlgili ekleme butonu
+                    const addRelatedBtnNew = document.getElementById('addRelatedBtn');
+                    if (addRelatedBtnNew) {
+                        addRelatedBtnNew.addEventListener('click', () => {
+                            const name = document.getElementById('relatedName').value.trim();
+                            const email = document.getElementById('relatedEmail').value.trim();
+                            const phone = document.getElementById('relatedPhone').value.trim();
+                            
+                            if (!name) {
+                                alert('Ad Soyad zorunludur!');
+                                return;
+                            }
+
+                            // Seçili scope'ları al
+                            const scopes = [];
+                            document.querySelectorAll('.checkbox-group input[type="checkbox"]:checked').forEach(cb => {
+                                scopes.push(cb.value);
+                            });
+
+                            // İlgiliyi listeye ekle
+                            this.addRelatedToList(name, email, phone, scopes);
+
+                            // Formu temizle
+                            document.getElementById('relatedName').value = '';
+                            document.getElementById('relatedEmail').value = '';
+                            document.getElementById('relatedPhone').value = '';
+                            document.querySelectorAll('.checkbox-group input[type="checkbox"]').forEach(cb => cb.checked = false);
+                        });
+                    }
+
+                    // ========================================================
+
                     // Modal içeriği sonradan gelirse delegasyonla yakala
                     document.addEventListener('click', (e) => {
                         const t = e.target;
                         if (t.closest?.('#toggleRelatedBtn')) this.toggleRelatedSection();
                         if (t.closest?.('#addRelatedBtn')) this.handleAddRelated();
                     });
+
+                    // İlgili telefon formatı
+                    const relatedPhone = document.getElementById('relatedPhone');
+                    if (relatedPhone) {
+                        relatedPhone.addEventListener('focus', () => {
+                            if (!relatedPhone.value.trim()) relatedPhone.value = '+90 ';
+                        });
+                        relatedPhone.addEventListener('input', () => {
+                            relatedPhone.value = this.formatTRPhone(relatedPhone.value);
+                        });
+                    }
 
                     console.log('✅ setupEventListeners tamamlandı');
                 }
@@ -1170,7 +1421,49 @@
                         });
                     });
                     }
-                async deletePerson(personId) {
+
+                    addRelatedToList(name, email, phone, scopes) {
+                        const relatedList = document.getElementById('relatedList');
+                        if (!relatedList) return;
+                        
+                        // Empty state'i kaldır
+                        const emptyState = relatedList.querySelector('.related-empty');
+                        if (emptyState) {
+                            emptyState.style.display = 'none';
+                        }
+
+                        // Yeni item oluştur
+                        const relatedItem = document.createElement('div');
+                        relatedItem.className = 'related-item';
+                        
+                        const scopeBadges = scopes.map(scope => `<span class="scope-badge">${scope}</span>`).join(' ');
+                        
+                        relatedItem.innerHTML = `
+                            <div class="related-info">
+                                <div class="related-name">${name}</div>
+                                <div class="related-details">
+                                    ${email ? `📧 ${email}` : ''} 
+                                    ${phone ? `📱 ${phone}` : ''}
+                                </div>
+                                <div class="related-scopes">${scopeBadges}</div>
+                            </div>
+                            <button type="button" class="remove-related-btn" onclick="this.parentElement.remove()">
+                                🗑️
+                            </button>
+                        `;
+                        
+                        relatedList.appendChild(relatedItem);
+                        
+                        // relatedDraft'a da ekle (mevcut yapınızla uyumlu olması için)
+                        if (!this.relatedDraft) this.relatedDraft = [];
+                        this.relatedDraft.push({
+                            name: name,
+                            email: email,
+                            phone: phone,
+                            scopes: scopes
+                        });
+                    }
+                    async deletePerson(personId) {
                     if (confirm('Bu kişiyi silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.')) {
                         const result = await personService.deletePerson(personId);
                         if (result.success) {
