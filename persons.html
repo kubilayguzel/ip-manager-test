@@ -446,7 +446,51 @@
         gap: 10px;
     }
 }
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 15px;
+    margin-top: 20px;
+    padding-top: 15px;
+    border-top: 1px solid #e1e8ed;
+}
 
+.btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.btn-primary {
+    background: linear-gradient(45deg, #1e3c72, #2a5298);
+    color: white;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(30, 60, 114, 0.3);
+}
+
+.btn-secondary {
+    background: #6c757d;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background: #5a6268;
+}
+
+/* İlgililer bölümü stillerini düzeltin */
+.related-section {
+    margin-top: 15px;
+}
+
+.related-section.show {
+    display: block !important;
+}
     </style>
 </head>
 <body>
@@ -597,6 +641,10 @@
                     </div>
                 </div>
             </form>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" id="cancelPersonBtn">İptal</button>
+                <button type="submit" class="btn btn-primary" id="savePersonBtn" form="personForm">Kaydet</button>
+            </div>
         </div>
     </div>
     <script type="module">
@@ -627,186 +675,257 @@
                     });
                 }
 
-                setupEventListeners() {
-                    // Her element için null kontrolü yapın
-                    const addNewPersonBtn = document.getElementById('addNewPersonBtn');
-                    if (addNewPersonBtn) {
-                        addNewPersonBtn.addEventListener('click', () => this.showAddPersonModal());
+setupEventListeners() {
+    console.log('🔧 setupEventListeners başlatılıyor...');
+    
+    // Her element için null kontrolü yapın
+    const addNewPersonBtn = document.getElementById('addNewPersonBtn');
+    if (addNewPersonBtn) {
+        addNewPersonBtn.addEventListener('click', () => this.showAddPersonModal());
+        console.log('✅ addNewPersonBtn event listener eklendi');
+    } else {
+        console.warn('❌ addNewPersonBtn elementi bulunamadı');
+    }
+
+    const closePersonModal = document.getElementById('closePersonModal');
+    if (closePersonModal) {
+        closePersonModal.addEventListener('click', () => this.closePersonModal());
+        console.log('✅ closePersonModal event listener eklendi');
+    } else {
+        console.warn('❌ closePersonModal elementi bulunamadı');
+    }
+
+    const cancelPersonBtn = document.getElementById('cancelPersonBtn');
+    if (cancelPersonBtn) {
+        cancelPersonBtn.addEventListener('click', () => this.closePersonModal());
+        console.log('✅ cancelPersonBtn event listener eklendi');
+    } else {
+        console.warn('❌ cancelPersonBtn elementi bulunamadı');
+    }
+
+    const personForm = document.getElementById('personForm');
+    if (personForm) {
+        personForm.addEventListener('submit', (e) => this.handlePersonFormSubmit(e));
+        console.log('✅ personForm event listener eklendi');
+    } else {
+        console.warn('❌ personForm elementi bulunamadı');
+    }
+
+    const personSearchInput = document.getElementById('personSearchInput');
+    if (personSearchInput) {
+        personSearchInput.addEventListener('input', (e) => this.filterPersons(e.target.value));
+        console.log('✅ personSearchInput event listener eklendi');
+    } else {
+        console.warn('❌ personSearchInput elementi bulunamadı');
+    }
+
+    const personsTableBody = document.getElementById('personsTableBody');
+    if (personsTableBody) {
+        personsTableBody.addEventListener('click', (e) => {
+            if (e.target.classList.contains('edit-btn')) {
+                this.showEditPersonModal(e.target.dataset.id);
+            } else if (e.target.classList.contains('delete-btn')) {
+                this.deletePerson(e.target.dataset.id);
+            }
+        });
+        console.log('✅ personsTableBody event listener eklendi');
+    } else {
+        console.warn('❌ personsTableBody elementi bulunamadı');
+    }
+
+    // Kişi tipi değişince ad/firma etiketi güncelle
+    const personType = document.getElementById('personType');
+    if (personType) {
+        personType.addEventListener('change', () => {
+            this.updateNameLabelByType();
+            this.updateExtraFieldsByType();
+        });
+        console.log('✅ personType event listener eklendi');
+    } else {
+        console.warn('❌ personType elementi bulunamadı');
+    }
+
+    // Telefon maskesi - Modal açıldıktan sonra eklenecek
+    setTimeout(() => {
+        const phoneInput = document.getElementById('personPhone');
+        if (phoneInput && !phoneInput.dataset.listenerAdded) {
+            phoneInput.addEventListener('focus', () => {
+                if (!phoneInput.value.trim()) phoneInput.value = '+90 ';
+            });
+            phoneInput.addEventListener('input', () => {
+                phoneInput.value = this.formatTRPhone(phoneInput.value);
+            });
+            phoneInput.dataset.listenerAdded = 'true';
+            console.log('✅ personPhone event listener eklendi');
+        }
+    }, 100);
+
+    // Ülke değişince il alanını uygun hale getir
+    setTimeout(() => {
+        const countrySelect = document.getElementById('countrySelect');
+        if (countrySelect && !countrySelect.dataset.listenerAdded) {
+            countrySelect.addEventListener('change', () => this.loadProvincesForSelectedCountry());
+            countrySelect.dataset.listenerAdded = 'true';
+            console.log('✅ countrySelect event listener eklendi');
+        }
+    }, 100);
+
+    // TCKN ve VKN için rakam/uzunluk kontrolü
+    setTimeout(() => {
+        const tcknInput = document.getElementById('personTckn');
+        const vknInput = document.getElementById('personVkn');
+
+        if (tcknInput && !tcknInput.dataset.listenerAdded) {
+            tcknInput.addEventListener('input', () => {
+                tcknInput.value = tcknInput.value.replace(/\D/g, '').slice(0, 11);
+            });
+            tcknInput.dataset.listenerAdded = 'true';
+            console.log('✅ personTckn event listener eklendi');
+        }
+        
+        if (vknInput && !vknInput.dataset.listenerAdded) {
+            vknInput.addEventListener('input', () => {
+                vknInput.value = vknInput.value.replace(/\D/g, '').slice(0, 10);
+            });
+            vknInput.dataset.listenerAdded = 'true';
+            console.log('✅ personVkn event listener eklendi');
+        }
+    }, 100);
+
+    // İlgililer butonu - Ana buton
+    setTimeout(() => {
+        const toggleRelatedBtn = document.getElementById('toggleRelatedBtn');
+        if (toggleRelatedBtn && !toggleRelatedBtn.dataset.listenerAdded) {
+            toggleRelatedBtn.addEventListener('click', () => {
+                console.log('🔄 İlgililer butonu tıklandı');
+                const relatedSection = document.getElementById('relatedSection');
+                if (relatedSection) {
+                    if (relatedSection.style.display === 'none' || !relatedSection.style.display) {
+                        relatedSection.style.display = 'block';
+                        console.log('📂 İlgililer bölümü açıldı');
                     } else {
-                        console.warn('addNewPersonBtn elementi bulunamadı');
+                        relatedSection.style.display = 'none';
+                        console.log('📁 İlgililer bölümü kapatıldı');
                     }
-
-                    const closePersonModal = document.getElementById('closePersonModal');
-                    if (closePersonModal) {
-                        closePersonModal.addEventListener('click', () => this.closePersonModal());
-                    } else {
-                        console.warn('closePersonModal elementi bulunamadı');
-                    }
-
-                    const cancelPersonBtn = document.getElementById('cancelPersonBtn');
-                    if (cancelPersonBtn) {
-                        cancelPersonBtn.addEventListener('click', () => this.closePersonModal());
-                    } else {
-                        console.warn('cancelPersonBtn elementi bulunamadı');
-                    }
-
-                    const personForm = document.getElementById('personForm');
-                    if (personForm) {
-                        personForm.addEventListener('submit', (e) => this.handlePersonFormSubmit(e));
-                    } else {
-                        console.warn('personForm elementi bulunamadı');
-                    }
-
-                    const personSearchInput = document.getElementById('personSearchInput');
-                    if (personSearchInput) {
-                        personSearchInput.addEventListener('input', (e) => this.filterPersons(e.target.value));
-                    } else {
-                        console.warn('personSearchInput elementi bulunamadı');
-                    }
-
-                    const personsTableBody = document.getElementById('personsTableBody');
-                    if (personsTableBody) {
-                        personsTableBody.addEventListener('click', (e) => {
-                            if (e.target.classList.contains('edit-btn')) {
-                                this.showEditPersonModal(e.target.dataset.id);
-                            } else if (e.target.classList.contains('delete-btn')) {
-                                this.deletePerson(e.target.dataset.id);
-                            }
-                        });
-                    } else {
-                        console.warn('personsTableBody elementi bulunamadı');
-                    }
-
-                    // Kişi tipi değişince ad/firma etiketi güncelle
-                    const personType = document.getElementById('personType');
-                    if (personType) {
-                        personType.addEventListener('change', () => this.updateNameLabelByType());
-                    } else {
-                        console.warn('personType elementi bulunamadı');
-                    }
-
-                    // Telefon maskesi - Güvenli erişim
-                    const phoneInput = document.getElementById('personPhone');
-                    if (phoneInput) {
-                        phoneInput.addEventListener('focus', () => {
-                            if (!phoneInput.value.trim()) phoneInput.value = '+90 ';
-                        });
-                        phoneInput.addEventListener('input', () => {
-                            phoneInput.value = this.formatTRPhone(phoneInput.value);
-                        });
-                    } else {
-                        console.warn('personPhone elementi bulunamadı - Modal henüz yüklenmemiş olabilir');
-                    }
-
-                    // Ülke değişince il alanını uygun hale getir
-                    const countrySelect = document.getElementById('countrySelect');
-                    if (countrySelect) {
-                        countrySelect.addEventListener('change', () => this.loadProvincesForSelectedCountry());
-                    } else {
-                        console.warn('countrySelect elementi bulunamadı');
-                    }
-                    
-                    // Tip değişince: etiket ve ekstra alanları güncelle
-                    if (personType) {
-                        personType.addEventListener('change', () => {
-                            this.updateNameLabelByType();
-                            this.updateExtraFieldsByType();
-                        });
-                    }
-
-                    // TCKN ve VKN için rakam/uzunluk kontrolü
-                    const tcknInput = document.getElementById('personTckn');
-                    const vknInput = document.getElementById('personVkn');
-
-                    if (tcknInput) {
-                        tcknInput.addEventListener('input', () => {
-                            tcknInput.value = tcknInput.value.replace(/\D/g, '').slice(0, 11);
-                        });
-                    }
-                    if (vknInput) {
-                        vknInput.addEventListener('input', () => {
-                            vknInput.value = vknInput.value.replace(/\D/g, '').slice(0, 10);
-                        });
-                    }
-
-                    // İlgililer bölümü aç/kapat - Güvenli binding
-                    const toggleBtn = document.getElementById('toggleRelatedBtn');
-                    if (toggleBtn && !toggleBtn.dataset.bound) {
-                        toggleBtn.addEventListener('click', () => this.toggleRelatedSection());
-                        toggleBtn.dataset.bound = '1';
-                    }
-                    
-                    const addRelBtn = document.getElementById('addRelatedBtn');
-                    if (addRelBtn && !addRelBtn.dataset.bound) {
-                        addRelBtn.addEventListener('click', () => this.handleAddRelated());
-                        addRelBtn.dataset.bound = '1';
-                    }
-
-                    // ============ YENİ EKLEMELER - İlgililer Bölümü ============
-                    
-                    // İlgililer bölümü toggle
-                    const relatedHeader = document.getElementById('relatedHeader');
-                    if (relatedHeader) {
-                        relatedHeader.addEventListener('click', () => {
-                            const section = document.getElementById('relatedSection');
-                            if (section) {
-                                section.classList.toggle('expanded');
-                            }
-                        });
-                    }
-
-                    // Yeni İlgili ekleme butonu
-                    const addRelatedBtnNew = document.getElementById('addRelatedBtn');
-                    if (addRelatedBtnNew) {
-                        addRelatedBtnNew.addEventListener('click', () => {
-                            const name = document.getElementById('relatedName').value.trim();
-                            const email = document.getElementById('relatedEmail').value.trim();
-                            const phone = document.getElementById('relatedPhone').value.trim();
-                            
-                            if (!name) {
-                                alert('Ad Soyad zorunludur!');
-                                return;
-                            }
-
-                            // Seçili scope'ları al
-                            const scopes = [];
-                            document.querySelectorAll('.checkbox-group input[type="checkbox"]:checked').forEach(cb => {
-                                scopes.push(cb.value);
-                            });
-
-                            // İlgiliyi listeye ekle
-                            this.addRelatedToList(name, email, phone, scopes);
-
-                            // Formu temizle
-                            document.getElementById('relatedName').value = '';
-                            document.getElementById('relatedEmail').value = '';
-                            document.getElementById('relatedPhone').value = '';
-                            document.querySelectorAll('.checkbox-group input[type="checkbox"]').forEach(cb => cb.checked = false);
-                        });
-                    }
-
-                    // ========================================================
-
-                    // Modal içeriği sonradan gelirse delegasyonla yakala
-                    document.addEventListener('click', (e) => {
-                        const t = e.target;
-                        if (t.closest?.('#toggleRelatedBtn')) this.toggleRelatedSection();
-                        if (t.closest?.('#addRelatedBtn')) this.handleAddRelated();
-                    });
-
-                    // İlgili telefon formatı
-                    const relatedPhone = document.getElementById('relatedPhone');
-                    if (relatedPhone) {
-                        relatedPhone.addEventListener('focus', () => {
-                            if (!relatedPhone.value.trim()) relatedPhone.value = '+90 ';
-                        });
-                        relatedPhone.addEventListener('input', () => {
-                            relatedPhone.value = this.formatTRPhone(relatedPhone.value);
-                        });
-                    }
-
-                    console.log('✅ setupEventListeners tamamlandı');
+                } else {
+                    console.warn('❌ relatedSection bulunamadı');
                 }
+            });
+            toggleRelatedBtn.dataset.listenerAdded = 'true';
+            console.log('✅ toggleRelatedBtn event listener eklendi');
+        } else if (!toggleRelatedBtn) {
+            console.warn('❌ toggleRelatedBtn bulunamadı');
+        }
+    }, 200);
+
+    // İlgili ekleme butonu
+    setTimeout(() => {
+        const addRelatedBtn = document.getElementById('addRelatedBtn');
+        if (addRelatedBtn && !addRelatedBtn.dataset.listenerAdded) {
+            addRelatedBtn.addEventListener('click', () => {
+                console.log('➕ İlgili ekle butonu tıklandı');
+                
+                const nameInput = document.getElementById('relatedName');
+                const emailInput = document.getElementById('relatedEmail');
+                const phoneInput = document.getElementById('relatedPhone');
+                
+                console.log('📋 Form elementleri kontrol ediliyor:', {
+                    nameInput: !!nameInput,
+                    emailInput: !!emailInput,
+                    phoneInput: !!phoneInput
+                });
+                
+                if (!nameInput || !emailInput || !phoneInput) {
+                    console.error('❌ İlgili form elementleri bulunamadı');
+                    alert('Form elementleri bulunamadı. Sayfayı yenileyin.');
+                    return;
+                }
+                
+                const name = nameInput.value.trim();
+                const email = emailInput.value.trim();
+                const phone = phoneInput.value.trim();
+                
+                console.log('📝 Form değerleri:', { 
+                    name: `"${name}"`, 
+                    email: `"${email}"`, 
+                    phone: `"${phone}"` 
+                });
+                
+                if (!name) {
+                    console.warn('⚠️ Ad Soyad boş');
+                    alert('Ad Soyad zorunludur!');
+                    nameInput.focus();
+                    return;
+                }
+
+                // Seçili scope'ları al
+                const scopes = [];
+                const checkboxes = document.querySelectorAll('#relatedSection .checkbox-group input[type="checkbox"]:checked');
+                console.log('☑️ Bulunan checkbox sayısı:', checkboxes.length);
+                
+                checkboxes.forEach(cb => {
+                    scopes.push(cb.value);
+                    console.log('✓ Seçili scope:', cb.value);
+                });
+
+                console.log('📊 Toplam seçili scope\'lar:', scopes);
+
+                // İlgiliyi listeye ekle
+                try {
+                    this.addRelatedToList(name, email, phone, scopes);
+                    console.log('✅ İlgili başarıyla eklendi');
+
+                    // Formu temizle
+                    nameInput.value = '';
+                    emailInput.value = '';
+                    phoneInput.value = '';
+                    document.querySelectorAll('#relatedSection .checkbox-group input[type="checkbox"]').forEach(cb => cb.checked = false);
+                    console.log('🧹 Form temizlendi');
+                } catch (error) {
+                    console.error('❌ İlgili eklenirken hata:', error);
+                    alert('İlgili eklenirken hata oluştu: ' + error.message);
+                }
+            });
+            addRelatedBtn.dataset.listenerAdded = 'true';
+            console.log('✅ addRelatedBtn event listener eklendi');
+        } else if (!addRelatedBtn) {
+            console.warn('❌ addRelatedBtn bulunamadı');
+        }
+    }, 300);
+
+    // İlgili telefon formatı
+    setTimeout(() => {
+        const relatedPhone = document.getElementById('relatedPhone');
+        if (relatedPhone && !relatedPhone.dataset.listenerAdded) {
+            relatedPhone.addEventListener('focus', () => {
+                if (!relatedPhone.value.trim()) relatedPhone.value = '+90 ';
+            });
+            relatedPhone.addEventListener('input', () => {
+                relatedPhone.value = this.formatTRPhone(relatedPhone.value);
+            });
+            relatedPhone.dataset.listenerAdded = 'true';
+            console.log('✅ relatedPhone event listener eklendi');
+        }
+    }, 300);
+
+    // Global delegasyon - son çare
+    document.addEventListener('click', (e) => {
+        if (e.target.id === 'toggleRelatedBtn' || e.target.closest('#toggleRelatedBtn')) {
+            console.log('🌐 Global delegasyon: İlgililer butonu');
+            this.toggleRelatedSection();
+        }
+        if (e.target.id === 'addRelatedBtn' || e.target.closest('#addRelatedBtn')) {
+            console.log('🌐 Global delegasyon: İlgili ekle butonu');
+            // Manuel tetikleme için event oluştur
+            const btn = document.getElementById('addRelatedBtn');
+            if (btn && btn.dataset.listenerAdded) {
+                console.log('🔄 Mevcut listener kullanılacak');
+            }
+        }
+    });
+
+    console.log('🎉 setupEventListeners tamamlandı');
+}
                 async loadPersons() {
                     document.getElementById('loadingIndicator').style.display = 'block';
                     try {
