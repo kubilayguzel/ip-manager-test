@@ -199,7 +199,7 @@
             outline: none; border-color: #1e3c72;
             box-shadow: 0 0 0 3px rgba(30, 60, 114, 0.1);
         }
-        .form-textarea { min-height: 60px; resize: vertical; } /* Adres alanı yüksekliği daraltıldı */
+        .form-textarea { min-height: 60px; resize: vertical; }
 
         .modal-footer {
             margin-top: 25px;
@@ -220,7 +220,6 @@
         .btn-secondary { background: #6c757d; color: white; border: none; }
         .btn-secondary:hover { background: #5a6268; }
         
-        /* Yeni İlgili Ekle butonu */
         .btn-add-related {
             background-color: #007bff;
             color: white;
@@ -242,14 +241,13 @@
             font-size: 1.2em;
         }
 
-        /* İlgililer Bölümü - GÜNCELLENMİŞ STİLLER */
         .related-section {
             margin-top: 20px;
             border: 1px solid #e1e8ed;
             border-radius: 8px;
             overflow: hidden;
             background-color: #f9fbfd;
-            display: none; /* Varsayılan olarak gizli */
+            display: none;
         }
         .related-section.show {
             display: block;
@@ -300,7 +298,7 @@
             font-weight: 600;
             color: #333;
             margin-bottom: 5px;
-            font-size: 1em; /* Ana modal fontuyla uyumlu hale getirildi */
+            font-size: 1em;
         }
         .related-details {
             font-size: 0.9em;
@@ -363,10 +361,14 @@
             font-weight: 600;
         }
 
-        .form-row {
+        /* İlgililer formundaki inputlar için düzen */
+        .related-form-container .form-row {
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: 1fr;
             gap: 15px;
+        }
+        .related-form-container .form-group input {
+            font-size: 1em; /* Ana modal inputları ile uyumlu hale getirildi */
         }
         
         .checkbox-group {
@@ -417,10 +419,10 @@
             padding: 8px 16px;
             font-size: 0.9em;
         }
-
+        
         /* Responsive */
         @media (max-width: 768px) {
-            .related-form .form-row {
+            .related-form-container .form-row {
                 grid-template-columns: 1fr;
             }
             .checkbox-group {
@@ -541,20 +543,19 @@
                                 <input type="hidden" id="relatedId">
                             </div>
                             
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label for="relatedName">Ad Soyad <span style="color:red;">*</span></label>
-                                    <input type="text" id="relatedName" placeholder="İlgili kişinin adı">
-                                </div>
-                                <div class="form-group">
-                                    <label for="relatedEmail">E-posta</label>
-                                    <input type="email" id="relatedEmail" placeholder="ilgili@email.com">
-                                </div>
+                            <div class="form-group">
+                                <label for="relatedName" class="form-label">Ad Soyad <span style="color:red;">*</span></label>
+                                <input type="text" id="relatedName" class="form-input" placeholder="İlgili kişinin adı">
                             </div>
                             <div class="form-group">
-                                <label for="relatedPhone">Telefon</label>
-                                <input type="tel" id="relatedPhone" placeholder="+90 5XX XXX XX XX">
+                                <label for="relatedEmail" class="form-label">E-posta</label>
+                                <input type="email" id="relatedEmail" class="form-input" placeholder="ilgili@email.com">
                             </div>
+                            <div class="form-group">
+                                <label for="relatedPhone" class="form-label">Telefon</label>
+                                <input type="tel" id="relatedPhone" class="form-input" placeholder="+90 5XX XXX XX XX">
+                            </div>
+
                             <div class="form-group">
                                 <label>Sorumlu Olduğu Alanlar:</label>
                                 <div class="checkbox-group">
@@ -567,7 +568,7 @@
                             </div>
                             <div id="relatedFormButtons">
                                 <button type="button" class="btn btn-secondary" id="cancelRelatedBtn" style="display:none;">İptal</button>
-                                <button type="button" class="btn btn-add-person" id="addRelatedBtn">➕ İlgili Ekle</button>
+                                <button type="button" class="btn btn-primary" id="addRelatedBtn">➕ İlgili Ekle</button>
                                 <button type="button" class="btn btn-primary" id="updateRelatedBtn" style="display:none;">✔️ İlgiliyi Güncelle</button>
                             </div>
                         </div>
@@ -673,13 +674,11 @@
                         cancelRelatedBtn.addEventListener('click', () => this.resetRelatedForm());
                     }
 
+                    // Telefon inputlarına event listener ekle
+                    this.addPhoneInputListeners('personPhone');
+                    this.addPhoneInputListeners('relatedPhone');
+
                     setTimeout(() => {
-                        const phoneInput = document.getElementById('personPhone');
-                        if (phoneInput && !phoneInput.dataset.listenerAdded) {
-                            phoneInput.addEventListener('focus', () => { if (!phoneInput.value.trim()) phoneInput.value = '+90 '; });
-                            phoneInput.addEventListener('input', () => { phoneInput.value = this.formatTRPhone(phoneInput.value); });
-                            phoneInput.dataset.listenerAdded = 'true';
-                        }
                         const countrySelect = document.getElementById('countrySelect');
                         if (countrySelect && !countrySelect.dataset.listenerAdded) {
                             countrySelect.addEventListener('change', () => this.loadProvincesForSelectedCountry());
@@ -696,6 +695,15 @@
                             vknInput.dataset.listenerAdded = 'true';
                         }
                     }, 100);
+                }
+                
+                addPhoneInputListeners(id) {
+                    const phoneInput = document.getElementById(id);
+                    if (phoneInput && !phoneInput.dataset.listenerAdded) {
+                        phoneInput.addEventListener('focus', () => { if (!phoneInput.value.trim()) phoneInput.value = '+90 '; });
+                        phoneInput.addEventListener('input', () => { phoneInput.value = this.formatTRPhone(phoneInput.value); });
+                        phoneInput.dataset.listenerAdded = 'true';
+                    }
                 }
 
                 toggleRelatedSection() {
@@ -1154,6 +1162,7 @@
                     all.forEach((r, idx) => {
                         const relatedItem = document.createElement('div');
                         relatedItem.className = 'related-item';
+                        relatedItem.dataset.idx = idx;
 
                         const scopes = extractScopes(r);
                         const scopeBadges = (scopes.length
@@ -1203,7 +1212,7 @@
                     document.getElementById('relatedPhone').value = related.phone || '';
 
                     const scopes = this.extractScopes(related);
-                    document.querySelectorAll('.checkbox-group input[type="checkbox"]').forEach(cb => {
+                    document.querySelectorAll('.related-form-container .checkbox-group input[type="checkbox"]').forEach(cb => {
                         cb.checked = scopes.includes(cb.value);
                     });
 
@@ -1212,7 +1221,7 @@
                     document.getElementById('cancelRelatedBtn').style.display = 'inline-block';
 
                     document.querySelectorAll('.related-item').forEach(item => item.classList.remove('selected'));
-                    const selectedItem = document.querySelector(`[data-idx="${index}"]`);
+                    const selectedItem = document.querySelector(`.related-item[data-idx="${index}"]`);
                     if (selectedItem) selectedItem.classList.add('selected');
                 }
 
