@@ -100,6 +100,8 @@
         .type-individual { background-color: #007bff; }
         .type-company { background-color: #28a745; }
         .type-institution { background-color: #6f42c1; }
+        .type-gercek { background-color: #007bff; }
+        .type-tuzel  { background-color: #28a745; }
 
         .action-btn {
             background: #007bff;
@@ -264,7 +266,7 @@
             <form id="personForm">
                 <input type="hidden" id="personId">
                 <div class="form-group">
-                    <label for="personName" class="form-label">Ad Soyad / Firma Adı:</label>
+                    <label for="personName" class="form-label"><span id="personNameLabel">Ad Soyad</span>:</label>
                     <input type="text" id="personName" class="form-input" required>
                 </div>
                 <div class="form-group">
@@ -273,17 +275,24 @@
                 </div>
                 <div class="form-group">
                     <label for="personPhone" class="form-label">Telefon:</label>
-                    <input type="tel" id="personPhone" class="form-input">
+                    <input type="tel" id="personPhone" class="form-input" placeholder="+90 5__ ___ __ __">
                 </div>
-                <div class="form-group">
+                   <div class="form-group">
                     <label for="personType" class="form-label">Kişi Tipi:</label>
                     <select id="personType" class="form-select" required>
                         <option value="">Seçiniz</option>
-                        <option value="individual">Bireysel</option>
-                        <option value="company">Şirket</option>
-                        <option value="institution">Kurum</option>
+                        <option value="gercek">Gerçek</option>
+                        <option value="tuzel">Tüzel</option>
                     </select>
-                </div>
+                    </div>
+                <div class="form-group">
+                    <label class="form-label">Adres Ülke / İl:</label>
+                    <div style="display:flex;gap:10px;flex-wrap:wrap">
+                        <select id="countrySelect" class="form-select" style="flex:1 1 200px"></select>
+                        <select id="provinceSelect" class="form-select" style="flex:1 1 200px"></select>
+                        <input type="text" id="provinceText" class="form-input" style="display:none;flex:1 1 200px" placeholder="Eyalet / İl">
+                    </div>
+                    </div>
                 <div class="form-group">
                     <label for="personAddress" class="form-label">Adres:</label>
                     <textarea id="personAddress" class="form-textarea"></textarea>
@@ -298,6 +307,7 @@
 
     <script type="module">
         import { authService, personService, auth } from './firebase-config.js';
+        import { getDoc, doc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
         import { showNotification } from './utils.js';
         import { loadSharedLayout } from './js/layout-loader.js'; // layout-loader.js eklendi
 
@@ -338,6 +348,20 @@
                             this.deletePerson(e.target.dataset.id);
                         }
                     });
+                    // Kişi tipi değişince ad/firma etiketi güncelle
+                    document.getElementById('personType').addEventListener('change', () => this.updateNameLabelByType());
+
+                    // Telefon maskesi
+                    const phoneInput = document.getElementById('personPhone');
+                    phoneInput.addEventListener('focus', () => {
+                    if (!phoneInput.value.trim()) phoneInput.value = '+90 ';
+                    });
+                    phoneInput.addEventListener('input', () => {
+                    phoneInput.value = this.formatTRPhone(phoneInput.value);
+                    });
+
+                    // Ülke değişince il alanını uygun hale getir
+                    document.getElementById('countrySelect').addEventListener('change', () => this.loadProvincesForSelectedCountry());
                 }
 
                 async loadPersons() {
@@ -378,14 +402,13 @@
 
                     filteredPersons.forEach(person => {
                         const row = document.createElement('tr');
-                        const typeClass = `type-${person.type}`;
-                        let typeText = '';
-                        switch(person.type) {
-                            case 'individual': typeText = 'Bireysel'; break;
-                            case 'company': typeText = 'Şirket'; break;
-                            case 'institution': typeText = 'Kurum'; break;
-                            default: typeText = 'Diğer'; break;
-                        }
+                        const typeKey =
+                        (person.type === 'individual') ? 'gercek' :
+                        ((person.type === 'company' || person.type === 'institution') ? 'tuzel' : (person.type || ''));
+
+                        const typeClass = `type-${typeKey}`;
+                        const typeText = (typeKey === 'gercek') ? 'Gerçek' :
+                                        (typeKey === 'tuzel')  ? 'Tüzel'  : 'Diğer';
 
                         row.innerHTML = `
                             <td>${person.name}</td>
@@ -401,6 +424,102 @@
                     });
                 }
 
+                updateNameLabelByType() {
+                    const val = document.getElementById('personType').value;
+                    document.getElementById('personNameLabel').textContent =
+                        (val === 'tuzel') ? 'Firma Adı' : 'Ad Soyad';
+                    }
+
+                formatTRPhone(raw) {
+                const digits = raw.replace(/\D/g, '');
+                let d = digits;
+                if (d.startsWith('90')) d = d.slice(2);
+                if (d.startsWith('0')) d = d.slice(1);
+                d = d.slice(0, 10); // 10 hane
+                let out = '+90 ';
+                if (d.length > 0) out += d.substring(0, 3);
+                if (d.length > 3) out += ' ' + d.substring(3, 6);
+                if (d.length > 6) out += ' ' + d.substring(6, 8);
+                if (d.length > 8) out += ' ' + d.substring(8, 10);
+                return out.trim();
+                }
+
+                async loadCountries() {
+                const countrySel = document.getElementById('countrySelect');
+                countrySel.innerHTML = '<option value="">Yükleniyor...</option>';
+                try {
+                    // common/countries dokümanı: { list: [{code:'TR', name:'Türkiye'}, ...] } veya benzeri
+                    const snap = await getDoc(doc(db, 'common', 'countries'));
+                    let list = [];
+                    if (snap.exists()) {
+                    const d = snap.data();
+                    list = d.list || d.countries || d.items || [];
+                    }
+                    if (!Array.isArray(list)) list = [];
+
+                    const options = ['<option value="">Seçiniz</option>'].concat(
+                    list.map(item => {
+                        const code = (item.code || item.iso || item.id || item).toString();
+                        const name = (item.name || item.label || item).toString();
+                        return `<option value="${code}">${name}</option>`;
+                    })
+                    ).join('');
+                    countrySel.innerHTML = options;
+
+                    // Varsayılan: Türkiye
+                    const opt = Array.from(countrySel.options).find(o =>
+                    /^(TR|TUR)$/i.test(o.value) || /türkiye|turkiye/i.test(o.text)
+                    );
+                    if (opt) opt.selected = true;
+
+                    await this.loadProvincesForSelectedCountry();
+                } catch (e) {
+                    console.error('Ülkeler yüklenemedi:', e);
+                    countrySel.innerHTML = '<option value="">Seçiniz</option>';
+                }
+                }
+
+                async loadProvincesForSelectedCountry() {
+                const countrySel = document.getElementById('countrySelect');
+                const provinceSel = document.getElementById('provinceSelect');
+                const provinceText = document.getElementById('provinceText');
+
+                const code = countrySel.value;
+                const name = countrySel.options[countrySel.selectedIndex]?.text || '';
+                const isTR = /^(TR|TUR)$/i.test(code) || /türkiye|turkiye/i.test(name);
+
+                if (isTR) {
+                    provinceText.style.display = 'none';
+                    provinceSel.style.display = 'block';
+                    provinceSel.innerHTML = '<option value="">Yükleniyor...</option>';
+
+                    let list = [];
+                    for (const docId of ['provinces_TR', 'cities_TR', 'turkey_provinces']) {
+                    try {
+                        const snap = await getDoc(doc(db, 'common', docId));
+                        if (snap.exists()) {
+                        const d = snap.data();
+                        list = d.list || d.provinces || d.cities || [];
+                        if (Array.isArray(list) && list.length) break;
+                        }
+                    } catch (_) {}
+                    }
+                    if (!Array.isArray(list)) list = [];
+
+                    provinceSel.innerHTML = ['<option value="">İl Seçiniz</option>'].concat(
+                    list.map(item => {
+                        const code = (item.code || item.id || item).toString();
+                        const name = (item.name || item.label || item).toString();
+                        return `<option value="${code}">${name}</option>`;
+                    })
+                    ).join('');
+                } else {
+                    provinceSel.style.display = 'none';
+                    provinceText.style.display = 'block';
+                    provinceText.value = '';
+                }
+                }
+                
                 filterPersons(query) {
                     this.renderPersons(query);
                 }
@@ -411,7 +530,7 @@
                     document.getElementById('personId').value = '';
                     document.getElementById('personModal').classList.add('show');
                 }
-
+                
                 showEditPersonModal(personId) {
                     const person = this.allPersons.find(p => p.id === personId);
                     if (!person) {
