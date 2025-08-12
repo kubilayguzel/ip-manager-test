@@ -208,6 +208,7 @@
             display: flex;
             justify-content: flex-end;
             gap: 10px;
+            flex-wrap: wrap;
         }
         .modal-footer .btn {
             padding: 10px 20px;
@@ -219,6 +220,28 @@
         .btn-secondary { background: #6c757d; color: white; border: none; }
         .btn-secondary:hover { background: #5a6268; }
 
+        /* Yeni İlgili Ekle butonu */
+        .btn-add-related {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .btn-add-related:hover {
+            background-color: #0056b3;
+        }
+        .btn-add-related span {
+            font-size: 1.2em;
+        }
+
         /* İlgililer Bölümü - YENİ VE GELİŞTİRİLMİŞ STİLLER */
         .related-section {
             margin-top: 20px;
@@ -226,47 +249,26 @@
             border-radius: 8px;
             overflow: hidden;
             background-color: #f9fbfd;
+            display: none; /* Varsayılan olarak gizli */
+        }
+        .related-section.show {
+            display: block;
         }
 
         .related-header {
             background-color: #e9ecef;
             padding: 15px 20px;
-            cursor: pointer;
-            border-bottom: 1px solid #dee2e6;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            transition: background-color 0.3s ease;
             font-weight: 600;
             color: #1e3c72;
+            border-bottom: 1px solid #dee2e6;
         }
-        .related-header:hover {
-            background-color: #dde2e6;
-        }
-
+        
         .related-header h5 {
             margin: 0;
             font-size: 1.1em;
-        }
-
-        .related-toggle-icon {
-            font-size: 1.2em;
-            color: #6c757d;
-            transition: transform 0.3s ease;
-        }
-
-        .related-section.expanded .related-toggle-icon {
-            transform: rotate(180deg);
-        }
-
-        .related-content {
-            display: none;
-            padding: 20px;
-            background-color: #fff;
-        }
-
-        .related-section.expanded .related-content {
-            display: block;
         }
 
         .related-form {
@@ -506,14 +508,12 @@
                 </div>
 
                 <div class="related-section" id="relatedSection">
-                    <div class="related-header" id="relatedHeader">
+                    <div class="related-header">
                         <h5>👥 İlgililer</h5>
-                        <span class="related-toggle-icon">▼</span>
                     </div>
                     <div class="related-content">
                         <div class="related-form">
                             <h6>Yeni İlgili Ekle</h6>
-                            
                             <div class="form-row">
                                 <div class="form-group">
                                     <label for="relatedName">Ad Soyad <span style="color:red;">*</span></label>
@@ -524,12 +524,10 @@
                                     <input type="email" id="relatedEmail" placeholder="ilgili@email.com">
                                 </div>
                             </div>
-
                             <div class="form-group">
                                 <label for="relatedPhone">Telefon</label>
                                 <input type="tel" id="relatedPhone" placeholder="+90 5XX XXX XX XX">
                             </div>
-
                             <div class="form-group">
                                 <label>Sorumlu Olduğu Alanlar:</label>
                                 <div class="checkbox-group">
@@ -540,10 +538,8 @@
                                     <label><input type="checkbox" value="muhasebe"> Muhasebe</label>
                                 </div>
                             </div>
-
                             <button type="button" id="addRelatedBtn">➕ İlgili Ekle</button>
                         </div>
-
                         <div class="related-list" id="relatedList">
                             <div class="related-empty">
                                 Henüz ilgili kişi eklenmedi.
@@ -551,8 +547,10 @@
                         </div>
                     </div>
                 </div>
-                
                 <div class="modal-footer">
+                    <button type="button" class="btn btn-add-related" id="showRelatedBtn">
+                        <span>&#x2795;</span> İlgilileri Yönet
+                    </button>
                     <button type="button" class="btn btn-secondary" id="cancelPersonBtn">İptal</button>
                     <button type="submit" class="btn btn-primary" id="savePersonBtn" form="personForm">Kaydet</button>
                 </div>
@@ -566,7 +564,6 @@
         import { collection, addDoc, getDoc, getDocs, query, where, deleteDoc, doc, writeBatch } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         document.addEventListener('DOMContentLoaded', async () => {
-            // Ortak layout'u yükle ve bu sayfanın aktif linkini belirt
             await loadSharedLayout({ activeMenuLink: 'persons.html' });
 
             class PersonsModule {
@@ -586,8 +583,6 @@
                 }
 
                 setupEventListeners() {
-                    console.log('🔧 setupEventListeners başlatılıyor...');
-                    
                     const addNewPersonBtn = document.getElementById('addNewPersonBtn');
                     if (addNewPersonBtn) {
                         addNewPersonBtn.addEventListener('click', () => this.showAddPersonModal());
@@ -631,54 +626,12 @@
                             this.updateExtraFieldsByType();
                         });
                     }
-
-                    setTimeout(() => {
-                        const phoneInput = document.getElementById('personPhone');
-                        if (phoneInput && !phoneInput.dataset.listenerAdded) {
-                            phoneInput.addEventListener('focus', () => {
-                                if (!phoneInput.value.trim()) phoneInput.value = '+90 ';
-                            });
-                            phoneInput.addEventListener('input', () => {
-                                phoneInput.value = this.formatTRPhone(phoneInput.value);
-                            });
-                            phoneInput.dataset.listenerAdded = 'true';
-                        }
-                    }, 100);
-
-                    setTimeout(() => {
-                        const countrySelect = document.getElementById('countrySelect');
-                        if (countrySelect && !countrySelect.dataset.listenerAdded) {
-                            countrySelect.addEventListener('change', () => this.loadProvincesForSelectedCountry());
-                            countrySelect.dataset.listenerAdded = 'true';
-                        }
-                    }, 100);
-
-                    setTimeout(() => {
-                        const tcknInput = document.getElementById('personTckn');
-                        const vknInput = document.getElementById('personVkn');
-                        if (tcknInput && !tcknInput.dataset.listenerAdded) {
-                            tcknInput.addEventListener('input', () => {
-                                tcknInput.value = tcknInput.value.replace(/\D/g, '').slice(0, 11);
-                            });
-                            tcknInput.dataset.listenerAdded = 'true';
-                        }
-                        if (vknInput && !vknInput.dataset.listenerAdded) {
-                            vknInput.addEventListener('input', () => {
-                                vknInput.value = vknInput.value.replace(/\D/g, '').slice(0, 10);
-                            });
-                            vknInput.dataset.listenerAdded = 'true';
-                        }
-                    }, 100);
                     
-                    // İlgililer akordiyonu için event listener
-                    const relatedHeader = document.getElementById('relatedHeader');
-                    if (relatedHeader) {
-                        relatedHeader.addEventListener('click', () => {
-                            document.getElementById('relatedSection').classList.toggle('expanded');
-                        });
+                    const showRelatedBtn = document.getElementById('showRelatedBtn');
+                    if (showRelatedBtn) {
+                        showRelatedBtn.addEventListener('click', () => this.showRelatedSection());
                     }
-
-                    // İlgili ekle butonu
+                    
                     const addRelatedBtn = document.getElementById('addRelatedBtn');
                     if (addRelatedBtn) {
                         addRelatedBtn.addEventListener('click', () => {
@@ -701,6 +654,42 @@
                             document.querySelectorAll('.related-form .checkbox-group input[type="checkbox"]').forEach(cb => cb.checked = false);
                         });
                     }
+
+                    setTimeout(() => {
+                        const phoneInput = document.getElementById('personPhone');
+                        if (phoneInput && !phoneInput.dataset.listenerAdded) {
+                            phoneInput.addEventListener('focus', () => { if (!phoneInput.value.trim()) phoneInput.value = '+90 '; });
+                            phoneInput.addEventListener('input', () => { phoneInput.value = this.formatTRPhone(phoneInput.value); });
+                            phoneInput.dataset.listenerAdded = 'true';
+                        }
+                        const countrySelect = document.getElementById('countrySelect');
+                        if (countrySelect && !countrySelect.dataset.listenerAdded) {
+                            countrySelect.addEventListener('change', () => this.loadProvincesForSelectedCountry());
+                            countrySelect.dataset.listenerAdded = 'true';
+                        }
+                        const tcknInput = document.getElementById('personTckn');
+                        const vknInput = document.getElementById('personVkn');
+                        if (tcknInput && !tcknInput.dataset.listenerAdded) {
+                            tcknInput.addEventListener('input', () => { tcknInput.value = tcknInput.value.replace(/\D/g, '').slice(0, 11); });
+                            tcknInput.dataset.listenerAdded = 'true';
+                        }
+                        if (vknInput && !vknInput.dataset.listenerAdded) {
+                            vknInput.addEventListener('input', () => { vknInput.value = vknInput.value.replace(/\D/g, '').slice(0, 10); });
+                            vknInput.dataset.listenerAdded = 'true';
+                        }
+                    }, 100);
+                }
+
+                showRelatedSection() {
+                    const relatedSection = document.getElementById('relatedSection');
+                    const showRelatedBtn = document.getElementById('showRelatedBtn');
+                    if (relatedSection.classList.contains('show')) {
+                        relatedSection.classList.remove('show');
+                        showRelatedBtn.innerHTML = '<span>&#x2795;</span> İlgilileri Yönet';
+                    } else {
+                        relatedSection.classList.add('show');
+                        showRelatedBtn.innerHTML = '<span>&#x2715;</span> İlgilileri Kapat';
+                    }
                 }
 
                 async loadPersons() {
@@ -719,6 +708,7 @@
                         document.getElementById('loadingIndicator').style.display = 'none';
                     }
                 }
+                
                 renderPersons(filterText = '') {
                     const tableBody = document.getElementById('personsTableBody');
                     const noPersonsMessage = document.getElementById('noPersonsMessage');
@@ -912,23 +902,14 @@
                     if (personBirthDate) personBirthDate.value = '';
                     if (personVkn) personVkn.value = '';
                     this.loadCountries();
-                    setTimeout(() => {
-                        const phoneInput = document.getElementById('personPhone');
-                        if (phoneInput && !phoneInput.dataset.listenerAdded) {
-                            phoneInput.addEventListener('focus', () => { if (!phoneInput.value.trim()) phoneInput.value = '+90 '; });
-                            phoneInput.addEventListener('input', () => { phoneInput.value = this.formatTRPhone(phoneInput.value); });
-                            phoneInput.dataset.listenerAdded = 'true';
-                        }
-                    }, 100);
-
-                    // İlgililer state'lerini sıfırla
+                    
                     this.relatedDraft = [];
                     this.relatedLoaded = [];
                     this.renderRelatedList();
 
-                    // İlgililer bölümünü akordiyon mantığına göre varsayılan olarak açılır hale getir
-                    const relatedSection = document.getElementById('relatedSection');
-                    if (relatedSection) relatedSection.classList.remove('expanded');
+                    // İlgililer bölümünü varsayılan olarak gizle
+                    document.getElementById('relatedSection').classList.remove('show');
+                    document.getElementById('showRelatedBtn').innerHTML = '<span>&#x2795;</span> İlgilileri Yönet';
 
                     document.getElementById('personModal').classList.add('show');
                 }
@@ -993,9 +974,9 @@
                     }
                     this.renderRelatedList();
 
-                    // İlgililer bölümünü aç ve genişlet
-                    const relatedSection = document.getElementById('relatedSection');
-                    if(relatedSection) relatedSection.classList.add('expanded');
+                    // Düzenleme modunda ilgililer bölümünü varsayılan olarak aç
+                    document.getElementById('relatedSection').classList.add('show');
+                    document.getElementById('showRelatedBtn').innerHTML = '<span>&#x2715;</span> İlgilileri Kapat';
 
                     document.getElementById('personModal').classList.add('show');
                 }
@@ -1113,9 +1094,10 @@
                     await this.loadPersons();
                 }
 
-                // Geliştirilmiş renderRelatedList() işlevi
                 renderRelatedList() {
                     const relatedList = document.getElementById('relatedList');
+                    if (!relatedList) return;
+                    
                     relatedList.innerHTML = '';
                     
                     const all = [
