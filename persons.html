@@ -199,7 +199,7 @@
             outline: none; border-color: #1e3c72;
             box-shadow: 0 0 0 3px rgba(30, 60, 114, 0.1);
         }
-        .form-textarea { min-height: 90px; resize: vertical; }
+        .form-textarea { min-height: 60px; resize: vertical; } /* Adres alanı yüksekliği daraltıldı */
 
         .modal-footer {
             margin-top: 25px;
@@ -219,7 +219,7 @@
         .btn-primary:hover { background: #2a5298; }
         .btn-secondary { background: #6c757d; color: white; border: none; }
         .btn-secondary:hover { background: #5a6268; }
-
+        
         /* Yeni İlgili Ekle butonu */
         .btn-add-related {
             background-color: #007bff;
@@ -242,7 +242,7 @@
             font-size: 1.2em;
         }
 
-        /* İlgililer Bölümü - YENİ VE GELİŞTİRİLMİŞ STİLLER */
+        /* İlgililer Bölümü - GÜNCELLENMİŞ STİLLER */
         .related-section {
             margin-top: 20px;
             border: 1px solid #e1e8ed;
@@ -255,92 +255,23 @@
             display: block;
         }
 
-        .related-header {
-            background-color: #e9ecef;
-            padding: 15px 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-weight: 600;
-            color: #1e3c72;
-            border-bottom: 1px solid #dee2e6;
-        }
-        
-        .related-header h5 {
-            margin: 0;
-            font-size: 1.1em;
-        }
-
-        .related-form {
+        .related-content {
             padding: 20px;
-            border-radius: 8px;
-            border: 1px solid #e1e8ed;
-            background-color: #f8f9fa;
-        }
-        .related-form h6 {
-            color: #1e3c72;
-            margin-bottom: 15px;
-            font-weight: 600;
-        }
-        .related-form .form-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-            margin-bottom: 15px;
-        }
-        .related-form .form-group {
-            margin-bottom: 0;
-        }
-        .related-form .form-group label {
-            font-size: 0.9em;
-            font-weight: 500;
-            color: #333;
-            margin-bottom: 5px;
-        }
-        .related-form .form-group input, .related-form .form-group select {
-            width: 100%;
-            padding: 8px 12px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            font-size: 0.9em;
-        }
-        .checkbox-group {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 15px;
-            margin-top: 10px;
-        }
-        .checkbox-group label {
-            display: flex;
-            align-items: center;
-            gap: 5px;
-            font-size: 0.9em;
-            cursor: pointer;
-        }
-        .checkbox-group input[type="checkbox"] {
-            margin: 0;
-            transform: scale(1.1);
-        }
-        #addRelatedBtn {
-            background: #28a745;
-            color: white;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 0.9em;
-            transition: background-color 0.3s ease;
-            margin-top: 15px;
-        }
-        #addRelatedBtn:hover {
-            background: #218838;
+            background-color: #fff;
         }
 
         .related-list {
-            margin-top: 20px;
+            margin-top: 10px;
             border: 1px solid #e1e8ed;
             border-radius: 8px;
             overflow: hidden;
+        }
+        .related-list-title {
+            background-color: #e9ecef;
+            padding: 15px;
+            font-weight: 600;
+            color: #1e3c72;
+            border-bottom: 1px solid #dee2e6;
         }
         .related-item {
             padding: 15px;
@@ -349,6 +280,15 @@
             justify-content: space-between;
             align-items: center;
             background-color: #fff;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+        .related-item:hover {
+            background-color: #f8f9fa;
+        }
+        .related-item.selected {
+            background-color: #e1f0ff;
+            border-left: 4px solid #007bff;
         }
         .related-item:last-child {
             border-bottom: none;
@@ -360,9 +300,10 @@
             font-weight: 600;
             color: #333;
             margin-bottom: 5px;
+            font-size: 1em; /* Ana modal fontuyla uyumlu hale getirildi */
         }
         .related-details {
-            font-size: 0.85em;
+            font-size: 0.9em;
             color: #666;
             margin-bottom: 5px;
         }
@@ -376,7 +317,7 @@
             color: white;
             padding: 2px 8px;
             border-radius: 12px;
-            font-size: 0.75em;
+            font-size: 0.8em;
             font-weight: 500;
             white-space: nowrap;
         }
@@ -399,6 +340,82 @@
             color: #666;
             font-style: italic;
             background-color: #fff;
+            font-size: 1em;
+        }
+        
+        .related-form-container {
+            border: 1px solid #e1e8ed;
+            border-radius: 8px;
+            background-color: #f8f9fa;
+            padding: 20px;
+            margin-top: 20px;
+        }
+
+        .related-form-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .related-form-header h6 {
+            margin: 0;
+            color: #1e3c72;
+            font-weight: 600;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+        
+        .checkbox-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-top: 10px;
+        }
+
+        /* Daha güzel checkbox tasarımı */
+        .checkbox-group input[type="checkbox"] {
+            display: none;
+        }
+        .checkbox-group label {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 8px 12px;
+            background-color: #e9ecef;
+            border: 1px solid #ced4da;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-weight: 500;
+            color: #495057;
+            font-size: 0.9em;
+            position: relative;
+        }
+        .checkbox-group input[type="checkbox"]:checked + label {
+            background-color: #007bff;
+            color: white;
+            border-color: #007bff;
+            box-shadow: 0 2px 4px rgba(0, 123, 255, 0.2);
+        }
+        .checkbox-group input[type="checkbox"]:checked + label::before {
+            content: "✓";
+            margin-right: 8px;
+            font-weight: 700;
+        }
+
+        #relatedFormButtons {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        #relatedFormButtons .btn-add-person, #relatedFormButtons .btn-secondary {
+            padding: 8px 16px;
+            font-size: 0.9em;
         }
 
         /* Responsive */
@@ -508,12 +525,22 @@
                 </div>
 
                 <div class="related-section" id="relatedSection">
-                    <div class="related-header">
-                        <h5>👥 İlgililer</h5>
-                    </div>
                     <div class="related-content">
-                        <div class="related-form">
-                            <h6>Yeni İlgili Ekle</h6>
+                        <div class="related-list">
+                            <div class="related-list-title">Eklenmiş İlgililer</div>
+                            <div id="relatedList">
+                                <div class="related-empty">
+                                    Henüz ilgili kişi eklenmedi.
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="related-form-container">
+                            <div class="related-form-header">
+                                <h6>Yeni İlgili Ekle</h6>
+                                <input type="hidden" id="relatedId">
+                            </div>
+                            
                             <div class="form-row">
                                 <div class="form-group">
                                     <label for="relatedName">Ad Soyad <span style="color:red;">*</span></label>
@@ -531,18 +558,17 @@
                             <div class="form-group">
                                 <label>Sorumlu Olduğu Alanlar:</label>
                                 <div class="checkbox-group">
-                                    <label><input type="checkbox" value="patent"> Patent</label>
-                                    <label><input type="checkbox" value="marka"> Marka</label>
-                                    <label><input type="checkbox" value="tasarim"> Tasarım</label>
-                                    <label><input type="checkbox" value="dava"> Dava</label>
-                                    <label><input type="checkbox" value="muhasebe"> Muhasebe</label>
+                                    <input type="checkbox" id="scopePatent" value="patent"><label for="scopePatent">Patent</label>
+                                    <input type="checkbox" id="scopeMarka" value="marka"><label for="scopeMarka">Marka</label>
+                                    <input type="checkbox" id="scopeTasarim" value="tasarim"><label for="scopeTasarim">Tasarım</label>
+                                    <input type="checkbox" id="scopeDava" value="dava"><label for="scopeDava">Dava</label>
+                                    <input type="checkbox" id="scopeMuhasebe" value="muhasebe"><label for="scopeMuhasebe">Muhasebe</label>
                                 </div>
                             </div>
-                            <button type="button" id="addRelatedBtn">➕ İlgili Ekle</button>
-                        </div>
-                        <div class="related-list" id="relatedList">
-                            <div class="related-empty">
-                                Henüz ilgili kişi eklenmedi.
+                            <div id="relatedFormButtons">
+                                <button type="button" class="btn btn-secondary" id="cancelRelatedBtn" style="display:none;">İptal</button>
+                                <button type="button" class="btn btn-add-person" id="addRelatedBtn">➕ İlgili Ekle</button>
+                                <button type="button" class="btn btn-primary" id="updateRelatedBtn" style="display:none;">✔️ İlgiliyi Güncelle</button>
                             </div>
                         </div>
                     </div>
@@ -561,7 +587,7 @@
         import { authService, personService, auth, db } from './firebase-config.js';
         import { showNotification } from './utils.js';
         import { loadSharedLayout } from './js/layout-loader.js';
-        import { collection, addDoc, getDoc, getDocs, query, where, deleteDoc, doc, writeBatch } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { collection, addDoc, getDoc, getDocs, query, where, deleteDoc, doc, updateDoc, writeBatch } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         document.addEventListener('DOMContentLoaded', async () => {
             await loadSharedLayout({ activeMenuLink: 'persons.html' });
@@ -576,9 +602,9 @@
 
                 init() {
                     authService.auth.onAuthStateChanged(async (user) => {
-                            this.currentUser = authService.getCurrentUser();
-                            await this.loadPersons();
-                            this.setupEventListeners();
+                        this.currentUser = authService.getCurrentUser();
+                        await this.loadPersons();
+                        this.setupEventListeners();
                     });
                 }
 
@@ -629,30 +655,22 @@
                     
                     const showRelatedBtn = document.getElementById('showRelatedBtn');
                     if (showRelatedBtn) {
-                        showRelatedBtn.addEventListener('click', () => this.showRelatedSection());
+                        showRelatedBtn.addEventListener('click', () => this.toggleRelatedSection());
                     }
                     
                     const addRelatedBtn = document.getElementById('addRelatedBtn');
                     if (addRelatedBtn) {
-                        addRelatedBtn.addEventListener('click', () => {
-                            const name = document.getElementById('relatedName').value.trim();
-                            const email = document.getElementById('relatedEmail').value.trim();
-                            const phone = document.getElementById('relatedPhone').value.trim();
-                            
-                            if (!name) {
-                                alert('Ad Soyad zorunludur!');
-                                return;
-                            }
-                            
-                            const scopes = Array.from(document.querySelectorAll('.related-form .checkbox-group input[type="checkbox"]:checked')).map(cb => cb.value);
-                            
-                            this.addRelatedToList({ name, email, phone, scopes });
+                        addRelatedBtn.addEventListener('click', () => this.addRelatedHandler());
+                    }
 
-                            document.getElementById('relatedName').value = '';
-                            document.getElementById('relatedEmail').value = '';
-                            document.getElementById('relatedPhone').value = '';
-                            document.querySelectorAll('.related-form .checkbox-group input[type="checkbox"]').forEach(cb => cb.checked = false);
-                        });
+                    const updateRelatedBtn = document.getElementById('updateRelatedBtn');
+                    if (updateRelatedBtn) {
+                        updateRelatedBtn.addEventListener('click', () => this.updateRelatedHandler());
+                    }
+
+                    const cancelRelatedBtn = document.getElementById('cancelRelatedBtn');
+                    if (cancelRelatedBtn) {
+                        cancelRelatedBtn.addEventListener('click', () => this.resetRelatedForm());
                     }
 
                     setTimeout(() => {
@@ -680,7 +698,7 @@
                     }, 100);
                 }
 
-                showRelatedSection() {
+                toggleRelatedSection() {
                     const relatedSection = document.getElementById('relatedSection');
                     const showRelatedBtn = document.getElementById('showRelatedBtn');
                     if (relatedSection.classList.contains('show')) {
@@ -906,8 +924,8 @@
                     this.relatedDraft = [];
                     this.relatedLoaded = [];
                     this.renderRelatedList();
+                    this.resetRelatedForm();
 
-                    // İlgililer bölümünü varsayılan olarak gizle
                     document.getElementById('relatedSection').classList.remove('show');
                     document.getElementById('showRelatedBtn').innerHTML = '<span>&#x2795;</span> İlgilileri Yönet';
 
@@ -973,8 +991,8 @@
                         console.warn('İlgililer yüklenemedi:', e);
                     }
                     this.renderRelatedList();
+                    this.resetRelatedForm();
 
-                    // Düzenleme modunda ilgililer bölümünü varsayılan olarak aç
                     document.getElementById('relatedSection').classList.add('show');
                     document.getElementById('showRelatedBtn').innerHTML = '<span>&#x2715;</span> İlgilileri Kapat';
 
@@ -1156,7 +1174,9 @@
                         `;
                         relatedList.appendChild(relatedItem);
 
-                        relatedItem.querySelector('.remove-related-btn').addEventListener('click', async () => {
+                        relatedItem.addEventListener('click', () => this.loadRelatedForEdit(r, idx));
+                        relatedItem.querySelector('.remove-related-btn').addEventListener('click', async (e) => {
+                            e.stopPropagation();
                             try {
                                 if (r._src === 'db' && r.id) {
                                     await deleteDoc(doc(db, 'personsRelated', r.id));
@@ -1165,6 +1185,8 @@
                                     this.relatedDraft.splice(r._draftIndex, 1);
                                 }
                                 this.renderRelatedList();
+                                this.resetRelatedForm();
+                                showNotification('İlgili başarıyla silindi.', 'success');
                             } catch (e) {
                                 console.error('İlgili silinirken hata:', e);
                                 showNotification?.('İlgili silinemedi', 'error');
@@ -1173,9 +1195,98 @@
                     });
                 }
 
-                addRelatedToList(relatedPerson) {
-                    this.relatedDraft.push(relatedPerson);
+                loadRelatedForEdit(related, index) {
+                    this.resetRelatedForm();
+                    document.getElementById('relatedId').value = related.id || `draft-${index}`;
+                    document.getElementById('relatedName').value = related.name || '';
+                    document.getElementById('relatedEmail').value = related.email || '';
+                    document.getElementById('relatedPhone').value = related.phone || '';
+
+                    const scopes = this.extractScopes(related);
+                    document.querySelectorAll('.checkbox-group input[type="checkbox"]').forEach(cb => {
+                        cb.checked = scopes.includes(cb.value);
+                    });
+
+                    document.getElementById('addRelatedBtn').style.display = 'none';
+                    document.getElementById('updateRelatedBtn').style.display = 'inline-block';
+                    document.getElementById('cancelRelatedBtn').style.display = 'inline-block';
+
+                    document.querySelectorAll('.related-item').forEach(item => item.classList.remove('selected'));
+                    const selectedItem = document.querySelector(`[data-idx="${index}"]`);
+                    if (selectedItem) selectedItem.classList.add('selected');
+                }
+
+                addRelatedHandler() {
+                    const name = document.getElementById('relatedName').value.trim();
+                    const email = document.getElementById('relatedEmail').value.trim();
+                    const phone = document.getElementById('relatedPhone').value.trim();
+                    
+                    if (!name) {
+                        alert('Ad Soyad zorunludur!');
+                        return;
+                    }
+                    
+                    const scopes = Array.from(document.querySelectorAll('.related-form-container .checkbox-group input[type="checkbox"]:checked')).map(cb => cb.value);
+                    
+                    this.relatedDraft.push({ name, email, phone, scopes });
                     this.renderRelatedList();
+                    this.resetRelatedForm();
+                    showNotification('Yeni ilgili eklendi.', 'success');
+                }
+
+                async updateRelatedHandler() {
+                    const relatedId = document.getElementById('relatedId').value;
+                    const name = document.getElementById('relatedName').value.trim();
+                    const email = document.getElementById('relatedEmail').value.trim();
+                    const phone = document.getElementById('relatedPhone').value.trim();
+                    
+                    if (!name) {
+                        alert('Ad Soyad zorunludur!');
+                        return;
+                    }
+
+                    const scopes = Array.from(document.querySelectorAll('.related-form-container .checkbox-group input[type="checkbox"]:checked')).map(cb => cb.value);
+                    const updatedData = { name, email, phone, responsible: {} };
+                    scopes.forEach(s => updatedData.responsible[s] = true);
+
+                    if (relatedId.startsWith('draft-')) {
+                        const index = parseInt(relatedId.replace('draft-', ''));
+                        this.relatedDraft[index] = { name, email, phone, scopes };
+                    } else {
+                        try {
+                            const relatedDocRef = doc(db, 'personsRelated', relatedId);
+                            await updateDoc(relatedDocRef, updatedData);
+                            this.relatedLoaded = this.relatedLoaded.map(r => r.id === relatedId ? { ...r, ...updatedData } : r);
+                            showNotification('İlgili başarıyla güncellendi.', 'success');
+                        } catch (e) {
+                            console.error('İlgili güncellenirken hata:', e);
+                            showNotification('İlgili güncellenemedi', 'error');
+                        }
+                    }
+                    this.renderRelatedList();
+                    this.resetRelatedForm();
+                }
+
+                resetRelatedForm() {
+                    document.getElementById('relatedId').value = '';
+                    document.getElementById('relatedName').value = '';
+                    document.getElementById('relatedEmail').value = '';
+                    document.getElementById('relatedPhone').value = '';
+                    document.querySelectorAll('.related-form-container .checkbox-group input[type="checkbox"]').forEach(cb => cb.checked = false);
+
+                    document.getElementById('addRelatedBtn').style.display = 'inline-block';
+                    document.getElementById('updateRelatedBtn').style.display = 'none';
+                    document.getElementById('cancelRelatedBtn').style.display = 'none';
+
+                    document.querySelectorAll('.related-item').forEach(item => item.classList.remove('selected'));
+                }
+
+                extractScopes(r) {
+                    if (r && typeof r.responsible === 'object' && r.responsible !== null) {
+                        return Object.keys(r.responsible).filter(k => !!r.responsible[k]).map(k => k);
+                    }
+                    if (Array.isArray(r?.scopes)) return r.scopes;
+                    return [];
                 }
 
                 async deletePerson(personId) {
