@@ -342,7 +342,7 @@
                     </div>
                     <!-- İlgililer Butonu -->
                     <div class="d-flex justify-content-start mb-3">
-                        <button type="button" class="btn btn-outline-primary" id="toggleRelatedSection">
+                        <button type="button" class="btn btn-outline-primary" id="toggleRelatedBtn">
                             <i class="fas fa-users"></i> İlgililer
                         </button>
                     </div>
@@ -484,14 +484,24 @@
                     });
                     }
                     // İlgililer bölümü aç/kapat
-                    document.getElementById('toggleRelatedSection').addEventListener('click', function() {
-                        const section = document.getElementById('relatedSection');
-                        section.style.display = section.style.display === 'none' ? 'block' : 'none';
-                    });
+                    // 2A) Güvenli: varsa doğrudan bağla
+                    const toggleBtn = document.getElementById('toggleRelatedBtn');
+                    if (toggleBtn && !toggleBtn.dataset.bound) {
+                    toggleBtn.addEventListener('click', () => this.toggleRelatedSection());
+                    toggleBtn.dataset.bound = '1';
+                    }
+                    const addRelBtn = document.getElementById('addRelatedBtn');
+                    if (addRelBtn && !addRelBtn.dataset.bound) {
+                    addRelBtn.addEventListener('click', () => this.handleAddRelated());
+                    addRelBtn.dataset.bound = '1';
+                    }
 
-                    // İlgili listeye ekle
-                    document.getElementById('addRelatedBtn')
-                    .addEventListener('click', () => this.handleAddRelated());
+                    // 2B) Ek güvence: Modal içeriği sonradan gelirse delegasyonla yakala
+                    document.addEventListener('click', (e) => {
+                    const t = e.target;
+                    if (t.closest?.('#toggleRelatedBtn')) this.toggleRelatedSection();
+                    if (t.closest?.('#addRelatedBtn')) this.handleAddRelated();
+                    });
 
                     // İlgili telefon formatı
                     const relatedPhone = document.getElementById('relatedPhone');
