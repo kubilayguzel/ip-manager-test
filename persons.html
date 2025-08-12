@@ -38,8 +38,8 @@
             display: flex;
             gap: 10px;
             align-items: center;
-            flex-grow: 1; /* Arama çubuğunun genişlemesini sağlar */
-            max-width: 400px; /* Maksimum genişlik atayabiliriz */
+            flex-grow: 1;
+            max-width: 400px;
         }
 
         .search-input {
@@ -95,7 +95,7 @@
             font-weight: 500;
             color: white;
             text-align: center;
-            display: inline-block; /* Inline-block yaparak içeriğine göre genişlemesini sağlar */
+            display: inline-block;
         }
         .type-individual { background-color: #007bff; }
         .type-company { background-color: #28a745; }
@@ -125,17 +125,17 @@
 
         /* Modal Styles */
         .modal {
-            display: none; /* Hidden by default */
-            position: fixed; /* Stay in place */
-            z-index: 1002; /* Sit on top */
+            display: none;
+            position: fixed;
+            z-index: 1002;
             left: 0;
             top: 0;
-            width: 100%; /* Full width */
-            height: 100%; /* Full height */
-            overflow: auto; /* Enable scroll if needed */
-            background-color: rgba(0,0,0,0.6); /* Black w/ opacity */
-            align-items: center; /* Center horizontally */
-            justify-content: center; /* Center vertically */
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.6);
+            align-items: center;
+            justify-content: center;
         }
 
         .modal.show {
@@ -147,12 +147,12 @@
             margin: auto;
             padding: 30px;
             border: 1px solid #888;
-            width: 90%; /* Could be more specific */
-            max-width: 500px; /* Max width for person form */
+            width: 90%;
+            max-width: 500px;
             border-radius: 20px;
             animation-name: animatetop;
             animation-duration: 0.4s;
-            max-height: 90vh; /* Allow scrolling within modal if content is long */
+            max-height: 90vh;
             overflow-y: auto;
         }
 
@@ -218,279 +218,197 @@
         .btn-primary:hover { background: #2a5298; }
         .btn-secondary { background: #6c757d; color: white; border: none; }
         .btn-secondary:hover { background: #5a6268; }
+
+        /* İlgililer Bölümü - YENİ VE GELİŞTİRİLMİŞ STİLLER */
         .related-section {
-    background: #f9fbfd;
-    border: 1px solid #dee2e6;
-    border-radius: 8px;
-}
+            margin-top: 20px;
+            border: 1px solid #e1e8ed;
+            border-radius: 8px;
+            overflow: hidden;
+            background-color: #f9fbfd;
+        }
 
-.related-section h5 {
-    color: #007bff;
-    font-weight: 600;
-}
+        .related-header {
+            background-color: #e9ecef;
+            padding: 15px 20px;
+            cursor: pointer;
+            border-bottom: 1px solid #dee2e6;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: background-color 0.3s ease;
+            font-weight: 600;
+            color: #1e3c72;
+        }
+        .related-header:hover {
+            background-color: #dde2e6;
+        }
 
-.checkbox-group label {
-    margin-right: 15px;
-    font-weight: 500;
-}
+        .related-header h5 {
+            margin: 0;
+            font-size: 1.1em;
+        }
 
-#toggleRelatedSection {
-    font-weight: 600;
-}
+        .related-toggle-icon {
+            font-size: 1.2em;
+            color: #6c757d;
+            transition: transform 0.3s ease;
+        }
 
-#toggleRelatedSection i {
-    margin-right: 5px;
-}
-.related-section {
-    margin-top: 20px;
-    border: 1px solid #e1e8ed;
-    border-radius: 8px;
-    overflow: hidden;
-}
+        .related-section.expanded .related-toggle-icon {
+            transform: rotate(180deg);
+        }
 
-.related-header {
-    background-color: #f8f9fa;
-    padding: 15px 20px;
-    cursor: pointer;
-    border-bottom: 1px solid #e1e8ed;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    transition: background-color 0.3s ease;
-}
+        .related-content {
+            display: none;
+            padding: 20px;
+            background-color: #fff;
+        }
 
-.related-header:hover {
-    background-color: #e9ecef;
-}
+        .related-section.expanded .related-content {
+            display: block;
+        }
 
-.related-header h5 {
-    margin: 0;
-    color: #1e3c72;
-    font-weight: 600;
-}
+        .related-form {
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #e1e8ed;
+            background-color: #f8f9fa;
+        }
+        .related-form h6 {
+            color: #1e3c72;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+        .related-form .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        .related-form .form-group {
+            margin-bottom: 0;
+        }
+        .related-form .form-group label {
+            font-size: 0.9em;
+            font-weight: 500;
+            color: #333;
+            margin-bottom: 5px;
+        }
+        .related-form .form-group input, .related-form .form-group select {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+        .checkbox-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-top: 10px;
+        }
+        .checkbox-group label {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.9em;
+            cursor: pointer;
+        }
+        .checkbox-group input[type="checkbox"] {
+            margin: 0;
+            transform: scale(1.1);
+        }
+        #addRelatedBtn {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: background-color 0.3s ease;
+            margin-top: 15px;
+        }
+        #addRelatedBtn:hover {
+            background: #218838;
+        }
 
-.related-toggle-icon {
-    font-size: 1.2em;
-    color: #666;
-    transition: transform 0.3s ease;
-}
+        .related-list {
+            margin-top: 20px;
+            border: 1px solid #e1e8ed;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .related-item {
+            padding: 15px;
+            border-bottom: 1px solid #f0f0f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: #fff;
+        }
+        .related-item:last-child {
+            border-bottom: none;
+        }
+        .related-info {
+            flex-grow: 1;
+        }
+        .related-name {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 5px;
+        }
+        .related-details {
+            font-size: 0.85em;
+            color: #666;
+            margin-bottom: 5px;
+        }
+        .related-scopes {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+        .scope-badge {
+            background: #007bff;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.75em;
+            font-weight: 500;
+            white-space: nowrap;
+        }
+        .remove-related-btn {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8em;
+            transition: background-color 0.3s ease;
+        }
+        .remove-related-btn:hover {
+            background: #c82333;
+        }
+        .related-empty {
+            padding: 30px;
+            text-align: center;
+            color: #666;
+            font-style: italic;
+            background-color: #fff;
+        }
 
-.related-section.expanded .related-toggle-icon {
-    transform: rotate(180deg);
-}
-
-.related-content {
-    display: none;
-    padding: 20px;
-    background-color: #fafbfc;
-}
-
-.related-section.expanded .related-content {
-    display: block;
-}
-
-.related-form {
-    background: white;
-    padding: 20px;
-    border-radius: 8px;
-    border: 1px solid #e1e8ed;
-    margin-bottom: 15px;
-}
-
-.related-form h6 {
-    color: #1e3c72;
-    margin-bottom: 15px;
-    font-weight: 600;
-}
-
-.related-form .form-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 15px;
-    margin-bottom: 15px;
-}
-
-.related-form .form-group {
-    margin-bottom: 15px;
-}
-
-.related-form .form-group label {
-    display: block;
-    margin-bottom: 5px;
-    font-weight: 500;
-    color: #333;
-}
-
-.related-form .form-group input {
-    width: 100%;
-    padding: 8px 12px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    font-size: 0.9em;
-}
-
-.checkbox-group {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 15px;
-    margin-top: 10px;
-}
-
-.checkbox-group label {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    font-size: 0.9em;
-    cursor: pointer;
-}
-
-.checkbox-group input[type="checkbox"] {
-    margin: 0;
-}
-
-#addRelatedBtn {
-    background: #28a745;
-    color: white;
-    border: none;
-    padding: 8px 16px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 0.9em;
-    transition: background-color 0.3s ease;
-}
-
-#addRelatedBtn:hover {
-    background: #218838;
-}
-
-.related-list {
-    background: white;
-    border: 1px solid #e1e8ed;
-    border-radius: 8px;
-    max-height: 200px;
-    overflow-y: auto;
-}
-
-.related-item {
-    padding: 15px;
-    border-bottom: 1px solid #f0f0f0;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.related-item:last-child {
-    border-bottom: none;
-}
-
-.related-info {
-    flex-grow: 1;
-}
-
-.related-name {
-    font-weight: 600;
-    color: #333;
-    margin-bottom: 5px;
-}
-
-.related-details {
-    font-size: 0.85em;
-    color: #666;
-    margin-bottom: 5px;
-}
-
-.related-scopes {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 5px;
-}
-
-.scope-badge {
-    background: #007bff;
-    color: white;
-    padding: 2px 8px;
-    border-radius: 12px;
-    font-size: 0.75em;
-    font-weight: 500;
-}
-
-.remove-related-btn {
-    background: #dc3545;
-    color: white;
-    border: none;
-    padding: 5px 10px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 0.8em;
-}
-
-.remove-related-btn:hover {
-    background: #c82333;
-}
-
-.related-empty {
-    padding: 30px;
-    text-align: center;
-    color: #666;
-    font-style: italic;
-}
-
-/* Responsive */
-@media (max-width: 768px) {
-    .related-form .form-row {
-        grid-template-columns: 1fr;
-    }
-    
-    .checkbox-group {
-        flex-direction: column;
-        gap: 10px;
-    }
-}
-.modal-footer {
-    display: flex;
-    justify-content: flex-end;
-    gap: 15px;
-    margin-top: 20px;
-    padding-top: 15px;
-    border-top: 1px solid #e1e8ed;
-}
-
-.btn {
-    padding: 10px 20px;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    font-weight: 600;
-    transition: all 0.3s ease;
-}
-
-.btn-primary {
-    background: linear-gradient(45deg, #1e3c72, #2a5298);
-    color: white;
-}
-
-.btn-primary:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(30, 60, 114, 0.3);
-}
-
-.btn-secondary {
-    background: #6c757d;
-    color: white;
-}
-
-.btn-secondary:hover {
-    background: #5a6268;
-}
-
-/* İlgililer bölümü stillerini düzeltin */
-.related-section {
-    margin-top: 15px;
-}
-
-.related-section.show {
-    display: block !important;
-}
+        /* Responsive */
+        @media (max-width: 768px) {
+            .related-form .form-row {
+                grid-template-columns: 1fr;
+            }
+            .checkbox-group {
+                flex-direction: column;
+                gap: 10px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -550,20 +468,17 @@
                     <label for="personName" class="form-label"><span id="personNameLabel">Ad Soyad</span>:</label>
                     <input type="text" id="personName" class="form-input" required>
                 </div>
-                <!-- Gerçek kişi: TCKN -->
                 <div class="form-group" id="tcknGroup" style="display:none;">
                 <label for="personTckn" class="form-label">TC Kimlik No:</label>
                 <input type="text" id="personTckn" class="form-input" maxlength="11" inputmode="numeric" placeholder="11 haneli">
                 <small class="text-muted">Sadece rakam, 11 hane</small>
                 </div>
 
-                <!-- Gerçek kişi: Doğum Tarihi -->
                 <div class="form-group" id="birthDateGroup" style="display:none;">
                 <label for="personBirthDate" class="form-label">Doğum Tarihi:</label>
                 <input type="date" id="personBirthDate" class="form-input">
                 </div>
 
-                <!-- Tüzel kişi: Vergi No -->
                 <div class="form-group" id="vknGroup" style="display:none;">
                 <label for="personVkn" class="form-label">Vergi No:</label>
                 <input type="text" id="personVkn" class="form-input" maxlength="10" inputmode="numeric" placeholder="10 haneli">
@@ -588,57 +503,58 @@
                         <select id="provinceSelect" class="form-select" style="flex:1 1 200px"></select>
                         <input type="text" id="provinceText" class="form-input" style="display:none;flex:1 1 200px" placeholder="Eyalet / İl">
                     </div>
+                </div>
+
+                <div class="related-section" id="relatedSection">
+                    <div class="related-header" id="relatedHeader">
+                        <h5>👥 İlgililer</h5>
+                        <span class="related-toggle-icon">▼</span>
                     </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" id="cancelPersonBtn">İptal</button>
-                        <button type="submit" class="btn btn-primary" id="savePersonBtn" form="personForm">Kaydet</button>
-                    </div>
-                    <div class="related-section" id="relatedSection">
-                        <div class="related-header" id="relatedHeader">
-                            <h5>👥 İlgililer</h5>
-                            <span class="related-toggle-icon">▼</span>
-                        </div>
-                        <div class="related-content">
-                            <div class="related-form">
-                                <h6>Yeni İlgili Ekle</h6>
-                                
-                                <div class="form-row">
-                                    <div class="form-group">
-                                        <label for="relatedName">Ad Soyad *</label>
-                                        <input type="text" id="relatedName" placeholder="İlgili kişinin adı">
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="relatedEmail">E-posta</label>
-                                        <input type="email" id="relatedEmail" placeholder="ilgili@email.com">
-                                    </div>
-                                </div>
-
+                    <div class="related-content">
+                        <div class="related-form">
+                            <h6>Yeni İlgili Ekle</h6>
+                            
+                            <div class="form-row">
                                 <div class="form-group">
-                                    <label for="relatedPhone">Telefon</label>
-                                    <input type="tel" id="relatedPhone" placeholder="+90 5XX XXX XX XX">
+                                    <label for="relatedName">Ad Soyad <span style="color:red;">*</span></label>
+                                    <input type="text" id="relatedName" placeholder="İlgili kişinin adı">
                                 </div>
-
                                 <div class="form-group">
-                                    <label>Sorumlu Olduğu Alanlar:</label>
-                                    <div class="checkbox-group">
-                                        <label><input type="checkbox" value="patent"> Patent</label>
-                                        <label><input type="checkbox" value="marka"> Marka</label>
-                                        <label><input type="checkbox" value="tasarim"> Tasarım</label>
-                                        <label><input type="checkbox" value="dava"> Dava</label>
-                                        <label><input type="checkbox" value="muhasebe"> Muhasebe</label>
-                                    </div>
+                                    <label for="relatedEmail">E-posta</label>
+                                    <input type="email" id="relatedEmail" placeholder="ilgili@email.com">
                                 </div>
-
-                                <button type="button" id="addRelatedBtn">➕ İlgili Ekle</button>
                             </div>
 
-                            <div class="related-list" id="relatedList">
-                                <div class="related-empty">
-                                    Henüz ilgili kişi eklenmedi.
+                            <div class="form-group">
+                                <label for="relatedPhone">Telefon</label>
+                                <input type="tel" id="relatedPhone" placeholder="+90 5XX XXX XX XX">
+                            </div>
+
+                            <div class="form-group">
+                                <label>Sorumlu Olduğu Alanlar:</label>
+                                <div class="checkbox-group">
+                                    <label><input type="checkbox" value="patent"> Patent</label>
+                                    <label><input type="checkbox" value="marka"> Marka</label>
+                                    <label><input type="checkbox" value="tasarim"> Tasarım</label>
+                                    <label><input type="checkbox" value="dava"> Dava</label>
+                                    <label><input type="checkbox" value="muhasebe"> Muhasebe</label>
                                 </div>
+                            </div>
+
+                            <button type="button" id="addRelatedBtn">➕ İlgili Ekle</button>
+                        </div>
+
+                        <div class="related-list" id="relatedList">
+                            <div class="related-empty">
+                                Henüz ilgili kişi eklenmedi.
                             </div>
                         </div>
                     </div>
+                </div>
+                
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" id="cancelPersonBtn">İptal</button>
+                    <button type="submit" class="btn btn-primary" id="savePersonBtn" form="personForm">Kaydet</button>
                 </div>
             </form>
         </div>
@@ -657,271 +573,136 @@
                 constructor() {
                     this.currentUser = null;
                     this.allPersons = [];
-                    this.relatedDraft = [];   // {name, email, phone, scopes: ['patent', ...]}
-                    this.relatedLoaded = [];  // edit modunda DB’den gelenler
+                    this.relatedDraft = [];
+                    this.relatedLoaded = [];
                 }
 
                 init() {
                     authService.auth.onAuthStateChanged(async (user) => {
-
                             this.currentUser = authService.getCurrentUser();
                             await this.loadPersons();
                             this.setupEventListeners();
-
                     });
                 }
 
-setupEventListeners() {
-    console.log('🔧 setupEventListeners başlatılıyor...');
-    
-    // Her element için null kontrolü yapın
-    const addNewPersonBtn = document.getElementById('addNewPersonBtn');
-    if (addNewPersonBtn) {
-        addNewPersonBtn.addEventListener('click', () => this.showAddPersonModal());
-        console.log('✅ addNewPersonBtn event listener eklendi');
-    } else {
-        console.warn('❌ addNewPersonBtn elementi bulunamadı');
-    }
-
-    const closePersonModal = document.getElementById('closePersonModal');
-    if (closePersonModal) {
-        closePersonModal.addEventListener('click', () => this.closePersonModal());
-        console.log('✅ closePersonModal event listener eklendi');
-    } else {
-        console.warn('❌ closePersonModal elementi bulunamadı');
-    }
-
-    const cancelPersonBtn = document.getElementById('cancelPersonBtn');
-    if (cancelPersonBtn) {
-        cancelPersonBtn.addEventListener('click', () => this.closePersonModal());
-        console.log('✅ cancelPersonBtn event listener eklendi');
-    } else {
-        console.warn('❌ cancelPersonBtn elementi bulunamadı');
-    }
-
-    const personForm = document.getElementById('personForm');
-    if (personForm) {
-        personForm.addEventListener('submit', (e) => this.handlePersonFormSubmit(e));
-        console.log('✅ personForm event listener eklendi');
-    } else {
-        console.warn('❌ personForm elementi bulunamadı');
-    }
-
-    const personSearchInput = document.getElementById('personSearchInput');
-    if (personSearchInput) {
-        personSearchInput.addEventListener('input', (e) => this.filterPersons(e.target.value));
-        console.log('✅ personSearchInput event listener eklendi');
-    } else {
-        console.warn('❌ personSearchInput elementi bulunamadı');
-    }
-
-    const personsTableBody = document.getElementById('personsTableBody');
-    if (personsTableBody) {
-        personsTableBody.addEventListener('click', (e) => {
-            if (e.target.classList.contains('edit-btn')) {
-                this.showEditPersonModal(e.target.dataset.id);
-            } else if (e.target.classList.contains('delete-btn')) {
-                this.deletePerson(e.target.dataset.id);
-            }
-        });
-        console.log('✅ personsTableBody event listener eklendi');
-    } else {
-        console.warn('❌ personsTableBody elementi bulunamadı');
-    }
-
-    // Kişi tipi değişince ad/firma etiketi güncelle
-    const personType = document.getElementById('personType');
-    if (personType) {
-        personType.addEventListener('change', () => {
-            this.updateNameLabelByType();
-            this.updateExtraFieldsByType();
-        });
-        console.log('✅ personType event listener eklendi');
-    } else {
-        console.warn('❌ personType elementi bulunamadı');
-    }
-
-    // Telefon maskesi - Modal açıldıktan sonra eklenecek
-    setTimeout(() => {
-        const phoneInput = document.getElementById('personPhone');
-        if (phoneInput && !phoneInput.dataset.listenerAdded) {
-            phoneInput.addEventListener('focus', () => {
-                if (!phoneInput.value.trim()) phoneInput.value = '+90 ';
-            });
-            phoneInput.addEventListener('input', () => {
-                phoneInput.value = this.formatTRPhone(phoneInput.value);
-            });
-            phoneInput.dataset.listenerAdded = 'true';
-            console.log('✅ personPhone event listener eklendi');
-        }
-    }, 100);
-
-    // Ülke değişince il alanını uygun hale getir
-    setTimeout(() => {
-        const countrySelect = document.getElementById('countrySelect');
-        if (countrySelect && !countrySelect.dataset.listenerAdded) {
-            countrySelect.addEventListener('change', () => this.loadProvincesForSelectedCountry());
-            countrySelect.dataset.listenerAdded = 'true';
-            console.log('✅ countrySelect event listener eklendi');
-        }
-    }, 100);
-
-    // TCKN ve VKN için rakam/uzunluk kontrolü
-    setTimeout(() => {
-        const tcknInput = document.getElementById('personTckn');
-        const vknInput = document.getElementById('personVkn');
-
-        if (tcknInput && !tcknInput.dataset.listenerAdded) {
-            tcknInput.addEventListener('input', () => {
-                tcknInput.value = tcknInput.value.replace(/\D/g, '').slice(0, 11);
-            });
-            tcknInput.dataset.listenerAdded = 'true';
-            console.log('✅ personTckn event listener eklendi');
-        }
-        
-        if (vknInput && !vknInput.dataset.listenerAdded) {
-            vknInput.addEventListener('input', () => {
-                vknInput.value = vknInput.value.replace(/\D/g, '').slice(0, 10);
-            });
-            vknInput.dataset.listenerAdded = 'true';
-            console.log('✅ personVkn event listener eklendi');
-        }
-    }, 100);
-
-    // İlgililer butonu - Ana buton
-    setTimeout(() => {
-        const toggleRelatedBtn = document.getElementById('toggleRelatedBtn');
-        if (toggleRelatedBtn && !toggleRelatedBtn.dataset.listenerAdded) {
-            toggleRelatedBtn.addEventListener('click', () => {
-                console.log('🔄 İlgililer butonu tıklandı');
-                const relatedSection = document.getElementById('relatedSection');
-                if (relatedSection) {
-                    if (relatedSection.style.display === 'none' || !relatedSection.style.display) {
-                        relatedSection.style.display = 'block';
-                        console.log('📂 İlgililer bölümü açıldı');
-                    } else {
-                        relatedSection.style.display = 'none';
-                        console.log('📁 İlgililer bölümü kapatıldı');
+                setupEventListeners() {
+                    console.log('🔧 setupEventListeners başlatılıyor...');
+                    
+                    const addNewPersonBtn = document.getElementById('addNewPersonBtn');
+                    if (addNewPersonBtn) {
+                        addNewPersonBtn.addEventListener('click', () => this.showAddPersonModal());
                     }
-                } else {
-                    console.warn('❌ relatedSection bulunamadı');
+
+                    const closePersonModal = document.getElementById('closePersonModal');
+                    if (closePersonModal) {
+                        closePersonModal.addEventListener('click', () => this.closePersonModal());
+                    }
+
+                    const cancelPersonBtn = document.getElementById('cancelPersonBtn');
+                    if (cancelPersonBtn) {
+                        cancelPersonBtn.addEventListener('click', () => this.closePersonModal());
+                    }
+
+                    const personForm = document.getElementById('personForm');
+                    if (personForm) {
+                        personForm.addEventListener('submit', (e) => this.handlePersonFormSubmit(e));
+                    }
+
+                    const personSearchInput = document.getElementById('personSearchInput');
+                    if (personSearchInput) {
+                        personSearchInput.addEventListener('input', (e) => this.filterPersons(e.target.value));
+                    }
+
+                    const personsTableBody = document.getElementById('personsTableBody');
+                    if (personsTableBody) {
+                        personsTableBody.addEventListener('click', (e) => {
+                            if (e.target.classList.contains('edit-btn')) {
+                                this.showEditPersonModal(e.target.dataset.id);
+                            } else if (e.target.classList.contains('delete-btn')) {
+                                this.deletePerson(e.target.dataset.id);
+                            }
+                        });
+                    }
+
+                    const personType = document.getElementById('personType');
+                    if (personType) {
+                        personType.addEventListener('change', () => {
+                            this.updateNameLabelByType();
+                            this.updateExtraFieldsByType();
+                        });
+                    }
+
+                    setTimeout(() => {
+                        const phoneInput = document.getElementById('personPhone');
+                        if (phoneInput && !phoneInput.dataset.listenerAdded) {
+                            phoneInput.addEventListener('focus', () => {
+                                if (!phoneInput.value.trim()) phoneInput.value = '+90 ';
+                            });
+                            phoneInput.addEventListener('input', () => {
+                                phoneInput.value = this.formatTRPhone(phoneInput.value);
+                            });
+                            phoneInput.dataset.listenerAdded = 'true';
+                        }
+                    }, 100);
+
+                    setTimeout(() => {
+                        const countrySelect = document.getElementById('countrySelect');
+                        if (countrySelect && !countrySelect.dataset.listenerAdded) {
+                            countrySelect.addEventListener('change', () => this.loadProvincesForSelectedCountry());
+                            countrySelect.dataset.listenerAdded = 'true';
+                        }
+                    }, 100);
+
+                    setTimeout(() => {
+                        const tcknInput = document.getElementById('personTckn');
+                        const vknInput = document.getElementById('personVkn');
+                        if (tcknInput && !tcknInput.dataset.listenerAdded) {
+                            tcknInput.addEventListener('input', () => {
+                                tcknInput.value = tcknInput.value.replace(/\D/g, '').slice(0, 11);
+                            });
+                            tcknInput.dataset.listenerAdded = 'true';
+                        }
+                        if (vknInput && !vknInput.dataset.listenerAdded) {
+                            vknInput.addEventListener('input', () => {
+                                vknInput.value = vknInput.value.replace(/\D/g, '').slice(0, 10);
+                            });
+                            vknInput.dataset.listenerAdded = 'true';
+                        }
+                    }, 100);
+                    
+                    // İlgililer akordiyonu için event listener
+                    const relatedHeader = document.getElementById('relatedHeader');
+                    if (relatedHeader) {
+                        relatedHeader.addEventListener('click', () => {
+                            document.getElementById('relatedSection').classList.toggle('expanded');
+                        });
+                    }
+
+                    // İlgili ekle butonu
+                    const addRelatedBtn = document.getElementById('addRelatedBtn');
+                    if (addRelatedBtn) {
+                        addRelatedBtn.addEventListener('click', () => {
+                            const name = document.getElementById('relatedName').value.trim();
+                            const email = document.getElementById('relatedEmail').value.trim();
+                            const phone = document.getElementById('relatedPhone').value.trim();
+                            
+                            if (!name) {
+                                alert('Ad Soyad zorunludur!');
+                                return;
+                            }
+                            
+                            const scopes = Array.from(document.querySelectorAll('.related-form .checkbox-group input[type="checkbox"]:checked')).map(cb => cb.value);
+                            
+                            this.addRelatedToList({ name, email, phone, scopes });
+
+                            document.getElementById('relatedName').value = '';
+                            document.getElementById('relatedEmail').value = '';
+                            document.getElementById('relatedPhone').value = '';
+                            document.querySelectorAll('.related-form .checkbox-group input[type="checkbox"]').forEach(cb => cb.checked = false);
+                        });
+                    }
                 }
-            });
-            toggleRelatedBtn.dataset.listenerAdded = 'true';
-            console.log('✅ toggleRelatedBtn event listener eklendi');
-        } else if (!toggleRelatedBtn) {
-            console.warn('❌ toggleRelatedBtn bulunamadı');
-        }
-    }, 200);
 
-    // İlgili ekleme butonu
-    setTimeout(() => {
-        const addRelatedBtn = document.getElementById('addRelatedBtn');
-        if (addRelatedBtn && !addRelatedBtn.dataset.listenerAdded) {
-            addRelatedBtn.addEventListener('click', () => {
-                console.log('➕ İlgili ekle butonu tıklandı');
-                
-                const nameInput = document.getElementById('relatedName');
-                const emailInput = document.getElementById('relatedEmail');
-                const phoneInput = document.getElementById('relatedPhone');
-                
-                console.log('📋 Form elementleri kontrol ediliyor:', {
-                    nameInput: !!nameInput,
-                    emailInput: !!emailInput,
-                    phoneInput: !!phoneInput
-                });
-                
-                if (!nameInput || !emailInput || !phoneInput) {
-                    console.error('❌ İlgili form elementleri bulunamadı');
-                    alert('Form elementleri bulunamadı. Sayfayı yenileyin.');
-                    return;
-                }
-                
-                const name = nameInput.value.trim();
-                const email = emailInput.value.trim();
-                const phone = phoneInput.value.trim();
-                
-                console.log('📝 Form değerleri:', { 
-                    name: `"${name}"`, 
-                    email: `"${email}"`, 
-                    phone: `"${phone}"` 
-                });
-                
-                if (!name) {
-                    console.warn('⚠️ Ad Soyad boş');
-                    alert('Ad Soyad zorunludur!');
-                    nameInput.focus();
-                    return;
-                }
-
-                // Seçili scope'ları al
-                const scopes = [];
-                const checkboxes = document.querySelectorAll('#relatedSection .checkbox-group input[type="checkbox"]:checked');
-                console.log('☑️ Bulunan checkbox sayısı:', checkboxes.length);
-                
-                checkboxes.forEach(cb => {
-                    scopes.push(cb.value);
-                    console.log('✓ Seçili scope:', cb.value);
-                });
-
-                console.log('📊 Toplam seçili scope\'lar:', scopes);
-
-                // İlgiliyi listeye ekle
-                try {
-                    this.addRelatedToList(name, email, phone, scopes);
-                    console.log('✅ İlgili başarıyla eklendi');
-
-                    // Formu temizle
-                    nameInput.value = '';
-                    emailInput.value = '';
-                    phoneInput.value = '';
-                    document.querySelectorAll('#relatedSection .checkbox-group input[type="checkbox"]').forEach(cb => cb.checked = false);
-                    console.log('🧹 Form temizlendi');
-                } catch (error) {
-                    console.error('❌ İlgili eklenirken hata:', error);
-                    alert('İlgili eklenirken hata oluştu: ' + error.message);
-                }
-            });
-            addRelatedBtn.dataset.listenerAdded = 'true';
-            console.log('✅ addRelatedBtn event listener eklendi');
-        } else if (!addRelatedBtn) {
-            console.warn('❌ addRelatedBtn bulunamadı');
-        }
-    }, 300);
-
-    // İlgili telefon formatı
-    setTimeout(() => {
-        const relatedPhone = document.getElementById('relatedPhone');
-        if (relatedPhone && !relatedPhone.dataset.listenerAdded) {
-            relatedPhone.addEventListener('focus', () => {
-                if (!relatedPhone.value.trim()) relatedPhone.value = '+90 ';
-            });
-            relatedPhone.addEventListener('input', () => {
-                relatedPhone.value = this.formatTRPhone(relatedPhone.value);
-            });
-            relatedPhone.dataset.listenerAdded = 'true';
-            console.log('✅ relatedPhone event listener eklendi');
-        }
-    }, 300);
-
-    // Global delegasyon - son çare
-    document.addEventListener('click', (e) => {
-        if (e.target.id === 'toggleRelatedBtn' || e.target.closest('#toggleRelatedBtn')) {
-            console.log('🌐 Global delegasyon: İlgililer butonu');
-            this.toggleRelatedSection();
-        }
-        if (e.target.id === 'addRelatedBtn' || e.target.closest('#addRelatedBtn')) {
-            console.log('🌐 Global delegasyon: İlgili ekle butonu');
-            // Manuel tetikleme için event oluştur
-            const btn = document.getElementById('addRelatedBtn');
-            if (btn && btn.dataset.listenerAdded) {
-                console.log('🔄 Mevcut listener kullanılacak');
-            }
-        }
-    });
-
-    console.log('🎉 setupEventListeners tamamlandı');
-}
                 async loadPersons() {
                     document.getElementById('loadingIndicator').style.display = 'block';
                     try {
@@ -944,7 +725,6 @@ setupEventListeners() {
                     tableBody.innerHTML = '';
                     
                     const lowerFilterText = filterText.toLowerCase();
-
                     const filteredPersons = this.allPersons.filter(person =>
                         person.name.toLowerCase().includes(lowerFilterText) ||
                         (person.email && person.email.toLowerCase().includes(lowerFilterText)) ||
@@ -957,14 +737,13 @@ setupEventListeners() {
                     }
                     noPersonsMessage.style.display = 'none';
 
-                    // 🔹 Basit tarih formatlayıcı
                     const formatDate = (isoDate) => {
                         if (!isoDate) return '';
-                        const parts = isoDate.split('-'); // [YYYY, MM, DD]
+                        const parts = isoDate.split('-');
                         if (parts.length === 3) {
                             return `${parts[2]}.${parts[1]}.${parts[0]}`;
                         }
-                        return isoDate; // format beklenmedikse aynen döndür
+                        return isoDate;
                     };
 
                     filteredPersons.forEach(person => {
@@ -977,7 +756,6 @@ setupEventListeners() {
                         const typeText = (typeKey === 'gercek') ? 'Gerçek' :
                                         (typeKey === 'tuzel')  ? 'Tüzel'  : 'Diğer';
 
-                        // 🔹 Tip’e göre ek bilgi metni hazırla (doğum tarihi formatlı)
                         const extraInfo = (typeKey === 'gercek')
                             ? [
                                 person.tckn && `TCKN: ${person.tckn}`,
@@ -1005,122 +783,111 @@ setupEventListeners() {
                 }
 
                 updateNameLabelByType() {
-                const val = document.getElementById('personType').value;
-                document.getElementById('personNameLabel').textContent = (val === 'tuzel') ? 'Firma Adı' : 'Ad Soyad';
+                    const val = document.getElementById('personType').value;
+                    document.getElementById('personNameLabel').textContent = (val === 'tuzel') ? 'Firma Adı' : 'Ad Soyad';
                 }
 
                 updateExtraFieldsByType() {
-                const type = document.getElementById('personType').value; // 'gercek' | 'tuzel'
-                const tcknGroup = document.getElementById('tcknGroup');
-                const vknGroup  = document.getElementById('vknGroup');
-                const birthGroup= document.getElementById('birthDateGroup');
-
-                if (type === 'gercek') {
-                    // Gerçek kişi: TCKN + Doğum Tarihi açık, VKN kapalı
-                    tcknGroup.style.display = '';
-                    birthGroup.style.display = '';
-                    vknGroup.style.display = 'none';
-                } else if (type === 'tuzel') {
-                    // Tüzel kişi: VKN açık, TCKN + Doğum Tarihi kapalı
-                    tcknGroup.style.display = 'none';
-                    birthGroup.style.display = 'none';
-                    vknGroup.style.display = '';
-                } else {
-                    // Seçilmemişse hepsi gizli
-                    tcknGroup.style.display = 'none';
-                    birthGroup.style.display = 'none';
-                    vknGroup.style.display = 'none';
-                }
+                    const type = document.getElementById('personType').value;
+                    const tcknGroup = document.getElementById('tcknGroup');
+                    const vknGroup  = document.getElementById('vknGroup');
+                    const birthGroup= document.getElementById('birthDateGroup');
+                    if (type === 'gercek') {
+                        tcknGroup.style.display = '';
+                        birthGroup.style.display = '';
+                        vknGroup.style.display = 'none';
+                    } else if (type === 'tuzel') {
+                        tcknGroup.style.display = 'none';
+                        birthGroup.style.display = 'none';
+                        vknGroup.style.display = '';
+                    } else {
+                        tcknGroup.style.display = 'none';
+                        birthGroup.style.display = 'none';
+                        vknGroup.style.display = 'none';
+                    }
                 }
 
                 formatTRPhone(raw) {
-                const digits = raw.replace(/\D/g, '');
-                let d = digits;
-                if (d.startsWith('90')) d = d.slice(2);
-                if (d.startsWith('0')) d = d.slice(1);
-                d = d.slice(0, 10); // 10 hane
-                let out = '+90 ';
-                if (d.length > 0) out += d.substring(0, 3);
-                if (d.length > 3) out += ' ' + d.substring(3, 6);
-                if (d.length > 6) out += ' ' + d.substring(6, 8);
-                if (d.length > 8) out += ' ' + d.substring(8, 10);
-                return out.trim();
+                    const digits = raw.replace(/\D/g, '');
+                    let d = digits;
+                    if (d.startsWith('90')) d = d.slice(2);
+                    if (d.startsWith('0')) d = d.slice(1);
+                    d = d.slice(0, 10);
+                    let out = '+90 ';
+                    if (d.length > 0) out += d.substring(0, 3);
+                    if (d.length > 3) out += ' ' + d.substring(3, 6);
+                    if (d.length > 6) out += ' ' + d.substring(6, 8);
+                    if (d.length > 8) out += ' ' + d.substring(8, 10);
+                    return out.trim();
                 }
 
                 async loadCountries() {
-                const countrySel = document.getElementById('countrySelect');
-                countrySel.innerHTML = '<option value="">Yükleniyor...</option>';
-                try {
-                    // common/countries dokümanı: { list: [{code:'TR', name:'Türkiye'}, ...] } veya benzeri
-                    const snap = await getDoc(doc(db, 'common', 'countries'));
-                    let list = [];
-                    if (snap.exists()) {
-                    const d = snap.data();
-                    list = d.list || d.countries || d.items || [];
+                    const countrySel = document.getElementById('countrySelect');
+                    countrySel.innerHTML = '<option value="">Yükleniyor...</option>';
+                    try {
+                        const snap = await getDoc(doc(db, 'common', 'countries'));
+                        let list = [];
+                        if (snap.exists()) {
+                            const d = snap.data();
+                            list = d.list || d.countries || d.items || [];
+                        }
+                        if (!Array.isArray(list)) list = [];
+                        const options = ['<option value="">Seçiniz</option>'].concat(
+                            list.map(item => {
+                                const code = (item.code || item.iso || item.id || item).toString();
+                                const name = (item.name || item.label || item).toString();
+                                return `<option value="${code}">${name}</option>`;
+                            })
+                        ).join('');
+                        countrySel.innerHTML = options;
+                        const opt = Array.from(countrySel.options).find(o =>
+                            /^(TR|TUR)$/i.test(o.value) || /türkiye|turkiye/i.test(o.text)
+                        );
+                        if (opt) opt.selected = true;
+                        await this.loadProvincesForSelectedCountry();
+                    } catch (e) {
+                        console.error('Ülkeler yüklenemedi:', e);
+                        countrySel.innerHTML = '<option value="">Seçiniz</option>';
                     }
-                    if (!Array.isArray(list)) list = [];
-
-                    const options = ['<option value="">Seçiniz</option>'].concat(
-                    list.map(item => {
-                        const code = (item.code || item.iso || item.id || item).toString();
-                        const name = (item.name || item.label || item).toString();
-                        return `<option value="${code}">${name}</option>`;
-                    })
-                    ).join('');
-                    countrySel.innerHTML = options;
-
-                    // Varsayılan: Türkiye
-                    const opt = Array.from(countrySel.options).find(o =>
-                    /^(TR|TUR)$/i.test(o.value) || /türkiye|turkiye/i.test(o.text)
-                    );
-                    if (opt) opt.selected = true;
-
-                    await this.loadProvincesForSelectedCountry();
-                } catch (e) {
-                    console.error('Ülkeler yüklenemedi:', e);
-                    countrySel.innerHTML = '<option value="">Seçiniz</option>';
-                }
                 }
 
                 async loadProvincesForSelectedCountry() {
-                const countrySel = document.getElementById('countrySelect');
-                const provinceSel = document.getElementById('provinceSelect');
-                const provinceText = document.getElementById('provinceText');
+                    const countrySel = document.getElementById('countrySelect');
+                    const provinceSel = document.getElementById('provinceSelect');
+                    const provinceText = document.getElementById('provinceText');
 
-                const code = countrySel.value;
-                const name = countrySel.options[countrySel.selectedIndex]?.text || '';
-                const isTR = /^(TR|TUR)$/i.test(code) || /türkiye|turkiye/i.test(name);
+                    const code = countrySel.value;
+                    const name = countrySel.options[countrySel.selectedIndex]?.text || '';
+                    const isTR = /^(TR|TUR)$/i.test(code) || /türkiye|turkiye/i.test(name);
 
-                if (isTR) {
-                    provinceText.style.display = 'none';
-                    provinceSel.style.display = 'block';
-                    provinceSel.innerHTML = '<option value="">Yükleniyor...</option>';
-
-                    let list = [];
-                    for (const docId of ['provinces_TR', 'cities_TR', 'turkey_provinces']) {
-                    try {
-                        const snap = await getDoc(doc(db, 'common', docId));
-                        if (snap.exists()) {
-                        const d = snap.data();
-                        list = d.list || d.provinces || d.cities || [];
-                        if (Array.isArray(list) && list.length) break;
+                    if (isTR) {
+                        provinceText.style.display = 'none';
+                        provinceSel.style.display = 'block';
+                        provinceSel.innerHTML = '<option value="">Yükleniyor...</option>';
+                        let list = [];
+                        for (const docId of ['provinces_TR', 'cities_TR', 'turkey_provinces']) {
+                            try {
+                                const snap = await getDoc(doc(db, 'common', docId));
+                                if (snap.exists()) {
+                                    const d = snap.data();
+                                    list = d.list || d.provinces || d.cities || [];
+                                    if (Array.isArray(list) && list.length) break;
+                                }
+                            } catch (_) {}
                         }
-                    } catch (_) {}
+                        if (!Array.isArray(list)) list = [];
+                        provinceSel.innerHTML = ['<option value="">İl Seçiniz</option>'].concat(
+                            list.map(item => {
+                                const code = (item.code || item.id || item).toString();
+                                const name = (item.name || item.label || item).toString();
+                                return `<option value="${code}">${name}</option>`;
+                            })
+                        ).join('');
+                    } else {
+                        provinceSel.style.display = 'none';
+                        provinceText.style.display = 'block';
+                        provinceText.value = '';
                     }
-                    if (!Array.isArray(list)) list = [];
-
-                    provinceSel.innerHTML = ['<option value="">İl Seçiniz</option>'].concat(
-                    list.map(item => {
-                        const code = (item.code || item.id || item).toString();
-                        const name = (item.name || item.label || item).toString();
-                        return `<option value="${code}">${name}</option>`;
-                    })
-                    ).join('');
-                } else {
-                    provinceSel.style.display = 'none';
-                    provinceText.style.display = 'block';
-                    provinceText.value = '';
-                }
                 }
                 
                 filterPersons(query) {
@@ -1131,89 +898,41 @@ setupEventListeners() {
                     document.getElementById('personModalTitle').textContent = 'Yeni Kişi Ekle';
                     document.getElementById('personForm').reset();
                     document.getElementById('personId').value = '';
-
-                    // Varsayılan: Gerçek kişi
+                    
                     const personType = document.getElementById('personType');
                     if (personType) {
                         personType.value = 'gercek';
                         this.updateNameLabelByType();
                         this.updateExtraFieldsByType();
                     }
-
-                    // Ek alanları temizle
                     const personTckn = document.getElementById('personTckn');
                     const personBirthDate = document.getElementById('personBirthDate');
                     const personVkn = document.getElementById('personVkn');
-                    
                     if (personTckn) personTckn.value = '';
                     if (personBirthDate) personBirthDate.value = '';
                     if (personVkn) personVkn.value = '';
-
-                    // Ülke/İl yükle
                     this.loadCountries();
-
-                    // Modal açıldıktan sonra telefon event listener'ını ekle
                     setTimeout(() => {
                         const phoneInput = document.getElementById('personPhone');
                         if (phoneInput && !phoneInput.dataset.listenerAdded) {
-                            phoneInput.addEventListener('focus', () => {
-                                if (!phoneInput.value.trim()) phoneInput.value = '+90 ';
-                            });
-                            phoneInput.addEventListener('input', () => {
-                                phoneInput.value = this.formatTRPhone(phoneInput.value);
-                            });
+                            phoneInput.addEventListener('focus', () => { if (!phoneInput.value.trim()) phoneInput.value = '+90 '; });
+                            phoneInput.addEventListener('input', () => { phoneInput.value = this.formatTRPhone(phoneInput.value); });
                             phoneInput.dataset.listenerAdded = 'true';
                         }
-
-                        // Diğer modal elementleri için de listener ekle
-                        const countrySelect = document.getElementById('countrySelect');
-                        if (countrySelect && !countrySelect.dataset.listenerAdded) {
-                            countrySelect.addEventListener('change', () => this.loadProvincesForSelectedCountry());
-                            countrySelect.dataset.listenerAdded = 'true';
-                        }
-
-                        const personTypeSelect = document.getElementById('personType');
-                        if (personTypeSelect && !personTypeSelect.dataset.listenerAdded) {
-                            personTypeSelect.addEventListener('change', () => {
-                                this.updateNameLabelByType();
-                                this.updateExtraFieldsByType();
-                            });
-                            personTypeSelect.dataset.listenerAdded = 'true';
-                        }
-
-                        // TCKN ve VKN için rakam/uzunluk kontrolü
-                        const tcknInput = document.getElementById('personTckn');
-                        const vknInput = document.getElementById('personVkn');
-
-                        if (tcknInput && !tcknInput.dataset.listenerAdded) {
-                            tcknInput.addEventListener('input', () => {
-                                tcknInput.value = tcknInput.value.replace(/\D/g, '').slice(0, 11);
-                            });
-                            tcknInput.dataset.listenerAdded = 'true';
-                        }
-                        
-                        if (vknInput && !vknInput.dataset.listenerAdded) {
-                            vknInput.addEventListener('input', () => {
-                                vknInput.value = vknInput.value.replace(/\D/g, '').slice(0, 10);
-                            });
-                            vknInput.dataset.listenerAdded = 'true';
-                        }
-                    }, 100); // Modal açılması için kısa bir gecikme
-
-                    // Telefon alanı placeholder boş kalsın
-                    const phoneInput = document.getElementById('personPhone');
-                    if (phoneInput && !phoneInput.value.trim()) phoneInput.value = '';
+                    }, 100);
 
                     // İlgililer state'lerini sıfırla
                     this.relatedDraft = [];
                     this.relatedLoaded = [];
                     this.renderRelatedList();
-                    
+
+                    // İlgililer bölümünü akordiyon mantığına göre varsayılan olarak açılır hale getir
                     const relatedSection = document.getElementById('relatedSection');
-                    if (relatedSection) relatedSection.style.display = 'none';
+                    if (relatedSection) relatedSection.classList.remove('expanded');
 
                     document.getElementById('personModal').classList.add('show');
                 }
+
                 async showEditPersonModal(personId) {
                     const person = this.allPersons.find(p => p.id === personId);
                     if (!person) {
@@ -1227,19 +946,14 @@ setupEventListeners() {
                     document.getElementById('personEmail').value = person.email || '';
                     document.getElementById('personPhone').value = person.phone || '';
 
-                    // Tipi eşle
                     let mappedType =
                         (person.type === 'individual') ? 'gercek' :
                         ((person.type === 'company' || person.type === 'institution') ? 'tuzel' : (person.type || ''));
-
                     document.getElementById('personType').value = mappedType;
                     this.updateNameLabelByType();
                     this.updateExtraFieldsByType();
-
-                    // 1) Ülkeleri yükle
                     await this.loadCountries();
 
-                    // 2) Ülkeyi seç
                     const countrySel = document.getElementById('countrySelect');
                     if (person.countryCode) {
                         const match = Array.from(countrySel.options).find(o => o.value === person.countryCode);
@@ -1247,15 +961,11 @@ setupEventListeners() {
                             countrySel.value = match.value;
                         }
                     }
-
-                    // 3) İl listesini yükle
                     await this.loadProvincesForSelectedCountry();
 
                     if (person.countryCode && !(/^(TR|TUR)$/i.test(person.countryCode))) {
-                        // Türkiye dışı → text alanına yaz
                         document.getElementById('provinceText').value = person.province || '';
                     } else {
-                        // Türkiye → select’ten seç
                         const pSel = document.getElementById('provinceSelect');
                         if (person.provinceCode) {
                             const opt = Array.from(pSel.options).find(o => o.value === person.provinceCode);
@@ -1266,15 +976,11 @@ setupEventListeners() {
                         }
                     }
 
-                    // Adres
                     document.getElementById('personAddress').value = person.address || '';
-
-                    // Ek alanlar
                     document.getElementById('personTckn').value = person.tckn || '';
                     document.getElementById('personBirthDate').value = person.birthDate || '';
                     document.getElementById('personVkn').value = person.taxNo || '';
 
-                    // İlgilileri yükle
                     this.relatedDraft = [];
                     this.relatedLoaded = [];
                     try {
@@ -1286,7 +992,10 @@ setupEventListeners() {
                         console.warn('İlgililer yüklenemedi:', e);
                     }
                     this.renderRelatedList();
-                    document.getElementById('relatedSection').style.display = 'block';
+
+                    // İlgililer bölümünü aç ve genişlet
+                    const relatedSection = document.getElementById('relatedSection');
+                    if(relatedSection) relatedSection.classList.add('expanded');
 
                     document.getElementById('personModal').classList.add('show');
                 }
@@ -1297,48 +1006,36 @@ setupEventListeners() {
 
                 async handlePersonFormSubmit(event) {
                     event.preventDefault();
-
                     const personIdInput = document.getElementById('personId').value;
-
-                    // — Ülke / İl
-                    const countrySel   = document.getElementById('countrySelect');
-                    const provinceSel  = document.getElementById('provinceSelect');
+                    const countrySel = document.getElementById('countrySelect');
+                    const provinceSel = document.getElementById('provinceSelect');
                     const provinceText = document.getElementById('provinceText');
-
                     const countryCode = countrySel?.value || '';
                     const countryName = countrySel?.options[countrySel.selectedIndex]?.text || '';
-
                     const isTR = /^(TR|TUR)$/i.test(countryCode) || /türkiye|turkiye/i.test(countryName);
                     const provinceCode = isTR ? (provinceSel ? (provinceSel.value || '') : '') : '';
-                    const provinceName = isTR
-                        ? (provinceSel ? (provinceSel.options[provinceSel.selectedIndex]?.text || '') : '')
-                        : (provinceText ? (provinceText.value || '') : '');
+                    const provinceName = isTR ? (provinceSel ? (provinceSel.options[provinceSel.selectedIndex]?.text || '') : '') : (provinceText ? (provinceText.value || '') : '');
+                    const typeVal = document.getElementById('personType').value;
+                    const tckn = (document.getElementById('personTckn')?.value || '').trim();
+                    const vkn = (document.getElementById('personVkn')?.value || '').trim();
+                    const bdate = (document.getElementById('personBirthDate')?.value || '');
 
-                    // — Tip / ek alanlar
-                    const typeVal = document.getElementById('personType').value; // 'gercek' | 'tuzel'
-                    const tckn  = (document.getElementById('personTckn')?.value || '').trim();
-                    const vkn   = (document.getElementById('personVkn')?.value  || '').trim();
-                    const bdate = (document.getElementById('personBirthDate')?.value || ''); // YYYY-MM-DD
-
-                    // — Doğrulamalar
                     if (!typeVal) {
                         showNotification('Kişi Tipi zorunludur.', 'error');
                         return;
                     }
                     if (typeVal === 'gercek') {
                         if (!tckn || tckn.length !== 11) {
-                        showNotification('TC Kimlik No 11 hane olmalı', 'warning');
-                        return;
+                            showNotification('TC Kimlik No 11 hane olmalı', 'warning');
+                            return;
                         }
                     }
                     if (typeVal === 'tuzel') {
                         if (!vkn || vkn.length !== 10) {
-                        showNotification('Vergi No 10 hane olmalı', 'warning');
-                        return;
+                            showNotification('Vergi No 10 hane olmalı', 'warning');
+                            return;
                         }
                     }
-
-                    // — Kayıt verisi
                     const personData = {
                         name: document.getElementById('personName').value,
                         email: document.getElementById('personEmail').value,
@@ -1347,16 +1044,13 @@ setupEventListeners() {
                         address: document.getElementById('personAddress').value,
                         countryCode,
                         countryName,
-                        provinceCode,          // TR için kod
-                        province: provinceName // gösterim için isim / text
+                        provinceCode,
+                        province: provinceName
                     };
-
                     if (!personData.name) {
                         showNotification('Ad Soyad / Firma Adı zorunludur.', 'error');
                         return;
                     }
-
-                    // Tip’e göre ek alanlar
                     if (typeVal === 'gercek') {
                         personData.tckn = tckn;
                         if (bdate) personData.birthDate = bdate;
@@ -1364,24 +1058,23 @@ setupEventListeners() {
                         personData.taxNo = vkn;
                     }
 
-                    // — Kişiyi kaydet
                     let savedPersonId = personIdInput || null;
                     try {
                         if (savedPersonId) {
-                        const result = await personService.updatePerson(savedPersonId, personData);
-                        if (!result?.success) {
-                            showNotification('Kişi güncellenirken hata oluştu' + (result?.error ? `: ${result.error}` : ''), 'error');
-                            return;
-                        }
-                        showNotification('Kişi başarıyla güncellendi!', 'success');
+                            const result = await personService.updatePerson(savedPersonId, personData);
+                            if (!result?.success) {
+                                showNotification('Kişi güncellenirken hata oluştu' + (result?.error ? `: ${result.error}` : ''), 'error');
+                                return;
+                            }
+                            showNotification('Kişi başarıyla güncellendi!', 'success');
                         } else {
-                        const result = await personService.addPerson(personData);
-                        if (!result?.success || !result?.id) {
-                            showNotification('Kişi eklenirken hata oluştu' + (result?.error ? `: ${result.error}` : ''), 'error');
-                            return;
-                        }
-                        savedPersonId = result.id;
-                        showNotification('Yeni kişi başarıyla eklendi!', 'success');
+                            const result = await personService.addPerson(personData);
+                            if (!result?.success || !result?.id) {
+                                showNotification('Kişi eklenirken hata oluştu' + (result?.error ? `: ${result.error}` : ''), 'error');
+                                return;
+                            }
+                            savedPersonId = result.id;
+                            showNotification('Yeni kişi başarıyla eklendi!', 'success');
                         }
                     } catch (err) {
                         console.error('Kişi kaydı hatası:', err);
@@ -1389,92 +1082,56 @@ setupEventListeners() {
                         return;
                     }
 
-                    // — İLGİLİLERİ personsRelated koleksiyonuna yaz (sadece draft olanlar)
                     try {
                         if (savedPersonId && this.relatedDraft && this.relatedDraft.length) {
-                        const batch = writeBatch(db);
-
-                        this.relatedDraft.forEach(r => {
-                            // scopes (['patent', 'marka', ...]) → responsible objesine dönüştür
-                            let responsible = {};
-                            if (Array.isArray(r.scopes)) {
-                            r.scopes.forEach(k => { if (k) responsible[k] = true; });
-                            } else if (r.responsible && typeof r.responsible === 'object') {
-                            responsible = r.responsible; // varsa doğrudan kullan
-                            }
-
-                            const ref = doc(collection(db, 'personsRelated'));
-                            batch.set(ref, {
-                            personId: savedPersonId,
-                            name: r.name || '',
-                            email: r.email || '',
-                            phone: r.phone || '',
-                            responsible,            // { patent:true, marka:true, ... }
-                            createdAt: Date.now()
+                            const batch = writeBatch(db);
+                            this.relatedDraft.forEach(r => {
+                                let responsible = {};
+                                if (Array.isArray(r.scopes)) {
+                                    r.scopes.forEach(k => { if (k) responsible[k] = true; });
+                                } else if (r.responsible && typeof r.responsible === 'object') {
+                                    responsible = r.responsible;
+                                }
+                                const ref = doc(collection(db, 'personsRelated'));
+                                batch.set(ref, {
+                                    personId: savedPersonId,
+                                    name: r.name || '',
+                                    email: r.email || '',
+                                    phone: r.phone || '',
+                                    responsible,
+                                    createdAt: Date.now()
+                                });
                             });
-                        });
-
-                        await batch.commit();
-                        this.relatedDraft = []; // taslakları temizle
+                            await batch.commit();
+                            this.relatedDraft = [];
                         }
                     } catch (e) {
                         console.error('personsRelated yazım hatası:', e);
                         showNotification('İlgililer kaydedilirken hata oluştu', 'error');
-                        // kişiyi kaydettiğimiz için modalı kapatmaya devam edelim; sadece uyarı verdik
                     }
-
-                    // — Modalı kapat, listeyi yenile
                     this.closePersonModal();
-                    await this.loadPersons(); // tabloyu tazele
-                    }
+                    await this.loadPersons();
+                }
 
-                toggleRelatedSection() {
-                    const sec = document.getElementById('relatedSection');
-                    sec.style.display = (sec.style.display === 'none' || !sec.style.display) ? 'block' : 'none';
-                    }
-
-                    handleAddRelated() {
-                    const name = (document.getElementById('relatedName').value || '').trim();
-                    const email = (document.getElementById('relatedEmail').value || '').trim();
-                    const phone = (document.getElementById('relatedPhone').value || '').trim();
-
-                    const scopes = Array.from(document.querySelectorAll('.rel-scope'))
-                        .filter(cb => cb.checked)
-                        .map(cb => cb.value);
-
-                    if (!name) { showNotification('İlgilinin adı gerekli', 'warning'); return; }
-
-                    this.relatedDraft.push({ name, email, phone, scopes });
-
-                    // inputları temizle (scopelar default tikli kalsın)
-                    document.getElementById('relatedName').value = '';
-                    document.getElementById('relatedEmail').value = '';
-                    document.getElementById('relatedPhone').value = '';
-
-                    this.renderRelatedList();
-                    }
-
-                    renderRelatedList() {
-                    const tbody = document.getElementById('relatedTableBody');
-                    if (!tbody) return;
-
-                    tbody.innerHTML = '';
-
-                    // DB’den gelenlerle (relatedLoaded) henüz kaydedilmemiş taslakları (relatedDraft) birleştir
+                // Geliştirilmiş renderRelatedList() işlevi
+                renderRelatedList() {
+                    const relatedList = document.getElementById('relatedList');
+                    relatedList.innerHTML = '';
+                    
                     const all = [
                         ...(this.relatedLoaded || []).map(r => ({ ...r, _src: 'db' })),
                         ...(this.relatedDraft  || []).map((r, i) => ({ ...r, _src: 'draft', _draftIndex: i }))
                     ];
 
-                    // Boşsa bilgi satırı
                     if (!all.length) {
-                        const tr = document.createElement('tr');
-                        tr.innerHTML = `<td colspan="5" class="text-center text-muted">Henüz ilgili eklenmedi</td>`;
-                        tbody.appendChild(tr);
+                        relatedList.innerHTML = `
+                            <div class="related-empty">
+                                Henüz ilgili kişi eklenmedi.
+                            </div>
+                        `;
                         return;
                     }
 
-                    // Yardımcı: scopes/responsible -> etiketli rozetlere çevir
                     const scopeLabel = (k) => {
                         switch (k) {
                         case 'patent':   return 'Patent';
@@ -1487,103 +1144,64 @@ setupEventListeners() {
                     };
 
                     const extractScopes = (r) => {
-                        // 1) responsible: {patent:true,...}
                         if (r && typeof r.responsible === 'object' && r.responsible !== null) {
-                        return Object.keys(r.responsible)
-                            .filter(k => !!r.responsible[k])
-                            .map(k => k);
+                            return Object.keys(r.responsible).filter(k => !!r.responsible[k]).map(k => k);
                         }
-                        // 2) scopes: ['patent', ...]
                         if (Array.isArray(r?.scopes)) return r.scopes;
                         return [];
                     };
 
                     all.forEach((r, idx) => {
-                        const tr = document.createElement('tr');
-
-                        const scopes = extractScopes(r);
-                        const scopesBadges = (scopes.length
-                        ? scopes
-                        : []) // boşsa hiçbir şey yazmayacağız (aşağıda '-' fallback var)
-                        .map(k => `<span class="badge badge-light" style="margin-right:6px;">✔ ${scopeLabel(k)}</span>`)
-                        .join('');
-
-                        tr.innerHTML = `
-                        <td>${r.name || '-'}</td>
-                        <td>${r.email || '-'}</td>
-                        <td>${r.phone || '-'}</td>
-                        <td>${scopesBadges || '-'}</td>
-                        <td class="text-right">
-                            <button type="button" class="btn btn-sm btn-outline-danger" data-idx="${idx}">Sil</button>
-                        </td>
-                        `;
-                        tbody.appendChild(tr);
-
-                        // Silme işlemi
-                        tr.querySelector('button').addEventListener('click', async () => {
-                        try {
-                            if (r._src === 'db' && r.id) {
-                            await deleteDoc(doc(db, 'personsRelated', r.id));
-                            this.relatedLoaded = (this.relatedLoaded || []).filter(x => x.id !== r.id);
-                            } else if (r._src === 'draft' && typeof r._draftIndex === 'number') {
-                            this.relatedDraft.splice(r._draftIndex, 1);
-                            }
-                            this.renderRelatedList();
-                        } catch (e) {
-                            console.error('İlgili silinirken hata:', e);
-                            showNotification?.('İlgili silinemedi', 'error');
-                        }
-                        });
-                    });
-                    }
-
-                    addRelatedToList(name, email, phone, scopes) {
-                        const relatedList = document.getElementById('relatedList');
-                        if (!relatedList) return;
-                        
-                        // Empty state'i kaldır
-                        const emptyState = relatedList.querySelector('.related-empty');
-                        if (emptyState) {
-                            emptyState.style.display = 'none';
-                        }
-
-                        // Yeni item oluştur
                         const relatedItem = document.createElement('div');
                         relatedItem.className = 'related-item';
-                        
-                        const scopeBadges = scopes.map(scope => `<span class="scope-badge">${scope}</span>`).join(' ');
+
+                        const scopes = extractScopes(r);
+                        const scopeBadges = (scopes.length
+                            ? scopes.map(k => `<span class="scope-badge">${scopeLabel(k)}</span>`).join('')
+                            : `<span style="font-style:italic; color:#999;">Alan belirtilmemiş</span>`
+                        );
                         
                         relatedItem.innerHTML = `
                             <div class="related-info">
-                                <div class="related-name">${name}</div>
+                                <div class="related-name">${r.name || '-'}</div>
                                 <div class="related-details">
-                                    ${email ? `📧 ${email}` : ''} 
-                                    ${phone ? `📱 ${phone}` : ''}
+                                    ${r.email ? `📧 ${r.email}` : ''}
+                                    ${r.phone ? `📱 ${r.phone}` : ''}
                                 </div>
                                 <div class="related-scopes">${scopeBadges}</div>
                             </div>
-                            <button type="button" class="remove-related-btn" onclick="this.parentElement.remove()">
-                                🗑️
-                            </button>
+                            <button type="button" class="remove-related-btn" data-idx="${idx}">🗑️</button>
                         `;
-                        
                         relatedList.appendChild(relatedItem);
-                        
-                        // relatedDraft'a da ekle (mevcut yapınızla uyumlu olması için)
-                        if (!this.relatedDraft) this.relatedDraft = [];
-                        this.relatedDraft.push({
-                            name: name,
-                            email: email,
-                            phone: phone,
-                            scopes: scopes
+
+                        relatedItem.querySelector('.remove-related-btn').addEventListener('click', async () => {
+                            try {
+                                if (r._src === 'db' && r.id) {
+                                    await deleteDoc(doc(db, 'personsRelated', r.id));
+                                    this.relatedLoaded = this.relatedLoaded.filter(x => x.id !== r.id);
+                                } else if (r._src === 'draft' && typeof r._draftIndex === 'number') {
+                                    this.relatedDraft.splice(r._draftIndex, 1);
+                                }
+                                this.renderRelatedList();
+                            } catch (e) {
+                                console.error('İlgili silinirken hata:', e);
+                                showNotification?.('İlgili silinemedi', 'error');
+                            }
                         });
-                    }
-                    async deletePerson(personId) {
+                    });
+                }
+
+                addRelatedToList(relatedPerson) {
+                    this.relatedDraft.push(relatedPerson);
+                    this.renderRelatedList();
+                }
+
+                async deletePerson(personId) {
                     if (confirm('Bu kişiyi silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.')) {
                         const result = await personService.deletePerson(personId);
                         if (result.success) {
                             showNotification('Kişi başarıyla silindi.', 'success');
-                            await this.loadPersons(); // Reload persons to update table
+                            await this.loadPersons();
                         } else {
                             showNotification('Kişi silinirken hata oluştu: ' + result.error, 'error');
                         }
