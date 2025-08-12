@@ -218,6 +218,30 @@
         .btn-primary:hover { background: #2a5298; }
         .btn-secondary { background: #6c757d; color: white; border: none; }
         .btn-secondary:hover { background: #5a6268; }
+        .related-section {
+    background: #f9fbfd;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+}
+
+.related-section h5 {
+    color: #007bff;
+    font-weight: 600;
+}
+
+.checkbox-group label {
+    margin-right: 15px;
+    font-weight: 500;
+}
+
+#toggleRelatedSection {
+    font-weight: 600;
+}
+
+#toggleRelatedSection i {
+    margin-right: 5px;
+}
+
     </style>
 </head>
 <body>
@@ -316,68 +340,65 @@
                         <input type="text" id="provinceText" class="form-input" style="display:none;flex:1 1 200px" placeholder="Eyalet / İl">
                     </div>
                     </div>
-                    <div class="modal-footer" style="gap:8px;flex-wrap:wrap;">
-                        <button type="button" id="toggleRelatedBtn" class="btn btn-outline-secondary">İlgililer</button>
-                        <div style="flex:1"></div>
-                        <button type="button" id="cancelPersonBtn" class="btn btn-secondary">İptal</button>
-                        <button type="submit" id="savePersonBtn" class="btn btn-primary">Kaydet</button>
-                    </div>
-                    <!-- İLGİLİLER BÖLÜMÜ (başlangıçta gizli) -->
-                    <div id="relatedSection" style="display:none; margin-top:16px; border-top:1px solid #eee; padding-top:16px;">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <h6 class="m-0">İlgililer</h6>
-                        <small class="text-muted">Kişi ile ilişkili gerçek kişiler</small>
+                    <!-- İlgililer Butonu -->
+                    <div class="d-flex justify-content-start mb-3">
+                        <button type="button" class="btn btn-outline-primary" id="toggleRelatedSection">
+                            <i class="fas fa-users"></i> İlgililer
+                        </button>
                     </div>
 
-                    <!-- İlgili Ekleme Formu -->
-                    <div class="card p-3 mb-3">
-                        <div class="form-row" style="display:flex; gap:8px; flex-wrap:wrap;">
-                        <div class="form-group" style="flex:1 1 200px;">
-                            <label class="form-label" for="relatedName">Ad Soyad</label>
-                            <input type="text" id="relatedName" class="form-input" placeholder="Ad Soyad">
-                        </div>
-                        <div class="form-group" style="flex:1 1 200px;">
-                            <label class="form-label" for="relatedEmail">E‑mail</label>
-                            <input type="email" id="relatedEmail" class="form-input" placeholder="ornek@eposta.com">
-                        </div>
-                        <div class="form-group" style="flex:1 1 160px;">
-                            <label class="form-label" for="relatedPhone">Telefon</label>
-                            <input type="text" id="relatedPhone" class="form-input" placeholder="+90 5__ ___ __ __">
-                        </div>
+                    <!-- İlgililer Alanı -->
+                    <div id="relatedSection" class="related-section border rounded p-3 mb-3" style="display: none;">
+                        <h5 class="mb-3"><i class="fas fa-user-friends"></i> İlgililer</h5>
+
+                        <div class="form-row">
+                            <div class="form-group col-md-4">
+                                <label>Ad Soyad</label>
+                                <input type="text" class="form-control" id="relatedName" placeholder="Ad Soyad">
+                            </div>
+                            <div class="form-group col-md-4">
+                                <label>E-mail</label>
+                                <input type="email" class="form-control" id="relatedEmail" placeholder="ornek@eposta.com">
+                            </div>
+                            <div class="form-group col-md-4">
+                                <label>Telefon</label>
+                                <input type="text" class="form-control" id="relatedPhone" placeholder="+90 5__ ___ __ __">
+                            </div>
                         </div>
 
-                        <!-- Sorumlu olunan alanlar -->
-                        <div class="form-group mb-2">
-                        <label class="form-label d-block">Sorumlu Olduğu Alanlar</label>
-                        <div class="d-flex" style="gap:16px; flex-wrap:wrap;">
-                            <label><input type="checkbox" class="rel-scope" value="patent" checked> Patent</label>
-                            <label><input type="checkbox" class="rel-scope" value="marka" checked> Marka</label>
-                            <label><input type="checkbox" class="rel-scope" value="tasarim" checked> Tasarım</label>
-                            <label><input type="checkbox" class="rel-scope" value="dava" checked> Dava</label>
-                            <label><input type="checkbox" class="rel-scope" value="muhasebe" checked> Muhasebe</label>
-                        </div>
+                        <div class="form-group">
+                            <label>Sorumlu Olduğu Alanlar</label>
+                            <div class="checkbox-group">
+                                <label><input type="checkbox" value="patent" checked> Patent</label>
+                                <label><input type="checkbox" value="marka" checked> Marka</label>
+                                <label><input type="checkbox" value="tasarim" checked> Tasarım</label>
+                                <label><input type="checkbox" value="dava"> Dava</label>
+                                <label><input type="checkbox" value="muhasebe"> Muhasebe</label>
+                            </div>
                         </div>
 
                         <div class="d-flex justify-content-end">
-                        <button type="button" id="addRelatedBtn" class="btn btn-outline-primary">Listeye Ekle</button>
+                            <button type="button" class="btn btn-success" id="addRelatedBtn">
+                                <i class="fas fa-plus"></i> Listeye Ekle
+                            </button>
                         </div>
-                    </div>
 
-                    <!-- İlgililer Listesi -->
-                    <div class="table-responsive">
-                        <table class="table table-sm">
-                        <thead>
-                            <tr>
-                            <th>Ad Soyad</th>
-                            <th>E‑mail</th>
-                            <th>Telefon</th>
-                            <th>Sorumlu Alanlar</th>
-                            <th style="width:60px;">İşlem</th>
-                            </tr>
-                        </thead>
-                        <tbody id="relatedTableBody"></tbody>
+                        <hr>
+
+                        <table class="table table-sm table-bordered table-striped mt-3">
+                            <thead class="thead-light">
+                                <tr>
+                                    <th>Ad Soyad</th>
+                                    <th>E-mail</th>
+                                    <th>Telefon</th>
+                                    <th>Sorumlu Alanlar</th>
+                                    <th width="60">İşlem</th>
+                                </tr>
+                            </thead>
+                            <tbody id="relatedTableBody"></tbody>
                         </table>
                     </div>
+
                     </div>
             </form>
         </div>
@@ -463,8 +484,10 @@
                     });
                     }
                     // İlgililer bölümü aç/kapat
-                    document.getElementById('toggleRelatedBtn')
-                    .addEventListener('click', () => this.toggleRelatedSection());
+                    document.getElementById('toggleRelatedSection').addEventListener('click', function() {
+                        const section = document.getElementById('relatedSection');
+                        section.style.display = section.style.display === 'none' ? 'block' : 'none';
+                    });
 
                     // İlgili listeye ekle
                     document.getElementById('addRelatedBtn')
