@@ -442,6 +442,31 @@
         import { loadSharedLayout } from './js/layout-loader.js';
 
         let transactionTypesMap = new Map();
+        // === İTİRAZ DURUM HARİTASI ===
+        const REQUEST_RESULT_STATUS = {
+        '24': 'Eksiklik Bildirimi',
+        '28': 'Kabul',
+        '29': 'Kısmi Kabul',
+        '30': 'Ret',
+        '31': 'B.S - Kabul',
+        '32': 'B.S - Kısmi Kabul',
+        '33': 'B.S - Ret',
+        '34': 'İ.S - Kabul',
+        '35': 'İ.S - Kısmi Kabul',
+        '36': 'İ.S - Ret',
+        '50': 'Kabul',
+        '51': 'Kısmi Kabul',
+        '52': 'Ret'
+        };
+
+        function formatObjectionStatus(requestResultId) {
+        if (requestResultId === undefined || requestResultId === null || requestResultId === '') {
+            return 'Karar Bekleniyor';
+        }
+        const key = String(requestResultId);
+        return REQUEST_RESULT_STATUS[key] ?? `Bilinmiyor (ID: ${key})`;
+        }
+
         let allPersons = []; 
         let pagination;
         let portfolioModule; 
