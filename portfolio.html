@@ -1592,25 +1592,11 @@ async loadObjectionRows() {
                     }
                     
                     // 4. requestResult değerini kontrol et ve statusText belirle
-                    if (foundRequestResult !== null) {
-                        console.log('🔍 requestResult kontrolü (spesifik TX için):', {
-                            targetTransactionId,
-                            value: foundRequestResult,
-                            type: typeof foundRequestResult,
-                            equals30: foundRequestResult === 30,
-                            equalsString30: foundRequestResult === '30',
-                            stringEquals30: String(foundRequestResult) === '30'
-                        });
-                        
-                        if (foundRequestResult === 30 || foundRequestResult === '30' || String(foundRequestResult) === '30') {
-                            statusText = 'Ret';
-                            console.log('✅ Status "Ret" olarak belirlendi (spesifik TX)');
-                        } else {
-                            statusText = String(foundRequestResult);
-                            console.log('✅ Status custom değer olarak belirlendi (spesifik TX):', statusText);
-                        }
+                    if (foundRequestResult !== null && foundRequestResult !== undefined && foundRequestResult !== '') {
+                        console.log('🔍 requestResult bulundu:', foundRequestResult, '->', formatObjectionStatus(foundRequestResult));
+                        statusText = formatObjectionStatus(foundRequestResult);
                     } else {
-                        console.log('⚠️ İlgili transaction\'da requestResult bulunamadı');
+                        console.log('⚠️ İlgili transaction\'da requestResult yok; varsayılan kullanılacak:', statusText);
                     }
                     
                     // 5. Debug: Tüm transaction'ların requestResult'larını göster
