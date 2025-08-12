@@ -485,7 +485,7 @@
                         tableBody.appendChild(row);
                     });
                 }
-                
+
                 updateNameLabelByType() {
                 const val = document.getElementById('personType').value;
                 document.getElementById('personNameLabel').textContent = (val === 'tuzel') ? 'Firma Adı' : 'Ad Soyad';
@@ -705,10 +705,10 @@
                     const countryName = countrySel.options[countrySel.selectedIndex]?.text || '';
 
                     const isTR = /^(TR|TUR)$/i.test(countryCode) || /türkiye|turkiye/i.test(countryName);
-                    const provinceCode = isTR ? (provinceSel.value || '') : '';
+                    const provinceCode = isTR ? (provinceSel ? (provinceSel.value || '') : '') : '';
                     const provinceName = isTR
-                    ? (provinceSel.options[provinceSel.selectedIndex]?.text || '')
-                    : (provinceText.value || '');
+                    ? (provinceSel ? (provinceSel.options[provinceSel.selectedIndex]?.text || '') : '')
+                    : (provinceText ? (provinceText.value || '') : '');
                     const typeVal = document.getElementById('personType').value; // 'gercek' | 'tuzel'
                     const tckn  = document.getElementById('personTckn').value.trim();
                     const vkn   = document.getElementById('personVkn').value.trim();
@@ -734,7 +734,7 @@
                     phone: document.getElementById('personPhone').value,
                     type: typeVal,
                     address: document.getElementById('personAddress').value,
-                    countryCode, countryName, provinceCode, province
+                    countryCode, countryName, provinceCode, province:provinceName
                     };
                     if (typeVal === 'gercek') {
                     if (tckn) personData.tckn = tckn;
