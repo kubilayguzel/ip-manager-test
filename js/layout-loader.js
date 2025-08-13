@@ -451,6 +451,11 @@ export function openPersonModal(onSaved) {
   // Formu sıfırla
   const form = document.getElementById('personForm');
   if (form) form.reset();
+  
+  const phoneInput = document.getElementById('pm_phone');
+    if (phoneInput) {
+    applyPhoneMask(phoneInput);
+    }
 
   // Varsayılan: TÜZEL
   const typeSel = document.getElementById('pm_personType');
@@ -591,6 +596,31 @@ async function populateCountryCitySelects() {
       .map(x => `<option value="${(x.code || x.name)}">${x.name}</option>`)
       .join('');
     citySel.disabled = false;
+  });
+}
+function applyPhoneMask(input) {
+  input.addEventListener('input', function(e) {
+    let value = e.target.value.replace(/\D/g, ''); // sadece rakam
+    if (!value.startsWith('90')) {
+      value = '90' + value; // TR kodu ekle
+    }
+    if (value.length > 12) {
+      value = value.slice(0, 12);
+    }
+    let formatted = '+' + value.slice(0, 2); // +90
+    if (value.length > 2) {
+      formatted += ' ' + value.slice(2, 5);
+    }
+    if (value.length > 5) {
+      formatted += ' ' + value.slice(5, 8);
+    }
+    if (value.length > 8) {
+      formatted += ' ' + value.slice(8, 10);
+    }
+    if (value.length > 10) {
+      formatted += ' ' + value.slice(10, 12);
+    }
+    e.target.value = formatted;
   });
 }
 
