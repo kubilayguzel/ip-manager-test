@@ -1,5 +1,5 @@
 import { authService, taskService, ipRecordsService, personService, accrualService, auth, transactionTypeService, db, storage } from '../firebase-config.js';
-import { loadSharedLayout } from './layout-loader.js';
+import { loadSharedLayout, openPersonModal, ensurePersonModal } from './layout-loader.js';
 import { initializeNiceClassification, getSelectedNiceClasses } from './nice-classification.js';
 import { ref, uploadBytes, getStorage, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
@@ -337,6 +337,18 @@ async initIpRecordSearchSelector() {
             assignedToSelect.appendChild(option);
         });
     }
+  _onPersonCreated(newPerson, target) {
+    this.allPersons = this.allPersons || [];
+    this.allPersons.push(newPerson);
+    if (target === 'relatedParty' && typeof this.selectPerson === 'function') {
+      this.selectPerson(newPerson, 'relatedParty');
+    } else if (target === 'applicant' && typeof this.addApplicant === 'function') {
+      this.addApplicant(newPerson);
+    }
+    console.log('✅ Yeni kişi eklendi:', newPerson);
+  }
+
+
 
     setupEventListeners() {
         if (this._eventsBound) return;
@@ -352,24 +364,6 @@ async initIpRecordSearchSelector() {
             if (e.target.id === 'nextTabBtn') {
                 this.handleNextTab();
             }
-        });
-
-        const closeAddPersonModalBtn = document.getElementById('closeAddPersonModal');
-        if (closeAddPersonModalBtn) closeAddPersonModalBtn.addEventListener('click', () => this.hideAddPersonModal());
-        const cancelPersonBtn = document.getElementById('cancelPersonBtn');
-        if (cancelPersonBtn) cancelPersonBtn.addEventListener('click', () => this.hideAddPersonModal());
-        const savePersonBtn = document.getElementById('savePersonBtn');
-        if (savePersonBtn) savePersonBtn.addEventListener('click', () => this.saveNewPerson());
-        const closeParentModalBtn = document.getElementById('closeSelectParentModal');
-        if (closeParentModalBtn) closeParentModalBtn.addEventListener('click', () => this.hideParentSelectionModal());
-        const cancelParentSelectionBtn = document.getElementById('cancelParentSelectionBtn');
-        if (cancelParentSelectionBtn) cancelParentSelectionBtn.addEventListener('click', () => this.hideParentSelectionModal());
-
-        $(document).on('click', '#myTaskTabs a', (e) => {
-            e.preventDefault();
-            const targetTabId = e.target.getAttribute('href').substring(1);
-            this.activeTab = targetTabId;
-            $(e.target).tab('show');
         });
 
         $(document).on('shown.bs.tab', '#myTaskTabs a', async (e) => {
@@ -1385,7 +1379,7 @@ async handleSpecificTypeChange(e) {
         const serviceInvoicePartySearch = document.getElementById('serviceInvoicePartySearch');
         if (serviceInvoicePartySearch) serviceInvoicePartySearch.addEventListener('input', (e) => this.searchPersons(e.target.value, 'serviceInvoiceParty'));
         const addNewPersonBtn = document.getElementById('addNewPersonBtn');
-        if (addNewPersonBtn) addNewPersonBtn.addEventListener('click', () => this.showAddPersonModal('relatedParty'));
+        if (addNewPersonBtn) addNewPersonBtn.addEventListener('click', () => { openPersonModal((newPerson) => { this.allPersons = this.allPersons || []; this.allPersons.push(newPerson); if (typeof this.selectPerson === 'function') this.selectPerson(newPerson, 'relatedParty'); }); });
 
         
         // — İlgili taraf çoklu arama —
@@ -1443,7 +1437,7 @@ async handleSpecificTypeChange(e) {
         const applicantSearchInput = document.getElementById('applicantSearchInput');
         if (applicantSearchInput) applicantSearchInput.addEventListener('input', (e) => this.searchPersons(e.target.value, 'applicant'));
         const addNewApplicantBtn = document.getElementById('addNewApplicantBtn');
-        if (addNewApplicantBtn) addNewApplicantBtn.addEventListener('click', () => this.showAddPersonModal('applicant'));
+        if (addNewApplicantBtn) addNewApplicantBtn.addEventListener('click', () => { openPersonModal((newPerson) => { this.allPersons = this.allPersons || []; this.allPersons.push(newPerson); if (typeof this.addApplicant === 'function') this.addApplicant(newPerson); }); });
 
         const selectedApplicantsList = document.getElementById('selectedApplicantsList');
         if (selectedApplicantsList) {
@@ -1814,15 +1808,6 @@ async handleSpecificTypeChange(e) {
         this.checkFormCompleteness();
         }
 
-    showAddPersonModal(target = null) {
-        const modal = document.getElementById('addPersonModal');
-        if (modal) {
-            $(modal).modal('show');
-            const form = document.getElementById('personForm');
-            if (form) form.reset();
-            modal.dataset.targetField = target; 
-        }
-    }
 
     hideAddPersonModal() {
         const modal = document.getElementById('addPersonModal');
@@ -1879,49 +1864,6 @@ async handleSpecificTypeChange(e) {
         } else {
             alert('Alt işlem kaydedilirken hata oluştu: ' + addResult.error);
             this.hideParentSelectionModal();
-        }
-    }
-    async saveNewPerson() {
-        const personNameInput = document.getElementById('personName');
-        const personTypeSelect = document.getElementById('personType');
-        const modal = document.getElementById('addPersonModal');
-        const targetField = modal ? modal.dataset.targetField : null;
-
-        if (!personNameInput || !personTypeSelect) return;
-        const name = personNameInput.value.trim();
-        const type = personTypeSelect.value;
-        if (!name || !type) {
-            alert('Ad Soyad ve Kişi Türü zorunludur.');
-            return;
-        }
-        const personData = {
-            name,
-            type,
-            email: document.getElementById('personEmail')?.value.trim(),
-            phone: document.getElementById('personPhone')?.value.trim(),
-            address: document.getElementById('personAddress')?.value.trim()
-        };
-        try {
-            const result = await personService.addPerson(personData);
-            if (result.success) {
-                alert('Yeni kişi başarıyla eklendi.');
-                this.allPersons.push({ ...result.data
-                });
-                if (targetField === 'applicant') {
-                    this.addApplicant(result.data);
-                } else if (targetField === 'relatedParty') {
-                    this.selectPerson(result.data, 'relatedParty');
-                } else if (targetField === 'tpInvoiceParty') {
-                    this.selectPerson(result.data, 'tpInvoiceParty');
-                } else if (targetField === 'serviceInvoiceParty') {
-                    this.selectPerson(result.data, 'serviceInvoiceParty');
-                }
-                this.hideAddPersonModal();
-            } else {
-                alert('Hata: ' + result.error);
-            }
-        } catch (error) {
-            alert("Kişi kaydedilirken beklenmeyen bir hata oluştu.");
         }
     }
 dedupeActionButtons() {
@@ -2355,7 +2297,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Shared layout'u yükle
     await loadSharedLayout({ activeMenuLink: 'create-task.html' });
     
-    // CreateTask instance'ını oluştur ve initialize et
+    
+    ensurePersonModal();
+// CreateTask instance'ını oluştur ve initialize et
     const createTaskInstance = new CreateTaskModule();
     
     // Global erişim için (debugging amaçlı)
