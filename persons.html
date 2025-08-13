@@ -5,127 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>IP Manager - Kişi Yönetimi</title>
     <style>
-        /* Bu sayfaya özel stiller */
-        /* Genel body, page-wrapper, main-container stilleri shared-styles.css'ten gelecektir. */
-        /* Sadece bu sayfaya özgü ve çakışmayan stilleri burada tutun */
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333; display: flex; }
-        .page-wrapper { flex-grow: 1; display: flex; flex-direction: column; height: 100vh; overflow-y: auto; background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); }
-        .main-container { width: 100%; padding: 30px; margin: 0; }
-        
-        /* Persons Management specific styles */
-        .page-header { background: rgba(255, 255, 255, 0.95); padding: 30px; border-radius: 20px; margin-bottom: 30px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1); }
-        .page-title { font-size: 2em; color: #1e3c72; margin-bottom: 10px; }
-        .page-subtitle { color: #666; font-size: 1.1em; }
-
-        .persons-container {
-            background: rgba(255, 255, 255, 0.95);
-            border-radius: 20px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-            overflow: hidden;
-        }
-
-        .persons-header {
-            padding: 20px 30px;
-            border-bottom: 1px solid #e1e8ed;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 15px;
-        }
-
-        .search-group {
-            display: flex;
-            gap: 10px;
-            align-items: center;
-            flex-grow: 1;
-            max-width: 400px;
-        }
-
-        .search-input {
-            flex-grow: 1;
-            padding: 8px 12px;
-            border-radius: 8px;
-            border: 1px solid #ccc;
-        }
-
-        .btn-add-person {
-            background: linear-gradient(45deg, #1e3c72, #2a5298);
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 0.9em;
-            font-weight: 600;
-            transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
-        .btn-add-person:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(30, 60, 114, 0.2);
-        }
-
-        .persons-table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        .persons-table th,
-        .persons-table td {
-            padding: 15px;
-            text-align: left;
-            border-bottom: 1px solid #f0f0f0;
-        }
-        .persons-table th:first-child,
-        .persons-table td:first-child {
-            width: 50px;
-            text-align: center;
-        }
-        .persons-table th {
-            background: #f8f9fa;
-            font-weight: 600;
-        }
-        .persons-table tr:hover {
-            background-color: #f6f8fa;
-        }
-
-        .type-badge {
-            padding: 4px 10px;
-            border-radius: 12px;
-            font-size: 0.8em;
-            font-weight: 500;
-            color: white;
-            text-align: center;
-            display: inline-block;
-        }
-        .type-individual { background-color: #007bff; }
-        .type-company { background-color: #28a745; }
-        .type-institution { background-color: #6f42c1; }
-        .type-gercek { background-color: #007bff; }
-        .type-tuzel  { background-color: #28a745; }
-
-        .action-btn {
-            background: #007bff;
-            color: white;
-            border: none;
-            padding: 8px 12px;
-            border-radius: 6px;
-            cursor: pointer;
-            margin-left: 5px;
-            transition: all 0.3s ease;
-        }
-        .action-btn.edit-btn { background-color: #ffc107; color: #212529; }
-        .action-btn.edit-btn:hover { background-color: #e0a800; }
-        .action-btn.delete-btn { background-color: #dc3545; }
-        .action-btn.delete-btn:hover { background-color: #c82333; }
-        .action-btn:hover {
-            opacity: 0.9;
-        }
-        .loading { text-align: center; padding: 50px; }
-        .no-records { text-align: center; padding: 50px; color: #666; }
+        /*...stil kodları...*/
     </style>
 </head>
 <body>
@@ -171,6 +51,124 @@
         </main>
     </div>
 
+    <div id="personModal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal-btn" id="closePersonModal">&times;</span>
+            <h3 class="modal-title" id="personModalTitle">Yeni Kişi Ekle</h3>
+            <form id="personForm">
+                <input type="hidden" id="personId">
+                <div class="form-group">
+                    <label for="personType" class="form-label">Kişi Tipi:</label>
+                    <select id="personType" class="form-select" required>
+                        <option value="">Seçiniz</option>
+                        <option value="gercek">Gerçek</option>
+                        <option value="tuzel">Tüzel</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="personName" class="form-label"><span id="personNameLabel">Ad Soyad</span>:</label>
+                    <input type="text" id="personName" class="form-input" required>
+                </div>
+                <div class="form-group" id="tcknGroup" style="display:none;">
+                <label for="personTckn" class="form-label">TC Kimlik No:</label>
+                <input type="text" id="personTckn" class="form-input" maxlength="11" inputmode="numeric" placeholder="11 haneli">
+                <small class="text-muted">Sadece rakam, 11 hane</small>
+                </div>
+
+                <div class="form-group" id="birthDateGroup" style="display:none;">
+                <label for="personBirthDate" class="form-label">Doğum Tarihi:</label>
+                <input type="date" id="personBirthDate" class="form-input">
+                </div>
+
+                <div class="form-group" id="vknGroup" style="display:none;">
+                <label for="personVkn" class="form-label">Vergi No:</label>
+                <input type="text" id="personVkn" class="form-input" maxlength="10" inputmode="numeric" placeholder="10 haneli">
+                <small class="text-muted">Sadece rakam, 10 hane</small>
+                </div>
+                <div class="form-group" id="tpeNoGroup">
+                    <label for="personTpeNo" class="form-label">TPE Müşteri No:</label>
+                    <input type="text" id="personTpeNo" class="form-input">
+                </div>
+
+                <div class="form-group">
+                    <label for="personEmail" class="form-label">E-posta:</label>
+                    <input type="email" id="personEmail" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label for="personPhone" class="form-label">Telefon:</label>
+                    <input type="tel" id="personPhone" class="form-input" placeholder="+90 5__ ___ __ __">
+                </div>
+                <div class="form-group">
+                    <label for="personAddress" class="form-label">Adres:</label>
+                    <textarea id="personAddress" class="form-textarea"></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Adres Ülke / İl:</label>
+                    <div style="display:flex;gap:10px;flex-wrap:wrap">
+                        <select id="countrySelect" class="form-select" style="flex:1 1 200px"></select>
+                        <select id="provinceSelect" class="form-select" style="flex:1 1 200px"></select>
+                        <input type="text" id="provinceText" class="form-input" style="display:none;flex:1 1 200px" placeholder="Eyalet / İl">
+                    </div>
+                </div>
+
+                <div class="related-section" id="relatedSection">
+                    <div class="related-content">
+                        <div class="related-list">
+                            <div class="related-list-title">Eklenmiş İlgililer</div>
+                            <div id="relatedList">
+                                <div class="related-empty">
+                                    Henüz ilgili kişi eklenmedi.
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="related-form-container">
+                            <div class="related-form-header">
+                                <h6>Yeni İlgili Ekle</h6>
+                                <input type="hidden" id="relatedId">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="relatedName" class="form-label">Ad Soyad <span style="color:red;">*</span></label>
+                                <input type="text" id="relatedName" class="form-input" placeholder="İlgili kişinin adı">
+                            </div>
+                            <div class="form-group">
+                                <label for="relatedEmail" class="form-label">E-posta</label>
+                                <input type="email" id="relatedEmail" class="form-input" placeholder="ilgili@email.com">
+                            </div>
+                            <div class="form-group">
+                                <label for="relatedPhone" class="form-label">Telefon</label>
+                                <input type="tel" id="relatedPhone" class="form-input" placeholder="+90 5XX XXX XX XX">
+                            </div>
+
+                            <div class="form-group">
+                                <label>Sorumlu Olduğu Alanlar:</label>
+                                <div class="checkbox-group">
+                                    <input type="checkbox" id="scopePatent" value="patent"><label for="scopePatent">Patent</label>
+                                    <input type="checkbox" id="scopeMarka" value="marka"><label for="scopeMarka">Marka</label>
+                                    <input type="checkbox" id="scopeTasarim" value="tasarim"><label for="scopeTasarim">Tasarım</label>
+                                    <input type="checkbox" id="scopeDava" value="dava"><label for="scopeDava">Dava</label>
+                                    <input type="checkbox" id="scopeMuhasebe" value="muhasebe"><label for="scopeMuhasebe">Muhasebe</label>
+                                </div>
+                            </div>
+                            <div id="relatedFormButtons">
+                                <button type="button" class="btn btn-secondary" id="cancelRelatedBtn" style="display:none;">İptal</button>
+                                <button type="button" class="btn btn-primary" id="addRelatedBtn">➕ İlgili Ekle</button>
+                                <button type="button" class="btn btn-primary" id="updateRelatedBtn" style="display:none;">✔️ İlgiliyi Güncelle</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-add-related" id="showRelatedBtn">
+                        <span>&#x2795;</span> İlgilileri Yönet
+                    </button>
+                    <button type="button" class="btn btn-secondary" id="cancelPersonBtn">İptal</button>
+                    <button type="submit" class="btn btn-primary" id="savePersonBtn" form="personForm">Kaydet</button>
+                </div>
+            </form>
+        </div>
+    </div>
     <script type="module">
         import { authService, personService, auth, db } from './firebase-config.js';
         import { showNotification } from './utils.js';
@@ -186,6 +184,8 @@
                     this.currentUser = null;
                     this.allPersons = [];
                     this.filteredPersons = [];
+                    this.relatedDraft = [];
+                    this.relatedLoaded = [];
                     this.pagination = new Pagination({
                         onPageChange: (currentPage, itemsPerPage) => {
                             this.renderPersons();
@@ -203,15 +203,24 @@
                 }
 
                 setupEventListeners() {
-                    // Bu sayfaya özgü event listener'lar
                     const addNewPersonBtn = document.getElementById('addNewPersonBtn');
                     if (addNewPersonBtn) {
-                        addNewPersonBtn.addEventListener('click', () => {
-                            // Modal açma işlemini doğrudan çağırıyoruz
-                            if(window.openPersonModal){
-                                window.openPersonModal({ targetField: 'personPage' });
-                            }
-                        });
+                        addNewPersonBtn.addEventListener('click', () => this.showAddPersonModal());
+                    }
+
+                    const closePersonModal = document.getElementById('closePersonModal');
+                    if (closePersonModal) {
+                        closePersonModal.addEventListener('click', () => this.closePersonModal());
+                    }
+
+                    const cancelPersonBtn = document.getElementById('cancelPersonBtn');
+                    if (cancelPersonBtn) {
+                        cancelPersonBtn.addEventListener('click', () => this.closePersonModal());
+                    }
+
+                    const personForm = document.getElementById('personForm');
+                    if (personForm) {
+                        personForm.addEventListener('submit', (e) => this.handlePersonFormSubmit(e));
                     }
 
                     const personSearchInput = document.getElementById('personSearchInput');
@@ -223,28 +232,84 @@
                     if (personsTableBody) {
                         personsTableBody.addEventListener('click', (e) => {
                             if (e.target.classList.contains('edit-btn')) {
-                                // `personsPage` için düzenleme modalını açar
-                                if(window.openPersonModal){
-                                    window.openPersonModal({ personId: e.target.dataset.id, targetField: 'personPage' });
-                                }
+                                this.showEditPersonModal(e.target.dataset.id);
                             } else if (e.target.classList.contains('delete-btn')) {
                                 this.deletePerson(e.target.dataset.id);
                             }
                         });
                     }
 
-                    // Merkezi modalden gelen olayları dinle
-                    window.addEventListener('personAdded', async (e) => {
-                        const person = e.detail.person;
-                        if (person) {
-                            // Yeni eklenen kişiyi listeye ekle ve tabloyu güncelle
-                            this.allPersons.push(person);
-                            this.filterPersons();
-                            showNotification('Kişi başarıyla eklendi!', 'success');
+                    const personType = document.getElementById('personType');
+                    if (personType) {
+                        personType.addEventListener('change', () => {
+                            this.updateNameLabelByType();
+                            this.updateExtraFieldsByType();
+                        });
+                    }
+                    
+                    const showRelatedBtn = document.getElementById('showRelatedBtn');
+                    if (showRelatedBtn) {
+                        showRelatedBtn.addEventListener('click', () => this.toggleRelatedSection());
+                    }
+                    
+                    const addRelatedBtn = document.getElementById('addRelatedBtn');
+                    if (addRelatedBtn) {
+                        addRelatedBtn.addEventListener('click', () => this.addRelatedHandler());
+                    }
+
+                    const updateRelatedBtn = document.getElementById('updateRelatedBtn');
+                    if (updateRelatedBtn) {
+                        updateRelatedBtn.addEventListener('click', () => this.updateRelatedHandler());
+                    }
+
+                    const cancelRelatedBtn = document.getElementById('cancelRelatedBtn');
+                    if (cancelRelatedBtn) {
+                        cancelRelatedBtn.addEventListener('click', () => this.resetRelatedForm());
+                    }
+
+                    this.addPhoneInputListeners('personPhone');
+                    this.addPhoneInputListeners('relatedPhone');
+
+                    setTimeout(() => {
+                        const countrySelect = document.getElementById('countrySelect');
+                        if (countrySelect && !countrySelect.dataset.listenerAdded) {
+                            countrySelect.addEventListener('change', () => this.loadProvincesForSelectedCountry());
+                            countrySelect.dataset.listenerAdded = 'true';
                         }
-                    });
+                        const tcknInput = document.getElementById('personTckn');
+                        const vknInput = document.getElementById('personVkn');
+                        if (tcknInput && !tcknInput.dataset.listenerAdded) {
+                            tcknInput.addEventListener('input', () => { tcknInput.value = tcknInput.value.replace(/\D/g, '').slice(0, 11); });
+                            tcknInput.dataset.listenerAdded = 'true';
+                        }
+                        if (vknInput && !vknInput.dataset.listenerAdded) {
+                            vknInput.addEventListener('input', () => { vknInput.value = vknInput.value.replace(/\D/g, '').slice(0, 10); });
+                            vknInput.dataset.listenerAdded = 'true';
+                        }
+                    }, 100);
                 }
                 
+                addPhoneInputListeners(id) {
+                    const phoneInput = document.getElementById(id);
+                    if (phoneInput && !phoneInput.dataset.listenerAdded) {
+                        phoneInput.addEventListener('focus', () => { if (!phoneInput.value.trim()) phoneInput.value = '+90 '; });
+                        phoneInput.addEventListener('input', () => { phoneInput.value = this.formatTRPhone(phoneInput.value); });
+                        phoneInput.dataset.listenerAdded = 'true';
+                    }
+                }
+
+                toggleRelatedSection() {
+                    const relatedSection = document.getElementById('relatedSection');
+                    const showRelatedBtn = document.getElementById('showRelatedBtn');
+                    if (relatedSection.classList.contains('show')) {
+                        relatedSection.classList.remove('show');
+                        showRelatedBtn.innerHTML = '<span>&#x2795;</span> İlgilileri Yönet';
+                    } else {
+                        relatedSection.classList.add('show');
+                        showRelatedBtn.innerHTML = '<span>&#x2715;</span> İlgilileri Kapat';
+                    }
+                }
+
                 async loadPersons() {
                     document.getElementById('loadingIndicator').style.display = 'block';
                     try {
@@ -313,7 +378,9 @@
 
                         row.innerHTML = `
                             <td>${startIndex + index + 1}</td>
-                            <td>${person.name}</td>
+                            <td>
+                                ${person.name}
+                            </td>
                             <td>${tcknVknText(person)}</td>
                             <td>${person.tpeNo || '-'}</td>
                             <td>${person.email || '-'}</td>
@@ -327,7 +394,525 @@
                         tableBody.appendChild(row);
                     });
                 }
+
+                updateNameLabelByType() {
+                    const val = document.getElementById('personType').value;
+                    document.getElementById('personNameLabel').textContent = (val === 'tuzel') ? 'Firma Adı' : 'Ad Soyad';
+                }
+
+                updateExtraFieldsByType() {
+                    const type = document.getElementById('personType').value;
+                    const tcknGroup = document.getElementById('tcknGroup');
+                    const vknGroup  = document.getElementById('vknGroup');
+                    const birthGroup= document.getElementById('birthDateGroup');
+                    if (type === 'gercek') {
+                        tcknGroup.style.display = '';
+                        birthGroup.style.display = '';
+                        vknGroup.style.display = 'none';
+                    } else if (type === 'tuzel') {
+                        tcknGroup.style.display = 'none';
+                        birthGroup.style.display = 'none';
+                        vknGroup.style.display = '';
+                    } else {
+                        tcknGroup.style.display = 'none';
+                        birthGroup.style.display = 'none';
+                        vknGroup.style.display = 'none';
+                    }
+                }
+
+                formatTRPhone(raw) {
+                    const digits = raw.replace(/\D/g, '');
+                    let d = digits;
+                    if (d.startsWith('90')) d = d.slice(2);
+                    if (d.startsWith('0')) d = d.slice(1);
+                    d = d.slice(0, 10);
+                    let out = '+90 ';
+                    if (d.length > 0) out += d.substring(0, 3);
+                    if (d.length > 3) out += ' ' + d.substring(3, 6);
+                    if (d.length > 6) out += ' ' + d.substring(6, 8);
+                    if (d.length > 8) out += ' ' + d.substring(8, 10);
+                    return out.trim();
+                }
+
+                async loadCountries() {
+                    const countrySel = document.getElementById('countrySelect');
+                    countrySel.innerHTML = '<option value="">Yükleniyor...</option>';
+                    try {
+                        const snap = await getDoc(doc(db, 'common', 'countries'));
+                        let list = [];
+                        if (snap.exists()) {
+                            const d = snap.data();
+                            list = d.list || d.countries || d.items || [];
+                        }
+                        if (!Array.isArray(list)) list = [];
+                        const options = ['<option value="">Seçiniz</option>'].concat(
+                            list.map(item => {
+                                const code = (item.code || item.iso || item.id || item).toString();
+                                const name = (item.name || item.label || item).toString();
+                                return `<option value="${code}">${name}</option>`;
+                            })
+                        ).join('');
+                        countrySel.innerHTML = options;
+                        const opt = Array.from(countrySel.options).find(o =>
+                            /^(TR|TUR)$/i.test(o.value) || /türkiye|turkiye/i.test(o.text)
+                        );
+                        if (opt) opt.selected = true;
+                        await this.loadProvincesForSelectedCountry();
+                    } catch (e) {
+                        console.error('Ülkeler yüklenemedi:', e);
+                        countrySel.innerHTML = '<option value="">Seçiniz</option>';
+                    }
+                }
+
+                async loadProvincesForSelectedCountry() {
+                    const countrySel = document.getElementById('countrySelect');
+                    const provinceSel = document.getElementById('provinceSelect');
+                    const provinceText = document.getElementById('provinceText');
+
+                    const code = countrySel.value;
+                    const name = countrySel.options[countrySel.selectedIndex]?.text || '';
+                    const isTR = /^(TR|TUR)$/i.test(code) || /türkiye|turkiye/i.test(name);
+
+                    if (isTR) {
+                        provinceText.style.display = 'none';
+                        provinceSel.style.display = 'block';
+                        provinceSel.innerHTML = '<option value="">Yükleniyor...</option>';
+                        let list = [];
+                        for (const docId of ['provinces_TR', 'cities_TR', 'turkey_provinces']) {
+                            try {
+                                const snap = await getDoc(doc(db, 'common', docId));
+                                if (snap.exists()) {
+                                    const d = snap.data();
+                                    list = d.list || d.provinces || d.cities || [];
+                                    if (Array.isArray(list) && list.length) break;
+                                }
+                            } catch (_) {}
+                        }
+                        if (!Array.isArray(list)) list = [];
+                        provinceSel.innerHTML = ['<option value="">İl Seçiniz</option>'].concat(
+                            list.map(item => {
+                                const code = (item.code || item.id || item).toString();
+                                const name = (item.name || item.label || item).toString();
+                                return `<option value="${code}">${name}</option>`;
+                            })
+                        ).join('');
+                    } else {
+                        provinceSel.style.display = 'none';
+                        provinceText.style.display = 'block';
+                        provinceText.value = '';
+                    }
+                }
                 
+                showAddPersonModal(prefill = {}) {
+                    document.getElementById('personModalTitle').textContent = 'Yeni Kişi Ekle';
+                    document.getElementById('personForm').reset();
+                    document.getElementById('personId').value = '';
+                    
+                    const personType = document.getElementById('personType');
+                    if (personType) {
+                        personType.value = prefill.type || 'gercek';
+                        this.updateNameLabelByType();
+                        this.updateExtraFieldsByType();
+                    }
+                    const personTckn = document.getElementById('personTckn');
+                    const personBirthDate = document.getElementById('personBirthDate');
+                    const personVkn = document.getElementById('personVkn');
+                    const personTpeNo = document.getElementById('personTpeNo');
+
+                    if (personTckn) personTckn.value = prefill.tckn || '';
+                    if (personBirthDate) personBirthDate.value = prefill.birthDate || '';
+                    if (personVkn) personVkn.value = prefill.vkn || '';
+                    if (personTpeNo) personTpeNo.value = prefill.tpeNo || '';
+
+                    this.loadCountries();
+                    
+                    this.relatedDraft = [];
+                    this.relatedLoaded = [];
+                    this.renderRelatedList();
+                    this.resetRelatedForm();
+
+                    document.getElementById('relatedSection').classList.remove('show');
+                    document.getElementById('showRelatedBtn').innerHTML = '<span>&#x2795;</span> İlgilileri Yönet';
+                    
+                    const modal = document.getElementById('personModal');
+                    if (modal) {
+                        modal.classList.add('show');
+                        modal.dataset.targetField = prefill.targetField || null;
+                    }
+                }
+
+                async showEditPersonModal(personId) {
+                    const person = this.allPersons.find(p => p.id === personId);
+                    if (!person) {
+                        showNotification('Kişi bulunamadı.', 'error');
+                        return;
+                    }
+
+                    document.getElementById('personModalTitle').textContent = 'Kişiyi Düzenle';
+                    document.getElementById('personId').value = person.id;
+                    document.getElementById('personName').value = person.name;
+                    document.getElementById('personEmail').value = person.email || '';
+                    document.getElementById('personPhone').value = person.phone || '';
+                    document.getElementById('personTpeNo').value = person.tpeNo || '';
+
+                    let mappedType =
+                        (person.type === 'individual') ? 'gercek' :
+                        ((person.type === 'company' || person.type === 'institution') ? 'tuzel' : (person.type || ''));
+                    document.getElementById('personType').value = mappedType;
+                    this.updateNameLabelByType();
+                    this.updateExtraFieldsByType();
+                    await this.loadCountries();
+
+                    const countrySel = document.getElementById('countrySelect');
+                    if (person.countryCode) {
+                        const match = Array.from(countrySel.options).find(o => o.value === person.countryCode);
+                        if (match) {
+                            countrySel.value = match.value;
+                        }
+                    }
+                    await this.loadProvincesForSelectedCountry();
+
+                    if (person.countryCode && !(/^(TR|TUR)$/i.test(person.countryCode))) {
+                        document.getElementById('provinceText').value = person.province || '';
+                    } else {
+                        const pSel = document.getElementById('provinceSelect');
+                        if (person.provinceCode) {
+                            const opt = Array.from(pSel.options).find(o => o.value === person.provinceCode);
+                            if (opt) opt.selected = true;
+                        } else if (person.province) {
+                            const opt = Array.from(pSel.options).find(o => o.text === person.province);
+                            if (opt) opt.selected = true;
+                        }
+                    }
+
+                    document.getElementById('personAddress').value = person.address || '';
+                    document.getElementById('personTckn').value = person.tckn || '';
+                    document.getElementById('personBirthDate').value = person.birthDate || '';
+                    document.getElementById('personVkn').value = person.taxNo || '';
+
+                    this.relatedDraft = [];
+                    this.relatedLoaded = [];
+                    try {
+                        const qSnap = await getDocs(
+                            query(collection(db, 'personsRelated'), where('personId', '==', personId))
+                        );
+                        this.relatedLoaded = qSnap.docs.map(d => ({ id: d.id, ...(d.data() || {}) }));
+                    } catch (e) {
+                        console.warn('İlgililer yüklenemedi:', e);
+                    }
+                    this.renderRelatedList();
+                    this.resetRelatedForm();
+
+                    document.getElementById('relatedSection').classList.add('show');
+                    document.getElementById('showRelatedBtn').innerHTML = '<span>&#x2715;</span> İlgilileri Kapat';
+
+                    document.getElementById('personModal').classList.add('show');
+                }
+
+                closePersonModal() {
+                    document.getElementById('personModal').classList.remove('show');
+                }
+
+                async handlePersonFormSubmit(event) {
+                    event.preventDefault();
+                    const personIdInput = document.getElementById('personId').value;
+                    const countrySel = document.getElementById('countrySelect');
+                    const provinceSel = document.getElementById('provinceSelect');
+                    const provinceText = document.getElementById('provinceText');
+                    const countryCode = countrySel?.value || '';
+                    const countryName = countrySel?.options[countrySel.selectedIndex]?.text || '';
+                    const isTR = /^(TR|TUR)$/i.test(countryCode) || /türkiye|turkiye/i.test(countryName);
+                    const provinceCode = isTR ? (provinceSel ? (provinceSel.value || '') : '') : '';
+                    const provinceName = isTR ? (provinceSel ? (provinceSel.options[provinceSel.selectedIndex]?.text || '') : '') : (provinceText ? (provinceText.value || '') : '');
+                    const typeVal = document.getElementById('personType').value;
+                    const tckn = (document.getElementById('personTckn')?.value || '').trim();
+                    const vkn = (document.getElementById('personVkn')?.value || '').trim();
+                    const bdate = (document.getElementById('personBirthDate')?.value || '');
+
+                    if (!typeVal) {
+                        showNotification('Kişi Tipi zorunludur.', 'error');
+                        return;
+                    }
+                    if (typeVal === 'gercek') {
+                        if (tckn && tckn.length !== 11) {
+                            showNotification('TC Kimlik No 11 hane olmalı', 'warning');
+                            return;
+                        }
+                    }
+                    if (typeVal === 'tuzel') {
+                        if (vkn && vkn.length !== 10) {
+                            showNotification('Vergi No 10 hane olmalı', 'warning');
+                            return;
+                        }
+                    }
+                    const personData = {
+                        name: document.getElementById('personName').value,
+                        tpeNo: document.getElementById('personTpeNo').value,
+                        email: document.getElementById('personEmail').value,
+                        phone: document.getElementById('personPhone').value,
+                        type: typeVal,
+                        address: document.getElementById('personAddress').value,
+                        countryCode,
+                        countryName,
+                        provinceCode,
+                        province: provinceName
+                    };
+                    if (!personData.name) {
+                        showNotification('Ad Soyad / Firma Adı zorunludur.', 'error');
+                        return;
+                    }
+                    if (typeVal === 'gercek') {
+                        personData.tckn = tckn;
+                        if (bdate) personData.birthDate = bdate;
+                    } else if (typeVal === 'tuzel') {
+                        personData.taxNo = vkn;
+                    }
+
+                    let savedPersonId = personIdInput || null;
+                    try {
+                        if (savedPersonId) {
+                            const result = await personService.updatePerson(savedPersonId, personData);
+                            if (!result?.success) {
+                                showNotification('Kişi güncellenirken hata oluştu' + (result?.error ? `: ${result.error}` : ''), 'error');
+                                return;
+                            }
+                            showNotification('Kişi başarıyla güncellendi!', 'success');
+                        } else {
+                            const result = await personService.addPerson(personData);
+                            if (!result?.success || !result?.id) {
+                                showNotification('Kişi eklenirken hata oluştu' + (result?.error ? `: ${result.error}` : ''), 'error');
+                                return;
+                            }
+                            savedPersonId = result.id;
+                            showNotification('Yeni kişi başarıyla eklendi!', 'success');
+                        }
+                    } catch (err) {
+                        console.error('Kişi kaydı hatası:', err);
+                        showNotification('Kişi kaydı sırasında hata oluştu', 'error');
+                        return;
+                    }
+                    
+                    const modal = document.getElementById('personModal');
+                    const targetField = modal.dataset.targetField;
+                    
+                    if (savedPersonId && this.relatedDraft && this.relatedDraft.length) {
+                        try {
+                            const batch = writeBatch(db);
+                            this.relatedDraft.forEach(r => {
+                                let responsible = {};
+                                if (Array.isArray(r.scopes)) {
+                                    r.scopes.forEach(k => { if (k) responsible[k] = true; });
+                                } else if (r.responsible && typeof r.responsible === 'object') {
+                                    responsible = r.responsible;
+                                }
+                                const ref = doc(collection(db, 'personsRelated'));
+                                batch.set(ref, {
+                                    personId: savedPersonId,
+                                    name: r.name || '',
+                                    email: r.email || '',
+                                    phone: r.phone || '',
+                                    responsible,
+                                    createdAt: Date.now()
+                                });
+                            });
+                            await batch.commit();
+                            this.relatedDraft = [];
+                        } catch (e) {
+                            console.error('personsRelated yazım hatası:', e);
+                            showNotification('İlgililer kaydedilirken hata oluştu', 'error');
+                        }
+                    }
+
+                    // İşlemi tamamladığımızda, `personAdded` olayını tetikleyelim
+                    window.dispatchEvent(new CustomEvent('personAdded', {
+                        detail: {
+                            person: { id: savedPersonId, ...personData },
+                            targetField: targetField
+                        }
+                    }));
+
+                    this.closePersonModal();
+                    await this.loadPersons();
+                }
+
+                renderRelatedList() {
+                    const relatedList = document.getElementById('relatedList');
+                    if (!relatedList) return;
+                    
+                    relatedList.innerHTML = '';
+                    
+                    const all = [
+                        ...(this.relatedLoaded || []).map(r => ({ ...r, _src: 'db' })),
+                        ...(this.relatedDraft  || []).map((r, i) => ({ ...r, _src: 'draft', _draftIndex: i }))
+                    ];
+
+                    if (!all.length) {
+                        relatedList.innerHTML = `
+                            <div class="related-empty">
+                                Henüz ilgili kişi eklenmedi.
+                            </div>
+                        `;
+                        return;
+                    }
+
+                    const scopeLabel = (k) => {
+                        switch (k) {
+                        case 'patent':   return 'Patent';
+                        case 'marka':    return 'Marka';
+                        case 'tasarim':  return 'Tasarım';
+                        case 'dava':     return 'Dava';
+                        case 'muhasebe': return 'Muhasebe';
+                        default:         return k;
+                        }
+                    };
+
+                    const extractScopes = (r) => {
+                        if (r && typeof r.responsible === 'object' && r.responsible !== null) {
+                            return Object.keys(r.responsible).filter(k => !!r.responsible[k]).map(k => k);
+                        }
+                        if (Array.isArray(r?.scopes)) return r.scopes;
+                        return [];
+                    };
+
+                    all.forEach((r, idx) => {
+                        const relatedItem = document.createElement('div');
+                        relatedItem.className = 'related-item';
+                        relatedItem.dataset.idx = idx;
+
+                        const scopes = extractScopes(r);
+                        const scopeBadges = (scopes.length
+                            ? scopes.map(k => `<span class="scope-badge">${scopeLabel(k)}</span>`).join('')
+                            : `<span style="font-style:italic; color:#999;">Alan belirtilmemiş</span>`
+                        );
+                        
+                        relatedItem.innerHTML = `
+                            <div class="related-info">
+                                <div class="related-name">${r.name || '-'}</div>
+                                <div class="related-details">
+                                    ${r.email ? `📧 ${r.email}` : ''}
+                                    ${r.phone ? `📱 ${r.phone}` : ''}
+                                </div>
+                                <div class="related-scopes">${scopeBadges}</div>
+                            </div>
+                            <button type="button" class="remove-related-btn" data-idx="${idx}">🗑️</button>
+                        `;
+                        relatedList.appendChild(relatedItem);
+
+                        relatedItem.addEventListener('click', () => this.loadRelatedForEdit(r, idx));
+                        relatedItem.querySelector('.remove-related-btn').addEventListener('click', async (e) => {
+                            e.stopPropagation();
+                            try {
+                                if (r._src === 'db' && r.id) {
+                                    await deleteDoc(doc(db, 'personsRelated', r.id));
+                                    this.relatedLoaded = this.relatedLoaded.filter(x => x.id !== r.id);
+                                } else if (r._src === 'draft' && typeof r._draftIndex === 'number') {
+                                    this.relatedDraft.splice(r._draftIndex, 1);
+                                }
+                                this.renderRelatedList();
+                                this.resetRelatedForm();
+                                showNotification('İlgili başarıyla silindi.', 'success');
+                            } catch (e) {
+                                console.error('İlgili silinirken hata:', e);
+                                showNotification?.('İlgili silinemedi', 'error');
+                            }
+                        });
+                    });
+                }
+
+                loadRelatedForEdit(related, index) {
+                    this.resetRelatedForm();
+                    document.getElementById('relatedId').value = related.id || `draft-${index}`;
+                    document.getElementById('relatedName').value = related.name || '';
+                    document.getElementById('relatedEmail').value = related.email || '';
+                    document.getElementById('relatedPhone').value = related.phone || '';
+
+                    const scopes = this.extractScopes(related);
+                    document.querySelectorAll('.related-form-container .checkbox-group input[type="checkbox"]').forEach(cb => {
+                        cb.checked = scopes.includes(cb.value);
+                    });
+
+                    document.getElementById('addRelatedBtn').style.display = 'none';
+                    document.getElementById('updateRelatedBtn').style.display = 'inline-block';
+                    document.getElementById('cancelRelatedBtn').style.display = 'inline-block';
+
+                    document.querySelectorAll('.related-item').forEach(item => item.classList.remove('selected'));
+                    const selectedItem = document.querySelector(`.related-item[data-idx="${index}"]`);
+                    if (selectedItem) selectedItem.classList.add('selected');
+                }
+
+                addRelatedHandler() {
+                    const name = document.getElementById('relatedName').value.trim();
+                    const email = document.getElementById('relatedEmail').value.trim();
+                    const phone = document.getElementById('relatedPhone').value.trim();
+                    
+                    if (!name) {
+                        alert('Ad Soyad zorunludur!');
+                        return;
+                    }
+                    
+                    const scopes = Array.from(document.querySelectorAll('.related-form-container .checkbox-group input[type="checkbox"]:checked')).map(cb => cb.value);
+                    
+                    this.relatedDraft.push({ name, email, phone, scopes });
+                    this.renderRelatedList();
+                    this.resetRelatedForm();
+                    showNotification('Yeni ilgili eklendi.', 'success');
+                }
+
+                async updateRelatedHandler() {
+                    const relatedId = document.getElementById('relatedId').value;
+                    const name = document.getElementById('relatedName').value.trim();
+                    const email = document.getElementById('relatedEmail').value.trim();
+                    const phone = document.getElementById('relatedPhone').value.trim();
+                    
+                    if (!name) {
+                        alert('Ad Soyad zorunludur!');
+                        return;
+                    }
+
+                    const scopes = Array.from(document.querySelectorAll('.related-form-container .checkbox-group input[type="checkbox"]:checked')).map(cb => cb.value);
+                    const updatedData = { name, email, phone, responsible: {} };
+                    scopes.forEach(s => updatedData.responsible[s] = true);
+
+                    if (relatedId.startsWith('draft-')) {
+                        const index = parseInt(relatedId.replace('draft-', ''));
+                        this.relatedDraft[index] = { name, email, phone, scopes };
+                    } else {
+                        try {
+                            const relatedDocRef = doc(db, 'personsRelated', relatedId);
+                            await updateDoc(relatedDocRef, updatedData);
+                            this.relatedLoaded = this.relatedLoaded.map(r => r.id === relatedId ? { ...r, ...updatedData } : r);
+                            showNotification('İlgili başarıyla güncellendi.', 'success');
+                        } catch (e) {
+                            console.error('İlgili güncellenirken hata:', e);
+                            showNotification('İlgili güncellenemedi', 'error');
+                        }
+                    }
+                    this.renderRelatedList();
+                    this.resetRelatedForm();
+                }
+
+                resetRelatedForm() {
+                    document.getElementById('relatedId').value = '';
+                    document.getElementById('relatedName').value = '';
+                    document.getElementById('relatedEmail').value = '';
+                    document.getElementById('relatedPhone').value = '';
+                    document.querySelectorAll('.related-form-container .checkbox-group input[type="checkbox"]').forEach(cb => cb.checked = false);
+
+                    document.getElementById('addRelatedBtn').style.display = 'inline-block';
+                    document.getElementById('updateRelatedBtn').style.display = 'none';
+                    document.getElementById('cancelRelatedBtn').style.display = 'none';
+
+                    document.querySelectorAll('.related-item').forEach(item => item.classList.remove('selected'));
+                }
+
+                extractScopes(r) {
+                    if (r && typeof r.responsible === 'object' && r.responsible !== null) {
+                        return Object.keys(r.responsible).filter(k => !!r.responsible[k]).map(k => k);
+                    }
+                    if (Array.isArray(r?.scopes)) return r.scopes;
+                    return [];
+                }
+
                 async deletePerson(personId) {
                     if (confirm('Bu kişiyi silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.')) {
                         const result = await personService.deletePerson(personId);
@@ -343,6 +928,37 @@
 
             const personsModule = new PersonsModule();
             personsModule.init();
+
+            // ⬇ Global açıcı (tüm sayfalardan kullanacağız)
+            window.openPersonCreate = (prefill = {}) => {
+                personsModule.showAddPersonModal(prefill);
+                if (prefill.name)  document.getElementById('personName').value  = prefill.name;
+                if (prefill.email) document.getElementById('personEmail').value = prefill.email;
+                if (prefill.phone) document.getElementById('personPhone').value = prefill.phone;
+            };
+            
+            // ⬇ HTML’den tetiklemek için delegasyon (data-action)
+            document.addEventListener('click', (e) => {
+                const btn = e.target.closest('[data-action="open-person-create"]');
+                if (btn) {
+                    window.openPersonCreate({
+                        type:  btn.dataset.personType,
+                        name:  btn.dataset.personName,
+                        email: btn.dataset.personEmail,
+                        phone: btn.dataset.personPhone
+                    });
+                }
+            });
+
+            // `create-task.js`'den gelen `personAdded` olayını dinle
+            window.addEventListener('personAdded', (e) => {
+                const person = e.detail.person;
+                if (person) {
+                    // All persons listesini güncelle
+                    personsModule.allPersons.push(person);
+                    personsModule.filterPersons(); // listeyi yeniden render et
+                }
+            });
         });
     </script>
 </body>
