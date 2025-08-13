@@ -345,12 +345,16 @@ async initIpRecordSearchSelector() {
 
         const addNewPersonBtn = document.getElementById('addNewPersonBtn');
         if (addNewPersonBtn) addNewPersonBtn.addEventListener('click', () => {
-            window.dispatchEvent(new CustomEvent('openPersonCreate', { detail: { targetField: 'relatedParty' } }));
+            if(window.openPersonCreate){
+                window.openPersonCreate({targetField: 'relatedParty'});
+            }
         });
 
         const addNewApplicantBtn = document.getElementById('addNewApplicantBtn');
         if (addNewApplicantBtn) addNewApplicantBtn.addEventListener('click', () => {
-            window.dispatchEvent(new CustomEvent('openPersonCreate', { detail: { targetField: 'applicant' } }));
+            if(window.openPersonCreate){
+                window.openPersonCreate({targetField: 'applicant'});
+            }
         });
 
         window.addEventListener('personAdded', (e) => {
