@@ -1,5 +1,6 @@
 // js/layout-loader.js
-import {personService , authService } from '../firebase-config.js';
+import {personService , authService, db } from '../firebase-config.js';
+import { doc, getDoc, collection, getDocs, query, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 // Menü yapısını daha yönetilebilir bir veri formatında tanımlıyoruz
 const menuItems = [
@@ -325,6 +326,12 @@ export function ensurePersonModal() {
           <small class="text-muted">Sadece rakam, 10 hane</small>
         </div>
 
+        <!-- Doğum Tarihi (yalnız GERÇEK kişi için görünsün) -->
+        <div class="form-group" id="pm_birthDateGroup" style="display:none;">
+        <label for="pm_birthDate" class="form-label">Doğum Tarihi</label>
+        <input id="pm_birthDate" type="date" class="form-input">
+        </div>
+
         <div class="form-group">
           <label for="pm_tpeMn" class="form-label">TPE Müşteri No</label>
           <input id="pm_tpeMn" type="text" class="form-input">
@@ -336,15 +343,30 @@ export function ensurePersonModal() {
         </div>
 
         <div class="form-group">
-          <label for="pm_phone" class="form-label">Telefon</label>
-          <input id="pm_phone" type="tel" class="form-input" placeholder="+90 5__ ___ __ __">
+        <label for="pm_phone" class="form-label">Telefon</label>
+        <input id="pm_phone" type="tel" class="form-input" placeholder="+90 5__ ___ __ __">
         </div>
 
         <div class="form-group">
-          <label for="pm_address" class="form-label">Adres</label>
-          <textarea id="pm_address" class="form-textarea" rows="2"></textarea>
+        <label for="pm_address" class="form-label">Adres</label>
+        <textarea id="pm_address" class="form-textarea" rows="2"></textarea>
         </div>
 
+        <!-- Ülke / İl -->
+        <div class="form-row" style="display:flex; gap:12px;">
+        <div class="form-group" style="flex:1;">
+            <label for="pm_country" class="form-label">Ülke</label>
+            <select id="pm_country" class="form-select">
+            <option value="">Yükleniyor…</option>
+            </select>
+        </div>
+        <div class="form-group" style="flex:1;">
+            <label for="pm_city" class="form-label">İl</label>
+            <select id="pm_city" class="form-select" disabled>
+            <option value="">Önce ülke seçin</option>
+            </select>
+        </div>
+        </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" id="pm_cancelBtn">Kapat</button>
           <button type="submit" class="btn btn-success" id="pm_saveBtn">Kaydet</button>
@@ -360,22 +382,26 @@ export function ensurePersonModal() {
   const tcknGroup = document.getElementById('pm_tcknGroup');
   const vknGroup = document.getElementById('pm_vknGroup');
   const nameLabel = document.getElementById('pm_nameLabel');
-  typeSel.addEventListener('change', () => {
+  const birthDateGroup = document.getElementById('pm_birthDateGroup');
+    typeSel.addEventListener('change', () => {
     const v = typeSel.value;
     if (v === 'gercek') {
-      tcknGroup.style.display = '';
-      vknGroup.style.display = 'none';
-      nameLabel.textContent = 'Ad Soyad';
+        tcknGroup.style.display = '';
+        vknGroup.style.display = 'none';
+        birthDateGroup.style.display = '';         // doğum tarihi göster
+        nameLabel.textContent = 'Ad Soyad';
     } else if (v === 'tuzel') {
-      tcknGroup.style.display = 'none';
-      vknGroup.style.display = '';
-      nameLabel.textContent = 'Firma Adı';
+        tcknGroup.style.display = 'none';
+        vknGroup.style.display = '';
+        birthDateGroup.style.display = 'none';     // doğum tarihi gizle
+        nameLabel.textContent = 'Firma Adı';
     } else {
-      tcknGroup.style.display = 'none';
-      vknGroup.style.display = 'none';
-      nameLabel.textContent = 'Ad Soyad';
+        tcknGroup.style.display = 'none';
+        vknGroup.style.display = 'none';
+        birthDateGroup.style.display = 'none';
+        nameLabel.textContent = 'Ad Soyad';
     }
-  });
+    });
 
   document.getElementById('pm_cancelBtn').addEventListener('click', closePersonModal);
   document.getElementById('closePersonModal').addEventListener('click', closePersonModal);
@@ -386,15 +412,18 @@ let __onPersonSaved = null;
 
 async function handlePersonSubmit(e) {
   e.preventDefault();
-  const payload = {
-    type: document.getElementById('pm_personType').value,
+    const payload = {
+    type: document.getElementById('pm_personType').value,                                  // 'gercek' | 'tuzel'
     name: document.getElementById('pm_name').value.trim(),
     nationalIdOrVkn: document.getElementById('pm_tckn').value.trim() || document.getElementById('pm_vkn').value.trim() || '',
     tpeMn: document.getElementById('pm_tpeMn').value.trim(),
     email: document.getElementById('pm_email').value.trim(),
     phone: document.getElementById('pm_phone').value.trim(),
-    address: document.getElementById('pm_address').value.trim()
-  };
+    countryCode: document.getElementById('pm_country').value || '',
+    cityCode: document.getElementById('pm_city').value || '',
+    address: document.getElementById('pm_address').value.trim(),
+    birthDate: document.getElementById('pm_birthDate')?.value || ''                        // sadece gerçek kişide dolu olur
+    };
 
   if (!payload.type || !payload.name) {
     alert('Lütfen Kişi Tipi ve Ad/Ünvan girin.');
@@ -418,9 +447,19 @@ async function handlePersonSubmit(e) {
 export function openPersonModal(onSaved) {
   ensurePersonModal();
   __onPersonSaved = onSaved || null;
+
   // Formu sıfırla
-  document.getElementById('personForm').reset();
-  document.getElementById('pm_personType').dispatchEvent(new Event('change'));
+  const form = document.getElementById('personForm');
+  if (form) form.reset();
+
+  // Varsayılan: TÜZEL
+  const typeSel = document.getElementById('pm_personType');
+  typeSel.value = 'tuzel';
+  typeSel.dispatchEvent(new Event('change'));
+
+  // Ülke/İl yükle
+  populateCountryCitySelects();
+
   document.getElementById('personModalTitle').textContent = 'Yeni Kişi Ekle';
   document.getElementById('personModal').classList.add('show');
 }
@@ -429,4 +468,130 @@ export function closePersonModal() {
   const modal = document.getElementById('personModal');
   if (modal) modal.classList.remove('show');
 }
+// ---------- Common Lookups (Ülke/İl) ----------
+let __countriesCache = null;
+let __citiesCacheByCountry = new Map();
+
+async function loadCountries() {
+  if (__countriesCache) return __countriesCache;
+
+  // 3 olası yapıdan birini deneyelim: 
+  // A) doc('common', 'countries') -> { list: [{code,name}, ...] }
+  // B) collection('common/countries/list') -> docs {code,name}
+  // C) collection('countries') -> docs {code,name}
+  // Sende hangisi varsa o çalışır; sırayla dener ve ilk bulduğunda döner.
+  // — A
+  try {
+    const snapA = await getDoc(doc(db, 'common', 'countries'));
+    const dataA = snapA.exists() ? snapA.data() : null;
+    if (dataA && Array.isArray(dataA.list) && dataA.list.length) {
+      __countriesCache = dataA.list;
+      return __countriesCache;
+    }
+  } catch {}
+
+  // — B
+  try {
+    const snapB = await getDocs(collection(db, 'common', 'countries', 'list'));
+    const arrB = snapB.docs.map(d => d.data()).filter(x => x && x.code && x.name);
+    if (arrB.length) {
+      __countriesCache = arrB;
+      return __countriesCache;
+    }
+  } catch {}
+
+  // — C
+  try {
+    const snapC = await getDocs(collection(db, 'countries'));
+    const arrC = snapC.docs.map(d => d.data()).filter(x => x && x.code && x.name);
+    if (arrC.length) {
+      __countriesCache = arrC;
+      return __countriesCache;
+    }
+  } catch {}
+
+  __countriesCache = [];
+  return __countriesCache;
+}
+
+async function loadCities(countryCode) {
+  if (!countryCode) return [];
+  if (__citiesCacheByCountry.has(countryCode)) return __citiesCacheByCountry.get(countryCode);
+
+  // Yine olası yapıları sırayla deneriz:
+  // A) doc('common', 'cities_TR') -> { list: ['İstanbul', 'Ankara', ...] }  (countryCode ile değişken)
+  // B) collection('common/cities') where countryCode == 'TR' -> { name }
+  // C) collection('cities_TR') -> { name }
+  // D) collection('cities') where countryCode == 'TR' -> { name }
+  // (Senin şemana uyan ilk yapı çalışacaktır.)
+  const tryDocs = [
+    async () => {
+      const d = await getDoc(doc(db, 'common', `cities_${countryCode}`));
+      const data = d.exists() ? d.data() : null;
+      if (data && Array.isArray(data.list)) return data.list.map(n => ({ name: n, code: n }));
+      return null;
+    },
+    async () => {
+      const snap = await getDocs(query(collection(db, 'common', 'cities', 'list'), where('countryCode', '==', countryCode)));
+      const arr = snap.docs.map(d => d.data()).filter(x => x && x.name);
+      return arr.length ? arr : null;
+    },
+    async () => {
+      const snap = await getDocs(collection(db, `cities_${countryCode}`));
+      const arr = snap.docs.map(d => d.data()).filter(x => x && x.name);
+      return arr.length ? arr : null;
+    },
+    async () => {
+      const snap = await getDocs(query(collection(db, 'cities'), where('countryCode', '==', countryCode)));
+      const arr = snap.docs.map(d => d.data()).filter(x => x && x.name);
+      return arr.length ? arr : null;
+    }
+  ];
+
+  for (const fn of tryDocs) {
+    try {
+      const res = await fn();
+      if (res && res.length) {
+        __citiesCacheByCountry.set(countryCode, res);
+        return res;
+      }
+    } catch {}
+  }
+
+  __citiesCacheByCountry.set(countryCode, []);
+  return [];
+}
+
+async function populateCountryCitySelects() {
+  const countrySel = document.getElementById('pm_country');
+  const citySel = document.getElementById('pm_city');
+  if (!countrySel || !citySel) return;
+
+  // Ülkeleri yükle
+  const countries = await loadCountries();
+  countrySel.innerHTML = `<option value="">Seçiniz</option>` + countries
+    .map(c => `<option value="${c.code}">${c.name}</option>`)
+    .join('');
+
+  // Varsayılan TR seçili olsun (istenmiyorsa kaldır)
+  const defaultCountry = 'TR';
+  const hasTR = countries.some(c => c.code === defaultCountry);
+  if (hasTR) {
+    countrySel.value = defaultCountry;
+    countrySel.dispatchEvent(new Event('change'));
+  }
+
+  // Ülke seçilince illeri getir
+  countrySel.addEventListener('change', async () => {
+    const code = countrySel.value;
+    citySel.disabled = true;
+    citySel.innerHTML = `<option value="">Yükleniyor…</option>`;
+    const cities = await loadCities(code);
+    citySel.innerHTML = `<option value="">Seçiniz</option>` + cities
+      .map(x => `<option value="${(x.code || x.name)}">${x.name}</option>`)
+      .join('');
+    citySel.disabled = false;
+  });
+}
+
 // ===========================================================================
