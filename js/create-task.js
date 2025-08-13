@@ -52,7 +52,7 @@ class CreateTaskModule {
         this.uploadedFiles = [];
         this.selectedIpRecord = null;
         this.selectedRelatedParty = null;    
-        this.selectedRelatedParties = [];
+        this.selectedRelatedParties = []; // çoklu ilgili taraf listesi
         this.selectedTpInvoiceParty = null;
         this.selectedServiceInvoiceParty = null;
         this.pendingChildTransactionData = null;
@@ -63,8 +63,8 @@ class CreateTaskModule {
         this._rendering = false;
         this._lastRenderSig = '';
         this._eventsBound = false;
-        this.searchSource = 'portfolio';
-        this.allBulletinRecords = [];
+        this.searchSource = 'portfolio';       // 'portfolio' | 'bulletin'
+        this.allBulletinRecords = [];          // itiraz aramaları için
     }
 
     async init() {
@@ -84,6 +84,7 @@ class CreateTaskModule {
       transactionTypeService.getTransactionTypes()
     ]);
 
+    // Dönen yapıları normalize et (data / items / dizi)
     const pickArray = (x) =>
       Array.isArray(x?.data)  ? x.data  :
       Array.isArray(x?.items) ? x.items :
@@ -94,6 +95,7 @@ class CreateTaskModule {
     this.allUsers            = pickArray(usersResult);
     this.allTransactionTypes = pickArray(transactionTypesResult);
 
+    // Logları try bloğu içinde yap (scope hatası olmasın)
     console.log('[INIT] allIpRecords size =', this.allIpRecords.length);
     console.log('[INIT] persons size =', this.allPersons.length);
     console.log('[INIT] users size =', this.allUsers.length);
@@ -107,6 +109,8 @@ class CreateTaskModule {
 
   this.setupEventListeners();
 }
+
+    // Basit debounce
 
     debounce(fn, delay = 250) {
     let t;
@@ -125,6 +129,7 @@ async initIpRecordSearchSelector() {
   const clearBtn = document.getElementById('clearSelectedIpRecord');
   if (!input || !results) return;
 
+  // Kaynağa göre havuzu hazırla
   if (this.searchSource === 'portfolio') {
     if (!Array.isArray(this.allIpRecords) || !this.allIpRecords.length) {
       try {
@@ -147,6 +152,7 @@ async initIpRecordSearchSelector() {
     }
 
     results.innerHTML = items.slice(0, 50).map(r => {
+      // Kaynağa göre alan eşlemesi
       const id    = r.id || r.recordId || r.docId || r._id || r.uid || '';
       const appNo = this.searchSource === 'bulletin'
         ? (r.applicationNo || '')
@@ -182,6 +188,7 @@ async initIpRecordSearchSelector() {
 
     results.style.display = 'block';
 
+    // Storage path -> URL çevir
     results.querySelectorAll('img[data-storage-path]').forEach(async imgEl => {
       const path = imgEl.getAttribute('data-storage-path');
       const url = await this.resolveImageUrl(path);
@@ -196,6 +203,7 @@ async initIpRecordSearchSelector() {
     const term = norm(raw).trim();
     if (!term) { results.style.display = 'none'; results.innerHTML = ''; return; }
 
+    // YENİ (yayına itiraz değilse self sahipli kayıtlarda ara)
     let pool;
     const typeId = document.getElementById('specificTaskType')?.value;
     const isOpposition = this.isPublicationOpposition(typeId);
@@ -210,6 +218,7 @@ async initIpRecordSearchSelector() {
     }
 
     const filtered = pool.filter(r => {
+      // Kaynağa göre aranan alanlar
       const hay = (this.searchSource === 'bulletin'
         ? [
             r.markName,
@@ -225,6 +234,7 @@ async initIpRecordSearchSelector() {
 
       if (hay.includes(term)) return true;
 
+      // Şemalar değişkense son güvenlik
       try { return Object.values(r).map(norm).join(' ').includes(term); }
       catch { return false; }
     });
@@ -239,6 +249,7 @@ async initIpRecordSearchSelector() {
     if (!item) return;
 
     const id = item.dataset.id;
+    // YENİ — seçimde de aynı filtre
     let pool;
     const typeId2 = document.getElementById('specificTaskType')?.value;
     const isOpposition2 = this.isPublicationOpposition(typeId2);
@@ -258,7 +269,7 @@ async initIpRecordSearchSelector() {
       ? (rec.markName || 'Başlık yok')
       : (rec.title || rec.name || rec.markName || rec.applicationTitle || 'Başlık yok');
     const owner = (this.searchSource === 'bulletin')
-      ? (Array.isArray(rec.holders) && rec.holders[0]?.name ? r.holders[0].name : '')
+      ? (Array.isArray(rec.holders) && rec.holders[0]?.name ? rec.holders[0].name : '')
       : (rec.ownerName || rec.owner || rec.applicantName || '');
     const appNo = (this.searchSource === 'bulletin')
       ? (rec.applicationNo || rec.applicationNumber || '')
@@ -343,39 +354,16 @@ async initIpRecordSearchSelector() {
             }
         });
 
-        const addNewPersonBtn = document.getElementById('addNewPersonBtn');
-        if (addNewPersonBtn) addNewPersonBtn.addEventListener('click', () => {
-            if(window.openPersonCreate){
-                window.openPersonCreate({targetField: 'relatedParty'});
-            }
-        });
-
-        const addNewApplicantBtn = document.getElementById('addNewApplicantBtn');
-        if (addNewApplicantBtn) addNewApplicantBtn.addEventListener('click', () => {
-            if(window.openPersonCreate){
-                window.openPersonCreate({targetField: 'applicant'});
-            }
-        });
-
-        window.addEventListener('personAdded', (e) => {
-            const person = e.detail.person;
-            const targetField = e.detail.targetField;
-            if (person) {
-                this.allPersons.push(person);
-
-                if (targetField === 'applicant') {
-                    this.addApplicant(person);
-                } else if (targetField === 'relatedParty') {
-                    this.selectPerson(person, 'relatedParty');
-                } else if (targetField === 'tpInvoiceParty') {
-                    this.selectPerson(person, 'tpInvoiceParty');
-                } else if (targetField === 'serviceInvoiceParty') {
-                    this.selectPerson(person, 'serviceInvoiceParty');
-                }
-                this.checkFormCompleteness();
-            }
-        });
-
+        const closeAddPersonModalBtn = document.getElementById('closeAddPersonModal');
+        if (closeAddPersonModalBtn) closeAddPersonModalBtn.addEventListener('click', () => this.hideAddPersonModal());
+        const cancelPersonBtn = document.getElementById('cancelPersonBtn');
+        if (cancelPersonBtn) cancelPersonBtn.addEventListener('click', () => this.hideAddPersonModal());
+        const savePersonBtn = document.getElementById('savePersonBtn');
+        if (savePersonBtn) savePersonBtn.addEventListener('click', () => this.saveNewPerson());
+        const closeParentModalBtn = document.getElementById('closeSelectParentModal');
+        if (closeParentModalBtn) closeParentModalBtn.addEventListener('click', () => this.hideParentSelectionModal());
+        const cancelParentSelectionBtn = document.getElementById('cancelParentSelectionBtn');
+        if (cancelParentSelectionBtn) cancelParentSelectionBtn.addEventListener('click', () => this.hideParentSelectionModal());
 
         $(document).on('click', '#myTaskTabs a', (e) => {
             e.preventDefault();
@@ -421,9 +409,11 @@ updateRelatedPartySectionVisibility(selectedTaskType) {
 }
 
 setupBaseFormListeners() {
+  // Bu fonksiyon container'ı parametre almıyor; DOM'dan bulalım
   const container = document.getElementById('conditionalFieldsContainer');
   if (!container) return;
 
+  // İptal butonu
   const cancelBtn = document.getElementById('cancelBtn');
   if (cancelBtn) {
     cancelBtn.addEventListener('click', () => {
@@ -433,6 +423,7 @@ setupBaseFormListeners() {
     });
   }
 
+  // Form submit
   const saveTaskBtn = document.getElementById('saveTaskBtn');
   if (saveTaskBtn) {
     saveTaskBtn.addEventListener('click', (e) => {
@@ -440,6 +431,7 @@ setupBaseFormListeners() {
     });
   }
 
+  // Form validation için input listeners
   const inputs = container.querySelectorAll('input, select, textarea');
   inputs.forEach(input => {
     input.addEventListener('input', () => this.checkFormCompleteness());
@@ -616,13 +608,16 @@ setupBaseFormListeners() {
             <div class="form-group full-width">
                 <label for="ipRecordSearch" class="form-label">Portföyden Ara</label>
 
+                <!-- Arama kutusu -->
                 <div class="position-relative">
                 <input type="text" id="ipRecordSearch" class="form-input" placeholder="Başlık, dosya no, başvuru no, sahip adı...">
+                <!-- Sonuç listesi (drop-down) -->
                 <div id="ipRecordSearchResults"
                     style="position:absolute; top:100%; left:0; right:0; z-index:1000; background:#fff; border:1px solid #ddd; border-top:none; display:none; max-height:260px; overflow:auto;">
                 </div>
                 </div>
 
+                <!-- Seçili kayıt özeti -->
                 <div id="selectedIpRecordContainer" class="mt-2" style="display:none;">
                 <div class="p-2 border rounded d-flex justify-content-between align-items-center">
                     <div>
@@ -761,11 +756,13 @@ handleIpRecordChange(recordId) {
 async handleSpecificTypeChange(e) {
     const taskTypeId = e.target.value;
     const selectedTaskType = this.allTransactionTypes.find(t => t.id === taskTypeId);
-    
+    // — INSERT #1 — seçime göre arama kaynağı + ilgili taraf görünürlüğü
         try {
+        // Eğer TASK_IDS sabitini kullanıyorsan:
         const tIdStr = String(selectedTaskType?.id ?? '');
         this.searchSource = (tIdStr === TASK_IDS.ITIRAZ_YAYIN) ? 'bulletin' : 'portfolio';
 
+        // İlgili taraf (Devir/Lisans/Birleşme/… ve 19-20) görünürlük/başlık
         this.updateRelatedPartySectionVisibility(selectedTaskType);
         } catch (e) {
         console.warn('Tip sonrası görünürlük/arama kaynağı ayarlanamadı:', e);
@@ -774,9 +771,12 @@ async handleSpecificTypeChange(e) {
     const container = document.getElementById('conditionalFieldsContainer');
     if (!container) return;
 
+    // ✅ ID BAZLI KONTROL - Çok daha güvenilir!
+    // Yayına İtiraz tiplerinin ID'leri (Firebase'den gelen veriler)
     const YAYIN_ITIRAZ_IDS = [
-        '20',
-        'trademark_publication_objection',
+        '20',  // Yayına İtiraz (ana tip)
+        'trademark_publication_objection',  // Eğer başka formatta ID varsa
+        // Gerekirse başka ID'ler de eklenebilir
     ];
     
     const isYayinaItiraz = selectedTaskType?.ipType === 'trademark' && 
@@ -792,13 +792,16 @@ async handleSpecificTypeChange(e) {
         searchSource: this.searchSource 
     });
 
+    // Aynı seçim tekrar geldiyse ve içerik zaten varsa atla
     const sig = selectedTaskType ? 
         `${selectedTaskType.id}::${selectedTaskType.alias || selectedTaskType.name || ''}` : '';
     if (this._lastRenderSig === sig && container.childElementCount > 0) return;
 
+    // Re-entrancy guard
     if (this._rendering) return;
     this._rendering = true;
 
+    // Önceki form-actions düğmelerini temizle
     document.querySelectorAll('.form-actions').forEach(el => el.remove());
 
     container.innerHTML = '';
@@ -812,18 +815,22 @@ async handleSpecificTypeChange(e) {
         return;
     }
 
+    // Marka başvurusu için özel form
     if (selectedTaskType.alias === 'Başvuru' && selectedTaskType.ipType === 'trademark') {
         this.renderTrademarkApplicationForm(container);
     } else {
         this.renderBaseForm(container, selectedTaskType.alias || selectedTaskType.name, selectedTaskType.id);
     }
 
+    // Arama kaynağına göre veri yükle
     if (this.searchSource === 'bulletin') {
         await this.loadBulletinRecordsOnce();
         console.log('📚 Bulletin records loaded:', this.allBulletinRecords?.length || 0);
     }
 
+    // Arama kutusunu başlat
     await this.initIpRecordSearchSelector();
+    // — INSERT #2 — DOM çizimi sonrası görünürlüğü bir kez daha sabitle
     try {
     const tIdStr = String(document.getElementById('specificTaskType')?.value || '');
     const selected = this.allTransactionTypes.find(t => String(t.id) === tIdStr);
@@ -1236,6 +1243,7 @@ async handleSpecificTypeChange(e) {
     
         let html = '';
         
+        // Marka görseli
         const brandImage = document.getElementById('brandExamplePreview')?.src;
         if (brandImage && brandImage !== window.location.href + '#') {
             html += `<h4 class="section-title">Marka Örneği</h4>
@@ -1244,6 +1252,7 @@ async handleSpecificTypeChange(e) {
                      </div>`;
         }
 
+        // 1. Marka Bilgileri
         html += `<h4 class="section-title">Marka Bilgileri</h4>`;
         html += `<div class="summary-card">
             <div class="summary-item">
@@ -1272,6 +1281,7 @@ async handleSpecificTypeChange(e) {
             </div>
         </div>`;
     
+        // 2. Mal ve Hizmet Sınıfları
         const goodsAndServices = getSelectedNiceClasses();
         html += `<h4 class="section-title mt-4">Mal ve Hizmet Sınıfları</h4>`;
         if (goodsAndServices.length > 0) {
@@ -1285,6 +1295,7 @@ async handleSpecificTypeChange(e) {
             html += `<p class="text-muted">Mal ve hizmet sınıfı seçilmedi.</p>`;
         }
     
+        // 3. Başvuru Sahipleri
         html += `<h4 class="section-title mt-4">Başvuru Sahipleri</h4>`;
         if (this.selectedApplicants.length > 0) {
             html += `<div class="summary-card">
@@ -1297,6 +1308,7 @@ async handleSpecificTypeChange(e) {
             html += `<p class="text-muted">Başvuru sahibi seçilmedi.</p>`;
         }
     
+        // 4. Rüçhan Bilgileri
         html += `<h4 class="section-title mt-4">Rüçhan Bilgileri</h4>`;
         if (this.priorities.length > 0) {
             html += `<div class="summary-card">
@@ -1309,6 +1321,7 @@ async handleSpecificTypeChange(e) {
             html += `<p class="text-muted">Rüçhan bilgisi eklenmedi.</p>`;
         }
     
+        // 5. Tahakkuk ve Diğer Bilgiler
         const assignedToUser = this.allUsers.find(u => u.id === document.getElementById('assignedTo')?.value);
         html += `<h4 class="section-title mt-4">Tahakkuk ve Diğer Bilgiler</h4>`;
         html += `<div class="summary-card">
@@ -1371,8 +1384,11 @@ async handleSpecificTypeChange(e) {
         if (tpInvoicePartySearch) tpInvoicePartySearch.addEventListener('input', (e) => this.searchPersons(e.target.value, 'tpInvoiceParty'));
         const serviceInvoicePartySearch = document.getElementById('serviceInvoicePartySearch');
         if (serviceInvoicePartySearch) serviceInvoicePartySearch.addEventListener('input', (e) => this.searchPersons(e.target.value, 'serviceInvoiceParty'));
+        const addNewPersonBtn = document.getElementById('addNewPersonBtn');
+        if (addNewPersonBtn) addNewPersonBtn.addEventListener('click', () => this.showAddPersonModal('relatedParty'));
 
         
+        // — İlgili taraf çoklu arama —
         const relatedPartySearch  = document.getElementById('personSearchInput');
         const relatedPartyResults = document.getElementById('personSearchResults');
         let rpTimer;
@@ -1406,6 +1422,7 @@ async handleSpecificTypeChange(e) {
                 const person = this.allPersons.find(p => p.id === id);
                 if (!person) return;
 
+                // Burada sahibin ekleme işlemi yapılır
                 if (!Array.isArray(this.selectedRelatedParties)) this.selectedRelatedParties = [];
                 if (!this.selectedRelatedParties.some(p => String(p.id) === String(person.id))) {
                 this.selectedRelatedParties.push({
@@ -1417,6 +1434,7 @@ async handleSpecificTypeChange(e) {
                 this.renderSelectedRelatedParties();
                 }
 
+                // Arama sonuçlarını kapat
                 relatedPartyResults.innerHTML = '';
                 relatedPartyResults.style.display = 'none';
                 relatedPartySearch.value = '';
@@ -1424,6 +1442,8 @@ async handleSpecificTypeChange(e) {
         }
         const applicantSearchInput = document.getElementById('applicantSearchInput');
         if (applicantSearchInput) applicantSearchInput.addEventListener('input', (e) => this.searchPersons(e.target.value, 'applicant'));
+        const addNewApplicantBtn = document.getElementById('addNewApplicantBtn');
+        if (addNewApplicantBtn) addNewApplicantBtn.addEventListener('click', () => this.showAddPersonModal('applicant'));
 
         const selectedApplicantsList = document.getElementById('selectedApplicantsList');
         if (selectedApplicantsList) {
@@ -1793,7 +1813,117 @@ async handleSpecificTypeChange(e) {
         this.renderSelectedRelatedParties();
         this.checkFormCompleteness();
         }
+
+    showAddPersonModal(target = null) {
+        const modal = document.getElementById('addPersonModal');
+        if (modal) {
+            $(modal).modal('show');
+            const form = document.getElementById('personForm');
+            if (form) form.reset();
+            modal.dataset.targetField = target; 
+        }
+    }
+
+    hideAddPersonModal() {
+        const modal = document.getElementById('addPersonModal');
+        if (modal) {
+            $(modal).modal('hide');
+        }
+    }
     
+    showParentSelectionModal(parentTransactions, childTransactionData) {
+        const modal = document.getElementById('selectParentModal');
+        const parentListContainer = document.getElementById('parentListContainer');
+        if (!modal || !parentListContainer) return;
+        parentListContainer.innerHTML = '';
+        this.pendingChildTransactionData = childTransactionData;
+        if (parentTransactions.length === 0) {
+            parentListContainer.innerHTML = '<p>Uygun ana işlem bulunamadı.</p>';
+            const cancelBtn = document.getElementById('cancelParentSelectionBtn');
+            if (cancelBtn) cancelBtn.textContent = 'Kapat';
+        } else {
+            parentTransactions.forEach(parent => {
+                const parentItem = document.createElement('div');
+                parentItem.className = 'parent-selection-item';
+                parentItem.style = 'border: 1px solid #ddd; padding: 10px; margin-bottom: 8px; border-radius: 8px; cursor: pointer; transition: background-color 0.2s;';
+                parentItem.innerHTML = `
+                    <b>İşlem Tipi:</b> ${parent.type ? (this.allTransactionTypes.find(t => t.id === parent.type)?.name || parent.type) : 'Bilinmiyor'}<br>
+                    <b>Açıklama:</b> ${parent.description}<br>
+                    <b>Tarih:</b> ${new Date(parent.timestamp).toLocaleDateString('tr-TR')}
+                `;
+                parentItem.addEventListener('click', () => this.handleParentSelection(parent.id));
+                parentListContainer.appendChild(parentItem);
+            });
+            const cancelBtn = document.getElementById('cancelParentSelectionBtn');
+            if (cancelBtn) cancelBtn.textContent = 'İptal';
+        }
+        modal.style.display = 'block';
+    }
+    hideParentSelectionModal() {
+        const modal = document.getElementById('selectParentModal');
+        if (modal) modal.style.display = 'none';
+        this.pendingChildTransactionData = null;
+    }
+    async handleParentSelection(selectedParentId) {
+        if (!this.pendingChildTransactionData) return;
+        const childTransactionData = {
+            ...this.pendingChildTransactionData,
+            parentId: selectedParentId,
+            transactionHierarchy: "child"
+        };
+        const addResult = await ipRecordsService.addTransactionToRecord(this.selectedIpRecord?.id, childTransactionData);
+        if (addResult.success) {
+            alert('İş ve ilgili alt işlem başarıyla oluşturuldu!');
+            this.hideParentSelectionModal();
+            window.location.href = 'task-management.html';
+        } else {
+            alert('Alt işlem kaydedilirken hata oluştu: ' + addResult.error);
+            this.hideParentSelectionModal();
+        }
+    }
+    async saveNewPerson() {
+        const personNameInput = document.getElementById('personName');
+        const personTypeSelect = document.getElementById('personType');
+        const modal = document.getElementById('addPersonModal');
+        const targetField = modal ? modal.dataset.targetField : null;
+
+        if (!personNameInput || !personTypeSelect) return;
+        const name = personNameInput.value.trim();
+        const type = personTypeSelect.value;
+        if (!name || !type) {
+            alert('Ad Soyad ve Kişi Türü zorunludur.');
+            return;
+        }
+        const personData = {
+            name,
+            type,
+            email: document.getElementById('personEmail')?.value.trim(),
+            phone: document.getElementById('personPhone')?.value.trim(),
+            address: document.getElementById('personAddress')?.value.trim()
+        };
+        try {
+            const result = await personService.addPerson(personData);
+            if (result.success) {
+                alert('Yeni kişi başarıyla eklendi.');
+                this.allPersons.push({ ...result.data
+                });
+                if (targetField === 'applicant') {
+                    this.addApplicant(result.data);
+                } else if (targetField === 'relatedParty') {
+                    this.selectPerson(result.data, 'relatedParty');
+                } else if (targetField === 'tpInvoiceParty') {
+                    this.selectPerson(result.data, 'tpInvoiceParty');
+                } else if (targetField === 'serviceInvoiceParty') {
+                    this.selectPerson(result.data, 'serviceInvoiceParty');
+                }
+                this.hideAddPersonModal();
+            } else {
+                alert('Hata: ' + result.error);
+            }
+        } catch (error) {
+            alert("Kişi kaydedilirken beklenmeyen bir hata oluştu.");
+        }
+    }
 dedupeActionButtons() {
     const saves = Array.from(document.querySelectorAll('#saveTaskBtn'));
     if (saves.length > 1) saves.slice(0, -1).forEach(b => b.closest('.form-actions')?.remove());
@@ -1805,7 +1935,7 @@ async resolveImageUrl(img) {
   if (!img) return '';
   if (typeof img === 'string' && img.startsWith('http')) return img;
   try {
-    const storage = getStorage();
+    const storage = getStorage();                 // modular
     const url = await getDownloadURL(ref(storage, img));
     return url;
   } catch {
@@ -1819,6 +1949,7 @@ async loadBulletinRecordsOnce() {
   try {
     const db = getFirestore();
     
+    // ✅ DOĞRU: trademarkBulletinRecords koleksiyonunu oku
     const snap = await getDocs(collection(db, 'trademarkBulletinRecords'));
     
     this.allBulletinRecords = snap.docs.map(d => {
@@ -1831,6 +1962,7 @@ async loadBulletinRecordsOnce() {
         holders: x.holders || [],
         bulletinId: x.bulletinId || '',
         attorneys: x.attorneys || [],
+        // ihtiyacın olan başka alanlar da buraya eklenebilir
       };
     });
     
@@ -1866,6 +1998,7 @@ checkFormCompleteness() {
         const taskTitle = document.getElementById('taskTitle')?.value?.trim() || selectedTaskType?.alias || selectedTaskType?.name;
         const hasIpRecord = !!this.selectedIpRecord;
 
+        // assignedTo, başlık ve portföy kaydı seçildiğinde tamamlandı olarak işaretle
         const tIdStr = asId(selectedTaskType.id);
         const needsRelatedParty = RELATED_PARTY_REQUIRED.has(tIdStr);
         const needsObjectionOwner = (tIdStr === TASK_IDS.ITIRAZ_YAYIN) || (tIdStr === '19') || (tIdStr === '7');
@@ -1891,10 +2024,11 @@ async uploadFileToStorage(file, path) {
         }
     }
 isPublicationOpposition(transactionTypeId) {
+    // create-portfolio-by-opposition.js ile aynı kontrol mantığı
     const PUBLICATION_OPPOSITION_IDS = [
-        'trademark_publication_objection',
-        '20',
-        20
+        'trademark_publication_objection',  // JSON'daki ID
+        '20',                               // Sistemdeki numeric ID
+        20                                  // Number olarak da olabilir
     ];
     
     return PUBLICATION_OPPOSITION_IDS.includes(transactionTypeId) || 
@@ -1936,9 +2070,11 @@ async handleFormSubmit(e) {
         relatedIpRecordTitle: this.selectedIpRecord ? this.selectedIpRecord.title : taskTitle,
         details: {}
     };
+    // --- İtiraz sahibi (opponent) yazımı: IDs 7, 19, 20 ---
     const tIdStr = String(selectedTransactionType?.id || '');
     const objectionTypeIds = new Set(['7', '19', '20']);
 
+    // Birincil kaynak: çoklu ilgili taraf listesinin ilk elemanı
     let opponentCandidate = Array.isArray(this.selectedRelatedParties) && this.selectedRelatedParties.length
     ? this.selectedRelatedParties[0]
     : (this.selectedRelatedParty || null);
@@ -1950,8 +2086,10 @@ async handleFormSubmit(e) {
         email: opponentCandidate.email || '',
         phone: opponentCandidate.phone || ''
     };
+    // Kök seviyeye yaz
     taskData.opponent = opponent;
 
+    // İstersen detaylara da ayna yapalım
     taskData.details = taskData.details || {};
     taskData.details.opponent = opponent;
     }
@@ -2026,6 +2164,7 @@ async handleFormSubmit(e) {
         taskData.relatedIpRecordId = newRecordResult.id;
         taskData.relatedIpRecordTitle = newIpRecordData.title;
    
+        // Çoklu ilgili tarafları ekle
         try {
             const tIdStr = asId(selectedTransactionType.id);
             if (Array.isArray(this.selectedRelatedParties) && this.selectedRelatedParties.length) {
@@ -2110,6 +2249,8 @@ async handleFormSubmit(e) {
         alert('İş ve ilgili kayıt başarıyla oluşturuldu!');
         window.location.href = 'task-management.html';
     } else {
+        // ✅ NORMAL İŞLER İÇİN MANTIK
+        
         if (!this.selectedIpRecord) {
             alert('Lütfen işleme konu olacak bir portföy kaydı seçin.');
             return;
@@ -2121,6 +2262,7 @@ async handleFormSubmit(e) {
             return;
         }
 
+        // Tahakkuk işlemleri
         const officialFee = parseFloat(document.getElementById('officialFee')?.value) || 0;
         const serviceFee = parseFloat(document.getElementById('serviceFee')?.value) || 0;
 
@@ -2158,9 +2300,11 @@ async handleFormSubmit(e) {
             }
         }
 
+        // ✅ ÇÖZÜM: Yayına itiraz işleri için portföye işlem eklemeyi atla
         const isPublicationOpposition = this.isPublicationOpposition(selectedTransactionType.id);
         
         if (!isPublicationOpposition) {
+            // Normal işler için portföye işlem ekle
             const transactionData = {
                 type: selectedTransactionType.id,
                 description: `${selectedTransactionType.name} işlemi.`,
@@ -2177,6 +2321,7 @@ async handleFormSubmit(e) {
             console.log('🔄 Yayına itiraz işi: Portföye işlem ekleme atlandı, otomatik 3.taraf portföy oluşturulacak');
         }
 
+        // ✅ Yayına itiraz işleri için otomatik 3.taraf portföy oluşturma
         if (window.portfolioByOppositionCreator) {
             const oppositionResult = await window.portfolioByOppositionCreator
                 .handleTransactionCreated({
@@ -2203,15 +2348,20 @@ async handleFormSubmit(e) {
 }
 
 }
+// CreateTaskModule class'ını initialize et
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('🚀 DOM Content Loaded - CreateTask initialize ediliyor...');
     
+    // Shared layout'u yükle
     await loadSharedLayout({ activeMenuLink: 'create-task.html' });
     
+    // CreateTask instance'ını oluştur ve initialize et
     const createTaskInstance = new CreateTaskModule();
     
+    // Global erişim için (debugging amaçlı)
     window.createTaskInstance = createTaskInstance;
     
+    // Initialize et
     await createTaskInstance.init();
     
     console.log('✅ CreateTask başarıyla initialize edildi');
