@@ -745,34 +745,39 @@ class CreateTaskModule {
   }
   handleIpRecordChange(recordId) {
     const taskTypeId = document.getElementById('specificTaskType')?.value;
+    
     if (this.isWithdrawalTask && recordId) {
-      const selectedRecord = this.allIpRecords.find(r => r.id === recordId);
-      if (selectedRecord) {
-        const parentTransactions = this.findParentObjectionTransactions(selectedRecord, taskTypeId);
-        if (parentTransactions.length > 1) {
-          this.showParentSelectionModal(parentTransactions, taskTypeId);
-        } else if (parentTransactions.length === 1) {
-          this.pendingChildTransactionData = {
-            type: taskTypeId,
-            description: `İtiraz geri çekildi.`
-          };
-          this.handleParentSelection(parentTransactions[0].transactionId);
-        } else {
-          alert('Bu portföyde geri çekilecek uygun bir itiraz işlemi bulunamadı. Lütfen işleme konu olacak başka bir portföy seçin veya iş tipini değiştirin.');
-          this.selectedIpRecord = null;
-          document.getElementById('clearSelectedIpRecord').click();
-          return;
+        const selectedRecord = this.allIpRecords.find(r => r.id === recordId);
+        if (selectedRecord) {
+            const parentTransactions = this.findParentObjectionTransactions(selectedRecord, taskTypeId);
+            
+            // ÖNEMLİ: pendingChildTransactionData'yı her durumda set edin
+            this.pendingChildTransactionData = taskTypeId; // Sadece task type ID'sini tutuyoruz
+            
+            if (parentTransactions.length > 1) {
+                console.log('🔄 Birden fazla itiraz bulundu, modal açılıyor...', parentTransactions);
+                this.showParentSelectionModal(parentTransactions, taskTypeId);
+            } else if (parentTransactions.length === 1) {
+                console.log('✅ Tek itiraz bulundu, otomatik seçiliyor:', parentTransactions[0]);
+                this.handleParentSelection(parentTransactions[0].transactionId);
+            } else {
+                alert('Bu portföyde geri çekilecek uygun bir itiraz işlemi bulunamadı. Lütfen işleme konu olacak başka bir portföy seçin veya iş tipini değiştirin.');
+                this.selectedIpRecord = null;
+                document.getElementById('clearSelectedIpRecord')?.click();
+                return;
+            }
         }
-      }
     }
+    
     if (recordId) {
-      this.selectedIpRecord = this.allIpRecords.find(r => r.id === recordId);
-      console.log('📋 IP kaydı seçildi:', this.selectedIpRecord);
+        this.selectedIpRecord = this.allIpRecords.find(r => r.id === recordId);
+        console.log('📋 IP kaydı seçildi:', this.selectedIpRecord);
     } else {
-      this.selectedIpRecord = null;
+        this.selectedIpRecord = null;
     }
     this.checkFormCompleteness();
-  }
+}
+
   findParentObjectionTransactions(record, childTaskTypeId) {
     if (!record || !record.transactions || !Array.isArray(record.transactions)) return [];
 
@@ -792,8 +797,22 @@ class CreateTaskModule {
     const selectedTaskType = this.allTransactionTypes.find(t => t.id === taskTypeId);
 
     try {
-      const tIdStr = String(selectedTaskType?.id ?? '');
-      this.searchSource = (tIdStr === TASK_IDS.ITIRAZ_YAYIN) ? 'bulletin' : 'portfolio';
+    const tIdStr = String(selectedTaskType?.id ?? '');
+    
+    // İtiraz geri çekme işi mi kontrol et
+        this.isWithdrawalTask = (tIdStr === TASK_IDS.YAYINA_ITIRAZI_CEKME || tIdStr === TASK_IDS.KARARA_ITIRAZI_CEKME);
+        console.log('🔄 İş tipi değişti:', {
+            taskTypeId: tIdStr, 
+            isWithdrawalTask: this.isWithdrawalTask,
+            taskName: selectedTaskType?.alias || selectedTaskType?.name
+        });
+
+        this.searchSource = (tIdStr === TASK_IDS.ITIRAZ_YAYIN) ? 
+            'bulletin' : 'portfolio';
+
+        if (this.isWithdrawalTask) {
+            console.log('⚠️ Geri çekme işi seçildi - portföy seçimi gerekli');
+        }
 
       this.updateRelatedPartySectionVisibility(selectedTaskType);
     } catch (e) {
@@ -1864,60 +1883,112 @@ class CreateTaskModule {
     }
   }
 
-  showParentSelectionModal(parentTransactions, childTaskTypeId) {
+  getTransactionTypeName(typeId) {
+    const transactionType = this.allTransactionTypes.find(t => t.id === typeId);
+    return transactionType ? (transactionType.alias || transactionType.name) : null;
+}
+showParentSelectionModal(parentTransactions, childTaskTypeId) {
+    console.log('🔄 Modal açılıyor...', { parentTransactions, childTaskTypeId });
+    
     const modal = document.getElementById('selectParentModal');
     const parentListContainer = document.getElementById('parentListContainer');
-    if (!modal || !parentListContainer) return;
+    
+    if (!modal) {
+        console.error('❌ Modal element bulunamadı!');
+        return;
+    }
+    
+    if (!parentListContainer) {
+        console.error('❌ Parent list container bulunamadı!');
+        return;
+    }
 
+    // Modal başlığını güncelle
     const modalTitleEl = document.getElementById('selectParentModalLabel');
     if (modalTitleEl) {
-      modalTitleEl.textContent = 'Geri Çekilecek İtirazı Seçin';
+        const isDecisionObjection = String(childTaskTypeId) === TASK_IDS.KARARA_ITIRAZI_CEKME;
+        modalTitleEl.textContent = isDecisionObjection ? 
+            'Geri Çekilecek Karara İtirazı Seçin' : 
+            'Geri Çekilecek Yayına İtirazı Seçin';
     }
 
+    // Liste içeriğini temizle ve yeniden oluştur
     parentListContainer.innerHTML = '';
-    parentTransactions.forEach(tx => {
-      const item = document.createElement('li');
-      item.className = 'list-group-item';
-      item.innerHTML = `
-                <b>${tx.type || 'Bilinmeyen Tip'}:</b> ${tx.description}
-                <small class="text-muted d-block">${new Date(tx.timestamp).toLocaleDateString('tr-TR')}</small>
-            `;
-      item.onclick = () => this.handleParentSelection(tx.transactionId);
-      parentListContainer.appendChild(item);
+    
+    parentTransactions.forEach((tx, index) => {
+        const item = document.createElement('li');
+        item.className = 'list-group-item list-group-item-action';
+        item.style.cursor = 'pointer';
+        
+        // İtiraz tipini belirle
+        const transactionTypeName = this.getTransactionTypeName(tx.type) || 'Bilinmeyen İtiraz Tipi';
+        
+        item.innerHTML = `
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h6 class="mb-1">${transactionTypeName}</h6>
+                    <p class="mb-1">${tx.description || 'Açıklama bulunmuyor'}</p>
+                    <small class="text-muted">Oluşturulma: ${new Date(tx.timestamp).toLocaleDateString('tr-TR')}</small>
+                </div>
+                <i class="fas fa-chevron-right text-muted"></i>
+            </div>
+        `;
+        
+        // Click event listener
+        item.onclick = () => {
+            console.log('📋 İtiraz seçildi:', tx);
+            this.handleParentSelection(tx.transactionId);
+        };
+        
+        parentListContainer.appendChild(item);
     });
 
-    $(modal).modal('show');
-  }
-  async handleParentSelection(selectedParentId) {
-    if (!this.selectedIpRecord || !this.pendingChildTransactionData) return;
+    // Bootstrap modal'ı göster
+    try {
+        $(modal).modal('show');
+        console.log('✅ Modal başarıyla açıldı');
+    } catch (error) {
+        console.error('❌ Modal açma hatası:', error);
+        // jQuery kullanılamıyorsa vanilla JS ile dene
+        modal.style.display = 'block';
+        modal.classList.add('show');
+        document.body.classList.add('modal-open');
+    }
+}
+async handleParentSelection(selectedParentId) {
+    console.log('🔄 Parent seçimi işleniyor:', selectedParentId);
     
-    const taskTypeId = this.pendingChildTransactionData;
-    const selectedTransactionType = this.allTransactionTypes.find(t => String(t.id) === String(taskTypeId));
-
-    const transactionData = {
-      type: selectedTransactionType?.id,
-      description: `${selectedTransactionType?.alias || selectedTransactionType?.name} işlemi.`,
-      parentId: selectedParentId,
-      transactionHierarchy: "child"
-    };
-
-    const addResult = await ipRecordsService.addTransactionToRecord(this.selectedIpRecord.id, transactionData);
-    if (addResult.success) {
-      alert('İş ve ilgili alt işlem başarıyla oluşturuldu!');
-      this.hideParentSelectionModal();
-      window.location.href = 'task-management.html';
-    } else {
-      alert('Alt işlem kaydedilirken hata oluştu: ' + addResult.error);
-      this.hideParentSelectionModal();
+    // Modal'ı kapat
+    const modal = document.getElementById('selectParentModal');
+    if (modal) {
+        try {
+            $(modal).modal('hide');
+        } catch (error) {
+            modal.style.display = 'none';
+            modal.classList.remove('show');
+            document.body.classList.remove('modal-open');
+        }
     }
 
+    if (!this.selectedIpRecord || !this.pendingChildTransactionData) {
+        console.error('❌ Gerekli veriler eksik:', {
+            selectedIpRecord: !!this.selectedIpRecord,
+            pendingChildTransactionData: !!this.pendingChildTransactionData
+        });
+        return;
+    }
+    
+    // Parent transaction ID'sini kaydet
     this.selectedParentTransactionId = selectedParentId;
-
-    const saveTaskBtn = document.getElementById('saveTaskBtn');
-    if (saveTaskBtn) {
-      this.handleFormSubmit();
-    }
-  }
+    
+    console.log('✅ Parent transaction seçildi:', {
+        parentId: selectedParentId,
+        childTaskType: this.pendingChildTransactionData
+    });
+    
+    // Form submit işlemini tetikle (eğer form doldurulmuşsa)
+    this.checkFormCompleteness();
+}
 
   dedupeActionButtons() {
     const saves = Array.from(document.querySelectorAll('#saveTaskBtn'));
