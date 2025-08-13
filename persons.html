@@ -79,7 +79,11 @@
             text-align: left;
             border-bottom: 1px solid #f0f0f0;
         }
-
+        .persons-table th:first-child,
+        .persons-table td:first-child {
+            width: 50px;
+            text-align: center;
+        }
         .persons-table th {
             background: #f8f9fa;
             font-weight: 600;
@@ -368,7 +372,7 @@
             gap: 15px;
         }
         .related-form-container .form-group input {
-            font-size: 1em; /* Ana modal inputları ile uyumlu hale getirildi */
+            font-size: 1em;
         }
         
         .checkbox-group {
@@ -454,6 +458,7 @@
                     <table class="persons-table">
                         <thead>
                             <tr>
+                                <th>Sıra</th>
                                 <th>Ad Soyad / Firma Adı</th>
                                 <th>E-posta</th>
                                 <th>Telefon</th>
@@ -467,6 +472,7 @@
                 </div>
                 <div id="loadingIndicator" class="loading">Yükleniyor...</div>
                 <div id="noPersonsMessage" class="no-records">Henüz kayıtlı kişi bulunmamaktadır.</div>
+                <div id="paginationContainer"></div>
             </div>
         </main>
     </div>
@@ -588,6 +594,7 @@
         import { authService, personService, auth, db } from './firebase-config.js';
         import { showNotification } from './utils.js';
         import { loadSharedLayout } from './js/layout-loader.js';
+        import Pagination from './js/pagination.js';
         import { collection, addDoc, getDoc, getDocs, query, where, deleteDoc, doc, updateDoc, writeBatch } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         document.addEventListener('DOMContentLoaded', async () => {
@@ -597,8 +604,15 @@
                 constructor() {
                     this.currentUser = null;
                     this.allPersons = [];
+                    this.filteredPersons = [];
                     this.relatedDraft = [];
                     this.relatedLoaded = [];
+                    this.pagination = new Pagination({
+                        onPageChange: (currentPage, itemsPerPage) => {
+                            this.renderPersons();
+                        },
+                        containerId: 'paginationContainer'
+                    });
                 }
 
                 init() {
@@ -674,7 +688,6 @@
                         cancelRelatedBtn.addEventListener('click', () => this.resetRelatedForm());
                     }
 
-                    // Telefon inputlarına event listener ekle
                     this.addPhoneInputListeners('personPhone');
                     this.addPhoneInputListeners('relatedPhone');
 
@@ -724,7 +737,7 @@
                         const result = await personService.getPersons();
                         if (result.success) {
                             this.allPersons = result.data;
-                            this.renderPersons();
+                            this.filterPersons();
                         } else {
                             showNotification('Kişiler yüklenirken hata: ' + result.error, 'error');
                         }
@@ -735,19 +748,26 @@
                     }
                 }
                 
-                renderPersons(filterText = '') {
-                    const tableBody = document.getElementById('personsTableBody');
-                    const noPersonsMessage = document.getElementById('noPersonsMessage');
-                    tableBody.innerHTML = '';
-                    
-                    const lowerFilterText = filterText.toLowerCase();
-                    const filteredPersons = this.allPersons.filter(person =>
+                filterPersons(query = '') {
+                    const lowerFilterText = query.toLowerCase();
+                    this.filteredPersons = this.allPersons.filter(person =>
                         person.name.toLowerCase().includes(lowerFilterText) ||
                         (person.email && person.email.toLowerCase().includes(lowerFilterText)) ||
                         (person.phone && person.phone.toLowerCase().includes(lowerFilterText))
                     );
+                    this.pagination.update(this.filteredPersons.length);
+                    this.renderPersons();
+                }
 
-                    if (filteredPersons.length === 0) {
+                renderPersons() {
+                    const tableBody = document.getElementById('personsTableBody');
+                    const noPersonsMessage = document.getElementById('noPersonsMessage');
+                    tableBody.innerHTML = '';
+                    
+                    const personsToShow = this.pagination.getCurrentPageData(this.filteredPersons);
+                    const startIndex = this.pagination.getStartIndex();
+
+                    if (personsToShow.length === 0) {
                         noPersonsMessage.style.display = 'block';
                         return;
                     }
@@ -762,7 +782,7 @@
                         return isoDate;
                     };
 
-                    filteredPersons.forEach(person => {
+                    personsToShow.forEach((person, index) => {
                         const row = document.createElement('tr');
                         const typeKey =
                             (person.type === 'individual') ? 'gercek' :
@@ -782,6 +802,7 @@
                             ].filter(Boolean).join(' • ');
 
                         row.innerHTML = `
+                            <td>${startIndex + index + 1}</td>
                             <td>
                                 ${person.name}
                                 ${extraInfo ? `<br><small class="text-muted">${extraInfo}</small>` : ''}
@@ -906,10 +927,6 @@
                     }
                 }
                 
-                filterPersons(query) {
-                    this.renderPersons(query);
-                }
-
                 showAddPersonModal() {
                     document.getElementById('personModalTitle').textContent = 'Yeni Kişi Ekle';
                     document.getElementById('personForm').reset();
