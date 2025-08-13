@@ -2,7 +2,7 @@
 import { initializeNiceClassification, getSelectedNiceClasses, setSelectedNiceClasses } from './nice-classification.js';
 import { personService, ipRecordsService, storage } from '../firebase-config.js';
 import { ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
-import { loadSharedLayout } from './layout-loader.js';
+import { loadSharedLayout, openPersonModal, ensurePersonModal } from './layout-loader.js';
 
 class DataEntryModule {
     constructor() {
@@ -453,7 +453,13 @@ class DataEntryModule {
         const addApplicantBtn = document.getElementById('addApplicantBtn');
         if (addApplicantBtn) {
             addApplicantBtn.addEventListener('click', () => {
-                this.showAddPersonModal();
+                openPersonModal((newPerson) => {
+                    if (typeof this.addApplicant === 'function') {
+                        this.addApplicant(newPerson);
+                    } else if (typeof window !== 'undefined' && typeof window.addApplicant === 'function') {
+                        window.addApplicant(newPerson);
+                    }
+                });
             });
         }
 
@@ -840,55 +846,6 @@ class DataEntryModule {
     if (this.saveBtn) {
         this.saveBtn.disabled = !isComplete;
     }
-}
-
-
-    showAddPersonModal() {
-        const modal = document.getElementById('addPersonModal');
-        if (modal && window.$) {
-            window.$('#addPersonModal').modal('show');
-        }
-    }
-
-    hideAddPersonModal() {
-        if (window.$) {
-            window.$('#addPersonModal').modal('hide');
-            document.getElementById('addPersonForm').reset();
-        }
-    }
-
-    async saveNewPerson() {
-        const name = document.getElementById('personName').value.trim();
-        const email = document.getElementById('personEmail').value.trim();
-        const phone = document.getElementById('personPhone').value.trim();
-        const address = document.getElementById('personAddress').value.trim();
-
-        if (!name) {
-            alert('İsim alanı zorunludur');
-            return;
-        }
-
-        const personData = {
-            name,
-            email: email || null,
-            phone: phone || null,
-            address: address || null
-        };
-
-        try {
-            const result = await personService.createPerson(personData);
-            if (result.success) {
-                const newPerson = { id: result.id, ...personData };
-                this.allPersons.push(newPerson);
-                this.hideAddPersonModal();
-                alert('Kişi başarıyla eklendi');
-            } else {
-                alert('Kişi eklenirken hata oluştu: ' + result.error);
-            }
-        } catch (error) {
-            console.error('Kişi kaydetme hatası:', error);
-            alert('Kişi eklenirken bir hata oluştu');
-        }
     }
 
     async uploadFileToStorage(file, path) {
@@ -1413,7 +1370,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Önce layout'u yükle
         console.log('📐 Layout yükleniyor...');
         await loadSharedLayout();
-        console.log('✅ Layout yüklendi');
+        
+    ensurePersonModal();
+console.log('✅ Layout yüklendi');
         
         // Sonra data entry modülünü başlat
         console.log('📋 Data Entry Module başlatılıyor...');
