@@ -2366,3 +2366,42 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     console.log('✅ CreateTask başarıyla initialize edildi');
 });
+// === "Devralan Taraf" içine Yeni Kişi butonunu akıllı yerleştir ===
+(function attachNewPersonButtonToAssignee() {
+  const root = document.getElementById('conditionalFieldsContainer');
+  if (!root) return;
+
+  const place = () => {
+    // "Sistemdeki Kişilerden Ara" inputunu veya "Aramak için en az 2 karakter..." placeholder'ını bul
+    const searchInput =
+      root.querySelector('input[placeholder*="Aramak için en az 2"]') ||
+      root.querySelector('input[placeholder*="Sistemdeki Kişilerden Ara"]');
+
+    if (!searchInput) return;
+
+    // Eğer buton zaten eklendiyse tekrar ekleme
+    if (root.querySelector('.btn-new-person')) return;
+
+    // Butonu yarat ve inputun sağına yerleştir
+    const wrapper = document.createElement('div');
+    wrapper.className = 'text-right mt-2';
+    wrapper.innerHTML = `
+      <button type="button"
+              class="btn btn-success btn-new-person"
+              data-action="open-person-create"
+              data-person-type="gercek">
+        <i class="fas fa-user-plus"></i> Yeni Kişi
+      </button>
+    `;
+
+    // inputun bulunduğu .form-group varsa onun hemen arkasına ekleyelim
+    const group = searchInput.closest('.form-group') || searchInput.parentElement;
+    group.insertAdjacentElement('afterend', wrapper);
+  };
+
+  // ilk yerleştirme
+  place();
+  // bölüm dinamik render ediliyorsa izleyip tekrar yerleştir
+  const mo = new MutationObserver(() => place());
+  mo.observe(root, { childList: true, subtree: true });
+})();
