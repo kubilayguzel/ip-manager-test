@@ -2,7 +2,7 @@ import { authService, taskService, ipRecordsService, personService, accrualServi
 import { loadSharedLayout, openPersonModal, ensurePersonModal } from './layout-loader.js';
 import { initializeNiceClassification, getSelectedNiceClasses } from './nice-classification.js';
 import { ref, uploadBytes, getStorage, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
-import { getFirestore, collection, getDocs, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getFirestore, collection, getDocs, getDoc, doc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 // === ID-based configuration (added by assistant) ===
 export const TASK_IDS = {
   DEVIR: '5',
@@ -1234,6 +1234,7 @@ async handleSpecificTypeChange(e) {
         this.setupDynamicFormListeners();
         this.setupBrandExampleUploader();
         this.updateButtonsAndTabs();
+        this.populateCountriesDropdown();
     }
     renderSummaryTab() {
         const container = document.getElementById('summaryContent');
