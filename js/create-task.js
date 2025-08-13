@@ -2,7 +2,7 @@ import { authService, taskService, ipRecordsService, personService, accrualServi
 import { loadSharedLayout, openPersonModal, ensurePersonModal } from './layout-loader.js';
 import { initializeNiceClassification, getSelectedNiceClasses } from './nice-classification.js';
 import { ref, uploadBytes, getStorage, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
-import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getFirestore, collection, getDocs, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 // === ID-based configuration (added by assistant) ===
 export const TASK_IDS = {
   DEVIR: '5',
@@ -65,9 +65,10 @@ class CreateTaskModule {
         this._eventsBound = false;
         this.searchSource = 'portfolio';       // 'portfolio' | 'bulletin'
         this.allBulletinRecords = [];          // itiraz aramaları için
+        this.allCountries = [];
     }
 
-    async init() {
+async init() {
   this.currentUser = authService.getCurrentUser();
   if (!this.currentUser) { window.location.href = 'index.html'; return; }
 
@@ -76,12 +77,14 @@ class CreateTaskModule {
       ipRecordsResult,
       personsResult,
       usersResult,
-      transactionTypesResult
+      transactionTypesResult,
+      countriesResult
     ] = await Promise.all([
       ipRecordsService.getRecords(),
       personService.getPersons(),
       taskService.getAllUsers(),
-      transactionTypeService.getTransactionTypes()
+      transactionTypeService.getTransactionTypes(),
+      this.getCountries()
     ]);
 
     // Dönen yapıları normalize et (data / items / dizi)
@@ -94,6 +97,7 @@ class CreateTaskModule {
     this.allPersons          = pickArray(personsResult);
     this.allUsers            = pickArray(usersResult);
     this.allTransactionTypes = pickArray(transactionTypesResult);
+    this.allCountries = pickArray(countriesResult);
 
     // Logları try bloğu içinde yap (scope hatası olmasın)
     console.log('[INIT] allIpRecords size =', this.allIpRecords.length);
@@ -1976,6 +1980,39 @@ isPublicationOpposition(transactionTypeId) {
     return PUBLICATION_OPPOSITION_IDS.includes(transactionTypeId) || 
            PUBLICATION_OPPOSITION_IDS.includes(String(transactionTypeId)) ||
            PUBLICATION_OPPOSITION_IDS.includes(Number(transactionTypeId));
+}
+// CreateTaskModule sınıfının içinde, herhangi bir yere ekleyebilirsiniz
+async getCountries() {
+    try {
+        const db = getFirestore();
+        const docRef = doc(db, 'common', 'countries'); // 'common' koleksiyonu, 'countries' belgesi
+        const docSnap = await getDoc(docRef);
+
+        if (docSnap.exists()) {
+            const data = docSnap.data();
+            return data.list || [];
+        } else {
+            console.log("common/countries belgesi bulunamadı!");
+            return [];
+        }
+    } catch (error) {
+        console.error("Ülke listesi çekilirken hata oluştu:", error);
+        return [];
+    }
+}
+// CreateTaskModule sınıfının içinde, herhangi bir yere ekleyebilirsiniz
+populateCountriesDropdown() {
+    const countrySelect = document.getElementById('priorityCountry');
+    if (!countrySelect) return;
+
+    countrySelect.innerHTML = '<option value="">Seçiniz...</option>'; // Önce mevcut seçenekleri temizle
+
+    this.allCountries.forEach(country => {
+        const option = document.createElement('option');
+        option.value = country.code;
+        option.textContent = country.name;
+        countrySelect.appendChild(option);
+    });
 }
 async handleFormSubmit(e) {
     e.preventDefault();
