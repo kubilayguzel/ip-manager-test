@@ -52,7 +52,7 @@ class CreateTaskModule {
         this.uploadedFiles = [];
         this.selectedIpRecord = null;
         this.selectedRelatedParty = null;    
-        this.selectedRelatedParties = []; // çoklu ilgili taraf listesi
+        this.selectedRelatedParties = [];
         this.selectedTpInvoiceParty = null;
         this.selectedServiceInvoiceParty = null;
         this.pendingChildTransactionData = null;
@@ -63,8 +63,8 @@ class CreateTaskModule {
         this._rendering = false;
         this._lastRenderSig = '';
         this._eventsBound = false;
-        this.searchSource = 'portfolio';       // 'portfolio' | 'bulletin'
-        this.allBulletinRecords = [];          // itiraz aramaları için
+        this.searchSource = 'portfolio';
+        this.allBulletinRecords = [];
     }
 
     async init() {
@@ -343,23 +343,22 @@ async initIpRecordSearchSelector() {
             }
         });
 
-        // Yeni kişi modalını çağıran butonlar için event listener'lar
         const addNewPersonBtn = document.getElementById('addNewPersonBtn');
         if (addNewPersonBtn) addNewPersonBtn.addEventListener('click', () => {
-            window.dispatchEvent(new CustomEvent('openPersonModal', { detail: { targetField: 'relatedParty' } }));
+            window.dispatchEvent(new CustomEvent('openPersonCreate', { detail: { targetField: 'relatedParty' } }));
         });
 
         const addNewApplicantBtn = document.getElementById('addNewApplicantBtn');
         if (addNewApplicantBtn) addNewApplicantBtn.addEventListener('click', () => {
-            window.dispatchEvent(new CustomEvent('openPersonModal', { detail: { targetField: 'applicant' } }));
+            window.dispatchEvent(new CustomEvent('openPersonCreate', { detail: { targetField: 'applicant' } }));
         });
 
-        // Merkezi modal'dan dönen veriyi dinle
         window.addEventListener('personAdded', (e) => {
             const person = e.detail.person;
             const targetField = e.detail.targetField;
             if (person) {
-                // `persons.html`'den dönen veriyi işleyelim
+                this.allPersons.push(person);
+
                 if (targetField === 'applicant') {
                     this.addApplicant(person);
                 } else if (targetField === 'relatedParty') {
@@ -369,8 +368,6 @@ async initIpRecordSearchSelector() {
                 } else if (targetField === 'serviceInvoiceParty') {
                     this.selectPerson(person, 'serviceInvoiceParty');
                 }
-                // `allPersons` listesini de güncelleyelim
-                this.allPersons.push(person);
                 this.checkFormCompleteness();
             }
         });
@@ -1792,62 +1789,6 @@ async handleSpecificTypeChange(e) {
         this.renderSelectedRelatedParties();
         this.checkFormCompleteness();
         }
-
-    // Kapatılacak ve dışarıdan çağrılacak
-    // showAddPersonModal(target = null) { ... }
-    // hideAddPersonModal() { ... }
-    // saveNewPerson() { ... }
-    
-    showParentSelectionModal(parentTransactions, childTransactionData) {
-        const modal = document.getElementById('selectParentModal');
-        const parentListContainer = document.getElementById('parentListContainer');
-        if (!modal || !parentListContainer) return;
-        parentListContainer.innerHTML = '';
-        this.pendingChildTransactionData = childTransactionData;
-        if (parentTransactions.length === 0) {
-            parentListContainer.innerHTML = '<p>Uygun ana işlem bulunamadı.</p>';
-            const cancelBtn = document.getElementById('cancelParentSelectionBtn');
-            if (cancelBtn) cancelBtn.textContent = 'Kapat';
-        } else {
-            parentTransactions.forEach(parent => {
-                const parentItem = document.createElement('div');
-                parentItem.className = 'parent-selection-item';
-                parentItem.style = 'border: 1px solid #ddd; padding: 10px; margin-bottom: 8px; border-radius: 8px; cursor: pointer; transition: background-color 0.2s;';
-                parentItem.innerHTML = `
-                    <b>İşlem Tipi:</b> ${parent.type ? (this.allTransactionTypes.find(t => t.id === parent.type)?.name || parent.type) : 'Bilinmiyor'}<br>
-                    <b>Açıklama:</b> ${parent.description}<br>
-                    <b>Tarih:</b> ${new Date(parent.timestamp).toLocaleDateString('tr-TR')}
-                `;
-                parentItem.addEventListener('click', () => this.handleParentSelection(parent.id));
-                parentListContainer.appendChild(parentItem);
-            });
-            const cancelBtn = document.getElementById('cancelParentSelectionBtn');
-            if (cancelBtn) cancelBtn.textContent = 'İptal';
-        }
-        modal.style.display = 'block';
-    }
-    hideParentSelectionModal() {
-        const modal = document.getElementById('selectParentModal');
-        if (modal) modal.style.display = 'none';
-        this.pendingChildTransactionData = null;
-    }
-    async handleParentSelection(selectedParentId) {
-        if (!this.pendingChildTransactionData) return;
-        const childTransactionData = {
-            ...this.pendingChildTransactionData,
-            parentId: selectedParentId,
-            transactionHierarchy: "child"
-        };
-        const addResult = await ipRecordsService.addTransactionToRecord(this.selectedIpRecord?.id, childTransactionData);
-        if (addResult.success) {
-            alert('İş ve ilgili alt işlem başarıyla oluşturuldu!');
-            this.hideParentSelectionModal();
-            window.location.href = 'task-management.html';
-        } else {
-            alert('Alt işlem kaydedilirken hata oluştu: ' + addResult.error);
-            this.hideParentSelectionModal();
-        }
-    }
     
 dedupeActionButtons() {
     const saves = Array.from(document.querySelectorAll('#saveTaskBtn'));
