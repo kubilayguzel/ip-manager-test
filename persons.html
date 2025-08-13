@@ -365,7 +365,6 @@
             font-weight: 600;
         }
 
-        /* İlgililer formundaki inputlar için düzen */
         .related-form-container .form-row {
             display: grid;
             grid-template-columns: 1fr;
@@ -382,7 +381,6 @@
             margin-top: 10px;
         }
 
-        /* Daha güzel checkbox tasarımı */
         .checkbox-group input[type="checkbox"] {
             display: none;
         }
@@ -424,7 +422,6 @@
             font-size: 0.9em;
         }
         
-        /* Responsive */
         @media (max-width: 768px) {
             .related-form-container .form-row {
                 grid-template-columns: 1fr;
@@ -460,6 +457,8 @@
                             <tr>
                                 <th>Sıra</th>
                                 <th>Ad Soyad / Firma Adı</th>
+                                <th>TC Kimlik/VKN</th>
+                                <th>TPE M.N.</th>
                                 <th>E-posta</th>
                                 <th>Telefon</th>
                                 <th>Kişi Tipi</th>
@@ -490,7 +489,7 @@
                         <option value="gercek">Gerçek</option>
                         <option value="tuzel">Tüzel</option>
                     </select>
-                    </div>
+                </div>
                 <div class="form-group">
                     <label for="personName" class="form-label"><span id="personNameLabel">Ad Soyad</span>:</label>
                     <input type="text" id="personName" class="form-input" required>
@@ -511,6 +510,11 @@
                 <input type="text" id="personVkn" class="form-input" maxlength="10" inputmode="numeric" placeholder="10 haneli">
                 <small class="text-muted">Sadece rakam, 10 hane</small>
                 </div>
+                <div class="form-group" id="tpeNoGroup">
+                    <label for="personTpeNo" class="form-label">TPE Müşteri No:</label>
+                    <input type="text" id="personTpeNo" class="form-input">
+                </div>
+
                 <div class="form-group">
                     <label for="personEmail" class="form-label">E-posta:</label>
                     <input type="email" id="personEmail" class="form-input">
@@ -753,7 +757,10 @@
                     this.filteredPersons = this.allPersons.filter(person =>
                         person.name.toLowerCase().includes(lowerFilterText) ||
                         (person.email && person.email.toLowerCase().includes(lowerFilterText)) ||
-                        (person.phone && person.phone.toLowerCase().includes(lowerFilterText))
+                        (person.phone && person.phone.toLowerCase().includes(lowerFilterText)) ||
+                        (person.tckn && person.tckn.toLowerCase().includes(lowerFilterText)) ||
+                        (person.taxNo && person.taxNo.toLowerCase().includes(lowerFilterText)) ||
+                        (person.tpeNo && person.tpeNo.toLowerCase().includes(lowerFilterText))
                     );
                     this.pagination.update(this.filteredPersons.length);
                     this.renderPersons();
@@ -792,21 +799,15 @@
                         const typeText = (typeKey === 'gercek') ? 'Gerçek' :
                                         (typeKey === 'tuzel')  ? 'Tüzel'  : 'Diğer';
 
-                        const extraInfo = (typeKey === 'gercek')
-                            ? [
-                                person.tckn && `TCKN: ${person.tckn}`,
-                                person.birthDate && `Doğum: ${formatDate(person.birthDate)}`
-                            ].filter(Boolean).join(' • ')
-                            : [
-                                person.taxNo && `Vergi No: ${person.taxNo}`
-                            ].filter(Boolean).join(' • ');
+                        const tcknVknText = (person.tckn || person.taxNo || '-');
 
                         row.innerHTML = `
                             <td>${startIndex + index + 1}</td>
                             <td>
                                 ${person.name}
-                                ${extraInfo ? `<br><small class="text-muted">${extraInfo}</small>` : ''}
                             </td>
+                            <td>${tcknVknText}</td>
+                            <td>${person.tpeNo || '-'}</td>
                             <td>${person.email || '-'}</td>
                             <td>${person.phone || '-'}</td>
                             <td><span class="type-badge ${typeClass}">${typeText}</span></td>
@@ -941,9 +942,13 @@
                     const personTckn = document.getElementById('personTckn');
                     const personBirthDate = document.getElementById('personBirthDate');
                     const personVkn = document.getElementById('personVkn');
+                    const personTpeNo = document.getElementById('personTpeNo');
+
                     if (personTckn) personTckn.value = '';
                     if (personBirthDate) personBirthDate.value = '';
                     if (personVkn) personVkn.value = '';
+                    if (personTpeNo) personTpeNo.value = '';
+
                     this.loadCountries();
                     
                     this.relatedDraft = [];
@@ -969,6 +974,7 @@
                     document.getElementById('personName').value = person.name;
                     document.getElementById('personEmail').value = person.email || '';
                     document.getElementById('personPhone').value = person.phone || '';
+                    document.getElementById('personTpeNo').value = person.tpeNo || '';
 
                     let mappedType =
                         (person.type === 'individual') ? 'gercek' :
@@ -1049,19 +1055,20 @@
                         return;
                     }
                     if (typeVal === 'gercek') {
-                        if (!tckn || tckn.length !== 11) {
+                        if (tckn && tckn.length !== 11) {
                             showNotification('TC Kimlik No 11 hane olmalı', 'warning');
                             return;
                         }
                     }
                     if (typeVal === 'tuzel') {
-                        if (!vkn || vkn.length !== 10) {
+                        if (vkn && vkn.length !== 10) {
                             showNotification('Vergi No 10 hane olmalı', 'warning');
                             return;
                         }
                     }
                     const personData = {
                         name: document.getElementById('personName').value,
+                        tpeNo: document.getElementById('personTpeNo').value,
                         email: document.getElementById('personEmail').value,
                         phone: document.getElementById('personPhone').value,
                         type: typeVal,
@@ -1330,7 +1337,33 @@
 
             const personsModule = new PersonsModule();
             personsModule.init();
+            // ⬇ Global açıcı (tüm sayfalardan kullanacağız)
+            window.openPersonCreate = (prefill = {}) => {
+            personsModule.showAddPersonModal();
+            if (prefill.type) {
+                const sel = document.getElementById('personType');
+                sel.value = prefill.type; // 'gercek' | 'tuzel'
+                personsModule.updateNameLabelByType();
+                personsModule.updateExtraFieldsByType();
+            }
+            if (prefill.name)  document.getElementById('personName').value  = prefill.name;
+            if (prefill.email) document.getElementById('personEmail').value = prefill.email;
+            if (prefill.phone) document.getElementById('personPhone').value = prefill.phone;
+            };
+
+            // ⬇ HTML’den tetiklemek için delegasyon (data-action)
+            document.addEventListener('click', (e) => {
+            const btn = e.target.closest('[data-action="open-person-create"]');
+            if (btn) {
+                window.openPersonCreate({
+                type:  btn.dataset.personType,   // opsiyonel
+                name:  btn.dataset.personName,   // opsiyonel
+                email: btn.dataset.personEmail,  // opsiyonel
+                phone: btn.dataset.personPhone   // opsiyonel
+                });
+            }
         });
-    </script>
+    });
+</script>
 </body>
 </html>
