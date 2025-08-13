@@ -125,7 +125,7 @@ export async function loadSharedLayout(options = {}) {
 
         const sidebarNav = document.querySelector('.sidebar-nav');
         if(sidebarNav) {
-            renderMenu(sidebarNav, userRole); // activeMenuLink parametresi renderMenu'den kaldırıldı
+            renderMenu(sidebarNav, userRole);
         } else {
             console.error('Sidebar navigation container (.sidebar-nav) not found in layout.');
         }
@@ -135,6 +135,17 @@ export async function loadSharedLayout(options = {}) {
 
         const currentPath = window.location.pathname.split('/').pop();
         setupMenuInteractions(currentPath);
+
+        // Yeni eklenen kısım: `openPersonModal` event'ini dinleme
+        window.addEventListener('openPersonModal', (e) => {
+            const targetField = e.detail?.targetField;
+            // Persons.html'den gelen global fonksiyonu çağırmaya çalış
+            if (typeof window.showPersonModalExternally === 'function') {
+                window.showPersonModalExternally(targetField);
+            } else {
+                console.warn('`showPersonModalExternally` fonksiyonu bulunamadı. Persons.html sayfasının doğru yüklendiğinden ve global fonksiyonu tanımladığından emin olun.');
+            }
+        });
 
 
     } catch (error) {
@@ -146,12 +157,11 @@ export async function loadSharedLayout(options = {}) {
     }
 }
 
-function renderMenu(container, userRole) { // currentPage parametresi kaldırıldı
+function renderMenu(container, userRole) {
     let currentCategory = '';
-    container.innerHTML = ''; // Mevcut içeriği temizle
+    container.innerHTML = '';
 
     menuItems.forEach(item => {
-        // Kategori başlığını ekle
         if (item.category && item.category !== currentCategory) {
             const categoryTitle = document.createElement('div');
             categoryTitle.className = 'nav-category-title';
@@ -160,19 +170,14 @@ function renderMenu(container, userRole) { // currentPage parametresi kaldırıl
             currentCategory = item.category;
         }
 
-        // Yetki kontrolü
         if ((item.adminOnly && userRole !== 'admin' && userRole !== 'superadmin') || (item.superAdminOnly && userRole !== 'superadmin')) {
-            return; // Menü öğesini atla
+            return;
         }
 
         const hasSubItems = item.subItems && item.subItems.length > 0;
         
         let linkClass = 'sidebar-nav-item';
-        // isDirectActive, isParentActive ve active sınıfı ekleme mantığı renderMenu'den kaldırıldı
-        // if (isDirectActive || isParentActive) {
-        //     linkClass += ' active';
-        // }
-        if (item.specialClass) { // create-task için özel sınıf
+        if (item.specialClass) {
             linkClass += ` ${item.specialClass}`;
         }
 
@@ -202,18 +207,14 @@ function renderMenu(container, userRole) { // currentPage parametresi kaldırıl
 }
 
 function setupMenuInteractions(currentPage) {
-    // 1. Accordion başlıklarına tıklama olay dinleyicilerini ekle
-    // Bu kısım, accordionların tıklama ile açılıp kapanmasını sağlar.
     document.querySelectorAll('.accordion-header').forEach(header => {
         header.addEventListener('click', () => {
             const content = header.nextElementSibling;
             const isActive = header.classList.contains('active');
 
-            // Tüm accordion'ları kapat
             document.querySelectorAll('.accordion-header').forEach(h => h.classList.remove('active'));
             document.querySelectorAll('.accordion-content').forEach(c => c.style.maxHeight = '0');
 
-            // Eğer tıklanan accordion kapalıydı, aç
             if (!isActive) {
                 header.classList.add('active');
                 content.style.maxHeight = content.scrollHeight + 'px';
@@ -221,17 +222,14 @@ function setupMenuInteractions(currentPage) {
         });
     });
 
-    // 2. Aktif sayfanın menüsünü vurgula
     highlightActiveMenu(currentPage);
 }
 
 function highlightActiveMenu(currentPage) {
-    // Tüm aktif sınıfları temizle
     document.querySelectorAll('.sidebar-nav-item, .accordion-content a').forEach(link => {
         link.classList.remove('active');
     });
 
-    // Aktif linki bul
     let activeLink = null;
     let parentAccordion = null;
 
@@ -241,7 +239,6 @@ function highlightActiveMenu(currentPage) {
             link.classList.add('active');
             activeLink = link;
             
-            // Eğer accordion içindeyse, parent accordion'ı bul
             const accordion = link.closest('.accordion');
             if (accordion) {
                 parentAccordion = accordion;
@@ -249,7 +246,6 @@ function highlightActiveMenu(currentPage) {
         }
     });
 
-    // Eğer aktif link accordion içindeyse, accordion'ı aç
     if (parentAccordion) {
         const accordionHeader = parentAccordion.querySelector('.accordion-header');
         const accordionContent = parentAccordion.querySelector('.accordion-content');
