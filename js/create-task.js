@@ -1107,9 +1107,6 @@ async handleSpecificTypeChange(e) {
                                 <div class="col-sm-9">
                                     <select class="form-control" id="priorityCountry">
                                         <option value="">Seçiniz...</option>
-                                        <option value="TR">Türkiye</option>
-                                        <option value="US">Amerika Birleşik Devletleri</option>
-                                        <option value="DE">Almanya</option>
                                     </select>
                                 </div>
                             </div>
