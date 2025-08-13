@@ -1337,33 +1337,31 @@
 
             const personsModule = new PersonsModule();
             personsModule.init();
-            // ⬇ Global açıcı (tüm sayfalardan kullanacağız)
+
+            // -- Yeni eklenen kısım --
+            // Diğer sayfalardan çağrılabilecek global fonksiyon
             window.openPersonCreate = (prefill = {}) => {
-            personsModule.showAddPersonModal();
-            if (prefill.type) {
-                const sel = document.getElementById('personType');
-                sel.value = prefill.type; // 'gercek' | 'tuzel'
-                personsModule.updateNameLabelByType();
-                personsModule.updateExtraFieldsByType();
-            }
-            if (prefill.name)  document.getElementById('personName').value  = prefill.name;
-            if (prefill.email) document.getElementById('personEmail').value = prefill.email;
-            if (prefill.phone) document.getElementById('personPhone').value = prefill.phone;
+                personsModule.showAddPersonModal(prefill);
             };
 
-            // ⬇ HTML’den tetiklemek için delegasyon (data-action)
+            // Diğer sayfalardan gönderilen eventi dinleme
+            window.addEventListener('openPersonCreate', (e) => {
+                window.openPersonCreate(e.detail.prefill);
+            });
+
+            // HTML içinden tetikleme (isteğe bağlı)
             document.addEventListener('click', (e) => {
-            const btn = e.target.closest('[data-action="open-person-create"]');
-            if (btn) {
-                window.openPersonCreate({
-                type:  btn.dataset.personType,   // opsiyonel
-                name:  btn.dataset.personName,   // opsiyonel
-                email: btn.dataset.personEmail,  // opsiyonel
-                phone: btn.dataset.personPhone   // opsiyonel
-                });
-            }
+                const btn = e.target.closest('[data-action="open-person-create"]');
+                if (btn) {
+                    window.openPersonCreate({
+                        type:  btn.dataset.personType,
+                        name:  btn.dataset.personName,
+                        email: btn.dataset.personEmail,
+                        phone: btn.dataset.personPhone
+                    });
+                }
+            });
         });
-    });
-</script>
+    </script>
 </body>
 </html>
