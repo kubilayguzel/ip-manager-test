@@ -1,5 +1,5 @@
 // js/layout-loader.js
-import { authService } from '../firebase-config.js';
+import {personService , authService } from '../firebase-config.js';
 
 // Menü yapısını daha yönetilebilir bir veri formatında tanımlıyoruz
 const menuItems = [
@@ -257,4 +257,176 @@ function highlightActiveMenu(currentPage) {
         accordionHeader.classList.add('active');
         accordionContent.style.maxHeight = accordionContent.scrollHeight + 'px';
     }
+    
 }
+
+// === [ORTAK KİŞİ MODALİ] ====================================================
+
+// Sayfaya bir defa modal ve stil enjekte et
+export function ensurePersonModal() {
+  // persons.html içinde zaten #personModal var => tekrar enjekte etme
+  if (document.getElementById('personModal')) return;
+
+  // Minimal gerekli stiller (persons.html'deki modal görünümünün özeti)
+  if (!document.getElementById('personModalSharedStyles')) {
+    const style = document.createElement('style');
+    style.id = 'personModalSharedStyles';
+    style.textContent = `
+      .modal{display:none;position:fixed;z-index:1002;left:0;top:0;width:100%;height:100%;overflow:auto;background-color:rgba(0,0,0,.6);align-items:center;justify-content:center}
+      .modal.show{display:flex}
+      .modal-content{background:#fff;margin:auto;padding:30px;border:1px solid #888;width:90%;max-width:600px;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.2)}
+      .close-modal-btn{position:absolute;right:16px;top:12px;font-size:28px;cursor:pointer}
+      .modal-title{margin:0 0 15px 0}
+      .form-group{margin-bottom:12px}
+      .form-label{display:block;font-weight:600;margin-bottom:6px}
+      .form-input,.form-select,.form-textarea{width:100%;padding:10px;border:1px solid #ccc;border-radius:8px}
+      .modal-footer{display:flex;justify-content:flex-end;gap:10px;margin-top:12px}
+      .btn{padding:10px 16px;border-radius:8px;border:0;cursor:pointer}
+      .btn-secondary{background:#e6e6e6}
+      .btn-success{background:#28a745;color:#fff}
+      .text-muted{color:#6c757d}
+    `;
+    document.head.appendChild(style);
+  }
+
+  // Modal HTML (persons.html’deki alanların sadeleştirilmiş hali)
+  const html = `
+  <div id="personModal" class="modal" aria-hidden="true">
+    <div class="modal-content">
+      <span class="close-modal-btn" id="closePersonModal">&times;</span>
+      <h3 class="modal-title" id="personModalTitle">Yeni Kişi Ekle</h3>
+
+      <form id="personForm">
+        <input type="hidden" id="personId">
+
+        <div class="form-group">
+          <label for="pm_personType" class="form-label">Kişi Tipi</label>
+          <select id="pm_personType" class="form-select" required>
+            <option value="">Seçiniz</option>
+            <option value="gercek">Gerçek</option>
+            <option value="tuzel">Tüzel</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="pm_name" class="form-label"><span id="pm_nameLabel">Ad Soyad</span></label>
+          <input id="pm_name" type="text" class="form-input" required>
+        </div>
+
+        <div class="form-group" id="pm_tcknGroup" style="display:none;">
+          <label for="pm_tckn" class="form-label">TC Kimlik No</label>
+          <input id="pm_tckn" type="text" class="form-input" maxlength="11" inputmode="numeric" placeholder="11 haneli">
+          <small class="text-muted">Sadece rakam, 11 hane</small>
+        </div>
+
+        <div class="form-group" id="pm_vknGroup" style="display:none;">
+          <label for="pm_vkn" class="form-label">Vergi No</label>
+          <input id="pm_vkn" type="text" class="form-input" maxlength="10" inputmode="numeric" placeholder="10 haneli">
+          <small class="text-muted">Sadece rakam, 10 hane</small>
+        </div>
+
+        <div class="form-group">
+          <label for="pm_tpeMn" class="form-label">TPE Müşteri No</label>
+          <input id="pm_tpeMn" type="text" class="form-input">
+        </div>
+
+        <div class="form-group">
+          <label for="pm_email" class="form-label">E‑posta</label>
+          <input id="pm_email" type="email" class="form-input">
+        </div>
+
+        <div class="form-group">
+          <label for="pm_phone" class="form-label">Telefon</label>
+          <input id="pm_phone" type="tel" class="form-input" placeholder="+90 5__ ___ __ __">
+        </div>
+
+        <div class="form-group">
+          <label for="pm_address" class="form-label">Adres</label>
+          <textarea id="pm_address" class="form-textarea" rows="2"></textarea>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" id="pm_cancelBtn">Kapat</button>
+          <button type="submit" class="btn btn-success" id="pm_saveBtn">Kaydet</button>
+        </div>
+      </form>
+    </div>
+  </div>`;
+
+  document.body.insertAdjacentHTML('beforeend', html);
+
+  // Tip değişince TCKN/VKN alanlarını göster/gizle
+  const typeSel = document.getElementById('pm_personType');
+  const tcknGroup = document.getElementById('pm_tcknGroup');
+  const vknGroup = document.getElementById('pm_vknGroup');
+  const nameLabel = document.getElementById('pm_nameLabel');
+  typeSel.addEventListener('change', () => {
+    const v = typeSel.value;
+    if (v === 'gercek') {
+      tcknGroup.style.display = '';
+      vknGroup.style.display = 'none';
+      nameLabel.textContent = 'Ad Soyad';
+    } else if (v === 'tuzel') {
+      tcknGroup.style.display = 'none';
+      vknGroup.style.display = '';
+      nameLabel.textContent = 'Firma Adı';
+    } else {
+      tcknGroup.style.display = 'none';
+      vknGroup.style.display = 'none';
+      nameLabel.textContent = 'Ad Soyad';
+    }
+  });
+
+  document.getElementById('pm_cancelBtn').addEventListener('click', closePersonModal);
+  document.getElementById('closePersonModal').addEventListener('click', closePersonModal);
+  document.getElementById('personForm').addEventListener('submit', handlePersonSubmit);
+}
+
+let __onPersonSaved = null;
+
+async function handlePersonSubmit(e) {
+  e.preventDefault();
+  const payload = {
+    type: document.getElementById('pm_personType').value,
+    name: document.getElementById('pm_name').value.trim(),
+    nationalIdOrVkn: document.getElementById('pm_tckn').value.trim() || document.getElementById('pm_vkn').value.trim() || '',
+    tpeMn: document.getElementById('pm_tpeMn').value.trim(),
+    email: document.getElementById('pm_email').value.trim(),
+    phone: document.getElementById('pm_phone').value.trim(),
+    address: document.getElementById('pm_address').value.trim()
+  };
+
+  if (!payload.type || !payload.name) {
+    alert('Lütfen Kişi Tipi ve Ad/Ünvan girin.');
+    return;
+  }
+
+  // Firebase’e kaydet
+  try {
+    const res = await personService.addPerson(payload);
+    if (!res?.success || !res?.data) throw new Error(res?.error || 'Kayıt başarısız.');
+    // Callback’i çağır
+    if (typeof __onPersonSaved === 'function') {
+      __onPersonSaved(res.data);
+    }
+    closePersonModal();
+  } catch (err) {
+    alert(err.message || 'Bilinmeyen hata.');
+  }
+}
+
+export function openPersonModal(onSaved) {
+  ensurePersonModal();
+  __onPersonSaved = onSaved || null;
+  // Formu sıfırla
+  document.getElementById('personForm').reset();
+  document.getElementById('pm_personType').dispatchEvent(new Event('change'));
+  document.getElementById('personModalTitle').textContent = 'Yeni Kişi Ekle';
+  document.getElementById('personModal').classList.add('show');
+}
+
+export function closePersonModal() {
+  const modal = document.getElementById('personModal');
+  if (modal) modal.classList.remove('show');
+}
+// ===========================================================================
