@@ -317,6 +317,10 @@ body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333
                                     <option value="">Önce İşin Ana Türünü Seçin</option>
                                 </select>
                             </div>
+                            <div class="form-group full-width">
+                                <label for="taskTitle" class="form-label">İş Başlığı (Opsiyonel)</label>
+                                <input type="text" id="taskTitle" class="form-input" placeholder="Varsayılan olarak iş tipi kullanılır.">
+                            </div>
                         </div>
                     </div>
 
@@ -381,8 +385,8 @@ body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333
                                             </p>
                                             <div class="input-group">
                                                 <textarea class="form-control" id="customClassInput" 
-                                                    placeholder="Özel mal/hizmet tanımınızı yazın..."
-                                                    maxlength="50000" rows="3" style="resize: vertical;"></textarea>
+                                                       placeholder="Özel mal/hizmet tanımınızı yazın..."
+                                                       maxlength="50000" rows="3" style="resize: vertical;"></textarea>
                                                 <div class="input-group-append">
                                                     <button class="btn btn-danger" type="button" id="addCustomClassBtn">
                                                         <i class="fas fa-plus mr-1"></i>99. Sınıfa Ekle
@@ -440,4 +444,41 @@ body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333
     <script type="module" src="./js/nice-classification.js"></script>
     <script type="module" src="./js/create-portfolio-by-opposition.js"></script>
 </body>
+
+<!-- Modal for selecting parent transaction -->
+<div class="modal fade" id="selectParentModal" tabindex="-1" aria-labelledby="selectParentModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="selectParentModalLabel">Geri Çekilecek İtirazı Seçin</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p>İlgili portföyde birden fazla açık itiraz işlemi bulundu. Lütfen geri çekilecek olanı seçin.</p>
+                <ul id="parentListContainer" class="list-group">
+                    <!-- Parent transactions will be listed here -->
+                </ul>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">İptal</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal for adding a new person -->
+<!-- ensurePersonModal fonksiyonu bu modalın HTML'ini otomatik olarak oluşturur
+ bu nedenle HTML'de tekrar eklemeye gerek yoktur. -->
+
+<style>
+    #parentListContainer .list-group-item {
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+    #parentListContainer .list-group-item:hover {
+        background-color: #f0f4f8;
+    }
+</style>
 </html>
