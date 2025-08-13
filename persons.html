@@ -928,14 +928,14 @@
                     }
                 }
                 
-                showAddPersonModal() {
+                showAddPersonModal(prefill = {}) {
                     document.getElementById('personModalTitle').textContent = 'Yeni Kişi Ekle';
                     document.getElementById('personForm').reset();
                     document.getElementById('personId').value = '';
                     
                     const personType = document.getElementById('personType');
                     if (personType) {
-                        personType.value = 'gercek';
+                        personType.value = prefill.type || 'gercek';
                         this.updateNameLabelByType();
                         this.updateExtraFieldsByType();
                     }
@@ -944,10 +944,10 @@
                     const personVkn = document.getElementById('personVkn');
                     const personTpeNo = document.getElementById('personTpeNo');
 
-                    if (personTckn) personTckn.value = '';
-                    if (personBirthDate) personBirthDate.value = '';
-                    if (personVkn) personVkn.value = '';
-                    if (personTpeNo) personTpeNo.value = '';
+                    if (personTckn) personTckn.value = prefill.tckn || '';
+                    if (personBirthDate) personBirthDate.value = prefill.birthDate || '';
+                    if (personVkn) personVkn.value = prefill.vkn || '';
+                    if (personTpeNo) personTpeNo.value = prefill.tpeNo || '';
 
                     this.loadCountries();
                     
@@ -958,8 +958,12 @@
 
                     document.getElementById('relatedSection').classList.remove('show');
                     document.getElementById('showRelatedBtn').innerHTML = '<span>&#x2795;</span> İlgilileri Yönet';
-
-                    document.getElementById('personModal').classList.add('show');
+                    
+                    const modal = document.getElementById('personModal');
+                    if (modal) {
+                        modal.classList.add('show');
+                        modal.dataset.targetField = prefill.targetField || null;
+                    }
                 }
 
                 async showEditPersonModal(personId) {
@@ -1112,9 +1116,12 @@
                         showNotification('Kişi kaydı sırasında hata oluştu', 'error');
                         return;
                     }
-
-                    try {
-                        if (savedPersonId && this.relatedDraft && this.relatedDraft.length) {
+                    
+                    const modal = document.getElementById('personModal');
+                    const targetField = modal.dataset.targetField;
+                    
+                    if (savedPersonId && this.relatedDraft && this.relatedDraft.length) {
+                        try {
                             const batch = writeBatch(db);
                             this.relatedDraft.forEach(r => {
                                 let responsible = {};
@@ -1135,11 +1142,20 @@
                             });
                             await batch.commit();
                             this.relatedDraft = [];
+                        } catch (e) {
+                            console.error('personsRelated yazım hatası:', e);
+                            showNotification('İlgililer kaydedilirken hata oluştu', 'error');
                         }
-                    } catch (e) {
-                        console.error('personsRelated yazım hatası:', e);
-                        showNotification('İlgililer kaydedilirken hata oluştu', 'error');
                     }
+
+                    // İşlemi tamamladığımızda, `personAdded` olayını tetikleyelim
+                    window.dispatchEvent(new CustomEvent('personAdded', {
+                        detail: {
+                            person: { id: savedPersonId, ...personData },
+                            targetField: targetField
+                        }
+                    }));
+
                     this.closePersonModal();
                     await this.loadPersons();
                 }
@@ -1338,18 +1354,15 @@
             const personsModule = new PersonsModule();
             personsModule.init();
 
-            // -- Yeni eklenen kısım --
-            // Diğer sayfalardan çağrılabilecek global fonksiyon
+            // ⬇ Global açıcı (tüm sayfalardan kullanacağız)
             window.openPersonCreate = (prefill = {}) => {
                 personsModule.showAddPersonModal(prefill);
+                if (prefill.name)  document.getElementById('personName').value  = prefill.name;
+                if (prefill.email) document.getElementById('personEmail').value = prefill.email;
+                if (prefill.phone) document.getElementById('personPhone').value = prefill.phone;
             };
-
-            // Diğer sayfalardan gönderilen eventi dinleme
-            window.addEventListener('openPersonCreate', (e) => {
-                window.openPersonCreate(e.detail.prefill);
-            });
-
-            // HTML içinden tetikleme (isteğe bağlı)
+            
+            // ⬇ HTML’den tetiklemek için delegasyon (data-action)
             document.addEventListener('click', (e) => {
                 const btn = e.target.closest('[data-action="open-person-create"]');
                 if (btn) {
@@ -1359,6 +1372,16 @@
                         email: btn.dataset.personEmail,
                         phone: btn.dataset.personPhone
                     });
+                }
+            });
+
+            // `create-task.js`'den gelen `personAdded` olayını dinle
+            window.addEventListener('personAdded', (e) => {
+                const person = e.detail.person;
+                if (person) {
+                    // All persons listesini güncelle
+                    personsModule.allPersons.push(person);
+                    personsModule.filterPersons(); // listeyi yeniden render et
                 }
             });
         });
