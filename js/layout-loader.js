@@ -1,43 +1,35 @@
 // js/layout-loader.js
 import { authService } from '../firebase-config.js';
 
-// Menü yapısını daha yönetilebilir bir veri formatında tanımlıyoruz
 const menuItems = [
     { id: 'dashboard', text: 'Dashboard', link: 'dashboard.html', icon: 'fas fa-tachometer-alt', category: 'Ana Menü' },
-    
-    // Yeni Portföy Yönetimi Akordiyonu eklendi
     {
         id: 'portfolio-management-accordion',
         text: 'Portföy Yönetimi',
-        icon: 'fas fa-folder', // Portföy Yönetimi için uygun bir ikon
-        category: 'Portföy Yönetimi', // Yeni kategori
+        icon: 'fas fa-folder',
+        category: 'Portföy Yönetimi',
         subItems: [
-            { id: 'portfolio', text: 'Portföy', link: 'portfolio.html' }, // Buraya taşındı
-            { id: 'data-entry', text: 'Yeni Kayıt', link: 'data-entry.html' }, // Buraya taşındı
-            { id: 'excel-upload', text: 'Excel ile Yükle', link: 'excel-upload.html', adminOnly: true } // Buraya taşındı
+            { id: 'portfolio', text: 'Portföy', link: 'portfolio.html' },
+            { id: 'data-entry', text: 'Yeni Kayıt', link: 'data-entry.html' },
+            { id: 'excel-upload', text: 'Excel ile Yükle', link: 'excel-upload.html', adminOnly: true }
         ]
     },
-
-    // Hatırlatmalar sekmesi Kişi Yönetimi'nden önce ve ayrı sekme olarak taşındı
     { id: 'reminders', text: 'Hatırlatmalar', link: 'reminders.html', icon: 'fas fa-bell', category: 'Yönetim' },
-    
-    // Mevcut 'tasks-accordion' değiştirildi ve adı 'İş Yönetimi' oldu
     {
-        id: 'task-management-accordion', // ID güncellendi
-        text: 'İş Yönetimi', // Adı güncellendi
-        icon: 'fas fa-briefcase', // İkon güncellendi
+        id: 'task-management-accordion',
+        text: 'İş Yönetimi',
+        icon: 'fas fa-briefcase',
         category: 'Yönetim',
         subItems: [
-            { id: 'task-management', text: 'İş Yönetimi', link: 'task-management.html' }, // Konumu korundu
-            { id: 'my-tasks', text: 'İşlerim', link: 'my-tasks.html' }, // Konumu korundu
-            { id: 'create-task', text: 'Yeni İş Oluştur', link: 'create-task.html', specialClass: 'new-task-link' } // Konumu korundu
-            // 'Hatırlatmalar' ve 'Zamanlanmış Görevler' buradan kaldırıldı
+            { id: 'task-management', text: 'İş Yönetimi', link: 'task-management.html' },
+            { id: 'my-tasks', text: 'İşlerim', link: 'my-tasks.html' },
+            { id: 'create-task', text: 'Yeni İş Oluştur', link: 'create-task.html', specialClass: 'new-task-link' }
         ]
     },
     {
         id: 'new-tasks-accordion',
         text: 'Görevler',
-        icon: 'fas fa-clipboard-check', // ← YENİ İKON
+        icon: 'fas fa-clipboard-check',
         category: 'Yönetim',
         subItems: [
             { id: 'scheduled-tasks', text: 'Zamanlanmış Görevler', link: 'scheduled-tasks.html' },
@@ -48,7 +40,7 @@ const menuItems = [
     {
         id: 'person-management-accordion',
         text: 'Kişi Yönetimi',
-        icon: 'fas fa-users', // Kişi Yönetimi ikonu
+        icon: 'fas fa-users',
         category: 'Yönetim',
         subItems: [
             { id: 'persons', text: 'Kişiler Yönetimi', link: 'persons.html' },
@@ -56,8 +48,6 @@ const menuItems = [
         ]
     },
     { id: 'accruals', text: 'Tahakkuklarım', link: 'accruals.html', icon: 'fas fa-file-invoice-dollar', category: 'Finans' },
-    
-    // GÜNCELLENMIŞ: indexing.html → bulk-indexing-page.html
     { id: 'indexing', text: 'Belge İndeksleme', link: 'bulk-indexing-page.html', icon: 'fas fa-folder-open', category: 'Araçlar' },
     { id: 'bulletin-management-accordion', text: 'Bülten Yönetimi', icon: 'fas fa-book', category: 'Araçlar', subItems: [
         { id: 'bulletin-upload', text: 'Bülten Yükleme/Silme', link: 'bulletin-upload.html' },
@@ -72,7 +62,7 @@ const menuItems = [
     },
     { id: 'reports', text: 'Raporlar', link: '#', icon: 'fas fa-chart-line', category: 'Araçlar', disabled: true },
     { id: 'settings', text: 'Ayarlar', link: '#', icon: 'fas fa-cog', category: 'Araçlar', disabled: true }
-    ];
+];
 
 export async function loadSharedLayout(options = {}) {
     const { activeMenuLink } = options;
@@ -84,14 +74,12 @@ export async function loadSharedLayout(options = {}) {
     }
 
     try {
-        // Font Awesome kütüphanesini ekle
         if (!document.querySelector('link[href*="font-awesome"]')) {
             const fontAwesomeLink = document.createElement('link');
             fontAwesomeLink.rel = 'stylesheet';
             fontAwesomeLink.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css';
             document.head.appendChild(fontAwesomeLink);
         }
-        // shared-styles.css dosyasını da buraya ekleyelim, eğer zaten eklenmemişse
         if (!document.querySelector('link[href*="shared-styles.css"]')) {
             const sharedStylesLink = document.createElement('link');
             sharedStylesLink.rel = 'stylesheet';
@@ -103,10 +91,10 @@ export async function loadSharedLayout(options = {}) {
         if (!response.ok) throw new Error('shared_layout_parts.html could not be loaded.');
         placeholder.innerHTML = await response.text();
         const user = authService.getCurrentUser();
-            if (!user && window.top === window) {
-                window.location.href = 'index.html';
-                return;
-            }
+        if (!user && window.top === window) {
+            window.location.href = 'index.html';
+            return;
+        }
 
         const userRole = user.role || 'user';
         
@@ -136,14 +124,13 @@ export async function loadSharedLayout(options = {}) {
         const currentPath = window.location.pathname.split('/').pop();
         setupMenuInteractions(currentPath);
 
-        // Yeni eklenen kısım: `openPersonModal` event'ini dinleme
-        window.addEventListener('openPersonModal', (e) => {
-            const targetField = e.detail?.targetField;
-            // Persons.html'den gelen global fonksiyonu çağırmaya çalış
-            if (typeof window.showPersonModalExternally === 'function') {
-                window.showPersonModalExternally(targetField);
+        // `persons.html`'den gelen global fonksiyonu çağırabilmek için event listener
+        window.addEventListener('openPersonCreate', (e) => {
+            const prefillData = e.detail?.prefill || {};
+            if (typeof window.openPersonCreate === 'function') {
+                window.openPersonCreate(prefillData);
             } else {
-                console.warn('`showPersonModalExternally` fonksiyonu bulunamadı. Persons.html sayfasının doğru yüklendiğinden ve global fonksiyonu tanımladığından emin olun.');
+                console.warn('`window.openPersonCreate` fonksiyonu bulunamadı. `persons.html` sayfasının doğru yüklendiğinden ve global fonksiyonu tanımladığından emin olun.');
             }
         });
 
