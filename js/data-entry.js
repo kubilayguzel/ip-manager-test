@@ -3,6 +3,7 @@ import { initializeNiceClassification, getSelectedNiceClasses, setSelectedNiceCl
 import { personService, ipRecordsService, storage } from '../firebase-config.js';
 import { ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 import { loadSharedLayout, openPersonModal, ensurePersonModal } from './layout-loader.js';
+import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 class DataEntryModule {
     constructor() {
@@ -16,6 +17,7 @@ class DataEntryModule {
         this.allPersons = [];
         this.recordOwnerTypeSelect = document.getElementById('recordOwnerType');
         this.editingRecordId = null;
+        this.allCountries = [];
         this.currentIpType = null;
     }
 
@@ -36,12 +38,19 @@ class DataEntryModule {
 
     async loadAllData() {
         try {
-            const personsResult = await personService.getPersons();
+            const [personsResult, countriesResult] = await Promise.all([
+                personService.getPersons(),
+                this.getCountries()
+            ]);
+            
             this.allPersons = personsResult.success ? personsResult.data : [];
-            console.log('📊 Tüm veriler yüklendi:', this.allPersons.length, 'kişi');
+            this.allCountries = countriesResult; // Yeni eklenen
+            
+            console.log('📊 Tüm veriler yüklendi:', this.allPersons.length, 'kişi,', this.allCountries.length, 'ülke.');
         } catch (error) {
             console.error('Veriler yüklenirken hata:', error);
             this.allPersons = [];
+            this.allCountries = [];
         }
     }
 
@@ -233,16 +242,6 @@ class DataEntryModule {
                                 '<div class="col-sm-9">' +
                                     '<select class="form-control" id="priorityCountry">' +
                                         '<option value="">Seçiniz...</option>' +
-                                        '<option value="TR">Türkiye</option>' +
-                                        '<option value="US">Amerika Birleşik Devletleri</option>' +
-                                        '<option value="DE">Almanya</option>' +
-                                        '<option value="FR">Fransa</option>' +
-                                        '<option value="GB">İngiltere</option>' +
-                                        '<option value="IT">İtalya</option>' +
-                                        '<option value="ES">İspanya</option>' +
-                                        '<option value="CN">Çin</option>' +
-                                        '<option value="JP">Japonya</option>' +
-                                        '<option value="KR">Güney Kore</option>' +
                                     '</select>' +
                                 '</div>' +
                             '</div>' +
@@ -356,6 +355,7 @@ class DataEntryModule {
         this.setupDynamicFormListeners();
         this.setupBrandExampleUploader();
         this.setupClearClassesButton(); // Temizle butonu setup'ını ekle
+        this.populateCountriesDropdown();
         this.updateSaveButtonState();
     }
 
@@ -1276,6 +1276,39 @@ async savePatentPortfolio(portfolioData) {
     } else {
         throw new Error(result.error);
     }
+}
+// DataEntryModule sınıfının içinde, herhangi bir yere ekleyebilirsiniz
+async getCountries() {
+    try {
+        const db = getFirestore();
+        const docRef = doc(db, 'common', 'countries');
+        const docSnap = await getDoc(docRef);
+
+        if (docSnap.exists()) {
+            const data = docSnap.data();
+            return data.list || [];
+        } else {
+            console.log("common/countries belgesi bulunamadı!");
+            return [];
+        }
+    } catch (error) {
+        console.error("Ülke listesi çekilirken hata oluştu:", error);
+        return [];
+    }
+}
+
+populateCountriesDropdown() {
+    const countrySelect = document.getElementById('priorityCountry');
+    if (!countrySelect) return;
+
+    countrySelect.innerHTML = '<option value="">Seçiniz...</option>';
+
+    this.allCountries.forEach(country => {
+        const option = document.createElement('option');
+        option.value = country.code;
+        option.textContent = country.name;
+        countrySelect.appendChild(option);
+    });
 }
 
 // Tasarım için
