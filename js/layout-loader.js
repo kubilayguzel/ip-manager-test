@@ -63,7 +63,7 @@ const menuItems = [
     },
     { id: 'reports', text: 'Raporlar', link: '#', icon: 'fas fa-chart-line', category: 'Araçlar', disabled: true },
     { id: 'settings', text: 'Ayarlar', link: '#', icon: 'fas fa-cog', category: 'Araçlar', disabled: true }
-    ];
+];
 
 export async function loadSharedLayout(options = {}) {
     const { activeMenuLink } = options;
@@ -125,21 +125,6 @@ export async function loadSharedLayout(options = {}) {
         const currentPath = window.location.pathname.split('/').pop();
         setupMenuInteractions(currentPath);
 
-        // -- YENİ: MERKEZİ KİŞİ EKLEME MODALINI ENTEGRE ET --
-        if (!document.getElementById('personModal')) {
-            createAndAppendPersonModal();
-        }
-
-        window.addEventListener('openPersonCreate', (e) => {
-            const prefillData = e.detail?.prefill || {};
-            // Dinamik olarak oluşturulan modalı açma fonksiyonunu çağır
-            if (window.personModalManager && typeof window.personModalManager.showModal === 'function') {
-                window.personModalManager.showModal(prefillData);
-            } else {
-                console.warn('Person modal manager not found.');
-            }
-        });
-
     } catch (error) {
         console.error('Error loading shared layout:', error);
         const errorDiv = document.createElement('div');
@@ -148,177 +133,6 @@ export async function loadSharedLayout(options = {}) {
         document.body.prepend(errorDiv);
     }
 }
-
-// -- YENİ: MERKEZİ KİŞİ EKLEME MODALI HTML VE JS --
-
-function createAndAppendPersonModal() {
-    const personModalHTML = `
-        <div id="personModal" class="modal">
-            <div class="modal-content">
-                <span class="close-modal-btn" id="closePersonModal">&times;</span>
-                <h3 class="modal-title" id="personModalTitle">Yeni Kişi Ekle</h3>
-                <form id="personForm">
-                    <input type="hidden" id="personId">
-                    <div class="form-group">
-                        <label for="personType" class="form-label">Kişi Tipi:</label>
-                        <select id="personType" class="form-select" required>
-                            <option value="">Seçiniz</option>
-                            <option value="gercek">Gerçek</option>
-                            <option value="tuzel">Tüzel</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="personName" class="form-label"><span id="personNameLabel">Ad Soyad</span>:</label>
-                        <input type="text" id="personName" class="form-input" required>
-                    </div>
-                    <div class="form-group" id="tcknGroup" style="display:none;">
-                        <label for="personTckn" class="form-label">TC Kimlik No:</label>
-                        <input type="text" id="personTckn" class="form-input" maxlength="11" inputmode="numeric" placeholder="11 haneli">
-                        <small class="text-muted">Sadece rakam, 11 hane</small>
-                    </div>
-                    <div class="form-group" id="birthDateGroup" style="display:none;">
-                        <label for="personBirthDate" class="form-label">Doğum Tarihi:</label>
-                        <input type="date" id="personBirthDate" class="form-input">
-                    </div>
-                    <div class="form-group" id="vknGroup" style="display:none;">
-                        <label for="personVkn" class="form-label">Vergi No:</label>
-                        <input type="text" id="personVkn" class="form-input" maxlength="10" inputmode="numeric" placeholder="10 haneli">
-                        <small class="text-muted">Sadece rakam, 10 hane</small>
-                    </div>
-                    <div class="form-group">
-                        <label for="personTpeNo" class="form-label">TPE Müşteri No:</label>
-                        <input type="text" id="personTpeNo" class="form-input">
-                    </div>
-                    <div class="form-group">
-                        <label for="personEmail" class="form-label">E-posta:</label>
-                        <input type="email" id="personEmail" class="form-input">
-                    </div>
-                    <div class="form-group">
-                        <label for="personPhone" class="form-label">Telefon:</label>
-                        <input type="tel" id="personPhone" class="form-input" placeholder="+90 5__ ___ __ __">
-                    </div>
-                    <div class="form-group">
-                        <label for="personAddress" class="form-label">Adres:</label>
-                        <textarea id="personAddress" class="form-textarea"></textarea>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Adres Ülke / İl:</label>
-                        <div style="display:flex;gap:10px;flex-wrap:wrap">
-                            <select id="countrySelect" class="form-select" style="flex:1 1 200px"></select>
-                            <select id="provinceSelect" class="form-select" style="flex:1 1 200px"></select>
-                            <input type="text" id="provinceText" class="form-input" style="display:none;flex:1 1 200px" placeholder="Eyalet / İl">
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" id="cancelPersonBtn">İptal</button>
-                        <button type="submit" class="btn btn-primary" id="savePersonBtn" form="personForm">Kaydet</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    `;
-    document.body.insertAdjacentHTML('beforeend', personModalHTML);
-    initializePersonModalLogic();
-}
-
-function initializePersonModalLogic() {
-    const modal = document.getElementById('personModal');
-    const form = document.getElementById('personForm');
-    const closeBtn = document.getElementById('closePersonModal');
-    const cancelBtn = document.getElementById('cancelPersonBtn');
-    const personTypeSelect = document.getElementById('personType');
-    const personNameLabel = document.getElementById('personNameLabel');
-
-    let currentPrefillData = {};
-
-    const updateNameLabelByType = (type) => {
-        personNameLabel.textContent = (type === 'tuzel') ? 'Firma Adı' : 'Ad Soyad';
-        document.getElementById('tcknGroup').style.display = (type === 'gercek') ? 'flex' : 'none';
-        document.getElementById('birthDateGroup').style.display = (type === 'gercek') ? 'flex' : 'none';
-        document.getElementById('vknGroup').style.display = (type === 'tuzel') ? 'flex' : 'none';
-    };
-
-    const closeModal = () => {
-        modal.classList.remove('show');
-        form.reset();
-    };
-
-    const showModal = (prefillData = {}) => {
-        form.reset();
-        currentPrefillData = prefillData;
-        modal.dataset.targetField = prefillData.targetField || null;
-
-        personTypeSelect.value = prefillData.type || 'gercek';
-        updateNameLabelByType(personTypeSelect.value);
-
-        document.getElementById('personName').value = prefillData.name || '';
-        document.getElementById('personEmail').value = prefillData.email || '';
-        document.getElementById('personPhone').value = prefillData.phone || '';
-        document.getElementById('personTckn').value = prefillData.tckn || '';
-        document.getElementById('personVkn').value = prefillData.vkn || '';
-        document.getElementById('personTpeNo').value = prefillData.tpeNo || '';
-        
-        // Ülke ve il seçeneklerini yükle
-        // Bu kısım için personService'in bir fonksiyonu kullanılabilir.
-        // Şimdilik sadece placeholder olarak bırakalım.
-        const countrySelect = document.getElementById('countrySelect');
-        countrySelect.innerHTML = '<option value="TR">Türkiye</option>';
-        document.getElementById('provinceSelect').innerHTML = '<option value="">İl Seçiniz</option>';
-        
-        modal.classList.add('show');
-    };
-
-    const handleSavePerson = async (e) => {
-        e.preventDefault();
-        const personData = {
-            name: document.getElementById('personName').value,
-            type: personTypeSelect.value,
-            email: document.getElementById('personEmail').value,
-            phone: document.getElementById('personPhone').value,
-            address: document.getElementById('personAddress').value,
-            tpeNo: document.getElementById('personTpeNo').value,
-            tckn: document.getElementById('personTckn').value,
-            taxNo: document.getElementById('personVkn').value,
-        };
-
-        if (!personData.name || !personData.type) {
-            alert('Ad Soyad ve Kişi Tipi zorunludur.');
-            return;
-        }
-
-        try {
-            const result = await personService.addPerson(personData);
-            if (result.success) {
-                alert('Yeni kişi başarıyla eklendi!');
-                // Event'i tetikle
-                window.dispatchEvent(new CustomEvent('personAdded', {
-                    detail: {
-                        person: { id: result.id, ...personData },
-                        targetField: modal.dataset.targetField
-                    }
-                }));
-                closeModal();
-            } else {
-                alert('Kişi kaydedilirken hata oluştu: ' + result.error);
-            }
-        } catch (error) {
-            alert('Beklenmeyen bir hata oluştu: ' + error.message);
-        }
-    };
-    
-    // Event listener'ları ata
-    closeBtn.addEventListener('click', closeModal);
-    cancelBtn.addEventListener('click', closeModal);
-    form.addEventListener('submit', handleSavePerson);
-    personTypeSelect.addEventListener('change', (e) => updateNameLabelByType(e.target.value));
-
-    // Dışarıdan erişim için bir global nesne oluştur
-    window.personModalManager = {
-        showModal,
-        closeModal
-    };
-}
-
 
 function renderMenu(container, userRole) {
     let currentCategory = '';
