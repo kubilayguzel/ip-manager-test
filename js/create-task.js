@@ -319,7 +319,8 @@ async initIpRecordSearchSelector() {
       const t = selectedBox.querySelector('.ip-thumb');
       if (t) t.remove();
       this.checkFormCompleteness();
-    });
+    if (this.selectedIpRecord && this.selectedIpRecord.id) { this.handleIpRecordChange(this.selectedIpRecord.id); }
+  });
   }
 
   document.addEventListener('click', (e) => {
@@ -2059,7 +2060,8 @@ async handleSpecificTypeChange(e) {
         // Click event listener
         item.onclick = () => {
             console.log('📋 İtiraz seçildi:', tx);
-            this.handleParentSelection(tx.transactionId);
+            const pid = tx.transactionId || tx.id || tx.docId || tx.uid || tx._id;
+            this.handleParentSelection(pid);
         };
         
         parentListContainer.appendChild(item);
@@ -2094,63 +2096,56 @@ async handleSpecificTypeChange(e) {
         this.pendingChildTransactionData = null;
     }
 async handleParentSelection(selectedParentId) {
-  // Modalı kapat (varsa)
-  const modal = document.getElementById('selectParentModal');
-  if (modal) {
-    try {
-      if (window.$ && typeof $ === 'function') {
-        $(modal).modal('hide');
-      } else {
-        modal.style.display = 'none';
-        modal.classList.remove('show');
-        document.body.classList.remove('modal-open');
-        const bd = document.getElementById('tempModalBackdrop');
-        if (bd) bd.remove();
-      }
-    } catch (e) {
-      console.warn('Modal kapatma sırasında uyarı:', e);
+    console.log('[handleParentSelection] selectedParentId param =', selectedParentId, ' this.selectedParentTransactionId =', this.selectedParentTransactionId);
+    // Modal'ı kapat
+    const modal = document.getElementById('selectParentModal');
+    if (modal) {
+        try {
+            if (window.$ && typeof $ === 'function') {
+                $(modal).modal('hide');
+            } else {
+                modal.style.display = 'none';
+                modal.classList.remove('show');
+                document.body.classList.remove('modal-open');
+            }
+        } catch (e) {
+            console.warn('Modal kapatma sırasında uyarı:', e);
+        }
     }
-  }
-
-  // 1) Parent ID’yi güvenle belirle
-  const parentId = selectedParentId || this.selectedParentTransactionId;
-  if (!parentId) {
-    alert('Parent işlem seçilemedi. Lütfen listeden bir itiraz seçin.');
-    return;
-  }
-
-  // 2) Çocuk işlemin tipini güvenle al
-  // (Örn: 8 = Karara İtirazı Geri Çekme, 21 = Yayına İtirazı Geri Çekme)
-  const childTypeId = this.pendingChildTransactionData;
-  if (!childTypeId) {
-    alert('İşlem tipi belirlenemedi. Lütfen iş tipini yeniden seçin.');
-    return;
-  }
-
-  // 3) Alt işlem objesini düzgün kur
-  const childTransactionData = {
-    type: String(childTypeId),
-    description: 'İtiraz geri çekme işlemi',
-    parentId: String(parentId),
-    transactionHierarchy: 'child'
-  };
-
-  // 4) Kaydet
-  if (!this.selectedIpRecord?.id) {
-    alert('Portföy kaydı bulunamadı. Lütfen bir portföy seçin.');
-    return;
-  }
-
-  const addResult = await ipRecordsService.addTransactionToRecord(
-    this.selectedIpRecord.id,
-    childTransactionData
-  );
-
-  if (addResult?.success) {
-    alert('Alt işlem başarıyla kaydedildi.');
-  } else {
-    alert('Alt işlem kaydedilirken hata oluştu: ' + (addResult?.error || 'Bilinmeyen hata'));
-  }
+    // Parent ID güvenliği
+    const parentId = selectedParentId || this.selectedParentTransactionId;
+    if (!parentId) {
+        alert('Parent işlem seçilemedi. Lütfen listeden bir itiraz seçin.');
+        return;
+    }
+    // Child type
+    const childTypeId = this.pendingChildTransactionData;
+    if (!childTypeId) {
+        alert('İşlem tipi belirlenemedi. Lütfen iş tipini yeniden seçin.');
+        return;
+    }
+    // Alt işlem objesi
+    const childTransactionData = {
+        type: String(childTypeId),
+        description: 'İtiraz geri çekme işlemi',
+        parentId: String(parentId),
+        transactionHierarchy: 'child'
+    };
+    if (!this.selectedIpRecord || !this.selectedIpRecord.id) {
+        alert('Portföy kaydı bulunamadı. Lütfen bir portföy seçin.');
+        return;
+    }
+    try {
+        const addResult = await ipRecordsService.addTransactionToRecord(this.selectedIpRecord.id, childTransactionData);
+        if (addResult && addResult.success) {
+            alert('Alt işlem başarıyla kaydedildi.');
+        } else {
+            alert('Alt işlem kaydedilirken hata oluştu: ' + (addResult && addResult.error ? addResult.error : 'Bilinmeyen hata'));
+        }
+    } catch (err) {
+        console.error('Alt işlem kayıt hatası:', err);
+        alert('Alt işlem kaydedilirken hata oluştu.');
+    }
 }
 
 dedupeActionButtons() {
