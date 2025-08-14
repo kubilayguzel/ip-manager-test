@@ -944,20 +944,39 @@ async handleParentSelection(selectedParentId) {
 }
 
 setupIpRecordSearchListeners() {
-    const ipRecordSearchResults = document.getElementById('ipRecordSearchResults');
-    if (ipRecordSearchResults) {
-        ipRecordSearchResults.addEventListener('click', (e) => {
-            const item = e.target.closest('.search-result-item') || e.target.closest('[data-id]');
-            if (item) {
-                const recordId = item.dataset.id;
-                if (recordId && this.selectIpRecord) {
-                    this.selectIpRecord(recordId);
+    console.log('🔧 setupIpRecordSearchListeners çağrıldı');
+    
+    // Element yoksa biraz bekle ve tekrar dene
+    const attachListener = () => {
+        const ipRecordSearchResults = document.getElementById('ipRecordSearchResults');
+        if (ipRecordSearchResults) {
+            console.log('✅ ipRecordSearchResults bulundu, event listener ekleniyor');
+            
+            // Önceki listener'ları temizlemek için clone
+            const newElement = ipRecordSearchResults.cloneNode(true);
+            ipRecordSearchResults.parentNode.replaceChild(newElement, ipRecordSearchResults);
+            
+            newElement.addEventListener('click', (e) => {
+                console.log('🔥 Portföy seçimi event listener tetiklendi');
+                const item = e.target.closest('.search-result-item') || e.target.closest('[data-id]');
+                if (item) {
+                    const recordId = item.dataset.id;
+                    console.log('🔥 Seçilen portföy ID:', recordId);
+                    if (recordId && this.selectIpRecord) {
+                        this.selectIpRecord(recordId);
+                    }
                 }
-            }
-        });
-    }
-}
+            });
+            
+            console.log('✅ Event listener başarıyla eklendi');
+        } else {
+            console.log('⚠️ ipRecordSearchResults henüz yok, 500ms sonra tekrar denenecek');
+            setTimeout(attachListener, 500);
+        }
+    };
 
+    attachListener();
+}
 async handleSpecificTypeChange(e) {
     const taskTypeId = e.target.value;
     const selectedTaskType = this.allTransactionTypes.find(t => t.id === taskTypeId);
