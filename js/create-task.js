@@ -720,17 +720,35 @@ class CreateTaskModule {
     this.checkFormCompleteness();
     this.initIpRecordSearchSelector();
   }
-handleIpRecordChange(recordId) {
+async handleIpRecordChange(recordId) {
     console.log('🔄 handleIpRecordChange çağrıldı:', recordId);
     
     const taskTypeId = document.getElementById('specificTaskType')?.value;
     console.log('📋 Task Type ID:', taskTypeId, 'isWithdrawalTask:', this.isWithdrawalTask);
     
     if (this.isWithdrawalTask && recordId) {
-        const selectedRecord = this.allIpRecords.find(r => r.id === recordId);
-        console.log('🔍 Seçilen portföy:', selectedRecord);
+        let selectedRecord = this.allIpRecords.find(r => r.id === recordId);
+        console.log('🔍 Seçilen portföy (başlangıç):', selectedRecord);
         
         if (selectedRecord) {
+            // ÖNEMLİ: Eğer transactions yoksa veya boşsa, veritabanından yükle
+            if (!selectedRecord.transactions || selectedRecord.transactions.length === 0) {
+                console.log('⚠️ Transactions yok, veritabanından yükleniyor...');
+                try {
+                    const transactionsResult = await ipRecordsService.getRecordTransactions(recordId);
+                    if (transactionsResult.success && transactionsResult.data) {
+                        selectedRecord.transactions = transactionsResult.data;
+                        console.log('✅ Transactions yüklendi:', selectedRecord.transactions);
+                    } else {
+                        console.log('⚠️ Transactions yüklenemedi:', transactionsResult.error);
+                        selectedRecord.transactions = [];
+                    }
+                } catch (error) {
+                    console.error('❌ Transactions yükleme hatası:', error);
+                    selectedRecord.transactions = [];
+                }
+            }
+            
             const parentTransactions = this.findParentObjectionTransactions(selectedRecord, taskTypeId);
             console.log('🔍 Bulunan parent itirazlar:', parentTransactions);
             
@@ -739,7 +757,7 @@ handleIpRecordChange(recordId) {
             if (parentTransactions.length > 1) {
                 console.log('🔄 Birden fazla itiraz bulundu, modal açılıyor...', parentTransactions);
                 this.showParentSelectionModal(parentTransactions, taskTypeId);
-                // Burada return etmeyin, çünkü selectedIpRecord'u da set etmemiz gerekiyor
+                // Modal açıldı ama selectedIpRecord'u da set etmeliyiz
             } else if (parentTransactions.length === 1) {
                 console.log('✅ Tek itiraz bulundu, otomatik seçiliyor:', parentTransactions[0]);
                 this.selectedParentTransactionId = parentTransactions[0].transactionId;
