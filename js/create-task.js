@@ -743,17 +743,215 @@ setupBaseFormListeners() {
         this.initIpRecordSearchSelector();
     }
 handleIpRecordChange(recordId) {
+    console.log('🔄 handleIpRecordChange çağrıldı:', recordId);
+    // 🔥 YENİ: Geri çekme işlemi kontrolü
+    const taskTypeId = document.getElementById('specificTaskType')?.value;
+    console.log('📋 Task Type ID:', taskTypeId, 'isWithdrawalTask:', this.isWithdrawalTask);
+    
+    if (this.isWithdrawalTask && recordId) {
+        let selectedRecord = this.allIpRecords.find(r => r.id === recordId);
+        console.log('🔍 Seçilen portföy (başlangıç):', selectedRecord);
+        
+        if (selectedRecord) {
+            // Eğer transactions yoksa veya boşsa, veritabanından yükle
+            if (!selectedRecord.transactions || selectedRecord.transactions.length === 0) {
+                console.log('⚠️ Transactions yok, veritabanından yükleniyor...');
+                ipRecordsService.getRecordTransactions(recordId).then(transactionsResult => {
+                    if (transactionsResult.success && transactionsResult.data) {
+                        selectedRecord.transactions = transactionsResult.data;
+                        console.log('✅ Transactions yüklendi:', selectedRecord.transactions);
+                        this.processParentTransactions(selectedRecord, taskTypeId);
+                    } else {
+                        console.log('⚠️ Transactions yüklenemedi:', transactionsResult.error);
+                        selectedRecord.transactions = [];
+                    }
+                }).catch(error => {
+                    console.error('❌ Transactions yükleme hatası:', error);
+                    selectedRecord.transactions = [];
+                });
+            } else {
+                this.processParentTransactions(selectedRecord, taskTypeId);
+            }
+        }
+    }
+ 
     if (recordId) {
         this.selectedIpRecord = this.allIpRecords.find(r => r.id === recordId);
         console.log('📋 IP kaydı seçildi:', this.selectedIpRecord);
     } else {
         this.selectedIpRecord = null;
+        this.selectedParentTransactionId = null; // 🔥 YENİ: Parent seçimini de temizle
     }
     this.checkFormCompleteness();
 }
+processParentTransactions(selectedRecord, taskTypeId) {
+    const parentTransactions = this.findParentObjectionTransactions(selectedRecord, taskTypeId);
+    console.log('🔍 Bulunan parent itirazlar:', parentTransactions);
+    
+    this.pendingChildTransactionData = taskTypeId;
+    
+    if (parentTransactions.length > 1) {
+        console.log('🔄 Birden fazla itiraz bulundu, modal açılıyor...', parentTransactions);
+        this.showParentSelectionModal(parentTransactions, taskTypeId);
+    } else if (parentTransactions.length === 1) {
+        console.log('✅ Tek itiraz bulundu, otomatik seçiliyor:', parentTransactions[0]);
+        this.selectedParentTransactionId = parentTransactions[0].transactionId;
+    } else {
+        alert('Bu portföyde geri çekilecek uygun bir itiraz işlemi bulunamadı. Lütfen işleme konu olacak başka bir portföy seçin veya iş tipini değiştirin.');
+        this.selectedIpRecord = null;
+        document.getElementById('clearSelectedIpRecord')?.click();
+        return;
+    }
+}
+
+findParentObjectionTransactions(record, childTaskTypeId) {
+    console.log('🔍 findParentObjectionTransactions çağrıldı:', {
+        record: record,
+        childTaskTypeId: childTaskTypeId,
+        recordTransactions: record?.transactions,
+        transactionsLength: record?.transactions?.length
+    });
+    
+    if (!record || !record.transactions || !Array.isArray(record.transactions)) {
+        console.log('❌ Record veya transactions array yok');
+        return [];
+    }
+
+    const parentTxTypeIds = new Set();
+    if (String(childTaskTypeId) === '21') { // Yayına İtirazı Geri Çekme
+        parentTxTypeIds.add('20'); // Yayına İtiraz
+        parentTxTypeIds.add('trademark_publication_objection');
+    } else if (String(childTaskTypeId) === '8') { // Karara İtirazı Geri Çekme
+        parentTxTypeIds.add('7'); // Karara İtiraz  
+        parentTxTypeIds.add('trademark_decision_objection');
+    }
+
+    console.log('🔍 Aranacak parent type ID\'leri:', Array.from(parentTxTypeIds));
+    
+    const matchingTransactions = record.transactions.filter(tx => {
+        console.log('🔍 Transaction kontrol ediliyor:', {
+            txType: tx.type,
+            txHierarchy: tx.transactionHierarchy,
+            isParentType: parentTxTypeIds.has(String(tx.type)),
+            isParentHierarchy: tx.transactionHierarchy === 'parent'
+        });
+        
+        return parentTxTypeIds.has(String(tx.type)) && tx.transactionHierarchy === 'parent';
+    });
+
+    console.log('✅ Eşleşen parent transactions:', matchingTransactions);
+    return matchingTransactions;
+}
+
+showParentSelectionModal(parentTransactions, childTaskTypeId) {
+    console.log('🔄 Modal açılıyor...', { parentTransactions, childTaskTypeId });
+    
+    const modal = document.getElementById('selectParentModal');
+    const parentListContainer = document.getElementById('parentListContainer');
+    
+    if (!modal) {
+        console.error('❌ Modal element bulunamadı!');
+        return;
+    }
+    
+    if (!parentListContainer) {
+        console.error('❌ Parent list container bulunamadı!');
+        return;
+    }
+
+    // Modal başlığını güncelle
+    const modalTitleEl = document.getElementById('selectParentModalLabel');
+    if (modalTitleEl) {
+        const isDecisionObjection = String(childTaskTypeId) === '8';
+        modalTitleEl.textContent = isDecisionObjection ? 
+            'Geri Çekilecek Karara İtirazı Seçin' : 
+            'Geri Çekilecek Yayına İtirazı Seçin';
+    }
+
+    // Liste içeriğini temizle ve yeniden oluştur
+    parentListContainer.innerHTML = '';
+    
+    parentTransactions.forEach((tx, index) => {
+        const item = document.createElement('li');
+        item.className = 'list-group-item list-group-item-action';
+        item.style.cursor = 'pointer';
+        
+        // İtiraz tipini belirle
+        const transactionTypeName = this.getTransactionTypeName(tx.type) || 'Bilinmeyen İtiraz Tipi';
+        
+        item.innerHTML = `
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h6 class="mb-1">${transactionTypeName}</h6>
+                    <p class="mb-1">${tx.description || 'Açıklama bulunmuyor'}</p>
+                    <small class="text-muted">Oluşturulma: ${new Date(tx.timestamp).toLocaleDateString('tr-TR')}</small>
+                </div>
+                <i class="fas fa-chevron-right text-muted"></i>
+            </div>
+        `;
+        
+        // Click event listener
+        item.onclick = () => {
+            console.log('📋 İtiraz seçildi:', tx);
+            this.handleParentSelection(tx.transactionId);
+        };
+        
+        parentListContainer.appendChild(item);
+    });
+
+    // Bootstrap modal'ı göster
+    try {
+        $(modal).modal('show');
+        console.log('✅ Modal başarıyla açıldı');
+    } catch (error) {
+        console.error('❌ Modal açma hatası:', error);
+        // jQuery kullanılamıyorsa vanilla JS ile dene
+        modal.style.display = 'block';
+        modal.classList.add('show');
+        document.body.classList.add('modal-open');
+    }
+}
+getTransactionTypeName(typeId) {
+    const transactionType = this.allTransactionTypes.find(t => t.id === typeId);
+    return transactionType ? (transactionType.alias || transactionType.name) : null;
+}
+async handleParentSelection(selectedParentId) {
+    console.log('🔄 Parent seçimi işleniyor:', selectedParentId);
+    
+    // Modal'ı kapat
+    const modal = document.getElementById('selectParentModal');
+    if (modal) {
+        try {
+            $(modal).modal('hide');
+        } catch (error) {
+            modal.style.display = 'none';
+            modal.classList.remove('show');
+            document.body.classList.remove('modal-open');
+        }
+    }
+
+    // Parent transaction ID'sini kaydet
+    this.selectedParentTransactionId = selectedParentId;
+    
+    console.log('✅ Parent transaction seçildi:', {
+        parentId: selectedParentId,
+        childTaskType: this.pendingChildTransactionData
+    });
+    
+    // Form submit işlemini tetikle (eğer form doldurulmuşsa)
+    this.checkFormCompleteness();
+}
+
 async handleSpecificTypeChange(e) {
     const taskTypeId = e.target.value;
     const selectedTaskType = this.allTransactionTypes.find(t => t.id === taskTypeId);
+    const tIdStr = String(selectedTaskType?.id ?? '');
+    this.isWithdrawalTask = (tIdStr === '21' || tIdStr === '8'); // 21: Yayına İtirazı Geri Çekme, 8: Karara İtirazı Geri Çekme
+    console.log('🔄 İş tipi değişti:', {
+        taskTypeId: tIdStr, 
+        isWithdrawalTask: this.isWithdrawalTask,
+        taskName: selectedTaskType?.alias || selectedTaskType?.name
+    });
     // — INSERT #1 — seçime göre arama kaynağı + ilgili taraf görünürlüğü
         try {
         // Eğer TASK_IDS sabitini kullanıyorsan:
