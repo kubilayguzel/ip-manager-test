@@ -250,10 +250,11 @@ body {
 <script src="https://cdn.tiny.cloud/1/uecky9tx0nvoenpj0odjyue9swj52q3sz49i62c745240d99/tinymce/6/tinymce.min.js" referrerpolicy="origin"></script>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
-import { getFirestore, collection, query, orderBy, onSnapshot,doc,getDoc, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
+import { getFirestore, collection, getDocs, query, orderBy, onSnapshot,doc, getDoc, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
 import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-functions.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
 import { loadSharedLayout } from './js/layout-loader.js';
+
 
 const firebaseConfig = {
     apiKey: "AIzaSyDbdqfiVbobnl1BtyiWxhD4bfIcREw8ZRc",
@@ -508,6 +509,7 @@ function showMissingInfo(notification) {
 }
 
 // Bildirimden portföy başvuru numarasını çıkar
+
 async function resolveApplicationNo(notification) {
   console.log('🔍 resolveApplicationNo başladı, notification:', notification);
   
@@ -542,19 +544,43 @@ async function resolveApplicationNo(notification) {
         // ✅ YENİ: associatedTransactionId üzerinden ipRecordId'yi bul
         if (!ipRecordId && d.associatedTransactionId) {
           console.log('🔄 associatedTransactionId üzerinden transaction aranıyor:', d.associatedTransactionId);
+          
+          // Tüm ipRecords'ları tarayıp sub-collection'larda ara
+          console.log('🔍 Tüm ipRecords sub-collections\'ında transaction aranıyor...');
           try {
-            const transRef = doc(db, "transactions", d.associatedTransactionId);
-            const transSnap = await getDoc(transRef);
-            if (transSnap.exists()) {
-              const transData = transSnap.data() || {};
-              console.log('📋 Transaction data:', transData);
-              ipRecordId = transData.ipRecordId || transData.relatedIpRecordId || transData.recordId;
-              console.log('📎 Transaction\'dan bulunan ipRecordId:', ipRecordId);
-            } else {
-              console.log('❌ Transaction bulunamadı:', d.associatedTransactionId);
+            // Firestore'dan tüm ipRecords'ları çek
+            const ipRecordsRef = collection(db, "ipRecords");
+            const ipRecordsSnapshot = await getDocs(ipRecordsRef);
+            
+            console.log(`📊 Toplam ${ipRecordsSnapshot.docs.length} ipRecord kontrol edilecek`);
+            
+            for (const ipDoc of ipRecordsSnapshot.docs) {
+              const ipRecordId_temp = ipDoc.id;
+              
+              try {
+                // Bu ipRecord'ın transactions sub-collection'ında ara
+                const subTransRef = doc(db, "ipRecords", ipRecordId_temp, "transactions", d.associatedTransactionId);
+                const subTransSnap = await getDoc(subTransRef);
+                
+                if (subTransSnap.exists()) {
+                  console.log(`✅ Transaction ${ipRecordId_temp}/transactions/${d.associatedTransactionId} içinde bulundu!`);
+                  const transData = subTransSnap.data() || {};
+                  console.log('📋 Sub-collection transaction data:', transData);
+                  ipRecordId = ipRecordId_temp; // Bu ipRecord'ın ID'si bizim aradığımız
+                  console.log('📎 Sub-collection\'dan bulunan ipRecordId:', ipRecordId);
+                  break;
+                }
+              } catch (subDocError) {
+                // Bu normal, her ipRecord'da bu transaction olmayabilir
+                continue;
+              }
             }
-          } catch (transError) {
-            console.error('❌ Transaction okuma hatası:', transError);
+            
+            if (!ipRecordId) {
+              console.log('❌ Hiçbir ipRecord sub-collection\'ında transaction bulunamadı');
+            }
+          } catch (subSearchError) {
+            console.error('❌ Sub-collection arama hatası:', subSearchError);
           }
         }
         
@@ -592,6 +618,7 @@ async function resolveApplicationNo(notification) {
     return null;
   }
 }
+
 // Modalı doldurup aç
 async function openMissingInfoModal(notification) {
   try {
