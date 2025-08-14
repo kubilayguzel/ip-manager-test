@@ -559,53 +559,32 @@ class CreateTaskModule {
     if (taskTypeId === 'litigation_yidk_annulment') {
       specificFieldsHtml = `
         <div class="form-section">
-          <h3 class="section-title">2. Dava Bilgileri</h3>
-          <div class="form-group full-width">
-            <label for="subjectOfLawsuit" class="form-label">Dava Konusu</label>
-            <textarea id="subjectOfLawsuit" name="subjectOfLawsuit" class="form-textarea"></textarea>
-          </div>
-          <div class="form-group">
-            <label for="courtName" class="form-label">Mahkeme Adı</label>
-            <input type="text" id="courtName" name="courtName" class="form-input">
-          </div>
-          <div class="form-group">
-            <label for="courtFileNumber" class="form-label">Dava Dosya Numarası</label>
-            <input type="text" id="courtFileNumber" name="courtFileNumber" class="form-input">
-          </div>
-          <div class="form-group date-picker-group">
-            <label for="lawsuitDate" class="form-label">Dava Tarihi</label>
-            <input type="date" id="lawsuitDate" name="lawsuitDate" class="form-input">
+          <h3 class="section-title">2. YİDK İptal Davası Detayları</h3>
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="courtName" class="form-label">Mahkeme Adı</label>
+              <input type="text" id="courtName" class="form-input" placeholder="Mahkeme adını girin">
+            </div>
+            <div class="form-group">
+              <label for="caseNumber" class="form-label">Dava Numarası</label>
+              <input type="text" id="caseNumber" class="form-input" placeholder="Dava numarası">
+            </div>
+            <div class="form-group">
+              <label for="caseDate" class="form-label">Dava Tarihi</label>
+              <input type="date" id="caseDate" class="form-input">
+            </div>
+            <div class="form-group">
+              <label for="defendantName" class="form-label">Davalı Adı</label>
+              <input type="text" id="defendantName" class="form-input" placeholder="Davalı adını girin">
+            </div>
           </div>
         </div>
       `;
     }
-    
-    container.innerHTML = `
-      <div class="form-section" id="ipRecordSearchSection">
-      <h3 class="section-title">2. İşleme Konu Varlık</h3>
 
-      <div class="form-group full-width" id="ipRecordSearchWrapper">
-        <label for="ipRecordSearch" class="form-label">Portföyden Ara</label>
-
-        <div class="position-relative">
-        <input type="text" id="ipRecordSearch" class="form-input" placeholder="Başlık, dosya no, başvuru no, sahip adı...">
-        <div id="ipRecordSearchResults"
-          style="position:absolute; top:100%; left:0; right:0; z-index:1000; background:#fff; border:1px solid #ddd; border-top:none; display:none; max-height:260px; overflow:auto;">
-        </div>
-        </div>
-
-        <div id="selectedIpRecordContainer" class="mt-2" style="display:none;">
-        <div class="p-2 border rounded d-flex justify-content-between align-items-center">
-          <div>
-          <div class="text-muted" id="selectedIpRecordLabel"></div>
-          <small class="text-secondary" id="selectedIpRecordMeta"></small>
-          </div>
-          <button type="button" class="btn btn-sm btn-outline-danger" id="clearSelectedIpRecord">Kaldır</button>
-        </div>
-        </div>
-      </div>
-      </div>
-     ${needsRelatedParty ? `
+    const html = `
+      ${needsRelatedParty ? 
+      `
       <div class="form-section" id="relatedPartySection">
         <h3 class="section-title" id="relatedPartyTitle">3. ${partyLabel}</h3>
         <div class="form-group full-width">
@@ -629,7 +608,9 @@ class CreateTaskModule {
       </div>
       ` : ''}
 
-      ${specificFieldsHtml} <div class="form-section">
+      ${specificFieldsHtml}
+
+      <div class="form-section">
         <h3 class="section-title">Tahakkuk Bilgileri</h3>
         <div class="form-grid">
           <div class="form-group">
@@ -658,10 +639,10 @@ class CreateTaskModule {
           </div>
           <div class="form-group">
             <label for="vatRate" class="form-label">KDV Oranı (%)</label>
-            <input type="number" id="vatRate" class="form-input" value="20">
+            <input type="number" id="vatRate" class="form-input" placeholder="20" value="20" step="0.01">
           </div>
           <div class="form-group">
-            <label for="totalAmountDisplay" class="form-label">Toplam Tutar</label>
+            <label for="totalAmount" class="form-label">Toplam Tutar</label>
             <div id="totalAmountDisplay" class="total-amount-display">0.00 TRY</div>
           </div>
           <div class="form-group full-width">
@@ -710,6 +691,7 @@ class CreateTaskModule {
       </div>
       <div class="form-actions"><button type="button" id="cancelBtn" class="btn btn-secondary">İptal</button><button type="submit" id="saveTaskBtn" class="btn btn-primary" disabled>İşi Oluştur ve Kaydet</button></div>
     `;
+    
     const selectedTaskTypeObj = this.allTransactionTypes.find(t => asId(t.id) === asId(taskTypeId));
     this.updateRelatedPartySectionVisibility(selectedTaskTypeObj);
     this.renderSelectedRelatedParties();
@@ -719,7 +701,7 @@ class CreateTaskModule {
     this.updateButtonsAndTabs();
     this.checkFormCompleteness();
     this.initIpRecordSearchSelector();
-  }
+}
 async handleIpRecordChange(recordId) {
     console.log('🔄 handleIpRecordChange çağrıldı:', recordId);
     
