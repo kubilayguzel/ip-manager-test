@@ -26,6 +26,50 @@ if (!admin.apps.length) {
   admin.initializeApp();
 }
 const db = admin.firestore();
+
+// === Recipient Helpers (injected) ===
+function mapMainProcessTypeToDomain(mainProcessType) {
+  if ((mainProcessType || '').toLowerCase() === 'trademark') return 'marka';
+  return 'marka'; // genişletilebilir: patent/tasarım
+}
+
+async function resolveRecipientsForDomain(ipRecord, domain) {
+  const toSet = new Set();
+  const ccSet = new Set();
+
+  const applicantIds = Array.isArray(ipRecord?.owners)
+    ? ipRecord.owners.map(o => o?.id).filter(Boolean)
+    : [];
+
+  if (applicantIds.length === 0) return { toList: [], ccList: [] };
+
+  const ids = applicantIds.slice(0, 10); // Firestore IN max 10
+  const prSnap = await db.collection('personsRelated')
+    .where('personId', 'in', ids)
+    .get();
+
+  for (const doc of prSnap.docs) {
+    const rel = doc.data() || {};
+    if (rel?.responsible?.[domain] !== true) continue;
+
+    const relatedPersonId = rel.personId;
+    if (!relatedPersonId) continue;
+
+    const pSnap = await db.collection('persons').doc(relatedPersonId).get();
+    if (!pSnap.exists) continue;
+
+    const email = (pSnap.data()?.email || '').trim();
+    if (!email) continue;
+
+    const n = rel?.notify?.[domain] || {};
+    if (n.to === true) toSet.add(email);
+    if (n.cc === true) ccSet.add(email);
+  }
+
+  return { toList: [...toSet], ccList: [...ccSet] };
+}
+// === /Recipient Helpers ===
+
 const pubsubClient = new PubSub(); // pubsubClient'ı burada tanımlayın
 
 // ********************************************************************************
@@ -219,16 +263,56 @@ export const validateEtebsTokenV2 = onRequest(
 );
 
 // Send Email Notification (v2 Callable Function)
-export const sendEmailNotificationV2 = onCall(
-    {
-        region: 'europe-west1'
-    },
-    async (request) => {
-        const { notificationId } = request.data;
 
-        if (!notificationId) {
-            throw new HttpsError("invalid-argument", "notificationId parametresi zorunludur.");
-        }
+export const sendEmailNotificationV2 = onCall(
+  { region: 'europe-west1' },
+  async (request) => {
+    const { notificationId } = request.data;
+    if (!notificationId) {
+      throw new HttpsError("invalid-argument", "notificationId parametresi zorunludur.");
+    }
+    const ref = db.collection("mail_notifications").doc(notificationId);
+    const snap = await ref.get();
+    if (!snap.exists) {
+      throw new HttpsError("not-found", "Bildirim bulunamadı.");
+    }
+    const n = snap.data();
+    const toList = Array.isArray(n.toList) ? n.toList : (n.recipientEmail ? [n.recipientEmail] : []);
+    const ccList = Array.isArray(n.ccList) ? n.ccList : [];
+    if (toList.length === 0 && ccList.length === 0) {
+      await ref.update({
+        status: "missing_info",
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        errorInfo: "Alıcı listesi boş (to/cc)."
+      });
+      throw new HttpsError("failed-precondition", "Alıcı listesi boş.");
+    }
+    const mailOptions = {
+      from: `"IP Manager" <kubilayguzel@evrekapatent.com>`,
+      to: toList.join(','),
+      cc: ccList.length ? ccList.join(',') : undefined,
+      subject: n.subject,
+      html: n.body
+    };
+    try {
+      await transporter.sendMail(mailOptions);
+      await ref.update({
+        status: "sent",
+        sentAt: admin.firestore.FieldValue.serverTimestamp(),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp()
+      });
+      return { success: true };
+    } catch (error) {
+      await ref.update({
+        status: "failed",
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        errorInfo: error.message
+      });
+      throw new HttpsError("internal", "E-posta gönderilirken hata oluştu.", error.message);
+    }
+  }
+);
+}
 
         const notificationRef = db.collection("mail_notifications").doc(notificationId);
         const notificationDoc = await notificationRef.get();
@@ -285,6 +369,50 @@ export const cleanupEtebsLogsV2 = onSchedule(
         console.log('🧹 ETEBS logs cleanup started');
 
         const db = admin.firestore();
+
+// === Recipient Helpers (injected) ===
+function mapMainProcessTypeToDomain(mainProcessType) {
+  if ((mainProcessType || '').toLowerCase() === 'trademark') return 'marka';
+  return 'marka'; // genişletilebilir: patent/tasarım
+}
+
+async function resolveRecipientsForDomain(ipRecord, domain) {
+  const toSet = new Set();
+  const ccSet = new Set();
+
+  const applicantIds = Array.isArray(ipRecord?.owners)
+    ? ipRecord.owners.map(o => o?.id).filter(Boolean)
+    : [];
+
+  if (applicantIds.length === 0) return { toList: [], ccList: [] };
+
+  const ids = applicantIds.slice(0, 10); // Firestore IN max 10
+  const prSnap = await db.collection('personsRelated')
+    .where('personId', 'in', ids)
+    .get();
+
+  for (const doc of prSnap.docs) {
+    const rel = doc.data() || {};
+    if (rel?.responsible?.[domain] !== true) continue;
+
+    const relatedPersonId = rel.personId;
+    if (!relatedPersonId) continue;
+
+    const pSnap = await db.collection('persons').doc(relatedPersonId).get();
+    if (!pSnap.exists) continue;
+
+    const email = (pSnap.data()?.email || '').trim();
+    if (!email) continue;
+
+    const n = rel?.notify?.[domain] || {};
+    if (n.to === true) toSet.add(email);
+    if (n.cc === true) ccSet.add(email);
+  }
+
+  return { toList: [...toSet], ccList: [...ccSet] };
+}
+// === /Recipient Helpers ===
+
         const thirtyDaysAgo = new Date();
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
@@ -314,19 +442,116 @@ export const cleanupEtebsLogsV2 = onSchedule(
 //              FIRESTORE TRIGGER FONKSİYONLARI (v2)
 // =========================================================
 
+
 export const createMailNotificationOnDocumentIndexV2 = onDocumentCreated(
-    {
-        document: "indexed_documents/{docId}",
-        region: 'europe-west1'
-    },
-    async (event) => {
-        const snap = event.data;
-        const newDocument = snap.data();
-        const docId = event.params.docId;
+  { document: "indexed_documents/{docId}", region: 'europe-west1' },
+  async (event) => {
+    const newDocument = event.data.data();
+    const docId = event.params.docId;
+
+    let missingFields = [];
+    let subject = "", body = "", status = "pending";
+
+    try {
+      const ruleQs = await db.collection("template_rules")
+        .where("sourceType", "==", "document")
+        .where("mainProcessType", "==", newDocument.mainProcessType)
+        .where("subProcessType", "==", newDocument.subProcessType)
+        .limit(1).get();
+      const rule = ruleQs.empty ? null : ruleQs.docs[0].data();
+      const template = rule ? (await db.collection("mail_templates").doc(rule.templateId).get()).data() : null;
+      if (!rule) missingFields.push("templateRule");
+      if (!template) missingFields.push("mailTemplate");
+
+      if (template) {
+        const params = { ...newDocument };
+        subject = (template.subject || "").replace(/{{(.*?)}}/g, (m,p)=> params[p.trim()] ?? m);
+        body = (template.body || "").replace(/{{(.*?)}}/g, (m,p)=> params[p.trim()] ?? m);
+      } else {
+        subject = "Eksik Bilgi: Bildirim Tamamlanamadı";
+        body = "Şablon bulunamadı.";
+        status = "missing_info";
+      }
+
+      const domain = mapMainProcessTypeToDomain(newDocument.mainProcessType);
+      let toList = [], ccList = [], ipRecordId = newDocument.ipRecordId || null;
+      if (ipRecordId) {
+        const ipSnap = await db.collection('ipRecords').doc(ipRecordId).get();
+        if (ipSnap.exists) {
+          const lists = await resolveRecipientsForDomain(ipSnap.data(), domain);
+          toList = lists.toList; ccList = lists.ccList;
+        }
+      }
+
+      if (!subject) missingFields.push("subject");
+      if (!body) missingFields.push("body");
+      if (toList.length === 0 && ccList.length === 0) missingFields.push("recipientEmail");
+      if (missingFields.length) status = "missing_info";
+
+      await db.collection("mail_notifications").add({
+        toList, ccList, domain,
+        ipRecordId: ipRecordId || null,
+        subject, body, status, missingFields,
+        sourceDocumentId: docId,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp()
+      });
+      return null;
+    } catch (e) {
+      console.error("createMailNotificationOnDocumentIndexV2 error:", e);
+      return null;
+    }
+  }
+);
+const docId = event.params.docId;
         
         console.log(`Yeni belge algılandı: ${docId}`, newDocument);
 
         const db = admin.firestore();
+
+// === Recipient Helpers (injected) ===
+function mapMainProcessTypeToDomain(mainProcessType) {
+  if ((mainProcessType || '').toLowerCase() === 'trademark') return 'marka';
+  return 'marka'; // genişletilebilir: patent/tasarım
+}
+
+async function resolveRecipientsForDomain(ipRecord, domain) {
+  const toSet = new Set();
+  const ccSet = new Set();
+
+  const applicantIds = Array.isArray(ipRecord?.owners)
+    ? ipRecord.owners.map(o => o?.id).filter(Boolean)
+    : [];
+
+  if (applicantIds.length === 0) return { toList: [], ccList: [] };
+
+  const ids = applicantIds.slice(0, 10); // Firestore IN max 10
+  const prSnap = await db.collection('personsRelated')
+    .where('personId', 'in', ids)
+    .get();
+
+  for (const doc of prSnap.docs) {
+    const rel = doc.data() || {};
+    if (rel?.responsible?.[domain] !== true) continue;
+
+    const relatedPersonId = rel.personId;
+    if (!relatedPersonId) continue;
+
+    const pSnap = await db.collection('persons').doc(relatedPersonId).get();
+    if (!pSnap.exists) continue;
+
+    const email = (pSnap.data()?.email || '').trim();
+    if (!email) continue;
+
+    const n = rel?.notify?.[domain] || {};
+    if (n.to === true) toSet.add(email);
+    if (n.cc === true) ccSet.add(email);
+  }
+
+  return { toList: [...toSet], ccList: [...ccSet] };
+}
+// === /Recipient Helpers ===
+
         let missingFields = [];
         let rule = null;
         let template = null;
@@ -427,20 +652,68 @@ export const createMailNotificationOnDocumentIndexV2 = onDocumentCreated(
     }
 );
 
+
 export const createMailNotificationOnDocumentStatusChangeV2 = onDocumentUpdated(
-    {
-        document: "unindexed_pdfs/{docId}",
-        region: 'europe-west1'
-    },
-      async (event) => {
-        const change = event.data;
-        if (!change || !change.before || !change.after) {
-          console.error("Unexpected Firestore event shape for onDocumentUpdated.", {
-            hasChange: !!change,
-            hasBefore: !!change?.before,
-            hasAfter: !!change?.after,
-          });
-          return null;
+  { document: "unindexed_pdfs/{docId}", region: 'europe-west1' },
+  async (event) => {
+    const before = event.data.before.data() || {};
+    const after  = event.data.after.data()  || {};
+    const docId = event.params.docId;
+
+    if (!(before.status !== 'indexed' && after.status === 'indexed')) {
+      return null;
+    }
+
+    try {
+      let status = "pending";
+      const ruleQs = await db.collection("template_rules")
+        .where("sourceType", "==", "document")
+        .where("mainProcessType", "==", after.mainProcessType)
+        .where("subProcessType", "==", after.subProcessType)
+        .limit(1).get();
+      const rule = ruleQs.empty ? null : ruleQs.docs[0].data();
+      const template = rule ? (await db.collection("mail_templates").doc(rule.templateId).get()).data() : null;
+      if (!rule || !template) status = "missing_info";
+
+      const params = { ...after };
+      const subject = template ? (template.subject || "").replace(/{{(.*?)}}/g, (m,p)=> params[p.trim()] ?? m)
+                               : "Eksik Bilgi: Bildirim Tamamlanamadı";
+      const body    = template ? (template.body || "").replace(/{{(.*?)}}/g, (m,p)=> params[p.trim()] ?? m)
+                               : "Şablon bulunamadı veya eksik.";
+
+      const domain = mapMainProcessTypeToDomain(after.mainProcessType);
+      let toList = [], ccList = [], ipRecordId = after.ipRecordId || null;
+      if (ipRecordId) {
+        const ipSnap = await db.collection('ipRecords').doc(ipRecordId).get();
+        if (ipSnap.exists) {
+          const lists = await resolveRecipientsForDomain(ipSnap.data(), domain);
+          toList = lists.toList; ccList = lists.ccList;
+        }
+      }
+
+      const missingFields = [];
+      if (!subject) missingFields.push('subject');
+      if (!body) missingFields.push('body');
+      if (toList.length === 0 && ccList.length === 0) missingFields.push('recipientEmail');
+      if (!template) missingFields.push('template');
+      if (missingFields.length) status = "missing_info";
+
+      await db.collection("mail_notifications").add({
+        toList, ccList, domain,
+        ipRecordId: ipRecordId || null,
+        subject, body, status, missingFields,
+        sourceDocumentId: docId,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp()
+      });
+      return null;
+    } catch (e) {
+      console.error("createMailNotificationOnDocumentStatusChangeV2 error:", e);
+      return null;
+    }
+  }
+);
+return null;
         }
         const before = change.before.data() || {};
         const after  = change.after.data()  || {};
@@ -450,6 +723,50 @@ export const createMailNotificationOnDocumentStatusChangeV2 = onDocumentUpdated(
             console.log(`Belge indexlendi: ${docId}`, after);
 
             const db = admin.firestore();
+
+// === Recipient Helpers (injected) ===
+function mapMainProcessTypeToDomain(mainProcessType) {
+  if ((mainProcessType || '').toLowerCase() === 'trademark') return 'marka';
+  return 'marka'; // genişletilebilir: patent/tasarım
+}
+
+async function resolveRecipientsForDomain(ipRecord, domain) {
+  const toSet = new Set();
+  const ccSet = new Set();
+
+  const applicantIds = Array.isArray(ipRecord?.owners)
+    ? ipRecord.owners.map(o => o?.id).filter(Boolean)
+    : [];
+
+  if (applicantIds.length === 0) return { toList: [], ccList: [] };
+
+  const ids = applicantIds.slice(0, 10); // Firestore IN max 10
+  const prSnap = await db.collection('personsRelated')
+    .where('personId', 'in', ids)
+    .get();
+
+  for (const doc of prSnap.docs) {
+    const rel = doc.data() || {};
+    if (rel?.responsible?.[domain] !== true) continue;
+
+    const relatedPersonId = rel.personId;
+    if (!relatedPersonId) continue;
+
+    const pSnap = await db.collection('persons').doc(relatedPersonId).get();
+    if (!pSnap.exists) continue;
+
+    const email = (pSnap.data()?.email || '').trim();
+    if (!email) continue;
+
+    const n = rel?.notify?.[domain] || {};
+    if (n.to === true) toSet.add(email);
+    if (n.cc === true) ccSet.add(email);
+  }
+
+  return { toList: [...toSet], ccList: [...ccSet] };
+}
+// === /Recipient Helpers ===
+
 
             let rule = null;
             let template = null;
