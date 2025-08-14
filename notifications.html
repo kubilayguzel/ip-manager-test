@@ -502,6 +502,7 @@ const __missingTrMap = {
 let __currentMissingNotification = null;
 
 function showMissingInfo(notification) {
+  console.log('showMissingInfo çağrıldı:', notification);
   __currentMissingNotification = notification;
   openMissingInfoModal(notification);
 }
