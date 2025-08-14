@@ -112,6 +112,7 @@ async init() {
   }
 
   this.setupEventListeners();
+  this.setupIpRecordSearchListeners();
 }
 
     // Basit debounce
@@ -940,6 +941,21 @@ async handleParentSelection(selectedParentId) {
     
     // Form submit işlemini tetikle (eğer form doldurulmuşsa)
     this.checkFormCompleteness();
+}
+
+setupIpRecordSearchListeners() {
+    const ipRecordSearchResults = document.getElementById('ipRecordSearchResults');
+    if (ipRecordSearchResults) {
+        ipRecordSearchResults.addEventListener('click', (e) => {
+            const item = e.target.closest('.search-result-item') || e.target.closest('[data-id]');
+            if (item) {
+                const recordId = item.dataset.id;
+                if (recordId && this.selectIpRecord) {
+                    this.selectIpRecord(recordId);
+                }
+            }
+        });
+    }
 }
 
 async handleSpecificTypeChange(e) {
