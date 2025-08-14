@@ -1379,6 +1379,8 @@
                 }
 
                 addRelatedHandler() {
+          const relatedId = document.getElementById('relatedId').value;
+          if (relatedId) { return this.updateRelatedHandler(); }
                     const name = document.getElementById('relatedName').value.trim();
                     const email = document.getElementById('relatedEmail').value.trim();
                     const phone = document.getElementById('relatedPhone').value.trim();
