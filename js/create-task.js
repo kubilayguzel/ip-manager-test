@@ -901,16 +901,16 @@ showParentSelectionModal(parentTransactions, childTaskTypeId) {
     });
 
     // Bootstrap modal'ı göster
-    try {
-        $(modal).modal('show');
-        console.log('✅ Modal başarıyla açıldı');
-    } catch (error) {
-        console.error('❌ Modal açma hatası:', error);
-        // jQuery kullanılamıyorsa vanilla JS ile dene
-        modal.style.display = 'block';
-        modal.classList.add('show');
-        document.body.classList.add('modal-open');
-    }
+try {
+    $('#selectParentModal').modal('show');
+    console.log('✅ Modal başarıyla açıldı');
+} catch (error) {
+    console.error('❌ Modal açma hatası:', error);
+    // Fallback
+    modal.style.display = 'block';
+    modal.classList.add('show');
+    document.body.classList.add('modal-open');
+}
 }
 getTransactionTypeName(typeId) {
     const transactionType = this.allTransactionTypes.find(t => t.id === typeId);
