@@ -87,6 +87,7 @@ async init() {
       this.getCountries()
     ]);
 
+    // Dönen yapıları normalize et (data / items / dizi)
     const pickArray = (x) =>
       Array.isArray(x?.data)  ? x.data  :
       Array.isArray(x?.items) ? x.items :
@@ -98,6 +99,7 @@ async init() {
     this.allTransactionTypes = pickArray(transactionTypesResult);
     this.allCountries = pickArray(countriesResult);
 
+    // Logları try bloğu içinde yap (scope hatası olmasın)
     console.log('[INIT] allIpRecords size =', this.allIpRecords.length);
     console.log('[INIT] persons size =', this.allPersons.length);
     console.log('[INIT] users size =', this.allUsers.length);
@@ -110,15 +112,10 @@ async init() {
   }
 
   this.setupEventListeners();
-  
-  // 🔥 Element yüklendikten sonra event listener kur
-  setTimeout(() => {
-    this.setupIpRecordSearchListeners();
-    console.log('✅ Delayed event listeners kuruldu');
-  }, 1000);
+  this.setupIpRecordSearchListeners();
 }
 
-// Basit debounce
+    // Basit debounce
 
     debounce(fn, delay = 250) {
     let t;
