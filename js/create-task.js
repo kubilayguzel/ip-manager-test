@@ -1862,6 +1862,7 @@ async handleSpecificTypeChange(e) {
         const searchResults = document.getElementById('portfolioSearchResults');
         if (searchResults) searchResults.innerHTML = '';
         this.checkFormCompleteness();
+        this.handleIpRecordChange(recordId);
     }
     searchPersons(query, target) {
         const resultsContainerId = {
