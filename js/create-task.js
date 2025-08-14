@@ -944,38 +944,17 @@ async handleParentSelection(selectedParentId) {
 }
 
 setupIpRecordSearchListeners() {
-    console.log('🔧 setupIpRecordSearchListeners çağrıldı');
-    
     const ipRecordSearchResults = document.getElementById('ipRecordSearchResults');
     if (ipRecordSearchResults) {
-        console.log('✅ ipRecordSearchResults bulundu, event listener ekleniyor');
-        
-        // SADECE click event listener ekle (mevcut listener'ları bozmadan)
         ipRecordSearchResults.addEventListener('click', (e) => {
-            console.log('🔥 Portföy seçimi click event tetiklendi');
             const item = e.target.closest('.search-result-item') || e.target.closest('[data-id]');
             if (item) {
                 const recordId = item.dataset.id;
-                console.log('🔥 Seçilen portföy ID:', recordId);
                 if (recordId && this.selectIpRecord) {
                     this.selectIpRecord(recordId);
-                } else {
-                    console.log('❌ selectIpRecord fonksiyonu bulunamadı');
                 }
-            } else {
-                console.log('❌ data-id bulunamadı, tıklanan element:', e.target);
             }
         });
-        
-        console.log('✅ Click event listener başarıyla eklendi');
-    } else {
-        console.log('❌ ipRecordSearchResults element bulunamadı');
-        
-        // Element yoksa bir süre sonra tekrar dene
-        setTimeout(() => {
-            console.log('🔄 ipRecordSearchResults için tekrar deneniyor...');
-            this.setupIpRecordSearchListeners();
-        }, 1000);
     }
 }
 
