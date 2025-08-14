@@ -173,123 +173,93 @@ class CreateTaskModule {
 
         const line = `${appNo ? (appNo + ' — ') : ''}${title}`;
         const imgHtml = img ?
-          (img.startsWith('http') ?
-            `<img src="${img}" class="ip-thumb" style="width:96px;height:96px;object-fit:contain;border-radius:4px;border:1px solid #eee;background:#fff;">` :
-            `<img data-storage-path="${img}" class="ip-thumb" style="width:96px;height:96px;object-fit:contain;border-radius:4px;border:1px solid #eee;background:#fff;">`) :
-          '';
+          (img.startsWith('http') ? 
+            `<img src="${img}" class="result-thumb" alt="">` : 
+            `<img src="/uploads/${img}" class="result-thumb" alt="">`
+          ) : '';
 
-        return `
-          <div class="search-result-item d-flex align-items-center"
-               data-id="${id}"
-               style="padding:8px 10px; border-bottom:1px solid #eee; cursor:pointer; gap:10px;">
+        // ÖNEMLİ: data-id attribute ekleyin ve result-item class'ı kullanın
+        return `<div class="result-item p-2 border-bottom" data-id="${id}" style="cursor:pointer;">
+          <div class="d-flex align-items-center">
             ${imgHtml}
-            <div>
-              <div><strong>${line}</strong></div>
-              <div class="text-muted" style="font-size:12px;">${owner || ''}</div>
+            <div class="flex-grow-1 ml-2">
+              <div class="font-weight-bold">${line}</div>
+              <small class="text-muted">${owner}</small>
             </div>
-          </div>`;
+          </div>
+        </div>`;
       }).join('');
-
       results.style.display = 'block';
-
-      results.querySelectorAll('img[data-storage-path]').forEach(async imgEl => {
-        const path = imgEl.getAttribute('data-storage-path');
-        const url = await this.resolveImageUrl(path);
-        if (url) {
-          imgEl.src = url;
-          imgEl.removeAttribute('data-storage-path');
-        }
-      });
     };
 
-    const doSearch = this.debounce((raw) => {
-      const term = norm(raw).trim();
-      if (!term) {
-        results.style.display = 'none';
+    const searchData = this.searchSource === 'portfolio' ? this.allIpRecords : this.bulletinRecords;
+
+    input.addEventListener('input', this.debounce((e) => {
+      const query = e.target.value.trim();
+      if (query.length < 2) {
         results.innerHTML = '';
+        results.style.display = 'none';
         return;
       }
 
-      let pool;
-      const typeId = document.getElementById('specificTaskType')?.value;
-      const isOpposition = this.isPublicationOpposition(typeId);
+      const filtered = searchData.filter(r => {
+        const tText = this.searchSource === 'bulletin' ? 
+          (r.markName || '') : 
+          (r.title || r.name || r.markName || '');
+        const appNo = this.searchSource === 'bulletin' ? 
+          (r.applicationNo || '') : 
+          (r.applicationNo || r.applicationNumber || '');
+        const owner = this.searchSource === 'bulletin' ? 
+          (Array.isArray(r.holders) && r.holders[0]?.name ? r.holders[0].name : '') : 
+          (r.ownerName || r.owner || '');
 
-      if (this.searchSource === 'bulletin') {
-        pool = this.allBulletinRecords || [];
-      } else {
-        const basePool = this.allIpRecords || [];
-        pool = isOpposition ?
-          basePool :
-          basePool.filter(r => String(r.recordOwnerType || '').toLowerCase() === 'self');
-      }
-
-      const filtered = pool.filter(r => {
-        const hay = (this.searchSource === 'bulletin' ?
-          [
-            r.markName,
-            r.applicationNo || r.applicationNumber
-          ] :
-          [
-            r.title, r.name, r.markName, r.applicationTitle,
-            r.ownerName, r.owner, r.applicantName,
-            r.applicationNo, r.applicationNumber, r.appNo,
-            r.fileNo, r.registrationNo
-          ])
-          .map(norm).join(' ');
-
-        if (hay.includes(term)) return true;
-
-        try {
-          return Object.values(r).map(norm).join(' ').includes(term);
-        } catch {
-          return false;
-        }
+        return norm(tText).includes(norm(query)) || 
+               norm(appNo).includes(norm(query)) || 
+               norm(owner).includes(norm(query));
       });
 
       renderResults(filtered);
-    }, 250);
+    }, 300));
 
-    input.addEventListener('input', (e) => doSearch(e.target.value));
-
-    results.addEventListener('click', async (e) => {
-      const item = e.target.closest('.search-result-item');
-      if (!item) return;
-
-      const id = item.dataset.id;
-      let pool;
-      const typeId2 = document.getElementById('specificTaskType')?.value;
-      const isOpposition2 = this.isPublicationOpposition(typeId2);
-
-      if (this.searchSource === 'bulletin') {
-        pool = this.allBulletinRecords || [];
-      } else {
-        const basePool = this.allIpRecords || [];
-        pool = isOpposition2 ?
-          basePool :
-          basePool.filter(r => String(r.recordOwnerType || '').toLowerCase() === 'self');
+    // 🔥 ÖNEMLİ: Portföy seçimi için event listener ekleme
+    results.addEventListener('click', (e) => {
+      const item = e.target.closest('.result-item');
+      if (item) {
+        const recordId = item.dataset.id;
+        console.log('🔄 Portföy seçildi, handleIpRecordChange çağrılıyor:', recordId);
+        
+        // Önce seçilen kaydı bulup selectRecord fonksiyonunu çağır
+        const record = searchData.find(r => (r.id || r.recordId || r.docId) === recordId);
+        if (record) {
+          this.selectRecord(record);
+        }
       }
+    });
 
-      const rec = pool.find(x => (x.id || x.recordId || x.docId || x._id || x.uid) === id) || {};
-
-      const title = (this.searchSource === 'bulletin') ?
+    // selectRecord fonksiyonunu güncelle/ekle
+    const selectRecord = async (rec) => {
+      const id = rec.id || rec.recordId || rec.docId || rec._id || rec.uid || '';
+      const appNo = this.searchSource === 'bulletin' ?
+        (rec.applicationNo || '') :
+        (rec.applicationNo || rec.applicationNumber || rec.appNo || rec.fileNo || rec.registrationNo || '');
+      const title = this.searchSource === 'bulletin' ?
         (rec.markName || 'Başlık yok') :
         (rec.title || rec.name || rec.markName || rec.applicationTitle || 'Başlık yok');
-      const owner = (this.searchSource === 'bulletin') ?
-        (Array.isArray(rec.holders) && r.holders[0]?.name ? r.holders[0].name : '') :
+      const owner = this.searchSource === 'bulletin' ?
+        (Array.isArray(rec.holders) && rec.holders[0]?.name ? rec.holders[0].name : '') :
         (rec.ownerName || rec.owner || rec.applicantName || '');
-      const appNo = (this.searchSource === 'bulletin') ?
-        (rec.applicationNo || rec.applicationNumber || '') :
-        (rec.applicationNo || rec.applicationNumber || rec.appNo || rec.fileNo || rec.registrationNo || '');
-      const img = (this.searchSource === 'bulletin') ?
+      const img = this.searchSource === 'bulletin' ?
         (rec.imagePath || '') :
         (rec.brandImageUrl || rec.markImageUrl || rec.brandSampleUrl || rec.markSampleUrl || rec.imageUrl || rec.brandSamplePath || '');
 
+      // selectedIpRecord'u set et (transactions array'i dahil)
       this.selectedIpRecord = {
         id: rec.id || id,
         title,
         ownerName: owner,
         applicationNo: appNo,
-        source: this.searchSource
+        source: this.searchSource,
+        transactions: rec.transactions || [] // ÖNEMLİ: transactions array'ini dahil et
       };
 
       selectedBox.style.display = 'block';
@@ -313,12 +283,21 @@ class CreateTaskModule {
       results.style.display = 'none';
       results.innerHTML = '';
       input.value = '';
+      
+      // 🔥 ÖNEMLİ: Portföy seçildikten sonra handleIpRecordChange'i çağır
+      console.log('📋 Portföy seçildi, handleIpRecordChange çağrılıyor:', this.selectedIpRecord.id);
+      this.handleIpRecordChange(this.selectedIpRecord.id);
+      
       this.checkFormCompleteness();
-    });
+    };
+
+    // selectRecord fonksiyonunu this'e ata (bind et)
+    this.selectRecord = selectRecord.bind(this);
 
     if (clearBtn) {
       clearBtn.addEventListener('click', () => {
         this.selectedIpRecord = null;
+        this.selectedParentTransactionId = null; // Parent seçimini de temizle
         selectedBox.style.display = 'none';
         selectedLabel.textContent = '';
         selectedMeta.textContent = '';
@@ -331,9 +310,7 @@ class CreateTaskModule {
     document.addEventListener('click', (e) => {
       if (!results.contains(e.target) && e.target !== input) results.style.display = 'none';
     });
-  }
-
-
+}
   populateAssignedToDropdown() {
     const assignedToSelect = document.getElementById('assignedTo');
     if (!assignedToSelect) {
@@ -744,40 +721,49 @@ class CreateTaskModule {
     this.initIpRecordSearchSelector();
   }
 handleIpRecordChange(recordId) {
+    console.log('🔄 handleIpRecordChange çağrıldı:', recordId);
+    
     const taskTypeId = document.getElementById('specificTaskType')?.value;
+    console.log('📋 Task Type ID:', taskTypeId, 'isWithdrawalTask:', this.isWithdrawalTask);
     
     if (this.isWithdrawalTask && recordId) {
         const selectedRecord = this.allIpRecords.find(r => r.id === recordId);
+        console.log('🔍 Seçilen portföy:', selectedRecord);
+        
         if (selectedRecord) {
             const parentTransactions = this.findParentObjectionTransactions(selectedRecord, taskTypeId);
+            console.log('🔍 Bulunan parent itirazlar:', parentTransactions);
             
-            // ÖNEMLİ: pendingChildTransactionData'yı her durumda set edin
-            this.pendingChildTransactionData = taskTypeId; // Sadece task type ID'sini tutuyoruz
+            this.pendingChildTransactionData = taskTypeId;
             
             if (parentTransactions.length > 1) {
                 console.log('🔄 Birden fazla itiraz bulundu, modal açılıyor...', parentTransactions);
                 this.showParentSelectionModal(parentTransactions, taskTypeId);
+                // Burada return etmeyin, çünkü selectedIpRecord'u da set etmemiz gerekiyor
             } else if (parentTransactions.length === 1) {
                 console.log('✅ Tek itiraz bulundu, otomatik seçiliyor:', parentTransactions[0]);
-                this.handleParentSelection(parentTransactions[0].transactionId);
+                this.selectedParentTransactionId = parentTransactions[0].transactionId;
             } else {
                 alert('Bu portföyde geri çekilecek uygun bir itiraz işlemi bulunamadı. Lütfen işleme konu olacak başka bir portföy seçin veya iş tipini değiştirin.');
                 this.selectedIpRecord = null;
                 document.getElementById('clearSelectedIpRecord')?.click();
+                this.checkFormCompleteness();
                 return;
             }
         }
     }
     
+    // ÖNEMLİ: selectedIpRecord'u her durumda set et
     if (recordId) {
         this.selectedIpRecord = this.allIpRecords.find(r => r.id === recordId);
         console.log('📋 IP kaydı seçildi:', this.selectedIpRecord);
     } else {
         this.selectedIpRecord = null;
+        this.selectedParentTransactionId = null; // Parent seçimini de temizle
     }
+    
     this.checkFormCompleteness();
 }
-
   findParentObjectionTransactions(record, childTaskTypeId) {
     if (!record || !record.transactions || !Array.isArray(record.transactions)) return [];
 
