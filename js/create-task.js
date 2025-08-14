@@ -797,7 +797,7 @@ processParentTransactions(selectedRecord, taskTypeId) {
         this.showParentSelectionModal(parentTransactions, taskTypeId);
     } else if (parentTransactions.length === 1) {
         console.log('✅ Tek itiraz bulundu, otomatik seçiliyor:', parentTransactions[0]);
-        this.selectedParentTransactionId = parentTransactions[0].transactionId;
+        this.selectedParentTransactionId = parentTransactions[0].id;
     } else {
         alert('Bu portföyde geri çekilecek uygun bir itiraz işlemi bulunamadı. Lütfen işleme konu olacak başka bir portföy seçin veya iş tipini değiştirin.');
         this.selectedIpRecord = null;
@@ -894,10 +894,10 @@ showParentSelectionModal(parentTransactions, childTaskTypeId) {
         
         // Click event listener
         item.onclick = () => {
-            console.log('📋 İtiraz seçildi:', tx);
-            this.handleParentSelection(tx.transactionId);
+          console.log('📋 İtiraz seçildi:', tx);
+          this.handleParentSelection(tx.id);
         };
-        
+       
         parentListContainer.appendChild(item);
     });
 
