@@ -919,32 +919,6 @@ getTransactionTypeName(typeId) {
     const transactionType = this.allTransactionTypes.find(t => t.id === typeId);
     return transactionType ? (transactionType.alias || transactionType.name) : null;
 }
-async handleParentSelection(selectedParentId) {
-    console.log('🔄 Parent seçimi işleniyor:', selectedParentId);
-    
-    // Modal'ı kapat
-    const modal = document.getElementById('selectParentModal');
-    if (modal) {
-        try {
-            $(modal).modal('hide');
-        } catch (error) {
-            modal.style.display = 'none';
-            modal.classList.remove('show');
-            document.body.classList.remove('modal-open');
-        }
-    }
-
-    // Parent transaction ID'sini kaydet
-    this.selectedParentTransactionId = selectedParentId;
-    
-    console.log('✅ Parent transaction seçildi:', {
-        parentId: selectedParentId,
-        childTaskType: this.pendingChildTransactionData
-    });
-    
-    // Form submit işlemini tetikle (eğer form doldurulmuşsa)
-    this.checkFormCompleteness();
-}
 
 setupIpRecordSearchListeners() {
     const ipRecordSearchResults = document.getElementById('ipRecordSearchResults');
@@ -2119,32 +2093,66 @@ async handleSpecificTypeChange(e) {
         if (modal) modal.style.display = 'none';
         this.pendingChildTransactionData = null;
     }
-    async handleParentSelection(selectedParentId) {
-        if (!this.pendingChildTransactionData) return;
-        const parentId = selectedParentId || this.selectedParentTransactionId;
-        if (!parentId) {
-          alert('Parent işlem seçilemedi. Lütfen listeden bir itiraz seçin.');
-          return;
-        }
-
-        const childTransactionData = {
-          type: this.pendingChildTransactionData,          // 8 veya 21 (geri çekme tipi)
-          description: 'İtiraz geri çekme işlemi',
-          parentId: parentId,                              // artık kesin dolu
-          transactionHierarchy: 'child'
-        };
-
-        const addResult = await ipRecordsService.addTransactionToRecord(this.selectedIpRecord?.id, childTransactionData);
-
-        if (addResult.success) {
-            alert('İş ve ilgili alt işlem başarıyla oluşturuldu!');
-            this.hideParentSelectionModal();
-            window.location.href = 'task-management.html';
-        } else {
-            alert('Alt işlem kaydedilirken hata oluştu: ' + addResult.error);
-            this.hideParentSelectionModal();
-        }
+async handleParentSelection(selectedParentId) {
+  // Modalı kapat (varsa)
+  const modal = document.getElementById('selectParentModal');
+  if (modal) {
+    try {
+      if (window.$ && typeof $ === 'function') {
+        $(modal).modal('hide');
+      } else {
+        modal.style.display = 'none';
+        modal.classList.remove('show');
+        document.body.classList.remove('modal-open');
+        const bd = document.getElementById('tempModalBackdrop');
+        if (bd) bd.remove();
+      }
+    } catch (e) {
+      console.warn('Modal kapatma sırasında uyarı:', e);
     }
+  }
+
+  // 1) Parent ID’yi güvenle belirle
+  const parentId = selectedParentId || this.selectedParentTransactionId;
+  if (!parentId) {
+    alert('Parent işlem seçilemedi. Lütfen listeden bir itiraz seçin.');
+    return;
+  }
+
+  // 2) Çocuk işlemin tipini güvenle al
+  // (Örn: 8 = Karara İtirazı Geri Çekme, 21 = Yayına İtirazı Geri Çekme)
+  const childTypeId = this.pendingChildTransactionData;
+  if (!childTypeId) {
+    alert('İşlem tipi belirlenemedi. Lütfen iş tipini yeniden seçin.');
+    return;
+  }
+
+  // 3) Alt işlem objesini düzgün kur
+  const childTransactionData = {
+    type: String(childTypeId),
+    description: 'İtiraz geri çekme işlemi',
+    parentId: String(parentId),
+    transactionHierarchy: 'child'
+  };
+
+  // 4) Kaydet
+  if (!this.selectedIpRecord?.id) {
+    alert('Portföy kaydı bulunamadı. Lütfen bir portföy seçin.');
+    return;
+  }
+
+  const addResult = await ipRecordsService.addTransactionToRecord(
+    this.selectedIpRecord.id,
+    childTransactionData
+  );
+
+  if (addResult?.success) {
+    alert('Alt işlem başarıyla kaydedildi.');
+  } else {
+    alert('Alt işlem kaydedilirken hata oluştu: ' + (addResult?.error || 'Bilinmeyen hata'));
+  }
+}
+
 dedupeActionButtons() {
     const saves = Array.from(document.querySelectorAll('#saveTaskBtn'));
     if (saves.length > 1) saves.slice(0, -1).forEach(b => b.closest('.form-actions')?.remove());
