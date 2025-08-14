@@ -307,6 +307,7 @@ async initIpRecordSearchSelector() {
     results.innerHTML = '';
     input.value = '';
     this.checkFormCompleteness();
+    this.handleIpRecordChange(this.selectedIpRecord.id);
   });
 
   if (clearBtn) {
