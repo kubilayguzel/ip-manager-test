@@ -70,6 +70,7 @@ body {
 .status-sent { background-color: #28a745; }
 .status-failed { background-color: #dc3545; }
 .status-pending { background-color: #6c757d; }
+/* missing-info status styling kept */
 .action-btn {
     background: #007bff;
     color: white;
@@ -83,6 +84,7 @@ body {
 .action-btn:hover {
     opacity: 0.9;
 }
+/* Modal common */
 .modal {
   position: fixed;
   top:0;
@@ -93,13 +95,51 @@ body {
   display:none;
   align-items:center;
   justify-content:center;
+  z-index: 9999;
 }
+/* Default modal content widened */
 .modal-content {
   background:#fff;
   padding:20px;
-  width:500px;
-  border-radius:8px;
+  width:720px;           /* was 500px */
+  max-width: 95vw;
+  border-radius:12px;    /* a bit softer */
   box-shadow:0 0 20px rgba(0,0,0,0.2);
+}
+/* Large editor modal */
+.modal-content-lg {
+  background:#fff;
+  padding:20px;
+  width:960px;           /* bigger editor modal */
+  max-width: 95vw;
+  border-radius:12px;
+  box-shadow:0 0 24px rgba(0,0,0,0.25);
+  display:flex;
+  flex-direction:column;
+}
+.modal-header {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  margin-bottom: 8px;
+}
+.modal-title { margin:0; font-size: 1.25rem; }
+.close-modal-btn, .close {
+  background: transparent;
+  border: 0;
+  font-size: 28px;
+  line-height: 1;
+  cursor: pointer;
+}
+.modal-body {
+  max-height: 70vh;
+  overflow:auto;
+}
+.modal-footer {
+  display:flex;
+  gap:8px;
+  justify-content:flex-end;
+  margin-top: 10px;
 }
 .modal-content label {
   display:block;
@@ -112,11 +152,6 @@ body {
 .modal-actions {
   margin-top:15px;
   text-align:right;
-}
-.close {
-  float:right;
-  font-size:24px;
-  cursor:pointer;
 }
 .missing-info {
   background-color: #ffe5c0; /* Açık turuncu */
@@ -171,7 +206,7 @@ body {
   <div class="modal-content-lg">
     <div class="modal-header">
       <h2 class="modal-title">Bildirimi Düzenle</h2>
-      <button id="close-modal" class="close-modal-btn">&times;</button>
+      <button id="close-modal" class="close-modal-btn" aria-label="Kapat">&times;</button>
     </div>
     <div class="modal-body">
       <label for="modal-subject" class="form-label">Konu</label>
@@ -181,15 +216,15 @@ body {
       <textarea id="modal-body"></textarea>
     </div>
     <div class="modal-footer">
-      <button id="save-draft" class="btn btn-secondary">Taslak Kaydet</button>
-      <button id="send-notification" class="btn btn-primary">Gönder</button>
+      <button id="save-draft" class="action-btn" style="background:#6c757d">Taslak Kaydet</button>
+      <button id="send-notification" class="action-btn">Gönder</button>
     </div>
   </div>
 </div>
 <!-- Eksik Bilgiler Modal -->
 <div id="missing-info-modal" class="modal">
   <div class="modal-content">
-    <span id="mi-close" class="close">&times;</span>
+    <button id="mi-close" class="close" aria-label="Kapat">&times;</button>
     <h3>Eksik Bilgiler</h3>
     <p>Bu bildirim şu anda <b>gönderilmeye hazır değil</b>. Lütfen aşağıdaki eksikleri tamamlayın.</p>
 
@@ -247,6 +282,7 @@ onAuthStateChanged(auth, (user) => {
         loader.textContent = "Bu sayfayı görmek için giriş yapmalısınız.";
     }
 });
+
 function startNotificationListener(user) {
   const q = query(collection(db, "mail_notifications"), orderBy("createdAt", "desc"));
 
@@ -261,46 +297,29 @@ function startNotificationListener(user) {
 
     for (const snapDoc of snapshot.docs) {
       const notification = { id: snapDoc.id, ...snapDoc.data() };
+
+      // Missing info tespiti
       const hasMissingFields = !notification.recipientEmail || !notification.subject;
 
-      let applicationNumber = '-';
+      // Başvuru No'yu her durumda portföy kaydından çöz
+      let applicationNumber = await resolveApplicationNo(notification) || '-';
+
+      // Ana işlem tipini (başlığı) task'tan çekmeye devam edelim
       let mainProcessType = '-';
-
-    if (notification.sourceTaskId) {
-      try {
-        const taskRef = doc(db, "tasks", notification.sourceTaskId);
-        const taskDoc = await getDoc(taskRef);
-
-        if (taskDoc.exists()) {
-          const taskData = taskDoc.data();
-
-
-          mainProcessType = taskData.title || '-';
-
-          if (taskData.relatedIpRecordId) {
-
-            const ipRecordRef = doc(db, "ipRecords", taskData.relatedIpRecordId);
-            const ipRecordDoc = await getDoc(ipRecordRef);
-
-            if (ipRecordDoc.exists()) {
-              const ipRecordData = ipRecordDoc.data();
-
-
-              applicationNumber = ipRecordData.applicationNumber || '-';
-            } else {
-              console.warn("⚠️ IP record bulunamadı:", taskData.relatedIpRecordId);
-            }
+      if (notification.sourceTaskId) {
+        try {
+          const taskRef = doc(db, "tasks", notification.sourceTaskId);
+          const taskDoc = await getDoc(taskRef);
+          if (taskDoc.exists()) {
+            const taskData = taskDoc.data();
+            mainProcessType = taskData.title || '-';
           } else {
-            console.warn("⚠️ relatedIpRecordId yok.");
+            console.warn("⚠️ Task bulunamadı:", notification.sourceTaskId);
           }
-        } else {
-          console.warn("⚠️ Task bulunamadı:", notification.sourceTaskId);
+        } catch (err) {
+          console.error("Task alınırken hata oluştu:", err);
         }
-      } catch (err) {
-        console.error("Task alınırken hata oluştu:", err);
       }
-    }
-
 
       const tr = document.createElement('tr');
       const statusClass = notification.status === 'sent' ? 'status-sent'
@@ -310,24 +329,26 @@ function startNotificationListener(user) {
 
       tr.innerHTML = `
         <td><span class="status-badge ${statusClass}">${notification.status}</span></td>
-      <td>
-        ${notification.recipientEmail 
-          ? notification.recipientEmail 
-          : '<span class="missing-field">E-posta Eksik</span>'}
-      </td>
-      <td>
-        ${notification.subject 
-          ? notification.subject 
-          : '<span class="missing-field">Konu Eksik</span>'}
-      </td>
+        <td>
+          ${notification.recipientEmail 
+            ? notification.recipientEmail 
+            : '<span class="missing-field">E-posta Eksik</span>'}
+        </td>
+        <td>
+          ${notification.subject 
+            ? notification.subject 
+            : '<span class="missing-field">Konu Eksik</span>'}
+        </td>
         <td>${applicationNumber}</td>
         <td>${mainProcessType}</td>
         <td>${notification.sentAt ? notification.sentAt.toDate().toLocaleString('tr-TR') : '-'}</td>
         <td class="action-cell"></td>
       `;
+
       if (hasMissingFields) {
         tr.classList.add('missing-info');
       }
+
       if (notification.status !== 'sent') {
         const actionCell = tr.querySelector('.action-cell');
 
@@ -346,8 +367,7 @@ function startNotificationListener(user) {
           missingBtn.dataset.id = notification.id;
           missingBtn.addEventListener('click', () => showMissingInfo(notification));
           actionCell.appendChild(missingBtn);
-        }
-        else if (notification.status === 'failed' || notification.status === 'pending') {
+        } else if (notification.status === 'failed' || notification.status === 'pending') {
           const sendButton = document.createElement('button');
           sendButton.className = 'action-btn';
           sendButton.textContent = notification.status === 'failed' ? 'Tekrar Gönder' : 'Gönder';
@@ -355,7 +375,8 @@ function startNotificationListener(user) {
           sendButton.addEventListener('click', () => sendNotification(notification));
           actionCell.appendChild(sendButton);
         }
-        }
+      }
+
       tableBody.appendChild(tr);
     }
   }, (error) => {
@@ -363,6 +384,7 @@ function startNotificationListener(user) {
     errorDiv.textContent = 'Bildirimler yüklenirken bir hata oluştu.';
   });
 }
+
 document.getElementById('save-draft').addEventListener('click', async () => {
   const id = document.getElementById('save-draft').dataset.id;
   const subject = document.getElementById('modal-subject').value.trim();
@@ -430,7 +452,7 @@ function openModal(notification) {
   // TinyMCE'yi yeniden başlat
   tinymce.init({
     selector: '#modal-body',
-    height: 300,
+    height: 400,
     menubar: false,
     plugins: 'link lists',
     toolbar: 'undo redo | bold italic underline | bullist numlist | link',
@@ -464,11 +486,12 @@ function openModal(notification) {
   };
 }
 
-// Eksik alan etiketleri (TR)
+// Eksik alan etiketleri (TR) — 'template' ve 'mailTemplate' -> 'E-mail taslağı eksik'
 const __missingTrMap = {
   recipientEmail: 'Alıcı e-posta',
   clientId: 'Müvekkil (clientId)',
-  mailTemplate: 'Mail şablonu',
+  template: 'E-mail taslağı eksik',
+  mailTemplate: 'E-mail taslağı eksik',
   templateRule: 'Şablon kuralı',
   subject: 'Konu',
   body: 'E-posta içeriği',
@@ -480,7 +503,7 @@ let __currentMissingNotification = null;
 
 function showMissingInfo(notification) {
   __currentMissingNotification = notification;
-  openMissingInfoModal(notification);  // <-- ARTIK TANIMLI
+  openMissingInfoModal(notification);
 }
 
 // Bildirimden portföy başvuru numarasını çıkar
@@ -557,6 +580,11 @@ function closeMissingInfoModal() {
   document.getElementById('missing-info-modal').style.display = 'none';
 }
 
+// Bildirim gönder (mevcut fonksiyon; değişmedi)
+async function sendNotification(notification) {
+  // Aç ve doldur
+  openModal(notification);
+}
 </script>
 </body>
 </html>
