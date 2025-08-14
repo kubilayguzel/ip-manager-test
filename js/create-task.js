@@ -192,8 +192,29 @@ class CreateTaskModule {
       results.style.display = 'block';
     };
 
-    const searchData = this.searchSource === 'portfolio' ? this.allIpRecords : this.bulletinRecords;
-
+    let searchData;
+    if (this.searchSource === 'portfolio') {
+        const taskTypeId = document.getElementById('specificTaskType')?.value;
+        const isYayinaItiraz = (String(taskTypeId) === TASK_IDS.ITIRAZ_YAYIN || String(taskTypeId) === '20');
+        
+        console.log('🔍 Varlık arama filtresi:', {
+            taskTypeId: taskTypeId,
+            isYayinaItiraz: isYayinaItiraz,
+            searchSource: this.searchSource
+        });
+        
+        if (isYayinaItiraz) {
+            // Yayına itiraz ise third_party olanları getir
+            searchData = this.allIpRecords.filter(r => r.recordOwnerType === 'third_party');
+            console.log('📋 Third party kayıtlar:', searchData.length);
+        } else {
+            // Diğer işler için self olanları getir
+            searchData = this.allIpRecords.filter(r => r.recordOwnerType === 'self');
+            console.log('📋 Self kayıtlar:', searchData.length);
+        }
+    } else {
+        searchData = this.bulletinRecords;
+    }
     input.addEventListener('input', this.debounce((e) => {
       const query = e.target.value.trim();
       if (query.length < 2) {
@@ -1442,6 +1463,37 @@ async handleSpecificTypeChange(e) {
     if (tpInvoicePartySearch) tpInvoicePartySearch.addEventListener('input', (e) => this.searchPersons(e.target.value, 'tpInvoiceParty'));
     const serviceInvoicePartySearch = document.getElementById('serviceInvoicePartySearch');
     if (serviceInvoicePartySearch) serviceInvoicePartySearch.addEventListener('input', (e) => this.searchPersons(e.target.value, 'serviceInvoiceParty'));
+        const personSearchInput = document.getElementById('personSearchInput');
+    const personSearchResults = document.getElementById('personSearchResults');
+    if (personSearchInput && personSearchResults) {
+        let searchTimer;
+        personSearchInput.addEventListener('input', (e) => {
+            const query = e.target.value.trim();
+            clearTimeout(searchTimer);
+            
+            if (query.length < 2) {
+                personSearchResults.innerHTML = '';
+                personSearchResults.style.display = 'none';
+                return;
+            }
+            
+            searchTimer = setTimeout(() => {
+                this.searchPersons(query, 'relatedParty');
+            }, 300);
+        });
+
+        // Click event listener for selecting persons
+        personSearchResults.addEventListener('click', (e) => {
+            const item = e.target.closest('.search-result-item');
+            if (item) {
+                const personId = item.dataset.id;
+                const person = this.allPersons.find(p => p.id === personId);
+                if (person) {
+                    this.selectPerson(person, 'relatedParty');
+                }
+            }
+        });
+    }    
     const addNewPersonBtn = document.getElementById('addNewPersonBtn');
     if (addNewPersonBtn) addNewPersonBtn.addEventListener('click', () => {
       openPersonModal((newPerson) => {
@@ -1558,6 +1610,8 @@ async handleSpecificTypeChange(e) {
       const el = document.getElementById(id);
       if (el) el.addEventListener('input', () => this.calculateTotalAmount());
     });
+
+
   }
   handlePriorityTypeChange(value) {
     const priorityDateLabel = document.getElementById('priorityDateLabel');
@@ -2219,11 +2273,12 @@ async handleParentSelection(selectedParentId) {
     let newIpRecordId = this.selectedIpRecord ? this.selectedIpRecord.id : null;
 
     if (selectedTransactionType.alias === 'Başvuru' && selectedTransactionType.ipType === 'trademark') {
-      taskTitle = document.getElementById('brandExampleText')?.value || selectedTransactionType.alias || selectedTransactionType.name;
-      taskDescription = document.getElementById('taskDescription')?.value || `'${document.getElementById('brandExampleText')?.value || 'Yeni Başvuru'}' adlı marka için ${selectedTransactionType.alias || selectedTransactionType.name} işlemi.`;
+        taskTitle = document.getElementById('brandExampleText')?.value || selectedTransactionType.alias || selectedTransactionType.name;
+        taskDescription = document.getElementById('taskDescription')?.value || `'${document.getElementById('brandExampleText')?.value || 'Yeni Başvuru'}' adlı marka için ${selectedTransactionType.alias || selectedTransactionType.name} işlemi.`;
     } else {
-      taskTitle = document.getElementById('taskTitle')?.value || selectedTransactionType.alias || selectedTransactionType.name;
-      taskDescription = document.getElementById('taskDescription')?.value || `${selectedTransactionType.alias || selectedTransactionType.name} işlemi.`;
+        // İş başlığı alanı kaldırıldığı için direkt iş tipi adını kullan
+        taskTitle = selectedTransactionType.alias || selectedTransactionType.name;
+        taskDescription = document.getElementById('taskDescription')?.value || `${selectedTransactionType.alias || selectedTransactionType.name} işlemi.`;
     }
 
     let taskData = {
