@@ -765,19 +765,45 @@ handleIpRecordChange(recordId) {
     this.checkFormCompleteness();
 }
   findParentObjectionTransactions(record, childTaskTypeId) {
-    if (!record || !record.transactions || !Array.isArray(record.transactions)) return [];
+    console.log('🔍 findParentObjectionTransactions çağrıldı:', {
+        record: record,
+        childTaskTypeId: childTaskTypeId,
+        recordTransactions: record?.transactions,
+        transactionsLength: record?.transactions?.length
+    });
+    
+    if (!record || !record.transactions || !Array.isArray(record.transactions)) {
+        console.log('❌ Record veya transactions array yok');
+        return [];
+    }
 
     const parentTxTypeIds = new Set();
     if (String(childTaskTypeId) === TASK_IDS.YAYINA_ITIRAZI_CEKME) {
-      parentTxTypeIds.add(TASK_IDS.ITIRAZ_YAYIN);
+        parentTxTypeIds.add(TASK_IDS.ITIRAZ_YAYIN);
+        parentTxTypeIds.add('20'); // Yayına İtiraz
+        parentTxTypeIds.add('trademark_publication_objection');
     } else if (String(childTaskTypeId) === TASK_IDS.KARARA_ITIRAZI_CEKME) {
-      parentTxTypeIds.add(TASK_IDS.KARARA_ITIRAZ);
+        parentTxTypeIds.add(TASK_IDS.KARARA_ITIRAZ);
+        parentTxTypeIds.add('7'); // Karara İtiraz  
+        parentTxTypeIds.add('trademark_decision_objection');
     }
 
-    return record.transactions.filter(tx =>
-      parentTxTypeIds.has(String(tx.type)) && tx.transactionHierarchy === 'parent'
-    );
-  }
+    console.log('🔍 Aranacak parent type ID\'leri:', Array.from(parentTxTypeIds));
+    
+    const matchingTransactions = record.transactions.filter(tx => {
+        console.log('🔍 Transaction kontrol ediliyor:', {
+            txType: tx.type,
+            txHierarchy: tx.transactionHierarchy,
+            isParentType: parentTxTypeIds.has(String(tx.type)),
+            isParentHierarchy: tx.transactionHierarchy === 'parent'
+        });
+        
+        return parentTxTypeIds.has(String(tx.type)) && tx.transactionHierarchy === 'parent';
+    });
+
+    console.log('✅ Eşleşen parent transactions:', matchingTransactions);
+    return matchingTransactions;
+}
 async handleSpecificTypeChange(e) {
     const taskTypeId = e.target.value;
     const selectedTaskType = this.allTransactionTypes.find(t => t.id === taskTypeId);
