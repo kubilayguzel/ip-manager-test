@@ -186,6 +186,30 @@ body {
     </div>
   </div>
 </div>
+<!-- Eksik Bilgiler Modal -->
+<div id="missing-info-modal" class="modal">
+  <div class="modal-content">
+    <span id="mi-close" class="close">&times;</span>
+    <h3>Eksik Bilgiler</h3>
+    <p>Bu bildirim şu anda <b>gönderilmeye hazır değil</b>. Lütfen aşağıdaki eksikleri tamamlayın.</p>
+
+    <div style="margin:8px 0;">
+      <strong>Portföy Başvuru No:</strong>
+      <span id="mi-application-no">—</span>
+    </div>
+
+    <div style="margin:8px 0;">
+      <strong>Eksik Alanlar:</strong>
+      <ul id="mi-missing-list" style="margin:6px 0;"></ul>
+    </div>
+
+    <div class="modal-actions">
+      <button id="mi-edit" class="action-btn">Bildirimi Düzenle</button>
+      <button id="mi-close-btn" class="action-btn" style="background:#6c757d">Kapat</button>
+    </div>
+  </div>
+</div>
+
 </main>
 </div>
 <script src="https://cdn.tiny.cloud/1/uecky9tx0nvoenpj0odjyue9swj52q3sz49i62c745240d99/tinymce/6/tinymce.min.js" referrerpolicy="origin"></script>
@@ -339,7 +363,7 @@ function startNotificationListener(user) {
     errorDiv.textContent = 'Bildirimler yüklenirken bir hata oluştu.';
   });
 }
-cument.getElementById('save-draft').addEventListener('click', async () => {
+document.getElementById('save-draft').addEventListener('click', async () => {
   const id = document.getElementById('save-draft').dataset.id;
   const subject = document.getElementById('modal-subject').value.trim();
   const body = tinymce.get('modal-body').getContent();
@@ -441,12 +465,9 @@ function openModal(notification) {
 }
 
 function showMissingInfo(notification) {
-  const missing = notification.missingFields || [];
-  const message = missing.length > 0
-    ? "Eksik Alanlar:\n\n" + missing.map(f => `- ${f}`).join("\n")
-    : "Hiçbir eksik alan tespit edilmedi.";
-  alert(message);
+  openMissingInfoModal(notification);
 }
+
 </script>
 </body>
 </html>
