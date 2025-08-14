@@ -2119,12 +2119,21 @@ async handleSpecificTypeChange(e) {
     }
     async handleParentSelection(selectedParentId) {
         if (!this.pendingChildTransactionData) return;
+        const parentId = selectedParentId || this.selectedParentTransactionId;
+        if (!parentId) {
+          alert('Parent işlem seçilemedi. Lütfen listeden bir itiraz seçin.');
+          return;
+        }
+
         const childTransactionData = {
-            ...this.pendingChildTransactionData,
-            parentId: selectedParentId,
-            transactionHierarchy: "child"
+          type: this.pendingChildTransactionData,          // 8 veya 21 (geri çekme tipi)
+          description: 'İtiraz geri çekme işlemi',
+          parentId: parentId,                              // artık kesin dolu
+          transactionHierarchy: 'child'
         };
+
         const addResult = await ipRecordsService.addTransactionToRecord(this.selectedIpRecord?.id, childTransactionData);
+
         if (addResult.success) {
             alert('İş ve ilgili alt işlem başarıyla oluşturuldu!');
             this.hideParentSelectionModal();
