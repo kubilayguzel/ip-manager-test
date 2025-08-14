@@ -571,7 +571,7 @@ class CreateTaskModule {
     }
   }
 
-  renderBaseForm(container, taskTypeName, taskTypeId) {
+renderBaseForm(container, taskTypeName, taskTypeId) {
     const taskIdStr = asId(taskTypeId);
     const needsRelatedParty = RELATED_PARTY_REQUIRED.has(taskIdStr);
     const partyLabel = PARTY_LABEL_BY_ID[taskIdStr] || 'İlgili Taraf';
@@ -603,7 +603,34 @@ class CreateTaskModule {
       `;
     }
 
+    // ÖNEMLİ: 2. İşleme Konu Varlık bölümünü ekleyin
+    const ipRecordSectionHtml = `
+      <div class="form-section" id="ipRecordSection">
+        <h3 class="section-title">2. İşleme Konu Varlık</h3>
+        <div class="form-group full-width">
+          <label for="ipRecordSearch" class="form-label">Portföy Arama</label>
+          <input type="text" id="ipRecordSearch" class="form-input" placeholder="Portföy başlığı veya numarası ara...">
+          <div id="ipRecordSearchResults" class="search-results-list"></div>
+        </div>
+        <div id="selectedIpRecordContainer" class="selected-record-container" style="display:none;">
+          <div class="p-2 border rounded bg-light">
+            <div class="d-flex justify-content-between align-items-start">
+              <div class="flex-grow-1">
+                <div id="selectedIpRecordLabel" class="font-weight-bold"></div>
+                <div id="selectedIpRecordMeta" class="text-muted small"></div>
+              </div>
+              <button type="button" id="clearSelectedIpRecord" class="btn btn-sm btn-outline-danger">
+                <i class="fas fa-times"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+
     const html = `
+      ${ipRecordSectionHtml}
+      
       ${needsRelatedParty ? 
       `
       <div class="form-section" id="relatedPartySection">
@@ -712,6 +739,9 @@ class CreateTaskModule {
       </div>
       <div class="form-actions"><button type="button" id="cancelBtn" class="btn btn-secondary">İptal</button><button type="submit" id="saveTaskBtn" class="btn btn-primary" disabled>İşi Oluştur ve Kaydet</button></div>
     `;
+
+    // ÖNEMLİ: HTML'i container'a ekle
+    container.innerHTML = html;
     
     const selectedTaskTypeObj = this.allTransactionTypes.find(t => asId(t.id) === asId(taskTypeId));
     this.updateRelatedPartySectionVisibility(selectedTaskTypeObj);
