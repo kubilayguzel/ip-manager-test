@@ -2032,35 +2032,85 @@ async handleSpecificTypeChange(e) {
             $(modal).modal('hide');
         }
     }
+    showParentSelectionModal(parentTransactions, childTaskTypeId) {
+    console.log('🔄 Modal açılıyor...', { parentTransactions, childTaskTypeId });
     
-    showParentSelectionModal(parentTransactions, childTransactionData) {
-        const modal = document.getElementById('selectParentModal');
-        const parentListContainer = document.getElementById('parentListContainer');
-        if (!modal || !parentListContainer) return;
-        parentListContainer.innerHTML = '';
-        this.pendingChildTransactionData = childTransactionData;
-        if (parentTransactions.length === 0) {
-            parentListContainer.innerHTML = '<p>Uygun ana işlem bulunamadı.</p>';
-            const cancelBtn = document.getElementById('cancelParentSelectionBtn');
-            if (cancelBtn) cancelBtn.textContent = 'Kapat';
-        } else {
-            parentTransactions.forEach(parent => {
-                const parentItem = document.createElement('div');
-                parentItem.className = 'parent-selection-item';
-                parentItem.style = 'border: 1px solid #ddd; padding: 10px; margin-bottom: 8px; border-radius: 8px; cursor: pointer; transition: background-color 0.2s;';
-                parentItem.innerHTML = `
-                    <b>İşlem Tipi:</b> ${parent.type ? (this.allTransactionTypes.find(t => t.id === parent.type)?.name || parent.type) : 'Bilinmiyor'}<br>
-                    <b>Açıklama:</b> ${parent.description}<br>
-                    <b>Tarih:</b> ${new Date(parent.timestamp).toLocaleDateString('tr-TR')}
-                `;
-                parentItem.addEventListener('click', () => this.handleParentSelection(parent.id));
-                parentListContainer.appendChild(parentItem);
-            });
-            const cancelBtn = document.getElementById('cancelParentSelectionBtn');
-            if (cancelBtn) cancelBtn.textContent = 'İptal';
-        }
-        modal.style.display = 'block';
+    const modal = document.getElementById('selectParentModal');
+    const parentListContainer = document.getElementById('parentListContainer');
+    
+    if (!modal) {
+        console.error('❌ Modal element bulunamadı!');
+        return;
     }
+    
+    if (!parentListContainer) {
+        console.error('❌ Parent list container bulunamadı!');
+        return;
+    }
+
+    // Modal başlığını güncelle
+    const modalTitleEl = document.getElementById('selectParentModalLabel');
+    if (modalTitleEl) {
+        const isDecisionObjection = String(childTaskTypeId) === '8';
+        modalTitleEl.textContent = isDecisionObjection ? 
+            'Geri Çekilecek Karara İtirazı Seçin' : 
+            'Geri Çekilecek Yayına İtirazı Seçin';
+    }
+
+    // Liste içeriğini temizle ve yeniden oluştur
+    parentListContainer.innerHTML = '';
+    
+    parentTransactions.forEach((tx, index) => {
+        const item = document.createElement('li');
+        item.className = 'list-group-item list-group-item-action';
+        item.style.cursor = 'pointer';
+        
+        // İtiraz tipini belirle
+        const transactionTypeName = this.getTransactionTypeName(tx.type) || 'Bilinmeyen İtiraz Tipi';
+        
+        item.innerHTML = `
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h6 class="mb-1">${transactionTypeName}</h6>
+                    <p class="mb-1">${tx.description || 'Açıklama bulunmuyor'}</p>
+                    <small class="text-muted">Oluşturulma: ${new Date(tx.timestamp).toLocaleDateString('tr-TR')}</small>
+                </div>
+                <i class="fas fa-chevron-right text-muted"></i>
+            </div>
+        `;
+        
+        // Click event listener
+        item.onclick = () => {
+            console.log('📋 İtiraz seçildi:', tx);
+            this.handleParentSelection(tx.transactionId);
+        };
+        
+        parentListContainer.appendChild(item);
+    });
+
+    // 🔥 ZORLA MODAL AÇ - Hem jQuery hem vanilla JS
+    console.log('🔥 Modal açmaya çalışılıyor...');
+    
+    // jQuery yöntemi
+    if (window.$ && $('#selectParentModal').length > 0) {
+        $('#selectParentModal').modal('show');
+        console.log('✅ jQuery ile modal açıldı');
+    } else {
+        // Vanilla JS yöntemi
+        modal.style.display = 'block';
+        modal.classList.add('show', 'fade');
+        modal.setAttribute('aria-hidden', 'false');
+        
+        // Backdrop ekle
+        const backdrop = document.createElement('div');
+        backdrop.className = 'modal-backdrop fade show';
+        backdrop.id = 'tempModalBackdrop';
+        document.body.appendChild(backdrop);
+        document.body.classList.add('modal-open');
+        
+        console.log('✅ Vanilla JS ile modal açıldı');
+    }
+}
     hideParentSelectionModal() {
         const modal = document.getElementById('selectParentModal');
         if (modal) modal.style.display = 'none';
