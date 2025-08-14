@@ -508,6 +508,7 @@ function showMissingInfo(notification) {
 }
 
 // Bildirimden portföy başvuru numarasını çıkar
+// Bildirimden portföy başvuru numarasını çıkar
 async function resolveApplicationNo(notification) {
   console.log('🔍 resolveApplicationNo başladı, notification:', notification);
   
@@ -515,7 +516,7 @@ async function resolveApplicationNo(notification) {
   let ipRecordId = notification.ipRecordId;
   console.log('📝 ipRecordId from notification:', ipRecordId);
 
-  // 2) Task üzerinden
+  // 2) Task üzerinden (sourceTaskId → tasks → relatedIpRecordId/ipRecordId)
   if (!ipRecordId && notification.sourceTaskId) {
     console.log('🔄 Task üzerinden aranıyor:', notification.sourceTaskId);
     const taskRef = doc(db, "tasks", notification.sourceTaskId);
@@ -527,7 +528,7 @@ async function resolveApplicationNo(notification) {
     }
   }
 
-  // 3) Belge üzerinden
+  // 3) Belge üzerinden (sourceDocumentId → unindexed_pdfs/indexed_documents/trademarkBulletinRecords)
   if (!ipRecordId && notification.sourceDocumentId) {
     console.log('📄 Document üzerinden aranıyor:', notification.sourceDocumentId);
     const tryCols = ['unindexed_pdfs', 'indexed_documents', 'trademarkBulletinRecords'];
@@ -541,18 +542,24 @@ async function resolveApplicationNo(notification) {
         
         // ✅ YENİ: associatedTransactionId üzerinden ipRecordId'yi bul
         if (!ipRecordId && d.associatedTransactionId) {
-          console.log('🔄 associatedTransactionId üzerinden aranıyor:', d.associatedTransactionId);
-          const transRef = doc(db, "transactions", d.associatedTransactionId);
-          const transSnap = await getDoc(transRef);
-          if (transSnap.exists()) {
-            const transData = transSnap.data() || {};
-            console.log('📋 Transaction data:', transData);
-            ipRecordId = transData.ipRecordId || transData.relatedIpRecordId;
-            console.log('📎 Transaction\'dan bulunan ipRecordId:', ipRecordId);
+          console.log('🔄 associatedTransactionId üzerinden transaction aranıyor:', d.associatedTransactionId);
+          try {
+            const transRef = doc(db, "transactions", d.associatedTransactionId);
+            const transSnap = await getDoc(transRef);
+            if (transSnap.exists()) {
+              const transData = transSnap.data() || {};
+              console.log('📋 Transaction data:', transData);
+              ipRecordId = transData.ipRecordId || transData.relatedIpRecordId || transData.recordId;
+              console.log('📎 Transaction\'dan bulunan ipRecordId:', ipRecordId);
+            } else {
+              console.log('❌ Transaction bulunamadı:', d.associatedTransactionId);
+            }
+          } catch (transError) {
+            console.error('❌ Transaction okuma hatası:', transError);
           }
         }
         
-        console.log(`📎 ${col}\'dan bulunan ipRecordId:`, ipRecordId);
+        console.log(`📎 ${col}\'dan bulunan final ipRecordId:`, ipRecordId);
         if (ipRecordId) break;
       } else {
         console.log(`❌ ${col} koleksiyonunda belge bulunamadı`);
@@ -567,19 +574,24 @@ async function resolveApplicationNo(notification) {
 
   // 4) ipRecords içinden başvuru no'yu oku
   console.log('🎯 ipRecords\'tan başvuru no aranıyor, ipRecordId:', ipRecordId);
-  const recSnap = await getDoc(doc(db, 'ipRecords', ipRecordId));
-  if (!recSnap.exists()) {
-    console.log('❌ ipRecord bulunamadı');
+  try {
+    const recSnap = await getDoc(doc(db, 'ipRecords', ipRecordId));
+    if (!recSnap.exists()) {
+      console.log('❌ ipRecord bulunamadı');
+      return null;
+    }
+    const r = recSnap.data() || {};
+    console.log('📊 ipRecord data:', r);
+
+    const appNo = r.applicationNumber || r.applicationNo || r.appNo ||
+      r.details?.brandInfo?.applicationNo || r.details?.application?.number || null;
+    
+    console.log('🎉 Bulunan başvuru no:', appNo);
+    return appNo;
+  } catch (recordError) {
+    console.error('❌ ipRecord okuma hatası:', recordError);
     return null;
   }
-  const r = recSnap.data() || {};
-  console.log('📊 ipRecord data:', r);
-
-  const appNo = r.applicationNumber || r.applicationNo || r.appNo ||
-    r.details?.brandInfo?.applicationNo || r.details?.application?.number || null;
-  
-  console.log('🎉 Bulunan başvuru no:', appNo);
-  return appNo;
 }
 // Modalı doldurup aç
 async function openMissingInfoModal(notification) {
