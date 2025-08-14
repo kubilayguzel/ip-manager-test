@@ -743,7 +743,7 @@ class CreateTaskModule {
     this.checkFormCompleteness();
     this.initIpRecordSearchSelector();
   }
-  handleIpRecordChange(recordId) {
+handleIpRecordChange(recordId) {
     const taskTypeId = document.getElementById('specificTaskType')?.value;
     
     if (this.isWithdrawalTask && recordId) {
@@ -792,14 +792,14 @@ class CreateTaskModule {
       parentTxTypeIds.has(String(tx.type)) && tx.transactionHierarchy === 'parent'
     );
   }
-  async handleSpecificTypeChange(e) {
+async handleSpecificTypeChange(e) {
     const taskTypeId = e.target.value;
     const selectedTaskType = this.allTransactionTypes.find(t => t.id === taskTypeId);
 
     try {
-    const tIdStr = String(selectedTaskType?.id ?? '');
-    
-    // İtiraz geri çekme işi mi kontrol et
+        const tIdStr = String(selectedTaskType?.id ?? '');
+        
+        // İtiraz geri çekme işi mi kontrol et
         this.isWithdrawalTask = (tIdStr === TASK_IDS.YAYINA_ITIRAZI_CEKME || tIdStr === TASK_IDS.KARARA_ITIRAZI_CEKME);
         console.log('🔄 İş tipi değişti:', {
             taskTypeId: tIdStr, 
@@ -2164,7 +2164,31 @@ async handleParentSelection(selectedParentId) {
         alert('Lütfen işleme konu olacak bir portföy kaydı seçin.');
         return;
     }
-    
+
+    // 🔥 YENİ EKLEME: Geri çekme işleri için modal kontrolü - BURAYA EKLEYİN
+    if (this.isWithdrawalTask && this.selectedIpRecord && !this.selectedParentTransactionId) {
+        console.log('🔄 Geri çekme işi kontrol ediliyor...', {
+            isWithdrawalTask: this.isWithdrawalTask,
+            selectedIpRecord: !!this.selectedIpRecord,
+            selectedParentTransactionId: this.selectedParentTransactionId
+        });
+        
+        const parentTransactions = this.findParentObjectionTransactions(this.selectedIpRecord, specificTaskTypeId);
+        
+        if (parentTransactions.length > 1) {
+            console.log('⚠️ Birden fazla parent var, modal açılıyor...');
+            this.pendingChildTransactionData = specificTaskTypeId;
+            this.showParentSelectionModal(parentTransactions, specificTaskTypeId);
+            return; // Modal açıldı, işlemi durdur
+        } else if (parentTransactions.length === 1) {
+            // Tek parent varsa otomatik seç
+            this.selectedParentTransactionId = parentTransactions[0].transactionId;
+            console.log('✅ Tek parent otomatik seçildi:', this.selectedParentTransactionId);
+        } else {
+            alert('Bu portföyde geri çekilecek uygun bir itiraz işlemi bulunamadı.');
+            return;
+        }
+    }    
     // Geri çekme işi ise ama parent henüz seçilmemişse, modalı tetikle
     if (this.isWithdrawalTask && !this.selectedParentTransactionId) {
         const parentTransactions = this.findParentObjectionTransactions(this.selectedIpRecord, specificTaskTypeId);
