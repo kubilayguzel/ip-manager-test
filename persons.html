@@ -431,6 +431,15 @@
                 gap: 10px;
             }
         }
+    
+        /* --- Mail To / CC prefs --- */
+        .mail-prefs-grid { display:grid; grid-template-columns: 1fr; gap:10px; }
+        .mail-scope-row { display:flex; align-items:center; gap:12px; background:#fff; border:1px solid #e1e8ed; border-radius:8px; padding:8px 12px; }
+        .mail-scope-row .label { min-width:110px; font-weight:600; color:#1e3c72; }
+        .mail-scope-row .toggles { margin-left:auto; display:flex; align-items:center; gap:12px; }
+        .mail-scope-row .toggles label { font-weight:500; background:#f1f3f5; padding:4px 8px; border-radius:8px; border:1px solid #dee2e6; }
+        .mail-scope-row .toggles input[type="checkbox"] { margin-right:6px; }
+
     </style>
 </head>
 <body>
@@ -574,7 +583,48 @@
                                     <input type="checkbox" id="scopeTasarim" value="tasarim"><label for="scopeTasarim">Tasarım</label>
                                     <input type="checkbox" id="scopeDava" value="dava"><label for="scopeDava">Dava</label>
                                     <input type="checkbox" id="scopeMuhasebe" value="muhasebe"><label for="scopeMuhasebe">Muhasebe</label>
+                                
+                            <div class="form-group">
+                                <label>E-posta Tercihleri (Mail_To / Mail_CC):</label>
+                                <div class="mail-prefs-grid">
+                                    <div class="mail-scope-row">
+                                        <div class="label">Patent</div>
+                                        <div class="toggles">
+                                            <label><input type="checkbox" class="mail-to" data-scope="patent" checked> Mail_To</label>
+                                            <label><input type="checkbox" class="mail-cc" data-scope="patent"> Mail_CC</label>
+                                        </div>
+                                    </div>
+                                    <div class="mail-scope-row">
+                                        <div class="label">Marka</div>
+                                        <div class="toggles">
+                                            <label><input type="checkbox" class="mail-to" data-scope="marka" checked> Mail_To</label>
+                                            <label><input type="checkbox" class="mail-cc" data-scope="marka"> Mail_CC</label>
+                                        </div>
+                                    </div>
+                                    <div class="mail-scope-row">
+                                        <div class="label">Tasarım</div>
+                                        <div class="toggles">
+                                            <label><input type="checkbox" class="mail-to" data-scope="tasarim" checked> Mail_To</label>
+                                            <label><input type="checkbox" class="mail-cc" data-scope="tasarim"> Mail_CC</label>
+                                        </div>
+                                    </div>
+                                    <div class="mail-scope-row">
+                                        <div class="label">Dava</div>
+                                        <div class="toggles">
+                                            <label><input type="checkbox" class="mail-to" data-scope="dava" checked> Mail_To</label>
+                                            <label><input type="checkbox" class="mail-cc" data-scope="dava"> Mail_CC</label>
+                                        </div>
+                                    </div>
+                                    <div class="mail-scope-row">
+                                        <div class="label">Muhasebe</div>
+                                        <div class="toggles">
+                                            <label><input type="checkbox" class="mail-to" data-scope="muhasebe" checked> Mail_To</label>
+                                            <label><input type="checkbox" class="mail-cc" data-scope="muhasebe"> Mail_CC</label>
+                                        </div>
+                                    </div>
                                 </div>
+                            </div>
+</div>
                             </div>
                             <div id="relatedFormButtons">
                                 <button type="button" class="btn btn-secondary" id="cancelRelatedBtn" style="display:none;">İptal</button>
@@ -603,6 +653,13 @@
 
         document.addEventListener('DOMContentLoaded', async () => {
             await loadSharedLayout({ activeMenuLink: 'persons.html' });
+
+            const SCOPES = ['patent','marka','tasarim','dava','muhasebe'];
+
+            function defaultMailPrefs(){ const d={}; SCOPES.forEach(s=>d[s]={to:true, cc:false}); return d; }
+            function getMailPrefsFromForm(){ const prefs={}; SCOPES.forEach(s=>{ const toEl=document.querySelector(`.mail-to[data-scope="${s}"]`); const ccEl=document.querySelector(`.mail-cc[data-scope="${s}"]`); prefs[s]={to:!!(toEl&&toEl.checked), cc:!!(ccEl&&ccEl.checked)}; }); return prefs; }
+            function setMailPrefsToForm(prefs){ SCOPES.forEach(s=>{ const p=(prefs&&prefs[s])||{to:true, cc:false}; const toEl=document.querySelector(`.mail-to[data-scope="${s}"]`); const ccEl=document.querySelector(`.mail-cc[data-scope="${s}"]`); if(toEl) toEl.checked=!!p.to; if(ccEl) ccEl.checked=!!p.cc; }); }
+
 
             class PersonsModule {
                 constructor() {
@@ -1130,6 +1187,7 @@
                                     email: r.email || '',
                                     phone: r.phone || '',
                                     responsible,
+                                    notify: r.notify || {},
                                     createdAt: Date.now()
                                 });
                             });
@@ -1189,12 +1247,18 @@
                         relatedItem.dataset.idx = idx;
 
                         const scopes = extractScopes(r);
+                        
+                        const mailInfo = (r.notify || {});
                         const scopeBadges = (scopes.length
-                            ? scopes.map(k => `<span class="scope-badge">${scopeLabel(k)}</span>`).join('')
+                            ? scopes.map(k => {
+                                const p = mailInfo[k] || {to:true, cc:false};
+                                const meta = (p.to ? 'To' : '') + (p.cc ? (p.to ? ' + ' : '') + 'CC' : '');
+                                return `<span class="scope-badge">${scopeLabel(k)} — ${meta || 'To'}</span>`;
+                              }).join('')
                             : `<span style="font-style:italic; color:#999;">Alan belirtilmemiş</span>`
                         );
-                        
-                        relatedItem.innerHTML = `
+                        relatedItem.innerHTML
+ = `
                             <div class="related-info">
                                 <div class="related-name">${r.name || '-'}</div>
                                 <div class="related-details">
@@ -1240,6 +1304,8 @@
                         cb.checked = scopes.includes(cb.value);
                     });
 
+                    setMailPrefsToForm(related.notify || defaultMailPrefs());
+
                     document.getElementById('addRelatedBtn').style.display = 'none';
                     document.getElementById('updateRelatedBtn').style.display = 'inline-block';
                     document.getElementById('cancelRelatedBtn').style.display = 'inline-block';
@@ -1261,7 +1327,8 @@
                     
                     const scopes = Array.from(document.querySelectorAll('.related-form-container .checkbox-group input[type="checkbox"]:checked')).map(cb => cb.value);
                     
-                    this.relatedDraft.push({ name, email, phone, scopes });
+                    const notify = getMailPrefsFromForm();
+                    this.relatedDraft.push({ name, email, phone, scopes, notify });
                     this.renderRelatedList();
                     this.resetRelatedForm();
                     showNotification('Yeni ilgili eklendi.', 'success');
@@ -1279,12 +1346,12 @@
                     }
 
                     const scopes = Array.from(document.querySelectorAll('.related-form-container .checkbox-group input[type="checkbox"]:checked')).map(cb => cb.value);
-                    const updatedData = { name, email, phone, responsible: {} };
+                    const updatedData = { name, email, phone, responsible: {}, notify: getMailPrefsFromForm() };
                     scopes.forEach(s => updatedData.responsible[s] = true);
 
                     if (relatedId.startsWith('draft-')) {
                         const index = parseInt(relatedId.replace('draft-', ''));
-                        this.relatedDraft[index] = { name, email, phone, scopes };
+                        this.relatedDraft[index] = { name, email, phone, scopes, notify: getMailPrefsFromForm() };
                     } else {
                         try {
                             const relatedDocRef = doc(db, 'personsRelated', relatedId);
@@ -1306,6 +1373,8 @@
                     document.getElementById('relatedEmail').value = '';
                     document.getElementById('relatedPhone').value = '';
                     document.querySelectorAll('.related-form-container .checkbox-group input[type="checkbox"]').forEach(cb => cb.checked = false);
+
+                    setMailPrefsToForm(defaultMailPrefs());
 
                     document.getElementById('addRelatedBtn').style.display = 'inline-block';
                     document.getElementById('updateRelatedBtn').style.display = 'none';
