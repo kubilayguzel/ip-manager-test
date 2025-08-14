@@ -509,45 +509,64 @@ function showMissingInfo(notification) {
 
 // Bildirimden portföy başvuru numarasını çıkar
 async function resolveApplicationNo(notification) {
+  console.log('🔍 resolveApplicationNo başladı, notification:', notification);
+  
   // 1) Bildirim kendi içinde ipRecordId taşıyorsa
   let ipRecordId = notification.ipRecordId;
+  console.log('📝 ipRecordId from notification:', ipRecordId);
 
-  // 2) Task üzerinden (sourceTaskId → tasks → relatedIpRecordId/ipRecordId)
+  // 2) Task üzerinden
   if (!ipRecordId && notification.sourceTaskId) {
+    console.log('🔄 Task üzerinden aranıyor:', notification.sourceTaskId);
     const taskRef = doc(db, "tasks", notification.sourceTaskId);
     const taskSnap = await getDoc(taskRef);
     if (taskSnap.exists()) {
       const t = taskSnap.data() || {};
       ipRecordId = t.relatedIpRecordId || t.ipRecordId || t.relatedRecordId;
+      console.log('📋 Task\'tan bulunan ipRecordId:', ipRecordId);
     }
   }
 
-  // 3) Belge üzerinden (sourceDocumentId → unindexed_pdfs/indexed_documents/trademarkBulletinRecords)
+  // 3) Belge üzerinden
   if (!ipRecordId && notification.sourceDocumentId) {
+    console.log('📄 Document üzerinden aranıyor:', notification.sourceDocumentId);
     const tryCols = ['unindexed_pdfs', 'indexed_documents', 'trademarkBulletinRecords'];
     for (const col of tryCols) {
+      console.log(`🔎 ${col} koleksiyonunda aranıyor...`);
       const dSnap = await getDoc(doc(db, col, notification.sourceDocumentId));
       if (dSnap.exists()) {
         const d = dSnap.data() || {};
+        console.log(`✅ ${col} koleksiyonunda belge bulundu:`, d);
         ipRecordId = d.ipRecordId || d.relatedIpRecordId || d.ipRecordRefId;
+        console.log(`📎 ${col}\'dan bulunan ipRecordId:`, ipRecordId);
         if (ipRecordId) break;
+      } else {
+        console.log(`❌ ${col} koleksiyonunda belge bulunamadı`);
       }
     }
   }
 
-  if (!ipRecordId) return null;
+  if (!ipRecordId) {
+    console.log('❌ ipRecordId bulunamadı');
+    return null;
+  }
 
-  // 4) ipRecords içinden başvuru no’yu oku
+  // 4) ipRecords içinden başvuru no'yu oku
+  console.log('🎯 ipRecords\'tan başvuru no aranıyor, ipRecordId:', ipRecordId);
   const recSnap = await getDoc(doc(db, 'ipRecords', ipRecordId));
-  if (!recSnap.exists()) return null;
+  if (!recSnap.exists()) {
+    console.log('❌ ipRecord bulunamadı');
+    return null;
+  }
   const r = recSnap.data() || {};
+  console.log('📊 ipRecord data:', r);
 
-  return (
-    r.applicationNumber || r.applicationNo || r.appNo ||
-    r.details?.brandInfo?.applicationNo || r.details?.application?.number || null
-  );
+  const appNo = r.applicationNumber || r.applicationNo || r.appNo ||
+    r.details?.brandInfo?.applicationNo || r.details?.application?.number || null;
+  
+  console.log('🎉 Bulunan başvuru no:', appNo);
+  return appNo;
 }
-
 // Modalı doldurup aç
 async function openMissingInfoModal(notification) {
   try {
