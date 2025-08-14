@@ -247,7 +247,24 @@ body {
 
 </main>
 </div>
-<script src="https://cdn.tiny.cloud/1/uecky9tx0nvoenpj0odjyue9swj52q3sz49i62c745240d99/tinymce/6/tinymce.min.js" referrerpolicy="origin"></script>
+<script src="https://cdn.tiny.cloud/1/uecky9tx0nvoenpj0odjyue9swj52q3sz49i62c745240d99/tinymce/6/tinymce.min.js" referrerpolicy="origin">
+function formatRecipients(notification) {
+    const toList = notification.toList || [];
+    const ccList = notification.ccList || [];
+    if ((!toList || toList.length === 0) && (!ccList || ccList.length === 0)) {
+        return '<span class="badge badge-warning">E-posta Eksik</span>';
+    }
+    let html = '';
+    if (toList.length > 0) {
+        html += '<div><strong>To:</strong> ' + toList.map(e => '<span class="badge badge-primary mr-1">' + e + '</span>').join('') + '</div>';
+    }
+    if (ccList.length > 0) {
+        html += '<div><strong>CC:</strong> ' + ccList.map(e => '<span class="badge badge-info mr-1">' + e + '</span>').join('') + '</div>';
+    }
+    return html;
+}
+
+</script>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
 import { getFirestore, collection, getDocs, query, orderBy, onSnapshot,doc, getDoc, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
@@ -657,6 +674,23 @@ async function sendNotification(notification) {
   // Aç ve doldur
   openModal(notification);
 }
+
+function formatRecipients(notification) {
+    const toList = notification.toList || [];
+    const ccList = notification.ccList || [];
+    if ((!toList || toList.length === 0) && (!ccList || ccList.length === 0)) {
+        return '<span class="badge badge-warning">E-posta Eksik</span>';
+    }
+    let html = '';
+    if (toList.length > 0) {
+        html += '<div><strong>To:</strong> ' + toList.map(e => '<span class="badge badge-primary mr-1">' + e + '</span>').join('') + '</div>';
+    }
+    if (ccList.length > 0) {
+        html += '<div><strong>CC:</strong> ' + ccList.map(e => '<span class="badge badge-info mr-1">' + e + '</span>').join('') + '</div>';
+    }
+    return html;
+}
+
 </script>
 </body>
 </html>
