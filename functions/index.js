@@ -432,10 +432,18 @@ export const createMailNotificationOnDocumentStatusChangeV2 = onDocumentUpdated(
         document: "unindexed_pdfs/{docId}",
         region: 'europe-west1'
     },
-    async (event) => {
+      async (event) => {
         const change = event.data;
-        const before = change.data.before.data();
-        const after = change.after.data();
+        if (!change || !change.before || !change.after) {
+          console.error("Unexpected Firestore event shape for onDocumentUpdated.", {
+            hasChange: !!change,
+            hasBefore: !!change?.before,
+            hasAfter: !!change?.after,
+          });
+          return null;
+        }
+        const before = change.before.data() || {};
+        const after  = change.after.data()  || {};
         const docId = event.params.docId;
 
         if (before.status !== 'indexed' && after.status === 'indexed') {
