@@ -538,6 +538,20 @@ async function resolveApplicationNo(notification) {
         const d = dSnap.data() || {};
         console.log(`✅ ${col} koleksiyonunda belge bulundu:`, d);
         ipRecordId = d.ipRecordId || d.relatedIpRecordId || d.ipRecordRefId;
+        
+        // ✅ YENİ: associatedTransactionId üzerinden ipRecordId'yi bul
+        if (!ipRecordId && d.associatedTransactionId) {
+          console.log('🔄 associatedTransactionId üzerinden aranıyor:', d.associatedTransactionId);
+          const transRef = doc(db, "transactions", d.associatedTransactionId);
+          const transSnap = await getDoc(transRef);
+          if (transSnap.exists()) {
+            const transData = transSnap.data() || {};
+            console.log('📋 Transaction data:', transData);
+            ipRecordId = transData.ipRecordId || transData.relatedIpRecordId;
+            console.log('📎 Transaction\'dan bulunan ipRecordId:', ipRecordId);
+          }
+        }
+        
         console.log(`📎 ${col}\'dan bulunan ipRecordId:`, ipRecordId);
         if (ipRecordId) break;
       } else {
