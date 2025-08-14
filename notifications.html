@@ -464,8 +464,97 @@ function openModal(notification) {
   };
 }
 
+// Eksik alan etiketleri (TR)
+const __missingTrMap = {
+  recipientEmail: 'Alıcı e-posta',
+  clientId: 'Müvekkil (clientId)',
+  mailTemplate: 'Mail şablonu',
+  templateRule: 'Şablon kuralı',
+  subject: 'Konu',
+  body: 'E-posta içeriği',
+  ipRecordId: 'Portföy kaydı',
+  applicationNo: 'Başvuru numarası'
+};
+
+let __currentMissingNotification = null;
+
 function showMissingInfo(notification) {
-  openMissingInfoModal(notification);
+  __currentMissingNotification = notification;
+  openMissingInfoModal(notification);  // <-- ARTIK TANIMLI
+}
+
+// Bildirimden portföy başvuru numarasını çıkar
+async function resolveApplicationNo(notification) {
+  // 1) Bildirim kendi içinde ipRecordId taşıyorsa
+  let ipRecordId = notification.ipRecordId;
+
+  // 2) Task üzerinden (sourceTaskId → tasks → relatedIpRecordId/ipRecordId)
+  if (!ipRecordId && notification.sourceTaskId) {
+    const taskRef = doc(db, "tasks", notification.sourceTaskId);
+    const taskSnap = await getDoc(taskRef);
+    if (taskSnap.exists()) {
+      const t = taskSnap.data() || {};
+      ipRecordId = t.relatedIpRecordId || t.ipRecordId || t.relatedRecordId;
+    }
+  }
+
+  // 3) Belge üzerinden (sourceDocumentId → unindexed_pdfs/indexed_documents/trademarkBulletinRecords)
+  if (!ipRecordId && notification.sourceDocumentId) {
+    const tryCols = ['unindexed_pdfs', 'indexed_documents', 'trademarkBulletinRecords'];
+    for (const col of tryCols) {
+      const dSnap = await getDoc(doc(db, col, notification.sourceDocumentId));
+      if (dSnap.exists()) {
+        const d = dSnap.data() || {};
+        ipRecordId = d.ipRecordId || d.relatedIpRecordId || d.ipRecordRefId;
+        if (ipRecordId) break;
+      }
+    }
+  }
+
+  if (!ipRecordId) return null;
+
+  // 4) ipRecords içinden başvuru no’yu oku
+  const recSnap = await getDoc(doc(db, 'ipRecords', ipRecordId));
+  if (!recSnap.exists()) return null;
+  const r = recSnap.data() || {};
+
+  return (
+    r.applicationNumber || r.applicationNo || r.appNo ||
+    r.details?.brandInfo?.applicationNo || r.details?.application?.number || null
+  );
+}
+
+// Modalı doldurup aç
+async function openMissingInfoModal(notification) {
+  try {
+    const missing = Array.isArray(notification.missingFields) ? notification.missingFields : [];
+    const listHtml = missing.length
+      ? missing.map(k => `<li>${__missingTrMap[k] || k}</li>`).join('')
+      : '<li>—</li>';
+    document.getElementById('mi-missing-list').innerHTML = listHtml;
+
+    // Başvuru no
+    const appNo = await resolveApplicationNo(notification);
+    document.getElementById('mi-application-no').textContent = appNo || '—';
+
+    // Butonlar
+    document.getElementById('mi-edit').onclick = () => {
+      closeMissingInfoModal();
+      openModal(__currentMissingNotification);
+    };
+    document.getElementById('mi-close').onclick = closeMissingInfoModal;
+    document.getElementById('mi-close-btn').onclick = closeMissingInfoModal;
+
+    // Göster
+    document.getElementById('missing-info-modal').style.display = 'flex';
+  } catch (err) {
+    console.error('Eksik bilgi modalı açılamadı:', err);
+    alert('Beklenmeyen bir hata oluştu.');
+  }
+}
+
+function closeMissingInfoModal() {
+  document.getElementById('missing-info-modal').style.display = 'none';
 }
 
 </script>
