@@ -841,10 +841,11 @@ async handleIndexing() {
                 indexedAt: new Date(),
                 associatedTransactionId: transactionIdToAssociateFiles,
                 mainProcessType: this.matchedRecord?.type || 'unknown',
-                subProcessType: childTypeId || null,
-                clientId: this.matchedRecord?.clientId || this.matchedRecord?.owners?.[0]?.id || 'client_not_set'
+                subProcessType: childTypeId || null
+                // clientId satırını tamamen kaldırın
             }
         );
+
         // 5. Parent transaction'a requestResult = childTypeId yaz (son indekse göre güncellenir)
         if (this.selectedTransactionId && childTypeId) {
         try {
