@@ -495,108 +495,131 @@ export const createMailNotificationOnDocumentStatusChangeV2 = onDocumentUpdated(
             let status = "pending";
             let subject = "";
             let body = "";
-
-            // **GÜNCELLENDİ** Yeni alıcı listeleri
-            let toRecipients = [];
-            let ccRecipients = [];
-            let notificationType = after.mainProcessType; // Örneğin 'marka'
-
-            try {
-                // İlgili IP Record'u bulma
-                const ipRecordSnapshot = await db.collection("ipRecords")
-                    .where("applicants", "array-contains", { id: after.clientId })
-                    .limit(1)
-                    .get();
-
-                let ipRecordData = null;
-                if (!ipRecordSnapshot.empty) {
-                    ipRecordData = ipRecordSnapshot.docs[0].data();
-                } else {
-                    console.warn(`clientId (${after.clientId}) için IP kaydı bulunamadı.`);
-                }
-
-                const recipients = await getRecipientsByApplicantIds(ipRecordData?.applicants || [], notificationType);
-                toRecipients = recipients.to;
-                ccRecipients = recipients.cc;
-
-                if (toRecipients.length === 0 && ccRecipients.length === 0) {
-                    console.warn("Gönderim için alıcı bulunamadı.");
-                    status = "missing_info";
-                }
-
-                if (after.clientId) {
-                    const clientSnapshot = await db.collection("persons").doc(after.clientId).get();
-                    if (!clientSnapshot.exists) {
-                        console.warn(`Müvekkil bulunamadı: ${after.clientId}`);
-                        status = "missing_info";
+            let ipRecordData = null;
+            let applicants = [];
+            
+            // **YENİ ALGORİTMA BAŞLANGICI**
+            // associatedTransactionId'yi kullanarak ilgili IPRecord'u bulun
+            const associatedTransactionId = after.associatedTransactionId;
+            if (associatedTransactionId) {
+                try {
+                    // Collection Group Query ile transactions dokümanını bulun
+                    const transactionSnapshot = await db.collectionGroup("transactions")
+                        .where(admin.firestore.FieldPath.documentId(), "==", associatedTransactionId)
+                        .limit(1)
+                        .get();
+                    
+                    if (!transactionSnapshot.empty) {
+                        const transactionDoc = transactionSnapshot.docs[0];
+                        // transaction dokümanının üst koleksiyonuna (ipRecords) referansını alın
+                        const ipRecordRef = transactionDoc.ref.parent.parent;
+                        const ipRecordSnapshot = await ipRecordRef.get();
+                        
+                        if (ipRecordSnapshot.exists) {
+                            ipRecordData = ipRecordSnapshot.data();
+                            applicants = ipRecordData.applicants || [];
+                            console.log(`✅ ${ipRecordRef.id} ID'li IP kaydı bulundu. ${applicants.length} adet başvuru sahibi var.`);
+                        }
                     } else {
+                        console.warn(`Associated transaction ID (${associatedTransactionId}) ile transaction kaydı bulunamadı.`);
+                    }
+                } catch (error) {
+                    console.error("Transaction veya IPRecord sorgusu sırasında hata:", error);
+                }
+            } else {
+                console.warn("associatedTransactionId alanı eksik. Alıcı bulunamayabilir.");
+            }
+            
+            // Alıcı listelerini belirleme
+            const notificationType = after.mainProcessType || 'marka'; // Varsayılan olarak 'marka'
+            const recipients = await getRecipientsByApplicantIds(applicants, notificationType);
+            const toRecipients = recipients.to;
+            const ccRecipients = recipients.cc;
+
+            if (toRecipients.length === 0 && ccRecipients.length === 0) {
+                console.warn("Gönderim için alıcı bulunamadı.");
+                status = "missing_info";
+            }
+            // **YENİ ALGORİTMA SONU**
+
+            if (after.clientId) {
+                const clientSnapshot = await db.collection("persons").doc(after.clientId).get();
+                if (!clientSnapshot.exists) {
+                    console.warn(`Müvekkil bulunamadı: ${after.clientId}`);
+                    status = "missing_info";
+                } else {
+                    client = clientSnapshot.data();
+                }
+            } else {
+                // Eğer clientId alanı yoksa, IPRecord'daki ilk applicant'ı müvekkil olarak kabul edin
+                if (applicants.length > 0) {
+                    const primaryApplicantId = applicants[0].id;
+                    const clientSnapshot = await db.collection("persons").doc(primaryApplicantId).get();
+                    if (clientSnapshot.exists) {
                         client = clientSnapshot.data();
                     }
-                } else {
-                    console.warn("clientId alanı eksik.");
+                }
+                if (!client) {
+                    console.warn("clientId alanı eksik ve ilk başvuru sahibi bulunamadı.");
                     status = "missing_info";
                 }
-                
-                const rulesSnapshot = await db.collection("template_rules")
-                    .where("sourceType", "==", "document")
-                    .where("mainProcessType", "==", after.mainProcessType)
-                    .where("subProcessType", "==", after.subProcessType)
-                    .limit(1)
-                    .get();
-
-                if (!rulesSnapshot.empty) {
-                    rule = rulesSnapshot.docs[0].data();
-                    const templateSnapshot = await db.collection("mail_templates").doc(rule.templateId).get();
-                    if (templateSnapshot.exists) {
-                        template = templateSnapshot.data();
-                    }
-                }
-
-                if (template && client) {
-                    subject = template.subject;
-                    body = template.body;
-
-                    const parameters = { ...client, ...after };
-                    for (const key in parameters) {
-                        const placeholder = new RegExp(`{{${key}}}`, "g");
-                        subject = subject.replace(placeholder, parameters[key]);
-                        body = body.replace(placeholder, parameters[key]);
-                    }
-                } else {
-                    subject = "Eksik Bilgi: Bildirim Tamamlanamadı";
-                    body = "Bu bildirim oluşturuldu ancak gönderim için eksik bilgiler mevcut. Lütfen eksiklikleri giderin.";
-                    status = "missing_info";
-                }
-
-                const missingFields = [];
-                if (!client) missingFields.push('client');
-                if (!after.clientId) missingFields.push('clientId');
-                if (!template) missingFields.push('template');
-                if (toRecipients.length === 0 && ccRecipients.length === 0) missingFields.push('recipients');
-
-                const notificationData = {
-                    // **GÜNCELLENDİ**
-                    recipientTo: toRecipients,
-                    recipientCc: ccRecipients,
-                    clientId: after.clientId || null,
-                    subject: subject,
-                    body: body,
-                    status: status,
-                    missingFields: missingFields,
-                    sourceDocumentId: docId,
-                    notificationType: notificationType,
-                    createdAt: admin.firestore.FieldValue.serverTimestamp(),
-                    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-                };
-
-                await db.collection("mail_notifications").add(notificationData);
-                console.log(`Mail bildirimi '${status}' olarak oluşturuldu.`);
-                return null;
-
-            } catch (error) {
-                console.error("Bildirim oluşturulurken hata:", error);
-                return null;
             }
+            
+            const rulesSnapshot = await db.collection("template_rules")
+                .where("sourceType", "==", "document")
+                .where("mainProcessType", "==", after.mainProcessType)
+                .where("subProcessType", "==", after.subProcessType)
+                .limit(1)
+                .get();
+
+            if (!rulesSnapshot.empty) {
+                rule = rulesSnapshot.docs[0].data();
+                const templateSnapshot = await db.collection("mail_templates").doc(rule.templateId).get();
+                if (templateSnapshot.exists) {
+                    template = templateSnapshot.data();
+                }
+            }
+
+            if (template && client) {
+                subject = template.subject;
+                body = template.body;
+
+                const parameters = { ...client, ...after };
+                for (const key in parameters) {
+                    const placeholder = new RegExp(`{{${key}}}`, "g");
+                    subject = subject.replace(placeholder, parameters[key]);
+                    body = body.replace(placeholder, parameters[key]);
+                }
+            } else {
+                subject = "Eksik Bilgi: Bildirim Tamamlanamadı";
+                body = "Bu bildirim oluşturuldu ancak gönderim için eksik bilgiler mevcut. Lütfen eksiklikleri giderin.";
+                status = "missing_info";
+            }
+
+            const missingFields = [];
+            if (!client) missingFields.push('client');
+            if (!template) missingFields.push('template');
+            if (toRecipients.length === 0 && ccRecipients.length === 0) missingFields.push('recipients');
+
+            const notificationData = {
+                // **GÜNCELLENDİ**
+                recipientTo: toRecipients,
+                recipientCc: ccRecipients,
+                clientId: after.clientId || (applicants.length > 0 ? applicants[0].id : null),
+                subject: subject,
+                body: body,
+                status: status,
+                missingFields: missingFields,
+                sourceDocumentId: docId,
+                notificationType: notificationType,
+                createdAt: admin.firestore.FieldValue.serverTimestamp(),
+                updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+            };
+
+            await db.collection("mail_notifications").add(notificationData);
+            console.log(`Mail bildirimi '${status}' olarak oluşturuldu.`);
+            return null;
+
         } else {
             console.log("Status değişimi indekslenme değil, işlem atlandı.");
             return null;
@@ -1220,7 +1243,7 @@ export const deleteBulletinV2 = onCall(
 
       const bulletinData = bulletinDoc.data();
       const bulletinNo = bulletinData.bulletinNo;
-      console.log(`📋 Silinecek bülten: ${bulletenNo}`);
+      console.log(`📋 Silinecek bülten: ${bulletinNo}`);
 
       // === 2. İlişkili trademarkBulletinRecords silme ===
       let totalDeleted = 0;
@@ -1832,11 +1855,11 @@ function calculateSimilarityScoreInternal(hitMarkName, searchMarkName, hitApplic
         if (len === 0) return 0.0; // Karşılaştırılacak karakter yok
 
         for (let i = 0; i < len; i++) {
-            if (s1[i] !== s2[i]) {
-                return 0.0; // İlk 'len' karakterlerde uyumsuzluk bulundu
+            if (s1[i] === s2[i]) {
+                return 1.0; // İlk 'len' karakterlerin hepsi tam eşleşiyor
             }
         }
-        return 1.0; // İlk 'len' karakterlerin hepsi tam eşleşiyor
+        return 0.0; // İlk 'len' karakterlerde uyumsuzluk bulundu
     })();
     logger.log(`   - Positional Exact Match Score (first 3 chars): ${positionalExactMatchScore.toFixed(2)}`);
 
