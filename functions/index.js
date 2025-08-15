@@ -900,30 +900,37 @@ export const processTrademarkBulletinUploadV3 = onObjectFinalized(
 // =========================================================
 
 /**
- * IPRecord'daki applicants'ları kullanarak "to" ve "cc" e-posta adreslerini belirler.
+ * IPRecord'daki applicants dizisindeki her kişi için e-posta alıcılarını belirler
  * @param {Array} applicants IPRecord'daki applicants dizisi
  * @param {string} notificationType Bildirim türü (örn: 'marka')
  * @returns {Promise<{to: string[], cc: string[]}>} Alıcı listeleri
  */
 async function getRecipientsByApplicantIds(applicants, notificationType) {
+    console.log("🚀 getRecipientsByApplicantIds başladı");
+    console.log("🔍 INPUT - applicants:", JSON.stringify(applicants, null, 2));
+    console.log("🔍 INPUT - notificationType:", notificationType);
+    
     const toRecipients = new Set();
     const ccRecipients = new Set();
     
     if (!applicants || applicants.length === 0) {
+        console.warn("❌ Applicants dizisi boş veya null");
         return { to: [], cc: [] };
     }
 
+    console.log(`📋 ${applicants.length} applicant işlenecek`);
+
     for (const applicant of applicants) {
+        console.log(`\n🔍 Processing applicant: ${applicant.id}`);
         try {
             // applicants.id alanını persons koleksiyonundaki docId olarak kabul ediyoruz.
-            // Bu ID'yi kullanarak hem persons dokümanını (e-posta adresi için)
-            // hem de personsRelated dokümanını (sorumluluk ve bildirim ayarları için) sorguluyoruz.
             const personSnapshot = await db.collection("persons").doc(applicant.id).get();
             if (!personSnapshot.exists) {
-                logger.warn(`Person bulunamadı: ${applicant.id}`);
+                console.warn(`❌ Person bulunamadı: ${applicant.id}`);
                 continue;
             }
             const personData = personSnapshot.data();
+            console.log(`✅ Person bulundu - Email: ${personData.email}`);
 
             // personsRelated tablosunda ilgili personId'yi arıyoruz.
             const personsRelatedSnapshot = await db.collection("personsRelated")
@@ -932,33 +939,63 @@ async function getRecipientsByApplicantIds(applicants, notificationType) {
                 .get();
             
             if (personsRelatedSnapshot.empty) {
-                logger.warn(`personsRelated kaydı bulunamadı: ${applicant.id}`);
+                console.warn(`❌ personsRelated kaydı bulunamadı: ${applicant.id}`);
                 continue;
             }
 
             const personsRelatedData = personsRelatedSnapshot.docs[0].data();
+            console.log(`✅ personsRelated bulundu:`, JSON.stringify(personsRelatedData, null, 2));
 
             // Sorumluluk kontrolü
+            console.log(`🔍 Checking responsible[${notificationType}]:`, personsRelatedData.responsible?.[notificationType]);
+            
             if (personsRelatedData.responsible && personsRelatedData.responsible[notificationType]) {
+                console.log(`✅ Person ${applicant.id} sorumlu - ${notificationType} için`);
+                
                 const notifySettings = personsRelatedData.notify[notificationType];
+                console.log(`🔍 Notify settings:`, JSON.stringify(notifySettings, null, 2));
                 
                 if (notifySettings) {
                     if (notifySettings.to) {
-                        if (personData.email) toRecipients.add(personData.email);
+                        if (personData.email) {
+                            toRecipients.add(personData.email);
+                            console.log(`📧 TO listesine eklendi: ${personData.email}`);
+                        } else {
+                            console.warn(`❌ Email adresi yok: ${applicant.id}`);
+                        }
                     }
                     if (notifySettings.cc) {
-                        if (personData.email) ccRecipients.add(personData.email);
+                        if (personData.email) {
+                            ccRecipients.add(personData.email);
+                            console.log(`📧 CC listesine eklendi: ${personData.email}`);
+                        } else {
+                            console.warn(`❌ Email adresi yok: ${applicant.id}`);
+                        }
                     }
+                } else {
+                    console.warn(`❌ Notify settings null: ${applicant.id}`);
                 }
+            } else {
+                console.warn(`❌ Person ${applicant.id} sorumlu değil - ${notificationType} için`);
             }
         } catch (error) {
-            logger.error(`Alıcı tespiti sırasında hata: ${error.message}`);
+            console.error(`❌ Alıcı tespiti sırasında hata - applicant ${applicant.id}:`, error);
         }
     }
 
-    return { to: Array.from(toRecipients), cc: Array.from(ccRecipients) };
+    const result = { 
+        to: Array.from(toRecipients), 
+        cc: Array.from(ccRecipients) 
+    };
+    
+    console.log("🎯 FINAL RESULT:");
+    console.log("📧 TO recipients:", result.to);
+    console.log("📧 CC recipients:", result.cc);
+    console.log("📊 TO count:", result.to.length);
+    console.log("📊 CC count:", result.cc.length);
+    
+    return result;
 }
-
 
 async function downloadWithStream(file, destination) {
   await pipeline(file.createReadStream(), fs.createWriteStream(destination));
