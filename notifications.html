@@ -466,18 +466,19 @@ document.getElementById('send-notification').addEventListener('click', async () 
 
 // === Helpers for recipients ===
 function getToCcFromNotification(n) {
-  const toList =
-    (Array.isArray(n?.toList) ? n.toList : null) ||
-    (Array.isArray(n?.toRecipients) ? n.toRecipients : null) ||
-    (Array.isArray(n?.to) ? n.to : null) || [];
-
-  const ccList =
-    (Array.isArray(n?.ccList) ? n.ccList : null) ||
-    (Array.isArray(n?.ccRecipients) ? n.ccRecipients : null) ||
-    (Array.isArray(n?.cc) ? n.cc : null) || [];
-
+  console.log("🔍 getToCcFromNotification çağrıldı, notification:", n);
+  
+  // Backend artık toList/ccList alan adlarını kullanıyor
+  const toList = Array.isArray(n?.toList) ? n.toList : [];
+  const ccList = Array.isArray(n?.ccList) ? n.ccList : [];
+  
+  // Tekil string gelmişse dizileştir (güvenlik için)
   const norm = a => (Array.isArray(a) ? a : (typeof a === 'string' && a ? [a] : []));
-  return { toList: norm(toList), ccList: norm(ccList) };
+  
+  const result = { toList: norm(toList), ccList: norm(ccList) };
+  console.log("🎯 getToCcFromNotification sonucu:", result);
+  
+  return result;
 }
 
 function openModal(notification) {
