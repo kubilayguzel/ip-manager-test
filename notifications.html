@@ -170,6 +170,14 @@ body {
 }
 .loading { text-align: center; padding: 50px; }
 .no-records { text-align: center; padding: 50px; color: #666; }
+
+/* Recipients badges */
+.recipient-badges .badge {
+  display:inline-block; padding:4px 8px; border-radius:12px; font-size:12px; margin:2px 4px 0 0;
+}
+.badge-to { background:#0d6efd; color:#fff; }
+.badge-cc { background:#17a2b8; color:#fff; }
+.badge-empty { background:#e9ecef; color:#555; }
 </style>
 </head>
 <body>
@@ -212,11 +220,20 @@ body {
       <label for="modal-subject" class="form-label">Konu</label>
       <input type="text" id="modal-subject" class="form-input" />
 
-    <div class="form-group" style="margin:12px 0;">
-      <div style="margin-bottom:6px; font-weight:600;">Alıcılar</div>
-      <div id="modal-to" style="margin-bottom:6px;"></div>
-      <div id="modal-cc"></div>
-    </div>
+      <!-- Recipients block -->
+      <div id="mailRecipientsBlock" style="margin:12px 0;">
+        <div style="margin-bottom:6px; font-weight:600;">Alıcılar</div>
+        <div class="d-flex" style="gap:16px; flex-wrap:wrap;">
+          <div style="min-width:240px; flex:1;">
+            <small class="text-muted d-block" style="margin-bottom:4px;">To</small>
+            <div id="modal-to" class="recipient-badges"></div>
+          </div>
+          <div style="min-width:240px; flex:1;">
+            <small class="text-muted d-block" style="margin-bottom:4px;">CC</small>
+            <div id="modal-cc" class="recipient-badges"></div>
+          </div>
+        </div>
+      </div>
 
       <label for="modal-body" class="form-label">İçerik</label>
       <textarea id="modal-body"></textarea>
@@ -253,24 +270,7 @@ body {
 
 </main>
 </div>
-<script src="https://cdn.tiny.cloud/1/uecky9tx0nvoenpj0odjyue9swj52q3sz49i62c745240d99/tinymce/6/tinymce.min.js" referrerpolicy="origin">
-function formatRecipients(notification) {
-    const toList = notification.toList || [];
-    const ccList = notification.ccList || [];
-    if ((!toList || toList.length === 0) && (!ccList || ccList.length === 0)) {
-        return '<span class="badge badge-warning">E-posta Eksik</span>';
-    }
-    let html = '';
-    if (toList.length > 0) {
-        html += '<div><strong>To:</strong> ' + toList.map(e => '<span class="badge badge-primary mr-1">' + e + '</span>').join('') + '</div>';
-    }
-    if (ccList.length > 0) {
-        html += '<div><strong>CC:</strong> ' + ccList.map(e => '<span class="badge badge-info mr-1">' + e + '</span>').join('') + '</div>';
-    }
-    return html;
-}
-
-</script>
+<script src="https://cdn.tiny.cloud/1/uecky9tx0nvoenpj0odjyue9swj52q3sz49i62c745240d99/tinymce/6/tinymce.min.js" referrerpolicy="origin"></script>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
 import { getFirestore, collection, getDocs, query, orderBy, onSnapshot,doc, getDoc, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
@@ -464,9 +464,8 @@ document.getElementById('send-notification').addEventListener('click', async () 
   }
 });
 
-// YENİ: Bildirim kaydından To/CC dizilerini akıllıca topla (birkaç şema desteği)
+// === Helpers for recipients ===
 function getToCcFromNotification(n) {
-  // Backend farklı alan adları kullanmış olabilir: toList/ccList, toRecipients/ccRecipients, to/cc
   const toList =
     (Array.isArray(n?.toList) ? n.toList : null) ||
     (Array.isArray(n?.toRecipients) ? n.toRecipients : null) ||
@@ -477,7 +476,6 @@ function getToCcFromNotification(n) {
     (Array.isArray(n?.ccRecipients) ? n.ccRecipients : null) ||
     (Array.isArray(n?.cc) ? n.cc : null) || [];
 
-  // Tekil string gelmişse dizileştir
   const norm = a => (Array.isArray(a) ? a : (typeof a === 'string' && a ? [a] : []));
   return { toList: norm(toList), ccList: norm(ccList) };
 }
@@ -513,17 +511,16 @@ function openModal(notification) {
     }
   });
 
-    const { toList, ccList } = getToCcFromNotification(notification);
+  const { toList, ccList } = getToCcFromNotification(notification);
   const toEl = document.getElementById('modal-to');
   const ccEl = document.getElementById('modal-cc');
 
   const renderBadges = (arr, kind) => {
     if (!arr || arr.length === 0) {
-      return `<div><strong>${kind}:</strong> <span class="badge badge-muted">—</span></div>`;
+      return `<span class="badge badge-empty">—</span>`;
     }
-    return `<div><strong>${kind}:</strong> ${
-      arr.map(e => `<span class="badge ${kind==='To' ? 'badge-primary' : 'badge-info'} mr-1">${e}</span>`).join(' ')
-    }</div>`;
+    const cls = kind === 'To' ? 'badge-to' : 'badge-cc';
+    return arr.map(e => `<span class="badge ${cls}">${e}</span>`).join(' ');
   };
 
   toEl.innerHTML = renderBadges(toList, 'To');
@@ -721,11 +718,10 @@ function formatRecipients(notification) {
     return '<span class="badge badge-warning">E-posta Eksik</span>';
   }
   let html = '';
-  if (toList.length) html += '<div><strong>To:</strong> ' + toList.map(e => `<span class="badge badge-primary mr-1">${e}</span>`).join('') + '</div>';
-  if (ccList.length) html += '<div><strong>CC:</strong> ' + ccList.map(e => `<span class="badge badge-info mr-1">${e}</span>`).join('') + '</div>';
+  if (toList.length) html += '<div><strong>To:</strong> ' + toList.map(e => `<span class="badge badge-to mr-1">${e}</span>`).join('') + '</div>';
+  if (ccList.length) html += '<div><strong>CC:</strong> ' + ccList.map(e => `<span class="badge badge-cc mr-1">${e}</span>`).join('') + '</div>';
   return html;
 }
-
 
 </script>
 </body>
