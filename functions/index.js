@@ -442,7 +442,7 @@ export const createMailNotificationOnDocumentIndexV2 = onDocumentCreated(
             const notificationData = {
                 // **GÜNCELLENDİ**
                 recipientTo: toRecipients,
-                recipientCc: ccRecipients,
+                recipientCc: Array.from(ccRecipients),
                 clientId: newDocument.clientId || null,
                 subject: subject,
                 body: body,
@@ -510,13 +510,14 @@ export const createMailNotificationOnDocumentStatusChangeV2 = onDocumentUpdated(
                             .collection("transactions")
                             .doc(associatedTransactionId);
                         
-                        const transactionDoc = await transactionRef.get();
-                        if (transactionDoc.exists) {
-                            ipRecordData = ipDoc.data();
-                            applicants = ipRecordData.applicants || [];
-                            console.log(`✅ Transaction found in ipRecord: ${ipDoc.id}`);
-                            break;
-                        }
+                    const transactionDoc = await transactionRef.get();
+                      if (transactionDoc.exists) {
+                        ipRecordData = ipDoc.data();
+                        applicants = ipRecordData.applicants || [];
+                      var foundTransactionType = transactionDoc.data()?.type; // ← EKLENDİ
+                        console.log(`✅ Transaction found in ipRecord: ${ipDoc.id}`);
+                        break;
+                      }
                     }
                     
 if (ipRecordData) {
@@ -578,15 +579,23 @@ console.log("🔍 notificationType:", notificationType);
 
 const recipients = await getRecipientsByApplicantIds(applicants, notificationType);
 console.log("🔍 Recipients result:", recipients);
-
 const toRecipients = recipients.to;
-const ccRecipients = recipients.cc;
+const ccRecipients = new Set(recipients.cc); // Set yapalım ki duplikasyon olmasın
+// ↘️ Eğer transaction.type bulunabildiyse evrekaMailCCList'ten de CC topla
+if (typeof foundTransactionType !== "undefined" && foundTransactionType !== null) {
+  console.log("🔎 foundTransactionType:", foundTransactionType);
+  const extraCc = await getCcFromEvrekaListByTransactionType(foundTransactionType);
+  for (const e of extraCc) { ccRecipients.add(e); }
+  console.log("📧 CC after evreka list merge:", Array.from(ccRecipients));
+} else {
+  console.warn("⚠️ foundTransactionType bulunamadı; evrekaMailCCList eklenmedi.");
+}
 
 console.log("📧 Final recipients:");
 console.log("📧 toRecipients:", toRecipients);
-console.log("📧 ccRecipients:", ccRecipients);
+console.log("📧 ccRecipients:", Array.from(ccRecipients));
 console.log("📧 toRecipients.length:", toRecipients.length);
-console.log("📧 ccRecipients.length:", ccRecipients.length);
+console.log("📧 ccRecipients.length:", Array.from(ccRecipients).length);
 
             if (toRecipients.length === 0 && ccRecipients.length === 0) {
                 console.warn("Gönderim için alıcı bulunamadı.");
@@ -664,7 +673,7 @@ console.log("📧 ccRecipients.length:", ccRecipients.length);
             const notificationData = {
                 // **GÜNCELLENDİ**
                 recipientTo: toRecipients,
-                recipientCc: ccRecipients,
+                recipientCc: Array.from(ccRecipients),
                 clientId: after.clientId || (applicants.length > 0 ? applicants[0].id : null),
                 subject: subject,
                 body: body,
@@ -774,8 +783,6 @@ export const createUniversalNotificationOnTaskCompleteV2 = onDocumentUpdated(
                 await db.collection("mail_notifications").add({
                     toList: toRecipients,             // ✅ En basit alan adı
                     ccList: ccRecipients,             // ✅ En basit alan adı
-                    
-                    // Diğer alanlar aynı kalır
                     clientId: primaryOwnerId,
                     subject: subject,
                     body: body,
@@ -1063,6 +1070,45 @@ async function getRecipientsByApplicantIds(applicants, notificationType = 'marka
   console.log("📊 TO count:", result.to.length);
   console.log("📊 CC count:", result.cc.length);
   return result;
+}
+
+/**
+ * evrekaMailCCList koleksiyonundan CC adreslerini getirir.
+ * - transactionTypes === "All" olanların hepsi
+ * - transactionTypes array-contains <txType> olanlar
+ * @param {number|string} txType
+ * @returns {Promise<string[]>}
+ */
+async function getCcFromEvrekaListByTransactionType(txType) {
+  const emails = new Set();
+
+  try {
+    // "All" olanlar
+    const allSnap = await db.collection("evrekaMailCCList")
+      .where("transactionTypes", "==", "All")
+      .get();
+    allSnap.forEach(d => {
+      const e = (d.data()?.email || "").trim();
+      if (e) emails.add(e);
+    });
+
+    // Sayısal type ise array-contains ile ara
+    // (txType string gelse bile sayıysa parse ediyoruz)
+    const n = typeof txType === "number" ? txType : parseInt(txType, 10);
+    if (!Number.isNaN(n)) {
+      const arrSnap = await db.collection("evrekaMailCCList")
+        .where("transactionTypes", "array-contains", n)
+        .get();
+      arrSnap.forEach(d => {
+        const e = (d.data()?.email || "").trim();
+        if (e) emails.add(e);
+      });
+    }
+  } catch (err) {
+    console.error("❌ evrekaMailCCList sorgu hatası:", err);
+  }
+
+  return Array.from(emails);
 }
 
 async function downloadWithStream(file, destination) {
