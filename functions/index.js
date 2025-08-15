@@ -522,42 +522,74 @@ export const createMailNotificationOnDocumentStatusChangeV2 = onDocumentUpdated(
                         }
                     }
                     
-                    if (ipRecordData) {
-                        console.log(`✅ IP kaydı bulundu. ${applicants.length} adet başvuru sahibi var.`);
-                        
-                        // Birincil başvuru sahibini müvekkil olarak al
-                        if (applicants.length > 0) {
-                            const primaryApplicantId = applicants[0].id;
-                            try {
-                                const clientSnapshot = await db.collection("persons").doc(primaryApplicantId).get();
-                                if (clientSnapshot.exists) {
-                                    client = clientSnapshot.data();
-                                    console.log(`✅ Müvekkil bulundu: ${client.name || primaryApplicantId}`);
-                                } else {
-                                    console.warn(`❌ Müvekkil dokümanı bulunamadı: ${primaryApplicantId}`);
-                                }
-                            } catch (clientError) {
-                                console.error("Müvekkil sorgusu sırasında hata:", clientError);
-                            }
-                        } else {
-                            console.warn("❌ Başvuru sahibi listesi boş");
-                        }
-                    } else {
-                        console.warn(`Associated transaction ID (${associatedTransactionId}) ile transaction kaydı bulunamadı.`);
-                    }
-
-                  } catch (error) {
-                    console.error("Transaction sorgusu sırasında hata:", error);
-                }
+if (ipRecordData) {
+    console.log(`✅ IP kaydı bulundu. ${applicants.length} adet başvuru sahibi var.`);
+    
+    // ✅ DEBUG: ipRecordData'nın tam içeriğini göster
+    console.log("🔍 FULL ipRecordData:", JSON.stringify(ipRecordData, null, 2));
+    console.log("🔍 ipRecordData.applicants:", ipRecordData.applicants);
+    console.log("🔍 ipRecordData.applicants length:", ipRecordData.applicants?.length);
+    console.log("🔍 ipRecordData.applicants type:", Array.isArray(ipRecordData.applicants));
+    
+    // Applicants'ı yeniden ata
+    applicants = ipRecordData.applicants || [];
+    
+    // ✅ Assignment sonrası kontrol
+    console.log("🔍 applicants AFTER assignment:", applicants);
+    console.log("🔍 applicants length AFTER assignment:", applicants.length);
+    console.log("🔍 applicants type AFTER assignment:", Array.isArray(applicants));
+    
+    // Birincil başvuru sahibini müvekkil olarak al
+    if (applicants.length > 0) {
+        console.log("🔍 Processing applicants for client...");
+        const primaryApplicantId = applicants[0].id;
+        console.log("🔍 Primary applicant ID:", primaryApplicantId);
+        
+        try {
+            const clientSnapshot = await db.collection("persons").doc(primaryApplicantId).get();
+            if (clientSnapshot.exists) {
+                client = clientSnapshot.data();
+                console.log(`✅ Müvekkil bulundu: ${client.name || primaryApplicantId}`);
             } else {
-                console.warn("associatedTransactionId alanı eksik. Alıcı bulunamayabilir.");
+                console.warn(`❌ Müvekkil dokümanı bulunamadı: ${primaryApplicantId}`);
             }
-            
-            // Alıcı listelerini belirleme
-            const notificationType = after.mainProcessType || 'marka'; // Varsayılan olarak 'marka'
-            const recipients = await getRecipientsByApplicantIds(applicants, notificationType);
-            const toRecipients = recipients.to;
-            const ccRecipients = recipients.cc;
+        } catch (clientError) {
+            console.error("Müvekkil sorgusu sırasında hata:", clientError);
+        }
+    } else {
+        console.warn("❌ Başvuru sahibi listesi boş");
+    }
+} else {
+    console.warn(`Associated transaction ID (${associatedTransactionId}) ile transaction kaydı bulunamadı.`);
+}
+} catch (error) {
+    console.error("Transaction sorgusu sırasında hata:", error);
+}
+} else {
+    console.warn("associatedTransactionId alanı eksik. Alıcı bulunamayabilir.");
+}
+
+// Alıcı listelerini belirleme
+const notificationType = after.mainProcessType || 'trademark'; // ✅ Düzeltildi: 'trademark'
+console.log("🔍 Notification type:", notificationType);
+
+// Recipients çağrısından HEMEN ÖNCE final kontrol
+console.log("🚨 JUST BEFORE getRecipientsByApplicantIds:");
+console.log("🔍 applicants variable:", applicants);
+console.log("🔍 applicants.length:", applicants.length);
+console.log("🔍 notificationType:", notificationType);
+
+const recipients = await getRecipientsByApplicantIds(applicants, notificationType);
+console.log("🔍 Recipients result:", recipients);
+
+const toRecipients = recipients.to;
+const ccRecipients = recipients.cc;
+
+console.log("📧 Final recipients:");
+console.log("📧 toRecipients:", toRecipients);
+console.log("📧 ccRecipients:", ccRecipients);
+console.log("📧 toRecipients.length:", toRecipients.length);
+console.log("📧 ccRecipients.length:", ccRecipients.length);
 
             if (toRecipients.length === 0 && ccRecipients.length === 0) {
                 console.warn("Gönderim için alıcı bulunamadı.");
