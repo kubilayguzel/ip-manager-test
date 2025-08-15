@@ -502,11 +502,8 @@ export const createMailNotificationOnDocumentStatusChangeV2 = onDocumentUpdated(
             if (associatedTransactionId) {
                 try {
                     // Önce hangi ipRecord'a ait olduğunu bulun
-                    const ipRecordsSnapshot = await db.collection("ipRecords").get();
-                    
-                    let ipRecordData = null;
-                    let applicants = [];
-                    
+                    const ipRecordsSnapshot = await db.collection("ipRecords").get();            
+                  
                     for (const ipDoc of ipRecordsSnapshot.docs) {
                         const transactionRef = db.collection("ipRecords")
                             .doc(ipDoc.id)
