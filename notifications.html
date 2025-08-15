@@ -466,19 +466,22 @@ document.getElementById('send-notification').addEventListener('click', async () 
 
 // === Helpers for recipients ===
 function getToCcFromNotification(n) {
-  console.log("🔍 getToCcFromNotification çağrıldı, notification:", n);
-  
-  // Backend artık toList/ccList alan adlarını kullanıyor
-  const toList = Array.isArray(n?.toList) ? n.toList : [];
-  const ccList = Array.isArray(n?.ccList) ? n.ccList : [];
-  
-  // Tekil string gelmişse dizileştir (güvenlik için)
-  const norm = a => (Array.isArray(a) ? a : (typeof a === 'string' && a ? [a] : []));
-  
-  const result = { toList: norm(toList), ccList: norm(ccList) };
-  console.log("🎯 getToCcFromNotification sonucu:", result);
-  
-  return result;
+  const to = normalize(n?.toList) 
+         || normalize(n?.toRecipients) 
+         || normalize(n?.recipientTo)   // ← Önemli
+         || normalize(n?.to) 
+         || normalize(n?.recipientEmail); // tekil string için
+  const cc = normalize(n?.ccList) 
+         || normalize(n?.ccRecipients) 
+         || normalize(n?.recipientCc)   // ← Önemli
+         || normalize(n?.cc);
+  return { toList: to || [], ccList: cc || [] };
+}
+function normalize(v) {
+  if (!v) return null;
+  if (Array.isArray(v)) return v.filter(Boolean).map(x => String(x).trim()).filter(Boolean);
+  if (typeof v === 'string') return v.split(/[;,]\s*/).filter(Boolean);
+  return null;
 }
 
 function openModal(notification) {
