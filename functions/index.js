@@ -525,12 +525,12 @@ export const createMailNotificationOnDocumentStatusChangeV2 = onDocumentUpdated(
                     if (ipRecordData) {
                         console.log(`✅ IP kaydı bulundu. ${applicants.length} adet başvuru sahibi var.`);
                         
-                        // ✅ YENİ: Birincil başvuru sahibini müvekkil olarak al
+                        // ✅ Birincil başvuru sahibini müvekkil olarak al
                         if (applicants.length > 0) {
                             const primaryApplicantId = applicants[0].id;
                             try {
                                 const clientSnapshot = await db.collection("persons").doc(primaryApplicantId).get();
-                                if (clientSnapshot.exists()) {
+                                if (clientSnapshot.exists) { // ✅ Düzeltildi: exists() değil exists
                                     client = clientSnapshot.data();
                                     console.log(`✅ Müvekkil bulundu: ${client.name || primaryApplicantId}`);
                                 } else {
