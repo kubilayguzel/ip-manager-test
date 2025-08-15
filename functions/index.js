@@ -935,21 +935,27 @@ export const processTrademarkBulletinUploadV3 = onObjectFinalized(
  * @returns {Promise<{to: string[], cc: string[]}>} Alıcı listeleri
  */
 async function getRecipientsByApplicantIds(applicants, notificationType) {
-  // Bildirim tipi → Firestore anahtarı eşlemesi
   const TYPE_KEY_MAP = {
-    trademark: 'marka',
-    marka: 'marka',
-    design: 'tasarim',
-    tasarim: 'tasarim',
-    lawsuit: 'dava',
-    dava: 'dava',
-    accounting: 'muhasebe',
-    muhasebe: 'muhasebe',
+    trademark: 'marka', marka: 'marka',
+    design: 'tasarim', tasarim: 'tasarim',
+    lawsuit: 'dava',   dava: 'dava',
+    accounting: 'muhasebe', muhasebe: 'muhasebe',
   };
   const typeKey = TYPE_KEY_MAP[notificationType] || notificationType;
 
   const toRecipients = new Set();
   const ccRecipients = new Set();
+
+  const addEmails = (set, val, label) => {
+    if (!val) return;
+    const arr =
+      Array.isArray(val) ? val :
+      (typeof val === 'string' ? [val] : []);
+    for (const e of arr.map(x => String(x).trim()).filter(Boolean)) {
+      set.add(e);
+      console.log(`📧 ${label} eklendi: ${e}`);
+    }
+  };
 
   if (!Array.isArray(applicants) || applicants.length === 0) {
     console.warn("❌ Applicants dizisi boş veya null");
@@ -961,80 +967,66 @@ async function getRecipientsByApplicantIds(applicants, notificationType) {
   for (const applicant of applicants) {
     const personId = applicant?.id || applicant?.personId;
     console.log(`\n🔍 Processing applicant personId: ${personId}`);
-
-    if (!personId) {
-      console.warn("❌ Applicant kaydında id/personId yok");
-      continue;
-    }
+    if (!personId) { console.warn("❌ Applicant kaydında id/personId yok"); continue; }
 
     try {
-      // persons koleksiyonundan temel kişi bilgisi
+      // persons
       const personSnap = await db.collection("persons").doc(personId).get();
-      if (!personSnap.exists) {
-        console.warn(`❌ Person bulunamadı: ${personId}`);
-        continue;
-      }
-      const personData = personSnap.data() || {};
-      console.log(`✅ Person bulundu - Email: ${personData.email || '(yok)'}`);
+      if (!personSnap.exists) { console.warn(`❌ Person bulunamadı: ${personId}`); continue; }
+      const person = personSnap.data() || {};
+      const personEmail = (person.email || '').trim();
+      console.log(`✅ Person bulundu - Email: ${personEmail || '(yok)'}`);
 
-      // personsRelated kaydı
+      // personsRelated
       const prSnap = await db.collection("personsRelated")
-        .where("personId", "==", personId)
-        .limit(1)
-        .get();
+        .where("personId", "==", personId).limit(1).get();
+      if (prSnap.empty) { console.warn(`❌ personsRelated kaydı bulunamadı: ${personId}`); continue; }
 
-      if (prSnap.empty) {
-        console.warn(`❌ personsRelated kaydı bulunamadı: ${personId}`);
-        continue;
-      }
-
-      const personsRelatedData = prSnap.docs[0].data() || {};
-      console.log(`✅ personsRelated bulundu (responsible.${typeKey}=${String(personsRelatedData?.responsible?.[typeKey])})`);
-
-      // Sorumluluk kontrolü (eşlenen anahtar ile)
-      const isResponsible = personsRelatedData?.responsible?.[typeKey] === true;
-      console.log(`🔍 Checking responsible[${typeKey}] (from '${notificationType}'):`, isResponsible);
+      const pr = prSnap.docs[0].data() || {};
+      const isResponsible = pr?.responsible?.[typeKey] === true;
+      console.log(`🔍 responsible[${typeKey}] = ${String(isResponsible)}`);
 
       if (!isResponsible) {
         console.warn(`❌ Person ${personId} sorumlu değil - '${typeKey}' için`);
         continue;
       }
 
-      // Notify ayarları (eşlenen anahtar ile)
-      const notifySettings = personsRelatedData?.notify?.[typeKey] || {};
-      console.log(`🔍 Notify settings[${typeKey}]:`, JSON.stringify(notifySettings));
+      const ns = pr?.notify?.[typeKey] || {};
+      console.log(`🔎 notify[${typeKey}] =`, JSON.stringify(ns));
 
-      const hasEmail = !!personData.email;
-      if (!hasEmail) {
-        console.warn(`❌ Email adresi yok: ${personId}`);
-        continue;
+      // — Kişinin kendi e-postası
+      if (personEmail) {
+        if (ns.to === true)  { toRecipients.add(personEmail);  console.log(`📧 TO (self): ${personEmail}`); }
+        if (ns.cc === true)  { ccRecipients.add(personEmail);  console.log(`📧 CC (self): ${personEmail}`); }
+      } else {
+        if (ns.to === true || ns.cc === true) console.warn(`⚠️ Kişinin email'i yok: ${personId}`);
       }
 
-      if (notifySettings.to === true) {
-        toRecipients.add(personData.email);
-        console.log(`📧 TO listesine eklendi: ${personData.email}`);
-      }
-      if (notifySettings.cc === true) {
-        ccRecipients.add(personData.email);
-        console.log(`📧 CC listesine eklendi: ${personData.email}`);
-      }
+      // — Ek listeler (notify altında)
+      addEmails(toRecipients, ns.toList,   'TO (toList)');
+      addEmails(toRecipients, ns.toEmails, 'TO (toEmails)');
+      if (Array.isArray(ns.to)) addEmails(toRecipients, ns.to, 'TO (to[])');
+
+      addEmails(ccRecipients, ns.ccList,   'CC (ccList)');
+      addEmails(ccRecipients, ns.ccEmails, 'CC (ccEmails)');
+      if (Array.isArray(ns.cc)) addEmails(ccRecipients, ns.cc, 'CC (cc[])');
+
+      // — Opsiyonel: personsRelated.emails[typeKey]
+      const prEmails = pr?.emails?.[typeKey] || {};
+      addEmails(toRecipients, prEmails.to, 'TO (pr.emails)');
+      addEmails(ccRecipients, prEmails.cc, 'CC (pr.emails)');
 
     } catch (err) {
       console.error(`❌ Alıcı tespiti sırasında hata - applicant ${personId}:`, err);
     }
   }
 
-  const result = {
-    to: Array.from(toRecipients),
-    cc: Array.from(ccRecipients),
-  };
-
+  const result = { to: Array.from(toRecipients), cc: Array.from(ccRecipients) };
   console.log("🎯 FINAL RESULT:");
   console.log("📧 TO recipients:", result.to);
   console.log("📧 CC recipients:", result.cc);
   console.log("📊 TO count:", result.to.length);
   console.log("📊 CC count:", result.cc.length);
-
   return result;
 }
 
