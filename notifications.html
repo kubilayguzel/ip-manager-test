@@ -3,37 +3,179 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Müvekkil Bildirimleri - IP Manager</title>
-<link rel="stylesheet" href="css/styles.css">
+<title>Müvekkil Bildirimleri</title>
+<link rel="stylesheet" href="css/shared-styles.css">
 <style>
-/* Modal stilleri */
-.modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.4); align-items: center; justify-content: center; }
-.modal-content-large { background-color: #fefefe; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.2); width: 90%; max-width: 800px; max-height: 90%; display: flex; flex-direction: column; }
-.modal-header { background-color: #0d6efd; color: white; padding: 16px 20px; border-radius: 8px 8px 0 0; font-weight: bold; font-size: 1.1em; }
-.modal-body { padding: 20px; flex: 1; overflow-y: auto; }
-.modal-footer { padding: 16px 20px; border-top: 1px solid #ddd; display: flex; gap: 12px; justify-content: flex-end; }
-.form-group { margin-bottom: 16px; }
-.form-group label { display: block; margin-bottom: 6px; font-weight: 500; color: #333; }
-.form-group input, .form-group textarea { width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; }
-.form-group textarea { min-height: 100px; resize: vertical; }
-.action-btn { padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; transition: background-color 0.2s; }
-.action-btn.primary { background-color: #0d6efd; color: white; }
-.action-btn.primary:hover { background-color: #0b5ed7; }
-.action-btn.secondary { background-color: #6c757d; color: white; }
-.action-btn.secondary:hover { background-color: #5a6268; }
-
-/* Durum stilleri */
-.status-badge { padding: 4px 8px; border-radius: 12px; font-size: 12px; font-weight: 500; text-transform: uppercase; }
-.status-badge.status-sent { background-color: #198754; color: #fff; }
-.status-badge.status-pending { background-color: #ffc107; color: #000; }
-.status-badge.status-failed { background-color: #dc3545; color: #fff; }
-.status-badge.status-draft { background-color: #6c757d; color: #fff; font-size: 0.85em; }
-.status-badge.missing-info { background-color: #fd7e14; color: #000; }
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    color: #333;
+    display: flex;
+}
+.page-wrapper {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow-y: auto;
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+}
+.main-container {
+    width: 100%;
+    padding: 30px;
+    margin: 0;
+}
+.page-header {
+    background: rgba(255,255,255,0.95);
+    padding: 30px;
+    border-radius: 20px;
+    margin-bottom: 30px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+}
+.page-title {
+    font-size: 2em;
+    color: #1e3c72;
+    margin-bottom: 10px;
+}
+.page-subtitle {
+    color: #666;
+    font-size: 1.1em;
+}
+.tasks-container {
+    background: rgba(255,255,255,0.95);
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    overflow: hidden;
+}
+.tasks-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+.tasks-table th,
+.tasks-table td {
+    padding: 15px;
+    text-align: left;
+    border-bottom: 1px solid #f0f0f0;
+    vertical-align: top;
+}
+.tasks-table th {
+    background: #f8f9fa;
+    font-weight: 600;
+}
+.status-badge {
+    padding: 5px 10px;
+    border-radius: 12px;
+    color: white;
+    font-weight: 500;
+    font-size: 0.9em;
+}
+.status-sent { background-color: #28a745; }
+.status-failed { background-color: #dc3545; }
+.status-pending { background-color: #6c757d; }
+/* missing-info status styling kept */
+.action-btn {
+    background: #007bff;
+    color: white;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    margin-left: 5px;
+    transition: all 0.3s ease;
+}
+.action-btn:hover {
+    opacity: 0.9;
+}
+/* Modal common */
+.modal {
+  position: fixed;
+  top:0;
+  left:0;
+  width:100%;
+  height:100%;
+  background: rgba(0,0,0,0.6);
+  display:none;
+  align-items:center;
+  justify-content:center;
+  z-index: 9999;
+}
+/* Default modal content widened */
+.modal-content {
+  background:#fff;
+  padding:20px;
+  width:720px;
+  max-width: 95vw;
+  border-radius:12px;
+  box-shadow:0 0 20px rgba(0,0,0,0.2);
+}
+/* Large editor modal */
+.modal-content-lg {
+  background:#fff;
+  padding:20px;
+  width:960px;
+  max-width: 95vw;
+  border-radius:12px;
+  box-shadow:0 0 24px rgba(0,0,0,0.25);
+  display:flex;
+  flex-direction:column;
+}
+.modal-header {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  margin-bottom: 8px;
+}
+.modal-title { margin:0; font-size: 1.25rem; }
+.close-modal-btn, .close {
+  background: transparent;
+  border: 0;
+  font-size: 28px;
+  line-height: 1;
+  cursor: pointer;
+}
+.modal-body {
+  max-height: 70vh;
+  overflow:auto;
+}
+.modal-footer {
+  display:flex;
+  gap:8px;
+  justify-content:flex-end;
+  margin-top: 10px;
+}
+.modal-content label {
+  display:block;
+  margin-top:10px;
+}
+.modal-content input, .modal-content textarea {
+  width:100%;
+  margin-top:5px;
+}
+.modal-actions {
+  margin-top:15px;
+  text-align:right;
+}
+.missing-info {
+  background-color: #ffe5c0;
+}
+.missing-field {
+  display: inline-block;
+  background-color: #fd7e14;
+  color: #000;
+  padding: 2px 8px;
+  border-radius: 8px;
+  font-size: 0.85em;
+}
+.status-badge.missing-info {
+  background-color: #fd7e14;
+  color: #000;
+}
 .loading { text-align: center; padding: 50px; }
 .no-records { text-align: center; padding: 50px; color: #666; }
 
 /* Recipients badges */
-.recipient-badges .badge { display:inline-block; padding:4px 8px; border-radius:12px; font-size:12px; margin:2px 4px 0 0; }
+.recipient-badges .badge {
+  display:inline-block; padding:4px 8px; border-radius:12px; font-size:12px; margin:2px 4px 0 0;
+}
 .badge-to { background:#0d6efd; color:#fff; }
 .badge-cc { background:#17a2b8; color:#fff; }
 .badge-empty { background:#e9ecef; color:#555; }
@@ -73,69 +215,74 @@
     </table>
     </div>
 </div>
-
-<!-- Bildirim Düzenleme Modal -->
 <div id="notification-modal" class="modal">
-  <div class="modal-content-large">
-    <div class="modal-header">Bildirim Düzenle</div>
+  <div class="modal-content-lg">
+    <div class="modal-header">
+      <h2 class="modal-title">Bildirimi Düzenle</h2>
+      <button id="close-modal" class="close-modal-btn" aria-label="Kapat">&times;</button>
+    </div>
     <div class="modal-body">
-      <div class="form-group">
-        <label for="modal-subject">Konu:</label>
-        <input type="text" id="modal-subject" placeholder="E-posta konusu...">
+      <label for="modal-subject" class="form-label">Konu</label>
+      <input type="text" id="modal-subject" class="form-input" />
+
+      <!-- Recipients block -->
+      <div id="mailRecipientsBlock" style="margin:12px 0;">
+        <div style="margin-bottom:6px; font-weight:600;">Alıcılar</div>
+        <div class="d-flex" style="gap:16px; flex-wrap:wrap;">
+          <div style="min-width:240px; flex:1;">
+            <small class="text-muted d-block" style="margin-bottom:4px;">To</small>
+            <div id="modal-to" class="recipient-badges"></div>
+          </div>
+          <div style="min-width:240px; flex:1;">
+            <small class="text-muted d-block" style="margin-bottom:4px;">CC</small>
+            <div id="modal-cc" class="recipient-badges"></div>
+          </div>
+        </div>
       </div>
-      <div class="form-group">
-        <label>Alıcılar (TO):</label>
-        <div id="modal-to" class="recipient-badges"></div>
-      </div>
-      <div class="form-group">
-        <label>Kopyalanacaklar (CC):</label>
-        <div id="modal-cc" class="recipient-badges"></div>
-      </div>
-      <div class="form-group">
-        <label for="modal-body">İçerik:</label>
-        <textarea id="modal-body" placeholder="E-posta içeriği..."></textarea>
-      </div>
+
+      <label for="modal-body" class="form-label">İçerik</label>
+      <textarea id="modal-body"></textarea>
     </div>
     <div class="modal-footer">
-      <button id="save-draft" class="action-btn secondary">Taslak Kaydet</button>
-      <button id="send-notification" class="action-btn primary">Gönder</button>
-      <button id="close-modal" class="action-btn secondary">Kapat</button>
+      <button id="save-draft" class="action-btn" style="background:#6c757d">Taslak Kaydet</button>
+      <button id="send-notification" class="action-btn">Gönder</button>
     </div>
   </div>
 </div>
-
-<!-- Eksik Bilgi Modal -->
+<!-- Eksik Bilgiler Modal -->
 <div id="missing-info-modal" class="modal">
-  <div class="modal-content-large">
-    <div class="modal-header">Eksik Bilgi</div>
-    <div class="modal-body">
-      <p style="margin:0 0 12px 0; color:#dc3545; font-weight:500;">Bu bildirim için gerekli bilgiler eksik. Lütfen aşağıdaki eksikleri tamamlayın.</p>
-      <div style="margin:8px 0;">
-        <strong>Portföy Başvuru No:</strong>
-        <span id="mi-application-no">—</span>
-      </div>
-      <div style="margin:8px 0;">
-        <strong>Eksik Alanlar:</strong>
-        <ul id="mi-missing-list" style="margin:6px 0;"></ul>
-      </div>
+  <div class="modal-content">
+    <button id="mi-close" class="close" aria-label="Kapat">&times;</button>
+    <h3>Eksik Bilgiler</h3>
+    <p>Bu bildirim şu anda <b>gönderilmeye hazır değil</b>. Lütfen aşağıdaki eksikleri tamamlayın.</p>
+
+    <div style="margin:8px 0;">
+      <strong>Portföy Başvuru No:</strong>
+      <span id="mi-application-no">—</span>
     </div>
-    <div class="modal-footer">
-      <button id="mi-edit" class="action-btn primary">Bildirimi Düzenle</button>
-      <button id="mi-close-btn" class="action-btn secondary">Kapat</button>
+
+    <div style="margin:8px 0;">
+      <strong>Eksik Alanlar:</strong>
+      <ul id="mi-missing-list" style="margin:6px 0;"></ul>
+    </div>
+
+    <div class="modal-actions">
+      <button id="mi-edit" class="action-btn">Bildirimi Düzenle</button>
+      <button id="mi-close-btn" class="action-btn" style="background:#6c757d">Kapat</button>
     </div>
   </div>
 </div>
 
 </main>
 </div>
-
 <script src="https://cdn.tiny.cloud/1/uecky9tx0nvoenpj0odjyue9swj52q3sz49i62c745240d99/tinymce/6/tinymce.min.js" referrerpolicy="origin"></script>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
-import { getFirestore, collection, getDocs, query, orderBy, onSnapshot, doc, getDoc, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
+import { getFirestore, collection, getDocs, query, orderBy, onSnapshot,doc, getDoc, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
 import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-functions.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
 import { loadSharedLayout } from './js/layout-loader.js';
+
 
 const firebaseConfig = {
     apiKey: "AIzaSyDbdqfiVbobnl1BtyiWxhD4bfIcREw8ZRc",
@@ -166,129 +313,70 @@ onAuthStateChanged(auth, (user) => {
 });
 
 /** =====================
- *   HELPER FONKSIYONLAR
+ *   HELPERLAR
  *  ===================== */
-
-// Başvuru numarasını çözümler
 async function resolveApplicationNo(notification) {
-    // ipRecordId → ipRecords.applicationNumber | details.brandInfo.applicationNo
-    let ipRecordId = notification.ipRecordId;
-    
-    // sourceTaskId'den ipRecordId bulmaya çalış
-    if (!ipRecordId && notification.sourceTaskId) {
-        try {
-            const taskDoc = await getDoc(doc(db, "tasks", notification.sourceTaskId));
-            if (taskDoc.exists()) {
-                const taskData = taskDoc.data() || {};
-                ipRecordId = taskData.relatedIpRecordId || taskData.ipRecordId || taskData.relatedRecordId;
-            }
-        } catch (error) {
-            console.warn("Task sorgusu sırasında hata:", error);
-        }
+  // ipRecordId → ipRecords.applicationNumber | details.brandInfo.applicationNo
+  let ipRecordId = notification.ipRecordId;
+  if (!ipRecordId && notification.sourceTaskId) {
+    const t = await getDoc(doc(db, "tasks", notification.sourceTaskId));
+    if (t.exists()) {
+      const td = t.data() || {};
+      ipRecordId = td.relatedIpRecordId || td.ipRecordId || td.relatedRecordId;
     }
-    
-    // sourceDocumentId'den ipRecordId bulmaya çalış  
-    if (!ipRecordId && notification.sourceDocumentId) {
-        for (const collection of ["unindexed_pdfs", "indexed_documents"]) {
-            try {
-                const docSnapshot = await getDoc(doc(db, collection, notification.sourceDocumentId));
-                if (docSnapshot.exists()) {
-                    const docData = docSnapshot.data() || {};
-                    ipRecordId = docData.ipRecordId || docData.relatedIpRecordId || docData.ipRecordRefId || ipRecordId;
-                    if (ipRecordId) break;
-                }
-            } catch (error) {
-                console.warn(`${collection} sorgusu sırasında hata:`, error);
-            }
-        }
+  }
+  if (!ipRecordId && notification.sourceDocumentId) {
+    for (const col of ["unindexed_pdfs", "indexed_documents"]) {
+      const d = await getDoc(doc(db, col, notification.sourceDocumentId));
+      if (d.exists()) {
+        const dd = d.data() || {};
+        ipRecordId = dd.ipRecordId || dd.relatedIpRecordId || dd.ipRecordRefId || ipRecordId;
+      }
     }
-    
-    if (!ipRecordId) return '-';
-    
-    try {
-        const ipRecordSnapshot = await getDoc(doc(db, "ipRecords", ipRecordId));
-        if (!ipRecordSnapshot.exists()) return '-';
-        
-        const ipRecordData = ipRecordSnapshot.data() || {};
-        return ipRecordData.applicationNumber || 
-               ipRecordData.applicationNo || 
-               ipRecordData.appNo || 
-               ipRecordData.details?.brandInfo?.applicationNo || 
-               '-';
-    } catch (error) {
-        console.warn("ipRecord sorgusu sırasında hata:", error);
-        return '-';
-    }
+  }
+  if (!ipRecordId) return '-';
+  const recSnap = await getDoc(doc(db, "ipRecords", ipRecordId));
+  if (!recSnap.exists()) return '-';
+  const r = recSnap.data() || {};
+  return r.applicationNumber || r.applicationNo || r.appNo || r.details?.brandInfo?.applicationNo || '-';
 }
 
-// Başvuru sahibi adını çözümler
 async function resolveApplicantName(notification) {
-    // ipRecord.applicants[].name varsa onu, yoksa persons/{id}.name
-    let ipRecordId = notification.ipRecordId;
-    
-    // sourceTaskId'den ipRecordId bulmaya çalış
-    if (!ipRecordId && notification.sourceTaskId) {
-        try {
-            const taskDoc = await getDoc(doc(db, "tasks", notification.sourceTaskId));
-            if (taskDoc.exists()) {
-                const taskData = taskDoc.data() || {};
-                ipRecordId = taskData.relatedIpRecordId || taskData.ipRecordId || taskData.relatedRecordId;
-            }
-        } catch (error) {
-            console.warn("Task sorgusu sırasında hata:", error);
-        }
+  // ipRecord.applicants[].name varsa onu, yoksa persons/{id}.name
+  let ipRecordId = notification.ipRecordId;
+  if (!ipRecordId && notification.sourceTaskId) {
+    const t = await getDoc(doc(db, "tasks", notification.sourceTaskId));
+    if (t.exists()) {
+      const td = t.data() || {};
+      ipRecordId = td.relatedIpRecordId || td.ipRecordId || td.relatedRecordId;
     }
-    
-    // sourceDocumentId'den ipRecordId bulmaya çalış
-    if (!ipRecordId && notification.sourceDocumentId) {
-        for (const collection of ["unindexed_pdfs", "indexed_documents"]) {
-            try {
-                const docSnapshot = await getDoc(doc(db, collection, notification.sourceDocumentId));
-                if (docSnapshot.exists()) {
-                    const docData = docSnapshot.data() || {};
-                    ipRecordId = docData.ipRecordId || docData.relatedIpRecordId || docData.ipRecordRefId || ipRecordId;
-                    if (ipRecordId) break;
-                }
-            } catch (error) {
-                console.warn(`${collection} sorgusu sırasında hata:`, error);
-            }
-        }
+  }
+  if (!ipRecordId && notification.sourceDocumentId) {
+    for (const col of ["unindexed_pdfs", "indexed_documents"]) {
+      const d = await getDoc(doc(db, col, notification.sourceDocumentId));
+      if (d.exists()) {
+        const dd = d.data() || {};
+        ipRecordId = dd.ipRecordId || dd.relatedIpRecordId || dd.ipRecordRefId || ipRecordId;
+      }
     }
-    
-    if (!ipRecordId) return '-';
-    
-    try {
-        const ipRecordSnapshot = await getDoc(doc(db, "ipRecords", ipRecordId));
-        if (!ipRecordSnapshot.exists()) return '-';
-        
-        const ipRecordData = ipRecordSnapshot.data() || {};
-        const applicants = Array.isArray(ipRecordData.applicants) ? ipRecordData.applicants : [];
-        
-        const names = [];
-        for (const applicant of applicants) {
-            if (applicant?.name) {
-                names.push(applicant.name);
-                continue;
-            }
-            
-            if (applicant?.id) {
-                try {
-                    const personSnapshot = await getDoc(doc(db, "persons", applicant.id));
-                    if (personSnapshot.exists()) {
-                        const personData = personSnapshot.data() || {};
-                        if (personData.name) names.push(personData.name);
-                    }
-                } catch (error) {
-                    console.warn("Person sorgusu sırasında hata:", error);
-                }
-            }
-        }
-        
-        return names.length ? names.join(", ") : '-';
-    } catch (error) {
-        console.warn("ipRecord sorgusu sırasında hata:", error);
-        return '-';
+  }
+  if (!ipRecordId) return '-';
+  const recSnap = await getDoc(doc(db, "ipRecords", ipRecordId));
+  if (!recSnap.exists()) return '-';
+  const r = recSnap.data() || {};
+  const applicants = Array.isArray(r.applicants) ? r.applicants : [];
+  const names = [];
+  for (const a of applicants) {
+    if (a?.name) { names.push(a.name); continue; }
+    if (a?.id) {
+      const ps = await getDoc(doc(db, "persons", a.id));
+      if (ps.exists()) {
+        const pd = ps.data() || {};
+        if (pd.name) names.push(pd.name);
+      }
     }
+  }
+  return names.length ? names.join(", ") : '-';
 }
 
 async function resolveType(notification) {
@@ -312,329 +400,220 @@ async function resolveType(notification) {
   return '-';
 }
 
-// Evrak bilgilerini çözümler
 async function resolveDocumentInfo(notification) {
-    // unindexed_pdfs/{sourceDocumentId} → fileName, fileUrl
-    if (!notification.sourceDocumentId) {
-        return { fileName: '-', fileUrl: null };
-    }
-    
-    try {
-        const docSnapshot = await getDoc(doc(db, "unindexed_pdfs", notification.sourceDocumentId));
-        if (!docSnapshot.exists()) {
-            return { fileName: '-', fileUrl: null };
-        }
-        
-        const docData = docSnapshot.data() || {};
-        return {
-            fileName: docData.fileName || '-',
-            fileUrl: docData.fileUrl || null
-        };
-    } catch (error) {
-        console.warn("Document sorgusu sırasında hata:", error);
-        return { fileName: '-', fileUrl: null };
-    }
+  // unindexed_pdfs/{sourceDocumentId} → fileName, fileUrl
+  if (!notification.sourceDocumentId) return { fileName: '-', fileUrl: null };
+  const d = await getDoc(doc(db, "unindexed_pdfs", notification.sourceDocumentId));
+  if (!d.exists()) return { fileName: '-', fileUrl: null };
+  const dd = d.data() || {};
+  return { fileName: dd.fileName || '-', fileUrl: dd.fileUrl || null };
 }
 
 /** =====================
- *   NOTIFICATION LISTENER
+ *   LİSTELEYİCİ
  *  ===================== */
 function startNotificationListener(user) {
-    // Sıralama: en yeni en üstte → DESC
-    const q = query(collection(db, "mail_notifications"), orderBy("createdAt", "desc"));
+  // Sıralama: en yeni en altta → ASC
+  const q = query(collection(db, "mail_notifications"), orderBy("createdAt", "asc"));
 
-    onSnapshot(q, async (snapshot) => {
-        loader.style.display = 'none';
-        tableBody.innerHTML = '';
+  onSnapshot(q, async (snapshot) => {
+    loader.style.display = 'none';
+    tableBody.innerHTML = '';
 
-        if (snapshot.empty) {
-            tableBody.innerHTML = '<tr><td colspan="8" class="no-records">Gösterilecek bildirim bulunamadı.</td></tr>';
-            return;
-        }
+    if (snapshot.empty) {
+      tableBody.innerHTML = '<tr><td colspan="8" class="no-records">Gösterilecek bildirim bulunamadı.</td></tr>';
+      return;
+    }
 
-        // Her notification için gerekli bilgileri paralel olarak çözümle
-        const notificationPromises = snapshot.docs.map(async (snapDoc) => {
-            const notification = { id: snapDoc.id, ...snapDoc.data() };
+    for (const snapDoc of snapshot.docs) {
+      const notification = { id: snapDoc.id, ...snapDoc.data() };
 
-            // Tüm alanları paralel olarak çözümle
-            const [applicationNumber, applicantName, typeValue, docInfo] = await Promise.all([
-                resolveApplicationNo(notification),
-                resolveApplicantName(notification),
-                resolveType(notification),
-                resolveDocumentInfo(notification)
-            ]);
+      // Alanlar
+      const [applicationNumber, applicantName, typeVal, docInfo] = await Promise.all([
+        resolveApplicationNo(notification),
+        resolveApplicantName(notification),
+        resolveType(notification),
+        resolveDocumentInfo(notification)
+      ]);
 
-            return {
-                notification,
-                applicationNumber,
-                applicantName,
-                typeValue,
-                docInfo
-            };
-        });
+      const tr = document.createElement('tr');
+      const statusClass = notification.status === 'sent' ? 'status-sent'
+        : notification.status === 'failed' ? 'status-failed'
+        : notification.status === 'missing_info' ? 'missing-info'
+        : 'status-pending';
 
-        // Tüm notifications işlenene kadar bekle
-        const resolvedNotifications = await Promise.all(notificationPromises);
+      const sentAtText = notification.sentAt ? notification.sentAt.toDate().toLocaleString('tr-TR') : '-';
 
-        // Tabloyu doldur
-        resolvedNotifications.forEach(({ notification, applicationNumber, applicantName, typeValue, docInfo }) => {
-            const tr = document.createElement('tr');
-            
-            // Durum badge'i
-            const statusClass = notification.status === 'sent' ? 'status-sent'
-                : notification.status === 'failed' ? 'status-failed'
-                : notification.status === 'missing_info' ? 'missing-info'
-                : notification.status === 'draft' ? 'status-draft'
-                : 'status-pending';
+      const fileCellHtml = docInfo.fileUrl
+        ? `<a class="link" href="${docInfo.fileUrl}" target="_blank" rel="noopener">${docInfo.fileName}</a>`
+        : (docInfo.fileName || '-');
 
-            const statusText = notification.status === 'sent' ? 'Gönderildi'
-                : notification.status === 'failed' ? 'Başarısız'
-                : notification.status === 'missing_info' ? 'Eksik Bilgi'
-                : notification.status === 'draft' ? 'Taslak'
-                : 'Bekliyor';
+      tr.innerHTML = `
+        <td><span class="status-badge ${statusClass}">${notification.status || '-'}</span></td>
+        <td>${applicantName}</td>
+        <td>${notification.subject ? notification.subject : '<span class="missing-field">Konu Eksik</span>'}</td>
+        <td>${applicationNumber || '-'}</td>
+        <td>${typeVal}</td>
+        <td>${fileCellHtml}</td>
+        <td>${sentAtText}</td>
+        <td class="action-cell"></td>
+      `;
 
-            const sentAtText = notification.sentAt 
-                ? notification.sentAt.toDate().toLocaleString('tr-TR') 
-                : '-';
+      const actionCell = tr.querySelector('.action-cell');
 
-            // Evrak linki
-            const fileCellHtml = docInfo.fileUrl
-                ? `<a href="${docInfo.fileUrl}" target="_blank" class="link">${docInfo.fileName}</a>`
-                : docInfo.fileName;
+      // Düzenle butonu her durumda olsun
+      const editButton = document.createElement('button');
+      editButton.className = 'action-btn';
+      editButton.textContent = 'Düzenle';
+      editButton.dataset.id = notification.id;
+      editButton.addEventListener('click', () => openModal(notification));
+      actionCell.appendChild(editButton);
 
-            tr.innerHTML = `
-                <td><span class="status-badge ${statusClass}">${statusText}</span></td>
-                <td>${applicantName}</td>
-                <td>${notification.subject || '-'}</td>
-                <td>${applicationNumber}</td>
-                <td>${typeValue}</td>
-                <td>${fileCellHtml}</td>
-                <td>${sentAtText}</td>
-                <td>
-                    ${notification.status === 'missing_info' 
-                        ? `<button class="action-btn secondary" onclick="showMissingInfoModal('${notification.id}')">Eksikler</button>`
-                        : `<button class="action-btn primary" onclick="openEditModal('${notification.id}')">Düzenle</button>`
-                    }
-                </td>
-            `;
+      // Gönder/ Eksik Bilgi butonları (mevcut davranış korunur)
+      if (notification.status === 'missing_info') {
+        const missingBtn = document.createElement('button');
+        missingBtn.className = 'action-btn';
+        missingBtn.textContent = 'Eksik Bilgileri Göster';
+        missingBtn.dataset.id = notification.id;
+        missingBtn.addEventListener('click', () => showMissingInfo(notification));
+        actionCell.appendChild(missingBtn);
+      } else if (notification.status === 'failed' || notification.status === 'pending') {
+        const sendButton = document.createElement('button');
+        sendButton.className = 'action-btn';
+        sendButton.textContent = notification.status === 'failed' ? 'Tekrar Gönder' : 'Gönder';
+        sendButton.dataset.id = notification.id;
+        sendButton.addEventListener('click', () => sendNotification(notification));
+        actionCell.appendChild(sendButton);
+      }
 
-            tableBody.appendChild(tr);
-        });
-    }, (error) => {
-        console.error("Notification listener hatası:", error);
-        loader.style.display = 'none';
-        errorDiv.innerHTML = '<p>Bildirimler yüklenirken bir hata oluştu.</p>';
-        errorDiv.style.display = 'block';
-    });
+      tableBody.appendChild(tr);
+    }
+  }, (error) => {
+    loader.style.display = 'none';
+    errorDiv.textContent = 'Bildirimler yüklenirken bir hata oluştu.';
+  });
 }
 
 /** =====================
- *   MODAL FONKSIYONLARI
+ *   MODAL / DÜZENLEME
  *  ===================== */
 
-// Düzenleme modalını aç
-window.openEditModal = async function(notificationId) {
-    try {
-        const docSnapshot = await getDoc(doc(db, "mail_notifications", notificationId));
-        if (!docSnapshot.exists()) {
-            alert("Bildirim bulunamadı.");
-            return;
-        }
+document.getElementById('save-draft').addEventListener('click', async () => {
+  const id = document.getElementById('save-draft').dataset.id;
+  const subject = document.getElementById('modal-subject').value.trim();
+  const body = tinymce.get('modal-body').getContent();
 
-        const notification = docSnapshot.data();
-        openModal(notification);
-    } catch (error) {
-        console.error("Modal açma hatası:", error);
-        alert("Modal açılırken bir hata oluştu.");
-    }
+  try {
+    await updateDoc(doc(db, "mail_notifications", id), {
+      subject: subject,
+      body: body,
+      isDraft: true,
+      updatedAt: serverTimestamp()
+    });
+    alert("Taslak kaydedildi!");
+    document.getElementById('notification-modal').style.display = "none";
+  } catch (err) {
+    console.error(err);
+    alert("Taslak kaydedilemedi.");
+  }
+});
+
+document.getElementById('send-notification').addEventListener('click', async () => {
+  const id = document.getElementById('send-notification').dataset.id;
+  const subject = document.getElementById('modal-subject').value.trim();
+  const body = tinymce.get('modal-body').getContent();
+  const user = auth.currentUser;
+  if (!user) {
+    alert("Giriş yapmalısınız.");
+    return;
+  }
+  if (!confirm("Bu e-postayı göndermek istediğinize emin misiniz?")) return;
+
+  try {
+    await updateDoc(doc(db, "mail_notifications", id), {
+      subject: subject,
+      body: body,
+      isDraft: false,
+      status: "pending",
+      missingFields: [],
+      updatedAt: serverTimestamp()
+    });
+    await sendEmail({ notificationId: id, userEmail: user.email });
+    alert("E-posta gönderim sırasına alındı!");
+    document.getElementById('notification-modal').style.display = "none";
+  } catch (err) {
+    console.error(err);
+    alert("Gönderim sırasında bir hata oluştu.");
+  }
+});
+
+// Recipient helperları ve modal doldurma
+function getToCcFromNotification(n) {
+  const to = normalize(n?.toList) 
+         || normalize(n?.toRecipients) 
+         || normalize(n?.recipientTo)
+         || normalize(n?.to) 
+         || normalize(n?.recipientEmail);
+  const cc = normalize(n?.ccList) 
+         || normalize(n?.ccRecipients) 
+         || normalize(n?.recipientCc)
+         || normalize(n?.cc);
+  return { toList: to || [], ccList: cc || [] };
 }
-
-// Eksik bilgi modalını göster
-window.showMissingInfoModal = async function(notificationId) {
-    try {
-        const docSnapshot = await getDoc(doc(db, "mail_notifications", notificationId));
-        if (!docSnapshot.exists()) {
-            alert("Bildirim bulunamadı.");
-            return;
-        }
-
-        const notification = docSnapshot.data();
-        const applicationNo = await resolveApplicationNo(notification);
-        
-        document.getElementById('mi-application-no').textContent = applicationNo;
-        
-        const missingList = document.getElementById('mi-missing-list');
-        missingList.innerHTML = '';
-        
-        if (notification.missingFields && notification.missingFields.length > 0) {
-            notification.missingFields.forEach(field => {
-                const li = document.createElement('li');
-                li.textContent = field;
-                missingList.appendChild(li);
-            });
-        } else {
-            const li = document.createElement('li');
-            li.textContent = 'Eksik alan bilgisi mevcut değil';
-            missingList.appendChild(li);
-        }
-
-        document.getElementById('mi-edit').onclick = () => {
-            document.getElementById('missing-info-modal').style.display = "none";
-            openEditModal(notificationId);
-        };
-
-        document.getElementById('missing-info-modal').style.display = "flex";
-    } catch (error) {
-        console.error("Eksik bilgi modal hatası:", error);
-        alert("Modal açılırken bir hata oluştu.");
-    }
+function normalize(v) {
+  if (!v) return null;
+  if (Array.isArray(v)) return v.filter(Boolean).map(x => String(x).trim()).filter(Boolean);
+  if (typeof v === 'string') return v.split(/[;,]\s*/).filter(Boolean);
+  return null;
 }
 
 function openModal(notification) {
-    const subjectInput = document.getElementById('modal-subject');
-    subjectInput.value = notification.subject || "";
+  const subjectInput = document.getElementById('modal-subject');
+  subjectInput.value = notification.subject || "";
 
-    // TinyMCE'yi temizle ve yeniden başlat
-    if (tinymce.get('modal-body')) {
-        tinymce.get('modal-body').remove();
+  if (tinymce.get('modal-body')) tinymce.get('modal-body').remove();
+
+  tinymce.init({
+    selector: '#modal-body',
+    height: 400,
+    menubar: false,
+    plugins: 'link lists',
+    toolbar: 'undo redo | bold italic underline | bullist numlist | link',
+    branding: false,
+    language: 'tr',
+    setup: (editor) => {
+      editor.on('init', () => {
+        let html = notification.body || "";
+        const bodyMatch = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+        if (bodyMatch) html = bodyMatch[1];
+        editor.setContent(html);
+        document.getElementById('notification-modal').style.display = "flex";
+      });
     }
+  });
 
-    tinymce.init({
-        selector: '#modal-body',
-        height: 400,
-        menubar: false,
-        plugins: 'link lists',
-        toolbar: 'undo redo | bold italic underline | bullist numlist | link',
-        branding: false,
-        language: 'tr',
-        setup: (editor) => {
-            editor.on('init', () => {
-                let html = notification.body || "";
-                // Body tag'i içindeki içeriği al
-                const bodyMatch = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
-                if (bodyMatch) html = bodyMatch[1];
-                editor.setContent(html);
-                document.getElementById('notification-modal').style.display = "flex";
-            });
-        }
-    });
+  const { toList, ccList } = getToCcFromNotification(notification);
+  const toEl = document.getElementById('modal-to');
+  const ccEl = document.getElementById('modal-cc');
 
-    // Recipient bilgilerini doldur
-    const { toList, ccList } = getToCcFromNotification(notification);
-    const toEl = document.getElementById('modal-to');
-    const ccEl = document.getElementById('modal-cc');
+  const renderBadges = (arr, kind) => {
+    if (!arr || arr.length === 0) return `<span class="badge badge-empty">—</span>`;
+    const cls = kind === 'To' ? 'badge-to' : 'badge-cc';
+    return arr.map(e => `<span class="badge ${cls}">${e}</span>`).join(' ');
+  };
 
-    const renderBadges = (arr, kind) => {
-        if (!arr || arr.length === 0) return `<span class="badge badge-empty">—</span>`;
-        const cls = kind === 'To' ? 'badge-to' : 'badge-cc';
-        return arr.map(e => `<span class="badge ${cls}">${e}</span>`).join(' ');
-    };
+  toEl.innerHTML = renderBadges(toList, 'To');
+  ccEl.innerHTML = renderBadges(ccList, 'CC');
 
-    toEl.innerHTML = renderBadges(toList, 'To');
-    ccEl.innerHTML = renderBadges(ccList, 'CC');
+  document.getElementById('save-draft').dataset.id = notification.id;
+  document.getElementById('send-notification').dataset.id = notification.id;
 
-    // Dataset ID'leri ayarla
-    document.getElementById('save-draft').dataset.id = notification.id;
-    document.getElementById('send-notification').dataset.id = notification.id;
-}
-
-// Modal kapama fonksiyonları
-document.getElementById('close-modal').onclick = () => {
+  document.getElementById('close-modal').onclick = () => {
     document.getElementById('notification-modal').style.display = "none";
     document.getElementById('modal-subject').value = "";
-    if (tinymce.get('modal-body')) {
-        tinymce.get('modal-body').remove();
-    }
-};
-
-document.getElementById('mi-close-btn').onclick = () => {
-    document.getElementById('missing-info-modal').style.display = "none";
-};
-
-// Taslak kaydetme
-document.getElementById('save-draft').addEventListener('click', async () => {
-    const id = document.getElementById('save-draft').dataset.id;
-    const subject = document.getElementById('modal-subject').value.trim();
-    const body = tinymce.get('modal-body').getContent();
-
-    try {
-        await updateDoc(doc(db, "mail_notifications", id), {
-            subject: subject,
-            body: body,
-            isDraft: true,
-            updatedAt: serverTimestamp()
-        });
-        alert("Taslak kaydedildi!");
-        document.getElementById('notification-modal').style.display = "none";
-    } catch (err) {
-        console.error("Taslak kaydetme hatası:", err);
-        alert("Taslak kaydedilemedi: " + err.message);
-    }
-});
-
-// E-posta gönderimi
-document.getElementById('send-notification').addEventListener('click', async () => {
-    const id = document.getElementById('send-notification').dataset.id;
-    const subject = document.getElementById('modal-subject').value.trim();
-    const body = tinymce.get('modal-body').getContent();
-    const user = auth.currentUser;
-    
-    if (!user) {
-        alert("Giriş yapmalısınız.");
-        return;
-    }
-    
-    if (!confirm("Bu e-postayı göndermek istediğinize emin misiniz?")) return;
-
-    try {
-        await updateDoc(doc(db, "mail_notifications", id), {
-            subject: subject,
-            body: body,
-            isDraft: false,
-            status: "pending",
-            missingFields: [],
-            updatedAt: serverTimestamp()
-        });
-        
-        await sendEmail({ notificationId: id, userEmail: user.email });
-        alert("E-posta gönderim sırasına alındı!");
-        document.getElementById('notification-modal').style.display = "none";
-    } catch (err) {
-        console.error("Gönderim hatası:", err);
-        alert("Gönderim sırasında bir hata oluştu: " + err.message);
-    }
-});
-
-/** =====================
- *   HELPER FONKSIYONLAR
- *  ===================== */
-
-function getToCcFromNotification(notification) {
-    const to = normalize(notification?.toList) 
-             || normalize(notification?.toRecipients) 
-             || normalize(notification?.recipientTo)
-             || normalize(notification?.to) 
-             || normalize(notification?.recipientEmail);
-             
-    const cc = normalize(notification?.ccList) 
-             || normalize(notification?.ccRecipients) 
-             || normalize(notification?.recipientCc)
-             || normalize(notification?.cc);
-             
-    return { toList: to || [], ccList: cc || [] };
+    if (tinymce.get('modal-body')) tinymce.get('modal-body').remove();
+  };
 }
-
-function normalize(value) {
-    if (!value) return null;
-    if (Array.isArray(value)) {
-        return value.filter(Boolean).map(x => String(x).trim()).filter(Boolean);
-    }
-    if (typeof value === 'string') {
-        return value.split(/[;,]\s*/).filter(Boolean);
-    }
-    return null;
-}
-
 </script>
 </body>
 </html>
