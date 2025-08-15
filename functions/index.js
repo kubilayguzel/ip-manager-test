@@ -525,15 +525,28 @@ export const createMailNotificationOnDocumentStatusChangeV2 = onDocumentUpdated(
                     
                     if (ipRecordData) {
                         console.log(`✅ IP kaydı bulundu. ${applicants.length} adet başvuru sahibi var.`);
-                    } else {
-                        console.warn(`Associated transaction ID (${associatedTransactionId}) ile transaction kaydı bulunamadı.`);
+                        
+                        // 1. Birincil başvuru sahibini müvekkil olarak al
+                        if (applicants.length > 0) {
+                            const primaryApplicantId = applicants[0].id;
+                            try {
+                                const clientSnapshot = await db.collection("persons").doc(primaryApplicantId).get();
+                                if (clientSnapshot.exists()) {
+                                    client = clientSnapshot.data();
+                                    console.log(`✅ Müvekkil bulundu: ${client.name || primaryApplicantId}`);
+                                    
+                                    // 2. clientId'yi notification'a ekle (optional, tracking için)
+                                    after.clientId = primaryApplicantId;
+                                } else {
+                                    console.warn(`❌ Müvekkil dokümanı bulunamadı: ${primaryApplicantId}`);
+                                }
+                            } catch (clientError) {
+                                console.error("Müvekkil sorgusu sırasında hata:", clientError);
+                            }
+                        } else {
+                            console.warn("❌ Başvuru sahibi listesi boş");
+                        }
                     }
-                } catch (error) {
-                    console.error("Transaction sorgusu sırasında hata:", error);
-                }
-            } else {
-                console.warn("associatedTransactionId alanı eksik. Alıcı bulunamayabilir.");
-            }
             
             // Alıcı listelerini belirleme
             const notificationType = after.mainProcessType || 'marka'; // Varsayılan olarak 'marka'
