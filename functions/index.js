@@ -570,7 +570,7 @@ if (ipRecordData) {
 }
 
 // Alıcı listelerini belirleme
-const notificationType = after.mainProcessType || 'trademark'; // ✅ Düzeltildi: 'trademark'
+const notificationType = after.mainProcessType || 'marka'; // ✅ Düzeltildi: 'trademark'
 console.log("🔍 Notification type:", notificationType);
 
 // Recipients çağrısından HEMEN ÖNCE final kontrol
