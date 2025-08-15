@@ -772,9 +772,10 @@ export const createUniversalNotificationOnTaskCompleteV2 = onDocumentUpdated(
                 }
 
                 await db.collection("mail_notifications").add({
-                    // **GÜNCELLENDİ**
-                    recipientTo: toRecipients,
-                    recipientCc: ccRecipients,
+                    toList: toRecipients,             // ✅ En basit alan adı
+                    ccList: ccRecipients,             // ✅ En basit alan adı
+                    
+                    // Diğer alanlar aynı kalır
                     clientId: primaryOwnerId,
                     subject: subject,
                     body: body,
