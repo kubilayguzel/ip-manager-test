@@ -291,44 +291,25 @@ async function resolveApplicantName(notification) {
     }
 }
 
-// Tür bilgisini çözümler
 async function resolveType(notification) {
-    // notification.type yoksa unindexed_pdfs.associatedTransactionId → ipRecords/{id}/transactions/{id}.type
-    if (notification.type !== undefined && notification.type !== null) {
-        return String(notification.type);
-    }
-    
-    if (notification.sourceDocumentId) {
-        try {
-            const unindexedDoc = await getDoc(doc(db, "unindexed_pdfs", notification.sourceDocumentId));
-            if (unindexedDoc.exists()) {
-                const unindexedData = unindexedDoc.data() || {};
-                const transactionId = unindexedData.associatedTransactionId;
-                let ipRecordId = unindexedData.ipRecordId || 
-                               unindexedData.relatedIpRecordId || 
-                               unindexedData.ipRecordRefId || 
-                               notification.ipRecordId;
-                
-                if (transactionId && ipRecordId) {
-                    try {
-                        const transactionSnapshot = await getDoc(doc(db, "ipRecords", ipRecordId, "transactions", transactionId));
-                        if (transactionSnapshot.exists()) {
-                            const transactionData = transactionSnapshot.data() || {};
-                            if (transactionData.type !== undefined && transactionData.type !== null) {
-                                return String(transactionData.type);
-                            }
-                        }
-                    } catch (error) {
-                        console.warn("Transaction sorgusu sırasında hata:", error);
-                    }
-                }
-            }
-        } catch (error) {
-            console.warn("unindexed_pdfs sorgusu sırasında hata:", error);
+  // notification.type yoksa unindexed_pdfs.associatedTransactionId → ipRecords/{id}/transactions/{id}.type
+  if (notification.type !== undefined) return String(notification.type);
+  if (notification.sourceDocumentId) {
+    const u = await getDoc(doc(db, "unindexed_pdfs", notification.sourceDocumentId));
+    if (u.exists()) {
+      const ud = u.data() || {};
+      const txId = ud.associatedTransactionId;
+      let ipRecordId = ud.ipRecordId || ud.relatedIpRecordId || ud.ipRecordRefId || notification.ipRecordId;
+      if (txId && ipRecordId) {
+        const txSnap = await getDoc(doc(db, "ipRecords", ipRecordId, "transactions", txId));
+        if (txSnap.exists()) {
+          const t = txSnap.data() || {};
+          if (t.type !== undefined) return String(t.type);
         }
+      }
     }
-    
-    return '-';
+  }
+  return '-';
 }
 
 // Evrak bilgilerini çözümler
