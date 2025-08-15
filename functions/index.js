@@ -498,33 +498,38 @@ export const createMailNotificationOnDocumentStatusChangeV2 = onDocumentUpdated(
             let ipRecordData = null;
             let applicants = [];
             
-            // **YENİ ALGORİTMA BAŞLANGICI**
             // associatedTransactionId'yi kullanarak ilgili IPRecord'u bulun
             const associatedTransactionId = after.associatedTransactionId;
             if (associatedTransactionId) {
                 try {
-                    // Collection Group Query ile transactions dokümanını bulun
-                    const transactionSnapshot = await db.collectionGroup("transactions")
-                        .where(admin.firestore.FieldPath.documentId(), "==", associatedTransactionId)
-                        .limit(1)
-                        .get();
+                    // Önce hangi ipRecord'a ait olduğunu bulun
+                    const ipRecordsSnapshot = await db.collection("ipRecords").get();
                     
-                    if (!transactionSnapshot.empty) {
-                        const transactionDoc = transactionSnapshot.docs[0];
-                        // transaction dokümanının üst koleksiyonuna (ipRecords) referansını alın
-                        const ipRecordRef = transactionDoc.ref.parent.parent;
-                        const ipRecordSnapshot = await ipRecordRef.get();
+                    let ipRecordData = null;
+                    let applicants = [];
+                    
+                    for (const ipDoc of ipRecordsSnapshot.docs) {
+                        const transactionRef = db.collection("ipRecords")
+                            .doc(ipDoc.id)
+                            .collection("transactions")
+                            .doc(associatedTransactionId);
                         
-                        if (ipRecordSnapshot.exists) {
-                            ipRecordData = ipRecordSnapshot.data();
+                        const transactionDoc = await transactionRef.get();
+                        if (transactionDoc.exists) {
+                            ipRecordData = ipDoc.data();
                             applicants = ipRecordData.applicants || [];
-                            console.log(`✅ ${ipRecordRef.id} ID'li IP kaydı bulundu. ${applicants.length} adet başvuru sahibi var.`);
+                            console.log(`✅ Transaction found in ipRecord: ${ipDoc.id}`);
+                            break;
                         }
+                    }
+                    
+                    if (ipRecordData) {
+                        console.log(`✅ IP kaydı bulundu. ${applicants.length} adet başvuru sahibi var.`);
                     } else {
                         console.warn(`Associated transaction ID (${associatedTransactionId}) ile transaction kaydı bulunamadı.`);
                     }
                 } catch (error) {
-                    console.error("Transaction veya IPRecord sorgusu sırasında hata:", error);
+                    console.error("Transaction sorgusu sırasında hata:", error);
                 }
             } else {
                 console.warn("associatedTransactionId alanı eksik. Alıcı bulunamayabilir.");
