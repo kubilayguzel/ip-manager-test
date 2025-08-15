@@ -525,12 +525,12 @@ export const createMailNotificationOnDocumentStatusChangeV2 = onDocumentUpdated(
                     if (ipRecordData) {
                         console.log(`✅ IP kaydı bulundu. ${applicants.length} adet başvuru sahibi var.`);
                         
-                        // ✅ Birincil başvuru sahibini müvekkil olarak al
+                        // Birincil başvuru sahibini müvekkil olarak al
                         if (applicants.length > 0) {
                             const primaryApplicantId = applicants[0].id;
                             try {
                                 const clientSnapshot = await db.collection("persons").doc(primaryApplicantId).get();
-                                if (clientSnapshot.exists) { // ✅ Düzeltildi: exists() değil exists
+                                if (clientSnapshot.exists) {
                                     client = clientSnapshot.data();
                                     console.log(`✅ Müvekkil bulundu: ${client.name || primaryApplicantId}`);
                                 } else {
@@ -545,7 +545,8 @@ export const createMailNotificationOnDocumentStatusChangeV2 = onDocumentUpdated(
                     } else {
                         console.warn(`Associated transaction ID (${associatedTransactionId}) ile transaction kaydı bulunamadı.`);
                     }
-                } catch (error) {
+
+                  } catch (error) {
                     console.error("Transaction sorgusu sırasında hata:", error);
                 }
             } else {
@@ -619,9 +620,17 @@ export const createMailNotificationOnDocumentStatusChangeV2 = onDocumentUpdated(
             }
 
             const missingFields = [];
-            if (!client) missingFields.push('client');
+            if (!client) {
+                console.warn("Müvekkil bulunamadı: client_not_set");
+                missingFields.push('client');
+            }
             if (!template) missingFields.push('template');
             if (toRecipients.length === 0 && ccRecipients.length === 0) missingFields.push('recipients');
+
+            // Status kontrolü
+            if (missingFields.length > 0) {
+                status = "missing_info";
+            }
 
             const notificationData = {
                 // **GÜNCELLENDİ**
