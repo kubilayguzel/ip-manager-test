@@ -498,7 +498,6 @@ export const createMailNotificationOnDocumentStatusChangeV2 = onDocumentUpdated(
             let ipRecordData = null;
             let applicants = [];
             
-            // associatedTransactionId'yi kullanarak ilgili IPRecord'u bulun
             const associatedTransactionId = after.associatedTransactionId;
             if (associatedTransactionId) {
                 try {
@@ -526,7 +525,7 @@ export const createMailNotificationOnDocumentStatusChangeV2 = onDocumentUpdated(
                     if (ipRecordData) {
                         console.log(`✅ IP kaydı bulundu. ${applicants.length} adet başvuru sahibi var.`);
                         
-                        // 1. Birincil başvuru sahibini müvekkil olarak al
+                        // ✅ YENİ: Birincil başvuru sahibini müvekkil olarak al
                         if (applicants.length > 0) {
                             const primaryApplicantId = applicants[0].id;
                             try {
@@ -534,9 +533,6 @@ export const createMailNotificationOnDocumentStatusChangeV2 = onDocumentUpdated(
                                 if (clientSnapshot.exists()) {
                                     client = clientSnapshot.data();
                                     console.log(`✅ Müvekkil bulundu: ${client.name || primaryApplicantId}`);
-                                    
-                                    // 2. clientId'yi notification'a ekle (optional, tracking için)
-                                    after.clientId = primaryApplicantId;
                                 } else {
                                     console.warn(`❌ Müvekkil dokümanı bulunamadı: ${primaryApplicantId}`);
                                 }
@@ -546,7 +542,15 @@ export const createMailNotificationOnDocumentStatusChangeV2 = onDocumentUpdated(
                         } else {
                             console.warn("❌ Başvuru sahibi listesi boş");
                         }
+                    } else {
+                        console.warn(`Associated transaction ID (${associatedTransactionId}) ile transaction kaydı bulunamadı.`);
                     }
+                } catch (error) {
+                    console.error("Transaction sorgusu sırasında hata:", error);
+                }
+            } else {
+                console.warn("associatedTransactionId alanı eksik. Alıcı bulunamayabilir.");
+            }
             
             // Alıcı listelerini belirleme
             const notificationType = after.mainProcessType || 'marka'; // Varsayılan olarak 'marka'
